@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: simak_db
+    environment:
+      POSTGRES_USER: simak_user
+      POSTGRES_PASSWORD: simak_password
+      POSTGRES_DB: simak_vokasi
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
