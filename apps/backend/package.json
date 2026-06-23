@@ -19,6 +19,7 @@
   "devDependencies": {
     "drizzle-kit": "^0.21.0",
     "@types/pg": "^8.11.0",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/node": "^20.0.0"
   }
 }
