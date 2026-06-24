@@ -8,6 +8,13 @@
       "when": 1782238485529,
       "tag": "0000_real_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1782337145421,
+      "tag": "0001_superb_gwen_stacy",
+      "breakpoints": true
     }
   ]
 }

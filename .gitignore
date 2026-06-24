@@ -6,3 +6,4 @@ dist
 .output
 .bun-build
 *.log
+drizzle
