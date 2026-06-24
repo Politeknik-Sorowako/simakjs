@@ -394,6 +394,10 @@ describe('SIMAK Vokasi API Backend Tests', () => {
             nama: 'Mahasiswa Admin',
             email: 'mhs-admin@test.com',
             programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Kandung Admin',
+            nik: '1234567890123456',
+            jenisKelamin: 'L',
+            tanggalLahir: '2000-01-01',
           }),
         })
       );
@@ -419,6 +423,10 @@ describe('SIMAK Vokasi API Backend Tests', () => {
             nama: 'Mahasiswa Dosen',
             email: 'mhs-dosen@test.com',
             programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Kandung Dosen',
+            nik: '1234567890123457',
+            jenisKelamin: 'P',
+            tanggalLahir: '2001-02-02',
           }),
         })
       );
@@ -441,6 +449,10 @@ describe('SIMAK Vokasi API Backend Tests', () => {
             nama: 'Mahasiswa Gagal',
             email: 'mhs-gagal@test.com',
             programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Kandung Gagal',
+            nik: '1234567890123458',
+            jenisKelamin: 'L',
+            tanggalLahir: '2000-03-03',
           }),
         })
       );
@@ -460,6 +472,10 @@ describe('SIMAK Vokasi API Backend Tests', () => {
             nama: 'Mahasiswa Guest',
             email: 'mhs-guest@test.com',
             programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Kandung Guest',
+            nik: '1234567890123459',
+            jenisKelamin: 'P',
+            tanggalLahir: '2002-04-04',
           }),
         })
       );
