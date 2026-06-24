@@ -6,7 +6,10 @@ import { db } from './db';
 import { users, programStudi, mahasiswa } from './db/schema';
 import { eq } from 'drizzle-orm';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret-simak-vokasi-12345';
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export const app = new Elysia()
   .use(
@@ -170,6 +173,11 @@ export const app = new Elysia()
             email: t.String({ format: 'email' }),
             programStudiId: t.Integer(),
             status: t.Optional(t.String()),
+            idPddikti: t.Optional(t.String()),
+            namaIbuKandung: t.String(),
+            nik: t.String({ minLength: 16, maxLength: 16 }),
+            jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')]),
+            tanggalLahir: t.String(),
           }),
         }
       )
