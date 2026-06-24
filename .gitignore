@@ -6,4 +6,4 @@ dist
 .output
 .bun-build
 *.log
-drizzle
+issue.md

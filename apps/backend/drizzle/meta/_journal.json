@@ -15,6 +15,13 @@
       "when": 1782337145421,
       "tag": "0001_superb_gwen_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782338405618,
+      "tag": "0002_lovely_aaron_stack",
+      "breakpoints": true
     }
   ]
 }

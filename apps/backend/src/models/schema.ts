@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boolean, numeric } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boolean, numeric, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa']);
@@ -51,6 +51,7 @@ export const periodeAkademik = pgTable('periode_akademik', {
   nama: varchar('nama', { length: 100 }).notNull(),
   aktif: boolean('aktif').default(false).notNull(),
   idPddikti: varchar('id_pddikti', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const mataKuliah = pgTable('mata_kuliah', {
@@ -62,6 +63,7 @@ export const mataKuliah = pgTable('mata_kuliah', {
   sksPraktek: integer('sks_praktek'),
   programStudiId: integer('program_studi_id').references(() => programStudi.id),
   idPddikti: varchar('id_pddikti', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const kelasKuliah = pgTable('kelas_kuliah', {
@@ -70,6 +72,7 @@ export const kelasKuliah = pgTable('kelas_kuliah', {
   periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id),
   namaKelas: varchar('nama_kelas', { length: 50 }).notNull(),
   idPddikti: varchar('id_pddikti', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const dosenPengajarKelas = pgTable('dosen_pengajar_kelas', {
@@ -78,6 +81,7 @@ export const dosenPengajarKelas = pgTable('dosen_pengajar_kelas', {
   kelasKuliahId: integer('kelas_kuliah_id').notNull().references(() => kelasKuliah.id),
   sksBebanMengajar: integer('sks_beban_mengajar'),
   idPddikti: varchar('id_pddikti', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const krs = pgTable('krs', {
@@ -88,6 +92,12 @@ export const krs = pgTable('krs', {
   nilaiHuruf: varchar('nilai_huruf', { length: 5 }),
   nilaiIndeks: numeric('nilai_indeks', { precision: 3, scale: 2 }),
   idPddikti: varchar('id_pddikti', { length: 50 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    mahasiswaIdIdx: index('krs_mahasiswa_id_idx').on(table.mahasiswaId),
+    kelasKuliahIdIdx: index('krs_kelas_kuliah_id_idx').on(table.kelasKuliahId),
+  };
 });
 
 // Relations
