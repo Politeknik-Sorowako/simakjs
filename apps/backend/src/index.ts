@@ -11,7 +11,7 @@ if (!process.env.JWT_SECRET) {
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 
-const app = new Elysia()
+export const app = new Elysia()
   .use(
     swagger({
       documentation: {
@@ -58,7 +58,10 @@ const app = new Elysia()
         async ({ body, set }) => {
           const { email, password, role } = body;
           // Hash password using Bun's native password hasher
-          const hashedPassword = await Bun.password.hash(password);
+          const hashedPassword = await Bun.password.hash(password, {
+  algorithm: "bcrypt",
+  cost: 10,
+});
           try {
             const [newUser] = await db
               .insert(users)
@@ -178,8 +181,10 @@ const app = new Elysia()
           }),
         }
       )
-  )
-  .listen(3000);
+  );
 
-console.log(`🦊 Server is running at http://localhost:3000`);
-console.log(`📖 Swagger API documentation is available at http://localhost:3000/swagger`);
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(3000);
+  console.log(`🦊 Server is running at http://localhost:3000`);
+  console.log(`📖 Swagger API documentation is available at http://localhost:3000/swagger`);
+}
