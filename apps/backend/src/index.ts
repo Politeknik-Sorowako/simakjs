@@ -38,6 +38,10 @@ export const app = new Elysia()
   // Auth Middleware
   .derive(({ jwt, headers }) => {
     return {
+      /**
+       * Mengambil dan memverifikasi token JWT dari header Authorization.
+       * Mengembalikan payload user jika token valid, atau null jika tidak valid/tidak ada.
+       */
       getCurrentUser: async () => {
         const authHeader = headers['authorization'];
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -55,6 +59,11 @@ export const app = new Elysia()
     app
       .post(
         '/register',
+        /**
+         * Endpoint untuk meregistrasi pengguna baru.
+         * Mendukung role admin, dosen, dan mahasiswa (default).
+         * Melakukan hashing password menggunakan bcrypt sebelum disimpan ke database.
+         */
         async ({ body, set }) => {
           const { email, password, role } = body;
           // Hash password using Bun's native password hasher
@@ -109,6 +118,11 @@ export const app = new Elysia()
       )
       .post(
         '/login',
+        /**
+         * Endpoint untuk login pengguna.
+         * Memverifikasi email dan kecocokan password yang di-hash.
+         * Jika berhasil, akan mengembalikan token JWT yang dapat digunakan untuk otorisasi endpoint lain.
+         */
         async ({ body, jwt, set }) => {
           const { email, password } = body;
           const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -164,6 +178,10 @@ export const app = new Elysia()
     app
       .get(
         '/',
+        /**
+         * Endpoint untuk mengambil semua data program studi.
+         * Terbuka untuk semua pengguna (public).
+         */
         async () => {
           return await db.select().from(programStudi);
         },
@@ -188,6 +206,10 @@ export const app = new Elysia()
       )
       .post(
         '/',
+        /**
+         * Endpoint untuk menambahkan program studi baru.
+         * Memerlukan token JWT yang valid dan hanya dapat diakses oleh user dengan role 'admin'.
+         */
         async ({ body, set, getCurrentUser }) => {
           const user = await getCurrentUser();
           if (!user || user.role !== 'admin') {
@@ -228,6 +250,9 @@ export const app = new Elysia()
     app
       .get(
         '/',
+        /**
+         * Endpoint untuk mengambil seluruh data mahasiswa yang terdaftar di sistem.
+         */
         async () => {
           return await db.select().from(mahasiswa);
         },
@@ -258,6 +283,10 @@ export const app = new Elysia()
       )
       .post(
         '/',
+        /**
+         * Endpoint untuk menambahkan data mahasiswa baru.
+         * Memerlukan otorisasi token JWT, hanya diperbolehkan untuk role 'admin' atau 'dosen'.
+         */
         async ({ body, set, getCurrentUser }) => {
           const user = await getCurrentUser();
           if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
