@@ -1,0 +1,77 @@
+# Perencanaan Unit Testing API Backend SIMAK Vokasi
+
+Dokumen ini berisi spesifikasi skenario pengujian unit (unit testing) untuk seluruh endpoint API yang tersedia pada backend SIMAK Vokasi. Tugas ini harus diimplementasikan oleh junior developer atau model AI pelaksana menggunakan runner bawaan Bun (`bun:test`).
+
+---
+
+## 📌 Ketentuan Umum Pengujian
+1. **Konsistensi Data**: Untuk setiap berkas pengujian (atau skenario), lakukan pembersihan data (truncate/delete) terlebih dahulu pada tabel terkait (`users`, `mahasiswa`, `dosen`, `program_studi`) sebelum test dijalankan (`beforeEach` atau `beforeAll`) agar pengujian bersifat independen dan konsisten.
+2. **Lingkungan Pengujian**: Jalankan pengujian pada basis data testing atau pastikan data local aman untuk dihapus selama testing.
+3. **HTTP Client**: Uji endpoint ElysiaJS secara langsung menggunakan `app.handle(new Request(...))` untuk simulasi request HTTP yang cepat tanpa perlu menjalankan server secara penuh.
+
+---
+
+## 🛠️ Daftar Skenario Pengujian Per API
+
+### 1. Autentikasi (`/auth`)
+
+#### A. Registrasi (`POST /auth/register`)
+* **Skenario Sukses**:
+  * Registrasi user baru dengan email valid, password minimal 6 karakter, dan peran `mahasiswa`/`dosen`/`admin`.
+  * Verifikasi response memiliki status `201`, pesan sukses, dan data user tanpa password.
+* **Skenario Gagal**:
+  * Registrasi dengan email yang sudah terdaftar sebelumnya (duplicate email).
+  * Registrasi dengan format email tidak valid (misal: `nama-salah.com`).
+  * Registrasi dengan password kurang dari 6 karakter.
+
+#### B. Login (`POST /auth/login`)
+* **Skenario Sukses**:
+  * Login dengan email dan password yang valid.
+  * Verifikasi response memiliki status `200`, mengembalikan token JWT, serta data user.
+* **Skenario Gagal**:
+  * Login dengan email yang belum terdaftar.
+  * Login dengan email valid tetapi password salah.
+
+---
+
+### 2. Program Studi (`/prodi`)
+
+#### A. Mengambil Data (`GET /prodi`)
+* **Skenario Sukses**:
+  * Mendapatkan list program studi. Verifikasi response mengembalikan array (kosong atau berisi data).
+
+#### B. Tambah Data (`POST /prodi`)
+* **Skenario Sukses**:
+  * Admin berhasil menambahkan data Program Studi baru (menyertakan token JWT Admin pada header `Authorization`).
+* **Skenario Gagal (Otorisasi)**:
+  * Dosen mencoba menambahkan Program Studi baru (menghasilkan status `403 Forbidden`).
+  * Mahasiswa mencoba menambahkan Program Studi baru (menghasilkan status `403 Forbidden`).
+  * Request tanpa token JWT mencoba menambahkan data (menghasilkan status `403` atau `401`).
+
+---
+
+### 3. Mahasiswa (`/mahasiswa`)
+
+#### A. Mengambil Data (`GET /mahasiswa`)
+* **Skenario Sukses**:
+  * Mendapatkan list mahasiswa. Verifikasi response mengembalikan array.
+
+#### B. Tambah Data (`POST /mahasiswa`)
+* **Skenario Sukses**:
+  * Admin berhasil menambahkan mahasiswa baru lengkap dengan kolom wajib PDDIKTI (header JWT Admin).
+  * Dosen berhasil menambahkan mahasiswa baru (header JWT Dosen).
+* **Skenario Gagal**:
+  * Mahasiswa mencoba menambahkan mahasiswa baru (menghasilkan status `403 Forbidden`).
+  * Request tanpa token JWT mencoba menambahkan mahasiswa (menghasilkan status `403` atau `401`).
+  * Request dengan field wajib PDDIKTI yang tidak lengkap (misal: `namaIbuKandung`, `nik` tidak 16 digit, atau `jenisKelamin` selain L/P).
+
+---
+
+## 🚀 Panduan Eksekusi bagi Pelaksana
+1. Buat berkas test baru, misalnya di `apps/backend/src/index.test.ts`.
+2. Gunakan import `describe`, `it`, `expect`, `beforeEach` dari `bun:test`.
+3. Manfaatkan database helper untuk mengosongkan tabel sebelum pengujian dijalankan.
+4. Jalankan perintah berikut untuk menguji:
+   ```bash
+   bun test
+   ```
