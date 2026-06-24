@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { app } from './index';
-import { db } from './db';
-import { users, programStudi, mahasiswa, dosen } from './db/schema';
+import { db } from './utils/db';
+import { users, programStudi, mahasiswa, dosen } from './models/schema';
 
 interface UserResponse {
   id: number;
