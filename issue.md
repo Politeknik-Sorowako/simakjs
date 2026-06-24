@@ -1,231 +1,102 @@
-# Perencanaan Implementasi Fitur Dokumentasi API (Swagger)
+# Refactor Arsitektur Backend (ElysiaJS + Drizzle ORM)
 
-Dokumen ini berisi spesifikasi teknis dan perencanaan untuk melengkapi fitur dokumentasi API menggunakan Swagger pada project SIMAK Vokasi. Tugas ini dapat diimplementasikan oleh junior programmer atau model AI pelaksana.
+## Deskripsi Tugas
+Melakukan refactoring pada struktur folder dan kode di dalam `backend/src` agar sesuai dengan arsitektur yang lebih modular, bersih, dan mudah di-maintain. Fungsionalitas aplikasi saat ini (Auth, Prodi, dan Mahasiswa) harus dipastikan tetap berjalan dengan normal tanpa ada perubahan pada *behavior* API.
 
----
-
-## 📌 Tujuan
-Project ini telah memiliki setup `@elysiajs/swagger`, namun dokumentasinya belum lengkap. Tujuan tugas ini adalah untuk melengkapi dokumentasi setiap *endpoint* pada file `apps/backend/src/index.ts` agar menyertakan:
-1. Penjelasan (*summary* dan *description*) untuk tiap endpoint.
-2. Kategori (*tags*) yang sesuai (contoh: "Autentikasi", "Program Studi", "Mahasiswa").
-3. Skema Input (*body*) beserta contoh data (mock/contoh data valid).
-4. Skema Output (*response*) untuk seluruh skenario (sukses 200/201, maupun gagal 400/401/403/422).
-
----
-
-## 🛠️ Langkah-Langkah Implementasi
-
-ElysiaJS memungkinkan dokumentasi Swagger secara langsung di objek konfigurasi endpoint (sebagai argumen ketiga di method `.get()` atau `.post()`).
-
-Kamu harus memodifikasi file `apps/backend/src/index.ts` pada bagian tiap endpoint. Gunakan struktur blok `detail` dan `response` dari `t` (Elysia type builder) seperti panduan di bawah ini.
-
-### 1. Endpoint Autentikasi (`/auth/register`)
-- **Tag**: `Autentikasi`
-- **Summary**: `Registrasi Pengguna Baru`
-- **Detail Contoh Input & Output**:
-  Tambahkan opsi skema pada `.post('/register', handler, { ...opsi })`:
-  ```typescript
-  {
-    detail: {
-      tags: ['Autentikasi'],
-      summary: 'Registrasi Pengguna Baru',
-      description: 'Mendaftarkan akun baru ke sistem dengan role admin, dosen, atau mahasiswa.'
-    },
-    body: t.Object({
-      email: t.String({ format: 'email', default: 'admin@test.com' }),
-      password: t.String({ minLength: 6, default: 'password123' }),
-      role: t.Optional(t.Union([t.Literal('admin'), t.Literal('dosen'), t.Literal('mahasiswa')], { default: 'mahasiswa' }))
-    }),
-    response: {
-      201: t.Object({
-        message: t.String({ default: 'Registrasi berhasil' }),
-        user: t.Object({
-          id: t.Integer({ default: 1 }),
-          email: t.String({ default: 'admin@test.com' }),
-          role: t.String({ default: 'admin' })
-        })
-      }),
-      400: t.Object({
-        error: t.String({ default: 'Email sudah terdaftar' })
-      })
-    }
-  }
-  ```
-
-### 2. Endpoint Autentikasi (`/auth/login`)
-- **Tag**: `Autentikasi`
-- **Summary**: `Login Pengguna`
-- **Detail Contoh Input & Output**:
-  ```typescript
-  {
-    detail: {
-      tags: ['Autentikasi'],
-      summary: 'Login Pengguna',
-      description: 'Login menggunakan email dan password untuk mendapatkan token JWT.'
-    },
-    body: t.Object({
-      email: t.String({ format: 'email', default: 'admin@test.com' }),
-      password: t.String({ default: 'password123' })
-    }),
-    response: {
-      200: t.Object({
-        message: t.String({ default: 'Login berhasil' }),
-        token: t.String({ default: 'eyJhbGciOiJIUzI1NiIsInR... (JWT string)' }),
-        user: t.Object({
-          id: t.Integer({ default: 1 }),
-          email: t.String({ default: 'admin@test.com' }),
-          role: t.String({ default: 'admin' })
-        })
-      }),
-      401: t.Object({
-        error: t.String({ default: 'Email atau password salah' })
-      })
-    }
-  }
-  ```
-
-### 3. Endpoint Program Studi (`GET /prodi`)
-- **Tag**: `Program Studi`
-- **Summary**: `Mendapatkan Daftar Program Studi`
-- **Detail Contoh Input & Output**:
-  Ubah `.get('/', handler)` menjadi memiliki opsi skema:
-  ```typescript
-  {
-    detail: {
-      tags: ['Program Studi'],
-      summary: 'Daftar Program Studi',
-      description: 'Mengambil semua data program studi yang terdaftar.'
-    },
-    response: {
-      200: t.Array(
-        t.Object({
-          id: t.Integer({ default: 1 }),
-          kode: t.String({ default: 'TI' }),
-          nama: t.String({ default: 'Teknik Informatika' }),
-          jenjang: t.String({ default: 'D4' }),
-          idPddikti: t.Union([t.String(), t.Null()], { default: null })
-        })
-      )
-    }
-  }
-  ```
-
-### 4. Endpoint Program Studi (`POST /prodi`)
-- **Tag**: `Program Studi`
-- **Summary**: `Tambah Program Studi Baru`
-- **Detail Contoh Input & Output**:
-  ```typescript
-  {
-    detail: {
-      tags: ['Program Studi'],
-      summary: 'Tambah Program Studi Baru',
-      description: 'Menambahkan prodi baru (Hanya dapat diakses oleh Admin yang menyertakan token JWT).'
-    },
-    body: t.Object({
-      kode: t.String({ default: 'TI' }),
-      nama: t.String({ default: 'Teknik Informatika' }),
-      jenjang: t.String({ default: 'D4' })
-    }),
-    response: {
-      201: t.Object({
-        id: t.Integer({ default: 1 }),
-        kode: t.String({ default: 'TI' }),
-        nama: t.String({ default: 'Teknik Informatika' }),
-        jenjang: t.String({ default: 'D4' }),
-        idPddikti: t.Union([t.String(), t.Null()], { default: null })
-      }),
-      403: t.Object({
-        error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
-      })
-    }
-  }
-  ```
-
-### 5. Endpoint Mahasiswa (`GET /mahasiswa`)
-- **Tag**: `Mahasiswa`
-- **Summary**: `Mendapatkan Daftar Mahasiswa`
-- **Detail Contoh Input & Output**:
-  ```typescript
-  {
-    detail: {
-      tags: ['Mahasiswa'],
-      summary: 'Daftar Mahasiswa',
-      description: 'Mengambil semua data mahasiswa yang terdaftar.'
-    },
-    response: {
-      200: t.Array(
-        t.Object({
-          id: t.Integer({ default: 1 }),
-          nim: t.String({ default: '12345678' }),
-          nama: t.String({ default: 'Budi Santoso' }),
-          email: t.String({ default: 'budi@test.com' }),
-          programStudiId: t.Integer({ default: 1 }),
-          status: t.String({ default: 'aktif' }),
-          namaIbuKandung: t.String({ default: 'Ibu Budi' }),
-          nik: t.String({ default: '1234567890123456' }),
-          jenisKelamin: t.String({ default: 'L' }),
-          tanggalLahir: t.String({ default: '2000-01-01' }),
-          idPddikti: t.Union([t.String(), t.Null()], { default: null })
-        })
-      )
-    }
-  }
-  ```
-
-### 6. Endpoint Mahasiswa (`POST /mahasiswa`)
-- **Tag**: `Mahasiswa`
-- **Summary**: `Tambah Mahasiswa Baru`
-- **Detail Contoh Input & Output**:
-  ```typescript
-  {
-    detail: {
-      tags: ['Mahasiswa'],
-      summary: 'Tambah Mahasiswa Baru',
-      description: 'Menambahkan mahasiswa baru lengkap dengan data wajib PDDIKTI (Hanya dapat diakses Admin / Dosen dengan token JWT).'
-    },
-    body: t.Object({
-      nim: t.String({ default: '12345678' }),
-      nama: t.String({ default: 'Budi Santoso' }),
-      email: t.String({ format: 'email', default: 'budi@test.com' }),
-      programStudiId: t.Integer({ default: 1 }),
-      status: t.Optional(t.String({ default: 'aktif' })),
-      idPddikti: t.Optional(t.String()),
-      namaIbuKandung: t.String({ default: 'Ibu Budi' }),
-      nik: t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' }),
-      jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' }),
-      tanggalLahir: t.String({ default: '2000-01-01' })
-    }),
-    response: {
-      201: t.Object({
-        id: t.Integer({ default: 1 }),
-        nim: t.String({ default: '12345678' }),
-        nama: t.String({ default: 'Budi Santoso' }),
-        email: t.String({ default: 'budi@test.com' }),
-        programStudiId: t.Integer({ default: 1 }),
-        status: t.String({ default: 'aktif' }),
-        namaIbuKandung: t.String({ default: 'Ibu Budi' }),
-        nik: t.String({ default: '1234567890123456' }),
-        jenisKelamin: t.String({ default: 'L' }),
-        tanggalLahir: t.String({ default: '2000-01-01T00:00:00.000Z' }),
-        idPddikti: t.Union([t.String(), t.Null()], { default: null })
-      }),
-      403: t.Object({
-        error: t.String({ default: 'Akses ditolak.' })
-      }),
-      422: t.Object({
-        message: t.String({ default: 'Validation error message...' })
-      })
-    }
-  }
-  ```
+## Struktur Direktori Tujuan
+Struktur direktori `backend/src` akan diubah menjadi seperti berikut:
+- **`routes`**: berisi definisi routing ElysiaJS.
+- **`controllers`**: berisi logic yang menghubungkan request/response dengan business logic.
+- **`models`**: berisi definisi schema Drizzle ORM.
+- **`services`**: berisi business logic inti (database query, hashing, dll).
+- **`schemas`**: berisi schema validasi request/response menggunakan TypeBox (`t` dari Elysia).
+- **`middlewares`**: berisi custom middleware ElysiaJS (contoh: Auth middleware).
+- **`utils`**: berisi fungsi-fungsi utility pendukung (contoh: koneksi DB).
+- **`plugins`**: berisi konfigurasi plugin ElysiaJS (contoh: Swagger, CORS).
+- **`app.ts`**: berisi konfigurasi utama aplikasi ElysiaJS (menggabungkan semua route dan middleware).
+- **`index.ts`**: entry point untuk menjalankan server.
+- **`.env`**: berisi environment variables.
 
 ---
 
-## 🧪 Cara Pengujian & Verifikasi Output
-1. Jalankan server secara lokal:
-   ```bash
-   bun run --cwd apps/backend dev
-   ```
-2. Buka browser dan arahkan ke: `http://localhost:3000/swagger`.
-3. Pastikan antarmuka Swagger sudah mengelompokkan API berdasarkan Tag yang dibuat (Autentikasi, Program Studi, Mahasiswa).
-4. Klik tiap endpoint untuk memastikan contoh *request body* dan *response* di berbagai status (200, 201, 400, 401, 403) tampil secara spesifik dan mudah dipahami sesuai skema di atas.
+## Tahapan Implementasi
+
+Berikut adalah langkah-langkah implementasi yang harus diikuti secara berurutan:
+
+### Tahap 1: Persiapan Struktur Folder
+1. Buat folder-folder berikut di dalam `backend/src`:
+   - `routes`
+   - `controllers`
+   - `models`
+   - `services`
+   - `schemas`
+   - `middlewares`
+   - `utils`
+   - `plugins`
+
+### Tahap 2: Pemindahan Models & Setup Database (`utils` & `models`)
+1. Pindahkan file schema Drizzle ORM dari `src/db/schema.ts` ke `src/models/schema.ts` (atau pecah menjadi `users.model.ts`, `prodi.model.ts`, dll jika memungkinkan).
+2. Pindahkan/buat koneksi database dari `src/db/index.ts` ke `src/utils/db.ts`.
+3. Pastikan export/import path disesuaikan pada file yang membutuhkan koneksi DB.
+
+### Tahap 3: Pembuatan Schemas Validasi (`schemas`)
+1. Ekstrak semua skema TypeBox (`t.Object`, `t.String`, dll) yang ada di blok `body` dan `response` pada file `index.ts` saat ini.
+2. Buat file `src/schemas/auth.schema.ts`, `src/schemas/prodi.schema.ts`, dan `src/schemas/mahasiswa.schema.ts`.
+3. Export skema-skema tersebut untuk digunakan di *routes* nantinya.
+
+### Tahap 4: Pembuatan Services (Business Logic) (`services`)
+1. Buat file `src/services/auth.service.ts`:
+   - Pindahkan logika `register` (hashing password dengan `Bun.password.hash`, insert ke DB).
+   - Pindahkan logika `login` (cek user di DB, verify password).
+2. Buat file `src/services/prodi.service.ts`:
+   - Pindahkan logika `getAllProdi` dan `createProdi`.
+3. Buat file `src/services/mahasiswa.service.ts`:
+   - Pindahkan logika `getAllMahasiswa` dan `createMahasiswa`.
+
+*Catatan: Service tidak boleh bersentuhan langsung dengan Context Elysia (seperti `set.status`). Service hanya menerima parameter biasa dan mengembalikan data atau melempar Error.*
+
+### Tahap 5: Pembuatan Controllers (`controllers`)
+1. Buat controller yang memanggil Service di atas:
+   - `src/controllers/auth.controller.ts`
+   - `src/controllers/prodi.controller.ts`
+   - `src/controllers/mahasiswa.controller.ts`
+2. Di dalam controller, tangani pemanggilan fungsi service, tangkap *return data* atau *error*, lalu atur HTTP status (melalui `set.status`) dan kembalikan response yang sesuai.
+
+### Tahap 6: Pembuatan Middlewares & Plugins (`middlewares` & `plugins`)
+1. **Middlewares**: Buat file `src/middlewares/auth.middleware.ts` untuk memindahkan logika pemanggilan `.derive({ getCurrentUser })` dan ekstraksi JWT token dari headers.
+2. **Plugins** (Opsional/Bisa langsung di app.ts): Buat file `src/plugins/swagger.plugin.ts` dan konfigurasi *cors* jika ingin dirapikan.
+
+### Tahap 7: Pembuatan Routes (`routes`)
+1. Buat file routing:
+   - `src/routes/auth.routes.ts`
+   - `src/routes/prodi.routes.ts`
+   - `src/routes/mahasiswa.routes.ts`
+2. Pada file route, buat instance `new Elysia({ prefix: '...' })`, pasangkan validasi (dari `schemas`), dan hubungkan logic-nya ke `controllers`.
+
+### Tahap 8: Konfigurasi App (`app.ts`)
+1. Buat file `src/app.ts`.
+2. Lakukan inisialisasi aplikasi utama Elysia.
+3. Daftarkan (use) global plugins: `swagger`, `cors`, `jwt`.
+4. Daftarkan global middleware (contoh: auth middleware).
+5. Gabungkan semua routes menggunakan `app.use(authRoutes).use(prodiRoutes).use(mahasiswaRoutes)`.
+6. Export instance `app`.
+
+### Tahap 9: Penyesuaian Entry Point (`index.ts`)
+1. Ubah `src/index.ts` agar hanya berfungsi sebagai *entry point*.
+2. Import `app` dari `app.ts`.
+3. Panggil `app.listen(process.env.PORT || 3000)`.
+
+### Tahap 10: Pengujian
+1. Jalankan server backend (sebaiknya menggunakan `bun run dev`).
+2. Pastikan tidak ada *typescript/import errors*.
+3. Lakukan pengetesan pada semua endpoint (Register, Login, Get Prodi, Create Prodi, Get Mahasiswa, Create Mahasiswa) melalui Swagger UI atau Postman/cURL untuk memastikan semua masih berfungsi persis seperti sebelumnya.
+
+---
+
+## Acceptance Criteria
+- [ ] Folder structure `backend/src` sudah sesuai ketentuan.
+- [ ] Business logic terpisah di `services`.
+- [ ] Definisi endpoint (URL, Validasi Schema TypeBox) terpisah di `routes` dan `schemas`.
+- [ ] Akses / handling Context Elysia terpisah di `controllers`.
+- [ ] Aplikasi berjalan tanpa error (0 import error, 0 runtime error).
+- [ ] Semua endpoint dapat di-hit dan mengembalikan response dan status code yang sesuai (sama persis dengan logic di file index.ts sebelumnya).
