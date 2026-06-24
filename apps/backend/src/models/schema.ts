@@ -2,6 +2,7 @@ import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boole
 import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa']);
+export const jenisKelaminEnum = pgEnum('jenis_kelamin', ['L', 'P']);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -9,6 +10,7 @@ export const users = pgTable('users', {
   password: text('password').notNull(),
   role: roleEnum('role').notNull().default('mahasiswa'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const programStudi = pgTable('program_studi', {
@@ -16,7 +18,11 @@ export const programStudi = pgTable('program_studi', {
   kode: varchar('kode', { length: 50 }).notNull().unique(),
   nama: varchar('nama', { length: 255 }).notNull(),
   jenjang: varchar('jenjang', { length: 10 }).notNull(), // D3, D4, dll.
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const dosen = pgTable('dosen', {
@@ -24,12 +30,16 @@ export const dosen = pgTable('dosen', {
   nip: varchar('nip', { length: 50 }).notNull().unique(),
   nama: varchar('nama', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  programStudiId: integer('program_studi_id').references(() => programStudi.id),
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
   nidn: varchar('nidn', { length: 50 }).unique(),
   nik: varchar('nik', { length: 16 }),
-  jenisKelamin: varchar('jenis_kelamin', { length: 1 }),
+  jenisKelamin: jenisKelaminEnum('jenis_kelamin'),
   tanggalLahir: date('tanggal_lahir'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const mahasiswa = pgTable('mahasiswa', {
@@ -37,21 +47,28 @@ export const mahasiswa = pgTable('mahasiswa', {
   nim: varchar('nim', { length: 50 }).notNull().unique(),
   nama: varchar('nama', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  programStudiId: integer('program_studi_id').references(() => programStudi.id),
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
   status: varchar('status', { length: 50 }).notNull().default('aktif'), // aktif, cuti, lulus, drop_out
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
   namaIbuKandung: varchar('nama_ibu_kandung', { length: 255 }).notNull(),
   nik: varchar('nik', { length: 16 }).notNull().unique(),
-  jenisKelamin: varchar('jenis_kelamin', { length: 1 }).notNull(),
+  jenisKelamin: jenisKelaminEnum('jenis_kelamin').notNull(),
   tanggalLahir: date('tanggal_lahir').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const periodeAkademik = pgTable('periode_akademik', {
   id: varchar('id', { length: 5 }).primaryKey(), // misal "20231"
   nama: varchar('nama', { length: 100 }).notNull(),
   aktif: boolean('aktif').default(false).notNull(),
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const mataKuliah = pgTable('mata_kuliah', {
@@ -61,38 +78,50 @@ export const mataKuliah = pgTable('mata_kuliah', {
   sksTotal: integer('sks_total').notNull(),
   sksTatapMuka: integer('sks_tatap_muka'),
   sksPraktek: integer('sks_praktek'),
-  programStudiId: integer('program_studi_id').references(() => programStudi.id),
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const kelasKuliah = pgTable('kelas_kuliah', {
   id: serial('id').primaryKey(),
-  mataKuliahId: integer('mata_kuliah_id').notNull().references(() => mataKuliah.id),
-  periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id),
+  mataKuliahId: integer('mata_kuliah_id').notNull().references(() => mataKuliah.id, { onDelete: 'restrict' }),
+  periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   namaKelas: varchar('nama_kelas', { length: 50 }).notNull(),
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const dosenPengajarKelas = pgTable('dosen_pengajar_kelas', {
   id: serial('id').primaryKey(),
-  dosenId: integer('dosen_id').notNull().references(() => dosen.id),
-  kelasKuliahId: integer('kelas_kuliah_id').notNull().references(() => kelasKuliah.id),
+  dosenId: integer('dosen_id').notNull().references(() => dosen.id, { onDelete: 'cascade' }),
+  kelasKuliahId: integer('kelas_kuliah_id').notNull().references(() => kelasKuliah.id, { onDelete: 'cascade' }),
   sksBebanMengajar: integer('sks_beban_mengajar'),
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const krs = pgTable('krs', {
   id: serial('id').primaryKey(),
-  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id),
-  kelasKuliahId: integer('kelas_kuliah_id').notNull().references(() => kelasKuliah.id),
+  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  kelasKuliahId: integer('kelas_kuliah_id').notNull().references(() => kelasKuliah.id, { onDelete: 'cascade' }),
   nilaiAngka: numeric('nilai_angka', { precision: 5, scale: 2 }),
   nilaiHuruf: varchar('nilai_huruf', { length: 5 }),
   nilaiIndeks: numeric('nilai_indeks', { precision: 3, scale: 2 }),
-  idPddikti: varchar('id_pddikti', { length: 50 }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 }, (table) => {
   return {
     mahasiswaIdIdx: index('krs_mahasiswa_id_idx').on(table.mahasiswaId),
@@ -169,4 +198,3 @@ export const krsRelations = relations(krs, ({ one }) => ({
     references: [kelasKuliah.id],
   }),
 }));
-

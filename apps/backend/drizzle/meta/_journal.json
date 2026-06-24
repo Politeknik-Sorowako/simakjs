@@ -22,6 +22,13 @@
       "when": 1782338405618,
       "tag": "0002_lovely_aaron_stack",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1782345303699,
+      "tag": "0003_hot_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }
