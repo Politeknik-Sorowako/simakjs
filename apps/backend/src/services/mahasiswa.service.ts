@@ -1,5 +1,6 @@
 import { db } from '../utils/db';
 import { mahasiswa } from '../models/schema';
+import { ilike, or } from 'drizzle-orm';
 
 export interface CreateMahasiswaDto {
   nim: string;
@@ -15,8 +16,23 @@ export interface CreateMahasiswaDto {
 }
 
 export class MahasiswaService {
-  static async getAll() {
-    return await db.select().from(mahasiswa);
+  static async getAll(page = 1, limit = 10, search = '') {
+    const offset = (page - 1) * limit;
+    if (search) {
+      return await db
+        .select()
+        .from(mahasiswa)
+        .where(
+          or(
+            ilike(mahasiswa.nama, `%${search}%`),
+            ilike(mahasiswa.nim, `%${search}%`),
+            ilike(mahasiswa.email, `%${search}%`)
+          )
+        )
+        .limit(limit)
+        .offset(offset);
+    }
+    return await db.select().from(mahasiswa).limit(limit).offset(offset);
   }
 
   static async create(data: CreateMahasiswaDto) {
@@ -24,3 +40,4 @@ export class MahasiswaService {
     return newMhs;
   }
 }
+

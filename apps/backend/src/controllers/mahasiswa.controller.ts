@@ -1,11 +1,15 @@
 import { MahasiswaService } from '../services/mahasiswa.service';
+import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class MahasiswaController {
-  static async getAll() {
-    return await MahasiswaService.getAll();
+  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
+    const page = query?.page ? parseInt(query.page) : 1;
+    const limit = query?.limit ? parseInt(query.limit) : 10;
+    const search = query?.search || '';
+    return await MahasiswaService.getAll(page, limit, search);
   }
 
-  static async create({ body, set, getCurrentUser }: any) {
+  static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -16,3 +20,4 @@ export class MahasiswaController {
     return newMhs;
   }
 }
+

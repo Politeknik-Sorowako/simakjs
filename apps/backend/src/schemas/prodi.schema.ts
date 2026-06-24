@@ -4,8 +4,13 @@ export const getProdiSchema = {
   detail: {
     tags: ['Program Studi'],
     summary: 'Daftar Program Studi',
-    description: 'Mengambil semua data program studi yang terdaftar.'
+    description: 'Mengambil semua data program studi yang terdaftar dengan pagination dan filter pencarian.'
   },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '10' })),
+    search: t.Optional(t.String({ default: '' }))
+  }),
   response: {
     200: t.Array(
       t.Object({
@@ -18,6 +23,7 @@ export const getProdiSchema = {
     )
   }
 };
+
 
 export const createProdiSchema = {
   detail: {

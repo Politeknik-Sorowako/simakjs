@@ -4,8 +4,13 @@ export const getMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],
     summary: 'Daftar Mahasiswa',
-    description: 'Mengambil semua data mahasiswa yang terdaftar.'
+    description: 'Mengambil semua data mahasiswa yang terdaftar dengan pagination dan filter pencarian.'
   },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '10' })),
+    search: t.Optional(t.String({ default: '' }))
+  }),
   response: {
     200: t.Array(
       t.Object({
@@ -24,6 +29,7 @@ export const getMahasiswaSchema = {
     )
   }
 };
+
 
 export const createMahasiswaSchema = {
   detail: {
