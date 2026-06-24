@@ -244,7 +244,7 @@ export const app = new Elysia()
                 nim: t.String({ default: '12345678' }),
                 nama: t.String({ default: 'Budi Santoso' }),
                 email: t.String({ default: 'budi@test.com' }),
-                programStudiId: t.Integer({ default: 1 }),
+                programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
                 status: t.String({ default: 'aktif' }),
                 namaIbuKandung: t.String({ default: 'Ibu Budi' }),
                 nik: t.String({ default: '1234567890123456' }),
