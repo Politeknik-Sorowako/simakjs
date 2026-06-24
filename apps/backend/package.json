@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun --watch src/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test": "DATABASE_URL=postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test bun drizzle-kit push && DATABASE_URL=postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test bun test"
   },
   "dependencies": {
     "elysia": "^1.0.0",

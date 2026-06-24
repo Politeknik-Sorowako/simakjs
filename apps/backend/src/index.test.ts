@@ -3,6 +3,45 @@ import { app } from './index';
 import { db } from './db';
 import { users, programStudi, mahasiswa, dosen } from './db/schema';
 
+interface UserResponse {
+  id: number;
+  email: string;
+  role: 'admin' | 'dosen' | 'mahasiswa';
+}
+
+interface RegisterSuccessResponse {
+  message: string;
+  user: UserResponse;
+}
+
+interface ErrorResponse {
+  error: string;
+}
+
+interface LoginSuccessResponse {
+  message: string;
+  token: string;
+  user: {
+    email: string;
+  };
+}
+
+interface ProdiSuccessResponse {
+  id: number;
+  kode: string;
+  nama: string;
+  jenjang: string;
+}
+
+interface MahasiswaSuccessResponse {
+  id: number;
+  nim: string;
+  nama: string;
+  email: string;
+  programStudiId: number;
+}
+
+
 // Helper function to clear all database tables to ensure test independence
 async function clearDatabase() {
   await db.delete(mahasiswa);
@@ -13,13 +52,18 @@ async function clearDatabase() {
 
 // Helper function to register and login a user, returning their JWT authorization token
 async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa') {
-  await app.handle(
+  const registerResponse = await app.handle(
     new Request('http://localhost/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: 'password123', role }),
     })
   );
+
+  if (registerResponse.status !== 201 && registerResponse.status !== 400) {
+    const errorText = await registerResponse.text();
+    throw new Error(`getAuthToken registration failed with status ${registerResponse.status}: ${errorText}`);
+  }
 
   const response = await app.handle(
     new Request('http://localhost/auth/login', {
@@ -28,7 +72,13 @@ async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa'
       body: JSON.stringify({ email, password: 'password123' }),
     })
   );
-  const data = await response.json() as { token: string };
+
+  if (response.status !== 200) {
+    const errorText = await response.text();
+    throw new Error(`getAuthToken login failed with status ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json() as LoginSuccessResponse;
   return data.token;
 }
 
@@ -53,12 +103,12 @@ describe('SIMAK Vokasi API Backend Tests', () => {
         );
 
         expect(response.status).toBe(201);
-        const body = await response.json() as any;
+        const body = await response.json() as RegisterSuccessResponse;
         expect(body.message).toBe('Registrasi berhasil');
         expect(body.user).toBeDefined();
         expect(body.user.email).toBe('admin@test.com');
         expect(body.user.role).toBe('admin');
-        expect(body.user.password).toBeUndefined(); // Password tidak boleh dikembalikan
+        expect((body.user as any).password).toBeUndefined(); // Password tidak boleh dikembalikan
       });
 
       it('harus gagal registrasi jika email sudah terdaftar', async () => {
@@ -87,7 +137,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
         );
 
         expect(response.status).toBe(400);
-        const body = await response.json() as any;
+        const body = await response.json() as ErrorResponse;
         expect(body.error).toBe('Email sudah terdaftar');
       });
 
@@ -153,7 +203,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
         );
 
         expect(response.status).toBe(200);
-        const body = await response.json() as any;
+        const body = await response.json() as LoginSuccessResponse;
         expect(body.message).toBe('Login berhasil');
         expect(body.token).toBeDefined();
         expect(body.user.email).toBe('user@test.com');
@@ -172,7 +222,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
         );
 
         expect(response.status).toBe(401);
-        const body = await response.json() as any;
+        const body = await response.json() as ErrorResponse;
         expect(body.error).toBe('Email atau password salah');
       });
 
@@ -189,7 +239,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
         );
 
         expect(response.status).toBe(401);
-        const body = await response.json() as any;
+        const body = await response.json() as ErrorResponse;
         expect(body.error).toBe('Email atau password salah');
       });
     });
@@ -227,7 +277,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
       );
 
       expect(response.status).toBe(201);
-      const body = await response.json() as any;
+      const body = await response.json() as ProdiSuccessResponse;
       expect(body.id).toBeDefined();
       expect(body.kode).toBe('TI');
     });
@@ -349,7 +399,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
       );
 
       expect(response.status).toBe(201);
-      const body = await response.json() as any;
+      const body = await response.json() as MahasiswaSuccessResponse;
       expect(body.id).toBeDefined();
       expect(body.nim).toBe('12345678');
     });
