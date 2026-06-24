@@ -59,11 +59,6 @@ export const app = new Elysia()
     app
       .post(
         '/register',
-        /**
-         * Endpoint untuk meregistrasi pengguna baru.
-         * Mendukung role admin, dosen, dan mahasiswa (default).
-         * Melakukan hashing password menggunakan bcrypt sebelum disimpan ke database.
-         */
         async ({ body, set }) => {
           const { email, password, role } = body;
           // Hash password using Bun's native password hasher
@@ -94,7 +89,7 @@ export const app = new Elysia()
           detail: {
             tags: ['Autentikasi'],
             summary: 'Registrasi Pengguna Baru',
-            description: 'Mendaftarkan akun baru ke sistem dengan role admin, dosen, atau mahasiswa.'
+            description: 'Mendaftarkan akun baru ke sistem dengan role admin, dosen, atau mahasiswa (default). Melakukan hashing password menggunakan bcrypt sebelum disimpan ke database.'
           },
           body: t.Object({
             email: t.String({ format: 'email', default: 'admin@test.com' }),
@@ -118,11 +113,6 @@ export const app = new Elysia()
       )
       .post(
         '/login',
-        /**
-         * Endpoint untuk login pengguna.
-         * Memverifikasi email dan kecocokan password yang di-hash.
-         * Jika berhasil, akan mengembalikan token JWT yang dapat digunakan untuk otorisasi endpoint lain.
-         */
         async ({ body, jwt, set }) => {
           const { email, password } = body;
           const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -150,7 +140,7 @@ export const app = new Elysia()
           detail: {
             tags: ['Autentikasi'],
             summary: 'Login Pengguna',
-            description: 'Login menggunakan email dan password untuk mendapatkan token JWT.'
+            description: 'Login menggunakan email dan password untuk mendapatkan token JWT. Memverifikasi email dan kecocokan password yang di-hash.'
           },
           body: t.Object({
             email: t.String({ format: 'email', default: 'admin@test.com' }),
@@ -178,10 +168,6 @@ export const app = new Elysia()
     app
       .get(
         '/',
-        /**
-         * Endpoint untuk mengambil semua data program studi.
-         * Terbuka untuk semua pengguna (public).
-         */
         async () => {
           return await db.select().from(programStudi);
         },
@@ -189,7 +175,7 @@ export const app = new Elysia()
           detail: {
             tags: ['Program Studi'],
             summary: 'Daftar Program Studi',
-            description: 'Mengambil semua data program studi yang terdaftar.'
+            description: 'Mengambil semua data program studi yang terdaftar. Terbuka untuk semua pengguna (public).'
           },
           response: {
             200: t.Array(
@@ -206,10 +192,6 @@ export const app = new Elysia()
       )
       .post(
         '/',
-        /**
-         * Endpoint untuk menambahkan program studi baru.
-         * Memerlukan token JWT yang valid dan hanya dapat diakses oleh user dengan role 'admin'.
-         */
         async ({ body, set, getCurrentUser }) => {
           const user = await getCurrentUser();
           if (!user || user.role !== 'admin') {
@@ -224,7 +206,7 @@ export const app = new Elysia()
           detail: {
             tags: ['Program Studi'],
             summary: 'Tambah Program Studi Baru',
-            description: 'Menambahkan prodi baru (Hanya dapat diakses oleh Admin yang menyertakan token JWT).'
+            description: 'Menambahkan program studi baru. Memerlukan token JWT yang valid dan hanya dapat diakses oleh user dengan role \'admin\'.'
           },
           body: t.Object({
             kode: t.String({ default: 'TI' }),
@@ -250,9 +232,6 @@ export const app = new Elysia()
     app
       .get(
         '/',
-        /**
-         * Endpoint untuk mengambil seluruh data mahasiswa yang terdaftar di sistem.
-         */
         async () => {
           return await db.select().from(mahasiswa);
         },
@@ -260,7 +239,7 @@ export const app = new Elysia()
           detail: {
             tags: ['Mahasiswa'],
             summary: 'Daftar Mahasiswa',
-            description: 'Mengambil semua data mahasiswa yang terdaftar.'
+            description: 'Mengambil seluruh data mahasiswa yang terdaftar di sistem.'
           },
           response: {
             200: t.Array(
@@ -283,10 +262,6 @@ export const app = new Elysia()
       )
       .post(
         '/',
-        /**
-         * Endpoint untuk menambahkan data mahasiswa baru.
-         * Memerlukan otorisasi token JWT, hanya diperbolehkan untuk role 'admin' atau 'dosen'.
-         */
         async ({ body, set, getCurrentUser }) => {
           const user = await getCurrentUser();
           if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -301,7 +276,7 @@ export const app = new Elysia()
           detail: {
             tags: ['Mahasiswa'],
             summary: 'Tambah Mahasiswa Baru',
-            description: 'Menambahkan mahasiswa baru lengkap dengan data wajib PDDIKTI (Hanya dapat diakses Admin / Dosen dengan token JWT).'
+            description: 'Menambahkan data mahasiswa baru lengkap dengan data wajib PDDIKTI. Memerlukan otorisasi token JWT, hanya diperbolehkan untuk role \'admin\' atau \'dosen\'.'
           },
           body: t.Object({
             nim: t.String({ default: '12345678' }),

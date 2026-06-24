@@ -107,7 +107,7 @@ Ikuti langkah-langkah di bawah ini untuk menjalankan *project* ini di mesin loka
 
 1. **Clone repository & masuk ke direktori proyek:**
    ```bash
-   git clone <repo-url>
+   git clone https://github.com/Politeknik-Sorowako/simakjs.git
    cd simakjs
    ```
 
