@@ -1,5 +1,19 @@
 import { t } from 'elysia';
 
+export const prodiBody = t.Object({
+  kode: t.String({ default: 'TI' }),
+  nama: t.String({ default: 'Teknik Informatika' }),
+  jenjang: t.String({ default: 'D4' }),
+  idPddikti: t.Optional(t.String())
+});
+
+export const updateProdiBody = t.Partial(t.Object({
+  kode: t.String(),
+  nama: t.String(),
+  jenjang: t.String(),
+  idPddikti: t.String()
+}));
+
 export const getProdiSchema = {
   detail: {
     tags: ['Program Studi'],
@@ -7,8 +21,8 @@ export const getProdiSchema = {
     description: 'Mengambil semua data program studi yang terdaftar dengan pagination dan filter pencarian.'
   },
   query: t.Object({
-    page: t.Optional(t.String({ default: '1' })),
-    limit: t.Optional(t.String({ default: '10' })),
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
@@ -42,12 +56,7 @@ export const createProdiSchema = {
     summary: 'Tambah Program Studi Baru',
     description: 'Menambahkan prodi baru (Hanya dapat diakses oleh Admin yang menyertakan token JWT).'
   },
-  body: t.Object({
-    kode: t.String({ default: 'TI' }),
-    nama: t.String({ default: 'Teknik Informatika' }),
-    jenjang: t.String({ default: 'D4' }),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: prodiBody,
   response: {
     201: t.Object({
       id: t.Integer({ default: 1 }),
@@ -102,12 +111,7 @@ export const updateProdiSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
-  body: t.Object({
-    kode: t.Optional(t.String()),
-    nama: t.Optional(t.String()),
-    jenjang: t.Optional(t.String()),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: updateProdiBody,
   response: {
     200: t.Object({
       id: t.Integer({ default: 1 }),

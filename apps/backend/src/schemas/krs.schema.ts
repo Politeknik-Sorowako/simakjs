@@ -1,5 +1,23 @@
 import { t } from 'elysia';
 
+export const krsBody = t.Object({
+  mahasiswaId: t.Integer({ default: 1 }),
+  kelasKuliahId: t.Integer({ default: 1 }),
+  nilaiAngka: t.Optional(t.Numeric()),
+  nilaiHuruf: t.Optional(t.String()),
+  nilaiIndeks: t.Optional(t.Numeric()),
+  idPddikti: t.Optional(t.String())
+});
+
+export const updateKrsBody = t.Partial(t.Object({
+  mahasiswaId: t.Integer(),
+  kelasKuliahId: t.Integer(),
+  nilaiAngka: t.Numeric(),
+  nilaiHuruf: t.String(),
+  nilaiIndeks: t.Numeric(),
+  idPddikti: t.String()
+}));
+
 export const getKrsSchema = {
   detail: {
     tags: ['KRS'],
@@ -7,8 +25,8 @@ export const getKrsSchema = {
     description: 'Mengambil semua data KRS dengan pagination, filter pencarian (nama/nim mahasiswa), dan relasi mahasiswa & kelas kuliah.'
   },
   query: t.Object({
-    page: t.Optional(t.String({ default: '1' })),
-    limit: t.Optional(t.String({ default: '10' })),
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
@@ -61,14 +79,7 @@ export const createKrsSchema = {
     summary: 'Tambah KRS Baru',
     description: 'Menambahkan KRS baru (Hanya dapat diakses Admin/Dosen/Mahasiswa dengan verifikasi token JWT).'
   },
-  body: t.Object({
-    mahasiswaId: t.Integer({ default: 1 }),
-    kelasKuliahId: t.Integer({ default: 1 }),
-    nilaiAngka: t.Optional(t.Numeric()),
-    nilaiHuruf: t.Optional(t.String()),
-    nilaiIndeks: t.Optional(t.Numeric()),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: krsBody,
   response: {
     201: t.Object({
       id: t.Integer({ default: 1 }),
@@ -144,14 +155,7 @@ export const updateKrsSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
-  body: t.Object({
-    mahasiswaId: t.Optional(t.Integer()),
-    kelasKuliahId: t.Optional(t.Integer()),
-    nilaiAngka: t.Optional(t.Numeric()),
-    nilaiHuruf: t.Optional(t.String()),
-    nilaiIndeks: t.Optional(t.Numeric()),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: updateKrsBody,
   response: {
     200: t.Object({
       id: t.Integer({ default: 1 }),

@@ -1,5 +1,19 @@
 import { t } from 'elysia';
 
+export const kelasBody = t.Object({
+  mataKuliahId: t.Integer({ default: 1 }),
+  periodeId: t.String({ default: '20231' }),
+  namaKelas: t.String({ default: '4A' }),
+  idPddikti: t.Optional(t.String())
+});
+
+export const updateKelasBody = t.Partial(t.Object({
+  mataKuliahId: t.Integer(),
+  periodeId: t.String(),
+  namaKelas: t.String(),
+  idPddikti: t.String()
+}));
+
 export const getKelasSchema = {
   detail: {
     tags: ['Kelas Kuliah'],
@@ -7,8 +21,8 @@ export const getKelasSchema = {
     description: 'Mengambil semua data kelas kuliah dengan pagination, filter pencarian, dan relasi mata kuliah & periode akademik.'
   },
   query: t.Object({
-    page: t.Optional(t.String({ default: '1' })),
-    limit: t.Optional(t.String({ default: '10' })),
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
@@ -59,12 +73,7 @@ export const createKelasSchema = {
     summary: 'Tambah Kelas Kuliah Baru',
     description: 'Menambahkan kelas kuliah baru (Hanya dapat diakses Admin).'
   },
-  body: t.Object({
-    mataKuliahId: t.Integer({ default: 1 }),
-    periodeId: t.String({ default: '20231' }),
-    namaKelas: t.String({ default: '4A' }),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: kelasBody,
   response: {
     201: t.Object({
       id: t.Integer({ default: 1 }),
@@ -136,12 +145,7 @@ export const updateKelasSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
-  body: t.Object({
-    mataKuliahId: t.Optional(t.Integer()),
-    periodeId: t.Optional(t.String()),
-    namaKelas: t.Optional(t.String()),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: updateKelasBody,
   response: {
     200: t.Object({
       id: t.Integer({ default: 1 }),

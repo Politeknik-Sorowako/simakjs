@@ -1,5 +1,29 @@
 import { t } from 'elysia';
 
+export const dosenBody = t.Object({
+  nip: t.String({ default: '198701012015011001' }),
+  nama: t.String({ default: 'Dr. John Doe' }),
+  email: t.String({ format: 'email', default: 'johndoe@test.com' }),
+  programStudiId: t.Optional(t.Integer({ default: 1 })),
+  idPddikti: t.Optional(t.String()),
+  nidn: t.Optional(t.String({ default: '0001018701' })),
+  nik: t.Optional(t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' })),
+  jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' })),
+  tanggalLahir: t.Optional(t.String({ default: '1987-01-01' }))
+});
+
+export const updateDosenBody = t.Partial(t.Object({
+  nip: t.String(),
+  nama: t.String(),
+  email: t.String({ format: 'email' }),
+  programStudiId: t.Integer(),
+  idPddikti: t.String(),
+  nidn: t.String(),
+  nik: t.String({ minLength: 16, maxLength: 16 }),
+  jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')]),
+  tanggalLahir: t.String()
+}));
+
 export const getDosenSchema = {
   detail: {
     tags: ['Dosen'],
@@ -7,8 +31,8 @@ export const getDosenSchema = {
     description: 'Mengambil semua data dosen yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
   },
   query: t.Object({
-    page: t.Optional(t.String({ default: '1' })),
-    limit: t.Optional(t.String({ default: '10' })),
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
@@ -56,17 +80,7 @@ export const createDosenSchema = {
     summary: 'Tambah Dosen Baru',
     description: 'Menambahkan dosen baru lengkap dengan NIDN, NIK, dan data lainnya (Hanya dapat diakses Admin).'
   },
-  body: t.Object({
-    nip: t.String({ default: '198701012015011001' }),
-    nama: t.String({ default: 'Dr. John Doe' }),
-    email: t.String({ format: 'email', default: 'johndoe@test.com' }),
-    programStudiId: t.Optional(t.Integer({ default: 1 })),
-    idPddikti: t.Optional(t.String()),
-    nidn: t.Optional(t.String({ default: '0001018701' })),
-    nik: t.Optional(t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' })),
-    jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' })),
-    tanggalLahir: t.Optional(t.String({ default: '1987-01-01' }))
-  }),
+  body: dosenBody,
   response: {
     201: t.Object({
       id: t.Integer({ default: 1 }),
@@ -140,17 +154,7 @@ export const updateDosenSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
-  body: t.Object({
-    nip: t.Optional(t.String()),
-    nama: t.Optional(t.String()),
-    email: t.Optional(t.String({ format: 'email' })),
-    programStudiId: t.Optional(t.Integer()),
-    idPddikti: t.Optional(t.String()),
-    nidn: t.Optional(t.String()),
-    nik: t.Optional(t.String({ minLength: 16, maxLength: 16 })),
-    jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')])),
-    tanggalLahir: t.Optional(t.String())
-  }),
+  body: updateDosenBody,
   response: {
     200: t.Object({
       id: t.Integer({ default: 1 }),
