@@ -4,7 +4,7 @@ export const getMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],
     summary: 'Daftar Mahasiswa',
-    description: 'Mengambil semua data mahasiswa yang terdaftar dengan pagination dan filter pencarian.'
+    description: 'Mengambil semua data mahasiswa yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
   },
   query: t.Object({
     page: t.Optional(t.String({ default: '1' })),
@@ -12,24 +12,44 @@ export const getMahasiswaSchema = {
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
-    200: t.Array(
-      t.Object({
-        id: t.Integer({ default: 1 }),
-        nim: t.String({ default: '12345678' }),
-        nama: t.String({ default: 'Budi Santoso' }),
-        email: t.String({ default: 'budi@test.com' }),
-        programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
-        status: t.String({ default: 'aktif' }),
-        namaIbuKandung: t.String({ default: 'Ibu Budi' }),
-        nik: t.String({ default: '1234567890123456' }),
-        jenisKelamin: t.String({ default: 'L' }),
-        tanggalLahir: t.String({ default: '2000-01-01' }),
-        idPddikti: t.Union([t.String(), t.Null()], { default: null })
+    200: t.Object({
+      data: t.Array(
+        t.Object({
+          id: t.Integer({ default: 1 }),
+          nim: t.String({ default: '12345678' }),
+          nama: t.String({ default: 'Budi Santoso' }),
+          email: t.String({ default: 'budi@test.com' }),
+          programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+          status: t.String({ default: 'aktif' }),
+          namaIbuKandung: t.String({ default: 'Ibu Budi' }),
+          nik: t.String({ default: '1234567890123456' }),
+          jenisKelamin: t.String({ default: 'L' }),
+          tanggalLahir: t.Any(),
+          idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+          isSynced: t.Boolean({ default: false }),
+          lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+          createdAt: t.Any(),
+          updatedAt: t.Any(),
+          programStudi: t.Union([
+            t.Object({
+              id: t.Integer(),
+              kode: t.String(),
+              nama: t.String(),
+              jenjang: t.String()
+            }),
+            t.Null()
+          ])
+        })
+      ),
+      meta: t.Object({
+        total: t.Integer({ default: 1 }),
+        page: t.Integer({ default: 1 }),
+        limit: t.Integer({ default: 10 }),
+        totalPages: t.Integer({ default: 1 })
       })
-    )
+    })
   }
 };
-
 
 export const createMahasiswaSchema = {
   detail: {
@@ -55,19 +75,135 @@ export const createMahasiswaSchema = {
       nim: t.String({ default: '12345678' }),
       nama: t.String({ default: 'Budi Santoso' }),
       email: t.String({ default: 'budi@test.com' }),
-      programStudiId: t.Integer({ default: 1 }),
+      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
       status: t.String({ default: 'aktif' }),
       namaIbuKandung: t.String({ default: 'Ibu Budi' }),
       nik: t.String({ default: '1234567890123456' }),
       jenisKelamin: t.String({ default: 'L' }),
-      tanggalLahir: t.String({ default: '2000-01-01T00:00:00.000Z' }),
-      idPddikti: t.Union([t.String(), t.Null()], { default: null })
+      tanggalLahir: t.Any(),
+      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      isSynced: t.Boolean({ default: false }),
+      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      createdAt: t.Any(),
+      updatedAt: t.Any()
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak.' })
     }),
     422: t.Object({
       message: t.String({ default: 'Validation error message...' })
+    })
+  }
+};
+
+export const getMahasiswaByIdSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Detail Mahasiswa',
+    description: 'Mengambil satu data mahasiswa berdasarkan ID beserta relasi program studi.'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  response: {
+    200: t.Object({
+      id: t.Integer({ default: 1 }),
+      nim: t.String({ default: '12345678' }),
+      nama: t.String({ default: 'Budi Santoso' }),
+      email: t.String({ default: 'budi@test.com' }),
+      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      status: t.String({ default: 'aktif' }),
+      namaIbuKandung: t.String({ default: 'Ibu Budi' }),
+      nik: t.String({ default: '1234567890123456' }),
+      jenisKelamin: t.String({ default: 'L' }),
+      tanggalLahir: t.Any(),
+      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      isSynced: t.Boolean({ default: false }),
+      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      createdAt: t.Any(),
+      updatedAt: t.Any(),
+      programStudi: t.Union([
+        t.Object({
+          id: t.Integer(),
+          kode: t.String(),
+          nama: t.String(),
+          jenjang: t.String()
+        }),
+        t.Null()
+      ])
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' })
+    })
+  }
+};
+
+export const updateMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Perbarui Mahasiswa',
+    description: 'Memperbarui data mahasiswa berdasarkan ID (Hanya dapat diakses oleh Admin/Dosen).'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  body: t.Object({
+    nim: t.Optional(t.String()),
+    nama: t.Optional(t.String()),
+    email: t.Optional(t.String({ format: 'email' })),
+    programStudiId: t.Optional(t.Integer()),
+    status: t.Optional(t.String()),
+    idPddikti: t.Optional(t.String()),
+    namaIbuKandung: t.Optional(t.String()),
+    nik: t.Optional(t.String({ minLength: 16, maxLength: 16 })),
+    jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')])),
+    tanggalLahir: t.Optional(t.String())
+  }),
+  response: {
+    200: t.Object({
+      id: t.Integer({ default: 1 }),
+      nim: t.String({ default: '12345678' }),
+      nama: t.String({ default: 'Budi Santoso' }),
+      email: t.String({ default: 'budi@test.com' }),
+      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      status: t.String({ default: 'aktif' }),
+      namaIbuKandung: t.String({ default: 'Ibu Budi' }),
+      nik: t.String({ default: '1234567890123456' }),
+      jenisKelamin: t.String({ default: 'L' }),
+      tanggalLahir: t.Any(),
+      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      isSynced: t.Boolean({ default: false }),
+      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      createdAt: t.Any(),
+      updatedAt: t.Any()
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak.' })
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' })
+    })
+  }
+};
+
+export const deleteMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Hapus Mahasiswa',
+    description: 'Menghapus data mahasiswa berdasarkan ID (Hanya dapat diakses oleh Admin/Dosen).'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Mahasiswa berhasil dihapus' })
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak.' })
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' })
     })
   }
 };

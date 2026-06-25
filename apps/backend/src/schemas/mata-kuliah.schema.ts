@@ -1,0 +1,188 @@
+import { t } from 'elysia';
+
+export const getMataKuliahSchema = {
+  detail: {
+    tags: ['Mata Kuliah'],
+    summary: 'Daftar Mata Kuliah',
+    description: 'Mengambil semua data mata kuliah yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
+  },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '10' })),
+    search: t.Optional(t.String({ default: '' }))
+  }),
+  response: {
+    200: t.Object({
+      data: t.Array(
+        t.Object({
+          id: t.Integer({ default: 1 }),
+          kode: t.String({ default: 'MK001' }),
+          nama: t.String({ default: 'Pemrograman Web' }),
+          sksTotal: t.Integer({ default: 3 }),
+          sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
+          sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
+          programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+          idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+          isSynced: t.Boolean({ default: false }),
+          lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+          createdAt: t.Any(),
+          updatedAt: t.Any(),
+          programStudi: t.Union([
+            t.Object({
+              id: t.Integer(),
+              kode: t.String(),
+              nama: t.String(),
+              jenjang: t.String()
+            }),
+            t.Null()
+          ])
+        })
+      ),
+      meta: t.Object({
+        total: t.Integer({ default: 1 }),
+        page: t.Integer({ default: 1 }),
+        limit: t.Integer({ default: 10 }),
+        totalPages: t.Integer({ default: 1 })
+      })
+    })
+  }
+};
+
+export const createMataKuliahSchema = {
+  detail: {
+    tags: ['Mata Kuliah'],
+    summary: 'Tambah Mata Kuliah Baru',
+    description: 'Menambahkan mata kuliah baru (Hanya dapat diakses Admin).'
+  },
+  body: t.Object({
+    kode: t.String({ default: 'MK001' }),
+    nama: t.String({ default: 'Pemrograman Web' }),
+    sksTotal: t.Integer({ default: 3 }),
+    sksTatapMuka: t.Optional(t.Integer({ default: 2 })),
+    sksPraktek: t.Optional(t.Integer({ default: 1 })),
+    programStudiId: t.Optional(t.Integer({ default: 1 })),
+    idPddikti: t.Optional(t.String())
+  }),
+  response: {
+    201: t.Object({
+      id: t.Integer({ default: 1 }),
+      kode: t.String({ default: 'MK001' }),
+      nama: t.String({ default: 'Pemrograman Web' }),
+      sksTotal: t.Integer({ default: 3 }),
+      sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
+      sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      isSynced: t.Boolean({ default: false }),
+      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      createdAt: t.Any(),
+      updatedAt: t.Any()
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
+    })
+  }
+};
+
+export const getMataKuliahByIdSchema = {
+  detail: {
+    tags: ['Mata Kuliah'],
+    summary: 'Detail Mata Kuliah',
+    description: 'Mengambil satu data mata kuliah berdasarkan ID beserta relasi program studi.'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  response: {
+    200: t.Object({
+      id: t.Integer({ default: 1 }),
+      kode: t.String({ default: 'MK001' }),
+      nama: t.String({ default: 'Pemrograman Web' }),
+      sksTotal: t.Integer({ default: 3 }),
+      sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
+      sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      isSynced: t.Boolean({ default: false }),
+      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      createdAt: t.Any(),
+      updatedAt: t.Any(),
+      programStudi: t.Union([
+        t.Object({
+          id: t.Integer(),
+          kode: t.String(),
+          nama: t.String(),
+          jenjang: t.String()
+        }),
+        t.Null()
+      ])
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' })
+    })
+  }
+};
+
+export const updateMataKuliahSchema = {
+  detail: {
+    tags: ['Mata Kuliah'],
+    summary: 'Perbarui Mata Kuliah',
+    description: 'Memperbarui data mata kuliah berdasarkan ID (Hanya dapat diakses oleh Admin).'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  body: t.Object({
+    kode: t.Optional(t.String()),
+    nama: t.Optional(t.String()),
+    sksTotal: t.Optional(t.Integer()),
+    sksTatapMuka: t.Optional(t.Integer()),
+    sksPraktek: t.Optional(t.Integer()),
+    programStudiId: t.Optional(t.Integer()),
+    idPddikti: t.Optional(t.String())
+  }),
+  response: {
+    200: t.Object({
+      id: t.Integer({ default: 1 }),
+      kode: t.String({ default: 'MK001' }),
+      nama: t.String({ default: 'Pemrograman Web' }),
+      sksTotal: t.Integer({ default: 3 }),
+      sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
+      sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      isSynced: t.Boolean({ default: false }),
+      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      createdAt: t.Any(),
+      updatedAt: t.Any()
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' })
+    })
+  }
+};
+
+export const deleteMataKuliahSchema = {
+  detail: {
+    tags: ['Mata Kuliah'],
+    summary: 'Hapus Mata Kuliah',
+    description: 'Menghapus data mata kuliah berdasarkan ID (Hanya dapat diakses oleh Admin).'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Mata Kuliah berhasil dihapus' })
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' })
+    })
+  }
+};

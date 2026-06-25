@@ -6,6 +6,11 @@ import { authMiddleware } from './middlewares/auth.middleware';
 import { authRoutes } from './routes/auth.routes';
 import { prodiRoutes } from './routes/prodi.routes';
 import { mahasiswaRoutes } from './routes/mahasiswa.routes';
+import { dosenRoutes } from './routes/dosen.routes';
+import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
+import { mataKuliahRoutes } from './routes/mata-kuliah.routes';
+import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
+import { krsRoutes } from './routes/krs.routes';
 
 export const app = new Elysia()
   .use(
@@ -48,5 +53,11 @@ export const app = new Elysia()
   .use(authMiddleware)
   .use(authRoutes)
   .use(prodiRoutes)
-  .use(mahasiswaRoutes);
+  .use(mahasiswaRoutes)
+  .use(dosenRoutes)
+  .use(periodeAkademikRoutes)
+  .use(mataKuliahRoutes)
+  .use(kelasKuliahRoutes)
+  .use(krsRoutes);
+
 

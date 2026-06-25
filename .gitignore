@@ -7,3 +7,4 @@ dist
 .bun-build
 *.log
 issue.md
+prompt.md
