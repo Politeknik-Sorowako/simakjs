@@ -9,6 +9,15 @@ export class ProdiController {
     return await ProdiService.getAll(page, limit, search);
   }
 
+  static async getById({ params, set }: AuthContext) {
+    const prodi = await ProdiService.getById(parseInt(params.id));
+    if (!prodi) {
+      set.status = 404;
+      return { error: 'Data tidak ditemukan' };
+    }
+    return prodi;
+  }
+
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -19,5 +28,32 @@ export class ProdiController {
     set.status = 201;
     return newProdi;
   }
-}
 
+  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    const updated = await ProdiService.update(parseInt(params.id), body);
+    if (!updated) {
+      set.status = 404;
+      return { error: 'Data tidak ditemukan' };
+    }
+    return updated;
+  }
+
+  static async delete({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    const deleted = await ProdiService.delete(parseInt(params.id));
+    if (!deleted) {
+      set.status = 404;
+      return { error: 'Data tidak ditemukan' };
+    }
+    return { message: 'Program Studi berhasil dihapus' };
+  }
+}

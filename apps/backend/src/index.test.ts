@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { app } from './index';
 import { db } from './utils/db';
-import { users, programStudi, mahasiswa, dosen } from './models/schema';
+import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas } from './models/schema';
 
 interface UserResponse {
   id: number;
@@ -44,8 +44,13 @@ interface MahasiswaSuccessResponse {
 
 // Helper function to clear all database tables to ensure test independence
 async function clearDatabase() {
+  await db.delete(krs);
+  await db.delete(dosenPengajarKelas);
+  await db.delete(kelasKuliah);
+  await db.delete(mataKuliah);
   await db.delete(mahasiswa);
   await db.delete(dosen);
+  await db.delete(periodeAkademik);
   await db.delete(programStudi);
   await db.delete(users);
 }
@@ -255,7 +260,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(Array.isArray(body)).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
     });
 
     it('harus sukses menambahkan prodi baru jika diakses oleh Admin (POST /prodi)', async () => {
@@ -376,7 +381,7 @@ describe('SIMAK Vokasi API Backend Tests', () => {
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(Array.isArray(body)).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
     });
 
     it('harus sukses menambahkan mahasiswa baru jika diakses oleh Admin (POST /mahasiswa)', async () => {
@@ -505,4 +510,572 @@ describe('SIMAK Vokasi API Backend Tests', () => {
       expect(response.status).toBe(422);
     });
   });
+
+  describe('4. Dosen (/dosen)', () => {
+    let prodiId: number;
+    let dosenId: number;
+
+    beforeEach(async () => {
+      // Setup prodi
+      const adminToken = await getAuthToken('admin-dosen-setup@test.com', 'admin');
+      const response = await app.handle(
+        new Request('http://localhost/prodi', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'TI-DOSEN-SETUP',
+            nama: 'Teknik Informatika Dosen Setup',
+            jenjang: 'D4',
+          }),
+        })
+      );
+      const data = await response.json() as { id: number };
+      prodiId = data.id;
+    });
+
+    it('harus sukses CRUD Dosen oleh Admin', async () => {
+      const adminToken = await getAuthToken('admin-dosen-crud@test.com', 'admin');
+
+      // 1. Create
+      const createRes = await app.handle(
+        new Request('http://localhost/dosen', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nip: '199001012020011001',
+            nama: 'Dosen Uji Coba',
+            email: 'dosenuji@test.com',
+            programStudiId: prodiId,
+            nidn: '0001019001',
+            nik: '9876543210123456',
+            jenisKelamin: 'L',
+            tanggalLahir: '1990-01-01',
+          }),
+        })
+      );
+      expect(createRes.status).toBe(201);
+      const created = await createRes.json() as { id: number; nama: string };
+      dosenId = created.id;
+      expect(created.nama).toBe('Dosen Uji Coba');
+
+      // 2. Get All
+      const getAllRes = await app.handle(
+        new Request('http://localhost/dosen?search=Uji', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getAllRes.status).toBe(200);
+      const listBody = await getAllRes.json() as { data: any[] };
+      expect(listBody.data.length).toBeGreaterThan(0);
+
+      // 3. Get By ID
+      const getByIdRes = await app.handle(
+        new Request(`http://localhost/dosen/${dosenId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getByIdRes.status).toBe(200);
+      const details = await getByIdRes.json() as { nama: string; programStudi: any };
+      expect(details.nama).toBe('Dosen Uji Coba');
+      expect(details.programStudi).toBeDefined();
+
+      // 4. Update
+      const updateRes = await app.handle(
+        new Request(`http://localhost/dosen/${dosenId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nama: 'Dosen Uji Coba Terupdate'
+          }),
+        })
+      );
+      expect(updateRes.status).toBe(200);
+      const updated = await updateRes.json() as { nama: string };
+      expect(updated.nama).toBe('Dosen Uji Coba Terupdate');
+
+      // 5. Delete
+      const deleteRes = await app.handle(
+        new Request(`http://localhost/dosen/${dosenId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(deleteRes.status).toBe(200);
+
+      // Verify deletion
+      const checkRes = await app.handle(
+        new Request(`http://localhost/dosen/${dosenId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(checkRes.status).toBe(404);
+    });
+  });
+
+  describe('5. Periode Akademik (/periode-akademik)', () => {
+    it('harus sukses CRUD Periode Akademik oleh Admin', async () => {
+      const adminToken = await getAuthToken('admin-periode-crud@test.com', 'admin');
+
+      // 1. Create
+      const createRes = await app.handle(
+        new Request('http://localhost/periode-akademik', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            id: '20251',
+            nama: '2025/2026 Ganjil',
+            aktif: true,
+          }),
+        })
+      );
+      expect(createRes.status).toBe(201);
+      const created = await createRes.json() as { id: string };
+      expect(created.id).toBe('20251');
+
+      // 2. Get All
+      const getAllRes = await app.handle(
+        new Request('http://localhost/periode-akademik', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getAllRes.status).toBe(200);
+      const listBody = await getAllRes.json() as { data: any[] };
+      expect(listBody.data.some(p => p.id === '20251')).toBe(true);
+
+      // 3. Get By ID
+      const getByIdRes = await app.handle(
+        new Request('http://localhost/periode-akademik/20251', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getByIdRes.status).toBe(200);
+
+      // 4. Update
+      const updateRes = await app.handle(
+        new Request('http://localhost/periode-akademik/20251', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nama: '2025/2026 Ganjil Terupdate'
+          }),
+        })
+      );
+      expect(updateRes.status).toBe(200);
+
+      // 5. Delete
+      const deleteRes = await app.handle(
+        new Request('http://localhost/periode-akademik/20251', {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(deleteRes.status).toBe(200);
+    });
+  });
+
+  describe('6. Mata Kuliah (/mata-kuliah)', () => {
+    let prodiId: number;
+    let mkId: number;
+
+    beforeEach(async () => {
+      const adminToken = await getAuthToken('admin-mk-setup@test.com', 'admin');
+      const response = await app.handle(
+        new Request('http://localhost/prodi', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'TI-MK-SETUP',
+            nama: 'Teknik Informatika MK Setup',
+            jenjang: 'D4',
+          }),
+        })
+      );
+      const data = await response.json() as { id: number };
+      prodiId = data.id;
+    });
+
+    it('harus sukses CRUD Mata Kuliah oleh Admin', async () => {
+      const adminToken = await getAuthToken('admin-mk-crud@test.com', 'admin');
+
+      // 1. Create
+      const createRes = await app.handle(
+        new Request('http://localhost/mata-kuliah', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'MKTEST001',
+            nama: 'Struktur Data & Algoritma',
+            sksTotal: 4,
+            sksTatapMuka: 2,
+            sksPraktek: 2,
+            programStudiId: prodiId,
+          }),
+        })
+      );
+      expect(createRes.status).toBe(201);
+      const created = await createRes.json() as { id: number };
+      mkId = created.id;
+
+      // 2. Get All
+      const getAllRes = await app.handle(
+        new Request('http://localhost/mata-kuliah', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getAllRes.status).toBe(200);
+
+      // 3. Get By ID
+      const getByIdRes = await app.handle(
+        new Request(`http://localhost/mata-kuliah/${mkId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getByIdRes.status).toBe(200);
+
+      // 4. Update
+      const updateRes = await app.handle(
+        new Request(`http://localhost/mata-kuliah/${mkId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nama: 'Struktur Data & Algoritma Terupdate'
+          }),
+        })
+      );
+      expect(updateRes.status).toBe(200);
+
+      // 5. Delete
+      const deleteRes = await app.handle(
+        new Request(`http://localhost/mata-kuliah/${mkId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(deleteRes.status).toBe(200);
+    });
+  });
+
+  describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
+    let prodiId: number;
+    let mkId: number;
+    let kelasId: number;
+
+    beforeEach(async () => {
+      const adminToken = await getAuthToken('admin-kelas-setup@test.com', 'admin');
+      
+      const prodiRes = await app.handle(
+        new Request('http://localhost/prodi', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'TI-KELAS-SETUP',
+            nama: 'Teknik Informatika Kelas Setup',
+            jenjang: 'D4',
+          }),
+        })
+      );
+      const prodiData = await prodiRes.json() as { id: number };
+      prodiId = prodiData.id;
+
+      const mkRes = await app.handle(
+        new Request('http://localhost/mata-kuliah', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'MKKELAS001',
+            nama: 'Basis Data',
+            sksTotal: 3,
+            programStudiId: prodiId,
+          }),
+        })
+      );
+      const mkData = await mkRes.json() as { id: number };
+      mkId = mkData.id;
+
+      await app.handle(
+        new Request('http://localhost/periode-akademik', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            id: '20232',
+            nama: '2023/2024 Genap',
+            aktif: true,
+          }),
+        })
+      );
+    });
+
+    it('harus sukses CRUD Kelas Kuliah oleh Admin', async () => {
+      const adminToken = await getAuthToken('admin-kelas-crud@test.com', 'admin');
+
+      // 1. Create
+      const createRes = await app.handle(
+        new Request('http://localhost/kelas-kuliah', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mataKuliahId: mkId,
+            periodeId: '20232',
+            namaKelas: 'TI-4A',
+          }),
+        })
+      );
+      expect(createRes.status).toBe(201);
+      const created = await createRes.json() as { id: number };
+      kelasId = created.id;
+
+      // 2. Get All
+      const getAllRes = await app.handle(
+        new Request('http://localhost/kelas-kuliah', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getAllRes.status).toBe(200);
+
+      // 3. Get By ID
+      const getByIdRes = await app.handle(
+        new Request(`http://localhost/kelas-kuliah/${kelasId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getByIdRes.status).toBe(200);
+
+      // 4. Update
+      const updateRes = await app.handle(
+        new Request(`http://localhost/kelas-kuliah/${kelasId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            namaKelas: 'TI-4A-Terupdate'
+          }),
+        })
+      );
+      expect(updateRes.status).toBe(200);
+
+      // 5. Delete
+      const deleteRes = await app.handle(
+        new Request(`http://localhost/kelas-kuliah/${kelasId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(deleteRes.status).toBe(200);
+    });
+  });
+
+  describe('8. KRS (/krs)', () => {
+    let prodiId: number;
+    let mhsId: number;
+    let mkId: number;
+    let kelasId: number;
+    let krsId: number;
+
+    beforeEach(async () => {
+      const adminToken = await getAuthToken('admin-krs-setup@test.com', 'admin');
+      
+      const prodiRes = await app.handle(
+        new Request('http://localhost/prodi', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'TI-KRS-SETUP',
+            nama: 'Teknik Informatika KRS Setup',
+            jenjang: 'D4',
+          }),
+        })
+      );
+      const prodiData = await prodiRes.json() as { id: number };
+      prodiId = prodiData.id;
+
+      const mhsRes = await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nim: '99999999',
+            nama: 'Mahasiswa KRS',
+            email: 'mhs-krs@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu KRS',
+            nik: '9999999999999999',
+            jenisKelamin: 'L',
+            tanggalLahir: '2002-01-01',
+          }),
+        })
+      );
+      const mhsData = await mhsRes.json() as { id: number };
+      mhsId = mhsData.id;
+
+      const mkRes = await app.handle(
+        new Request('http://localhost/mata-kuliah', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'MKKRS001',
+            nama: 'Logika Matematika',
+            sksTotal: 2,
+            programStudiId: prodiId,
+          }),
+        })
+      );
+      const mkData = await mkRes.json() as { id: number };
+      mkId = mkData.id;
+
+      await app.handle(
+        new Request('http://localhost/periode-akademik', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            id: '20233',
+            nama: '2023/2024 Pendek',
+            aktif: true,
+          }),
+        })
+      );
+
+      const kelasRes = await app.handle(
+        new Request('http://localhost/kelas-kuliah', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mataKuliahId: mkId,
+            periodeId: '20233',
+            namaKelas: 'TI-KRS-A',
+          }),
+        })
+      );
+      const kelasData = await kelasRes.json() as { id: number };
+      kelasId = kelasData.id;
+    });
+
+    it('harus sukses CRUD KRS oleh Admin', async () => {
+      const adminToken = await getAuthToken('admin-krs-crud@test.com', 'admin');
+
+      // 1. Create
+      const createRes = await app.handle(
+        new Request('http://localhost/krs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            kelasKuliahId: kelasId,
+          }),
+        })
+      );
+      expect(createRes.status).toBe(201);
+      const created = await createRes.json() as { id: number };
+      krsId = created.id;
+
+      // 2. Get All
+      const getAllRes = await app.handle(
+        new Request('http://localhost/krs', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getAllRes.status).toBe(200);
+
+      // 3. Get By ID
+      const getByIdRes = await app.handle(
+        new Request(`http://localhost/krs/${krsId}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(getByIdRes.status).toBe(200);
+
+      // 4. Update (Nilai)
+      const updateRes = await app.handle(
+        new Request(`http://localhost/krs/${krsId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nilaiAngka: 85.50,
+            nilaiHuruf: 'A',
+            nilaiIndeks: 4.00,
+          }),
+        })
+      );
+      expect(updateRes.status).toBe(200);
+
+      // 5. Delete
+      const deleteRes = await app.handle(
+        new Request(`http://localhost/krs/${krsId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+        })
+      );
+      expect(deleteRes.status).toBe(200);
+    });
+  });
 });
+

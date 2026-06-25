@@ -1,10 +1,10 @@
 import { t } from 'elysia';
 
-export const getProdiSchema = {
+export const getPeriodeSchema = {
   detail: {
-    tags: ['Program Studi'],
-    summary: 'Daftar Program Studi',
-    description: 'Mengambil semua data program studi yang terdaftar dengan pagination dan filter pencarian.'
+    tags: ['Periode Akademik'],
+    summary: 'Daftar Periode Akademik',
+    description: 'Mengambil semua data periode akademik yang terdaftar dengan pagination dan filter pencarian.'
   },
   query: t.Object({
     page: t.Optional(t.String({ default: '1' })),
@@ -15,10 +15,9 @@ export const getProdiSchema = {
     200: t.Object({
       data: t.Array(
         t.Object({
-          id: t.Integer({ default: 1 }),
-          kode: t.String({ default: 'TI' }),
-          nama: t.String({ default: 'Teknik Informatika' }),
-          jenjang: t.String({ default: 'D4' }),
+          id: t.String({ default: '20231' }),
+          nama: t.String({ default: '2023/2024 Ganjil' }),
+          aktif: t.Boolean({ default: false }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
           lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
@@ -36,24 +35,23 @@ export const getProdiSchema = {
   }
 };
 
-export const createProdiSchema = {
+export const createPeriodeSchema = {
   detail: {
-    tags: ['Program Studi'],
-    summary: 'Tambah Program Studi Baru',
-    description: 'Menambahkan prodi baru (Hanya dapat diakses oleh Admin yang menyertakan token JWT).'
+    tags: ['Periode Akademik'],
+    summary: 'Tambah Periode Akademik Baru',
+    description: 'Menambahkan periode akademik baru (Hanya dapat diakses Admin).'
   },
   body: t.Object({
-    kode: t.String({ default: 'TI' }),
-    nama: t.String({ default: 'Teknik Informatika' }),
-    jenjang: t.String({ default: 'D4' }),
+    id: t.String({ minLength: 5, maxLength: 5, default: '20231' }),
+    nama: t.String({ default: '2023/2024 Ganjil' }),
+    aktif: t.Optional(t.Boolean({ default: false })),
     idPddikti: t.Optional(t.String())
   }),
   response: {
     201: t.Object({
-      id: t.Integer({ default: 1 }),
-      kode: t.String({ default: 'TI' }),
-      nama: t.String({ default: 'Teknik Informatika' }),
-      jenjang: t.String({ default: 'D4' }),
+      id: t.String({ default: '20231' }),
+      nama: t.String({ default: '2023/2024 Ganjil' }),
+      aktif: t.Boolean({ default: false }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
@@ -66,21 +64,20 @@ export const createProdiSchema = {
   }
 };
 
-export const getProdiByIdSchema = {
+export const getPeriodeByIdSchema = {
   detail: {
-    tags: ['Program Studi'],
-    summary: 'Detail Program Studi',
-    description: 'Mengambil satu data program studi berdasarkan ID.'
+    tags: ['Periode Akademik'],
+    summary: 'Detail Periode Akademik',
+    description: 'Mengambil satu data periode akademik berdasarkan ID.'
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.String()
   }),
   response: {
     200: t.Object({
-      id: t.Integer({ default: 1 }),
-      kode: t.String({ default: 'TI' }),
-      nama: t.String({ default: 'Teknik Informatika' }),
-      jenjang: t.String({ default: 'D4' }),
+      id: t.String({ default: '20231' }),
+      nama: t.String({ default: '2023/2024 Ganjil' }),
+      aktif: t.Boolean({ default: false }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
@@ -93,27 +90,25 @@ export const getProdiByIdSchema = {
   }
 };
 
-export const updateProdiSchema = {
+export const updatePeriodeSchema = {
   detail: {
-    tags: ['Program Studi'],
-    summary: 'Perbarui Program Studi',
-    description: 'Memperbarui data program studi berdasarkan ID (Hanya dapat diakses oleh Admin).'
+    tags: ['Periode Akademik'],
+    summary: 'Perbarui Periode Akademik',
+    description: 'Memperbarui data periode akademik berdasarkan ID (Hanya dapat diakses oleh Admin).'
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.String()
   }),
   body: t.Object({
-    kode: t.Optional(t.String()),
     nama: t.Optional(t.String()),
-    jenjang: t.Optional(t.String()),
+    aktif: t.Optional(t.Boolean()),
     idPddikti: t.Optional(t.String())
   }),
   response: {
     200: t.Object({
-      id: t.Integer({ default: 1 }),
-      kode: t.String({ default: 'TI' }),
-      nama: t.String({ default: 'Teknik Informatika' }),
-      jenjang: t.String({ default: 'D4' }),
+      id: t.String({ default: '20231' }),
+      nama: t.String({ default: '2023/2024 Ganjil' }),
+      aktif: t.Boolean({ default: false }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
@@ -129,18 +124,18 @@ export const updateProdiSchema = {
   }
 };
 
-export const deleteProdiSchema = {
+export const deletePeriodeSchema = {
   detail: {
-    tags: ['Program Studi'],
-    summary: 'Hapus Program Studi',
-    description: 'Menghapus program studi berdasarkan ID (Hanya dapat diakses oleh Admin).'
+    tags: ['Periode Akademik'],
+    summary: 'Hapus Periode Akademik',
+    description: 'Menghapus data periode akademik berdasarkan ID (Hanya dapat diakses oleh Admin).'
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.String()
   }),
   response: {
     200: t.Object({
-      message: t.String({ default: 'Program Studi berhasil dihapus' })
+      message: t.String({ default: 'Periode Akademik berhasil dihapus' })
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' })

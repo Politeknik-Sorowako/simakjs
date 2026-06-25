@@ -1,41 +1,41 @@
-import { MahasiswaService } from '../services/mahasiswa.service';
+import { KelasKuliahService } from '../services/kelas-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
-export class MahasiswaController {
+export class KelasKuliahController {
   static async getAll({ query }: AuthContext<any, PaginationQuery>) {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
-    return await MahasiswaService.getAll(page, limit, search);
+    return await KelasKuliahService.getAll(page, limit, search);
   }
 
   static async getById({ params, set }: AuthContext) {
-    const mhs = await MahasiswaService.getById(parseInt(params.id));
-    if (!mhs) {
+    const data = await KelasKuliahService.getById(parseInt(params.id));
+    if (!data) {
       set.status = 404;
       return { error: 'Data tidak ditemukan' };
     }
-    return mhs;
+    return data;
   }
 
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || user.role !== 'admin') {
       set.status = 403;
-      return { error: 'Akses ditolak.' };
+      return { error: 'Akses ditolak. Hanya Admin.' };
     }
-    const newMhs = await MahasiswaService.create(body);
+    const newKelas = await KelasKuliahService.create(body);
     set.status = 201;
-    return newMhs;
+    return newKelas;
   }
 
   static async update({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || user.role !== 'admin') {
       set.status = 403;
-      return { error: 'Akses ditolak.' };
+      return { error: 'Akses ditolak. Hanya Admin.' };
     }
-    const updated = await MahasiswaService.update(parseInt(params.id), body);
+    const updated = await KelasKuliahService.update(parseInt(params.id), body);
     if (!updated) {
       set.status = 404;
       return { error: 'Data tidak ditemukan' };
@@ -45,15 +45,15 @@ export class MahasiswaController {
 
   static async delete({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || user.role !== 'admin') {
       set.status = 403;
-      return { error: 'Akses ditolak.' };
+      return { error: 'Akses ditolak. Hanya Admin.' };
     }
-    const deleted = await MahasiswaService.delete(parseInt(params.id));
+    const deleted = await KelasKuliahService.delete(parseInt(params.id));
     if (!deleted) {
       set.status = 404;
       return { error: 'Data tidak ditemukan' };
     }
-    return { message: 'Mahasiswa berhasil dihapus' };
+    return { message: 'Kelas Kuliah berhasil dihapus' };
   }
 }
