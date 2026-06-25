@@ -13,7 +13,7 @@ export type AuthContext<TBody = any, TQuery = any> = Context & {
 };
 
 export interface PaginationQuery {
-  page?: string;
-  limit?: string;
+  page?: string | number;
+  limit?: string | number;
   search?: string;
 }

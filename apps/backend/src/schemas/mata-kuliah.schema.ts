@@ -1,5 +1,25 @@
 import { t } from 'elysia';
 
+export const mataKuliahBody = t.Object({
+  kode: t.String({ default: 'MK001' }),
+  nama: t.String({ default: 'Pemrograman Web' }),
+  sksTotal: t.Integer({ default: 3 }),
+  sksTatapMuka: t.Optional(t.Integer({ default: 2 })),
+  sksPraktek: t.Optional(t.Integer({ default: 1 })),
+  programStudiId: t.Optional(t.Integer({ default: 1 })),
+  idPddikti: t.Optional(t.String())
+});
+
+export const updateMataKuliahBody = t.Partial(t.Object({
+  kode: t.String(),
+  nama: t.String(),
+  sksTotal: t.Integer(),
+  sksTatapMuka: t.Integer(),
+  sksPraktek: t.Integer(),
+  programStudiId: t.Integer(),
+  idPddikti: t.String()
+}));
+
 export const getMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
@@ -7,8 +27,8 @@ export const getMataKuliahSchema = {
     description: 'Mengambil semua data mata kuliah yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
   },
   query: t.Object({
-    page: t.Optional(t.String({ default: '1' })),
-    limit: t.Optional(t.String({ default: '10' })),
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
@@ -54,15 +74,7 @@ export const createMataKuliahSchema = {
     summary: 'Tambah Mata Kuliah Baru',
     description: 'Menambahkan mata kuliah baru (Hanya dapat diakses Admin).'
   },
-  body: t.Object({
-    kode: t.String({ default: 'MK001' }),
-    nama: t.String({ default: 'Pemrograman Web' }),
-    sksTotal: t.Integer({ default: 3 }),
-    sksTatapMuka: t.Optional(t.Integer({ default: 2 })),
-    sksPraktek: t.Optional(t.Integer({ default: 1 })),
-    programStudiId: t.Optional(t.Integer({ default: 1 })),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: mataKuliahBody,
   response: {
     201: t.Object({
       id: t.Integer({ default: 1 }),
@@ -132,15 +144,7 @@ export const updateMataKuliahSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
-  body: t.Object({
-    kode: t.Optional(t.String()),
-    nama: t.Optional(t.String()),
-    sksTotal: t.Optional(t.Integer()),
-    sksTatapMuka: t.Optional(t.Integer()),
-    sksPraktek: t.Optional(t.Integer()),
-    programStudiId: t.Optional(t.Integer()),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: updateMataKuliahBody,
   response: {
     200: t.Object({
       id: t.Integer({ default: 1 }),

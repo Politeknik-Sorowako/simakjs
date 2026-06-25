@@ -1,5 +1,31 @@
 import { t } from 'elysia';
 
+export const mahasiswaBody = t.Object({
+  nim: t.String({ default: '12345678' }),
+  nama: t.String({ default: 'Budi Santoso' }),
+  email: t.String({ format: 'email', default: 'budi@test.com' }),
+  programStudiId: t.Integer({ default: 1 }),
+  status: t.Optional(t.String({ default: 'aktif' })),
+  idPddikti: t.Optional(t.String()),
+  namaIbuKandung: t.String({ default: 'Ibu Budi' }),
+  nik: t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' }),
+  jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' }),
+  tanggalLahir: t.String({ default: '2000-01-01' })
+});
+
+export const updateMahasiswaBody = t.Partial(t.Object({
+  nim: t.String(),
+  nama: t.String(),
+  email: t.String({ format: 'email' }),
+  programStudiId: t.Integer(),
+  status: t.String(),
+  idPddikti: t.String(),
+  namaIbuKandung: t.String(),
+  nik: t.String({ minLength: 16, maxLength: 16 }),
+  jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')]),
+  tanggalLahir: t.String()
+}));
+
 export const getMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],
@@ -7,8 +33,8 @@ export const getMahasiswaSchema = {
     description: 'Mengambil semua data mahasiswa yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
   },
   query: t.Object({
-    page: t.Optional(t.String({ default: '1' })),
-    limit: t.Optional(t.String({ default: '10' })),
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
@@ -57,18 +83,7 @@ export const createMahasiswaSchema = {
     summary: 'Tambah Mahasiswa Baru',
     description: 'Menambahkan mahasiswa baru lengkap dengan data wajib PDDIKTI (Hanya dapat diakses Admin / Dosen dengan token JWT).'
   },
-  body: t.Object({
-    nim: t.String({ default: '12345678' }),
-    nama: t.String({ default: 'Budi Santoso' }),
-    email: t.String({ format: 'email', default: 'budi@test.com' }),
-    programStudiId: t.Integer({ default: 1 }),
-    status: t.Optional(t.String({ default: 'aktif' })),
-    idPddikti: t.Optional(t.String()),
-    namaIbuKandung: t.String({ default: 'Ibu Budi' }),
-    nik: t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' }),
-    jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' }),
-    tanggalLahir: t.String({ default: '2000-01-01' })
-  }),
+  body: mahasiswaBody,
   response: {
     201: t.Object({
       id: t.Integer({ default: 1 }),
@@ -147,18 +162,7 @@ export const updateMahasiswaSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
-  body: t.Object({
-    nim: t.Optional(t.String()),
-    nama: t.Optional(t.String()),
-    email: t.Optional(t.String({ format: 'email' })),
-    programStudiId: t.Optional(t.Integer()),
-    status: t.Optional(t.String()),
-    idPddikti: t.Optional(t.String()),
-    namaIbuKandung: t.Optional(t.String()),
-    nik: t.Optional(t.String({ minLength: 16, maxLength: 16 })),
-    jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')])),
-    tanggalLahir: t.Optional(t.String())
-  }),
+  body: updateMahasiswaBody,
   response: {
     200: t.Object({
       id: t.Integer({ default: 1 }),

@@ -1,5 +1,12 @@
 import { t } from 'elysia';
 
+export const periodeBody = t.Object({
+  id: t.String({ minLength: 5, maxLength: 5, default: '20231' }),
+  nama: t.String({ default: '2023/2024 Ganjil' }),
+  aktif: t.Optional(t.Boolean({ default: false })),
+  idPddikti: t.Optional(t.String())
+});
+
 export const getPeriodeSchema = {
   detail: {
     tags: ['Periode Akademik'],
@@ -7,8 +14,8 @@ export const getPeriodeSchema = {
     description: 'Mengambil semua data periode akademik yang terdaftar dengan pagination dan filter pencarian.'
   },
   query: t.Object({
-    page: t.Optional(t.String({ default: '1' })),
-    limit: t.Optional(t.String({ default: '10' })),
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' }))
   }),
   response: {
@@ -41,12 +48,7 @@ export const createPeriodeSchema = {
     summary: 'Tambah Periode Akademik Baru',
     description: 'Menambahkan periode akademik baru (Hanya dapat diakses Admin).'
   },
-  body: t.Object({
-    id: t.String({ minLength: 5, maxLength: 5, default: '20231' }),
-    nama: t.String({ default: '2023/2024 Ganjil' }),
-    aktif: t.Optional(t.Boolean({ default: false })),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: periodeBody,
   response: {
     201: t.Object({
       id: t.String({ default: '20231' }),
@@ -99,11 +101,7 @@ export const updatePeriodeSchema = {
   params: t.Object({
     id: t.String()
   }),
-  body: t.Object({
-    nama: t.Optional(t.String()),
-    aktif: t.Optional(t.Boolean()),
-    idPddikti: t.Optional(t.String())
-  }),
+  body: t.Partial(t.Omit(periodeBody, ['id'])),
   response: {
     200: t.Object({
       id: t.String({ default: '20231' }),
