@@ -54,7 +54,19 @@ export const getKelasSchema = {
               aktif: t.Boolean()
             }),
             t.Null()
-          ])
+          ]),
+          dosenPengajarKelas: t.Optional(t.Array(t.Object({
+            id: t.Integer(),
+            dosenId: t.Integer(),
+            kelasKuliahId: t.Integer(),
+            sksBebanMengajar: t.Union([t.Integer(), t.Null()]),
+            dosen: t.Union([t.Object({
+              id: t.Integer(),
+              nip: t.String(),
+              nama: t.String(),
+              email: t.String()
+            }), t.Null()])
+          })))
         })
       ),
       meta: t.Object({
@@ -128,7 +140,19 @@ export const getKelasByIdSchema = {
           aktif: t.Boolean()
         }),
         t.Null()
-      ])
+      ]),
+      dosenPengajarKelas: t.Optional(t.Array(t.Object({
+        id: t.Integer(),
+        dosenId: t.Integer(),
+        kelasKuliahId: t.Integer(),
+        sksBebanMengajar: t.Union([t.Integer(), t.Null()]),
+        dosen: t.Union([t.Object({
+          id: t.Integer(),
+          nip: t.String(),
+          nama: t.String(),
+          email: t.String()
+        }), t.Null()])
+      })))
     }),
     404: t.Object({
       error: t.String({ default: 'Data tidak ditemukan' })

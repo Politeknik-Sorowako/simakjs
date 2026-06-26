@@ -13,6 +13,7 @@ import PeriodeAkademik from './routes/PeriodeAkademik';
 import MataKuliah from './routes/MataKuliah';
 import KelasKuliah from './routes/KelasKuliah';
 import Krs from './routes/Krs';
+import KeuanganDashboard from './routes/KeuanganDashboard';
 
 function AppContent() {
   const auth = useAuth();
@@ -84,6 +85,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
             <Krs />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/keuangan"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <KeuanganDashboard />
           </ProtectedRoute>
         }
       />

@@ -34,7 +34,12 @@ export class KelasKuliahService {
       offset,
       with: {
         mataKuliah: true,
-        periodeAkademik: true
+        periodeAkademik: true,
+        dosenPengajarKelas: {
+          with: {
+            dosen: true
+          }
+        }
       }
     });
 
@@ -56,7 +61,12 @@ export class KelasKuliahService {
       where: eq(kelasKuliah.id, id),
       with: {
         mataKuliah: true,
-        periodeAkademik: true
+        periodeAkademik: true,
+        dosenPengajarKelas: {
+          with: {
+            dosen: true
+          }
+        }
       }
     });
     return data || null;

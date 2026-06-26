@@ -200,3 +200,29 @@ export const deleteKrsSchema = {
     })
   }
 };
+
+export const approveKrsBody = t.Object({
+  mahasiswaId: t.Integer({ default: 1 }),
+  periodeId: t.String({ default: '20231' })
+});
+
+export const approveKrsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Persetujuan KRS oleh Dosen PA',
+    description: 'Menyetujui semua item KRS mahasiswa di periode akademik tertentu (Hanya dapat diakses Admin/Dosen).'
+  },
+  body: approveKrsBody,
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'KRS berhasil disetujui' }),
+      count: t.Integer({ default: 1 })
+    }),
+    400: t.Object({
+      error: t.String()
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak.' })
+    })
+  }
+};
