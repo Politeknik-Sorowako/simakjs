@@ -10,3 +10,4 @@ issue.md
 prompt.md
 prompt-frontend.md
 .agents
+*.lock
