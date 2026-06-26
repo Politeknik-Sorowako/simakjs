@@ -9,6 +9,7 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
 
   const config: RequestInit = {
     ...customConfig,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...headers,

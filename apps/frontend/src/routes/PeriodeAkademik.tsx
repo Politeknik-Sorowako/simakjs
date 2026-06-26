@@ -5,8 +5,17 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { useToast } from '../contexts/ToastContext';
+import { z } from 'zod';
+
+const periodeSchema = z.object({
+  id: z.string().length(5, { message: 'ID Periode harus tepat 5 karakter angka (contoh: 20231)' }).regex(/^\d+$/, { message: 'ID Periode harus berupa angka' }),
+  nama: z.string().min(3, { message: 'Nama Periode minimal harus 3 karakter' }),
+  aktif: z.boolean(),
+});
 
 export default function PeriodeAkademik() {
+  const toast = useToast();
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
@@ -14,7 +23,14 @@ export default function PeriodeAkademik() {
   // Fetch Periode Data
   const [periodes, { refetch }] = createResource(
     () => ({ search: search(), page: page(), limit: limit() }),
-    ({ search, page, limit }) => periodeAkademikController.getAll(search, page, limit)
+    async ({ search, page, limit }) => {
+      try {
+        return await periodeAkademikController.getAll(search, page, limit);
+      } catch (e: any) {
+        toast.showToast(e.message || 'Gagal memuat data periode akademik', 'error');
+        throw e;
+      }
+    }
   );
 
   // Form State
@@ -46,16 +62,31 @@ export default function PeriodeAkademik() {
   const handleSave = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
+
+    // Zod validation
+    const formData = { id: id(), nama: nama(), aktif: aktif() };
+    const result = periodeSchema.safeParse(formData);
+    if (!result.success) {
+      const firstError = result.error.errors[0]?.message || 'Input tidak valid';
+      setErrorMsg(firstError);
+      toast.showToast(firstError, 'error');
+      return;
+    }
+
     try {
       if (editId()) {
         await periodeAkademikController.update(editId()!, { nama: nama(), aktif: aktif() });
+        toast.showToast('Periode akademik berhasil diperbarui', 'success');
       } else {
         await periodeAkademikController.create({ id: id(), nama: nama(), aktif: aktif() });
+        toast.showToast('Periode akademik berhasil ditambahkan', 'success');
       }
       setShowModal(false);
       refetch();
     } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+      const errText = e.message || 'Gagal menyimpan data';
+      setErrorMsg(errText);
+      toast.showToast(errText, 'error');
     }
   };
 
@@ -63,9 +94,10 @@ export default function PeriodeAkademik() {
     if (!confirm('Apakah Anda yakin ingin menghapus Periode Akademik ini?')) return;
     try {
       await periodeAkademikController.delete(id);
+      toast.showToast('Periode akademik berhasil dihapus', 'success');
       refetch();
     } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+      toast.showToast(e.message || 'Gagal menghapus data', 'error');
     }
   };
 
@@ -84,6 +116,7 @@ export default function PeriodeAkademik() {
           <Input
             placeholder="Cari periode..."
             value={search()}
+            aria-label="Cari periode akademik"
             onInput={(e) => {
               setSearch(e.currentTarget.value);
               setPage(1);
@@ -91,7 +124,15 @@ export default function PeriodeAkademik() {
           />
         </div>
 
-        <Show when={!periodes.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+        <Show
+          when={!periodes.loading}
+          fallback={
+            <div class="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm gap-4">
+              <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+              <p class="text-sm font-medium text-gray-500 animate-pulse">Memuat data periode akademik...</p>
+            </div>
+          }
+        >
           <Table headers={['ID / Kode', 'Nama Semester', 'Status', 'Aksi']}>
             <For each={periodes()?.data}>
               {(item) => (
@@ -106,10 +147,10 @@ export default function PeriodeAkademik() {
                     </span>
                   </td>
                   <td class="px-6 py-4 flex gap-2">
-                    <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
+                    <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5" aria-label={`Ubah periode ${item.nama}`}>
                       Edit
                     </Button>
-                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5">
+                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5" aria-label={`Hapus periode ${item.nama}`}>
                       Hapus
                     </Button>
                   </td>
@@ -137,6 +178,7 @@ export default function PeriodeAkademik() {
                   disabled={page() === 1}
                   onClick={() => setPage((p) => Math.max(p - 1, 1))}
                   class="!py-1 !px-3"
+                  aria-label="Halaman sebelumnya"
                 >
                   Sebelumnya
                 </Button>
@@ -145,6 +187,7 @@ export default function PeriodeAkademik() {
                   disabled={page() >= periodes()!.meta.totalPages}
                   onClick={() => setPage((p) => Math.min(p + 1, periodes()!.meta.totalPages))}
                   class="!py-1 !px-3"
+                  aria-label="Halaman berikutnya"
                 >
                   Berikutnya
                 </Button>
@@ -167,6 +210,7 @@ export default function PeriodeAkademik() {
               value={id()}
               onInput={(e) => setId(e.currentTarget.value)}
               placeholder="Contoh: 20231 (Tahun 2023 Ganjil)"
+              aria-label="ID Periode Akademik"
             />
             <Input
               label="Nama Periode"
@@ -174,6 +218,7 @@ export default function PeriodeAkademik() {
               value={nama()}
               onInput={(e) => setNama(e.currentTarget.value)}
               placeholder="Contoh: Ganjil 2023/2024"
+              aria-label="Nama Periode Akademik"
             />
             <Input
               isSelect
@@ -184,12 +229,13 @@ export default function PeriodeAkademik() {
                 { label: 'Aktif', value: 'aktif' },
                 { label: 'Non-aktif', value: 'nonaktif' },
               ]}
+              aria-label="Status Periode Aktif"
             />
             <div class="flex justify-end gap-2 border-t pt-4">
-              <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
+              <Button type="button" variant="secondary" onClick={() => setShowModal(false)} aria-label="Batal">
                 Batal
               </Button>
-              <Button type="submit">
+              <Button type="submit" aria-label="Simpan">
                 Simpan
               </Button>
             </div>

@@ -4,10 +4,22 @@ import { useAuth } from '../contexts/AuthContext';
 import { authController } from '../controllers/authController';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { useToast } from '../contexts/ToastContext';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email({ message: 'Format email tidak valid' }),
+  password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+});
+
+const registerSchema = loginSchema.extend({
+  role: z.enum(['admin', 'dosen', 'mahasiswa'], { message: 'Peran tidak valid' }),
+});
 
 export default function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
@@ -24,20 +36,38 @@ export default function Login() {
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
+
+    // Zod validation
+    const formData = { email: email(), password: password(), role: role() };
+    const schema = isRegister() ? registerSchema : loginSchema;
+    
+    const result = schema.safeParse(formData);
+    if (!result.success) {
+      const firstError = result.error.errors[0]?.message || 'Input tidak valid';
+      setErrorMsg(firstError);
+      toast.showToast(firstError, 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (isRegister()) {
         await authController.register(email(), password(), role());
         setIsRegister(false);
-        setErrorMsg('Registrasi sukses! Silakan login.');
+        const successMsg = 'Registrasi sukses! Silakan login.';
+        setErrorMsg(successMsg);
+        toast.showToast(successMsg, 'success');
       } else {
         const response = await authController.login(email(), password());
         auth.login(response.token, response.user);
+        toast.showToast('Login berhasil! Selamat datang.', 'success');
         navigate('/dashboard', { replace: true });
       }
     } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal terhubung ke server');
+      const errText = e.message || 'Gagal terhubung ke server';
+      setErrorMsg(errText);
+      toast.showToast(errText, 'error');
     } finally {
       setLoading(false);
     }

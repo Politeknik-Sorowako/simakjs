@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from '@solidjs/router';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ToastProvider } from './contexts/ToastContext';
 
 // Routes imports
 import Login from './routes/Login';
@@ -104,8 +105,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ToastProvider>
   );
 }
