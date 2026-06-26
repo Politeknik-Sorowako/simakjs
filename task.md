@@ -1,0 +1,37 @@
+- `[x]` 1. Utilities & API Helper
+  - `[x]` Create `apps/frontend/src/utils/api.ts`
+- `[x]` 2. Context & State Management
+  - `[x]` Create `apps/frontend/src/contexts/AuthContext.tsx`
+- `[x]` 3. Controllers
+  - `[x]` Create `authController.ts`
+  - `[x]` Create `prodiController.ts`
+  - `[x]` Create `mahasiswaController.ts`
+  - `[x]` Create `dosenController.ts`
+  - `[x]` Create `periodeAkademikController.ts`
+  - `[x]` Create `mataKuliahController.ts`
+  - `[x]` Create `kelasKuliahController.ts`
+  - `[x]` Create `krsController.ts`
+- `[x]` 4. Reusable UI Components
+  - `[x]` Create `components/ui/Button.tsx`
+  - `[x]` Create `components/ui/Input.tsx`
+  - `[x]` Create `components/ui/Table.tsx`
+  - `[x]` Create `components/ui/Modal.tsx`
+- `[x]` 5. Layout & Guard Components
+  - `[x]` Create `components/ProtectedRoute.tsx`
+  - `[x]` Create `components/Sidebar.tsx`
+  - `[x]` Create `components/Navbar.tsx`
+  - `[x]` Create `components/MainLayout.tsx`
+- `[x]` 6. Routes (Page Views)
+  - `[x]` Create `routes/Login.tsx`
+  - `[x]` Create `routes/Dashboard.tsx`
+  - `[x]` Create `routes/ProgramStudi.tsx`
+  - `[x]` Create `routes/Mahasiswa.tsx`
+  - `[x]` Create `routes/Dosen.tsx`
+  - `[x]` Create `routes/PeriodeAkademik.tsx`
+  - `[x]` Create `routes/MataKuliah.tsx`
+  - `[x]` Create `routes/KelasKuliah.tsx`
+  - `[x]` Create `routes/Krs.tsx`
+- `[x]` 7. App & Router Setup
+  - `[x]` Modify `App.tsx`
+- `[x]` 8. Docker & Final Integration
+  - `[x]` Update `docker-compose.yml`

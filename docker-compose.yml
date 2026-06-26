@@ -13,5 +13,30 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: simak_backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://simak_user:simak_password@db:5432/simak_vokasi
+      - PORT=3000
+      - JWT_SECRET=simak_vokasi_secret_key_123456
+      - CORS_ORIGIN=*
+    depends_on:
+      - db
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    container_name: simak_frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
 volumes:
   pgdata:
