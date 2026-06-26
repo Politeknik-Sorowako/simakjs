@@ -1,4 +1,4 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
+import { createSignal, createResource, Show, For, createMemo } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -25,7 +25,7 @@ export default function LaporanKompensasi() {
   const [laporan, { refetch: refetchLaporan }] = createResource(() => presensiController.getLaporanKompensasi());
 
   // Filtered reports list
-  const filteredLaporan = () => {
+  const filteredLaporan = createMemo(() => {
     const list = laporan() || [];
     const q = search().toLowerCase();
     if (!q) return list;
@@ -34,15 +34,16 @@ export default function LaporanKompensasi() {
       item.nim.toLowerCase().includes(q) || 
       (item.prodiNama || '').toLowerCase().includes(q)
     );
-  };
+  });
 
   // 2. Fetch Selected Student Details
   const [mhsDetail, { refetch: refetchDetail }] = createResource(selectedMhsId, async (id) => {
     if (!id) return null;
     try {
       return await presensiController.getKompensasiDetail(id);
-    } catch (e: any) {
-      toast.showToast('Gagal memuat detail kompensasi mahasiswa', 'error');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Gagal memuat detail kompensasi mahasiswa';
+      toast.showToast(msg, 'error');
       return null;
     }
   });
@@ -76,8 +77,9 @@ export default function LaporanKompensasi() {
       // Refresh data
       refetchDetail();
       refetchLaporan();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan pembayaran', 'error');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal menyimpan pembayaran';
+      toast.showToast(msg, 'error');
     }
   };
 

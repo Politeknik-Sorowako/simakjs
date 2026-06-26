@@ -15,6 +15,8 @@ export class PresensiService {
 
       if (status === 'alpa' || status === 'sakit' || status === 'izin') {
         durMangkir = foundBap.durasiMenit;
+      } else if (status === 'telat') {
+        durMangkir = Math.min(item.durasiMangkir || 0, foundBap.durasiMenit);
       } else if (status === 'hadir') {
         durMangkir = 0;
       }

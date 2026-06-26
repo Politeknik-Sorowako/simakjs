@@ -11,7 +11,12 @@ export class PresensiController {
     return await PresensiService.saveBulkPresensi(body.bapId, body.presensiList);
   }
 
-  static async getByBap({ params }: AuthContext) {
+  static async getByBap({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Akses ditolak. Silakan login.' };
+    }
     return await PresensiService.getPresensiByBap(parseInt(params.bapId));
   }
 

@@ -12,3 +12,4 @@ prompt-frontend.md
 .agents
 *.lock
 task.md
+pr_description.md

@@ -2,7 +2,12 @@ import { BapService } from '../services/bap.service';
 import { AuthContext } from '../utils/types';
 
 export class BapController {
-  static async getByKelas({ params }: AuthContext) {
+  static async getByKelas({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Akses ditolak. Silakan login.' };
+    }
     return await BapService.getByKelas(parseInt(params.kelasKuliahId));
   }
 
