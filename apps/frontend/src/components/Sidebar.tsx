@@ -97,6 +97,14 @@ export function Sidebar() {
           >
             💰 Keuangan & SPP
           </A>
+          <A
+            href="/laporan-kompensasi"
+            activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+            inactiveClass="hover:bg-gray-800 hover:text-white"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+          >
+            ⚖️ Laporan Kompensasi
+          </A>
         </Show>
 
         {/* Academic / KRS Menu for Dosen, Mahasiswa, or Admin */}
@@ -111,6 +119,16 @@ export function Sidebar() {
         >
           📝 Kartu Rencana Studi (KRS)
         </A>
+        <Show when={role() === 'admin' || role() === 'dosen'}>
+          <A
+            href="/jurnal-presensi"
+            activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+            inactiveClass="hover:bg-gray-800 hover:text-white"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+          >
+            📓 Jurnal & Presensi
+          </A>
+        </Show>
       </nav>
 
       {/* Footer / User Profile Summary */}

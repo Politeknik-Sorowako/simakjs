@@ -14,6 +14,8 @@ import MataKuliah from './routes/MataKuliah';
 import KelasKuliah from './routes/KelasKuliah';
 import Krs from './routes/Krs';
 import KeuanganDashboard from './routes/KeuanganDashboard';
+import BapPresensi from './routes/BapPresensi';
+import LaporanKompensasi from './routes/LaporanKompensasi';
 
 function AppContent() {
   const auth = useAuth();
@@ -93,6 +95,22 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <KeuanganDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/jurnal-presensi"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+            <BapPresensi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan-kompensasi"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <LaporanKompensasi />
           </ProtectedRoute>
         }
       />

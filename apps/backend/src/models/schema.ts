@@ -158,6 +158,8 @@ export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
   }),
   krs: many(krs),
   tagihan: many(tagihan),
+  presensi: many(presensi),
+  kompensasiBayar: many(kompensasiBayar),
 }));
 
 export const dosenRelations = relations(dosen, ({ one, many }) => ({
@@ -178,6 +180,7 @@ export const mataKuliahRelations = relations(mataKuliah, ({ one, many }) => ({
     references: [programStudi.id],
   }),
   kelasKuliah: many(kelasKuliah),
+  cpmk: many(cpmk),
 }));
 
 export const kelasKuliahRelations = relations(kelasKuliah, ({ one, many }) => ({
@@ -227,5 +230,96 @@ export const tagihanRelations = relations(tagihan, ({ one }) => ({
   periodeAkademik: one(periodeAkademik, {
     fields: [tagihan.periodeId],
     references: [periodeAkademik.id],
+  }),
+}));
+
+export const presensiStatusEnum = pgEnum('presensi_status', ['hadir', 'sakit', 'izin', 'telat', 'alpa']);
+
+export const cpmk = pgTable('cpmk', {
+  id: serial('id').primaryKey(),
+  mataKuliahId: integer('mata_kuliah_id').notNull().references(() => mataKuliah.id, { onDelete: 'cascade' }),
+  kode: varchar('kode', { length: 50 }).notNull(),
+  deskripsi: text('deskripsi').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const bap = pgTable('bap', {
+  id: serial('id').primaryKey(),
+  kelasKuliahId: integer('kelas_kuliah_id').notNull().references(() => kelasKuliah.id, { onDelete: 'cascade' }),
+  tanggal: date('tanggal').notNull(),
+  pertemuanKe: integer('pertemuan_ke').notNull(),
+  materi: text('materi').notNull(),
+  durasiMenit: integer('durasi_menit').notNull(),
+  cpmkId: integer('cpmk_id').notNull().references(() => cpmk.id, { onDelete: 'restrict' }),
+  dosenId: integer('dosen_id').notNull().references(() => dosen.id, { onDelete: 'restrict' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const presensi = pgTable('presensi', {
+  id: serial('id').primaryKey(),
+  bapId: integer('bap_id').notNull().references(() => bap.id, { onDelete: 'cascade' }),
+  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  status: presensiStatusEnum('status').notNull(),
+  durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const kompensasiBayar = pgTable('kompensasi_bayar', {
+  id: serial('id').primaryKey(),
+  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  jumlahMenit: integer('jumlah_menit').notNull(),
+  tanggal: date('tanggal').notNull(),
+  keterangan: text('keterangan').notNull(),
+  petugasId: integer('petugas_id').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const cpmkRelations = relations(cpmk, ({ one, many }) => ({
+  mataKuliah: one(mataKuliah, {
+    fields: [cpmk.mataKuliahId],
+    references: [mataKuliah.id],
+  }),
+  bap: many(bap),
+}));
+
+export const bapRelations = relations(bap, ({ one, many }) => ({
+  kelasKuliah: one(kelasKuliah, {
+    fields: [bap.kelasKuliahId],
+    references: [kelasKuliah.id],
+  }),
+  cpmk: one(cpmk, {
+    fields: [bap.cpmkId],
+    references: [cpmk.id],
+  }),
+  dosen: one(dosen, {
+    fields: [bap.dosenId],
+    references: [dosen.id],
+  }),
+  presensi: many(presensi),
+}));
+
+export const presensiRelations = relations(presensi, ({ one }) => ({
+  bap: one(bap, {
+    fields: [presensi.bapId],
+    references: [bap.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [presensi.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+}));
+
+export const kompensasiBayarRelations = relations(kompensasiBayar, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [kompensasiBayar.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  petugas: one(users, {
+    fields: [kompensasiBayar.petugasId],
+    references: [users.id],
   }),
 }));

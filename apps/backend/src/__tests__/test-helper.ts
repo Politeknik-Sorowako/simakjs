@@ -1,6 +1,6 @@
 import { app } from '../index';
 import { db } from '../utils/db';
-import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas } from '../models/schema';
+import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar } from '../models/schema';
 
 export interface UserResponse {
   id: number;
@@ -42,6 +42,10 @@ export interface MahasiswaSuccessResponse {
 
 // Helper function to clear all database tables to ensure test independence
 export async function clearDatabase() {
+  await db.delete(kompensasiBayar);
+  await db.delete(presensi);
+  await db.delete(bap);
+  await db.delete(cpmk);
   await db.delete(krs);
   await db.delete(dosenPengajarKelas);
   await db.delete(kelasKuliah);
