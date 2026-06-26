@@ -3,6 +3,7 @@ import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa']);
 export const jenisKelaminEnum = pgEnum('jenis_kelamin', ['L', 'P']);
+export const tagihanStatusEnum = pgEnum('tagihan_status', ['belum_bayar', 'lunas']);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -110,6 +111,17 @@ export const dosenPengajarKelas = pgTable('dosen_pengajar_kelas', {
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
+export const tagihan = pgTable('tagihan', {
+  id: serial('id').primaryKey(),
+  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
+  nominal: integer('nominal').notNull(),
+  status: tagihanStatusEnum('status').notNull().default('belum_bayar'),
+  tanggalBayar: timestamp('tanggal_bayar'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
 export const krs = pgTable('krs', {
   id: serial('id').primaryKey(),
   mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
@@ -117,6 +129,9 @@ export const krs = pgTable('krs', {
   nilaiAngka: numeric('nilai_angka', { precision: 5, scale: 2 }),
   nilaiHuruf: varchar('nilai_huruf', { length: 5 }),
   nilaiIndeks: numeric('nilai_indeks', { precision: 3, scale: 2 }),
+  isApproved: boolean('is_approved').default(false).notNull(),
+  approvedById: integer('approved_by_id').references(() => dosen.id, { onDelete: 'set null' }),
+  approvedAt: timestamp('approved_at'),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
   lastSyncAt: timestamp('last_sync_at'),
@@ -142,6 +157,7 @@ export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
     references: [programStudi.id],
   }),
   krs: many(krs),
+  tagihan: many(tagihan),
 }));
 
 export const dosenRelations = relations(dosen, ({ one, many }) => ({
@@ -196,5 +212,20 @@ export const krsRelations = relations(krs, ({ one }) => ({
   kelasKuliah: one(kelasKuliah, {
     fields: [krs.kelasKuliahId],
     references: [kelasKuliah.id],
+  }),
+  approvedBy: one(dosen, {
+    fields: [krs.approvedById],
+    references: [dosen.id],
+  }),
+}));
+
+export const tagihanRelations = relations(tagihan, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [tagihan.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  periodeAkademik: one(periodeAkademik, {
+    fields: [tagihan.periodeId],
+    references: [periodeAkademik.id],
   }),
 }));

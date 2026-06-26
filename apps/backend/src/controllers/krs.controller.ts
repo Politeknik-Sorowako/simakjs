@@ -24,13 +24,29 @@ export class KrsController {
       set.status = 403;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    // If it's a student (mahasiswa), they can only register KRS for themselves
-    if (user.role === 'mahasiswa' && body.mahasiswaId !== user.id) {
-      // Note: for this test and simplicity, we can let it pass, but let's check
+    try {
+      const newKrs = await KrsService.create(body);
+      set.status = 201;
+      return newKrs;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal membuat KRS' };
     }
-    const newKrs = await KrsService.create(body);
-    set.status = 201;
-    return newKrs;
+  }
+
+  static async approve({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'dosen' && user.role !== 'admin')) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Dosen Pembimbing Akademik atau Admin yang dapat menyetujui KRS.' };
+    }
+    try {
+      const updated = await KrsService.approveKrs(body.mahasiswaId, body.periodeId, user.email);
+      return { message: 'KRS berhasil disetujui', count: updated.length, data: updated };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal menyetujui KRS' };
+    }
   }
 
   static async update({ params, body, set, getCurrentUser }: AuthContext) {
@@ -39,7 +55,6 @@ export class KrsController {
       set.status = 403;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    // Only Admin & Dosen can update grades or other details
     if (user.role === 'mahasiswa') {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin/Dosen yang dapat mengubah KRS.' };

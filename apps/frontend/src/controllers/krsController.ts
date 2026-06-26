@@ -49,4 +49,11 @@ export const krsController = {
       method: 'DELETE',
     });
   },
+
+  async approve(mahasiswaId: number, periodeId: string): Promise<{ message: string; count: number }> {
+    return fetchApi<{ message: string; count: number }>('/krs/approve', {
+      method: 'POST',
+      body: JSON.stringify({ mahasiswaId, periodeId }),
+    });
+  },
 };

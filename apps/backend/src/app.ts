@@ -11,6 +11,8 @@ import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { mataKuliahRoutes } from './routes/mata-kuliah.routes';
 import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { krsRoutes } from './routes/krs.routes';
+import { tagihanRoutes } from './routes/tagihan.routes';
+import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
 
 export const app = new Elysia()
   .use(
@@ -59,6 +61,8 @@ export const app = new Elysia()
   .use(periodeAkademikRoutes)
   .use(mataKuliahRoutes)
   .use(kelasKuliahRoutes)
-  .use(krsRoutes);
+  .use(krsRoutes)
+  .use(tagihanRoutes)
+  .use(dosenPengajarRoutes);
 
 

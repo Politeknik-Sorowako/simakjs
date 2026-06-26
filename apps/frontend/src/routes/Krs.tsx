@@ -8,9 +8,11 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { useToast } from '../contexts/ToastContext';
 
 export default function Krs() {
   const auth = useAuth();
+  const toast = useToast();
   const role = () => auth.user()?.role;
   const userEmail = () => auth.user()?.email;
 
@@ -41,7 +43,12 @@ export default function Krs() {
     }),
     async ({ search, page, limit, mhsLoaded }) => {
       if (!mhsLoaded) return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 1 } };
-      return krsController.getAll(search, page, limit);
+      try {
+        return await krsController.getAll(search, page, limit);
+      } catch (e: any) {
+        toast.showToast(e.message || 'Gagal memuat data KRS', 'error');
+        throw e;
+      }
     }
   );
 
@@ -75,6 +82,10 @@ export default function Krs() {
         alert('Data profile mahasiswa belum dimuat.');
         return;
       }
+      if (mahasiswaProfile()?.status !== 'aktif') {
+        alert('Status Anda tidak Aktif. Anda tidak dapat melakukan pengisian KRS.');
+        return;
+      }
       setMhsId(mahasiswaProfile()!.id);
     } else {
       const firstMhs = mahasiswaOptions()?.data?.[0]?.id || 0;
@@ -103,9 +114,11 @@ export default function Krs() {
         kelasKuliahId: Number(kelasId()),
       });
       setShowAddModal(false);
+      toast.showToast('KRS berhasil dikontrak', 'success');
       refetch();
     } catch (e: any) {
       setErrorMsg(e.message || 'Gagal menambahkan KRS');
+      toast.showToast(e.message || 'Gagal menambahkan KRS', 'error');
     }
   };
 
@@ -119,9 +132,25 @@ export default function Krs() {
         nilaiIndeks: nilaiIndeks() ? Number(nilaiIndeks()) : undefined,
       });
       setShowGradeModal(false);
+      toast.showToast('Nilai berhasil disimpan', 'success');
       refetch();
     } catch (e: any) {
       setErrorMsg(e.message || 'Gagal memperbarui nilai');
+      toast.showToast(e.message || 'Gagal memperbarui nilai', 'error');
+    }
+  };
+
+  const handleApproveAll = async () => {
+    const firstItem = krsData()?.data?.[0];
+    if (!firstItem) return;
+    if (!confirm(`Apakah Anda yakin ingin menyetujui seluruh KRS untuk mahasiswa ${firstItem.mahasiswa?.nama}?`)) return;
+
+    try {
+      await krsController.approve(firstItem.mahasiswaId, firstItem.kelasKuliah?.periodeId || '20231');
+      toast.showToast('KRS mahasiswa berhasil disetujui', 'success');
+      refetch();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal menyetujui KRS', 'error');
     }
   };
 
@@ -129,9 +158,10 @@ export default function Krs() {
     if (!confirm('Apakah Anda yakin ingin membatalkan/menghapus KRS ini?')) return;
     try {
       await krsController.delete(id);
+      toast.showToast('KRS berhasil dihapus/dibatalkan', 'success');
       refetch();
     } catch (e: any) {
-      alert(e.message || 'Gagal menghapus KRS');
+      toast.showToast(e.message || 'Gagal menghapus KRS', 'error');
     }
   };
 
@@ -147,8 +177,37 @@ export default function Krs() {
                 : 'Kelola pendaftaran kontrak rencana studi dan input nilai indeks mahasiswa.'}
             </p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Kontrak KRS</Button>
+          <Button
+            disabled={role() === 'mahasiswa' && mahasiswaProfile()?.status !== 'aktif'}
+            onClick={openAddModal}
+          >
+            + Tambah Kontrak KRS
+          </Button>
         </div>
+
+        {/* Warning Banner if Mahasiswa is not active */}
+        <Show when={role() === 'mahasiswa' && mahasiswaProfile() && mahasiswaProfile()?.status !== 'aktif'}>
+          <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-semibold shadow-sm flex items-start gap-3">
+            <span class="text-base">⚠️</span>
+            <div>
+              <p class="font-bold">Status Registrasi: Tidak Aktif (SPP/UKT Belum Lunas)</p>
+              <p class="text-xs text-red-500 font-medium mt-1">Anda tidak diperbolehkan mengontrak KRS sebelum tagihan SPP dilunasi dan status diaktifkan kembali oleh bagian Keuangan.</p>
+            </div>
+          </div>
+        </Show>
+
+        {/* Dosen PA Batch Approval Banner */}
+        <Show when={(role() === 'dosen' || role() === 'admin') && krsData()?.data && krsData()!.data.length > 0 && krsData()!.data.some(k => !k.isApproved)}>
+          <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+            <div>
+              <h4 class="text-sm font-bold text-yellow-800">KRS Mahasiswa Menunggu Persetujuan</h4>
+              <p class="text-xs text-yellow-600 font-medium mt-0.5">Terdapat beberapa kontrak KRS pending untuk mahasiswa {krsData()?.data?.[0]?.mahasiswa?.nama || 'ini'}.</p>
+            </div>
+            <Button variant="primary" onClick={handleApproveAll} class="!py-1.5 !px-4 text-xs">
+              Setujui Semua KRS
+            </Button>
+          </div>
+        </Show>
 
         {/* Search Filter for Admins / Dosen */}
         <Show when={role() !== 'mahasiswa'}>
@@ -165,7 +224,7 @@ export default function Krs() {
         </Show>
 
         <Show when={!krsData.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
-          <Table headers={['Mahasiswa', 'Kelas Kuliah', 'Periode', 'Nilai Angka', 'Nilai Huruf', 'Nilai Indeks', 'Aksi']}>
+          <Table headers={['Mahasiswa', 'Kelas Kuliah', 'Periode', 'Nilai Angka', 'Nilai Huruf', 'Nilai Indeks', 'Status', 'Aksi']}>
             <For each={krsData()?.data}>
               {(item) => (
                 <tr class="hover:bg-gray-50/50 transition-colors">
@@ -178,13 +237,24 @@ export default function Krs() {
                   <td class="px-6 py-4 font-mono font-semibold">{item.nilaiAngka || '-'}</td>
                   <td class="px-6 py-4 font-bold text-blue-600">{item.nilaiHuruf || '-'}</td>
                   <td class="px-6 py-4 font-mono">{item.nilaiIndeks || '-'}</td>
+                  <td class="px-6 py-4">
+                    <span
+                      class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        item.isApproved
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                      }`}
+                    >
+                      {item.isApproved ? 'Disetujui' : 'Pending'}
+                    </span>
+                  </td>
                   <td class="px-6 py-4 flex gap-2">
                     <Show when={role() !== 'mahasiswa'}>
-                      <Button variant="secondary" onClick={() => openGradeModal(item)} class="!py-1 !px-2.5">
+                      <Button variant="secondary" onClick={() => openGradeModal(item)} class="!py-1 !px-2.5 text-xs">
                         Input Nilai
                       </Button>
                     </Show>
-                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5">
+                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
                       Batal
                     </Button>
                   </td>
@@ -193,7 +263,7 @@ export default function Krs() {
             </For>
             <Show when={krsData()?.data.length === 0}>
               <tr>
-                <td colspan="7" class="px-6 py-10 text-center text-gray-400">
+                <td colspan="8" class="px-6 py-10 text-center text-gray-400">
                   Tidak ada kontrak KRS ditemukan.
                 </td>
               </tr>
