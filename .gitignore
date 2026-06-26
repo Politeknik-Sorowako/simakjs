@@ -8,3 +8,4 @@ dist
 *.log
 issue.md
 prompt.md
+prompt-frontend.md

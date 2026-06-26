@@ -8,8 +8,9 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@solidjs/router": "^0.8.2",
     "solid-js": "^1.8.0",
-    "@solidjs/router": "^0.8.2"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "vite": "^5.0.0",
