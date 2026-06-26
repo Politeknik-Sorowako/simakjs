@@ -13,6 +13,9 @@ import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { krsRoutes } from './routes/krs.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
+import { cpmkRoutes } from './routes/cpmk.routes';
+import { bapRoutes } from './routes/bap.routes';
+import { presensiRoutes } from './routes/presensi.routes';
 
 export const app = new Elysia()
   .use(
@@ -63,6 +66,9 @@ export const app = new Elysia()
   .use(kelasKuliahRoutes)
   .use(krsRoutes)
   .use(tagihanRoutes)
-  .use(dosenPengajarRoutes);
+  .use(dosenPengajarRoutes)
+  .use(cpmkRoutes)
+  .use(bapRoutes)
+  .use(presensiRoutes);
 
 
