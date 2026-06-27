@@ -24,6 +24,7 @@ export interface BimbinganMonitoring {
   id: number;
   nim: string;
   nama: string;
+  dosenPaId: number | null;
   dosenPaNama: string | null;
   bimbinganId: number | null;
   ringkasan: string | null;

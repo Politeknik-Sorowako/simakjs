@@ -347,7 +347,7 @@ export const bimbingan = pgTable('bimbingan', {
 export const bimbinganThread = pgTable('bimbingan_thread', {
   id: serial('id').primaryKey(),
   bimbinganId: integer('bimbingan_id').notNull().references(() => bimbingan.id, { onDelete: 'cascade' }),
-  senderRole: varchar('sender_role', { length: 20 }).notNull(), // 'dosen', 'mahasiswa', 'admin'
+  senderRole: roleEnum('sender_role').notNull(),
   pesan: text('pesan').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

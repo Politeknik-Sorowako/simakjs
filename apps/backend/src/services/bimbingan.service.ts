@@ -113,6 +113,7 @@ export class BimbinganService {
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        dosenPaId: mahasiswa.dosenPaId,
         dosenPaNama: dosen.nama,
       })
       .from(mahasiswa)

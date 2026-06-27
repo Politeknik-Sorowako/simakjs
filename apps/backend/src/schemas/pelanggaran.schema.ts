@@ -2,7 +2,7 @@ import { t } from 'elysia';
 
 export const pelanggaranBody = t.Object({
   mahasiswaId: t.Integer({ default: 1 }),
-  tanggal: t.String({ default: '2026-06-27' }),
+  tanggal: t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$', default: '2026-06-27' }),
   jenisPelanggaran: t.String({ minLength: 3, maxLength: 255, default: 'Keterlambatan masuk kelas praktikum' }),
   bobotPoin: t.Integer({ minimum: 1, maximum: 100, default: 5 }),
   keterangan: t.String({ minLength: 3, maxLength: 1000, default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' }),

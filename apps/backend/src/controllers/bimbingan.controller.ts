@@ -31,6 +31,10 @@ export class BimbinganController {
     }
 
     const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
 
     // RBAC check
     if (user.role === 'mahasiswa') {
@@ -68,6 +72,10 @@ export class BimbinganController {
     }
 
     const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
     let senderRole: 'mahasiswa' | 'dosen' | 'admin' = 'mahasiswa';
 
     // RBAC check
@@ -118,6 +126,10 @@ export class BimbinganController {
     }
 
     const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
 
     // If Dosen, check if they are the PA
     if (user.role === 'dosen') {

@@ -11,6 +11,10 @@ export class PelanggaranService {
     keterangan: string;
     dibuatOleh?: number;
   }) {
+    if (data.bobotPoin <= 0 || data.bobotPoin > 100) {
+      throw new Error('Bobot poin pelanggaran harus bernilai antara 1 dan 100.');
+    }
+
     const [mhs] = await db
       .select()
       .from(mahasiswa)
