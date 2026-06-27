@@ -215,53 +215,75 @@ export class KhsService {
         )
       );
 
+    const classIds = studentKrs.map(k => k.kelasKuliahId);
     const classEligibility = [];
 
-    for (const item of studentKrs) {
-      const meetings = await db
+    if (classIds.length > 0) {
+      // Fetch all BAP records for these classes
+      const allBaps = await db
         .select()
         .from(bap)
-        .where(eq(bap.kelasKuliahId, item.kelasKuliahId));
+        .where(inArray(bap.kelasKuliahId, classIds));
 
-      const totalMeetings = meetings.length;
-      let presentMeetings = 0;
+      // Group BAPs by class ID
+      const bapsByClass = new Map<number, typeof bap.$inferSelect[]>();
+      for (const b of allBaps) {
+        const arr = bapsByClass.get(b.kelasKuliahId) || [];
+        arr.push(b);
+        bapsByClass.set(b.kelasKuliahId, arr);
+      }
 
-      if (totalMeetings > 0) {
-        const meetingIds = meetings.map(m => m.id);
+      // Fetch all presensi records for these BAP records of the student
+      const bapIds = allBaps.map(b => b.id);
+      const presentBapIds = new Set<number>();
+
+      if (bapIds.length > 0) {
         const studentPresensi = await db
           .select()
           .from(presensi)
           .where(
             and(
               eq(presensi.mahasiswaId, mahasiswaId),
-              inArray(presensi.bapId, meetingIds)
+              inArray(presensi.bapId, bapIds)
             )
           );
 
         for (const p of studentPresensi) {
           if (p.status === 'hadir' || p.status === 'telat') {
-            presentMeetings++;
+            presentBapIds.add(p.bapId);
           }
         }
       }
 
-      const attendanceRate = totalMeetings > 0 ? (presentMeetings / totalMeetings) * 100 : 100;
-      const attendanceEligible = attendanceRate >= 80;
+      for (const item of studentKrs) {
+        const meetings = bapsByClass.get(item.kelasKuliahId) || [];
+        const totalMeetings = meetings.length;
+        let presentMeetings = 0;
 
-      classEligibility.push({
-        kelasKuliahId: item.kelasKuliahId,
-        namaKelas: item.namaKelas,
-        mataKuliahNama: item.mataKuliahNama,
-        mataKuliahKode: item.mataKuliahKode,
-        totalMeetings,
-        presentMeetings,
-        attendanceRate: parseFloat(attendanceRate.toFixed(2)),
-        eligible: attendanceEligible && bimbinganEligible,
-        reasons: {
-          attendance: attendanceEligible ? 'Lolos (>= 80%)' : `Kehadiran kurang (${attendanceRate.toFixed(1)}% < 80%)`,
-          bimbingan: bimbinganEligible ? 'Lolos' : 'Bimbingan PA belum terpenuhi (min. 3 interaksi)'
+        for (const m of meetings) {
+          if (presentBapIds.has(m.id)) {
+            presentMeetings++;
+          }
         }
-      });
+
+        const attendanceRate = totalMeetings > 0 ? (presentMeetings / totalMeetings) * 100 : 100;
+        const attendanceEligible = attendanceRate >= 80;
+
+        classEligibility.push({
+          kelasKuliahId: item.kelasKuliahId,
+          namaKelas: item.namaKelas,
+          mataKuliahNama: item.mataKuliahNama,
+          mataKuliahKode: item.mataKuliahKode,
+          totalMeetings,
+          presentMeetings,
+          attendanceRate: parseFloat(attendanceRate.toFixed(2)),
+          eligible: attendanceEligible && bimbinganEligible,
+          reasons: {
+            attendance: attendanceEligible ? 'Lolos (>= 80%)' : `Kehadiran kurang (${attendanceRate.toFixed(1)}% < 80%)`,
+            bimbingan: bimbinganEligible ? 'Lolos' : 'Bimbingan PA belum terpenuhi (min. 3 interaksi)'
+          }
+        });
+      }
     }
 
     const overallEligible = classEligibility.every(c => c.eligible);
