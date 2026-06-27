@@ -49,7 +49,6 @@ export const mahasiswa = pgTable('mahasiswa', {
   nama: varchar('nama', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
-  dosenPaId: integer('dosen_pa_id').references(() => dosen.id, { onDelete: 'set null' }),
   status: varchar('status', { length: 50 }).notNull().default('aktif'), // aktif, cuti, lulus, drop_out
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
@@ -157,16 +156,10 @@ export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
     fields: [mahasiswa.programStudiId],
     references: [programStudi.id],
   }),
-  dosenPa: one(dosen, {
-    fields: [mahasiswa.dosenPaId],
-    references: [dosen.id],
-  }),
   krs: many(krs),
   tagihan: many(tagihan),
   presensi: many(presensi),
   kompensasiBayar: many(kompensasiBayar),
-  bimbingan: many(bimbingan),
-  pelanggaran: many(pelanggaran),
 }));
 
 export const dosenRelations = relations(dosen, ({ one, many }) => ({
@@ -175,8 +168,6 @@ export const dosenRelations = relations(dosen, ({ one, many }) => ({
     references: [programStudi.id],
   }),
   dosenPengajarKelas: many(dosenPengajarKelas),
-  mahasiswaWali: many(mahasiswa),
-  bimbingan: many(bimbingan),
 }));
 
 export const periodeAkademikRelations = relations(periodeAkademik, ({ many }) => ({
@@ -329,71 +320,6 @@ export const kompensasiBayarRelations = relations(kompensasiBayar, ({ one }) => 
   }),
   petugas: one(users, {
     fields: [kompensasiBayar.petugasId],
-    references: [users.id],
-  }),
-}));
-
-export const bimbingan = pgTable('bimbingan', {
-  id: serial('id').primaryKey(),
-  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'set null' }),
-  periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
-  ringkasan: text('ringkasan'),
-  isApproved: boolean('is_approved').default(false).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
-});
-
-export const bimbinganThread = pgTable('bimbingan_thread', {
-  id: serial('id').primaryKey(),
-  bimbinganId: integer('bimbingan_id').notNull().references(() => bimbingan.id, { onDelete: 'cascade' }),
-  senderRole: varchar('sender_role', { length: 20 }).notNull(), // 'dosen', 'mahasiswa', 'admin'
-  pesan: text('pesan').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
-
-export const pelanggaran = pgTable('pelanggaran', {
-  id: serial('id').primaryKey(),
-  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  tanggal: date('tanggal').notNull(),
-  jenisPelanggaran: varchar('jenis_pelanggaran', { length: 255 }).notNull(),
-  bobotPoin: integer('bobot_poin').notNull(),
-  keterangan: text('keterangan').notNull(),
-  dibuatOleh: integer('dibuat_oleh').references(() => users.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
-});
-
-export const bimbinganRelations = relations(bimbingan, ({ one, many }) => ({
-  mahasiswa: one(mahasiswa, {
-    fields: [bimbingan.mahasiswaId],
-    references: [mahasiswa.id],
-  }),
-  dosen: one(dosen, {
-    fields: [bimbingan.dosenId],
-    references: [dosen.id],
-  }),
-  periodeAkademik: one(periodeAkademik, {
-    fields: [bimbingan.periodeId],
-    references: [periodeAkademik.id],
-  }),
-  thread: many(bimbinganThread),
-}));
-
-export const bimbinganThreadRelations = relations(bimbinganThread, ({ one }) => ({
-  bimbingan: one(bimbingan, {
-    fields: [bimbinganThread.bimbinganId],
-    references: [bimbingan.id],
-  }),
-}));
-
-export const pelanggaranRelations = relations(pelanggaran, ({ one }) => ({
-  mahasiswa: one(mahasiswa, {
-    fields: [pelanggaran.mahasiswaId],
-    references: [mahasiswa.id],
-  }),
-  petugas: one(users, {
-    fields: [pelanggaran.dibuatOleh],
     references: [users.id],
   }),
 }));
