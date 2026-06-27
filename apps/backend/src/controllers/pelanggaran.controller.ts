@@ -42,6 +42,10 @@ export class PelanggaranController {
     }
 
     const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
 
     // RBAC check
     if (user.role === 'mahasiswa') {

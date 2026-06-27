@@ -251,7 +251,6 @@ describe('Bimbingan & Pelanggaran API', () => {
 
     it('mahasiswa harus sukses melihat daftar pelanggaran dan akumulasi poin miliknya sendiri', async () => {
       // Seed first
-      await db.insert(mahasiswa).values; // Dummy is not needed, we have mhsId.
       await app.handle(
         new Request('http://localhost/pelanggaran', {
           method: 'POST',

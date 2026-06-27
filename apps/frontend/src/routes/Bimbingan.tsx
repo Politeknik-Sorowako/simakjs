@@ -69,9 +69,9 @@ export default function Bimbingan() {
   const filteredMonitoring = () => {
     const list = monitoringList() || [];
     if (user()?.role === 'dosen') {
-      const dName = dosenProfile()?.nama;
-      if (!dName) return [];
-      return list.filter((item) => item.dosenPaNama === dName);
+      const dId = dosenProfile()?.id;
+      if (!dId) return [];
+      return list.filter((item) => item.dosenPaId === dId);
     }
     return list;
   };
