@@ -18,6 +18,8 @@ import { bapRoutes } from './routes/bap.routes';
 import { presensiRoutes } from './routes/presensi.routes';
 import { bimbinganRoutes } from './routes/bimbingan.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
+import { khsRoutes } from './routes/khs.routes';
+import { yudisiumRoutes } from './routes/yudisium.routes';
 
 export const app = new Elysia()
   .use(
@@ -73,6 +75,8 @@ export const app = new Elysia()
   .use(bapRoutes)
   .use(presensiRoutes)
   .use(bimbinganRoutes)
-  .use(pelanggaranRoutes);
+  .use(pelanggaranRoutes)
+  .use(khsRoutes)
+  .use(yudisiumRoutes);
 
 

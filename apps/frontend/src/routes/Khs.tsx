@@ -1,0 +1,334 @@
+import { createSignal, createResource, Show, For } from 'solid-js';
+import { useAuth } from '../contexts/AuthContext';
+import { khsController } from '../controllers/khsController';
+import { mahasiswaController } from '../controllers/mahasiswaController';
+import { MainLayout } from '../components/MainLayout';
+import { Button } from '../components/ui/Button';
+
+export default function Khs() {
+  const auth = useAuth();
+  const user = () => auth.user();
+  const role = () => user()?.role;
+
+  const [activeTab, setActiveTab] = createSignal<'khs' | 'transkrip'>('khs');
+  const [selectedPeriode, setSelectedPeriode] = createSignal('20231'); // Default Active Period
+
+  // For Admin / Dosen view
+  const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
+  const [searchNim, setSearchNim] = createSignal('');
+
+  // Load Mahasiswa profile if logged in as student
+  const [mhsProfile] = createResource(
+    () => {
+      if (role() === 'mahasiswa') return user()?.email;
+      return null;
+    },
+    async (email) => {
+      if (!email) return null;
+      const res = await mahasiswaController.getAll(email, 1, 1);
+      const profile = res.data[0] || null;
+      if (profile) setSelectedMhsId(profile.id);
+      return profile;
+    }
+  );
+
+  // Search Mahasiswa (Admin/Dosen only)
+  const [searchedStudents] = createResource(
+    searchNim,
+    async (nim) => {
+      if (!nim) return [];
+      const res = await mahasiswaController.getAll(nim, 1, 10);
+      return res.data;
+    }
+  );
+
+  // Load KHS
+  const [khsData, { refetch: refetchKhs }] = createResource(
+    () => {
+      const mId = selectedMhsId();
+      const pId = selectedPeriode();
+      if (!mId) return null;
+      return { mhsId: mId, periodeId: pId };
+    },
+    async ({ mhsId, periodeId }) => {
+      return await khsController.getByMhsIdAndPeriode(mhsId, periodeId);
+    }
+  );
+
+  // Load Transkrip
+  const [transkripData, { refetch: refetchTranskrip }] = createResource(
+    selectedMhsId,
+    async (mhsId) => {
+      if (!mhsId) return null;
+      return await khsController.getTranskrip(mhsId);
+    }
+  );
+
+  return (
+    <MainLayout>
+      <div class="flex flex-col gap-6">
+        {/* Header */}
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">Hasil Studi Akademik</h1>
+            <p class="text-sm text-gray-500">Kartu Hasil Studi (KHS) dan Transkrip Nilai Akademik Mahasiswa</p>
+          </div>
+          
+          <div class="flex gap-2">
+            <button
+              onClick={() => setActiveTab('khs')}
+              class={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab() === 'khs' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              KHS Semester
+            </button>
+            <button
+              onClick={() => setActiveTab('transkrip')}
+              class={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab() === 'transkrip' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              Transkrip Nilai
+            </button>
+          </div>
+        </div>
+
+        {/* Admin/Dosen Student Selector */}
+        <Show when={role() !== 'mahasiswa'}>
+          <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
+            <h3 class="font-bold text-gray-700 text-sm">Pilih Mahasiswa & Periode</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-gray-500">Cari NIM / Nama</label>
+                <input
+                  type="text"
+                  placeholder="Masukkan NIM atau Nama..."
+                  value={searchNim()}
+                  onInput={(e) => setSearchNim(e.currentTarget.value)}
+                  class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1.5">
+                <label class="text-xs font-semibold text-gray-500">Pilih dari Hasil Pencarian</label>
+                <select
+                  onChange={(e) => {
+                    const id = parseInt(e.currentTarget.value);
+                    setSelectedMhsId(id || null);
+                  }}
+                  class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">-- Pilih Mahasiswa --</option>
+                  <For each={searchedStudents()}>
+                    {(item) => (
+                      <option value={item.id} selected={selectedMhsId() === item.id}>
+                        {item.nim} - {item.nama}
+                      </option>
+                    )}
+                  </For>
+                </select>
+              </div>
+
+              <Show when={activeTab() === 'khs'}>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-semibold text-gray-500">Pilih Periode</label>
+                  <select
+                    value={selectedPeriode()}
+                    onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="20231">Ganjil 2023/2024</option>
+                    <option value="20232">Genap 2023/2024</option>
+                  </select>
+                </div>
+              </Show>
+            </div>
+          </div>
+        </Show>
+
+        {/* Student Period Selector */}
+        <Show when={role() === 'mahasiswa' && activeTab() === 'khs'}>
+          <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <span class="text-sm font-bold text-gray-700">Periode Akademik:</span>
+            <select
+              value={selectedPeriode()}
+              onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
+              class="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="20231">Ganjil 2023/2024</option>
+              <option value="20232">Genap 2023/2024</option>
+            </select>
+          </div>
+        </Show>
+
+        {/* Content Area */}
+        <Show when={selectedMhsId()} fallback={
+          <div class="bg-white p-12 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+            Silakan cari dan pilih mahasiswa terlebih dahulu untuk menampilkan data akademik.
+          </div>
+        }>
+          <Show when={activeTab() === 'khs'}>
+            <Show when={khsData.loading}>
+              <div class="text-center py-12 text-gray-400">Memuat data KHS...</div>
+            </Show>
+
+            <Show when={!khsData.loading && khsData()}>
+              <Show
+                when={khsData()?.blocked}
+                fallback={
+                  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Summary Cards */}
+                    <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">IP Semester</span>
+                        <span class="text-3xl font-extrabold text-blue-600">{khsData()?.summary?.ipSemester?.toFixed(2)}</span>
+                      </div>
+                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">IPK Kumulatif</span>
+                        <span class="text-3xl font-extrabold text-indigo-600">{khsData()?.summary?.ipk?.toFixed(2)}</span>
+                      </div>
+                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">SKS Terkontrak</span>
+                        <span class="text-3xl font-extrabold text-gray-800">{khsData()?.summary?.totalSks} SKS</span>
+                      </div>
+                      <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">SKS Kumulatif</span>
+                        <span class="text-3xl font-extrabold text-gray-800">{khsData()?.summary?.totalSksKumulatif} SKS</span>
+                      </div>
+                    </div>
+
+                    {/* KHS Table */}
+                    <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
+                      <h3 class="font-bold text-gray-800 border-b pb-2">Rincian Mata Kuliah & Nilai</h3>
+                      <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
+                            <th class="p-3">Kode MK</th>
+                            <th class="p-3">Nama Mata Kuliah</th>
+                            <th class="p-3">SKS</th>
+                            <th class="p-3">Nilai Angka</th>
+                            <th class="p-3">Nilai Huruf</th>
+                            <th class="p-3">Nilai Indeks</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
+                          <For each={khsData()?.krsList} fallback={
+                            <tr>
+                              <td colspan="6" class="p-4 text-center text-gray-400 italic">Nilai belum dimasukkan atau belum disetujui Dosen PA.</td>
+                            </tr>
+                          }>
+                            {(item) => (
+                              <tr class="hover:bg-gray-50/20">
+                                <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
+                                <td class="p-3 font-bold text-gray-800">{item.mataKuliah?.nama}</td>
+                                <td class="p-3">{item.mataKuliah?.sksTotal}</td>
+                                <td class="p-3">{item.nilaiAngka || '-'}</td>
+                                <td class="p-3">
+                                  <Show when={item.nilaiHuruf} fallback="-">
+                                    <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                      item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
+                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                        : item.nilaiHuruf === 'C+' || item.nilaiHuruf === 'C'
+                                        ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                        : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                    }`}>
+                                      {item.nilaiHuruf}
+                                    </span>
+                                  </Show>
+                                </td>
+                                <td class="p-3">{item.nilaiIndeks || '-'}</td>
+                              </tr>
+                            )}
+                          </For>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                }
+              >
+                {/* Blocked View */}
+                <div class="bg-rose-50 border border-rose-200 p-8 rounded-2xl text-rose-800 shadow-sm flex flex-col items-center justify-center text-center gap-4 max-w-2xl mx-auto my-8">
+                  <span class="text-5xl">🔒</span>
+                  <h2 class="text-xl font-extrabold tracking-tight text-rose-900">Akses KHS Diblokir Sementara</h2>
+                  <p class="text-sm font-medium leading-relaxed max-w-md text-rose-700">
+                    Sesuai dengan ketentuan Buku Panduan Akademik, Anda harus melunasi seluruh kewajiban administrasi sebelum dapat mengakses nilai akhir KHS.
+                  </p>
+                  <div class="bg-white border border-rose-100 rounded-xl p-4 w-full text-left flex flex-col gap-1.5 shadow-sm">
+                    <span class="text-xs uppercase font-extrabold tracking-wider text-rose-500">Penyebab Blokir:</span>
+                    <p class="text-xs font-bold text-gray-700">{khsData()?.reason}</p>
+                    <p class="text-xs text-gray-500 font-medium">{khsData()?.detail}</p>
+                  </div>
+                  <p class="text-xs text-rose-600 font-bold mt-2">Silakan hubungi Bagian Keuangan atau BAAK untuk melakukan penyelesaian tanggungan.</p>
+                </div>
+              </Show>
+            </Show>
+          </Show>
+
+          <Show when={activeTab() === 'transkrip'}>
+            <Show when={transkripData.loading}>
+              <div class="text-center py-12 text-gray-400">Memuat Transkrip...</div>
+            </Show>
+
+            <Show when={!transkripData.loading && transkripData()}>
+              <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">IPK Kumulatif (Transcript)</span>
+                    <span class="text-3xl font-extrabold text-blue-600">{transkripData()?.summary?.ipk?.toFixed(2)}</span>
+                  </div>
+                  <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Total SKS Lulus</span>
+                    <span class="text-3xl font-extrabold text-indigo-600">{transkripData()?.summary?.totalSks} SKS</span>
+                  </div>
+                </div>
+
+                <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
+                  <h3 class="font-bold text-gray-800 border-b pb-2">Transkrip Nilai Akademik Kumulatif</h3>
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
+                        <th class="p-3">Semester</th>
+                        <th class="p-3">Kode MK</th>
+                        <th class="p-3">Nama Mata Kuliah</th>
+                        <th class="p-3">SKS</th>
+                        <th class="p-3">Nilai Angka</th>
+                        <th class="p-3">Nilai Huruf</th>
+                        <th class="p-3">Nilai Indeks</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
+                      <For each={transkripData()?.transkripList} fallback={
+                        <tr>
+                          <td colspan="7" class="p-4 text-center text-gray-400 italic">Belum ada nilai akademik terdaftar dalam transkrip.</td>
+                        </tr>
+                      }>
+                        {(item) => (
+                          <tr class="hover:bg-gray-50/20">
+                            <td class="p-3 font-semibold text-gray-500">{item.periodeId}</td>
+                            <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
+                            <td class="p-3 font-bold text-gray-800">{item.mataKuliah?.nama}</td>
+                            <td class="p-3">{item.mataKuliah?.sksTotal}</td>
+                            <td class="p-3">{item.nilaiAngka || '-'}</td>
+                            <td class="p-3">
+                              <Show when={item.nilaiHuruf} fallback="-">
+                                <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                  item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
+                                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                    : 'bg-amber-50 text-amber-600 border border-amber-100'
+                                }`}>
+                                  {item.nilaiHuruf}
+                                </span>
+                              </Show>
+                            </td>
+                            <td class="p-3">{item.nilaiIndeks || '-'}</td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </Show>
+          </Show>
+        </Show>
+      </div>
+    </MainLayout>
+  );
+}

@@ -1,0 +1,156 @@
+import { YudisiumService } from '../services/yudisium.service';
+import { AuthContext } from '../utils/types';
+import { db } from '../utils/db';
+import { mahasiswa } from '../models/schema';
+import { eq } from 'drizzle-orm';
+
+export class YudisiumController {
+  private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
+    const [mhs] = await db
+      .select({ id: mahasiswa.id })
+      .from(mahasiswa)
+      .where(eq(mahasiswa.email, email));
+    return mhs ? mhs.id : null;
+  }
+
+  static async getPengajuan({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+
+    const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    // RBAC check
+    if (user.role === 'mahasiswa') {
+      const myMhsId = await YudisiumController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== targetMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+    }
+
+    return await YudisiumService.getPengajuan(targetMhsId);
+  }
+
+  static async submitPengajuan({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login.' };
+    }
+
+    const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    // Only student can submit their yudisium
+    if (user.role === 'mahasiswa') {
+      const myMhsId = await YudisiumController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== targetMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+    } else {
+      set.status = 403;
+      return { error: 'Hanya mahasiswa yang dapat melakukan pengajuan yudisium.' };
+    }
+
+    try {
+      const result = await YudisiumService.createOrUpdatePengajuan(targetMhsId, body);
+      set.status = 201;
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal menyimpan pengajuan yudisium.' };
+    }
+  }
+
+  static async updateStatus({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin atau Kaprodi/Dosen.' };
+    }
+
+    const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    try {
+      const result = await YudisiumService.updateStatus(targetMhsId, body.status, body.catatan);
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal memperbarui status yudisium.' };
+    }
+  }
+
+  static async getAll({ set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    return await YudisiumService.getAllPengajuan();
+  }
+
+  // --- GRADE COMPONENTS CONTROLLERS ---
+
+  static async getKomponen({ params }: AuthContext) {
+    return await YudisiumService.getKomponen(parseInt(params.kelasKuliahId));
+  }
+
+  static async saveKomponen({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const result = await YudisiumService.saveKomponen(body.kelasKuliahId, body.komponenList);
+      set.status = 200;
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal menyimpan komponen nilai.' };
+    }
+  }
+
+  static async getNilaiMahasiswa({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    return await YudisiumService.getNilaiMahasiswa(parseInt(params.kelasKuliahId));
+  }
+
+  static async saveNilaiMahasiswa({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const result = await YudisiumService.saveNilaiMahasiswa(body.kelasKuliahId, body.nilaiList);
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal menyimpan nilai komponen mahasiswa.' };
+    }
+  }
+}

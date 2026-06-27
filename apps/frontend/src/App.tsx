@@ -18,6 +18,8 @@ import BapPresensi from './routes/BapPresensi';
 import LaporanKompensasi from './routes/LaporanKompensasi';
 import Bimbingan from './routes/Bimbingan';
 import Pelanggaran from './routes/Pelanggaran';
+import Khs from './routes/Khs';
+import Yudisium from './routes/Yudisium';
 
 function AppContent() {
   const auth = useAuth();
@@ -129,6 +131,22 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
             <Pelanggaran />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/khs"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+            <Khs />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/yudisium"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+            <Yudisium />
           </ProtectedRoute>
         }
       />

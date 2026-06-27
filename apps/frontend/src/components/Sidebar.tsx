@@ -145,6 +145,22 @@ export function Sidebar() {
         >
           ⚖️ Kedisiplinan
         </A>
+        <A
+          href="/khs"
+          activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+          inactiveClass="hover:bg-gray-800 hover:text-white"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+        >
+          📊 Hasil Studi & KHS
+        </A>
+        <A
+          href="/yudisium"
+          activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+          inactiveClass="hover:bg-gray-800 hover:text-white"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+        >
+          🎓 Evaluasi Yudisium
+        </A>
       </nav>
 
       {/* Footer / User Profile Summary */}

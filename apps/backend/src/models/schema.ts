@@ -167,6 +167,7 @@ export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
   kompensasiBayar: many(kompensasiBayar),
   bimbingan: many(bimbingan),
   pelanggaran: many(pelanggaran),
+  pengajuanYudisium: one(pengajuanYudisium),
 }));
 
 export const dosenRelations = relations(dosen, ({ one, many }) => ({
@@ -203,6 +204,7 @@ export const kelasKuliahRelations = relations(kelasKuliah, ({ one, many }) => ({
   }),
   dosenPengajarKelas: many(dosenPengajarKelas),
   krs: many(krs),
+  komponenNilai: many(komponenNilai),
 }));
 
 export const dosenPengajarKelasRelations = relations(dosenPengajarKelas, ({ one }) => ({
@@ -216,7 +218,7 @@ export const dosenPengajarKelasRelations = relations(dosenPengajarKelas, ({ one 
   }),
 }));
 
-export const krsRelations = relations(krs, ({ one }) => ({
+export const krsRelations = relations(krs, ({ one, many }) => ({
   mahasiswa: one(mahasiswa, {
     fields: [krs.mahasiswaId],
     references: [mahasiswa.id],
@@ -229,6 +231,7 @@ export const krsRelations = relations(krs, ({ one }) => ({
     fields: [krs.approvedById],
     references: [dosen.id],
   }),
+  nilaiKomponenMahasiswa: many(nilaiKomponenMahasiswa),
 }));
 
 export const tagihanRelations = relations(tagihan, ({ one }) => ({
@@ -395,5 +398,63 @@ export const pelanggaranRelations = relations(pelanggaran, ({ one }) => ({
   petugas: one(users, {
     fields: [pelanggaran.dibuatOleh],
     references: [users.id],
+  }),
+}));
+
+export const komponenNilai = pgTable('komponen_nilai', {
+  id: serial('id').primaryKey(),
+  kelasKuliahId: integer('kelas_kuliah_id').notNull().references(() => kelasKuliah.id, { onDelete: 'cascade' }),
+  nama: varchar('nama', { length: 100 }).notNull(),
+  bobot: integer('bobot').notNull(), // 0 - 100
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const nilaiKomponenMahasiswa = pgTable('nilai_komponen_mahasiswa', {
+  id: serial('id').primaryKey(),
+  krsId: integer('krs_id').notNull().references(() => krs.id, { onDelete: 'cascade' }),
+  komponenNilaiId: integer('komponen_nilai_id').notNull().references(() => komponenNilai.id, { onDelete: 'cascade' }),
+  nilai: numeric('nilai', { precision: 5, scale: 2 }).notNull(), // 0.00 - 100.00
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const pengajuanYudisium = pgTable('pengajuan_yudisium', {
+  id: serial('id').primaryKey(),
+  mahasiswaId: integer('mahasiswa_id').notNull().unique().references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  bebasPerpustakaan: boolean('bebas_perpustakaan').default(false).notNull(),
+  bebasLab: boolean('bebas_lab').default(false).notNull(),
+  buktiPembayaranWisuda: boolean('bukti_pembayaran_wisuda').default(false).notNull(),
+  skorToefl: integer('skor_toefl').default(0).notNull(),
+  judulTa: text('judul_ta').notNull(),
+  status: varchar('status', { length: 20 }).default('diajukan').notNull(), // 'diajukan', 'diverifikasi', 'disetujui', 'ditolak'
+  catatan: text('catatan'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const komponenNilaiRelations = relations(komponenNilai, ({ one, many }) => ({
+  kelasKuliah: one(kelasKuliah, {
+    fields: [komponenNilai.kelasKuliahId],
+    references: [kelasKuliah.id],
+  }),
+  nilaiKomponenMahasiswa: many(nilaiKomponenMahasiswa),
+}));
+
+export const nilaiKomponenMahasiswaRelations = relations(nilaiKomponenMahasiswa, ({ one }) => ({
+  krs: one(krs, {
+    fields: [nilaiKomponenMahasiswa.krsId],
+    references: [krs.id],
+  }),
+  komponenNilai: one(komponenNilai, {
+    fields: [nilaiKomponenMahasiswa.komponenNilaiId],
+    references: [komponenNilai.id],
+  }),
+}));
+
+export const pengajuanYudisiumRelations = relations(pengajuanYudisium, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [pengajuanYudisium.mahasiswaId],
+    references: [mahasiswa.id],
   }),
 }));
