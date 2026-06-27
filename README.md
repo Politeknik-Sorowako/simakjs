@@ -102,24 +102,36 @@ Database didesain menggunakan PostgreSQL dengan tabel-tabel berikut:
    - Atribut wajib: `status` (aktif/cuti/lulus/drop_out), `namaIbuKandung`, `nik`, `jenisKelamin`, `tanggalLahir`
    - Atribut opsional: `idPddikti`
 
+## 📈 Status Implementasi (Progress)
+
+Aplikasi SIMAK Vokasi ini telah mengimplementasikan alur bisnis akademik lengkap (Siklus Fase 1 hingga Fase 5):
+- **[✅] Fase 1 (Persiapan Semester):** Manajemen master data (Prodi, Mahasiswa, Dosen, Kelas) dan Tagihan Keuangan.
+- **[✅] Fase 2 (KRS & Bimbingan):** Pengisian KRS, approval dosen PA, dan diskusi bimbingan terintegrasi (minimal 3 interaksi).
+- **[✅] Fase 3 (Perkuliahan):** Input BAP, pencatatan Presensi Mahasiswa, dan akumulasi jam ketidakhadiran/mangkir.
+- **[✅] Fase 4 (KHS & Kelayakan Ujian):** Cetak Kartu Ujian (terhalang jika tagihan belum lunas), validasi syarat kehadiran >= 80%, serta auto-generate KHS.
+- **[✅] Fase 5 (Yudisium & PDDIKTI):** Penguncian nilai akhir kelas (Locking), evaluasi Yudisium, serta modul interaktif sinkronisasi ke Neo Feeder PDDIKTI.
+
 ## 🌐 Daftar API yang Tersedia (Endpoints)
 
 Backend berjalan pada URL _default_: `http://localhost:3000`. Dokumentasi interaktif Swagger dapat diakses melalui: `http://localhost:3000/swagger`.
 
-### 1. Autentikasi (`/auth`)
+### 1. Autentikasi & Pengguna
+- **`/auth/*`**: Register dan Login dengan JWT berbasis HttpOnly Cookie.
+- **`/dosen/*`**: CRUD master data Dosen pengampu.
+- **`/mahasiswa/*`**: CRUD master data Mahasiswa.
 
-- **`POST /auth/register`**: Mendaftarkan pengguna baru (Admin, Dosen, Mahasiswa). Input `email`, `password`, dan `role`. Mengembalikan status registrasi.
-- **`POST /auth/login`**: Login menggunakan `email` dan `password`. Menyetel **HttpOnly Cookie** yang berisi JWT secara otomatis untuk sesi autentikasi yang aman dari XSS.
+### 2. Akademik & Perkuliahan
+- **`/prodi/*`**: Manajemen Program Studi.
+- **`/kelas-kuliah/*`**: Pembuatan kelas dan plotting dosen mata kuliah.
+- **`/krs/*`**: Pengambilan mata kuliah dan approval Dosen PA.
+- **`/bap/*` & `/presensi/*`**: Pencatatan Berita Acara Perkuliahan dan absensi kelas.
+- **`/bimbingan/*`**: Layanan chat interaktif antara Dosen PA dan Mahasiswa.
 
-### 2. Program Studi (`/prodi`)
-
-- **`GET /prodi`**: Mengambil daftar semua program studi. Terbuka untuk umum.
-- **`POST /prodi`**: Menambahkan data program studi baru. **Diproteksi:** Memerlukan sesi admin yang valid dari cookie.
-
-### 3. Mahasiswa (`/mahasiswa`)
-
-- **`GET /mahasiswa`**: Mengambil daftar data mahasiswa beserta informasinya.
-- **`POST /mahasiswa`**: Menambahkan data mahasiswa baru. **Diproteksi:** Memerlukan sesi admin atau dosen dari cookie.
+### 3. Keuangan & Evaluasi Studi
+- **`/tagihan/*`**: Manajemen SPP/UKT Mahasiswa (pengecekan clearance finansial).
+- **`/khs/*`**: API cek kelayakan ujian (kehadiran & bimbingan) dan rekap KHS / Transkrip.
+- **`/yudisium/*`**: Manajemen komponen nilai, input nilai, dan fitur Lock (Penguncian Kelas).
+- **`/pddikti/*`**: Endpoint integrasi (sinkronisasi data) ke Neo Feeder PDDIKTI nasional.
 
 ## 🚀 Cara Setup dan Menjalankan Aplikasi (Lokal & Docker)
 
