@@ -93,6 +93,7 @@ export const kelasKuliah = pgTable('kelas_kuliah', {
   mataKuliahId: integer('mata_kuliah_id').notNull().references(() => mataKuliah.id, { onDelete: 'restrict' }),
   periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   namaKelas: varchar('nama_kelas', { length: 50 }).notNull(),
+  isLocked: boolean('is_locked').default(false).notNull(),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
   lastSyncAt: timestamp('last_sync_at'),

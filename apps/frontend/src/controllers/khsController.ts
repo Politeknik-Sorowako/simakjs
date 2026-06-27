@@ -118,5 +118,25 @@ export const khsController = {
       method: 'POST',
       body: JSON.stringify({ kelasKuliahId, nilaiList })
     });
+  },
+
+  async getExamEligibility(mhsId: number, periodeId: string): Promise<any> {
+    return fetchApi<any>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}/eligibility`);
+  },
+
+  async lockKelas(kelasKuliahId: number): Promise<any> {
+    return fetchApi<any>(`/yudisium/kelas/${kelasKuliahId}/lock`, {
+      method: 'POST'
+    });
+  },
+
+  async getPddiktiStats(): Promise<any> {
+    return fetchApi<any>('/pddikti/stats');
+  },
+
+  async syncPddikti(): Promise<any> {
+    return fetchApi<any>('/pddikti/sync', {
+      method: 'POST'
+    });
   }
 };

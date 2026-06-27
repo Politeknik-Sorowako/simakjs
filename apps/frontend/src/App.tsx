@@ -20,6 +20,7 @@ import Bimbingan from './routes/Bimbingan';
 import Pelanggaran from './routes/Pelanggaran';
 import Khs from './routes/Khs';
 import Yudisium from './routes/Yudisium';
+import { PddiktiSync } from './routes/PddiktiSync';
 
 function AppContent() {
   const auth = useAuth();
@@ -147,6 +148,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
             <Yudisium />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pddikti"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+            <PddiktiSync />
           </ProtectedRoute>
         }
       />

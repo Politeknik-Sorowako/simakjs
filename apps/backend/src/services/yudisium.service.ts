@@ -1,5 +1,5 @@
 import { db } from '../utils/db';
-import { pengajuanYudisium, mahasiswa, programStudi, komponenNilai, nilaiKomponenMahasiswa, krs } from '../models/schema';
+import { pengajuanYudisium, mahasiswa, programStudi, komponenNilai, nilaiKomponenMahasiswa, krs, kelasKuliah } from '../models/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 export class YudisiumService {
@@ -117,6 +117,13 @@ export class YudisiumService {
   }
 
   static async saveKomponen(kelasKuliahId: number, list: Array<{ nama: string; bobot: number }>) {
+    const foundKelas = await db.query.kelasKuliah.findFirst({
+      where: eq(kelasKuliah.id, kelasKuliahId)
+    });
+    if (foundKelas?.isLocked) {
+      throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
+    }
+
     const totalBobot = list.reduce((sum, item) => sum + item.bobot, 0);
     if (totalBobot !== 100) {
       throw new Error('Total bobot komponen nilai harus tepat 100%.');
@@ -196,6 +203,13 @@ export class YudisiumService {
     krsId: number;
     nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number | string }>
   }>) {
+    const foundKelas = await db.query.kelasKuliah.findFirst({
+      where: eq(kelasKuliah.id, kelasKuliahId)
+    });
+    if (foundKelas?.isLocked) {
+      throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
+    }
+
     const components = await this.getKomponen(kelasKuliahId);
     const compMap = new Map<number, number>();
     for (const c of components) {
@@ -276,5 +290,17 @@ export class YudisiumService {
     if (score >= 60) return { huruf: 'C', indeks: 2.0 };
     if (score >= 50) return { huruf: 'D', indeks: 1.0 };
     return { huruf: 'E', indeks: 0.0 };
+  }
+
+  static async lockKelas(kelasKuliahId: number) {
+    const [updated] = await db
+      .update(kelasKuliah)
+      .set({ isLocked: true, updatedAt: new Date() })
+      .where(eq(kelasKuliah.id, kelasKuliahId))
+      .returning();
+    if (!updated) {
+      throw new Error('Kelas kuliah tidak ditemukan.');
+    }
+    return updated;
   }
 }

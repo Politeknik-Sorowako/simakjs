@@ -1,6 +1,6 @@
 import { db } from '../utils/db';
-import { krs, mahasiswa, kelasKuliah, mataKuliah, tagihan } from '../models/schema';
-import { eq, and, isNotNull } from 'drizzle-orm';
+import { krs, mahasiswa, kelasKuliah, mataKuliah, tagihan, bimbingan, bap, presensi } from '../models/schema';
+import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { PresensiService } from './presensi.service';
 
 export interface KhsSummary {
@@ -178,6 +178,104 @@ export class KhsService {
         totalSks,
         ipk
       }
+    };
+  }
+
+  static async getExamEligibility(mahasiswaId: number, activePeriodeId: string) {
+    const bimb = await db.query.bimbingan.findFirst({
+      where: and(
+        eq(bimbingan.mahasiswaId, mahasiswaId),
+        eq(bimbingan.periodeId, activePeriodeId)
+      ),
+      with: {
+        thread: true
+      }
+    });
+
+    const hasBimbinganApproved = bimb?.isApproved === true;
+    const threadCount = bimb?.thread?.length || 0;
+    const bimbinganEligible = hasBimbinganApproved || threadCount >= 3;
+
+    const studentKrs = await db
+      .select({
+        krsId: krs.id,
+        kelasKuliahId: krs.kelasKuliahId,
+        namaKelas: kelasKuliah.namaKelas,
+        mataKuliahNama: mataKuliah.nama,
+        mataKuliahKode: mataKuliah.kode
+      })
+      .from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .where(
+        and(
+          eq(krs.mahasiswaId, mahasiswaId),
+          eq(kelasKuliah.periodeId, activePeriodeId),
+          eq(krs.isApproved, true)
+        )
+      );
+
+    const classEligibility = [];
+
+    for (const item of studentKrs) {
+      const meetings = await db
+        .select()
+        .from(bap)
+        .where(eq(bap.kelasKuliahId, item.kelasKuliahId));
+
+      const totalMeetings = meetings.length;
+      let presentMeetings = 0;
+
+      if (totalMeetings > 0) {
+        const meetingIds = meetings.map(m => m.id);
+        const studentPresensi = await db
+          .select()
+          .from(presensi)
+          .where(
+            and(
+              eq(presensi.mahasiswaId, mahasiswaId),
+              inArray(presensi.bapId, meetingIds)
+            )
+          );
+
+        for (const p of studentPresensi) {
+          if (p.status === 'hadir' || p.status === 'telat') {
+            presentMeetings++;
+          }
+        }
+      }
+
+      const attendanceRate = totalMeetings > 0 ? (presentMeetings / totalMeetings) * 100 : 100;
+      const attendanceEligible = attendanceRate >= 80;
+
+      classEligibility.push({
+        kelasKuliahId: item.kelasKuliahId,
+        namaKelas: item.namaKelas,
+        mataKuliahNama: item.mataKuliahNama,
+        mataKuliahKode: item.mataKuliahKode,
+        totalMeetings,
+        presentMeetings,
+        attendanceRate: parseFloat(attendanceRate.toFixed(2)),
+        eligible: attendanceEligible && bimbinganEligible,
+        reasons: {
+          attendance: attendanceEligible ? 'Lolos (>= 80%)' : `Kehadiran kurang (${attendanceRate.toFixed(1)}% < 80%)`,
+          bimbingan: bimbinganEligible ? 'Lolos' : 'Bimbingan PA belum terpenuhi (min. 3 interaksi)'
+        }
+      });
+    }
+
+    const overallEligible = classEligibility.every(c => c.eligible);
+
+    return {
+      mahasiswaId,
+      periodeId: activePeriodeId,
+      bimbingan: {
+        isApproved: bimb?.isApproved || false,
+        interactionsCount: threadCount,
+        eligible: bimbinganEligible
+      },
+      classes: classEligibility,
+      overallEligible
     };
   }
 }

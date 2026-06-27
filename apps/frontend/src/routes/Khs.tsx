@@ -25,6 +25,28 @@ export default function Khs() {
   const [editableComponents, setEditableComponents] = createSignal<Array<{ name: string; bobot: number }>>([]);
   const [inputGrades, setInputGrades] = createSignal<Record<string, number>>({});
 
+  // Printing States
+  const [showPrintUjian, setShowPrintUjian] = createSignal(false);
+  const [showPrintKhs, setShowPrintKhs] = createSignal(false);
+  const [showPrintTranskrip, setShowPrintTranskrip] = createSignal(false);
+
+  // Load exam eligibility for print card
+  const [eligibilityData] = createResource(
+    () => {
+      const mhsId = selectedMhsId();
+      const pId = selectedPeriode();
+      if (!mhsId || !showPrintUjian()) return null;
+      return { mhsId, periodeId: pId };
+    },
+    async ({ mhsId, periodeId }) => {
+      try {
+        return await khsController.getExamEligibility(mhsId, periodeId);
+      } catch (e) {
+        return null;
+      }
+    }
+  );
+
   // Load Mahasiswa profile if logged in as student
   const [mhsProfile] = createResource(
     () => {
@@ -211,6 +233,24 @@ export default function Khs() {
     }
   };
 
+  const selectedClassDetails = () => classes()?.find(c => c.id === selectedKelasId()) || null;
+  const isClassLocked = () => selectedClassDetails()?.isLocked || false;
+
+  const handleLockKelas = async () => {
+    const id = selectedKelasId();
+    if (!id) return;
+    if (!confirm('Apakah Anda yakin ingin mengunci nilai kelas ini? Setelah dikunci, komponen dan nilai tidak dapat diubah kembali.')) return;
+
+    try {
+      await khsController.lockKelas(id);
+      toast.showToast('Nilai kelas berhasil dikunci!', 'success');
+      refetchStudentsGrades();
+      classes.refetch();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal mengunci kelas.', 'error');
+    }
+  };
+
   const [khsData, { refetch: refetchKhs }] = createResource(
     () => {
       const mId = selectedMhsId();
@@ -371,7 +411,15 @@ export default function Khs() {
               <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Left side: Component Weights Management */}
                 <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
-                  <h3 class="font-bold text-gray-800 border-b pb-2">Komposisi Bobot Nilai (%)</h3>
+                  <div class="flex justify-between items-center border-b pb-2">
+                    <h3 class="font-bold text-gray-800">Komposisi Bobot Nilai (%)</h3>
+                    <Show when={isClassLocked()}>
+                      <span class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold rounded-lg flex items-center gap-1">
+                        🔒 Dikunci
+                      </span>
+                    </Show>
+                  </div>
+                  
                   <div class="flex flex-col gap-3">
                     <For each={editableComponents()}>
                       {(comp, idx) => (
@@ -380,45 +428,53 @@ export default function Khs() {
                             type="text"
                             placeholder="Nama Komponen"
                             value={comp.name}
+                            disabled={isClassLocked()}
                             onInput={(e) => updateComponentField(idx(), 'name', e.currentTarget.value)}
-                            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none"
+                            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
                           />
                           <input
                             type="number"
                             placeholder="Bobot"
                             value={comp.bobot}
+                            disabled={isClassLocked()}
                             onInput={(e) => updateComponentField(idx(), 'bobot', e.currentTarget.value)}
-                            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none"
+                            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400"
                           />
                           <span class="text-xs text-gray-400 font-bold">%</span>
-                          <button
-                            onClick={() => removeComponent(idx())}
-                            class="text-rose-500 hover:text-rose-700 text-xs p-1"
-                          >
-                            ❌
-                          </button>
+                          <Show when={!isClassLocked()}>
+                            <button
+                              onClick={() => removeComponent(idx())}
+                              class="text-rose-500 hover:text-rose-700 text-xs p-1"
+                            >
+                              ❌
+                            </button>
+                          </Show>
                         </div>
                       )}
                     </For>
 
                     <div class="flex justify-between items-center mt-2">
-                      <button
-                        onClick={addComponent}
-                        class="text-blue-600 hover:text-blue-700 font-bold text-xs flex items-center gap-1"
-                      >
-                        ➕ Tambah Komponen
-                      </button>
+                      <Show when={!isClassLocked()} fallback={<span class="text-xs text-gray-400 font-medium">Pengaturan komponen dinonaktifkan.</span>}>
+                        <button
+                          onClick={addComponent}
+                          class="text-blue-600 hover:text-blue-700 font-bold text-xs flex items-center gap-1"
+                        >
+                          ➕ Tambah Komponen
+                        </button>
+                      </Show>
                       <span class="text-xs font-bold text-gray-600">
                         Total: {editableComponents().reduce((sum, item) => sum + item.bobot, 0)}%
                       </span>
                     </div>
 
-                    <button
-                      onClick={handleSaveComponents}
-                      class="mt-4 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-100"
-                    >
-                      Simpan Bobot Komponen
-                    </button>
+                    <Show when={!isClassLocked()}>
+                      <button
+                        onClick={handleSaveComponents}
+                        class="mt-4 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-100"
+                      >
+                        Simpan Bobot Komponen
+                      </button>
+                    </Show>
                   </div>
                 </div>
 
@@ -426,14 +482,28 @@ export default function Khs() {
                 <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
                   <div class="flex justify-between items-center border-b pb-2">
                     <h3 class="font-bold text-gray-800">Daftar Mahasiswa & Pengisian Nilai</h3>
-                    <Show when={components() && components().length > 0}>
-                      <button
-                        onClick={handleSaveGrades}
-                        class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-sm"
-                      >
-                        Simpan Semua Nilai
-                      </button>
-                    </Show>
+                    <div class="flex gap-2">
+                      <Show when={components() && components().length > 0}>
+                        <Show when={!isClassLocked()} fallback={
+                          <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl">
+                            🔒 Nilai Kelas Telah Dikunci (Selesai)
+                          </span>
+                        }>
+                          <button
+                            onClick={handleSaveGrades}
+                            class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-sm"
+                          >
+                            Simpan Nilai
+                          </button>
+                          <button
+                            onClick={handleLockKelas}
+                            class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs hover:bg-rose-700 active:scale-95 transition-all shadow-sm"
+                          >
+                            🔒 Kunci Nilai
+                          </button>
+                        </Show>
+                      </Show>
+                    </div>
                   </div>
 
                   <Show when={components() && components().length > 0} fallback={
@@ -475,9 +545,10 @@ export default function Khs() {
                                       min="0"
                                       max="100"
                                       placeholder="0"
+                                      disabled={isClassLocked()}
                                       value={inputGrades()[`${stud.krsId}_${c.id}`] || ''}
                                       onInput={(e) => handleGradeChange(stud.krsId, c.id!, parseFloat(e.currentTarget.value) || 0)}
-                                      class="border border-gray-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-blue-500"
+                                      class="border border-gray-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-blue-500 disabled:bg-gray-55 disabled:text-gray-400"
                                     />
                                   </td>
                                 )}
@@ -538,7 +609,26 @@ export default function Khs() {
 
                       {/* KHS Table */}
                       <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
-                        <h3 class="font-bold text-gray-800 border-b pb-2">Rincian Mata Kuliah & Nilai</h3>
+                        <div class="flex justify-between items-center border-b pb-2">
+                          <h3 class="font-bold text-gray-800">Rincian Mata Kuliah & Nilai</h3>
+                          <div class="flex gap-2">
+                            <button
+                              onClick={() => setShowPrintUjian(true)}
+                              disabled={khsData()?.blocked}
+                              class="px-3 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-blue-100"
+                            >
+                              🖨️ Cetak Kartu Ujian
+                            </button>
+                            <button
+                              onClick={() => setShowPrintKhs(true)}
+                              disabled={khsData()?.blocked}
+                              class="px-3 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-blue-100"
+                            >
+                              🖨️ Cetak KHS
+                            </button>
+                          </div>
+                        </div>
+
                         <table class="w-full text-left text-xs border-collapse">
                           <thead>
                             <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
@@ -622,7 +712,16 @@ export default function Khs() {
                   </div>
 
                   <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
-                    <h3 class="font-bold text-gray-800 border-b pb-2">Transkrip Nilai Akademik Kumulatif</h3>
+                    <div class="flex justify-between items-center border-b pb-2">
+                      <h3 class="font-bold text-gray-800">Transkrip Nilai Akademik Kumulatif</h3>
+                      <button
+                        onClick={() => setShowPrintTranskrip(true)}
+                        class="px-3 py-1.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-100"
+                      >
+                        🖨️ Cetak Transkrip
+                      </button>
+                    </div>
+
                     <table class="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
@@ -670,6 +769,231 @@ export default function Khs() {
               </Show>
             </Show>
           </Show>
+        </Show>
+
+        {/* PRINTABLE OVERLAY MODALS */}
+        <Show when={showPrintUjian()}>
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0">
+              <div class="flex justify-between items-center border-b pb-2 print:hidden">
+                <h3 class="font-bold text-gray-800">Print Preview - Kartu Ujian</h3>
+                <button onClick={() => setShowPrintUjian(false)} class="text-gray-400 hover:text-gray-650">❌</button>
+              </div>
+              
+              <div class="flex flex-col gap-4 text-gray-850" id="print-area-ujian">
+                <div class="text-center border-b pb-3 flex flex-col gap-1">
+                  <h2 class="text-xl font-extrabold text-blue-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
+                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">KARTU UJIAN MAHASISWA (UTS/UAS)</h3>
+                  <p class="text-xs text-gray-400">Periode Akademik: {selectedPeriode()}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-600 mb-2">
+                  <div>
+                    <p>NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span></p>
+                    <p>Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span></p>
+                  </div>
+                  <div class="text-right">
+                    <p>Bimbingan PA: <span class={`font-bold ${eligibilityData()?.bimbingan?.eligible ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {eligibilityData()?.bimbingan?.eligible ? 'TERPENUHI' : 'BELUM TERPENUHI'}
+                    </span></p>
+                  </div>
+                </div>
+
+                <table class="w-full text-left text-xs border border-gray-200 border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200">
+                      <th class="p-2 border-r">Kode</th>
+                      <th class="p-2 border-r">Mata Kuliah</th>
+                      <th class="p-2 border-r text-center">Kehadiran</th>
+                      <th class="p-2 text-center">Status Kelayakan</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200 font-medium text-gray-700">
+                    <For each={eligibilityData()?.classes} fallback={
+                      <tr>
+                        <td colspan="4" class="p-4 text-center text-gray-400 italic">Memuat data kelayakan ujian...</td>
+                      </tr>
+                    }>
+                      {(c) => (
+                        <tr>
+                          <td class="p-2 border-r">{c.mataKuliahKode}</td>
+                          <td class="p-2 border-r font-bold text-gray-800">{c.mataKuliahNama} ({c.namaKelas})</td>
+                          <td class="p-2 border-r text-center">{c.attendanceRate}% ({c.presentMeetings}/{c.totalMeetings})</td>
+                          <td class="p-2 text-center">
+                            <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              c.eligible ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
+                            }`}>
+                              {c.eligible ? 'LAYAK' : 'TIDAK LAYAK'}
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="flex justify-end gap-3 mt-4 border-t pt-4 print:hidden">
+                <button
+                  onClick={() => setShowPrintUjian(false)}
+                  class="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 active:scale-95 transition-all"
+                >
+                  Tutup
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                >
+                  🖨️ Cetak Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        <Show when={showPrintKhs()}>
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0">
+              <div class="flex justify-between items-center border-b pb-2 print:hidden">
+                <h3 class="font-bold text-gray-800">Print Preview - KHS</h3>
+                <button onClick={() => setShowPrintKhs(false)} class="text-gray-400 hover:text-gray-650">❌</button>
+              </div>
+              
+              <div class="flex flex-col gap-4 text-gray-850" id="print-area-khs">
+                <div class="text-center border-b pb-3 flex flex-col gap-1">
+                  <h2 class="text-xl font-extrabold text-blue-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
+                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">KARTU HASIL STUDI (KHS) SEMESTER</h3>
+                  <p class="text-xs text-gray-400">Periode Akademik: {selectedPeriode()}</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-600 mb-2">
+                  <div>
+                    <p>NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span></p>
+                    <p>Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span></p>
+                  </div>
+                  <div class="text-right">
+                    <p>IP Semester: <span class="text-gray-900 font-extrabold text-blue-600">{khsData()?.summary?.ipSemester?.toFixed(2)}</span></p>
+                    <p>SKS Terkontrak: <span class="text-gray-900 font-bold">{khsData()?.summary?.totalSks} SKS</span></p>
+                  </div>
+                </div>
+
+                <table class="w-full text-left text-xs border border-gray-200 border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200">
+                      <th class="p-2 border-r">Kode MK</th>
+                      <th class="p-2 border-r">Nama Mata Kuliah</th>
+                      <th class="p-2 border-r text-center">SKS</th>
+                      <th class="p-2 border-r text-center">Nilai Angka</th>
+                      <th class="p-2 border-r text-center">Nilai Huruf</th>
+                      <th class="p-2 text-center">Nilai Indeks</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200 font-medium text-gray-700">
+                    <For each={khsData()?.krsList}>
+                      {(item) => (
+                        <tr>
+                          <td class="p-2 border-r">{item.mataKuliah?.kode}</td>
+                          <td class="p-2 border-r font-bold text-gray-800">{item.mataKuliah?.nama}</td>
+                          <td class="p-2 border-r text-center">{item.mataKuliah?.sksTotal}</td>
+                          <td class="p-2 border-r text-center">{item.nilaiAngka || '-'}</td>
+                          <td class="p-2 border-r text-center">{item.nilaiHuruf || '-'}</td>
+                          <td class="p-2 text-center">{item.nilaiIndeks || '-'}</td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="flex justify-end gap-3 mt-4 border-t pt-4 print:hidden">
+                <button
+                  onClick={() => setShowPrintKhs(false)}
+                  class="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 active:scale-95 transition-all"
+                >
+                  Tutup
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                >
+                  🖨️ Cetak Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        <Show when={showPrintTranskrip()}>
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0">
+              <div class="flex justify-between items-center border-b pb-2 print:hidden">
+                <h3 class="font-bold text-gray-800">Print Preview - Transkrip Akademik</h3>
+                <button onClick={() => setShowPrintTranskrip(false)} class="text-gray-400 hover:text-gray-650">❌</button>
+              </div>
+              
+              <div class="flex flex-col gap-4 text-gray-850" id="print-area-transkrip">
+                <div class="text-center border-b pb-3 flex flex-col gap-1">
+                  <h2 class="text-xl font-extrabold text-blue-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
+                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">TRANSKRIP NILAI AKADEMIK KUMULATIF</h3>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-600 mb-2">
+                  <div>
+                    <p>NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span></p>
+                    <p>Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span></p>
+                  </div>
+                  <div class="text-right">
+                    <p>IPK Kumulatif: <span class="text-gray-900 font-extrabold text-blue-600">{transkripData()?.summary?.ipk?.toFixed(2)}</span></p>
+                    <p>Total SKS Lulus: <span class="text-gray-900 font-bold">{transkripData()?.summary?.totalSks} SKS</span></p>
+                  </div>
+                </div>
+
+                <table class="w-full text-left text-xs border border-gray-200 border-collapse">
+                  <thead>
+                    <tr class="bg-gray-50 text-gray-500 font-bold uppercase border-b border-gray-200">
+                      <th class="p-2 border-r">Semester</th>
+                      <th class="p-2 border-r">Kode MK</th>
+                      <th class="p-2 border-r">Nama Mata Kuliah</th>
+                      <th class="p-2 border-r text-center">SKS</th>
+                      <th class="p-2 border-r text-center">Nilai Angka</th>
+                      <th class="p-2 border-r text-center">Nilai Huruf</th>
+                      <th class="p-2 text-center">Nilai Indeks</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200 font-medium text-gray-700">
+                    <For each={transkripData()?.transkripList}>
+                      {(item) => (
+                        <tr>
+                          <td class="p-2 border-r">{item.periodeId}</td>
+                          <td class="p-2 border-r">{item.mataKuliah?.kode}</td>
+                          <td class="p-2 border-r font-bold text-gray-800">{item.mataKuliah?.nama}</td>
+                          <td class="p-2 border-r text-center">{item.mataKuliah?.sksTotal}</td>
+                          <td class="p-2 border-r text-center">{item.nilaiAngka || '-'}</td>
+                          <td class="p-2 border-r text-center">{item.nilaiHuruf || '-'}</td>
+                          <td class="p-2 text-center">{item.nilaiIndeks || '-'}</td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="flex justify-end gap-3 mt-4 border-t pt-4 print:hidden">
+                <button
+                  onClick={() => setShowPrintTranskrip(false)}
+                  class="px-4 py-2 border rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-50 active:scale-95 transition-all"
+                >
+                  Tutup
+                </button>
+                <button
+                  onClick={() => window.print()}
+                  class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                >
+                  🖨️ Cetak Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
         </Show>
       </div>
     </MainLayout>

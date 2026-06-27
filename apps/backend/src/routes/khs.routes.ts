@@ -6,4 +6,5 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 export const khsRoutes = new Elysia({ prefix: '/khs' })
   .use(authMiddleware)
   .get('/mahasiswa/:mhsId/periode/:periodeId', KhsController.getByMhsIdAndPeriode, getKhsSchema)
-  .get('/mahasiswa/:mhsId/transkrip', KhsController.getTranskrip, getTranskripSchema);
+  .get('/mahasiswa/:mhsId/transkrip', KhsController.getTranskrip, getTranskripSchema)
+  .get('/mahasiswa/:mhsId/periode/:periodeId/eligibility', KhsController.getExamEligibility);

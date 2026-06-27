@@ -20,4 +20,5 @@ export const yudisiumRoutes = new Elysia({ prefix: '/yudisium' })
   .get('/kelas/:kelasKuliahId/komponen', YudisiumController.getKomponen)
   .post('/kelas/komponen', YudisiumController.saveKomponen, { body: saveKomponenBody })
   .get('/kelas/:kelasKuliahId/nilai', YudisiumController.getNilaiMahasiswa)
-  .post('/kelas/nilai', YudisiumController.saveNilaiMahasiswa, { body: saveNilaiMahasiswaBody });
+  .post('/kelas/nilai', YudisiumController.saveNilaiMahasiswa, { body: saveNilaiMahasiswaBody })
+  .post('/kelas/:kelasKuliahId/lock', YudisiumController.lockKelas);

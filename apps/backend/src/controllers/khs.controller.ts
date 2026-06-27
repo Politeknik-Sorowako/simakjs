@@ -88,4 +88,36 @@ export class KhsController {
       return { error: err.message || 'Gagal memproses Transkrip Nilai.' };
     }
   }
+
+  static async getExamEligibility({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+
+    const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    const targetPeriodeId = params.periodeId;
+
+    // RBAC Check
+    if (user.role === 'mahasiswa') {
+      const myMhsId = await KhsController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== targetMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat melihat kelayakan ujian Anda sendiri.' };
+      }
+    }
+
+    try {
+      return await KhsService.getExamEligibility(targetMhsId, targetPeriodeId);
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal memproses kelayakan ujian.' };
+    }
+  }
 }

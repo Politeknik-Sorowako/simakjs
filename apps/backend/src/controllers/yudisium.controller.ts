@@ -153,4 +153,20 @@ export class YudisiumController {
       return { error: e.message || 'Gagal menyimpan nilai komponen mahasiswa.' };
     }
   }
+
+  static async lockKelas({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const result = await YudisiumService.lockKelas(parseInt(params.kelasKuliahId));
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal mengunci nilai kelas.' };
+    }
+  }
 }
