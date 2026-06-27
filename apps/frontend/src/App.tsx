@@ -16,6 +16,8 @@ import Krs from './routes/Krs';
 import KeuanganDashboard from './routes/KeuanganDashboard';
 import BapPresensi from './routes/BapPresensi';
 import LaporanKompensasi from './routes/LaporanKompensasi';
+import Bimbingan from './routes/Bimbingan';
+import Pelanggaran from './routes/Pelanggaran';
 
 function AppContent() {
   const auth = useAuth();
@@ -111,6 +113,22 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <LaporanKompensasi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bimbingan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+            <Bimbingan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pelanggaran"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+            <Pelanggaran />
           </ProtectedRoute>
         }
       />

@@ -129,6 +129,22 @@ export function Sidebar() {
             📓 Jurnal & Presensi
           </A>
         </Show>
+        <A
+          href="/bimbingan"
+          activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+          inactiveClass="hover:bg-gray-800 hover:text-white"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+        >
+          💬 Bimbingan Akademik
+        </A>
+        <A
+          href="/pelanggaran"
+          activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+          inactiveClass="hover:bg-gray-800 hover:text-white"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+        >
+          ⚖️ Kedisiplinan
+        </A>
       </nav>
 
       {/* Footer / User Profile Summary */}

@@ -16,6 +16,8 @@ import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
 import { cpmkRoutes } from './routes/cpmk.routes';
 import { bapRoutes } from './routes/bap.routes';
 import { presensiRoutes } from './routes/presensi.routes';
+import { bimbinganRoutes } from './routes/bimbingan.routes';
+import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 
 export const app = new Elysia()
   .use(
@@ -69,6 +71,8 @@ export const app = new Elysia()
   .use(dosenPengajarRoutes)
   .use(cpmkRoutes)
   .use(bapRoutes)
-  .use(presensiRoutes);
+  .use(presensiRoutes)
+  .use(bimbinganRoutes)
+  .use(pelanggaranRoutes);
 
 
