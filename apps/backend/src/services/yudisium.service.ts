@@ -64,6 +64,16 @@ export class YudisiumService {
           .update(mahasiswa)
           .set({ status: 'lulus', updatedAt: new Date() })
           .where(eq(mahasiswa.id, mahasiswaId));
+      } else {
+        const currentMhs = await tx.query.mahasiswa.findFirst({
+          where: eq(mahasiswa.id, mahasiswaId)
+        });
+        if (currentMhs && currentMhs.status === 'lulus') {
+          await tx
+            .update(mahasiswa)
+            .set({ status: 'aktif', updatedAt: new Date() })
+            .where(eq(mahasiswa.id, mahasiswaId));
+        }
       }
 
       return updated;
@@ -115,6 +125,17 @@ export class YudisiumService {
     return await db.transaction(async (tx) => {
       // Clear old components (will cascade delete grades in nilai_komponen_mahasiswa)
       await tx.delete(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+
+      // Reset KRS grades for this class to ensure integrity
+      await tx
+        .update(krs)
+        .set({
+          nilaiAngka: null,
+          nilaiHuruf: null,
+          nilaiIndeks: null,
+          updatedAt: new Date()
+        })
+        .where(eq(krs.kelasKuliahId, kelasKuliahId));
 
       const inserts = list.map((item) => ({
         kelasKuliahId,

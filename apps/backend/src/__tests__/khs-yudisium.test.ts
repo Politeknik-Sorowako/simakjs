@@ -227,6 +227,74 @@ describe('KHS, Grade Components & Yudisium API', () => {
       expect(finalKrs.nilaiHuruf).toBe('A');
       expect(parseFloat(finalKrs.nilaiIndeks!)).toBe(4.00);
     });
+
+    it('mengubah komponen nilai harus me-reset nilai akhir KRS mahasiswa terkait menjadi null', async () => {
+      const compRes1 = await app.handle(
+        new Request('http://localhost/yudisium/kelas/komponen', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${dosenToken}`
+          },
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            komponenList: [
+              { nama: 'UTS', bobot: 50 },
+              { nama: 'UAS', bobot: 50 }
+            ]
+          })
+        })
+      );
+      const comps1 = await compRes1.json();
+
+      await app.handle(
+        new Request('http://localhost/yudisium/kelas/nilai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${dosenToken}`
+          },
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            nilaiList: [
+              {
+                krsId: krsId,
+                nilaiKomponenList: [
+                  { komponenNilaiId: comps1[0].id, nilai: 80 },
+                  { komponenNilaiId: comps1[1].id, nilai: 90 }
+                ]
+              }
+            ]
+          })
+        })
+      );
+
+      const [krsBefore] = await db.select().from(krs).where(eq(krs.id, krsId));
+      expect(krsBefore.nilaiAngka).not.toBeNull();
+
+      await app.handle(
+        new Request('http://localhost/yudisium/kelas/komponen', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${dosenToken}`
+          },
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            komponenList: [
+              { nama: 'Tugas', bobot: 20 },
+              { nama: 'UTS', bobot: 30 },
+              { nama: 'UAS', bobot: 50 }
+            ]
+          })
+        })
+      );
+
+      const [krsAfter] = await db.select().from(krs).where(eq(krs.id, krsId));
+      expect(krsAfter.nilaiAngka).toBeNull();
+      expect(krsAfter.nilaiHuruf).toBeNull();
+      expect(krsAfter.nilaiIndeks).toBeNull();
+    });
   });
 
   describe('Yudisium Wisuda Process', () => {
@@ -295,6 +363,75 @@ describe('KHS, Grade Components & Yudisium API', () => {
       // Verify student status is updated to 'lulus'
       const [updatedMhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, mhsId));
       expect(updatedMhs.status).toBe('lulus');
+    });
+
+    it('membatalkan/menolak yudisium yang sudah disetujui harus mengembalikan status mahasiswa ke aktif', async () => {
+      // 1. Submit & Approve yudisium (mahasiswa jadi lulus)
+      await db.insert(mahasiswa).values({
+        id: 999,
+        nim: '20200009',
+        nama: 'Mahasiswa Yudisium',
+        email: 'mhs-yud@test.com',
+        programStudiId: prodiId,
+        status: 'aktif',
+        namaIbuKandung: 'Ibu Test',
+        nik: '1234567890123459',
+        jenisKelamin: 'L',
+        tanggalLahir: '2000-01-01',
+      });
+
+      const tokenMhs2 = await getAuthToken('mhs-yud@test.com', 'mahasiswa');
+
+      await app.handle(
+        new Request('http://localhost/yudisium/mahasiswa/999', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${tokenMhs2}`
+          },
+          body: JSON.stringify({
+            judulTa: 'Judul Wisuda',
+            skorToefl: 500,
+            bebasPerpustakaan: true,
+            bebasLab: true,
+            buktiPembayaranWisuda: true
+          })
+        })
+      );
+
+      await app.handle(
+        new Request('http://localhost/yudisium/mahasiswa/999/status', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`
+          },
+          body: JSON.stringify({
+            status: 'disetujui'
+          })
+        })
+      );
+
+      const [mhsLulus] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, 999));
+      expect(mhsLulus.status).toBe('lulus');
+
+      // 2. Batalkan / Ubah status yudisium menjadi ditolak
+      await app.handle(
+        new Request('http://localhost/yudisium/mahasiswa/999/status', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`
+          },
+          body: JSON.stringify({
+            status: 'ditolak',
+            catatan: 'Dokumen palsu atau tidak lengkap.'
+          })
+        })
+      );
+
+      const [mhsReverted] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, 999));
+      expect(mhsReverted.status).toBe('aktif');
     });
   });
 });
