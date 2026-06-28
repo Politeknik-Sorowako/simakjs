@@ -2,23 +2,28 @@ import { Elysia } from 'elysia';
 import { YudisiumController } from '../controllers/yudisium.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
-  pengajuanYudisiumBody,
-  updateYudisiumStatusBody,
-  saveKomponenBody,
-  saveNilaiMahasiswaBody,
-  getYudisiumSchema
+  getYudisiumSchema,
+  getAllYudisiumSchema,
+  submitPengajuanYudisiumSchema,
+  updateYudisiumStatusSchema,
+  getKomponenYudisiumSchema,
+  saveKomponenYudisiumSchema,
+  getNilaiMahasiswaYudisiumSchema,
+  saveNilaiMahasiswaYudisiumSchema,
+  lockKelasYudisiumSchema
 } from '../schemas/yudisium.schema';
 
 export const yudisiumRoutes = new Elysia({ prefix: '/yudisium' })
   .use(authMiddleware)
-  .get('/', YudisiumController.getAll)
+  .get('/', YudisiumController.getAll, getAllYudisiumSchema)
   .get('/mahasiswa/:mhsId', YudisiumController.getPengajuan, getYudisiumSchema)
-  .post('/mahasiswa/:mhsId', YudisiumController.submitPengajuan, { body: pengajuanYudisiumBody })
-  .put('/mahasiswa/:mhsId/status', YudisiumController.updateStatus, { body: updateYudisiumStatusBody })
+  .post('/mahasiswa/:mhsId', YudisiumController.submitPengajuan, submitPengajuanYudisiumSchema)
+  .put('/mahasiswa/:mhsId/status', YudisiumController.updateStatus, updateYudisiumStatusSchema)
   
   // Grade Components
-  .get('/kelas/:kelasKuliahId/komponen', YudisiumController.getKomponen)
-  .post('/kelas/komponen', YudisiumController.saveKomponen, { body: saveKomponenBody })
-  .get('/kelas/:kelasKuliahId/nilai', YudisiumController.getNilaiMahasiswa)
-  .post('/kelas/nilai', YudisiumController.saveNilaiMahasiswa, { body: saveNilaiMahasiswaBody })
-  .post('/kelas/:kelasKuliahId/lock', YudisiumController.lockKelas);
+  .get('/kelas/:kelasKuliahId/komponen', YudisiumController.getKomponen, getKomponenYudisiumSchema)
+  .post('/kelas/komponen', YudisiumController.saveKomponen, saveKomponenYudisiumSchema)
+  .get('/kelas/:kelasKuliahId/nilai', YudisiumController.getNilaiMahasiswa, getNilaiMahasiswaYudisiumSchema)
+  .post('/kelas/nilai', YudisiumController.saveNilaiMahasiswa, saveNilaiMahasiswaYudisiumSchema)
+  .post('/kelas/:kelasKuliahId/lock', YudisiumController.lockKelas, lockKelasYudisiumSchema);
+

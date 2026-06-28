@@ -184,7 +184,7 @@ export default function Khs() {
     }
 
     try {
-      await khsController.saveKomponen(kelasId, list);
+      await khsController.saveKomponen(kelasId, list.map(c => ({ nama: c.name, bobot: c.bobot })));
       toast.showToast('Komponen nilai berhasil disimpan.', 'success');
       refetchComponents();
       refetchStudentsGrades();

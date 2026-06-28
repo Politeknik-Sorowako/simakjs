@@ -17,6 +17,18 @@ export const createBapSchema = {
     description: 'Menambahkan BAP (Berita Acara Perkuliahan) baru beserta referensi CPMK.'
   },
   body: bapBody,
+  response: {
+    201: t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
+      tanggal: t.Optional(t.String({ default: '2026-06-27' })),
+      pertemuanKe: t.Optional(t.Integer({ default: 1 })),
+      materi: t.Optional(t.String({ default: 'Pengenalan dan Dasar Pemrograman' })),
+      durasiMenit: t.Optional(t.Integer({ default: 100 })),
+      cpmkId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
+      dosenId: t.Optional(t.Integer({ default: 1 })),
+    })
+  }
 };
 
 export const getBapByKelasSchema = {
@@ -28,4 +40,17 @@ export const getBapByKelasSchema = {
   params: t.Object({
     kelasKuliahId: t.Numeric()
   }),
+  response: {
+    200: t.Array(t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
+      tanggal: t.Optional(t.String({ default: '2026-06-27' })),
+      pertemuanKe: t.Optional(t.Integer({ default: 1 })),
+      materi: t.Optional(t.String({ default: 'Pengenalan dan Dasar Pemrograman' })),
+      durasiMenit: t.Optional(t.Integer({ default: 100 })),
+      cpmkId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
+      dosenId: t.Optional(t.Integer({ default: 1 })),
+    }))
+  }
 };
+

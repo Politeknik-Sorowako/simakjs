@@ -9,7 +9,37 @@ export const getKhsSchema = {
   params: t.Object({
     mhsId: t.Numeric(),
     periodeId: t.String({ minLength: 1, maxLength: 10 })
-  })
+  }),
+  response: {
+    200: t.Object({
+      blocked: t.Optional(t.Boolean({ default: false })),
+      reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
+      detail: t.Optional(t.Any()),
+      krsList: t.Optional(t.Array(t.Object({
+        id: t.Optional(t.Integer({ default: 1 })),
+        nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: '85.5' })),
+        nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: 'A' })),
+        nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: '4.0' })),
+        isApproved: t.Optional(t.Boolean({ default: true })),
+        kelasKuliah: t.Optional(t.Object({
+          id: t.Optional(t.Integer({ default: 1 })),
+          namaKelas: t.Optional(t.String({ default: 'Kelas A' }))
+        })),
+        mataKuliah: t.Optional(t.Object({
+          id: t.Optional(t.Integer({ default: 1 })),
+          kode: t.Optional(t.String({ default: 'MK001' })),
+          nama: t.Optional(t.String({ default: 'Dasar Pemrograman' })),
+          sksTotal: t.Optional(t.Integer({ default: 3 }))
+        }))
+      }))),
+      summary: t.Optional(t.Object({
+        totalSks: t.Optional(t.Integer({ default: 21 })),
+        ipSemester: t.Optional(t.Number({ default: 3.75 })),
+        ipk: t.Optional(t.Number({ default: 3.65 })),
+        totalSksKumulatif: t.Optional(t.Integer({ default: 84 }))
+      }))
+    })
+  }
 };
 
 export const getTranskripSchema = {
@@ -20,5 +50,49 @@ export const getTranskripSchema = {
   },
   params: t.Object({
     mhsId: t.Numeric()
-  })
+  }),
+  response: {
+    200: t.Object({
+      mahasiswa: t.Optional(t.Object({
+        id: t.Optional(t.Integer({ default: 1 })),
+        nim: t.Optional(t.String({ default: '202301001' })),
+        nama: t.Optional(t.String({ default: 'Andi Pratama' }))
+      })),
+      transkripList: t.Optional(t.Array(t.Object({
+        mataKuliahKode: t.Optional(t.String({ default: 'MK001' })),
+        mataKuliahNama: t.Optional(t.String({ default: 'Dasar Pemrograman' })),
+        sks: t.Optional(t.Integer({ default: 3 })),
+        nilaiHuruf: t.Optional(t.String({ default: 'A' })),
+        nilaiIndeks: t.Optional(t.Union([t.String(), t.Number(), t.Null()], { default: '4.00' }))
+      }))),
+      totalSksLulus: t.Optional(t.Integer({ default: 84 })),
+      ipk: t.Optional(t.Number({ default: 3.65 }))
+    })
+  }
 };
+
+export const getExamEligibilitySchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Cek Kelayakan Ujian Mahasiswa',
+    description: 'Mengecek apakah mahasiswa layak mengikuti ujian pada periode tertentu (tidak memiliki tunggakan SPP & kompensasi mangkir).'
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+    periodeId: t.String({ minLength: 1, maxLength: 10 })
+  }),
+  response: {
+    200: t.Object({
+      mahasiswaId: t.Optional(t.Integer({ default: 1 })),
+      periodeId: t.Optional(t.String({ default: '20261' })),
+      bimbingan: t.Optional(t.Object({
+        isApproved: t.Optional(t.Boolean({ default: false })),
+        interactionsCount: t.Optional(t.Integer({ default: 0 })),
+        eligible: t.Optional(t.Boolean({ default: false }))
+      })),
+      classes: t.Optional(t.Array(t.Any())),
+      overallEligible: t.Optional(t.Boolean({ default: true }))
+    })
+  }
+};
+

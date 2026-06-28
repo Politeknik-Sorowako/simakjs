@@ -18,6 +18,14 @@ export const createCpmkSchema = {
     description: 'Menambahkan CPMK baru untuk Mata Kuliah tertentu.'
   },
   body: cpmkBody,
+  response: {
+    201: t.Object({
+      id: t.Integer({ default: 1 }),
+      mataKuliahId: t.Integer({ default: 1 }),
+      kode: t.String({ default: 'CPMK-1' }),
+      deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' })
+    })
+  }
 };
 
 export const getCpmkByMataKuliahSchema = {
@@ -29,4 +37,29 @@ export const getCpmkByMataKuliahSchema = {
   params: t.Object({
     mataKuliahId: t.Numeric()
   }),
+  response: {
+    200: t.Array(t.Object({
+      id: t.Integer({ default: 1 }),
+      mataKuliahId: t.Integer({ default: 1 }),
+      kode: t.String({ default: 'CPMK-1' }),
+      deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' })
+    }))
+  }
 };
+
+export const deleteCpmkSchema = {
+  detail: {
+    tags: ['CPMK'],
+    summary: 'Hapus CPMK',
+    description: 'Menghapus CPMK berdasarkan ID.'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'CPMK berhasil dihapus' })
+    })
+  }
+};
+

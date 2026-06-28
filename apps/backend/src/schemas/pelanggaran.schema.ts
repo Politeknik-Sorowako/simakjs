@@ -14,7 +14,17 @@ export const createPelanggaranSchema = {
     summary: 'Catat Tindakan Indisipliner',
     description: 'Admin/Dosen mencatat tindakan indisipliner mahasiswa beserta bobot pelanggaran.'
   },
-  body: pelanggaranBody
+  body: pelanggaranBody,
+  response: {
+    201: t.Object({
+      id: t.Integer({ default: 1 }),
+      mahasiswaId: t.Integer({ default: 1 }),
+      tanggal: t.String({ default: '2026-06-27' }),
+      jenisPelanggaran: t.String({ default: 'Keterlambatan masuk kelas praktikum' }),
+      bobotPoin: t.Integer({ default: 5 }),
+      keterangan: t.String({ default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' })
+    })
+  }
 };
 
 export const getPelanggaranMahasiswaSchema = {
@@ -25,7 +35,20 @@ export const getPelanggaranMahasiswaSchema = {
   },
   params: t.Object({
     mhsId: t.Numeric()
-  })
+  }),
+  response: {
+    200: t.Object({
+      totalPoin: t.Optional(t.Integer({ default: 5 })),
+      pelanggaranList: t.Optional(t.Array(t.Object({
+        id: t.Optional(t.Integer({ default: 1 })),
+        tanggal: t.Optional(t.String({ default: '2026-06-27' })),
+        jenisPelanggaran: t.Optional(t.String({ default: 'Terlambat masuk kelas' })),
+        bobotPoin: t.Optional(t.Integer({ default: 5 })),
+        keterangan: t.Optional(t.String({ default: 'Terlambat lebih dari 15 menit' })),
+        createdAt: t.Optional(t.Any())
+      })))
+    })
+  }
 };
 
 export const getAllPelanggaranSchema = {
@@ -33,5 +56,19 @@ export const getAllPelanggaranSchema = {
     tags: ['Kedisiplinan'],
     summary: 'Daftar Semua Pelanggaran',
     description: 'Mengambil semua data pelanggaran mahasiswa untuk keperluan rekap BAAK/Kaprodi.'
+  },
+  response: {
+    200: t.Array(t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      mahasiswaId: t.Optional(t.Integer({ default: 1 })),
+      nim: t.Optional(t.String({ default: '202301001' })),
+      namaMahasiswa: t.Optional(t.String({ default: 'Andi Pratama' })),
+      prodiNama: t.Optional(t.Union([t.String(), t.Null()], { default: 'Teknik Elektro' })),
+      tanggal: t.Optional(t.String({ default: '2026-06-27' })),
+      jenisPelanggaran: t.Optional(t.String({ default: 'Keterlambatan masuk kelas praktikum' })),
+      bobotPoin: t.Optional(t.Integer({ default: 5 })),
+      keterangan: t.Optional(t.String({ default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' })),
+      createdAt: t.Optional(t.Any())
+    }))
   }
 };

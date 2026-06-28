@@ -43,6 +43,13 @@
       "when": 1782554781532,
       "tag": "0005_ambitious_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782564801342,
+      "tag": "0006_worried_the_fallen",
+      "breakpoints": true
     }
   ]
 }

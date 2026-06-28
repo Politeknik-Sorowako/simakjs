@@ -74,7 +74,14 @@ export const khsController = {
   },
 
   async getPengajuanYudisium(mhsId: number): Promise<PengajuanYudisium | null> {
-    return fetchApi<PengajuanYudisium | null>(`/yudisium/mahasiswa/${mhsId}`);
+    try {
+      return await fetchApi<PengajuanYudisium | null>(`/yudisium/mahasiswa/${mhsId}`);
+    } catch (e: any) {
+      if (e.message && (e.message.includes('tidak ditemukan') || e.message.includes('Not Found'))) {
+        return null;
+      }
+      throw e;
+    }
   },
 
   async submitPengajuanYudisium(mhsId: number, data: Omit<PengajuanYudisium, 'mahasiswaId' | 'status'>): Promise<PengajuanYudisium> {

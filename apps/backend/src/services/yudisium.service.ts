@@ -7,9 +7,31 @@ export class YudisiumService {
 
   static async getPengajuan(mahasiswaId: number) {
     const record = await db.query.pengajuanYudisium.findFirst({
-      where: eq(pengajuanYudisium.mahasiswaId, mahasiswaId)
+      where: eq(pengajuanYudisium.mahasiswaId, mahasiswaId),
+      with: {
+        mahasiswa: {
+          columns: {
+            nim: true,
+            nama: true,
+            status: true
+          },
+          with: {
+            programStudi: {
+              columns: {
+                nama: true
+              }
+            }
+          }
+        }
+      }
     });
-    return record || null;
+
+    if (!record) return null;
+
+    return {
+      ...record,
+      prodi: record.mahasiswa?.programStudi ? { nama: record.mahasiswa.programStudi.nama } : undefined
+    };
   }
 
   static async createOrUpdatePengajuan(mahasiswaId: number, data: {

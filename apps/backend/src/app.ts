@@ -21,6 +21,7 @@ import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 import { khsRoutes } from './routes/khs.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
+import { e2eRoutes } from './routes/e2e.routes';
 
 export const app = new Elysia()
   .use(
@@ -52,6 +53,7 @@ export const app = new Elysia()
       return { error: 'Data duplikat terdeteksi. Kunci unik sudah digunakan.' };
     }
     if (err && err.code === '23503') {
+      console.error('FOREIGN KEY CONSTRAINT FAILURE:', err);
       set.status = 400;
       return { error: 'Relasi tidak valid. Referensi ID tidak ditemukan.' };
     }
@@ -79,6 +81,8 @@ export const app = new Elysia()
   .use(pelanggaranRoutes)
   .use(khsRoutes)
   .use(yudisiumRoutes)
-  .use(pddiktiRoutes);
+  .use(pddiktiRoutes)
+  .use(e2eRoutes);
+
 
 

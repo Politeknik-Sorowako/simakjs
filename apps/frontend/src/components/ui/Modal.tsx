@@ -1,15 +1,18 @@
 import { JSX, Show } from 'solid-js';
 
 interface ModalProps {
-  show: boolean;
+  show?: boolean;
+  isOpen?: boolean;
   title: string;
   onClose: () => void;
   children: JSX.Element;
 }
 
 export function Modal(props: ModalProps) {
+  const visible = () => props.show ?? props.isOpen ?? false;
+  
   return (
-    <Show when={props.show}>
+    <Show when={visible()}>
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300">
         <div class="w-full max-w-lg overflow-hidden rounded-2xl bg-white p-6 shadow-2xl transition-transform duration-300 transform scale-100 flex flex-col gap-4 border border-gray-100">
           <div class="flex items-center justify-between border-b pb-3">

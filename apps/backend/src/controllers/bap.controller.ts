@@ -1,5 +1,8 @@
 import { BapService } from '../services/bap.service';
 import { AuthContext } from '../utils/types';
+import { db } from '../utils/db';
+import { dosen } from '../models/schema';
+import { eq } from 'drizzle-orm';
 
 export class BapController {
   static async getByKelas({ params, set, getCurrentUser }: AuthContext) {
@@ -17,7 +20,23 @@ export class BapController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const newBap = await BapService.create(body);
+
+    let dosenId = body.dosenId;
+    if (user.role === 'dosen') {
+      const dosenProfile = await db.query.dosen.findFirst({
+        where: eq(dosen.email, user.email),
+      });
+      if (!dosenProfile) {
+        set.status = 400;
+        return { error: 'Profil dosen tidak ditemukan.' };
+      }
+      dosenId = dosenProfile.id;
+    }
+
+    const newBap = await BapService.create({
+      ...body,
+      dosenId,
+    });
     set.status = 201;
     return newBap;
   }

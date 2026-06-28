@@ -35,7 +35,12 @@ export class YudisiumController {
       }
     }
 
-    return await YudisiumService.getPengajuan(targetMhsId);
+    const result = await YudisiumService.getPengajuan(targetMhsId);
+    if (!result) {
+      set.status = 404;
+      return { error: 'Pengajuan yudisium tidak ditemukan' };
+    }
+    return result;
   }
 
   static async submitPengajuan({ params, body, set, getCurrentUser }: AuthContext) {

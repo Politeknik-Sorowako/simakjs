@@ -1,10 +1,11 @@
-import { JSX } from 'solid-js';
+import { JSX, splitProps } from 'solid-js';
 
 interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'danger' | 'success';
 }
 
 export function Button(props: ButtonProps) {
+  const [local, others] = splitProps(props, ['variant', 'class', 'onClick']);
   const baseStyle = "px-4 py-2 rounded-lg font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 transform active:scale-95 text-sm";
   const variants = {
     primary: "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/20 focus:ring-blue-500",
@@ -15,8 +16,12 @@ export function Button(props: ButtonProps) {
 
   return (
     <button
-      {...props}
-      class={`${baseStyle} ${variants[props.variant || 'primary']} ${props.class || ''}`}
+      {...others}
+      onclick={(e) => {
+        console.log('BUTTON CLICKED! Has handler:', !!local.onClick);
+        if (local.onClick) (local.onClick as any)(e);
+      }}
+      class={`${baseStyle} ${variants[local.variant || 'primary']} ${local.class || ''}`}
     />
   );
 }

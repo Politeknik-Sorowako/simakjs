@@ -51,5 +51,202 @@ export const getYudisiumSchema = {
   },
   params: t.Object({
     mhsId: t.Numeric()
-  })
+  }),
+  response: {
+    200: t.Object({
+      id: t.Integer({ default: 1 }),
+      mahasiswaId: t.Integer({ default: 1 }),
+      judulTa: t.String({ default: 'Rancang Bangun Sistem Informasi Vokasi' }),
+      skorToefl: t.Integer({ default: 450 }),
+      bebasPerpustakaan: t.Boolean({ default: true }),
+      bebasLab: t.Boolean({ default: true }),
+      buktiPembayaranWisuda: t.Boolean({ default: true }),
+      status: t.String({ default: 'diajukan' }),
+      catatan: t.Union([t.String(), t.Null()], { default: null }),
+      mahasiswa: t.Optional(t.Object({
+        nim: t.String({ default: '202301001' }),
+        nama: t.String({ default: 'Andi Pratama' }),
+        status: t.String({ default: 'aktif' })
+      })),
+      prodi: t.Optional(t.Object({
+        nama: t.String({ default: 'Teknik Informatika' })
+      }))
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Pengajuan yudisium tidak ditemukan' })
+    })
+  }
 };
+
+export const getAllYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Daftar Pengajuan Yudisium',
+    description: 'Mengambil daftar semua pengajuan yudisium mahasiswa.'
+  },
+  response: {
+    200: t.Array(t.Object({
+      id: t.Integer({ default: 1 }),
+      mahasiswaId: t.Integer({ default: 1 }),
+      judulTa: t.String({ default: 'Rancang Bangun Sistem Informasi Vokasi' }),
+      skorToefl: t.Integer({ default: 450 }),
+      bebasPerpustakaan: t.Boolean({ default: true }),
+      bebasLab: t.Boolean({ default: true }),
+      buktiPembayaranWisuda: t.Boolean({ default: true }),
+      status: t.String({ default: 'diajukan' }),
+      catatan: t.Union([t.String(), t.Null()], { default: null }),
+      mahasiswa: t.Optional(t.Object({
+        nim: t.String({ default: '202301001' }),
+        nama: t.String({ default: 'Andi Pratama' }),
+        status: t.String({ default: 'aktif' })
+      })),
+      prodi: t.Optional(t.Object({
+        nama: t.String({ default: 'Teknik Informatika' })
+      }))
+    }))
+  }
+};
+
+export const submitPengajuanYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Ajukan Yudisium',
+    description: 'Mengajukan yudisium bagi mahasiswa dengan menyertakan kelengkapan berkas.'
+  },
+  params: t.Object({
+    mhsId: t.Numeric()
+  }),
+  body: pengajuanYudisiumBody,
+  response: {
+    201: t.Object({
+      id: t.Integer({ default: 1 }),
+      mahasiswaId: t.Integer({ default: 1 }),
+      judulTa: t.String({ default: 'Rancang Bangun Sistem Informasi Vokasi' }),
+      skorToefl: t.Integer({ default: 450 }),
+      bebasPerpustakaan: t.Boolean({ default: true }),
+      bebasLab: t.Boolean({ default: true }),
+      buktiPembayaranWisuda: t.Boolean({ default: true }),
+      status: t.String({ default: 'diajukan' })
+    })
+  }
+};
+
+export const updateYudisiumStatusSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Update Status Yudisium',
+    description: 'Memperbarui status verifikasi/persetujuan pengajuan yudisium mahasiswa oleh kaprodi/admin.'
+  },
+  params: t.Object({
+    mhsId: t.Numeric()
+  }),
+  body: updateYudisiumStatusBody,
+  response: {
+    200: t.Object({
+      id: t.Integer({ default: 1 }),
+      mahasiswaId: t.Integer({ default: 1 }),
+      status: t.String({ default: 'diverifikasi' }),
+      catatan: t.Union([t.String(), t.Null()], { default: 'Berkas lengkap dan sesuai' })
+    })
+  }
+};
+
+export const getKomponenYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Daftar Komponen Nilai Kelas',
+    description: 'Mengambil daftar komponen nilai (uts, uas, tugas, dll) untuk suatu Kelas Kuliah.'
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric()
+  }),
+  response: {
+    200: t.Array(t.Object({
+      id: t.Integer({ default: 1 }),
+      kelasKuliahId: t.Integer({ default: 1 }),
+      nama: t.String({ default: 'UTS' }),
+      bobot: t.Integer({ default: 30 })
+    }))
+  }
+};
+
+export const saveKomponenYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Simpan Komponen Nilai Kelas',
+    description: 'Menyimpan komponen nilai beserta bobotnya untuk suatu Kelas Kuliah.'
+  },
+  body: saveKomponenBody,
+  response: {
+    200: t.Array(t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
+      nama: t.Optional(t.String({ default: 'UTS' })),
+      bobot: t.Optional(t.Integer({ default: 30 }))
+    }))
+  }
+};
+
+export const getNilaiMahasiswaYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Daftar Nilai Mahasiswa Kelas',
+    description: 'Mengambil daftar nilai mahasiswa beserta nilainya per komponen di suatu Kelas Kuliah.'
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric()
+  }),
+  response: {
+    200: t.Array(t.Object({
+      krsId: t.Optional(t.Integer({ default: 1 })),
+      mahasiswaNim: t.Optional(t.String({ default: '202301001' })),
+      mahasiswaNama: t.Optional(t.String({ default: 'Andi Pratama' })),
+      nilaiKomponenList: t.Optional(t.Array(t.Object({
+        komponenNilaiId: t.Optional(t.Integer({ default: 1 })),
+        namaKomponen: t.Optional(t.String({ default: 'UTS' })),
+        bobot: t.Optional(t.Integer({ default: 30 })),
+        nilai: t.Optional(t.Number({ default: 85.5 }))
+      })))
+    }))
+  }
+};
+
+export const saveNilaiMahasiswaYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Simpan Nilai Mahasiswa Kelas',
+    description: 'Menginput/menyimpan nilai mahasiswa untuk setiap komponen nilai di suatu Kelas Kuliah.'
+  },
+  body: saveNilaiMahasiswaBody,
+  response: {
+    200: t.Array(t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      mahasiswaId: t.Optional(t.Integer({ default: 1 })),
+      kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
+      nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: '85.5' })),
+      nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: 'A' })),
+      nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: '4.0' }))
+    }))
+  }
+};
+
+export const lockKelasYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Kunci Nilai Kelas',
+    description: 'Mengunci nilai suatu Kelas Kuliah agar tidak dapat diubah lagi dan nilai diproses ke KHS.'
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric()
+  }),
+  response: {
+    200: t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      mataKuliahId: t.Optional(t.Integer({ default: 1 })),
+      periodeId: t.Optional(t.String({ default: '20261' })),
+      nama: t.Optional(t.String({ default: 'Kelas A' })),
+      isLocked: t.Optional(t.Boolean({ default: true }))
+    })
+  }
+};
+

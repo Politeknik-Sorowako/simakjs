@@ -40,7 +40,19 @@ export class PresensiService {
   }
 
   static async getPresensiByBap(bapId: number) {
-    return await db.select().from(presensi).where(eq(presensi.bapId, bapId));
+    const rows = await db
+      .select({
+        id: presensi.id,
+        mahasiswaId: presensi.mahasiswaId,
+        mahasiswaNim: mahasiswa.nim,
+        mahasiswaNama: mahasiswa.nama,
+        status: presensi.status,
+        durasiMangkir: presensi.durasiMangkir,
+      })
+      .from(presensi)
+      .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .where(eq(presensi.bapId, bapId));
+    return rows;
   }
 
   static calculateKompensasiMinutes(status: string, durasiMangkir: number): number {
