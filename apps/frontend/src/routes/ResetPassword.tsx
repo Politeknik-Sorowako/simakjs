@@ -1,40 +1,37 @@
-import { createSignal, Show, createEffect } from 'solid-js';
-import { useNavigate, A } from '@solidjs/router';
-import { useAuth } from '../contexts/AuthContext';
+import { createSignal, Show, onMount } from 'solid-js';
+import { useNavigate, useSearchParams, A } from '@solidjs/router';
 import { authController } from '../controllers/authController';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Format email tidak valid' }),
+const resetSchema = z.object({
   password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+  confirmPassword: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Konfirmasi password tidak cocok',
+  path: ['confirmPassword']
 });
 
-const registerSchema = loginSchema.extend({
-  nama: z.string().min(3, { message: 'Nama minimal harus 3 karakter' }),
-  role: z.enum(['admin', 'dosen', 'mahasiswa'], { message: 'Peran tidak valid' }),
-});
-
-export default function Login() {
-  const auth = useAuth();
+export default function ResetPassword() {
   const navigate = useNavigate();
   const toast = useToast();
+  const auth = useAuth();
+  const [searchParams] = useSearchParams();
 
-  const [email, setEmail] = createSignal('');
+  const [token, setToken] = createSignal('');
   const [password, setPassword] = createSignal('');
-  const [nama, setNama] = createSignal('');
-  const [role, setRole] = createSignal('mahasiswa');
-  const [isRegister, setIsRegister] = createSignal(false);
+  const [confirmPassword, setConfirmPassword] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
   const [loading, setLoading] = createSignal(false);
 
-  // If already logged in, redirect (wrapped in createEffect to prevent render phase routing crashes)
-  createEffect(() => {
-    if (auth.isAuthenticated()) {
-      navigate('/dashboard', { replace: true });
+  onMount(() => {
+    const t = searchParams.token;
+    if (t) {
+      setToken(t);
     }
   });
 
@@ -42,13 +39,14 @@ export default function Login() {
     e.preventDefault();
     setErrorMsg('');
 
-    // Zod validation
-    const formData = isRegister() 
-      ? { email: email(), password: password(), nama: nama(), role: role() }
-      : { email: email(), password: password() };
-    const schema = isRegister() ? registerSchema : loginSchema;
-    
-    const result = schema.safeParse(formData);
+    if (!token()) {
+      const err = 'Token reset password tidak ditemukan';
+      setErrorMsg(err);
+      toast.showToast(err, 'error');
+      return;
+    }
+
+    const result = resetSchema.safeParse({ password: password(), confirmPassword: confirmPassword() });
     if (!result.success) {
       const firstError = result.error.errors[0]?.message || 'Input tidak valid';
       setErrorMsg(firstError);
@@ -59,20 +57,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isRegister()) {
-        await authController.register(email(), password(), nama(), role());
-        setIsRegister(false);
-        const successMsg = 'Registrasi sukses! Silakan login.';
-        setErrorMsg(successMsg);
-        toast.showToast(successMsg, 'success');
-      } else {
-        const response = await authController.login(email(), password());
-        auth.login(response.token, response.user);
-        toast.showToast('Login berhasil! Selamat datang.', 'success');
-        navigate('/dashboard', { replace: true });
-      }
+      await authController.resetPassword(token(), password());
+      toast.showToast('Kata sandi berhasil diubah! Silakan login.', 'success');
+      navigate('/login', { replace: true });
     } catch (e: any) {
-      const errText = e.message || 'Gagal terhubung ke server';
+      const errText = e.message || 'Gagal mengubah kata sandi';
       setErrorMsg(errText);
       toast.showToast(errText, 'error');
     } finally {
@@ -104,54 +93,36 @@ export default function Login() {
         </button>
       </div>
 
-      {/* Decorative Blur Orbs */}
       <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/20 rounded-full blur-[128px] pointer-events-none" />
       <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
 
-      {/* Login Card */}
       <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl flex flex-col gap-6 relative z-10 text-white">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
-          <h2 class="text-2xl font-bold tracking-tight text-white">
-            {isRegister() ? 'Buat Akun Baru' : 'Masuk ke SIMAK'}
-          </h2>
-          <p class="text-sm text-gray-400">Sistem Informasi Akademik Vokasi</p>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Atur Ulang Kata Sandi</h2>
+          <p class="text-sm text-gray-400">Masukkan kata sandi baru untuk akun Anda.</p>
         </div>
 
         <Show when={errorMsg()}>
-          <div class={`p-3 rounded-lg text-xs font-semibold text-center ${
-            errorMsg().includes('sukses') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-          }`}>
+          <div class="p-3 rounded-lg text-xs font-semibold text-center bg-rose-500/10 text-rose-400 border border-rose-500/20">
             {errorMsg()}
           </div>
         </Show>
 
         <form onSubmit={handleSubmit} class="flex flex-col gap-4">
           <Input
-            type="email"
-            label="Email"
+            type="text"
+            label="Token Reset Password"
             required
-            value={email()}
-            onInput={(e) => setEmail(e.currentTarget.value)}
-            disabled={loading()}
+            value={token()}
+            onInput={(e) => setToken(e.currentTarget.value)}
+            disabled={loading() || !!searchParams.token}
             class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
           />
 
-          <Show when={isRegister()}>
-            <Input
-              type="text"
-              label="Nama Lengkap"
-              required
-              value={nama()}
-              onInput={(e) => setNama(e.currentTarget.value)}
-              disabled={loading()}
-              class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
-            />
-          </Show>
-
           <Input
             type="password"
-            label="Password"
+            label="Kata Sandi Baru"
             required
             value={password()}
             onInput={(e) => setPassword(e.currentTarget.value)}
@@ -159,33 +130,28 @@ export default function Login() {
             class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
           />
 
-
+          <Input
+            type="password"
+            label="Konfirmasi Kata Sandi Baru"
+            required
+            value={confirmPassword()}
+            onInput={(e) => setConfirmPassword(e.currentTarget.value)}
+            disabled={loading()}
+            class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
+          />
 
           <Button type="submit" disabled={loading()} class="w-full mt-2 py-3">
-            {loading() ? 'Memproses...' : isRegister() ? 'Daftar Sekarang' : 'Masuk'}
+            {loading() ? 'Memproses...' : 'Ubah Kata Sandi'}
           </Button>
         </form>
 
-        <div class="text-center flex flex-col gap-2">
-          <button
-            onClick={() => {
-              setIsRegister(!isRegister());
-              setErrorMsg('');
-            }}
-            disabled={loading()}
+        <div class="text-center">
+          <A
+            href="/login"
             class="text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors focus:outline-none"
           >
-            {isRegister() ? 'Sudah memiliki akun? Masuk' : 'Belum memiliki akun? Daftar'}
-          </button>
-          
-          <Show when={!isRegister()}>
-            <A
-              href="/forgot-password"
-              class="text-xs text-gray-400 hover:text-gray-300 transition-colors focus:outline-none mt-1"
-            >
-              Lupa Kata Sandi?
-            </A>
-          </Show>
+            Kembali ke Halaman Masuk
+          </A>
         </div>
       </div>
     </div>

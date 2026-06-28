@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { app } from '../index';
+import { app } from '../app';
 import { clearDatabase, RegisterSuccessResponse, LoginSuccessResponse, ErrorResponse } from './test-helper';
 import { db } from '../utils/db';
 import { users } from '../models/schema';
@@ -188,6 +188,84 @@ describe('1. Autentikasi (/auth)', () => {
       expect(response.status).toBe(401);
       const body = await response.json() as ErrorResponse;
       expect(body.error).toBe('Email atau password salah');
+    });
+  });
+
+  describe('Password Reset Flow', () => {
+    beforeEach(async () => {
+      await app.handle(
+        new Request('http://localhost/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'reset@test.com',
+            password: 'oldpassword123',
+            nama: 'Reset Test',
+            role: 'mahasiswa',
+          }),
+        })
+      );
+    });
+
+    it('harus sukses membuat token reset password untuk email terdaftar', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'reset@test.com' }),
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const body = await response.json() as any;
+      expect(body.message).toBe('Link/token reset password berhasil dibuat');
+      expect(body.token).toBeDefined();
+    });
+
+    it('harus gagal membuat token jika email tidak terdaftar', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'nonexistent@test.com' }),
+        })
+      );
+
+      expect(response.status).toBe(404);
+    });
+
+    it('harus sukses mereset password dengan token valid', async () => {
+      const forgotResponse = await app.handle(
+        new Request('http://localhost/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'reset@test.com' }),
+        })
+      );
+      const { token } = await forgotResponse.json() as any;
+
+      const resetResponse = await app.handle(
+        new Request('http://localhost/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, password: 'newpassword123' }),
+        })
+      );
+
+      expect(resetResponse.status).toBe(200);
+      const resetBody = await resetResponse.json() as any;
+      expect(resetBody.message).toBe('Password Anda berhasil diubah. Silakan login kembali.');
+
+      // Try logging in with new password (activate first)
+      await db.update(users).set({ isActive: true }).where(eq(users.email, 'reset@test.com'));
+      const loginResponse = await app.handle(
+        new Request('http://localhost/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'reset@test.com', password: 'newpassword123' }),
+        })
+      );
+      expect(loginResponse.status).toBe(200);
     });
   });
 });

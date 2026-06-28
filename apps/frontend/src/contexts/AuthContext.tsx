@@ -5,6 +5,8 @@ export interface User {
   email: string;
   nama: string;
   role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest';
+  theme?: string;
+  avatar?: string;
 }
 
 interface AuthContextType {
@@ -13,6 +15,8 @@ interface AuthContextType {
   isAuthenticated: () => boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  theme: () => string;
+  setTheme: (newTheme: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>();
@@ -20,6 +24,7 @@ const AuthContext = createContext<AuthContextType>();
 export function AuthProvider(props: { children: JSX.Element }) {
   const [user, setUser] = createSignal<User | null>(null);
   const [token, setToken] = createSignal<string | null>(null);
+  const [localTheme, setLocalTheme] = createSignal(localStorage.getItem('theme') || 'light');
 
   // Initialize from localStorage
   const localToken = localStorage.getItem('token');
@@ -27,18 +32,36 @@ export function AuthProvider(props: { children: JSX.Element }) {
   if (localToken && localUser) {
     setToken(localToken);
     try {
-      setUser(JSON.parse(localUser));
+      const parsedUser = JSON.parse(localUser);
+      setUser(parsedUser);
+      if (parsedUser.theme) {
+        setLocalTheme(parsedUser.theme);
+      }
     } catch (_) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
   }
 
+  // Reactively apply theme to document
+  createEffect(() => {
+    const activeTheme = user()?.theme || localTheme();
+    if (activeTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  });
+
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem('token', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
+    if (newUser.theme) {
+      setLocalTheme(newUser.theme);
+      localStorage.setItem('theme', newUser.theme);
+    }
   };
 
   const logout = () => {
@@ -48,10 +71,16 @@ export function AuthProvider(props: { children: JSX.Element }) {
     localStorage.removeItem('user');
   };
 
+  const setTheme = (newTheme: string) => {
+    setLocalTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
+
+  const theme = () => user()?.theme || localTheme();
   const isAuthenticated = () => !!token();
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout, theme, setTheme }}>
       {props.children}
     </AuthContext.Provider>
   );

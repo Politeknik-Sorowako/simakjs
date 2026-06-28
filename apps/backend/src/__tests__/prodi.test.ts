@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { app } from '../index';
+import { app } from '../app';
 import { clearDatabase, getAuthToken, ProdiSuccessResponse } from './test-helper';
 
 describe('2. Program Studi (/prodi)', () => {
