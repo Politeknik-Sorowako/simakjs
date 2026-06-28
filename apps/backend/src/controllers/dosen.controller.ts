@@ -2,14 +2,24 @@ import { DosenService } from '../services/dosen.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class DosenController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data dosen.' };
+    }
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
     return await DosenService.getAll(page, limit, search);
   }
 
-  static async getById({ params, set }: AuthContext) {
+  static async getById({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data dosen.' };
+    }
     const data = await DosenService.getById(parseInt(params.id));
     if (!data) {
       set.status = 404;

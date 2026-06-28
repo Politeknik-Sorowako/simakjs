@@ -15,9 +15,9 @@ export class YudisiumController {
 
   static async getPengajuan({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user) {
-      set.status = 401;
-      return { error: 'Silakan login terlebih dahulu.' };
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
     }
 
     const targetMhsId = parseInt(params.mhsId);
@@ -63,7 +63,7 @@ export class YudisiumController {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-    } else if (user.role !== 'admin' && user.role !== 'dosen') {
+    } else if (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi') {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -80,9 +80,9 @@ export class YudisiumController {
 
   static async updateStatus({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin atau Kaprodi/Dosen.' };
+      return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen.' };
     }
 
     const targetMhsId = parseInt(params.mhsId);
@@ -102,7 +102,7 @@ export class YudisiumController {
 
   static async getAll({ set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -118,7 +118,7 @@ export class YudisiumController {
 
   static async saveKomponen({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -135,7 +135,7 @@ export class YudisiumController {
 
   static async getNilaiMahasiswa({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -145,7 +145,7 @@ export class YudisiumController {
 
   static async saveNilaiMahasiswa({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -161,7 +161,7 @@ export class YudisiumController {
 
   static async lockKelas({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

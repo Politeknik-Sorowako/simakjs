@@ -144,8 +144,9 @@ describe('4. Dosen (/dosen)', () => {
   });
 
   describe('GET /dosen', () => {
+    let token: string;
     beforeEach(async () => {
-      const adminToken = await getAuthToken('admin-dosen@test.com', 'admin');
+      token = await getAuthToken('admin-dosen-setup@test.com', 'admin');
       const items = [
         { nip: '111', nama: 'Dosen Satu', email: 'dosen1@test.com', programStudiId: prodiId, nidn: '101', nik: '1234567890123451', jenisKelamin: 'L', tanggalLahir: '1980-01-01' },
         { nip: '222', nama: 'Dosen Dua', email: 'dosen2@test.com', programStudiId: prodiId, nidn: '102', nik: '1234567890123452', jenisKelamin: 'P', tanggalLahir: '1981-02-02' },
@@ -156,7 +157,7 @@ describe('4. Dosen (/dosen)', () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${adminToken}`,
+              'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify(item),
           })
@@ -166,7 +167,12 @@ describe('4. Dosen (/dosen)', () => {
 
     it('harus sukses mengambil list dosen (Default)', async () => {
       const response = await app.handle(
-        new Request('http://localhost/dosen', { method: 'GET' })
+        new Request('http://localhost/dosen', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -176,7 +182,12 @@ describe('4. Dosen (/dosen)', () => {
 
     it('harus sukses menggunakan pagination (page & limit)', async () => {
       const response = await app.handle(
-        new Request('http://localhost/dosen?page=1&limit=1', { method: 'GET' })
+        new Request('http://localhost/dosen?page=1&limit=1', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -185,26 +196,52 @@ describe('4. Dosen (/dosen)', () => {
 
     it('harus sukses mencari dosen berdasarkan keyword search', async () => {
       const response = await app.handle(
-        new Request('http://localhost/dosen?search=Satu', { method: 'GET' })
+        new Request('http://localhost/dosen?search=Satu', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.data.length).toBe(1);
       expect(body.data[0].nip).toBe('111');
     });
+
+    it('harus gagal mengambil list dosen jika diakses oleh Guest (RBAC)', async () => {
+      const guestToken = await getAuthToken('guest-dosen@test.com', 'guest' as any);
+      const response = await app.handle(
+        new Request('http://localhost/dosen', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${guestToken}`
+          }
+        })
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('harus gagal mengambil list dosen jika tanpa token (Guest)', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/dosen', { method: 'GET' })
+      );
+      expect(response.status).toBe(403);
+    });
   });
 
   describe('GET /dosen/:id', () => {
     let dosenId: number;
+    let token: string;
 
     beforeEach(async () => {
-      const adminToken = await getAuthToken('admin-dosen@test.com', 'admin');
+      token = await getAuthToken('admin-dosen@test.com', 'admin');
       const res = await app.handle(
         new Request('http://localhost/dosen', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             nip: '199001012020011001',
@@ -224,7 +261,12 @@ describe('4. Dosen (/dosen)', () => {
 
     it('harus sukses mengambil detail dosen berdasarkan ID valid', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/dosen/${dosenId}`, { method: 'GET' })
+        new Request(`http://localhost/dosen/${dosenId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -233,7 +275,12 @@ describe('4. Dosen (/dosen)', () => {
 
     it('harus mengembalikan error 404 ketika ID dosen tidak ditemukan', async () => {
       const response = await app.handle(
-        new Request('http://localhost/dosen/999999', { method: 'GET' })
+        new Request('http://localhost/dosen/999999', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(404);
     });
@@ -371,7 +418,12 @@ describe('4. Dosen (/dosen)', () => {
 
       // Verify deletion
       const checkResponse = await app.handle(
-        new Request(`http://localhost/dosen/${dosenId}`, { method: 'GET' })
+        new Request(`http://localhost/dosen/${dosenId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        })
       );
       expect(checkResponse.status).toBe(404);
     });

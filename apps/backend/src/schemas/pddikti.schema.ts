@@ -20,7 +20,7 @@ export const getPddiktiStatsSchema = {
       })
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin atau Kaprodi/Dosen.' })
+      error: t.String({ default: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen.' })
     })
   },
   detail: {
@@ -43,7 +43,7 @@ export const syncPddiktiSchema = {
       })
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin atau Kaprodi/Dosen.' })
+      error: t.String({ default: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen.' })
     })
   },
   detail: {

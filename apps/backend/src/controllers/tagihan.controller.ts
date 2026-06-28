@@ -2,7 +2,12 @@ import { TagihanService } from '../services/tagihan.service';
 import { AuthContext } from '../utils/types';
 
 export class TagihanController {
-  static async getAll({ query }: AuthContext<any, any>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data tagihan.' };
+    }
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
@@ -12,7 +17,7 @@ export class TagihanController {
 
   static async generate({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -28,7 +33,7 @@ export class TagihanController {
 
   static async bayar({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

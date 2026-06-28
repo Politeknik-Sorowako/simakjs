@@ -2,14 +2,24 @@ import { MahasiswaService } from '../services/mahasiswa.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class MahasiswaController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data mahasiswa.' };
+    }
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
     return await MahasiswaService.getAll(page, limit, search);
   }
 
-  static async getById({ params, set }: AuthContext) {
+  static async getById({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data mahasiswa.' };
+    }
     const mhs = await MahasiswaService.getById(parseInt(params.id));
     if (!mhs) {
       set.status = 404;

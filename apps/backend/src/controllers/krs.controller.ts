@@ -2,14 +2,24 @@ import { KrsService } from '../services/krs.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class KrsController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data KRS.' };
+    }
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
     return await KrsService.getAll(page, limit, search);
   }
 
-  static async getById({ params, set }: AuthContext) {
+  static async getById({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data KRS.' };
+    }
     const data = await KrsService.getById(parseInt(params.id));
     if (!data) {
       set.status = 404;
@@ -36,9 +46,9 @@ export class KrsController {
 
   static async approve({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'dosen' && user.role !== 'admin')) {
+    if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Dosen Pembimbing Akademik atau Admin yang dapat menyetujui KRS.' };
+      return { error: 'Akses ditolak. Hanya Dosen Pembimbing Akademik, Prodi, atau Admin yang dapat menyetujui KRS.' };
     }
     try {
       const updated = await KrsService.approveKrs(body.mahasiswaId, body.periodeId, user.email);
@@ -55,9 +65,9 @@ export class KrsController {
       set.status = 403;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    if (user.role === 'mahasiswa') {
+    if (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi') {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin/Dosen yang dapat mengubah KRS.' };
+      return { error: 'Akses ditolak. Hanya Admin, Dosen, atau Prodi yang dapat mengubah KRS.' };
     }
     const updated = await KrsService.update(parseInt(params.id), body);
     if (!updated) {
