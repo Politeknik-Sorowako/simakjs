@@ -56,16 +56,16 @@ export class YudisiumController {
       return { error: 'ID Mahasiswa tidak valid.' };
     }
 
-    // Only student can submit their yudisium
+    // RBAC check: student can only submit their own, admin/dosen can submit for anyone
     if (user.role === 'mahasiswa') {
       const myMhsId = await YudisiumController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-    } else {
+    } else if (user.role !== 'admin' && user.role !== 'dosen') {
       set.status = 403;
-      return { error: 'Hanya mahasiswa yang dapat melakukan pengajuan yudisium.' };
+      return { error: 'Akses ditolak.' };
     }
 
     try {

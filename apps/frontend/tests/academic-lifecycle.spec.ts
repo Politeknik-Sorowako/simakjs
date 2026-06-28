@@ -309,19 +309,9 @@ test.describe('Academic Lifecycle E2E Test', () => {
     await expect(page.locator('text=85.5')).toBeVisible();
     await expect(page.locator('td', { hasText: /^A$/ })).toBeVisible();
 
-    // Logout Mahasiswa
-    await page.click('text=Logout');
-    await expect(page).toHaveURL(/\/login/);
-
     // -----------------------------------------------------------------
     // SIKLUS 5: Yudisium (Pengajuan oleh Mahasiswa, Verifikasi & Kelulusan oleh Admin)
     // -----------------------------------------------------------------
-    // Login as Mahasiswa
-    await page.fill('input[type="email"]', 'mahasiswa@simak.id');
-    await page.fill('input[type="password"]', 'password123');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/\/dashboard/);
-
     // Go to Yudisium
     await page.click('text=Evaluasi Yudisium');
     await expect(page).toHaveURL(/\/yudisium/);
@@ -381,7 +371,7 @@ test.describe('Academic Lifecycle E2E Test', () => {
 
     // Verify status is disetujui and LULUS
     await expect(page.locator('text=Status: DISETUJUI')).toBeVisible();
-    await expect(page.locator('text=LULUS')).toBeVisible();
+    await expect(page.locator('span', { hasText: /^lulus$/i }).first()).toBeVisible();
     await expect(page.locator('text=Selamat! Anda telah dinyatakan lulus Yudisium')).toBeVisible();
 
     // Done!
