@@ -8,15 +8,15 @@
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "test": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun drizzle-kit push && DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun test"
-
   },
   "dependencies": {
-    "elysia": "^1.0.0",
-    "@elysiajs/swagger": "^1.0.0",
-    "@elysiajs/jwt": "^1.0.0",
     "@elysiajs/cors": "^1.0.0",
+    "@elysiajs/jwt": "^1.0.0",
+    "@elysiajs/swagger": "^1.0.0",
     "drizzle-orm": "^0.30.0",
-    "pg": "^8.11.0"
+    "elysia": "^1.0.0",
+    "pg": "^8.11.0",
+    "resend": "^6.16.0"
   },
   "devDependencies": {
     "drizzle-kit": "^0.21.0",

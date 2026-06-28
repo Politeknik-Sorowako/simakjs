@@ -57,7 +57,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-900 overflow-hidden px-4">
+    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-100 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-indigo-950 dark:to-slate-950 overflow-hidden px-4 transition-colors duration-200">
       {/* Floating Theme Toggle in Top Right */}
       <div class="absolute top-4 right-4 z-50">
         <button
@@ -65,7 +65,7 @@ export default function ForgotPassword() {
             const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
             auth.setTheme(nextTheme);
           }}
-          class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all focus:outline-none shadow-lg"
+          class="p-2.5 rounded-xl bg-gray-100/80 dark:bg-white/10 backdrop-blur-md border border-gray-250/50 dark:border-white/20 text-gray-700 dark:text-white hover:bg-gray-200/80 dark:hover:bg-white/20 transition-all focus:outline-none shadow-md dark:shadow-lg"
           title="Beralih Mode Gelap/Terang"
         >
           {auth.theme() === 'light' ? (
@@ -80,36 +80,28 @@ export default function ForgotPassword() {
         </button>
       </div>
 
-      <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/20 rounded-full blur-[128px] pointer-events-none" />
-      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
+      <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-[128px] pointer-events-none" />
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
 
-      <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl flex flex-col gap-6 relative z-10 text-white">
+      <div class="w-full max-w-md bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl border border-gray-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-slate-800 dark:text-white transition-all duration-200">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
-          <h2 class="text-2xl font-bold tracking-tight text-white">Lupa Kata Sandi</h2>
-          <p class="text-sm text-gray-400">Masukkan email Anda untuk menerima token reset password.</p>
+          <h2 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Lupa Kata Sandi</h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Masukkan email Anda untuk menerima token reset password.</p>
         </div>
 
         <Show when={errorMsg()}>
-          <div class="p-3 rounded-lg text-xs font-semibold text-center bg-rose-500/10 text-rose-400 border border-rose-500/20">
+          <div class="p-3 rounded-lg text-xs font-semibold text-center bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
             {errorMsg()}
           </div>
         </Show>
 
         <Show when={successMsg()}>
-          <div class="p-3 rounded-lg text-xs font-semibold text-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex flex-col gap-2">
-            <div>{successMsg()}</div>
-            <Show when={resetToken()}>
-              <div class="text-left mt-2 p-2 bg-slate-950/60 rounded border border-white/5 font-mono text-[10px] break-all select-all">
-                Token reset: <span class="text-blue-400 font-bold">{resetToken()}</span>
-              </div>
-              <A 
-                href={`/reset-password?token=${resetToken()}`} 
-                class="text-xs text-blue-400 hover:underline font-bold mt-1 self-center"
-              >
-                Klik di sini untuk langsung Mereset Password
-              </A>
-            </Show>
+          <div class="p-4 rounded-xl text-sm text-center bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex flex-col gap-2">
+            <span class="font-bold">Email Terkirim!</span>
+            <p class="text-xs text-gray-500 dark:text-gray-300">
+              Tautan dan token untuk mengatur ulang kata sandi telah berhasil dikirim ke email Anda. Silakan periksa kotak masuk atau spam email Anda.
+            </p>
           </div>
         </Show>
 
@@ -121,7 +113,7 @@ export default function ForgotPassword() {
             value={email()}
             onInput={(e) => setEmail(e.currentTarget.value)}
             disabled={loading() || successMsg().length > 0}
-            class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
+            class="!bg-slate-50 dark:!bg-slate-950/40 !border-gray-250 dark:!border-white/10 !text-slate-800 dark:!text-white focus:!ring-blue-500/30"
           />
 
           <Button type="submit" disabled={loading() || successMsg().length > 0} class="w-full mt-2 py-3">
@@ -132,7 +124,7 @@ export default function ForgotPassword() {
         <div class="text-center">
           <A
             href="/login"
-            class="text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors focus:outline-none"
+            class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors focus:outline-none"
           >
             Kembali ke Halaman Masuk
           </A>

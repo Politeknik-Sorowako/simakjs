@@ -24,6 +24,8 @@ services:
       - JWT_SECRET=${JWT_SECRET:-simak_vokasi_secret_key_123456}
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
       - NODE_ENV=${NODE_ENV:-development}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
     depends_on:
       - db
 
