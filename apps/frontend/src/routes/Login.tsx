@@ -81,7 +81,7 @@ export default function Login() {
   };
 
   return (
-    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-900 overflow-hidden px-4">
+    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-100 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-indigo-950 dark:to-slate-950 overflow-hidden px-4 transition-colors duration-200">
       {/* Floating Theme Toggle in Top Right */}
       <div class="absolute top-4 right-4 z-50">
         <button
@@ -89,7 +89,7 @@ export default function Login() {
             const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
             auth.setTheme(nextTheme);
           }}
-          class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all focus:outline-none shadow-lg"
+          class="p-2.5 rounded-xl bg-gray-100/80 dark:bg-white/10 backdrop-blur-md border border-gray-250/50 dark:border-white/20 text-gray-700 dark:text-white hover:bg-gray-200/80 dark:hover:bg-white/20 transition-all focus:outline-none shadow-md dark:shadow-lg"
           title="Beralih Mode Gelap/Terang"
         >
           {auth.theme() === 'light' ? (
@@ -105,22 +105,22 @@ export default function Login() {
       </div>
 
       {/* Decorative Blur Orbs */}
-      <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/20 rounded-full blur-[128px] pointer-events-none" />
-      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
+      <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-[128px] pointer-events-none" />
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
 
       {/* Login Card */}
-      <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl flex flex-col gap-6 relative z-10 text-white">
+      <div class="w-full max-w-md bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl border border-gray-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-slate-800 dark:text-white transition-all duration-200">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
-          <h2 class="text-2xl font-bold tracking-tight text-white">
+          <h2 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">
             {isRegister() ? 'Buat Akun Baru' : 'Masuk ke SIMAK'}
           </h2>
-          <p class="text-sm text-gray-400">Sistem Informasi Akademik Vokasi</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Sistem Informasi Akademik Vokasi</p>
         </div>
 
         <Show when={errorMsg()}>
           <div class={`p-3 rounded-lg text-xs font-semibold text-center ${
-            errorMsg().includes('sukses') ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+            errorMsg().includes('sukses') ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
           }`}>
             {errorMsg()}
           </div>
@@ -134,7 +134,7 @@ export default function Login() {
             value={email()}
             onInput={(e) => setEmail(e.currentTarget.value)}
             disabled={loading()}
-            class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
+            class="!bg-slate-50 dark:!bg-slate-950/40 !border-gray-250 dark:!border-white/10 !text-slate-800 dark:!text-white focus:!ring-blue-500/30"
           />
 
           <Show when={isRegister()}>
@@ -145,7 +145,7 @@ export default function Login() {
               value={nama()}
               onInput={(e) => setNama(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
+              class="!bg-slate-50 dark:!bg-slate-950/40 !border-gray-250 dark:!border-white/10 !text-slate-800 dark:!text-white focus:!ring-blue-500/30"
             />
           </Show>
 
@@ -156,10 +156,8 @@ export default function Login() {
             value={password()}
             onInput={(e) => setPassword(e.currentTarget.value)}
             disabled={loading()}
-            class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
+            class="!bg-slate-50 dark:!bg-slate-950/40 !border-gray-250 dark:!border-white/10 !text-slate-800 dark:!text-white focus:!ring-blue-500/30"
           />
-
-
 
           <Button type="submit" disabled={loading()} class="w-full mt-2 py-3">
             {loading() ? 'Memproses...' : isRegister() ? 'Daftar Sekarang' : 'Masuk'}
@@ -173,7 +171,7 @@ export default function Login() {
               setErrorMsg('');
             }}
             disabled={loading()}
-            class="text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors focus:outline-none"
+            class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors focus:outline-none"
           >
             {isRegister() ? 'Sudah memiliki akun? Masuk' : 'Belum memiliki akun? Daftar'}
           </button>
@@ -181,7 +179,7 @@ export default function Login() {
           <Show when={!isRegister()}>
             <A
               href="/forgot-password"
-              class="text-xs text-gray-400 hover:text-gray-300 transition-colors focus:outline-none mt-1"
+              class="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors focus:outline-none mt-1"
             >
               Lupa Kata Sandi?
             </A>
