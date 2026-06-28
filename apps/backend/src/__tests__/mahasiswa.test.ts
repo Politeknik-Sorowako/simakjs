@@ -149,8 +149,9 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
   });
 
   describe('GET /mahasiswa', () => {
+    let token: string;
     beforeEach(async () => {
-      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+      token = await getAuthToken('admin-mhs@test.com', 'admin');
       const items = [
         { nim: '12345678', nama: 'Budi Santoso', email: 'budi@test.com', programStudiId: prodiId, namaIbuKandung: 'Ibu Budi', nik: '1234567890123451', jenisKelamin: 'L', tanggalLahir: '2000-01-01' },
         { nim: '12345679', nama: 'Ani Lestari', email: 'ani@test.com', programStudiId: prodiId, namaIbuKandung: 'Ibu Ani', nik: '1234567890123452', jenisKelamin: 'P', tanggalLahir: '2001-02-02' },
@@ -161,7 +162,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${adminToken}`,
+              'Authorization': `Bearer ${token}`,
             },
             body: JSON.stringify(item),
           })
@@ -171,7 +172,12 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
     it('harus sukses mengambil list mahasiswa (Default)', async () => {
       const response = await app.handle(
-        new Request('http://localhost/mahasiswa', { method: 'GET' })
+        new Request('http://localhost/mahasiswa', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -181,7 +187,12 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
     it('harus sukses menggunakan pagination (page & limit)', async () => {
       const response = await app.handle(
-        new Request('http://localhost/mahasiswa?page=1&limit=1', { method: 'GET' })
+        new Request('http://localhost/mahasiswa?page=1&limit=1', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -190,26 +201,69 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
     it('harus sukses mencari mahasiswa berdasarkan keyword search', async () => {
       const response = await app.handle(
-        new Request('http://localhost/mahasiswa?search=Budi', { method: 'GET' })
+        new Request('http://localhost/mahasiswa?search=Budi', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.data.length).toBe(1);
       expect(body.data[0].nim).toBe('12345678');
     });
+
+    it('harus gagal mengambil list mahasiswa jika diakses oleh Guest (RBAC)', async () => {
+      // Guest is not supported directly by getAuthToken type definition helper but since we updated the enum and schemas it will register and authenticate correctly
+      const guestToken = await getAuthToken('guest-mhs@test.com', 'guest' as any);
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${guestToken}`
+          }
+        })
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('harus gagal mengambil list mahasiswa jika tanpa token (Guest)', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa', { method: 'GET' })
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('harus hanya mengembalikan profil sendiri jika diakses oleh Mahasiswa (IDOR)', async () => {
+      const mhsToken = await getAuthToken('budi@test.com', 'mahasiswa');
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${mhsToken}`
+          }
+        })
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data.length).toBe(1);
+      expect(body.data[0].email).toBe('budi@test.com');
+    });
   });
 
   describe('GET /mahasiswa/:id', () => {
     let mhsId: number;
+    let token: string;
 
     beforeEach(async () => {
-      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+      token = await getAuthToken('admin-mhs@test.com', 'admin');
       const res = await app.handle(
         new Request('http://localhost/mahasiswa', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             nim: '12345678',
@@ -229,7 +283,12 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
     it('harus sukses mengambil detail mahasiswa berdasarkan ID valid', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/mahasiswa/${mhsId}`, { method: 'GET' })
+        new Request(`http://localhost/mahasiswa/${mhsId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -238,9 +297,84 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
     it('harus mengembalikan error 404 ketika ID mahasiswa tidak ditemukan', async () => {
       const response = await app.handle(
-        new Request('http://localhost/mahasiswa/999999', { method: 'GET' })
+        new Request('http://localhost/mahasiswa/999999', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
       );
       expect(response.status).toBe(404);
+    });
+
+    it('harus gagal mengambil profil mahasiswa lain jika diakses oleh Mahasiswa (IDOR)', async () => {
+      const mhsToken = await getAuthToken('other-student@test.com', 'mahasiswa');
+      await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            nim: '87654321',
+            nama: 'Other Student',
+            email: 'other-student@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Other',
+            nik: '8765432109876543',
+            jenisKelamin: 'L',
+            tanggalLahir: '2001-01-01'
+          })
+        })
+      );
+
+      const response = await app.handle(
+        new Request(`http://localhost/mahasiswa/${mhsId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${mhsToken}`
+          }
+        })
+      );
+      expect(response.status).toBe(403);
+    });
+
+    it('harus sukses mengambil profil sendiri jika diakses oleh Mahasiswa (IDOR)', async () => {
+      const mhsToken = await getAuthToken('other-student-2@test.com', 'mahasiswa');
+      const res = await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            nim: '87654322',
+            nama: 'Other Student 2',
+            email: 'other-student-2@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Other 2',
+            nik: '8765432109876544',
+            jenisKelamin: 'L',
+            tanggalLahir: '2001-01-01'
+          })
+        })
+      );
+      const data = await res.json() as { id: number };
+      const myId = data.id;
+
+      const response = await app.handle(
+        new Request(`http://localhost/mahasiswa/${myId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${mhsToken}`
+          }
+        })
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.email).toBe('other-student-2@test.com');
     });
   });
 
@@ -376,7 +510,12 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
       // Verify deletion
       const checkResponse = await app.handle(
-        new Request(`http://localhost/mahasiswa/${mhsId}`, { method: 'GET' })
+        new Request(`http://localhost/mahasiswa/${mhsId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        })
       );
       expect(checkResponse.status).toBe(404);
     });

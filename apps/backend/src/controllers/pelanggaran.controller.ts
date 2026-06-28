@@ -36,9 +36,9 @@ export class PelanggaranController {
 
   static async getByMhsId({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user) {
-      set.status = 401;
-      return { error: 'Silakan login terlebih dahulu.' };
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
     }
 
     const targetMhsId = parseInt(params.mhsId);

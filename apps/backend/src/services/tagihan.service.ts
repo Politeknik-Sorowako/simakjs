@@ -68,7 +68,7 @@ export class TagihanService {
     return updatedTagihan;
   }
 
-  static async getAll(page = 1, limit = 10, search = '', statusFilter?: string) {
+  static async getAll(page = 1, limit = 10, search = '', statusFilter?: string, mahasiswaId?: number) {
     const offset = (page - 1) * limit;
 
     const searchConditions: any[] = [];
@@ -82,6 +82,9 @@ export class TagihanService {
     }
     if (statusFilter) {
       searchConditions.push(eq(tagihan.status, statusFilter as any));
+    }
+    if (mahasiswaId !== undefined) {
+      searchConditions.push(eq(tagihan.mahasiswaId, mahasiswaId));
     }
 
     const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;

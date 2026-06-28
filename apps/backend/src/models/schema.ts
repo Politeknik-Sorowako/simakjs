@@ -1,7 +1,7 @@
 import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boolean, numeric, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa']);
+export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest']);
 export const jenisKelaminEnum = pgEnum('jenis_kelamin', ['L', 'P']);
 export const tagihanStatusEnum = pgEnum('tagihan_status', ['belum_bayar', 'lunas']);
 
