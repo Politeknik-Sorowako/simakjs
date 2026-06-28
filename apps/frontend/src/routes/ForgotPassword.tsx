@@ -4,6 +4,7 @@ import { authController } from '../controllers/authController';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useToast } from '../contexts/ToastContext';
+import { useAuth } from '../contexts/AuthContext';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 
@@ -14,6 +15,7 @@ const emailSchema = z.object({
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const toast = useToast();
+  const auth = useAuth();
 
   const [email, setEmail] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
@@ -56,6 +58,28 @@ export default function ForgotPassword() {
 
   return (
     <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-900 via-indigo-950 to-slate-900 overflow-hidden px-4">
+      {/* Floating Theme Toggle in Top Right */}
+      <div class="absolute top-4 right-4 z-50">
+        <button
+          onClick={() => {
+            const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
+            auth.setTheme(nextTheme);
+          }}
+          class="p-2.5 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all focus:outline-none shadow-lg"
+          title="Beralih Mode Gelap/Terang"
+        >
+          {auth.theme() === 'light' ? (
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          ) : (
+            <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+          )}
+        </button>
+      </div>
+
       <div class="absolute -top-40 -left-40 w-96 h-96 bg-blue-500/20 rounded-full blur-[128px] pointer-events-none" />
       <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
 

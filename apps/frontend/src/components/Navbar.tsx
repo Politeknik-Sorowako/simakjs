@@ -6,13 +6,16 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
   const currentTheme = () => auth.user()?.theme || 'light';
 
   const toggleTheme = async () => {
-    const nextTheme = currentTheme() === 'light' ? 'dark' : 'light';
+    const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
+    auth.setTheme(nextTheme);
     try {
-      const res = await userController.updateProfile(auth.user()?.nama || '', undefined, nextTheme);
-      auth.login(localStorage.getItem('token') || '', {
-        ...auth.user()!,
-        theme: res.user.theme,
-      });
+      if (auth.user()) {
+        const res = await userController.updateProfile(auth.user()?.nama || '', undefined, nextTheme);
+        auth.login(localStorage.getItem('token') || '', {
+          ...auth.user()!,
+          theme: res.user.theme,
+        });
+      }
     } catch (err) {
       console.error('Gagal memperbarui tema di server:', err);
     }
@@ -41,7 +44,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
           class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 focus:outline-none transition-colors"
           title="Beralih Mode Gelap/Terang"
         >
-          {currentTheme() === 'light' ? (
+          {auth.theme() === 'light' ? (
             <svg class="w-5.5 h-5.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
             </svg>
