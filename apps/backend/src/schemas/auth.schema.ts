@@ -4,12 +4,12 @@ export const registerSchema = {
   detail: {
     tags: ['Autentikasi'],
     summary: 'Registrasi Pengguna Baru',
-    description: 'Mendaftarkan akun baru ke sistem dengan role admin, dosen, atau mahasiswa.'
+    description: 'Mendaftarkan akun baru ke sistem dengan role admin, dosen, mahasiswa, prodi, keuangan, atau guest.'
   },
   body: t.Object({
     email: t.String({ format: 'email', default: 'admin@test.com' }),
     password: t.String({ minLength: 6, default: 'password123' }),
-    role: t.Optional(t.Union([t.Literal('admin'), t.Literal('dosen'), t.Literal('mahasiswa')], { default: 'mahasiswa' }))
+    role: t.Optional(t.Union([t.Literal('admin'), t.Literal('dosen'), t.Literal('mahasiswa'), t.Literal('prodi'), t.Literal('keuangan'), t.Literal('guest')], { default: 'mahasiswa' }))
   }),
   response: {
     201: t.Object({

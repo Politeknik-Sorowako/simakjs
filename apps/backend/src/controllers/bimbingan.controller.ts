@@ -25,9 +25,9 @@ export class BimbinganController {
 
   static async getByMhsId({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user) {
-      set.status = 401;
-      return { error: 'Silakan login terlebih dahulu.' };
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
     }
 
     const targetMhsId = parseInt(params.mhsId);
@@ -66,9 +66,9 @@ export class BimbinganController {
 
   static async createThreadMessage({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user) {
-      set.status = 401;
-      return { error: 'Silakan login terlebih dahulu.' };
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
     }
 
     const targetMhsId = parseInt(params.mhsId);
@@ -76,7 +76,7 @@ export class BimbinganController {
       set.status = 400;
       return { error: 'ID Mahasiswa tidak valid.' };
     }
-    let senderRole: 'mahasiswa' | 'dosen' | 'admin' = 'mahasiswa';
+    let senderRole: 'mahasiswa' | 'dosen' | 'admin' | 'prodi' = 'mahasiswa';
 
     // RBAC check
     if (user.role === 'mahasiswa') {
@@ -100,6 +100,8 @@ export class BimbinganController {
       senderRole = 'dosen';
     } else if (user.role === 'admin') {
       senderRole = 'admin';
+    } else if (user.role === 'prodi') {
+      senderRole = 'prodi';
     }
 
     try {
@@ -115,9 +117,9 @@ export class BimbinganController {
 
   static async updateBimbingan({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user) {
-      set.status = 401;
-      return { error: 'Silakan login terlebih dahulu.' };
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
     }
 
     if (user.role === 'mahasiswa') {
@@ -157,9 +159,9 @@ export class BimbinganController {
 
   static async getMonitoring({ set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin atau Kaprodi/Dosen yang dapat mengakses monitoring.' };
+      return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen yang dapat mengakses monitoring.' };
     }
 
     return await BimbinganService.getMonitoringBimbingan();

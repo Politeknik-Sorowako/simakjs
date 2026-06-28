@@ -23,8 +23,12 @@ import { yudisiumRoutes } from './routes/yudisium.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { e2eRoutes } from './routes/e2e.routes';
 
-export const app = new Elysia()
-  .use(
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+export const app = new Elysia();
+
+if (isDevelopment) {
+  app.use(
     swagger({
       documentation: {
         info: {
@@ -34,8 +38,10 @@ export const app = new Elysia()
         },
       },
     })
-  )
-  .use(
+  );
+}
+
+app.use(
     cors({
       origin: process.env.CORS_ORIGIN === '*' ? true : (process.env.CORS_ORIGIN || true),
       credentials: true,

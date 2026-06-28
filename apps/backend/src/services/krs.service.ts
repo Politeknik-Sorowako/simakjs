@@ -12,22 +12,29 @@ export interface CreateKrsDto {
 }
 
 export class KrsService {
-  static async getAll(page = 1, limit = 10, search = '') {
+  static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number) {
     const offset = (page - 1) * limit;
     
-    let searchCondition = undefined;
+    const searchConditions: any[] = [];
     if (search) {
-      searchCondition = or(
-        ilike(mahasiswa.nama, `%${search}%`),
-        ilike(mahasiswa.nim, `%${search}%`)
+      searchConditions.push(
+        or(
+          ilike(mahasiswa.nama, `%${search}%`),
+          ilike(mahasiswa.nim, `%${search}%`)
+        )
       );
     }
+    if (mahasiswaId !== undefined) {
+      searchConditions.push(eq(krs.mahasiswaId, mahasiswaId));
+    }
+
+    const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
 
     const [totalResult] = await db
       .select({ total: count() })
       .from(krs)
       .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
-      .where(searchCondition);
+      .where(whereClause);
 
     const total = totalResult?.total || 0;
 
@@ -69,7 +76,7 @@ export class KrsService {
       .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
       .leftJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .leftJoin(dosen, eq(krs.approvedById, dosen.id))
-      .where(searchCondition)
+      .where(whereClause)
       .limit(limit)
       .offset(offset);
 

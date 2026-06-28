@@ -11,7 +11,7 @@ export class DosenPengajarController {
 
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -22,7 +22,7 @@ export class DosenPengajarController {
 
   static async delete({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

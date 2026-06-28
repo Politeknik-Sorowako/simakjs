@@ -1,54 +1,35 @@
-# Issue: Setup Deployment, Branching, & CI/CD ke VPS
+# Issue: Implementasi Role-Based Access Control (RBAC) pada API
 
 **Deskripsi Tugas:**
-Kita perlu menyiapkan alur kerja (workflow) untuk deployment aplikasi ini ke VPS. Tugas ini mencakup pengaturan server (VPS), strategi percabangan (branching) Git, dan pembuatan pipeline CI/CD yang berjalan secara otomatis.
+Saat ini, layanan API dan dokumentasi Swagger kita terlalu terbuka dan dapat diakses oleh siapa saja. Kita perlu meningkatkan keamanan dengan menerapkan *Role-Based Access Control* (RBAC). Dengan RBAC, setiap endpoint API hanya akan dapat diakses oleh pengguna yang memiliki peran (*role*) yang sesuai (misalnya: Admin, Dosen, Mahasiswa).
 
 Harap ikuti tahapan-tahapan berikut secara berurutan. Kerjakan selangkah demi selangkah.
 
 ---
 
-## 1. Persiapan & Tahapan Deploy ke VPS (Manual Setup)
-Tujuan dari tahap ini adalah menyiapkan server agar siap menjalankan dan melayani aplikasi kita.
+## 1. Pembuatan Skema Hak Akses (Role-Based Mapping)
+Tujuan dari tahap ini adalah merencanakan dan memetakan batasan akses untuk setiap endpoint yang ada.
 
 **Langkah-langkah yang harus diimplementasikan:**
-- [ ] **Akses VPS:** Pastikan bisa login ke VPS melalui SSH.
-- [ ] **Install Kebutuhan Sistem:** Install perangkat lunak (software) utama di server:
-  - Node.js (dan `npm` atau `yarn` atau `pnpm`).
-  - Git.
-  - Process Manager seperti `PM2` (direkomendasikan agar aplikasi tetap hidup di background).
-  - Web Server Nginx (berfungsi sebagai Reverse Proxy agar aplikasi bisa diakses melalui domain atau port 80/443).
-- [ ] **Clone Repository:** Clone project ini dari repository (misalnya GitHub) ke direktori server, contohnya di `/var/www/simakjs`.
-- [ ] **Setup Environment Variabel:** Buat file `.env` di VPS yang berisi konfigurasi rahasia untuk production (seperti URL Database, Secret Keys, dll).
-- [ ] **Build & Testing Manual:** Jalankan instalasi (`npm install`), lakukan build kode (`npm run build`), dan jalankan aplikasi secara manual menggunakan PM2 untuk memastikan tidak ada error. Terakhir, sambungkan port aplikasi tersebut dengan konfigurasi Nginx.
+- [ ] **Definisikan Tipe Role:** Pastikan sistem (database dan model aplikasi) sudah memiliki definisi yang jelas mengenai peran pengguna (misal menggunakan Enum: `ADMIN`, `DOSEN`, `MAHASISWA`, `PRODI`, `KEUANGAN`).
+- [ ] **Pemetaan Endpoint:** Buat pemetaan logika sederhana (bisa di dalam struktur kode routing) yang mendeskripsikan *role* mana saja yang boleh mengakses endpoint tertentu. 
+  * *Contoh 1:* Endpoint untuk mengubah nilai mahasiswa (`PUT /api/nilai`) hanya boleh diakses oleh `DOSEN` atau `ADMIN`.
+  * *Contoh 2:* Endpoint untuk melihat profil pengguna (`GET /api/profile`) bisa diakses oleh `DOSEN`, `MAHASISWA`, dan `ADMIN`.
+  * *Contoh 3:* Endpoint keuangan/tagihan dikhususkan untuk `KEUANGAN` (dan `ADMIN`), sedangkan verifikasi akademik untuk `PRODI`.
+- [ ] **Sertakan Data Role di Token:** Pastikan saat proses Login berhasil, sistem memasukkan informasi *role* pengguna ke dalam *payload* JWT (JSON Web Token) yang dikembalikan ke *client*.
 
 ---
 
-## 2. Pengaturan Strategi Branching (Percabangan Kode)
-Kita perlu memisahkan kode yang sedang dikerjakan dengan kode yang sudah stabil.
+## 2. Melindungi Layanan API dan Dokumentasi (Implementasi Middleware)
+Tujuan tahap ini adalah mengeksekusi logika penolakan akses jika pengguna tidak memenuhi kriteria *role* yang diizinkan.
 
 **Langkah-langkah yang harus diimplementasikan:**
-- [x] **Aktifkan Branch `production` (atau `main`):** Branch ini **KHUSUS** untuk versi aplikasi yang stabil dan ter-deploy di VPS. Tidak boleh ada commit langsung ke branch ini.
-- [x] **Aktifkan Branch `development`:** Branch utama tempat semua fitur baru digabungkan. Setiap programmer mengerjakan fitur di branch masing-masing, lalu di-merge ke sini.
-- [x] **Aktifkan Branch `testing` (atau `staging`):** Branch khusus untuk tahap pengujian (QA). Kode dari `development` akan masuk ke sini untuk diuji sebelum dirilis ke pengguna.
-- **Aturan Alur Kerja:** Alur rilis fitur yang benar adalah: `[Branch Fitur] -> development -> testing -> production`.
-
----
-
-## 3. Setup CI/CD Pipeline (Deployment Otomatis)
-Tujuan tahap ini adalah membuat proses update aplikasi di VPS terjadi secara otomatis setiap kali ada pembaruan kode pada branch `production`.
-
-**Langkah-langkah yang harus diimplementasikan:**
-- [x] **Persiapan Secrets di Repository:** Tambahkan variabel rahasia di pengaturan CI/CD (misal di GitHub Secrets). Tambahkan rahasia seperti: IP/Host VPS, Username VPS, dan SSH Private Key.
-- [x] **Buat File Konfigurasi Workflow:** Buat file script CI/CD (misalnya `.github/workflows/deploy.yml` jika menggunakan GitHub Actions).
-- [x] **Tentukan Trigger (Pemicu):** Atur agar workflow tersebut HANYA berjalan secara otomatis ketika ada kode yang masuk (push atau merge) ke branch `production`.
-- [x] **Tulis Script Deployment Otomatis:** Di dalam script workflow tersebut, berikan instruksi agar server CI/CD melakukan SSH ke VPS kita, lalu mengeksekusi perintah berikut di dalam VPS:
-  1. Masuk ke direktori aplikasi (`cd /var/www/simakjs`).
-  2. Tarik update terbaru (`git pull origin production`).
-  3. Perbarui dependensi (`npm install`).
-  4. Build aplikasi (`npm run build`).
-  5. Restart aplikasi yang sedang berjalan (`pm2 restart simakjs`).
-- [ ] **Testing CI/CD:** Lakukan perubahan kecil pada kode, lalu merge ke branch `production`. Pastikan aplikasi di VPS ter-update dengan sendirinya tanpa perlu login SSH manual.
+- [ ] **Buat Middleware Autentikasi (Authentication):** Pastikan ada fungsi perantara (*middleware*) yang bertugas mengecek validitas token JWT pada setiap request API yang bersifat privat. Jika token salah atau tidak ada, kembalikan response `401 Unauthorized`.
+- [ ] **Buat Middleware Otorisasi Role (Authorization):** Buat sebuah fungsi *guard* yang dapat memvalidasi peran pengguna. Fungsi ini akan mengambil data *role* dari token pengguna dan mencocokkannya dengan *role* yang disyaratkan oleh endpoint tersebut. Jika *role* tidak cocok, tolak request dengan response `403 Forbidden`.
+- [ ] **Terapkan Middleware pada Semua Route:** Pasangkan middleware tersebut ke rute-rute (*routes*) API yang sesuai dengan pemetaan di tahap 1.
+- [ ] **Amankan Halaman Swagger:** Endpoint dokumentasi API (misalnya `/swagger`) juga terlalu terbuka. Disarankan untuk menonaktifkan fitur Swagger (tidak melakukan inisialisasi plugin Swagger) jika aplikasi berjalan di mode `production` (misal menggunakan pengecekan `NODE_ENV !== 'production'`).
+- [ ] **Pengujian (Testing):** Lakukan simulasi request untuk memastikan keamanan berjalan baik. Coba akses endpoint milik Admin dengan menggunakan token login milik Mahasiswa, dan pastikan sistem mengembalikan error `403 Forbidden`.
 
 ---
 **Catatan untuk Junior Programmer / AI Assistant:**
-Pastikan kamu memahami arsitektur aplikasi (frontend/backend/database) sebelum mengeksekusi langkah-langkah di atas. Lakukan pengecekan dan validasi (tes) setiap kali kamu menyelesaikan satu tahapan sebelum lanjut ke tahapan berikutnya.
+Bekerjalah secara bertahap. Terapkan pada satu modul rute terlebih dahulu (misalnya modul `users`), lakukan testing, lalu baru terapkan ke rute-rute lainnya. Hati-hati, pastikan endpoint yang memang harus terbuka untuk publik (seperti `/api/login`) tidak ikut terkunci.
