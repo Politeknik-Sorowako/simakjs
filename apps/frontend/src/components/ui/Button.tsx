@@ -18,7 +18,6 @@ export function Button(props: ButtonProps) {
     <button
       {...others}
       onclick={(e) => {
-        console.log('BUTTON CLICKED! Has handler:', !!local.onClick);
         if (local.onClick) (local.onClick as any)(e);
       }}
       class={`${baseStyle} ${variants[local.variant || 'primary']} ${local.class || ''}`}

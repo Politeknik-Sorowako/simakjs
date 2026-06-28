@@ -111,8 +111,6 @@ export class AuthController {
         expiresAt,
       });
 
-      console.log(`[SIMAK RESET PASSWORD] Token untuk ${email}: ${token}`);
-
       // Send reset link using Resend API if API Key is configured
       const resendApiKey = process.env.RESEND_API_KEY;
       if (resendApiKey) {
@@ -153,6 +151,7 @@ export class AuthController {
         }
       } else {
         console.warn('[SIMAK RESET PASSWORD] RESEND_API_KEY tidak dikonfigurasi di environment backend!');
+        console.log(`[SIMAK RESET PASSWORD] Token untuk ${email}: ${token}`);
       }
 
       return {
