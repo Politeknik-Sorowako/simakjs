@@ -9,6 +9,7 @@ export const registerSchema = {
   body: t.Object({
     email: t.String({ format: 'email', default: 'admin@test.com' }),
     password: t.String({ minLength: 6, default: 'password123' }),
+    nama: t.String({ minLength: 3, default: 'Nama Pengguna' }),
     role: t.Optional(t.Union([t.Literal('admin'), t.Literal('dosen'), t.Literal('mahasiswa'), t.Literal('prodi'), t.Literal('keuangan'), t.Literal('guest')], { default: 'mahasiswa' }))
   }),
   response: {
@@ -17,6 +18,7 @@ export const registerSchema = {
       user: t.Object({
         id: t.Integer({ default: 1 }),
         email: t.String({ default: 'admin@test.com' }),
+        nama: t.String({ default: 'Nama Pengguna' }),
         role: t.String({ default: 'admin' })
       })
     }),
@@ -43,6 +45,7 @@ export const loginSchema = {
       user: t.Object({
         id: t.Integer({ default: 1 }),
         email: t.String({ default: 'admin@test.com' }),
+        nama: t.String({ default: 'Nama Pengguna' }),
         role: t.String({ default: 'admin' })
       })
     }),

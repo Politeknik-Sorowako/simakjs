@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { app } from '../index';
 import { clearDatabase, RegisterSuccessResponse, LoginSuccessResponse, ErrorResponse } from './test-helper';
+import { db } from '../utils/db';
+import { users } from '../models/schema';
+import { eq } from 'drizzle-orm';
 
 describe('1. Autentikasi (/auth)', () => {
   beforeEach(async () => {
@@ -16,6 +19,7 @@ describe('1. Autentikasi (/auth)', () => {
           body: JSON.stringify({
             email: 'admin@test.com',
             password: 'password123',
+            nama: 'Admin Test',
             role: 'admin',
           }),
         })
@@ -34,6 +38,7 @@ describe('1. Autentikasi (/auth)', () => {
       const payload = {
         email: 'duplicate@test.com',
         password: 'password123',
+        nama: 'Duplicate Test',
         role: 'mahasiswa' as const,
       };
 
@@ -66,6 +71,7 @@ describe('1. Autentikasi (/auth)', () => {
           body: JSON.stringify({
             email: 'invalid-email-format',
             password: 'password123',
+            nama: 'Invalid Test',
             role: 'mahasiswa',
           }),
         })
@@ -82,6 +88,7 @@ describe('1. Autentikasi (/auth)', () => {
           body: JSON.stringify({
             email: 'shortpass@test.com',
             password: '12345',
+            nama: 'Short Test',
             role: 'mahasiswa',
           }),
         })
@@ -100,13 +107,34 @@ describe('1. Autentikasi (/auth)', () => {
           body: JSON.stringify({
             email: 'user@test.com',
             password: 'password123',
+            nama: 'User Test',
             role: 'mahasiswa',
           }),
         })
       );
     });
 
-    it('harus sukses login dengan email & password valid', async () => {
+    it('harus gagal login jika akun belum diaktifkan (inactive)', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'user@test.com',
+            password: 'password123',
+          }),
+        })
+      );
+
+      expect(response.status).toBe(403);
+      const body = await response.json() as ErrorResponse;
+      expect(body.error).toBe('Akun Anda belum diaktifkan oleh Admin');
+    });
+
+    it('harus sukses login jika akun sudah diaktifkan (active)', async () => {
+      // Activate user directly in database
+      await db.update(users).set({ isActive: true }).where(eq(users.email, 'user@test.com'));
+
       const response = await app.handle(
         new Request('http://localhost/auth/login', {
           method: 'POST',
@@ -143,6 +171,9 @@ describe('1. Autentikasi (/auth)', () => {
     });
 
     it('harus gagal login dengan password yang salah', async () => {
+      // Activate user first
+      await db.update(users).set({ isActive: true }).where(eq(users.email, 'user@test.com'));
+
       const response = await app.handle(
         new Request('http://localhost/auth/login', {
           method: 'POST',

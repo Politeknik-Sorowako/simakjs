@@ -53,7 +53,7 @@ export default function Dashboard() {
         <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl p-8 shadow-lg relative overflow-hidden">
           <div class="absolute -right-16 -top-16 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
           <div class="relative z-10 flex flex-col gap-2">
-            <h1 class="text-3xl font-extrabold tracking-tight">Selamat Datang, {user()?.email}!</h1>
+            <h1 class="text-3xl font-extrabold tracking-tight">Selamat Datang, {user()?.nama || user()?.email}!</h1>
             <p class="text-blue-100 max-w-xl">
               Anda masuk sebagai <strong class="uppercase text-white">{user()?.role}</strong> di SIMAK Vokasi. Gunakan menu navigasi di sebelah kiri untuk mengelola atau mengakses fitur akademik.
             </p>

@@ -56,21 +56,27 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' })
       await db.insert(users).values({
         email: 'admin@simak.id',
         password: hashedPassword,
+        nama: 'Admin SIMAK',
         role: 'admin',
+        isActive: true,
       });
 
       // Dosen User
       const [dosenUser] = await db.insert(users).values({
         email: 'dosen@simak.id',
         password: hashedPassword,
+        nama: 'Dosen Wali',
         role: 'dosen',
+        isActive: true,
       }).returning();
 
       // Mahasiswa User
       const [mhsUser] = await db.insert(users).values({
         email: 'mahasiswa@simak.id',
         password: hashedPassword,
+        nama: 'Mahasiswa Bimbingan',
         role: 'mahasiswa',
+        isActive: true,
       }).returning();
 
       // 3. Seed Program Studi

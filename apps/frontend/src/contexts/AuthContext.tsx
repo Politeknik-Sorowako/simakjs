@@ -3,7 +3,8 @@ import { createContext, useContext, createSignal, JSX, createEffect } from 'soli
 export interface User {
   id: number;
   email: string;
-  role: 'admin' | 'dosen' | 'mahasiswa';
+  nama: string;
+  role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest';
 }
 
 interface AuthContextType {

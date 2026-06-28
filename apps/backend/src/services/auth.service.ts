@@ -3,7 +3,7 @@ import { users } from '../models/schema';
 import { eq } from 'drizzle-orm';
 
 export class AuthService {
-  static async register(email: string, password: string, role?: 'admin' | 'dosen' | 'mahasiswa') {
+  static async register(email: string, password: string, nama: string, role?: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest') {
     const hashedPassword = await Bun.password.hash(password, {
       algorithm: 'bcrypt',
       cost: 10,
@@ -14,13 +14,16 @@ export class AuthService {
       .values({
         email,
         password: hashedPassword,
+        nama,
         role: role || 'mahasiswa',
+        isActive: false, // Default is false, requires admin approval
       })
       .returning();
 
     return {
       id: newUser.id,
       email: newUser.email,
+      nama: newUser.nama,
       role: newUser.role,
     };
   }
@@ -39,7 +42,9 @@ export class AuthService {
     return {
       id: user.id,
       email: user.email,
+      nama: user.nama,
       role: user.role,
+      isActive: user.isActive,
     };
   }
 }
