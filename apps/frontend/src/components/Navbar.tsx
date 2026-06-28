@@ -38,6 +38,10 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
       </div>
 
       <div class="flex items-center gap-4">
+        <span class="text-xs bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 px-3 py-1 rounded-full text-blue-700 dark:text-blue-400 font-semibold uppercase tracking-wider">
+          {auth.user()?.role}
+        </span>
+
         {/* Night Mode Theme Toggle Button */}
         <button
           onClick={toggleTheme}
@@ -54,10 +58,6 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
             </svg>
           )}
         </button>
-
-        <span class="text-xs bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 px-3 py-1 rounded-full text-blue-700 dark:text-blue-400 font-semibold uppercase tracking-wider">
-          {auth.user()?.role}
-        </span>
       </div>
     </header>
   );

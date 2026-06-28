@@ -12,7 +12,6 @@ export default function Profil() {
   const user = () => auth.user();
 
   const [nama, setNama] = createSignal(user()?.nama || '');
-  const [theme, setTheme] = createSignal(user()?.theme || 'light');
   const [avatar, setAvatar] = createSignal(user()?.avatar || '');
   const [password, setPassword] = createSignal('');
   const [confirmPassword, setConfirmPassword] = createSignal('');
@@ -30,26 +29,6 @@ export default function Profil() {
         setAvatar(reader.result as string);
       };
       reader.readAsDataURL(file);
-    }
-  };
-
-  const toggleTheme = async () => {
-    const nextTheme = theme() === 'light' ? 'dark' : 'light';
-    setTheme(nextTheme);
-
-    try {
-      // Save directly to backend profile
-      const res = await userController.updateProfile(nama(), undefined, nextTheme);
-      // Synchronize in local auth context
-      auth.login(localStorage.getItem('token') || '', {
-        ...user()!,
-        theme: res.user.theme,
-      });
-      toast.showToast(`Mode ${nextTheme === 'dark' ? 'gelap' : 'terang'} berhasil disimpan`, 'success');
-    } catch (err: any) {
-      toast.showToast('Gagal mengubah preferensi tema di server', 'error');
-      // Revert local state if server fails
-      setTheme(theme());
     }
   };
 
@@ -74,14 +53,13 @@ export default function Profil() {
 
     setLoading(true);
     try {
-      const res = await userController.updateProfile(nama(), password() || undefined, theme(), avatar() || undefined);
+      const res = await userController.updateProfile(nama(), password() || undefined, undefined, avatar() || undefined);
       toast.showToast(res.message, 'success');
       
       // Update local auth context user
       auth.login(localStorage.getItem('token') || '', {
         ...user()!,
         nama: res.user.nama,
-        theme: res.user.theme,
         avatar: res.user.avatar,
       });
 
@@ -100,7 +78,7 @@ export default function Profil() {
       <div class="flex flex-col gap-6 max-w-xl text-gray-800 dark:text-white transition-colors duration-200">
         <div class="flex flex-col gap-1">
           <h1 class="text-2xl font-extrabold tracking-tight">Profil Saya</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Perbarui informasi profil, foto, dan preferensi tampilan Anda.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Perbarui informasi profil dan foto Anda.</p>
         </div>
 
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 transition-colors duration-200">
@@ -165,27 +143,6 @@ export default function Profil() {
               disabled={loading()}
               class="!bg-white dark:!bg-slate-950 !border-gray-200 dark:!border-slate-855 dark:!text-white focus:!ring-blue-500/30"
             />
-
-            {/* Dark Mode Switch Toggle Component */}
-            <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/40">
-              <div class="flex flex-col gap-0.5">
-                <span class="text-sm font-semibold">Mode Gelap (Night Mode)</span>
-                <span class="text-xs text-gray-400 dark:text-gray-550">Sesuaikan kenyamanan membaca Anda saat malam hari.</span>
-              </div>
-              <button 
-                type="button"
-                onClick={toggleTheme}
-                class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                  theme() === 'dark' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-800'
-                }`}
-              >
-                <span 
-                  class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    theme() === 'dark' ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
 
             <hr class="border-gray-100 dark:border-slate-800 my-2" />
 
