@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, createEffect } from 'solid-js';
 import { useNavigate, A } from '@solidjs/router';
 import { useAuth } from '../contexts/AuthContext';
 import { authController } from '../controllers/authController';
@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useToast } from '../contexts/ToastContext';
 import { z } from 'zod';
+import logoImg from '../assets/logo.png';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Format email tidak valid' }),
@@ -30,10 +31,12 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [loading, setLoading] = createSignal(false);
 
-  // If already logged in, redirect
-  if (auth.isAuthenticated()) {
-    navigate('/dashboard', { replace: true });
-  }
+  // If already logged in, redirect (wrapped in createEffect to prevent render phase routing crashes)
+  createEffect(() => {
+    if (auth.isAuthenticated()) {
+      navigate('/dashboard', { replace: true });
+    }
+  });
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
