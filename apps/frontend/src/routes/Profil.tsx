@@ -13,9 +13,25 @@ export default function Profil() {
 
   const [nama, setNama] = createSignal(user()?.nama || '');
   const [theme, setTheme] = createSignal(user()?.theme || 'light');
+  const [avatar, setAvatar] = createSignal(user()?.avatar || '');
   const [password, setPassword] = createSignal('');
   const [confirmPassword, setConfirmPassword] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+
+  const handleFileChange = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.showToast('Ukuran file maksimal 2MB', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleUpdateProfile = async (e: Event) => {
     e.preventDefault();
@@ -38,7 +54,7 @@ export default function Profil() {
 
     setLoading(true);
     try {
-      const res = await userController.updateProfile(nama(), password() || undefined, theme());
+      const res = await userController.updateProfile(nama(), password() || undefined, theme(), avatar() || undefined);
       toast.showToast(res.message, 'success');
       
       // Update local auth context user
@@ -46,6 +62,7 @@ export default function Profil() {
         ...user()!,
         nama: res.user.nama,
         theme: res.user.theme,
+        avatar: res.user.avatar,
       });
 
       // Clear password fields
@@ -63,11 +80,55 @@ export default function Profil() {
       <div class="flex flex-col gap-6 max-w-xl text-gray-800 dark:text-white transition-colors duration-200">
         <div class="flex flex-col gap-1">
           <h1 class="text-2xl font-extrabold tracking-tight">Profil Saya</h1>
-          <p class="text-sm text-gray-500 dark:text-gray-400">Perbarui informasi profil dan preferensi tampilan Anda.</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Perbarui informasi profil, foto, dan preferensi tampilan Anda.</p>
         </div>
 
         <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 transition-colors duration-200">
           <form onSubmit={handleUpdateProfile} class="flex flex-col gap-5">
+            {/* Profile Picture Upload Section */}
+            <div class="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/40">
+              <div class="relative group">
+                <Show 
+                  when={avatar()} 
+                  fallback={
+                    <div class="h-20 w-20 rounded-full bg-blue-600 border-2 border-blue-500 flex items-center justify-center font-bold text-white text-3xl uppercase shadow-lg">
+                      {nama()?.[0] || user()?.email?.[0] || 'U'}
+                    </div>
+                  }
+                >
+                  <img src={avatar()} alt="Foto Profil" class="h-20 w-20 rounded-full object-cover border-2 border-blue-500 shadow-lg" />
+                </Show>
+              </div>
+              <div class="flex-1 flex flex-col gap-1.5 items-center sm:items-start">
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Foto Profil</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleFileChange}
+                  class="hidden" 
+                  id="avatar-upload-input"
+                />
+                <div class="flex gap-2">
+                  <label 
+                    for="avatar-upload-input"
+                    class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Pilih Foto
+                  </label>
+                  <Show when={avatar()}>
+                    <button 
+                      type="button" 
+                      onClick={() => setAvatar('')}
+                      class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-750 text-white rounded text-xs font-bold transition-colors"
+                    >
+                      Hapus
+                    </button>
+                  </Show>
+                </div>
+                <span class="text-[10px] text-gray-450 dark:text-gray-500">Format JPG, PNG. Maksimal 2MB.</span>
+              </div>
+            </div>
+
             <div>
               <label class="block text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Email</label>
               <div class="w-full rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 select-none">

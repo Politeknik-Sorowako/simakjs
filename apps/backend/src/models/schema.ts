@@ -13,6 +13,7 @@ export const users = pgTable('users', {
   role: roleEnum('role').notNull().default('mahasiswa'),
   isActive: boolean('is_active').default(false).notNull(),
   theme: varchar('theme', { length: 20 }).default('light').notNull(),
+  avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });

@@ -6,7 +6,7 @@ export function MainLayout(props: { children: JSX.Element }) {
   const [isOpen, setIsOpen] = createSignal(false);
 
   return (
-    <div class="min-h-screen flex bg-gray-50/50 relative overflow-hidden">
+    <div class="min-h-screen flex bg-gray-50/50 dark:bg-slate-950 text-gray-800 dark:text-gray-100 relative overflow-hidden transition-colors duration-200">
       {/* Mobile Sidebar Backdrop Overlay */}
       <Show when={isOpen()}>
         <div 

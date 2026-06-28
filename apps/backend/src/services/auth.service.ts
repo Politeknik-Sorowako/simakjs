@@ -46,6 +46,7 @@ export class AuthService {
       role: user.role,
       isActive: user.isActive,
       theme: user.theme,
+      avatar: user.avatar,
     };
   }
 }

@@ -37,6 +37,7 @@ export class AuthController {
       nama: user.nama,
       role: user.role,
       theme: user.theme,
+      avatar: user.avatar,
     });
     
     // Set token in httpOnly cookie
@@ -60,6 +61,7 @@ export class AuthController {
         nama: user.nama,
         role: user.role,
         theme: user.theme,
+        avatar: user.avatar,
       },
     };
   }

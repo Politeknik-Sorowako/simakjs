@@ -41,6 +41,7 @@ export class UserController {
           role: users.role,
           isActive: users.isActive,
           theme: users.theme,
+          avatar: users.avatar,
           createdAt: users.createdAt,
         })
         .from(users)
@@ -175,6 +176,7 @@ export class UserController {
       const nama = (body as any)?.nama;
       const password = (body as any)?.password;
       const theme = (body as any)?.theme;
+      const avatar = (body as any)?.avatar;
 
       const updateData: Record<string, any> = {};
 
@@ -193,6 +195,10 @@ export class UserController {
           return { error: 'Tema tidak valid' };
         }
         updateData.theme = theme;
+      }
+
+      if (avatar !== undefined) {
+        updateData.avatar = avatar;
       }
 
       if (password) {
@@ -224,6 +230,7 @@ export class UserController {
           nama: updated.nama,
           role: updated.role,
           theme: updated.theme,
+          avatar: updated.avatar,
         }
       };
     } catch (error: any) {

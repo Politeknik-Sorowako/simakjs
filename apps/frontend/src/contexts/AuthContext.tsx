@@ -6,6 +6,7 @@ export interface User {
   nama: string;
   role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest';
   theme?: string;
+  avatar?: string;
 }
 
 interface AuthContextType {
