@@ -1,5 +1,5 @@
 import { createSignal, Show } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
+import { useNavigate, A } from '@solidjs/router';
 import { useAuth } from '../contexts/AuthContext';
 import { authController } from '../controllers/authController';
 import { Button } from '../components/ui/Button';
@@ -140,7 +140,7 @@ export default function Login() {
           </Button>
         </form>
 
-        <div class="text-center">
+        <div class="text-center flex flex-col gap-2">
           <button
             onClick={() => {
               setIsRegister(!isRegister());
@@ -151,6 +151,15 @@ export default function Login() {
           >
             {isRegister() ? 'Sudah memiliki akun? Masuk' : 'Belum memiliki akun? Daftar'}
           </button>
+          
+          <Show when={!isRegister()}>
+            <A
+              href="/forgot-password"
+              class="text-xs text-gray-400 hover:text-gray-300 transition-colors focus:outline-none mt-1"
+            >
+              Lupa Kata Sandi?
+            </A>
+          </Show>
         </div>
       </div>
     </div>

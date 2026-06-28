@@ -23,6 +23,8 @@ import Yudisium from './routes/Yudisium';
 import { PddiktiSync } from './routes/PddiktiSync';
 import Pengguna from './routes/Pengguna';
 import Profil from './routes/Profil';
+import ForgotPassword from './routes/ForgotPassword';
+import ResetPassword from './routes/ResetPassword';
 
 function AppContent() {
   const auth = useAuth();
@@ -31,6 +33,8 @@ function AppContent() {
     <Routes>
       {/* Public Route */}
       <Route path="/login" component={Login} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
 
       {/* Protected Routes */}
       <Route

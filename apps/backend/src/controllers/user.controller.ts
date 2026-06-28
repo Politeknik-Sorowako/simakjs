@@ -40,6 +40,7 @@ export class UserController {
           nama: users.nama,
           role: users.role,
           isActive: users.isActive,
+          theme: users.theme,
           createdAt: users.createdAt,
         })
         .from(users)
@@ -173,13 +174,26 @@ export class UserController {
 
       const nama = (body as any)?.nama;
       const password = (body as any)?.password;
+      const theme = (body as any)?.theme;
 
-      if (!nama || nama.length < 3) {
-        set.status = 400;
-        return { error: 'Nama minimal harus 3 karakter' };
+      const updateData: Record<string, any> = {};
+
+      if (nama !== undefined) {
+        if (!nama || nama.length < 3) {
+          set.status = 400;
+          return { error: 'Nama minimal harus 3 karakter' };
+        }
+        updateData.nama = nama;
       }
 
-      const updateData: Record<string, any> = { nama };
+      if (theme !== undefined) {
+        const validThemes = ['light', 'dark'];
+        if (!validThemes.includes(theme)) {
+          set.status = 400;
+          return { error: 'Tema tidak valid' };
+        }
+        updateData.theme = theme;
+      }
 
       if (password) {
         if (password.length < 6) {
@@ -190,6 +204,11 @@ export class UserController {
           algorithm: 'bcrypt',
           cost: 10,
         });
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        set.status = 400;
+        return { error: 'Tidak ada data yang diperbarui' };
       }
 
       const [updated] = await db.update(users)
@@ -204,6 +223,7 @@ export class UserController {
           email: updated.email,
           nama: updated.nama,
           role: updated.role,
+          theme: updated.theme,
         }
       };
     } catch (error: any) {

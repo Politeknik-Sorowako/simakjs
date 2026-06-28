@@ -5,6 +5,7 @@ export interface User {
   email: string;
   nama: string;
   role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest';
+  theme?: string;
 }
 
 interface AuthContextType {
@@ -34,6 +35,16 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
   }
 
+  // Reactively apply theme to document
+  createEffect(() => {
+    const activeTheme = user()?.theme || 'light';
+    if (activeTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  });
+
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
@@ -46,6 +57,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    document.documentElement.classList.remove('dark'); // Clean up on logout
   };
 
   const isAuthenticated = () => !!token();
