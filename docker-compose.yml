@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
     container_name: simak_db
     environment:
-      POSTGRES_USER: simak_user
-      POSTGRES_PASSWORD: simak_password
-      POSTGRES_DB: simak_vokasi
+      POSTGRES_USER: ${POSTGRES_USER:-simak_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simak_password}
+      POSTGRES_DB: ${POSTGRES_DB:-simak_vokasi}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -19,12 +17,12 @@ services:
       dockerfile: apps/backend/Dockerfile
     container_name: simak_backend
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     environment:
-      - DATABASE_URL=postgresql://simak_user:simak_password@db:5432/simak_vokasi
+      - DATABASE_URL=${DATABASE_URL:-postgresql://simak_user:simak_password@db:5432/simak_vokasi}
       - PORT=3000
-      - JWT_SECRET=simak_vokasi_secret_key_123456
-      - CORS_ORIGIN=*
+      - JWT_SECRET=${JWT_SECRET:-simak_vokasi_secret_key_123456}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
     depends_on:
       - db
 
@@ -34,9 +32,10 @@ services:
       dockerfile: apps/frontend/Dockerfile
     container_name: simak_frontend
     ports:
-      - "8080:80"
+      - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
 
 volumes:
   pgdata:
+
