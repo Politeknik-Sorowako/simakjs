@@ -4,7 +4,7 @@ import { AuthContext } from '../utils/types';
 export class AuthController {
   static async register({ body, set }: AuthContext) {
     try {
-      const user = await AuthService.register(body.email, body.password, body.role);
+      const user = await AuthService.register(body.email, body.password, body.nama, body.role);
       set.status = 201;
       return {
         message: 'Registrasi berhasil',
@@ -22,9 +22,14 @@ export class AuthController {
       set.status = 401;
       return { error: 'Email atau password salah' };
     }
+    if (!user.isActive) {
+      set.status = 403;
+      return { error: 'Akun Anda belum diaktifkan oleh Admin' };
+    }
     const token = await jwt.sign({
       id: user.id,
       email: user.email,
+      nama: user.nama,
       role: user.role,
     });
     
@@ -43,7 +48,12 @@ export class AuthController {
     return {
       message: 'Login berhasil',
       token,
-      user,
+      user: {
+        id: user.id,
+        email: user.email,
+        nama: user.nama,
+        role: user.role,
+      },
     };
   }
 }

@@ -1,5 +1,6 @@
 import { app } from '../index';
 import { db } from '../utils/db';
+import { eq } from 'drizzle-orm';
 import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar, bimbingan, bimbinganThread, pelanggaran, komponenNilai, nilaiKomponenMahasiswa, pengajuanYudisium } from '../models/schema';
 
 export interface UserResponse {
@@ -69,7 +70,7 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
     new Request('http://localhost/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: 'password123', role }),
+      body: JSON.stringify({ email, password: 'password123', nama: 'Test User', role }),
     })
   );
 
@@ -77,6 +78,9 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
     const errorText = await registerResponse.text();
     throw new Error(`getAuthToken registration failed with status ${registerResponse.status}: ${errorText}`);
   }
+
+  // Activate user directly in DB for test authorization
+  await db.update(users).set({ isActive: true }).where(eq(users.email, email));
 
   const response = await app.handle(
     new Request('http://localhost/auth/login', {

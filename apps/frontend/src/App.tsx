@@ -21,6 +21,7 @@ import Pelanggaran from './routes/Pelanggaran';
 import Khs from './routes/Khs';
 import Yudisium from './routes/Yudisium';
 import { PddiktiSync } from './routes/PddiktiSync';
+import Pengguna from './routes/Pengguna';
 
 function AppContent() {
   const auth = useAuth();
@@ -156,6 +157,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen']}>
             <PddiktiSync />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengguna"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <Pengguna />
           </ProtectedRoute>
         }
       />

@@ -22,6 +22,7 @@ import { khsRoutes } from './routes/khs.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { e2eRoutes } from './routes/e2e.routes';
+import { userRoutes } from './routes/user.routes';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -88,7 +89,8 @@ app.use(
   .use(khsRoutes)
   .use(yudisiumRoutes)
   .use(pddiktiRoutes)
-  .use(e2eRoutes);
+  .use(e2eRoutes)
+  .use(userRoutes);
 
 
 

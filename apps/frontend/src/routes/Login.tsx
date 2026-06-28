@@ -13,6 +13,7 @@ const loginSchema = z.object({
 });
 
 const registerSchema = loginSchema.extend({
+  nama: z.string().min(3, { message: 'Nama minimal harus 3 karakter' }),
   role: z.enum(['admin', 'dosen', 'mahasiswa'], { message: 'Peran tidak valid' }),
 });
 
@@ -23,6 +24,7 @@ export default function Login() {
 
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
+  const [nama, setNama] = createSignal('');
   const [role, setRole] = createSignal('mahasiswa');
   const [isRegister, setIsRegister] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
@@ -38,7 +40,9 @@ export default function Login() {
     setErrorMsg('');
 
     // Zod validation
-    const formData = { email: email(), password: password(), role: role() };
+    const formData = isRegister() 
+      ? { email: email(), password: password(), nama: nama(), role: role() }
+      : { email: email(), password: password() };
     const schema = isRegister() ? registerSchema : loginSchema;
     
     const result = schema.safeParse(formData);
@@ -53,7 +57,7 @@ export default function Login() {
 
     try {
       if (isRegister()) {
-        await authController.register(email(), password(), role());
+        await authController.register(email(), password(), nama(), role());
         setIsRegister(false);
         const successMsg = 'Registrasi sukses! Silakan login.';
         setErrorMsg(successMsg);
@@ -106,6 +110,18 @@ export default function Login() {
             disabled={loading()}
             class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
           />
+
+          <Show when={isRegister()}>
+            <Input
+              type="text"
+              label="Nama Lengkap"
+              required
+              value={nama()}
+              onInput={(e) => setNama(e.currentTarget.value)}
+              disabled={loading()}
+              class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
+            />
+          </Show>
 
           <Input
             type="password"
