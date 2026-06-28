@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { app } from '../index';
+import { app } from '../app';
 import { clearDatabase, getAuthToken } from './test-helper';
 import { db } from '../utils/db';
 import { programStudi, mahasiswa, periodeAkademik, mataKuliah, kelasKuliah, krs, bimbingan, bap, presensi, dosen, cpmk } from '../models/schema';

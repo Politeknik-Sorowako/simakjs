@@ -22,4 +22,20 @@ export const authController = {
       body: JSON.stringify({ email, password, nama, role }),
     });
   },
+
+  async forgotPassword(email: string): Promise<{ message: string; token?: string }> {
+    return fetchApi<{ message: string; token?: string }>('/auth/forgot-password', {
+      method: 'POST',
+      requireAuth: false,
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      requireAuth: false,
+      body: JSON.stringify({ token, password }),
+    });
+  },
 };

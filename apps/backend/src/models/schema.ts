@@ -12,6 +12,8 @@ export const users = pgTable('users', {
   nama: varchar('nama', { length: 255 }).notNull(),
   role: roleEnum('role').notNull().default('mahasiswa'),
   isActive: boolean('is_active').default(false).notNull(),
+  theme: varchar('theme', { length: 20 }).default('light').notNull(),
+  avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
@@ -461,3 +463,12 @@ export const pengajuanYudisiumRelations = relations(pengajuanYudisium, ({ one })
     references: [mahasiswa.id],
   }),
 }));
+
+export const passwordResets = pgTable('password_resets', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+

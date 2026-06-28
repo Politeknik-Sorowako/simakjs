@@ -4,9 +4,9 @@ import { eq } from 'drizzle-orm';
 
 async function seed() {
   console.log('Seeding initial active admin...');
-  
-  const email = 'admin@simak.id';
-  const hashedPassword = await Bun.password.hash('password123', {
+  const email = process.env.ADMIN_EMAIL || 'admin@simak.id';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'password123';
+  const hashedPassword = await Bun.password.hash(adminPassword, {
     algorithm: 'bcrypt',
     cost: 10,
   });

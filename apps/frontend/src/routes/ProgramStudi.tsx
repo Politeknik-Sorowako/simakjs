@@ -74,9 +74,9 @@ export default function ProgramStudi() {
       <div class="flex flex-col gap-6">
         {/* Header */}
         <div class="flex justify-between items-center">
-          <div>
-            <h1 class="text-2xl font-extrabold text-gray-800">Program Studi</h1>
-            <p class="text-sm text-gray-500">Kelola daftar program studi vokasi yang tersedia.</p>
+          <div class="flex flex-col gap-1">
+            <h1 class="text-2xl font-extrabold tracking-tight">Program Studi</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">Kelola daftar program studi vokasi yang tersedia.</p>
           </div>
           <Button onClick={openAddModal}>+ Tambah Prodi</Button>
         </div>

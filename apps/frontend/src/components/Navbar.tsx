@@ -1,23 +1,60 @@
 import { useAuth } from '../contexts/AuthContext';
-import { Button } from './ui/Button';
+import { userController } from '../controllers/userController';
 
-export function Navbar() {
+export function Navbar(props: { onToggleSidebar: () => void }) {
   const auth = useAuth();
+  const currentTheme = () => auth.user()?.theme || 'light';
+
+  const toggleTheme = async () => {
+    const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
+    auth.setTheme(nextTheme);
+    try {
+      if (auth.user()) {
+        const res = await userController.updateProfile(auth.user()?.nama || '', undefined, nextTheme);
+        auth.login(localStorage.getItem('token') || '', {
+          ...auth.user()!,
+          theme: res.user.theme,
+        });
+      }
+    } catch (err) {
+      console.error('Gagal memperbarui tema di server:', err);
+    }
+  };
 
   return (
-    <header class="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 shadow-sm">
-      <div class="flex items-center gap-4">
-        {/* Dynamic header / breadcrumb context if desired, or left blank */}
-        <h2 class="text-lg font-bold text-gray-800">Sistem Informasi Akademik</h2>
+    <header class="h-16 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
+      <div class="flex items-center gap-3">
+        {/* Mobile Hamburger Toggle Button */}
+        <button 
+          onClick={() => props.onToggleSidebar()}
+          class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 focus:outline-none md:hidden"
+        >
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <h2 class="text-md font-bold text-gray-800 dark:text-white hidden sm:block">Sistem Informasi Akademik</h2>
       </div>
 
       <div class="flex items-center gap-4">
-        <span class="text-xs bg-gray-100 border border-gray-200 px-3 py-1 rounded-full text-gray-600 font-semibold uppercase tracking-wider">
-          {auth.user()?.role}
-        </span>
-        <Button variant="danger" onClick={auth.logout} class="!py-1.5 !px-3 shadow-none">
-          Logout
-        </Button>
+
+        {/* Night Mode Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          class="p-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-750 transition-all focus:outline-none shadow-sm"
+          title="Beralih Mode Gelap/Terang"
+        >
+          {auth.theme() === 'light' ? (
+            <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+          ) : (
+            <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            </svg>
+          )}
+        </button>
       </div>
     </header>
   );
