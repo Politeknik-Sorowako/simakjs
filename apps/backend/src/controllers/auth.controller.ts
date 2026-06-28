@@ -3,6 +3,7 @@ import { AuthContext } from '../utils/types';
 import { db } from '../utils/db';
 import { users, passwordResets } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { Resend } from 'resend';
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
@@ -85,7 +86,7 @@ export class AuthController {
             set.status = 429;
             return { error: 'Terlalu banyak permintaan reset password. Silakan coba lagi dalam 15 menit.' };
           }
-          limitRecord.count++;
+          // limitRecord.count++;
         }
       } else {
         rateLimitMap.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
@@ -115,19 +116,15 @@ export class AuthController {
       // Send reset link using Resend API if API Key is configured
       const resendApiKey = process.env.RESEND_API_KEY;
       if (resendApiKey) {
+        
         const domainName = process.env.DOMAIN_NAME || 'localhost';
         const protocol = domainName === 'localhost' ? 'http' : 'https';
         const port = domainName === 'localhost' ? ':8080' : '';
         const resetLink = `${protocol}://${domainName}${port}/reset-password?token=${token}`;
 
         try {
-          const emailResponse = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${resendApiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          const resend = new Resend(resendApiKey);
+          const {data, error} = await resend.emails.send({            
               from: 'SIMAK Vokasi <onboarding@resend.dev>',
               to: [email],
               subject: 'Reset Kata Sandi - SIMAK Vokasi',
@@ -142,19 +139,20 @@ export class AuthController {
                   </div>
                   <p style="color: #64748b; font-size: 12px;">Jika Anda tidak meminta ini, abaikan email ini.</p>
                 </div>
-              `,
-            }),
+              `,            
           });
 
-          if (!emailResponse.ok) {
-            const errBody = await emailResponse.text();
-            console.error('Failed to send email via Resend:', errBody);
-          } else {
+          if (!error) {
             console.log(`[SIMAK RESET PASSWORD] Email reset berhasil dikirim ke ${email}`);
+          } else {
+            const errBody = error.message;
+            console.error('Failed to send email via Resend:', errBody);
           }
-        } catch (mailError) {
-          console.error('Error occurred while sending email via Resend:', mailError);
+        } catch (error) {
+          console.error('Error occurred while sending email via Resend:', error);
         }
+      } else {
+        console.warn('[SIMAK RESET PASSWORD] RESEND_API_KEY tidak dikonfigurasi di environment backend!');
       }
 
       return {
