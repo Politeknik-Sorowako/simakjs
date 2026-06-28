@@ -33,6 +33,26 @@ export default function Profil() {
     }
   };
 
+  const toggleTheme = async () => {
+    const nextTheme = theme() === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+
+    try {
+      // Save directly to backend profile
+      const res = await userController.updateProfile(nama(), undefined, nextTheme);
+      // Synchronize in local auth context
+      auth.login(localStorage.getItem('token') || '', {
+        ...user()!,
+        theme: res.user.theme,
+      });
+      toast.showToast(`Mode ${nextTheme === 'dark' ? 'gelap' : 'terang'} berhasil disimpan`, 'success');
+    } catch (err: any) {
+      toast.showToast('Gagal mengubah preferensi tema di server', 'error');
+      // Revert local state if server fails
+      setTheme(theme());
+    }
+  };
+
   const handleUpdateProfile = async (e: Event) => {
     e.preventDefault();
 
@@ -143,42 +163,35 @@ export default function Profil() {
               value={nama()}
               onInput={(e) => setNama(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-white dark:!bg-slate-950 !border-gray-200 dark:!border-slate-850 dark:!text-white focus:!ring-blue-500/30"
+              class="!bg-white dark:!bg-slate-950 !border-gray-200 dark:!border-slate-855 dark:!text-white focus:!ring-blue-500/30"
             />
 
-            <div class="flex flex-col gap-2">
-              <label class="block text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Tema Tampilan (Mode)</label>
-              <div class="flex gap-6 mt-1">
-                <label class="flex items-center gap-2 cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  <input
-                    type="radio"
-                    name="theme"
-                    value="light"
-                    checked={theme() === 'light'}
-                    onChange={() => setTheme('light')}
-                    class="text-blue-600 focus:ring-blue-500 dark:bg-slate-950 dark:border-slate-800"
-                  />
-                  ☀ Mode Terang (Light)
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  <input
-                    type="radio"
-                    name="theme"
-                    value="dark"
-                    checked={theme() === 'dark'}
-                    onChange={() => setTheme('dark')}
-                    class="text-blue-600 focus:ring-blue-500 dark:bg-slate-950 dark:border-slate-800"
-                  />
-                  🌙 Mode Gelap (Dark)
-                </label>
+            {/* Dark Mode Switch Toggle Component */}
+            <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/40">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-sm font-semibold">Mode Gelap (Night Mode)</span>
+                <span class="text-xs text-gray-400 dark:text-gray-550">Sesuaikan kenyamanan membaca Anda saat malam hari.</span>
               </div>
+              <button 
+                type="button"
+                onClick={toggleTheme}
+                class={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  theme() === 'dark' ? 'bg-blue-600' : 'bg-gray-300 dark:bg-slate-800'
+                }`}
+              >
+                <span 
+                  class={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    theme() === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
 
             <hr class="border-gray-100 dark:border-slate-800 my-2" />
 
             <div class="flex flex-col gap-1">
               <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300">Ubah Kata Sandi (Opsional)</h3>
-              <p class="text-xs text-gray-400 dark:text-gray-500">Kosongkan kolom di bawah jika Anda tidak ingin mengubah kata sandi.</p>
+              <p class="text-xs text-gray-400 dark:text-gray-550">Kosongkan kolom di bawah jika Anda tidak ingin mengubah kata sandi.</p>
             </div>
 
             <Input
@@ -187,7 +200,7 @@ export default function Profil() {
               value={password()}
               onInput={(e) => setPassword(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-white dark:!bg-slate-950 !border-gray-200 dark:!border-slate-850 dark:!text-white focus:!ring-blue-500/30"
+              class="!bg-white dark:!bg-slate-950 !border-gray-200 dark:!border-slate-855 dark:!text-white focus:!ring-blue-500/30"
             />
 
             <Input
@@ -196,7 +209,7 @@ export default function Profil() {
               value={confirmPassword()}
               onInput={(e) => setConfirmPassword(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-white dark:!bg-slate-950 !border-gray-200 dark:!border-slate-850 dark:!text-white focus:!ring-blue-500/30"
+              class="!bg-white dark:!bg-slate-950 !border-gray-200 dark:!border-slate-855 dark:!text-white focus:!ring-blue-500/30"
             />
 
             <div class="flex justify-end mt-2">
