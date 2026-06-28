@@ -1,4 +1,4 @@
-import { app } from '../index';
+import { app } from '../app';
 import { db } from '../utils/db';
 import { eq } from 'drizzle-orm';
 import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar, bimbingan, bimbinganThread, pelanggaran, komponenNilai, nilaiKomponenMahasiswa, pengajuanYudisium } from '../models/schema';

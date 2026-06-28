@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
-import { app } from '../index';
+import { app } from '../app';
 import { clearDatabase, getAuthToken, MahasiswaSuccessResponse } from './test-helper';
 
 describe('3. Mahasiswa (/mahasiswa)', () => {
