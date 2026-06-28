@@ -1,0 +1,50 @@
+import { fetchApi } from '../utils/api';
+
+export interface UserItem {
+  id: number;
+  email: string;
+  nama: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface UserListResponse {
+  data: UserItem[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export const userController = {
+  async getAll(page = 1, limit = 10, search = ''): Promise<UserListResponse> {
+    return fetchApi<UserListResponse>(`/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+  },
+
+  async toggleActive(id: number): Promise<{ message: string; user: UserItem }> {
+    return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/activate`, {
+      method: 'PUT',
+    });
+  },
+
+  async updateRole(id: number, role: string): Promise<{ message: string; user: UserItem }> {
+    return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/role`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  async updateProfile(nama: string, password?: string): Promise<{ message: string; user: UserItem }> {
+    const payload: Record<string, any> = { nama };
+    if (password) {
+      payload.password = password;
+    }
+    return fetchApi<{ message: string; user: UserItem }>('/users/profile', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+};

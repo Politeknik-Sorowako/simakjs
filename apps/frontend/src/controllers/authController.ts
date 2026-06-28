@@ -15,11 +15,11 @@ export const authController = {
     });
   },
 
-  async register(email: string, password: string, role: string): Promise<any> {
+  async register(email: string, password: string, nama: string, role: string): Promise<any> {
     return fetchApi<any>('/auth/register', {
       method: 'POST',
       requireAuth: false,
-      body: JSON.stringify({ email, password, role }),
+      body: JSON.stringify({ email, password, nama, role }),
     });
   },
 };

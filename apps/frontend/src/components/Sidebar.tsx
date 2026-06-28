@@ -35,6 +35,15 @@ export function Sidebar() {
           Dashboard
         </A>
 
+        <A
+          href="/profil"
+          activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+          inactiveClass="hover:bg-gray-800 hover:text-white"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+        >
+          👤 Profil Saya
+        </A>
+
         {/* Admin only / Manage menus */}
         <Show when={role() === 'admin'}>
           <div class="pt-4 px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-widest">
@@ -104,6 +113,14 @@ export function Sidebar() {
             class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
           >
             ⚖️ Laporan Kompensasi
+          </A>
+          <A
+            href="/pengguna"
+            activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+            inactiveClass="hover:bg-gray-800 hover:text-white"
+            class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+          >
+            👤 Pengguna
           </A>
         </Show>
 
@@ -177,10 +194,10 @@ export function Sidebar() {
       <div class="p-4 border-t border-gray-800 bg-gray-950 flex flex-col gap-2">
         <div class="flex items-center gap-3">
           <div class="h-9 w-9 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center font-bold text-white uppercase">
-            {auth.user()?.email?.[0] || 'U'}
+            {auth.user()?.nama?.[0] || auth.user()?.email?.[0] || 'U'}
           </div>
           <div class="flex-1 overflow-hidden">
-            <div class="text-sm font-semibold text-white truncate">{auth.user()?.email}</div>
+            <div class="text-sm font-semibold text-white truncate">{auth.user()?.nama || auth.user()?.email}</div>
             <div class="text-xs text-gray-500 capitalize">{auth.user()?.role}</div>
           </div>
         </div>
