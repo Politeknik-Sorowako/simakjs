@@ -1,10 +1,12 @@
 # Build stage
 FROM oven/bun:1-alpine AS builder
 WORKDIR /app
-COPY apps/frontend/package.json ./
-RUN bun install
-COPY apps/frontend ./
-RUN bun run build
+COPY package.json bun.lock ./
+COPY apps/frontend/package.json ./apps/frontend/
+RUN bun install --filter frontend
+COPY apps/frontend ./apps/frontend
+RUN bun run --cwd apps/frontend build
+
 
 # Production stage
 FROM nginx:alpine

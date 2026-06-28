@@ -1,7 +1,9 @@
 FROM oven/bun:1-alpine
 WORKDIR /app
-COPY apps/backend/package.json ./
-RUN bun install --production
-COPY apps/backend ./
+COPY package.json bun.lock ./
+COPY apps/backend/package.json ./apps/backend/
+RUN bun install --production --filter backend
+COPY apps/backend ./apps/backend
 EXPOSE 3000
-CMD ["bun", "run", "dev"]
+CMD ["bun", "run", "--cwd", "apps/backend", "dev"]
+
