@@ -97,19 +97,11 @@ export default function ForgotPassword() {
         </Show>
 
         <Show when={successMsg()}>
-          <div class="p-3 rounded-lg text-xs font-semibold text-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex flex-col gap-2">
-            <div>{successMsg()}</div>
-            <Show when={resetToken()}>
-              <div class="text-left mt-2 p-2 bg-slate-950/60 rounded border border-white/5 font-mono text-[10px] break-all select-all">
-                Token reset: <span class="text-blue-400 font-bold">{resetToken()}</span>
-              </div>
-              <A 
-                href={`/reset-password?token=${resetToken()}`} 
-                class="text-xs text-blue-400 hover:underline font-bold mt-1 self-center"
-              >
-                Klik di sini untuk langsung Mereset Password
-              </A>
-            </Show>
+          <div class="p-4 rounded-xl text-sm text-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex flex-col gap-2">
+            <span class="font-bold">Email Terkirim!</span>
+            <p class="text-xs text-gray-300">
+              Tautan dan token untuk mengatur ulang kata sandi telah berhasil dikirim ke email Anda. Silakan periksa kotak masuk atau spam email Anda.
+            </p>
           </div>
         </Show>
 
