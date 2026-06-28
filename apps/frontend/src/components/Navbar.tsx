@@ -8,7 +8,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
   const toggleTheme = async () => {
     const nextTheme = currentTheme() === 'light' ? 'dark' : 'light';
     try {
-      const res = await userController.updateProfile(auth.user()?.nama || '', nextTheme);
+      const res = await userController.updateProfile(auth.user()?.nama || '', undefined, nextTheme);
       auth.login(localStorage.getItem('token') || '', {
         ...auth.user()!,
         theme: res.user.theme,
