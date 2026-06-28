@@ -85,7 +85,8 @@ export default function Login() {
 
       {/* Login Card */}
       <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl flex flex-col gap-6 relative z-10 text-white">
-        <div class="text-center flex flex-col gap-1">
+        <div class="text-center flex flex-col items-center gap-2">
+          <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
           <h2 class="text-2xl font-bold tracking-tight text-white">
             {isRegister() ? 'Buat Akun Baru' : 'Masuk ke SIMAK'}
           </h2>

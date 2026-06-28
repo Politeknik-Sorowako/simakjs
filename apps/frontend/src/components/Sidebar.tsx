@@ -1,6 +1,7 @@
 import { A } from '@solidjs/router';
 import { useAuth } from '../contexts/AuthContext';
 import { Show, createSignal } from 'solid-js';
+import logoImg from '../assets/logo.png';
 
 export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const auth = useAuth();
@@ -18,11 +19,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
       {/* Brand Header */}
       <div class="h-16 flex items-center justify-between border-b border-slate-800 bg-slate-950 px-6">
         <div class="flex items-center gap-3">
-          <svg class="h-7 w-7 text-blue-500 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2" fill="none"/>
-          </svg>
-          <span class="text-sm font-bold text-white tracking-wider uppercase">Politeknik Sorowako</span>
+          <img src={logoImg} alt="Logo" class="h-8 w-8 object-contain rounded-md" />
+          <span class="text-xs font-bold text-white tracking-wider uppercase">Politeknik Sorowako</span>
         </div>
 
         {/* Mobile Close Button */}
@@ -37,23 +35,21 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
       </div>
 
       {/* Nav Menu */}
-      <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+      <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
         <div class="px-3 mb-2 text-[10px] font-semibold text-gray-500 uppercase tracking-widest">
           Menu Utama
         </div>
 
-        {/* Dashboard Link */}
+        {/* Dashboard Link (Selaras dengan menu lainnya) */}
         <A
           href="/dashboard"
           onClick={() => props.onClose()}
-          activeClass="bg-blue-600/10 text-blue-400 font-semibold border-l-4 border-blue-500"
+          activeClass="text-blue-400 font-semibold border-l-2 border-blue-500 pl-2 bg-slate-800/30"
           inactiveClass="hover:bg-slate-800/60 hover:text-white"
-          class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all duration-150"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-xs transition-all duration-150"
         >
-          <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-          </svg>
-          Dashboard
+          <span>🏠</span>
+          <span>Dashboard</span>
         </A>
 
         {/* Admin only / Manage menus */}

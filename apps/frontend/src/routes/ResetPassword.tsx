@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useToast } from '../contexts/ToastContext';
 import { z } from 'zod';
+import logoImg from '../assets/logo.png';
 
 const resetSchema = z.object({
   password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
@@ -72,7 +73,8 @@ export default function ResetPassword() {
       <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
 
       <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl flex flex-col gap-6 relative z-10 text-white">
-        <div class="text-center flex flex-col gap-1">
+        <div class="text-center flex flex-col items-center gap-2">
+          <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
           <h2 class="text-2xl font-bold tracking-tight text-white">Atur Ulang Kata Sandi</h2>
           <p class="text-sm text-gray-400">Masukkan kata sandi baru untuk akun Anda.</p>
         </div>

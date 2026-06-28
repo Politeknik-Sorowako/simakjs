@@ -37,12 +37,15 @@ export const userController = {
     });
   },
 
-  async updateProfile(nama: string, password?: string): Promise<{ message: string; user: UserItem }> {
+  async updateProfile(nama: string, password?: string, theme?: string): Promise<{ message: string; user: any }> {
     const payload: Record<string, any> = { nama };
     if (password) {
       payload.password = password;
     }
-    return fetchApi<{ message: string; user: UserItem }>('/users/profile', {
+    if (theme) {
+      payload.theme = theme;
+    }
+    return fetchApi<{ message: string; user: any }>('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
