@@ -5,7 +5,10 @@ COPY package.json bun.lock ./
 COPY apps/frontend/package.json ./apps/frontend/
 RUN bun install --filter frontend
 COPY apps/frontend ./apps/frontend
+ARG VITE_APP_MODE=development
+ENV VITE_APP_MODE=$VITE_APP_MODE
 RUN bun run --cwd apps/frontend build
+
 
 
 # Production stage
