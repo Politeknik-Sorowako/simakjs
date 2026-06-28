@@ -35,6 +35,15 @@ export function Sidebar() {
           Dashboard
         </A>
 
+        <A
+          href="/profil"
+          activeClass="bg-blue-600/10 text-blue-400 font-medium border-l-4 border-blue-500"
+          inactiveClass="hover:bg-gray-800 hover:text-white"
+          class="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-all duration-200"
+        >
+          👤 Profil Saya
+        </A>
+
         {/* Admin only / Manage menus */}
         <Show when={role() === 'admin'}>
           <div class="pt-4 px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-widest">

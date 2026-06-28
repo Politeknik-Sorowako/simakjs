@@ -133,21 +133,7 @@ export default function Login() {
             class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
           />
 
-          <Show when={isRegister()}>
-            <Input
-              isSelect
-              label="Role / Peran"
-              value={role()}
-              onChange={(e) => setRole(e.currentTarget.value)}
-              disabled={loading()}
-              selectOptions={[
-                { label: 'Mahasiswa', value: 'mahasiswa' },
-                { label: 'Dosen', value: 'dosen' },
-                { label: 'Admin', value: 'admin' },
-              ]}
-              class="!bg-slate-950/40 !border-white/10 !text-white focus:!ring-blue-500/30"
-            />
-          </Show>
+
 
           <Button type="submit" disabled={loading()} class="w-full mt-2 py-3">
             {loading() ? 'Memproses...' : isRegister() ? 'Daftar Sekarang' : 'Masuk'}

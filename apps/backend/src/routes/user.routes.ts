@@ -5,4 +5,6 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 export const userRoutes = new Elysia({ prefix: '/users' })
   .use(authMiddleware)
   .get('/', UserController.getAll)
-  .put('/:id/activate', UserController.toggleActive);
+  .put('/profile', UserController.updateProfile)
+  .put('/:id/activate', UserController.toggleActive)
+  .put('/:id/role', UserController.updateRole);
