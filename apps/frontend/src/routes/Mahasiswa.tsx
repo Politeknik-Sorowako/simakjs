@@ -6,11 +6,13 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 
 export default function Mahasiswa() {
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Fetch Mahasiswa Data
   const [mahasiswas, { refetch }] = createResource(
@@ -112,8 +114,20 @@ export default function Mahasiswa() {
             <h1 class="text-2xl font-extrabold text-gray-800">Mahasiswa</h1>
             <p class="text-sm text-gray-500">Kelola informasi data mahasiswa aktif dan administrasi akademik.</p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Mahasiswa</Button>
+          <div class="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Button onClick={openAddModal}>+ Tambah Mahasiswa</Button>
+          </div>
         </div>
+
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          importUrl="/mahasiswa/import"
+          templateHeaders={['nim', 'nama', 'email', 'programStudiKode', 'status', 'namaIbuKandung', 'nik', 'jenisKelamin', 'tanggalLahir', 'tempatLahir', 'idAgama', 'jalan', 'rt', 'rw', 'kodePos', 'kewarganegaraan']}
+          title="Mahasiswa"
+          onSuccess={() => refetch()}
+        />
 
         <div class="max-w-xs">
           <Input

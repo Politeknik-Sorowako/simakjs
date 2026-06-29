@@ -25,6 +25,8 @@ import Pengguna from './routes/Pengguna';
 import Profil from './routes/Profil';
 import ForgotPassword from './routes/ForgotPassword';
 import ResetPassword from './routes/ResetPassword';
+import Kurikulum from './routes/Kurikulum';
+import Rps from './routes/Rps';
 
 function AppContent() {
   const auth = useAuth();
@@ -178,6 +180,22 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <Profil />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kurikulum"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <Kurikulum />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rps"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+            <Rps />
           </ProtectedRoute>
         }
       />

@@ -6,11 +6,13 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 
 export default function MataKuliah() {
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Fetch Mata Kuliah Data
   const [matkuls, { refetch }] = createResource(
@@ -100,8 +102,20 @@ export default function MataKuliah() {
             <h1 class="text-2xl font-extrabold text-gray-800">Mata Kuliah</h1>
             <p class="text-sm text-gray-500">Kelola daftar kurikulum mata kuliah, SKS, dan program studi terkait.</p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Matkul</Button>
+          <div class="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Button onClick={openAddModal}>+ Tambah Matkul</Button>
+          </div>
         </div>
+
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          importUrl="/mata-kuliah/import"
+          templateHeaders={['kode', 'nama', 'sksTotal', 'sksTatapMuka', 'sksPraktek', 'sksPraktekLapangan', 'sksSimulasi', 'programStudiKode']}
+          title="Mata Kuliah"
+          onSuccess={() => refetch()}
+        />
 
         <div class="max-w-xs">
           <Input

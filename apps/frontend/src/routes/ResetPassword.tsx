@@ -23,6 +23,7 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
 
   const [token, setToken] = createSignal('');
+  const [username, setUsername] = createSignal('');
   const [password, setPassword] = createSignal('');
   const [confirmPassword, setConfirmPassword] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
@@ -32,6 +33,24 @@ export default function ResetPassword() {
     const t = searchParams.token;
     if (t) {
       setToken(t);
+    }
+  });
+
+  // Fetch username/email when token is present
+  createEffect(() => {
+    const t = token();
+    if (t) {
+      authController.getResetTokenDetails(t).then(data => {
+        if (data.email) {
+          setUsername(data.email);
+        }
+      }).catch(err => {
+        // We do not show error here since it might be a user typing an invalid token.
+        // Or if it was loaded from URL, we could show error, but we'll let submit handle validation.
+        setUsername('');
+      });
+    } else {
+      setUsername('');
     }
   });
 
@@ -110,6 +129,16 @@ export default function ResetPassword() {
         </Show>
 
         <form onSubmit={handleSubmit} class="flex flex-col gap-4">
+          <Show when={username()}>
+            <Input
+              type="text"
+              label="Username (Email)"
+              value={username()}
+              disabled={true}
+              class="!bg-slate-50 dark:!bg-slate-950/40 !border-gray-250 dark:!border-white/10 focus:!ring-0 !text-slate-800 dark:!text-white"
+            />
+          </Show>
+
           <Input
             type="text"
             label="Token Reset Password"

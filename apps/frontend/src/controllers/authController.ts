@@ -38,4 +38,11 @@ export const authController = {
       body: JSON.stringify({ token, password }),
     });
   },
+
+  async getResetTokenDetails(token: string): Promise<{ email: string }> {
+    return fetchApi<{ email: string }>(`/auth/reset-password/details/${token}`, {
+      method: 'GET',
+      requireAuth: false,
+    });
+  },
 };
