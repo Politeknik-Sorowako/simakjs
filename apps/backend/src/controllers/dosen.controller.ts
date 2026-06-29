@@ -1,4 +1,5 @@
 import { DosenService } from '../services/dosen.service';
+import { CsvImportService } from '../services/csv-import.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class DosenController {
@@ -65,5 +66,25 @@ export class DosenController {
       return { error: 'Data tidak ditemukan' };
     }
     return { message: 'Dosen berhasil dihapus' };
+  }
+
+  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const mode = (formData.get('mode') as string) || 'skip';
+    if (!file) {
+      set.status = 400;
+      return { error: 'File CSV tidak ditemukan.' };
+    }
+
+    const text = await file.text();
+    const result = await CsvImportService.importDosen(text, mode);
+    return result;
   }
 }

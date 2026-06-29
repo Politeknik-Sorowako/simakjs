@@ -43,6 +43,8 @@ export const dosen = pgTable('dosen', {
   nik: varchar('nik', { length: 16 }),
   jenisKelamin: jenisKelaminEnum('jenis_kelamin'),
   tanggalLahir: date('tanggal_lahir'),
+  tempatLahir: varchar('tempat_lahir', { length: 100 }),
+  idAgama: integer('id_agama'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
@@ -62,6 +64,13 @@ export const mahasiswa = pgTable('mahasiswa', {
   nik: varchar('nik', { length: 16 }).notNull().unique(),
   jenisKelamin: jenisKelaminEnum('jenis_kelamin').notNull(),
   tanggalLahir: date('tanggal_lahir').notNull(),
+  tempatLahir: varchar('tempat_lahir', { length: 100 }),
+  idAgama: integer('id_agama'),
+  jalan: text('jalan'),
+  rt: varchar('rt', { length: 5 }),
+  rw: varchar('rw', { length: 5 }),
+  kodePos: varchar('kode_pos', { length: 10 }),
+  kewarganegaraan: varchar('kewarganegaraan', { length: 5 }).default('ID'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
@@ -84,6 +93,8 @@ export const mataKuliah = pgTable('mata_kuliah', {
   sksTotal: integer('sks_total').notNull(),
   sksTatapMuka: integer('sks_tatap_muka'),
   sksPraktek: integer('sks_praktek'),
+  sksPraktekLapangan: integer('sks_praktek_lapangan').default(0),
+  sksSimulasi: integer('sks_simulasi').default(0),
   programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
@@ -98,6 +109,8 @@ export const kelasKuliah = pgTable('kelas_kuliah', {
   periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   namaKelas: varchar('nama_kelas', { length: 50 }).notNull(),
   isLocked: boolean('is_locked').default(false).notNull(),
+  tanggalMulaiEfektif: date('tanggal_mulai_efektif'),
+  tanggalAkhirEfektif: date('tanggal_akhir_efektif'),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
   lastSyncAt: timestamp('last_sync_at'),
@@ -471,4 +484,122 @@ export const passwordResets = pgTable('password_resets', {
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const kurikulum = pgTable('kurikulum', {
+  id: serial('id').primaryKey(),
+  kode: varchar('kode', { length: 50 }).notNull().unique(),
+  nama: varchar('nama', { length: 255 }).notNull(),
+  programStudiId: integer('program_studi_id').notNull().references(() => programStudi.id, { onDelete: 'restrict' }),
+  semesterMulai: varchar('semester_mulai', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
+  jumlahSksLulus: integer('jumlah_sks_lulus').notNull(),
+  jumlahSksWajib: integer('jumlah_sks_wajib').notNull(),
+  jumlahSksPilihan: integer('jumlah_sks_pilihan').notNull(),
+  isAktif: boolean('is_aktif').default(false).notNull(),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const kurikulumMataKuliah = pgTable('kurikulum_mata_kuliah', {
+  id: serial('id').primaryKey(),
+  kurikulumId: integer('kurikulum_id').notNull().references(() => kurikulum.id, { onDelete: 'cascade' }),
+  mataKuliahId: integer('mata_kuliah_id').notNull().references(() => mataKuliah.id, { onDelete: 'cascade' }),
+  semester: integer('semester').notNull(),
+  sksMataKuliah: integer('sks_mata_kuliah').notNull(),
+  sksTatapMuka: integer('sks_tatap_muka'),
+  sksPraktek: integer('sks_praktek'),
+  sksPraktekLapangan: integer('sks_praktek_lapangan').default(0),
+  sksSimulasi: integer('sks_simulasi').default(0),
+  isWajib: boolean('is_wajib').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const rps = pgTable('rps', {
+  id: serial('id').primaryKey(),
+  mataKuliahId: integer('mata_kuliah_id').notNull().references(() => mataKuliah.id, { onDelete: 'restrict' }),
+  periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
+  deskripsi: text('deskripsi'),
+  cplProdi: text('cpl_prodi'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const rpsTopik = pgTable('rps_topik', {
+  id: serial('id').primaryKey(),
+  rpsId: integer('rps_id').notNull().references(() => rps.id, { onDelete: 'cascade' }),
+  pertemuanKe: integer('pertemuan_ke').notNull(),
+  topik: varchar('topik', { length: 255 }).notNull(),
+  subTopik: text('sub_topik'),
+  metode: varchar('metode', { length: 100 }),
+  cpmkId: integer('cpmk_id').references(() => cpmk.id, { onDelete: 'set null' }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const rencanaEvaluasi = pgTable('rencana_evaluasi', {
+  id: serial('id').primaryKey(),
+  mataKuliahId: integer('mata_kuliah_id').notNull().references(() => mataKuliah.id, { onDelete: 'cascade' }),
+  namaEvaluasi: varchar('nama_evaluasi', { length: 100 }).notNull(),
+  bobotEvaluasi: numeric('bobot_evaluasi', { precision: 5, scale: 2 }).notNull(),
+  deskripsi: text('deskripsi'),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+// Relations
+export const kurikulumRelations = relations(kurikulum, ({ one, many }) => ({
+  programStudi: one(programStudi, {
+    fields: [kurikulum.programStudiId],
+    references: [programStudi.id],
+  }),
+  semesterMulaiPeriode: one(periodeAkademik, {
+    fields: [kurikulum.semesterMulai],
+    references: [periodeAkademik.id],
+  }),
+  kurikulumMataKuliah: many(kurikulumMataKuliah),
+}));
+
+export const kurikulumMataKuliahRelations = relations(kurikulumMataKuliah, ({ one }) => ({
+  kurikulum: one(kurikulum, {
+    fields: [kurikulumMataKuliah.kurikulumId],
+    references: [kurikulum.id],
+  }),
+  mataKuliah: one(mataKuliah, {
+    fields: [kurikulumMataKuliah.mataKuliahId],
+    references: [mataKuliah.id],
+  }),
+}));
+
+export const rpsRelations = relations(rps, ({ one, many }) => ({
+  mataKuliah: one(mataKuliah, {
+    fields: [rps.mataKuliahId],
+    references: [mataKuliah.id],
+  }),
+  periode: one(periodeAkademik, {
+    fields: [rps.periodeId],
+    references: [periodeAkademik.id],
+  }),
+  topik: many(rpsTopik),
+}));
+
+export const rpsTopikRelations = relations(rpsTopik, ({ one }) => ({
+  rps: one(rps, {
+    fields: [rpsTopik.rpsId],
+    references: [rps.id],
+  }),
+  cpmk: one(cpmk, {
+    fields: [rpsTopik.cpmkId],
+    references: [cpmk.id],
+  }),
+}));
+
+export const rencanaEvaluasiRelations = relations(rencanaEvaluasi, ({ one }) => ({
+  mataKuliah: one(mataKuliah, {
+    fields: [rencanaEvaluasi.mataKuliahId],
+    references: [mataKuliah.id],
+  }),
+}));
 

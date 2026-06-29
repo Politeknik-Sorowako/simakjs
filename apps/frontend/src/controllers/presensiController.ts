@@ -85,9 +85,12 @@ export const presensiController = {
     });
   },
 
-  // BAP
   async getBapByKelas(kelasKuliahId: number): Promise<BAP[]> {
     return fetchApi<BAP[]>(`/bap/kelas/${kelasKuliahId}`);
+  },
+
+  async getRpsTopikByKelas(kelasKuliahId: number): Promise<Array<{ id: number; rpsId: number; pertemuanKe: number; topik: string; subTopik: string | null; metode: string | null; cpmkId: number | null }>> {
+    return fetchApi<any[]>(`/bap/kelas/${kelasKuliahId}/topik`);
   },
 
   async createBap(data: Omit<BAP, 'id'>): Promise<BAP> {

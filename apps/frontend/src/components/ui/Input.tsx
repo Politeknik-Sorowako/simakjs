@@ -20,7 +20,7 @@ export function Input(props: InputProps) {
       {props.isSelect ? (
         <select
           {...(local as any)}
-          class={`px-4 py-2.5 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm shadow-sm ${
+          class={`px-4 py-2.5 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm shadow-sm text-slate-900 dark:text-white disabled:opacity-100 disabled:text-slate-900 dark:disabled:text-white disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:border-gray-300 dark:disabled:border-slate-700 ${
             props.error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
           } ${props.class || ''}`}
         >
@@ -33,7 +33,7 @@ export function Input(props: InputProps) {
       ) : (
         <input
           {...local}
-          class={`px-4 py-2.5 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm shadow-sm ${
+          class={`px-4 py-2.5 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm shadow-sm text-slate-900 dark:text-white disabled:opacity-100 disabled:text-slate-900 dark:disabled:text-white disabled:bg-gray-100 dark:disabled:bg-slate-800 disabled:border-gray-300 dark:disabled:border-slate-700 ${
             props.error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
           } ${props.class || ''}`}
         />

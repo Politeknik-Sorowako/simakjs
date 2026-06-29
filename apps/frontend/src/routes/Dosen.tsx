@@ -6,11 +6,13 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 
 export default function Dosen() {
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Fetch Dosen Data
   const [dosens, { refetch }] = createResource(
@@ -108,8 +110,20 @@ export default function Dosen() {
             <h1 class="text-2xl font-extrabold text-gray-800">Dosen</h1>
             <p class="text-sm text-gray-500">Kelola data dosen pengajar dan program studi terkait.</p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Dosen</Button>
+          <div class="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Button onClick={openAddModal}>+ Tambah Dosen</Button>
+          </div>
         </div>
+
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          importUrl="/dosen/import"
+          templateHeaders={['nip', 'nama', 'email', 'programStudiKode', 'nidn', 'nik', 'jenisKelamin', 'tanggalLahir', 'tempatLahir', 'idAgama']}
+          title="Dosen"
+          onSuccess={() => refetch()}
+        />
 
         <div class="max-w-xs">
           <Input

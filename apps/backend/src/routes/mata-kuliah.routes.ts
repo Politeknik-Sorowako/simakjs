@@ -13,6 +13,7 @@ export const mataKuliahRoutes = new Elysia({ prefix: '/mata-kuliah' })
   .use(authMiddleware)
   .get('/', MataKuliahController.getAll, getMataKuliahSchema)
   .post('/', MataKuliahController.create, createMataKuliahSchema)
+  .post('/import', MataKuliahController.importCsv)
   .get('/:id', MataKuliahController.getById, getMataKuliahByIdSchema)
   .put('/:id', MataKuliahController.update, updateMataKuliahSchema)
   .delete('/:id', MataKuliahController.delete, deleteMataKuliahSchema);

@@ -68,6 +68,16 @@ export default function BapPresensi() {
     }
   );
 
+  // Fetch RPS Topics for selected Class
+  const [rpsTopics] = createResource(selectedKelasId, async (kelasId) => {
+    if (!kelasId) return [];
+    try {
+      return await presensiController.getRpsTopikByKelas(kelasId);
+    } catch (e) {
+      return [];
+    }
+  });
+
   // 4. Fetch students in Class (via KRS)
   const [krsData] = createResource(
     () => ({ kelasId: selectedKelasId(), loaded: !!selectedKelasId() }),
@@ -464,14 +474,33 @@ export default function BapPresensi() {
             </select>
           </div>
 
-          <Input
-            type="text"
-            label="Catatan / Topik Materi Kuliah"
-            placeholder="Misal: Tag HTML, Styling Flexbox CSS"
-            value={materi()}
-            onInput={(e) => setMateri(e.currentTarget.value)}
-            required
-          />
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-semibold text-gray-600">Catatan / Topik Materi Kuliah (Dari RPS)</label>
+            <select
+              class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={materi()}
+              onChange={(e) => {
+                const selectedVal = e.target.value;
+                setMateri(selectedVal);
+                
+                // Automatically pre-fill CPMK if the selected topic maps to one
+                const matchedTopic = rpsTopics()?.find(t => t.topik === selectedVal);
+                if (matchedTopic && matchedTopic.cpmkId) {
+                  setSelectedCpmkId(matchedTopic.cpmkId);
+                }
+              }}
+              required
+            >
+              <option value="">-- Pilih Topik Pembelajaran RPS --</option>
+              <For each={rpsTopics() || []}>
+                {(topic) => (
+                  <option value={topic.topik}>
+                    Pertemuan {topic.pertemuanKe}: {topic.topik} {topic.subTopik ? `(${topic.subTopik})` : ''}
+                  </option>
+                )}
+              </For>
+            </select>
+          </div>
 
           <Input
             type="number"

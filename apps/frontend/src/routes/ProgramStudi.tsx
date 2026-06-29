@@ -5,11 +5,13 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 
 export default function ProgramStudi() {
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Fetch data
   const [prodis, { refetch }] = createResource(
@@ -78,8 +80,20 @@ export default function ProgramStudi() {
             <h1 class="text-2xl font-extrabold tracking-tight">Program Studi</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400">Kelola daftar program studi vokasi yang tersedia.</p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Prodi</Button>
+          <div class="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Button onClick={openAddModal}>+ Tambah Prodi</Button>
+          </div>
         </div>
+
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          importUrl="/prodi/import"
+          templateHeaders={['kode', 'nama', 'jenjang']}
+          title="Program Studi"
+          onSuccess={() => refetch()}
+        />
 
         {/* Search */}
         <div class="max-w-xs">

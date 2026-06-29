@@ -23,6 +23,8 @@ import { yudisiumRoutes } from './routes/yudisium.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { e2eRoutes } from './routes/e2e.routes';
 import { userRoutes } from './routes/user.routes';
+import { kurikulumRoutes } from './routes/kurikulum.routes';
+import { rpsRoutes } from './routes/rps.routes';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -90,7 +92,9 @@ app.use(
   .use(yudisiumRoutes)
   .use(pddiktiRoutes)
   .use(e2eRoutes)
-  .use(userRoutes);
+  .use(userRoutes)
+  .use(kurikulumRoutes)
+  .use(rpsRoutes);
 
 
 
