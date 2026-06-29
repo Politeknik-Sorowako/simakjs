@@ -53,4 +53,24 @@ export const getBapByKelasSchema = {
     }))
   }
 };
-
+export const getRpsTopikByKelasSchema = {
+  detail: {
+    tags: ['BAP'],
+    summary: 'Daftar Topik RPS per Kelas',
+    description: 'Mengambil daftar topik RPS untuk kelas kuliah tertentu.'
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric()
+  }),
+  response: {
+    200: t.Array(t.Object({
+      id: t.Integer({ default: 1 }),
+      rpsId: t.Integer({ default: 1 }),
+      pertemuanKe: t.Integer({ default: 1 }),
+      topik: t.String({ default: 'Pengenalan HTML' }),
+      subTopik: t.Union([t.String(), t.Null()]),
+      metode: t.Union([t.String(), t.Null()]),
+      cpmkId: t.Union([t.Integer(), t.Null()]),
+    }))
+  }
+};

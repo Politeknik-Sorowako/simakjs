@@ -14,6 +14,15 @@ export class BapController {
     return await BapService.getByKelas(parseInt(params.kelasKuliahId));
   }
 
+  static async getRpsTopik({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Akses ditolak. Silakan login.' };
+    }
+    return await BapService.getRpsTopikByKelas(parseInt(params.kelasKuliahId));
+  }
+
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
