@@ -56,4 +56,25 @@ export class MataKuliahController {
     }
     return { message: 'Mata Kuliah berhasil dihapus' };
   }
+
+  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const mode = (formData.get('mode') as string) || 'skip';
+    if (!file) {
+      set.status = 400;
+      return { error: 'File CSV tidak ditemukan.' };
+    }
+
+    const text = await file.text();
+    const { CsvImportService } = require('../services/csv-import.service');
+    const result = await CsvImportService.importMataKuliah(text, mode);
+    return result;
+  }
 }

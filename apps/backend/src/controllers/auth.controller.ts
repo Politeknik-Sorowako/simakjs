@@ -220,5 +220,32 @@ export class AuthController {
       return { error: 'Gagal menyetel ulang password', details: error.message };
     }
   }
+
+  static async getResetTokenDetails({ params, set }: { params: { token: string }; set: any }) {
+    try {
+      const token = params.token;
+      if (!token) {
+        set.status = 400;
+        return { error: 'Token wajib diisi' };
+      }
+      
+      const [resetRecord] = await db.select().from(passwordResets).where(eq(passwordResets.token, token)).limit(1);
+      if (!resetRecord) {
+        set.status = 400;
+        return { error: 'Token reset password tidak valid atau kedaluwarsa' };
+      }
+      
+      if (resetRecord.expiresAt < new Date()) {
+        await db.delete(passwordResets).where(eq(passwordResets.id, resetRecord.id));
+        set.status = 400;
+        return { error: 'Token reset password telah kedaluwarsa' };
+      }
+      
+      return { email: resetRecord.email };
+    } catch (error: any) {
+      set.status = 500;
+      return { error: 'Gagal memverifikasi token reset password', details: error.message };
+    }
+  }
 }
 
