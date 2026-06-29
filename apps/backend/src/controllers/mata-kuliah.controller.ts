@@ -1,4 +1,5 @@
 import { MataKuliahService } from '../services/mata-kuliah.service';
+import { CsvImportService } from '../services/csv-import.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class MataKuliahController {
@@ -73,7 +74,6 @@ export class MataKuliahController {
     }
 
     const text = await file.text();
-    const { CsvImportService } = require('../services/csv-import.service');
     const result = await CsvImportService.importMataKuliah(text, mode);
     return result;
   }

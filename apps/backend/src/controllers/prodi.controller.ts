@@ -1,4 +1,5 @@
 import { ProdiService } from '../services/prodi.service';
+import { CsvImportService } from '../services/csv-import.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class ProdiController {
@@ -73,7 +74,6 @@ export class ProdiController {
     }
 
     const text = await file.text();
-    const { CsvImportService } = require('../services/csv-import.service');
     const result = await CsvImportService.importProgramStudi(text, mode);
     return result;
   }

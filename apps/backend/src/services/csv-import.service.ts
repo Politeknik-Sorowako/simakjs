@@ -100,7 +100,7 @@ export class CsvImportService {
         jenisKelamin: record.jeniskelamin === 'P' ? 'P' : 'L',
         tanggalLahir: record.tanggallahir || new Date().toISOString().split('T')[0],
         tempatLahir: record.tempatlahir || null,
-        idAgama: record.idagama ? parseInt(record.idagama) : null,
+        idAgama: record.idagama && !isNaN(parseInt(record.idagama)) ? parseInt(record.idagama) : null,
         jalan: record.jalan || null,
         rt: record.rt || null,
         rw: record.rw || null,
@@ -110,9 +110,9 @@ export class CsvImportService {
     }
 
     if (batchData.length > 0) {
-      try {
-        if (mode === 'update') {
-          for (const item of batchData) {
+      if (mode === 'update') {
+        for (const item of batchData) {
+          try {
             await db.insert(mahasiswa)
               .values(item)
               .onConflictDoUpdate({
@@ -135,16 +135,21 @@ export class CsvImportService {
                   kewarganegaraan: item.kewarganegaraan,
                 }
               });
+            result.successCount++;
+          } catch (err: any) {
+            result.errors.push({ line: 0, error: `Gagal menyimpan data NIM ${item.nim}: ${err.message}` });
           }
-        } else {
+        }
+      } else {
+        try {
           // default is skip (ON CONFLICT DO NOTHING)
           await db.insert(mahasiswa)
             .values(batchData)
             .onConflictDoNothing({ target: mahasiswa.nim });
+          result.successCount = batchData.length;
+        } catch (err: any) {
+          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
         }
-        result.successCount = batchData.length;
-      } catch (err: any) {
-        result.errors.push({ line: 0, error: `Gagal menyimpan data: ${err.message}` });
       }
     }
 
@@ -193,14 +198,14 @@ export class CsvImportService {
         jenisKelamin: record.jeniskelamin === 'P' ? 'P' : 'L',
         tanggalLahir: record.tanggallahir || null,
         tempatLahir: record.tempatlahir || null,
-        idAgama: record.idagama ? parseInt(record.idagama) : null,
+        idAgama: record.idagama && !isNaN(parseInt(record.idagama)) ? parseInt(record.idagama) : null,
       });
     }
 
     if (batchData.length > 0) {
-      try {
-        if (mode === 'update') {
-          for (const item of batchData) {
+      if (mode === 'update') {
+        for (const item of batchData) {
+          try {
             await db.insert(dosen)
               .values(item)
               .onConflictDoUpdate({
@@ -217,15 +222,20 @@ export class CsvImportService {
                   idAgama: item.idAgama,
                 }
               });
+            result.successCount++;
+          } catch (err: any) {
+            result.errors.push({ line: 0, error: `Gagal menyimpan data Dosen NIP ${item.nip}: ${err.message}` });
           }
-        } else {
+        }
+      } else {
+        try {
           await db.insert(dosen)
             .values(batchData)
             .onConflictDoNothing({ target: dosen.nip });
+          result.successCount = batchData.length;
+        } catch (err: any) {
+          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
         }
-        result.successCount = batchData.length;
-      } catch (err: any) {
-        result.errors.push({ line: 0, error: `Gagal menyimpan data: ${err.message}` });
       }
     }
 
@@ -264,22 +274,27 @@ export class CsvImportService {
       const prodiKode = record.programstudikode || '';
       const prodiId = prodiMap.get(prodiKode.toLowerCase());
 
+      const parseSks = (val: string) => {
+        const parsed = parseInt(val);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
       batchData.push({
         kode: record.kode,
         nama: record.nama,
-        sksTotal: parseInt(record.skstotal),
-        sksTatapMuka: record.skstatapmuka ? parseInt(record.skstatapmuka) : 0,
-        sksPraktek: record.skspraktek ? parseInt(record.skspraktek) : 0,
-        sksPraktekLapangan: record.sksprakteklapangan ? parseInt(record.sksprakteklapangan) : 0,
-        sksSimulasi: record.skssimulasi ? parseInt(record.skssimulasi) : 0,
+        sksTotal: parseSks(record.skstotal),
+        sksTatapMuka: record.skstatapmuka ? parseSks(record.skstatapmuka) : 0,
+        sksPraktek: record.skspraktek ? parseSks(record.skspraktek) : 0,
+        sksPraktekLapangan: record.sksprakteklapangan ? parseSks(record.sksprakteklapangan) : 0,
+        sksSimulasi: record.skssimulasi ? parseSks(record.skssimulasi) : 0,
         programStudiId: prodiId || null,
       });
     }
 
     if (batchData.length > 0) {
-      try {
-        if (mode === 'update') {
-          for (const item of batchData) {
+      if (mode === 'update') {
+        for (const item of batchData) {
+          try {
             await db.insert(mataKuliah)
               .values(item)
               .onConflictDoUpdate({
@@ -294,15 +309,20 @@ export class CsvImportService {
                   programStudiId: item.programStudiId,
                 }
               });
+            result.successCount++;
+          } catch (err: any) {
+            result.errors.push({ line: 0, error: `Gagal menyimpan data Mata Kuliah Kode ${item.kode}: ${err.message}` });
           }
-        } else {
+        }
+      } else {
+        try {
           await db.insert(mataKuliah)
             .values(batchData)
             .onConflictDoNothing({ target: mataKuliah.kode });
+          result.successCount = batchData.length;
+        } catch (err: any) {
+          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
         }
-        result.successCount = batchData.length;
-      } catch (err: any) {
-        result.errors.push({ line: 0, error: `Gagal menyimpan data: ${err.message}` });
       }
     }
 
@@ -343,9 +363,9 @@ export class CsvImportService {
     }
 
     if (batchData.length > 0) {
-      try {
-        if (mode === 'update') {
-          for (const item of batchData) {
+      if (mode === 'update') {
+        for (const item of batchData) {
+          try {
             await db.insert(programStudi)
               .values(item)
               .onConflictDoUpdate({
@@ -355,15 +375,20 @@ export class CsvImportService {
                   jenjang: item.jenjang,
                 }
               });
+            result.successCount++;
+          } catch (err: any) {
+            result.errors.push({ line: 0, error: `Gagal menyimpan data Program Studi Kode ${item.kode}: ${err.message}` });
           }
-        } else {
+        }
+      } else {
+        try {
           await db.insert(programStudi)
             .values(batchData)
             .onConflictDoNothing({ target: programStudi.kode });
+          result.successCount = batchData.length;
+        } catch (err: any) {
+          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
         }
-        result.successCount = batchData.length;
-      } catch (err: any) {
-        result.errors.push({ line: 0, error: `Gagal menyimpan data: ${err.message}` });
       }
     }
 

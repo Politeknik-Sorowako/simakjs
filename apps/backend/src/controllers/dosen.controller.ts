@@ -1,4 +1,5 @@
 import { DosenService } from '../services/dosen.service';
+import { CsvImportService } from '../services/csv-import.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class DosenController {
@@ -83,7 +84,6 @@ export class DosenController {
     }
 
     const text = await file.text();
-    const { CsvImportService } = require('../services/csv-import.service');
     const result = await CsvImportService.importDosen(text, mode);
     return result;
   }

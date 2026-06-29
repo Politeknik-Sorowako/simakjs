@@ -1,4 +1,5 @@
 import { MahasiswaService } from '../services/mahasiswa.service';
+import { CsvImportService } from '../services/csv-import.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 import { db } from '../utils/db';
 import { mahasiswa } from '../models/schema';
@@ -118,7 +119,6 @@ export class MahasiswaController {
     }
 
     const text = await file.text();
-    const { CsvImportService } = require('../services/csv-import.service');
     const result = await CsvImportService.importMahasiswa(text, mode);
     return result;
   }

@@ -1,6 +1,6 @@
 import { db } from '../utils/db';
 import { kurikulum, kurikulumMataKuliah } from '../models/schema';
-import { count, eq, ilike, or } from 'drizzle-orm';
+import { count, eq, ilike, or, and } from 'drizzle-orm';
 
 export interface CreateKurikulumDto {
   kode: string;
@@ -39,7 +39,7 @@ export class KurikulumService {
 
     if (prodiId) {
       if (whereClause) {
-        whereClause = or(whereClause, eq(kurikulum.programStudiId, prodiId));
+        whereClause = and(whereClause, eq(kurikulum.programStudiId, prodiId));
       } else {
         whereClause = eq(kurikulum.programStudiId, prodiId);
       }
@@ -144,8 +144,10 @@ export class KurikulumService {
     const [deletedKmk] = await db
       .delete(kurikulumMataKuliah)
       .where(
-        eq(kurikulumMataKuliah.kurikulumId, kurikulumId) &&
-        eq(kurikulumMataKuliah.mataKuliahId, mataKuliahId)
+        and(
+          eq(kurikulumMataKuliah.kurikulumId, kurikulumId),
+          eq(kurikulumMataKuliah.mataKuliahId, mataKuliahId)
+        )
       )
       .returning();
     return deletedKmk || null;

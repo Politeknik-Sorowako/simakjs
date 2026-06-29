@@ -474,7 +474,7 @@ export default function BapPresensi() {
             </select>
           </div>
 
-           <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-gray-600">Catatan / Topik Materi Kuliah (Dari RPS)</label>
             <select
               class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

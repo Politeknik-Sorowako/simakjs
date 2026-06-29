@@ -91,6 +91,7 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
       if (res.errors && res.errors.length > 0) {
         if (res.successCount > 0) {
           setSuccessMsg(`Berhasil mengimpor ${res.successCount} data (dengan beberapa error).`);
+          props.onSuccess();
         } else {
           setErrorMsg('Gagal mengimpor data. Silakan cek detail error di bawah.');
         }
