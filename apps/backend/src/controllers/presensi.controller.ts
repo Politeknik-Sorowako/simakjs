@@ -58,4 +58,24 @@ export class PresensiController {
     set.status = 201;
     return newPayment;
   }
+
+  static async updateKompensasiBayar({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const id = parseInt(params.id);
+      const updated = await PresensiService.updateKompensasiBayar(id, body);
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Data penyelesaian kompensasi tidak ditemukan.' };
+      }
+      return updated;
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal mengubah penyelesaian kompensasi.' };
+    }
+  }
 }

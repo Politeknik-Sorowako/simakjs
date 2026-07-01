@@ -1,4 +1,4 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
+import { createSignal, createResource, Show, For, createEffect } from 'solid-js';
 import { tagihanController, Tagihan } from '../controllers/tagihanController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { MainLayout } from '../components/MainLayout';
@@ -13,11 +13,18 @@ export default function KeuanganDashboard() {
   const [statusFilter, setStatusFilter] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
-  const [selectedPeriode, setSelectedPeriode] = createSignal('20231');
+  const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [isGenerating, setIsGenerating] = createSignal(false);
 
   // Fetch Periodes for Select Options
   const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
+
+  createEffect(() => {
+    const list = periodes()?.data;
+    if (list && list.length > 0 && !selectedPeriode()) {
+      setSelectedPeriode(list[0].id);
+    }
+  });
 
   // Fetch Tagihan
   const [tagihanData, { refetch }] = createResource(

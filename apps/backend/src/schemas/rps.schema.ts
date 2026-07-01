@@ -53,7 +53,10 @@ export const updateRpsSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
-  body: t.Partial(rpsBody)
+  body: t.Partial(t.Object({
+    deskripsi: t.Optional(t.String()),
+    cplProdi: t.Optional(t.String())
+  }))
 };
 
 export const addTopikSchema = {

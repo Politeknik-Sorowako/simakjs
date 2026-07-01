@@ -133,3 +133,34 @@ export const getLaporanKompensasiSchema = {
   }
 };
 
+export const updateKompensasiBayarSchema = {
+  detail: {
+    tags: ['Kompensasi'],
+    summary: 'Update Penyelesaian Kompensasi',
+    description: 'Mengubah catatan pelunasan/penyelesaian kompensasi mahasiswa berdasarkan ID.'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  body: t.Partial(t.Object({
+    jumlahMenit: t.Optional(t.Integer()),
+    tanggal: t.Optional(t.String()),
+    keterangan: t.Optional(t.String())
+  })),
+  response: {
+    200: t.Object({
+      id: t.Integer(),
+      mahasiswaId: t.Integer(),
+      jumlahMenit: t.Integer(),
+      tanggal: t.String(),
+      keterangan: t.String(),
+      petugasId: t.Union([t.Integer(), t.Null()]),
+      createdAt: t.Any(),
+      updatedAt: t.Any(),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  }
+};
+

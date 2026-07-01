@@ -306,6 +306,37 @@ describe('BAP, Presensi & Kompensasi API', () => {
       const mhsReport = reportList.find((r: any) => r.id === mhsId);
       expect(mhsReport).toBeDefined();
       expect(mhsReport.sisaKompensasi).toBe(40);
+
+      // 6. Admin mengedit pembayaran kompensasi dari 60 menit menjadi 80 menit
+      const payData = await payRes.json();
+      const payId = payData.id;
+      const editPayRes = await app.handle(
+        new Request(`http://localhost/presensi/kompensasi/bayar/${payId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            jumlahMenit: 80,
+            keterangan: 'Revisi kerja bakti perpustakaan',
+          }),
+        })
+      );
+      expect(editPayRes.status).toBe(200);
+
+      // Verifikasi sisa kompensasi terupdate (100 - 80 = 20 menit)
+      const updatedMhsCompRes = await app.handle(
+        new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${mhsToken}`,
+          },
+        })
+      );
+      const updatedCompDetail = await updatedMhsCompRes.json();
+      expect(updatedCompDetail.summary.totalDibayar).toBe(80);
+      expect(updatedCompDetail.summary.sisaKompensasi).toBe(20);
     });
   });
 });

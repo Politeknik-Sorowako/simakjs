@@ -199,13 +199,17 @@ export const getNilaiMahasiswaYudisiumSchema = {
   response: {
     200: t.Array(t.Object({
       krsId: t.Optional(t.Integer({ default: 1 })),
-      mahasiswaNim: t.Optional(t.String({ default: '202301001' })),
-      mahasiswaNama: t.Optional(t.String({ default: 'Andi Pratama' })),
-      nilaiKomponenList: t.Optional(t.Array(t.Object({
-        komponenNilaiId: t.Optional(t.Integer({ default: 1 })),
-        namaKomponen: t.Optional(t.String({ default: 'UTS' })),
-        bobot: t.Optional(t.Integer({ default: 30 })),
-        nilai: t.Optional(t.Number({ default: 85.5 }))
+      mahasiswaId: t.Optional(t.Integer({ default: 1 })),
+      nim: t.Optional(t.String({ default: '202301001' })),
+      nama: t.Optional(t.String({ default: 'Andi Pratama' })),
+      nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: '85.5' })),
+      nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: 'A' })),
+      nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: '4.0' })),
+      nilaiKomponen: t.Optional(t.Array(t.Object({
+        id: t.Optional(t.Integer()),
+        krsId: t.Optional(t.Integer()),
+        komponenNilaiId: t.Optional(t.Integer()),
+        nilai: t.Optional(t.Union([t.String(), t.Number()]))
       })))
     }))
   }

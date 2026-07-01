@@ -15,9 +15,14 @@ export class DosenPengajarController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const newPlotting = await DosenPengajarService.create(body);
-    set.status = 201;
-    return newPlotting;
+    try {
+      const newPlotting = await DosenPengajarService.create(body);
+      set.status = 201;
+      return newPlotting;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
   }
 
   static async delete({ params, set, getCurrentUser }: AuthContext) {

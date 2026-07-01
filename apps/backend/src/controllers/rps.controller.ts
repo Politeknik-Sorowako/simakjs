@@ -91,9 +91,14 @@ export class RpsController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const newEval = await RpsService.createRencanaEvaluasi(body);
-    set.status = 201;
-    return newEval;
+    try {
+      const newEval = await RpsService.createRencanaEvaluasi(body);
+      set.status = 201;
+      return newEval;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
   }
 
   static async updateRencanaEvaluasi({ params, body, set, getCurrentUser }: AuthContext) {
@@ -102,12 +107,17 @@ export class RpsController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const updated = await RpsService.updateRencanaEvaluasi(parseInt(params.id), body);
-    if (!updated) {
-      set.status = 404;
-      return { error: 'Data tidak ditemukan' };
+    try {
+      const updated = await RpsService.updateRencanaEvaluasi(parseInt(params.id), body);
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Data tidak ditemukan' };
+      }
+      return updated;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
     }
-    return updated;
   }
 
   static async deleteRencanaEvaluasi({ params, set, getCurrentUser }: AuthContext) {
