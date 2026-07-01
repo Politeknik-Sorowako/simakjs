@@ -23,7 +23,8 @@ export class BimbinganController {
     return dsn ? dsn.id : null;
   }
 
-  static async getByMhsId({ params, set, getCurrentUser }: AuthContext) {
+  static async getByMhsId(ctx: AuthContext<any, any>) {
+    const { params, query, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -57,14 +58,16 @@ export class BimbinganController {
     }
 
     try {
-      return await BimbinganService.getOrCreateBimbingan(targetMhsId);
+      const targetPeriodeId = query?.periodeId || undefined;
+      return await BimbinganService.getOrCreateBimbingan(targetMhsId, targetPeriodeId);
     } catch (err: any) {
       set.status = 400;
       return { error: err.message || 'Gagal memproses bimbingan.' };
     }
   }
 
-  static async createThreadMessage({ params, body, set, getCurrentUser }: AuthContext) {
+  static async createThreadMessage(ctx: AuthContext) {
+    const { params, body, set, getCurrentUser, server } = ctx as any;
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -106,7 +109,16 @@ export class BimbinganController {
 
     try {
       const bimbData = await BimbinganService.getOrCreateBimbingan(targetMhsId);
-      const newMsg = await BimbinganService.addThreadMessage(bimbData.id, senderRole, body.pesan);
+      const newMsg = await BimbinganService.addThreadMessage(bimbData.id, senderRole, body.pesan, body.tipe);
+      
+      // Publish live update to WebSocket subscribers
+      if (server) {
+        server.publish(`bimbingan-${bimbData.id}`, JSON.stringify({
+          type: 'new_message',
+          message: newMsg
+        }));
+      }
+
       set.status = 201;
       return newMsg;
     } catch (err: any) {

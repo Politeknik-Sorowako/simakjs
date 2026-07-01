@@ -72,6 +72,11 @@ app.use(
     return { error: 'Terjadi kesalahan internal server' };
   })
   .use(jwtPlugin)
+  .ws('/bimbingan/ws/:bimbinganId', {
+    open(ws) {
+      ws.subscribe(`bimbingan-${ws.data.params.bimbinganId}`);
+    }
+  })
   .use(authMiddleware)
   .use(authRoutes)
   .use(prodiRoutes)

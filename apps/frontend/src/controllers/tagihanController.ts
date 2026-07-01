@@ -7,6 +7,7 @@ export interface Tagihan {
   mahasiswaId: number;
   periodeId: string;
   nominal: number;
+  nominalTerbayar: number;
   status: string;
   tanggalBayar?: string | null;
   mahasiswa?: Mahasiswa | null;
@@ -23,16 +24,17 @@ export const tagihanController = {
     return fetchApi<PaginatedResponse<Tagihan>>(`/tagihan${queryString}`);
   },
 
-  async generate(periodeId: string): Promise<{ message: string; count: number }> {
+  async generate(periodeId: string, nominal?: number): Promise<{ message: string; count: number }> {
     return fetchApi<{ message: string; count: number }>('/tagihan/generate', {
       method: 'POST',
-      body: JSON.stringify({ periodeId }),
+      body: JSON.stringify({ periodeId, nominal }),
     });
   },
 
-  async bayar(id: number): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
+  async bayar(id: number, nominalBayar?: number): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
     return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/${id}/bayar`, {
       method: 'POST',
+      body: nominalBayar !== undefined ? JSON.stringify({ nominalBayar }) : undefined
     });
   },
 };

@@ -11,20 +11,33 @@ export class BimbinganService {
     return active;
   }
 
-  static async getOrCreateBimbingan(mahasiswaId: number) {
+  static async getOrCreateBimbingan(mahasiswaId: number, targetPeriodeId?: string) {
     const activePeriode = await this.getActivePeriode();
     if (!activePeriode) {
       throw new Error('Tidak ada periode akademik aktif.');
     }
+    const reqPeriodeId = targetPeriodeId || activePeriode.id;
 
-    // Cari bimbingan untuk periode aktif
+    // Ambil daftar semua periode yang memiliki bimbingan untuk mahasiswa ini
+    const rawPeriodes = await db
+      .select({ periodeId: bimbingan.periodeId })
+      .from(bimbingan)
+      .where(eq(bimbingan.mahasiswaId, mahasiswaId));
+    const availablePeriodes = rawPeriodes.map(p => p.periodeId);
+
+    // Tambahkan periode aktif jika belum ada di list
+    if (activePeriode && !availablePeriodes.includes(activePeriode.id)) {
+      availablePeriodes.push(activePeriode.id);
+    }
+
+    // Cari bimbingan untuk periode terpilih
     const [existing] = await db
       .select()
       .from(bimbingan)
       .where(
         and(
           eq(bimbingan.mahasiswaId, mahasiswaId),
-          eq(bimbingan.periodeId, activePeriode.id)
+          eq(bimbingan.periodeId, reqPeriodeId)
         )
       );
 
@@ -39,10 +52,24 @@ export class BimbinganService {
       return {
         ...existing,
         thread: threadMessages,
+        availablePeriodes,
       };
     }
 
-    // Jika belum ada, buat bimbingan baru
+    // Jika belum ada, buat bimbingan baru (hanya untuk periode aktif)
+    if (reqPeriodeId !== activePeriode.id) {
+      return {
+        id: 0,
+        mahasiswaId,
+        dosenId: null,
+        periodeId: reqPeriodeId,
+        ringkasan: null,
+        isApproved: false,
+        thread: [],
+        availablePeriodes,
+      };
+    }
+
     const [mhs] = await db
       .select({
         id: mahasiswa.id,
@@ -69,16 +96,18 @@ export class BimbinganService {
     return {
       ...newBimbingan,
       thread: [],
+      availablePeriodes,
     };
   }
 
-  static async addThreadMessage(bimbinganId: number, senderRole: 'dosen' | 'mahasiswa' | 'admin', pesan: string) {
+  static async addThreadMessage(bimbinganId: number, senderRole: 'dosen' | 'mahasiswa' | 'admin', pesan: string, tipe?: string) {
     const [newMsg] = await db
       .insert(bimbinganThread)
       .values({
         bimbinganId,
         senderRole,
         pesan,
+        tipe: tipe || 'uts'
       })
       .returning();
     return newMsg;

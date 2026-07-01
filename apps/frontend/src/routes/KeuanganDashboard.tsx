@@ -49,11 +49,17 @@ export default function KeuanganDashboard() {
       toast.showToast('Silakan pilih periode akademik terlebih dahulu', 'error');
       return;
     }
-    if (!confirm(`Apakah Anda yakin ingin membuat tagihan massal untuk periode ${selectedPeriode()}?`)) return;
+    const inputNominal = prompt(`Masukkan nominal tagihan untuk periode ${selectedPeriode()}:`, "5000000");
+    if (inputNominal === null) return;
+    const nominal = parseInt(inputNominal);
+    if (isNaN(nominal) || nominal <= 0) {
+      toast.showToast('Nominal tagihan tidak valid', 'error');
+      return;
+    }
 
     setIsGenerating(true);
     try {
-      const res = await tagihanController.generate(selectedPeriode());
+      const res = await tagihanController.generate(selectedPeriode(), nominal);
       toast.showToast(`${res.message} (${res.count} mahasiswa)`, 'success');
       refetch();
     } catch (e: any) {
@@ -64,10 +70,17 @@ export default function KeuanganDashboard() {
   };
 
   const handleBayar = async (item: Tagihan) => {
-    if (!confirm(`Konfirmasi pembayaran SPP Rp ${item.nominal.toLocaleString('id-ID')} untuk mahasiswa ${item.mahasiswa?.nama}?`)) return;
+    const sisa = item.nominal - (item.nominalTerbayar || 0);
+    const inputBayar = prompt(`Masukkan nominal pembayaran untuk mahasiswa ${item.mahasiswa?.nama} (Sisa: Rp ${sisa.toLocaleString('id-ID')}):`, sisa.toString());
+    if (inputBayar === null) return;
+    const nominalBayar = parseInt(inputBayar);
+    if (isNaN(nominalBayar) || nominalBayar <= 0 || nominalBayar > sisa) {
+      toast.showToast('Nominal pembayaran tidak valid', 'error');
+      return;
+    }
 
     try {
-      const res = await tagihanController.bayar(item.id);
+      const res = await tagihanController.bayar(item.id, nominalBayar);
       toast.showToast(res.message, 'success');
       refetch();
     } catch (e: any) {
@@ -137,7 +150,7 @@ export default function KeuanganDashboard() {
 
         {/* Table */}
         <Show when={!tagihanData.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data keuangan...</div>}>
-          <Table headers={['Mahasiswa', 'Periode', 'Nominal', 'Status', 'Tanggal Bayar', 'Aksi']}>
+          <Table headers={['Mahasiswa', 'Periode', 'Tagihan', 'Terbayar', 'Sisa', 'Status', 'Tanggal Bayar', 'Aksi']}>
             <For each={tagihanData()?.data}>
               {(item) => (
                 <tr class="hover:bg-gray-50/50 transition-colors">
@@ -147,6 +160,8 @@ export default function KeuanganDashboard() {
                   </td>
                   <td class="px-6 py-4 font-mono text-xs text-gray-600">{item.periodeId}</td>
                   <td class="px-6 py-4 font-semibold text-gray-700">{formatRupiah(item.nominal)}</td>
+                  <td class="px-6 py-4 font-semibold text-emerald-600">{formatRupiah(item.nominalTerbayar || 0)}</td>
+                  <td class="px-6 py-4 font-semibold text-rose-500">{formatRupiah(item.nominal - (item.nominalTerbayar || 0))}</td>
                   <td class="px-6 py-4">
                     <span
                       class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -165,11 +180,11 @@ export default function KeuanganDashboard() {
                     <Show
                       when={item.status === 'belum_bayar'}
                       fallback={
-                        <span class="text-xs text-gray-400 font-semibold italic">Selesai</span>
+                        <span class="text-xs text-gray-400 font-semibold italic text-green-650">Lunas</span>
                       }
                     >
                       <Button variant="primary" onClick={() => handleBayar(item)} class="!py-1 !px-3 text-xs">
-                        Konfirmasi Bayar
+                        Input Bayar
                       </Button>
                     </Show>
                   </td>
@@ -178,7 +193,7 @@ export default function KeuanganDashboard() {
             </For>
             <Show when={tagihanData()?.data.length === 0}>
               <tr>
-                <td colspan="6" class="px-6 py-10 text-center text-gray-400">
+                <td colspan="8" class="px-6 py-10 text-center text-gray-400">
                   Tidak ada data tagihan ditemukan.
                 </td>
               </tr>

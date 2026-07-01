@@ -87,7 +87,10 @@ export const getExamEligibilitySchema = {
       periodeId: t.Optional(t.String({ default: '20261' })),
       bimbingan: t.Optional(t.Object({
         isApproved: t.Optional(t.Boolean({ default: false })),
-        interactionsCount: t.Optional(t.Integer({ default: 0 })),
+        utsInteractionsCount: t.Optional(t.Integer({ default: 0 })),
+        uasInteractionsCount: t.Optional(t.Integer({ default: 0 })),
+        utsEligible: t.Optional(t.Boolean({ default: false })),
+        uasEligible: t.Optional(t.Boolean({ default: false })),
         eligible: t.Optional(t.Boolean({ default: false }))
       })),
       classes: t.Optional(t.Array(t.Any())),

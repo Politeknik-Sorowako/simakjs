@@ -5,6 +5,7 @@ export interface BimbinganThread {
   bimbinganId: number;
   senderRole: 'mahasiswa' | 'dosen' | 'admin';
   pesan: string;
+  tipe: string;
   createdAt: string;
 }
 
@@ -18,6 +19,7 @@ export interface Bimbingan {
   createdAt: string;
   updatedAt: string;
   thread: BimbinganThread[];
+  availablePeriodes?: string[];
 }
 
 export interface BimbinganMonitoring {
@@ -52,14 +54,15 @@ export interface PelanggaranRekap {
 }
 
 export const bimbinganController = {
-  async getByMhsId(mhsId: number): Promise<Bimbingan> {
-    return fetchApi<Bimbingan>(`/bimbingan/mahasiswa/${mhsId}`);
+  async getByMhsId(mhsId: number, periodeId?: string): Promise<Bimbingan> {
+    const query = periodeId ? `?periodeId=${periodeId}` : '';
+    return fetchApi<Bimbingan>(`/bimbingan/mahasiswa/${mhsId}${query}`);
   },
 
-  async sendThread(mhsId: number, pesan: string): Promise<BimbinganThread> {
+  async sendThread(mhsId: number, pesan: string, tipe?: string): Promise<BimbinganThread> {
     return fetchApi<BimbinganThread>(`/bimbingan/mahasiswa/${mhsId}/thread`, {
       method: 'POST',
-      body: JSON.stringify({ pesan }),
+      body: JSON.stringify({ pesan, tipe }),
     });
   },
 
