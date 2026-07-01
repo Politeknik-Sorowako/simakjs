@@ -12,6 +12,7 @@ export default function LaporanKompensasi() {
   // Modal State
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
   const [showPayModal, setShowPayModal] = createSignal(false);
+  const [editingPay, setEditingPay] = createSignal<any | null>(null);
   
   // Payment Form State
   const [jumlahMenit, setJumlahMenit] = createSignal(60);
@@ -57,19 +58,46 @@ export default function LaporanKompensasi() {
     setSelectedMhsId(null);
   };
 
+  const openAddPaymentModal = () => {
+    setEditingPay(null);
+    setJumlahMenit(60);
+    setKeterangan('');
+    setTanggal(new Date().toISOString().split('T')[0]);
+    setShowPayModal(true);
+  };
+
+  const openEditPaymentModal = (pay: any) => {
+    setEditingPay(pay);
+    setJumlahMenit(pay.jumlahMenit);
+    setKeterangan(pay.keterangan);
+    setTanggal(new Date(pay.tanggal).toISOString().split('T')[0]);
+    setShowPayModal(true);
+  };
+
   const handleSavePayment = async (e: Event) => {
     e.preventDefault();
     const id = selectedMhsId();
     if (!id) return;
 
     try {
-      await presensiController.bayarKompensasi({
-        mahasiswaId: id,
+      const data = {
         jumlahMenit: jumlahMenit(),
         tanggal: tanggal(),
         keterangan: keterangan(),
-      });
-      toast.showToast('Pembayaran kompensasi berhasil diinput', 'success');
+      };
+
+      const editTarget = editingPay();
+      if (editTarget) {
+        await presensiController.updateKompensasiBayar(editTarget.id, data);
+        toast.showToast('Pembayaran kompensasi berhasil diupdate', 'success');
+      } else {
+        await presensiController.bayarKompensasi({
+          mahasiswaId: id,
+          ...data,
+        });
+        toast.showToast('Pembayaran kompensasi berhasil diinput', 'success');
+      }
+
       setShowPayModal(false);
       setKeterangan('');
       setJumlahMenit(60);
@@ -217,7 +245,7 @@ export default function LaporanKompensasi() {
                 <div class="flex flex-col gap-3">
                   <div class="flex justify-between items-center border-b pb-2">
                     <h4 class="font-bold text-gray-700 text-sm">Log Penyelesaian Kompensasi</h4>
-                    <Button onClick={() => setShowPayModal(true)} variant="success" class="!px-2.5 !py-1 text-[11px] font-bold">
+                    <Button onClick={openAddPaymentModal} variant="success" class="!px-2.5 !py-1 text-[11px] font-bold">
                       + Input Pelunasan
                     </Button>
                   </div>
@@ -232,7 +260,16 @@ export default function LaporanKompensasi() {
                             <span class="font-bold text-gray-700">{pay.keterangan}</span>
                             <span class="text-gray-400">{new Date(pay.tanggal).toLocaleDateString('id-ID')}</span>
                           </div>
-                          <span class="font-bold text-emerald-600 font-mono">-{pay.jumlahMenit}m</span>
+                          <div class="flex items-center gap-2">
+                            <span class="font-bold text-emerald-600 font-mono">-{pay.jumlahMenit}m</span>
+                            <Button
+                              onClick={() => openEditPaymentModal(pay)}
+                              variant="secondary"
+                              class="!py-0.5 !px-1.5 text-[10px]"
+                            >
+                              Edit
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </For>
@@ -251,7 +288,7 @@ export default function LaporanKompensasi() {
       </Modal>
 
       {/* Modal Input Payment */}
-      <Modal isOpen={showPayModal()} onClose={() => setShowPayModal(false)} title="Input Penyelesaian Jam Kompensasi">
+      <Modal isOpen={showPayModal()} onClose={() => setShowPayModal(false)} title={editingPay() ? "Edit Penyelesaian Jam Kompensasi" : "Input Penyelesaian Jam Kompensasi"}>
         <form onSubmit={handleSavePayment} class="flex flex-col gap-4">
           <Input
             type="number"

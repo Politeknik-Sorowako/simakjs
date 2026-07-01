@@ -73,4 +73,24 @@ export class PelanggaranController {
 
     return await PelanggaranService.getAllPelanggaran();
   }
+
+  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const id = parseInt(params.id);
+      const updated = await PelanggaranService.updatePelanggaran(id, body);
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Data pelanggaran tidak ditemukan' };
+      }
+      return updated;
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal mengubah pelanggaran.' };
+    }
+  }
 }

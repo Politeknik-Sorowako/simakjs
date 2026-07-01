@@ -92,6 +92,14 @@ export class RpsService {
   }
 
   static async createRencanaEvaluasi(data: CreateRencanaEvaluasiDto) {
+    const existing = await db.query.rencanaEvaluasi.findMany({
+      where: eq(rencanaEvaluasi.mataKuliahId, data.mataKuliahId)
+    });
+    const currentTotal = existing.reduce((sum, item) => sum + parseFloat(item.bobotEvaluasi), 0);
+    if (currentTotal + data.bobotEvaluasi > 100) {
+      throw new Error('Total bobot rencana evaluasi tidak boleh melebihi 100%');
+    }
+
     const [newEval] = await db.insert(rencanaEvaluasi).values({
       ...data,
       bobotEvaluasi: data.bobotEvaluasi.toString()
@@ -100,6 +108,25 @@ export class RpsService {
   }
 
   static async updateRencanaEvaluasi(id: number, data: Partial<CreateRencanaEvaluasiDto>) {
+    const currentEval = await db.query.rencanaEvaluasi.findFirst({
+      where: eq(rencanaEvaluasi.id, id)
+    });
+    if (!currentEval) return null;
+
+    const mkId = data.mataKuliahId ?? currentEval.mataKuliahId;
+    const newBobot = data.bobotEvaluasi !== undefined ? data.bobotEvaluasi : parseFloat(currentEval.bobotEvaluasi);
+
+    const existing = await db.query.rencanaEvaluasi.findMany({
+      where: eq(rencanaEvaluasi.mataKuliahId, mkId)
+    });
+    const currentTotal = existing
+      .filter(item => item.id !== id)
+      .reduce((sum, item) => sum + parseFloat(item.bobotEvaluasi), 0);
+
+    if (currentTotal + newBobot > 100) {
+      throw new Error('Total bobot rencana evaluasi tidak boleh melebihi 100%');
+    }
+
     const updateData: any = { ...data };
     if (data.bobotEvaluasi !== undefined) {
       updateData.bobotEvaluasi = data.bobotEvaluasi.toString();

@@ -165,11 +165,20 @@ export default function Rps() {
   const handleSaveEval = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
+
+    // Client-side validation: total bobot tidak boleh > 100
+    const newBobot = Number(bobotEvaluasi());
+    const currentTotal = (rencanaEvals() || []).reduce((sum, item) => sum + (item.id === editEvalId() ? 0 : Number(item.bobotEvaluasi)), 0);
+    if (currentTotal + newBobot > 100) {
+      setErrorMsg(`Total bobot evaluasi (${currentTotal + newBobot}%) tidak boleh melebihi 100%`);
+      return;
+    }
+
     try {
       const payload = {
         mataKuliahId: selectedMk(),
         namaEvaluasi: namaEvaluasi(),
-        bobotEvaluasi: Number(bobotEvaluasi()),
+        bobotEvaluasi: newBobot,
         deskripsi: evalDeskripsi(),
       };
 

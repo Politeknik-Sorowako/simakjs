@@ -100,6 +100,13 @@ export const presensiController = {
     });
   },
 
+  async updateBap(id: number, data: Partial<Omit<BAP, 'id'>>): Promise<BAP> {
+    return fetchApi<BAP>(`/bap/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   // Presensi
   async saveBulkPresensi(data: { bapId: number; presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number }> }): Promise<{ message: string }> {
     return fetchApi<{ message: string }>('/presensi/bulk', {
@@ -124,6 +131,13 @@ export const presensiController = {
   async bayarKompensasi(data: { mahasiswaId: number; jumlahMenit: number; tanggal: string; keterangan: string }): Promise<PaymentItem> {
     return fetchApi<PaymentItem>('/presensi/kompensasi/bayar', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateKompensasiBayar(id: number, data: Partial<Omit<PaymentItem, 'id' | 'mahasiswaId'>>): Promise<PaymentItem> {
+    return fetchApi<PaymentItem>(`/presensi/kompensasi/bayar/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   },

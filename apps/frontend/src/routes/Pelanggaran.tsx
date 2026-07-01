@@ -65,14 +65,27 @@ export default function Pelanggaran() {
   const [bobotPoin, setBobotPoin] = createSignal(0);
   const [keterangan, setKeterangan] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
+  const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
 
   const openAddModal = () => {
+    setEditPelanggaranId(null);
     const firstStudent = students()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
     setTanggal(new Date().toISOString().split('T')[0]);
     setJenisPelanggaran('');
     setBobotPoin(5);
     setKeterangan('');
+    setErrorMsg('');
+    setShowModal(true);
+  };
+
+  const openEditModal = (item: IPelanggaran) => {
+    setEditPelanggaranId(item.id);
+    setMahasiswaId(item.mahasiswaId);
+    setTanggal(new Date(item.tanggal).toISOString().split('T')[0]);
+    setJenisPelanggaran(item.jenisPelanggaran);
+    setBobotPoin(item.bobotPoin);
+    setKeterangan(item.keterangan);
     setErrorMsg('');
     setShowModal(true);
   };
@@ -85,13 +98,20 @@ export default function Pelanggaran() {
     }
 
     try {
-      await bimbinganController.createPelanggaran({
+      const payload = {
         mahasiswaId: mahasiswaId(),
         tanggal: tanggal(),
         jenisPelanggaran: jenisPelanggaran(),
         bobotPoin: bobotPoin(),
         keterangan: keterangan(),
-      });
+      };
+
+      const activeId = editPelanggaranId();
+      if (activeId) {
+        await bimbinganController.updatePelanggaran(activeId, payload);
+      } else {
+        await bimbinganController.createPelanggaran(payload);
+      }
       setShowModal(false);
       refetchAllViolations();
     } catch (err: any) {
@@ -211,6 +231,9 @@ export default function Pelanggaran() {
                       <th class="p-3">Jenis Pelanggaran</th>
                       <th class="p-3">Bobot Poin</th>
                       <th class="p-3">Keterangan</th>
+                      <Show when={user()?.role === 'admin'}>
+                        <th class="p-3 text-center">Aksi</th>
+                      </Show>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-50 font-medium text-gray-600">
@@ -228,6 +251,17 @@ export default function Pelanggaran() {
                             </span>
                           </td>
                           <td class="p-3">{item.keterangan}</td>
+                          <Show when={user()?.role === 'admin'}>
+                            <td class="p-3 text-center">
+                              <Button
+                                onClick={() => openEditModal(item)}
+                                variant="secondary"
+                                class="py-1 px-2.5 text-[10px]"
+                              >
+                                Edit
+                              </Button>
+                            </td>
+                          </Show>
                         </tr>
                       )}
                     </For>
@@ -239,7 +273,7 @@ export default function Pelanggaran() {
         </Show>
 
         {/* Modal Entry Pelanggaran */}
-        <Modal show={showModal()} onClose={() => setShowModal(false)} title="Catat Pelanggaran Baru">
+        <Modal show={showModal()} onClose={() => setShowModal(false)} title={editPelanggaranId() ? "Edit Catatan Pelanggaran" : "Catat Pelanggaran Baru"}>
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold border border-rose-100">
@@ -266,7 +300,7 @@ export default function Pelanggaran() {
               label="Tanggal Pelanggaran"
               type="date"
               value={tanggal()}
-              onInput={setTanggal}
+              onInput={(e) => setTanggal(e.currentTarget.value)}
             />
 
             {/* Jenis Pelanggaran */}
@@ -275,7 +309,7 @@ export default function Pelanggaran() {
               type="text"
               placeholder="Contoh: Terlambat Kelas Praktik, Kerusakan Fasilitas"
               value={jenisPelanggaran()}
-              onInput={setJenisPelanggaran}
+              onInput={(e) => setJenisPelanggaran(e.currentTarget.value)}
             />
 
             {/* Bobot Poin */}

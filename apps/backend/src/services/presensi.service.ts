@@ -193,4 +193,17 @@ export class PresensiService {
     const [newPayment] = await db.insert(kompensasiBayar).values(data).returning();
     return newPayment;
   }
+
+  static async updateKompensasiBayar(id: number, data: Partial<{
+    jumlahMenit: number;
+    tanggal: string;
+    keterangan: string;
+  }>) {
+    const [updated] = await db
+      .update(kompensasiBayar)
+      .set(data)
+      .where(eq(kompensasiBayar.id, id))
+      .returning();
+    return updated || null;
+  }
 }

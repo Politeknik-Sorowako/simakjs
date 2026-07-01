@@ -88,4 +88,11 @@ export const bimbinganController = {
   async getAllPelanggaran(): Promise<Pelanggaran[]> {
     return fetchApi<Pelanggaran[]>('/pelanggaran');
   },
+
+  async updatePelanggaran(id: number, data: Partial<Omit<Pelanggaran, 'id'>>): Promise<Pelanggaran> {
+    return fetchApi<Pelanggaran>(`/pelanggaran/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
 };

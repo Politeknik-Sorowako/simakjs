@@ -74,3 +74,22 @@ export const getRpsTopikByKelasSchema = {
     }))
   }
 };
+
+export const updateBapSchema = {
+  detail: {
+    tags: ['BAP'],
+    summary: 'Perbarui BAP',
+    description: 'Memperbarui data BAP (Berita Acara Perkuliahan) berdasarkan ID.'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  body: t.Partial(t.Object({
+    tanggal: t.Optional(t.String()),
+    pertemuanKe: t.Optional(t.Integer()),
+    materi: t.Optional(t.String()),
+    durasiMenit: t.Optional(t.Integer()),
+    cpmkId: t.Optional(t.Integer()),
+    dosenId: t.Optional(t.Integer()),
+  }))
+};

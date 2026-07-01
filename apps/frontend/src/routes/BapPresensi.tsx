@@ -29,6 +29,7 @@ export default function BapPresensi() {
   const [materi, setMateri] = createSignal('');
   const [durasiMenit, setDurasiMenit] = createSignal(100);
   const [selectedCpmkId, setSelectedCpmkId] = createSignal<number | null>(null);
+  const [editBapId, setEditBapId] = createSignal<number | null>(null);
 
   // New CPMK Form
   const [newCpmkKode, setNewCpmkKode] = createSignal('');
@@ -130,7 +131,29 @@ export default function BapPresensi() {
   });
 
   // Handlers
-  const handleCreateBap = async (e: Event) => {
+  const openAddBap = () => {
+    setEditBapId(null);
+    setTanggal(new Date().toISOString().split('T')[0]);
+    setPertemuanKe((bapData()?.length || 0) + 1);
+    setMateri('');
+    setDurasiMenit(100);
+    setSelectedCpmkId(null);
+    setShowBapModal(true);
+  };
+
+  const openEditBap = () => {
+    const activeBap = bapData()?.find(b => b.id === selectedBapId());
+    if (!activeBap) return;
+    setEditBapId(activeBap.id);
+    setTanggal(new Date(activeBap.tanggal).toISOString().split('T')[0]);
+    setPertemuanKe(activeBap.pertemuanKe);
+    setMateri(activeBap.materi);
+    setDurasiMenit(activeBap.durasiMenit);
+    setSelectedCpmkId(activeBap.cpmkId);
+    setShowBapModal(true);
+  };
+
+  const handleSaveBap = async (e: Event) => {
     e.preventDefault();
     const kelasId = selectedKelasId();
     const cpmkId = selectedCpmkId();
@@ -141,21 +164,33 @@ export default function BapPresensi() {
     }
 
     try {
-      const newBap = await presensiController.createBap({
+      const payload = {
         kelasKuliahId: kelasId,
         tanggal: tanggal(),
         pertemuanKe: pertemuanKe(),
         materi: materi(),
         durasiMenit: durasiMenit(),
         cpmkId: cpmkId,
-        dosenId: 1, // Will be resolved from backend JWT context
-      });
-      toast.showToast('BAP berhasil dibuat', 'success');
+        dosenId: selectedKelas()?.dosenPengajarKelas?.[0]?.dosenId || 1,
+      };
+
+      let activeBapId = editBapId();
+      if (activeBapId) {
+        await presensiController.updateBap(activeBapId, payload);
+        toast.showToast('BAP berhasil diperbarui', 'success');
+      } else {
+        const newBap = await presensiController.createBap(payload);
+        toast.showToast('BAP berhasil dibuat', 'success');
+        activeBapId = newBap.id;
+      }
+
       setShowBapModal(false);
       refetchBap();
-      setSelectedBapId(newBap.id);
+      if (activeBapId) {
+        setSelectedBapId(activeBapId);
+      }
     } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membuat BAP', 'error');
+      toast.showToast(e.message || 'Gagal menyimpan BAP', 'error');
     }
   };
 
@@ -230,7 +265,7 @@ export default function BapPresensi() {
             <p class="text-sm text-gray-500">Isi Berita Acara Perkuliahan (BAP) dan Presensi kehadiran mahasiswa</p>
           </div>
           <Show when={selectedKelasId()}>
-            <Button onClick={() => setShowBapModal(true)} variant="primary">
+            <Button onClick={openAddBap} variant="primary">
               + Buat Pertemuan / BAP
             </Button>
           </Show>
@@ -289,7 +324,10 @@ export default function BapPresensi() {
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left BAP Summary */}
             <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 lg:col-span-1 h-fit">
-              <h3 class="font-bold text-gray-800 border-b pb-2">Detail Berita Acara (BAP)</h3>
+              <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-gray-800">Detail Berita Acara (BAP)</h3>
+                <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-xs">Edit</Button>
+              </div>
               
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold text-gray-400 uppercase">Materi Pokok (CPMK)</span>
@@ -422,8 +460,8 @@ export default function BapPresensi() {
       </div>
 
       {/* Modal Buat BAP */}
-      <Modal isOpen={showBapModal()} onClose={() => setShowBapModal(false)} title="Buat Jurnal Harian (BAP) Baru">
-        <form onSubmit={handleCreateBap} class="flex flex-col gap-4">
+      <Modal isOpen={showBapModal()} onClose={() => setShowBapModal(false)} title={editBapId() ? 'Edit Jurnal Harian (BAP)' : 'Buat Jurnal Harian (BAP) Baru'}>
+        <form onSubmit={handleSaveBap} class="flex flex-col gap-4">
           <div class="grid grid-cols-2 gap-4">
             <Input
               type="date"

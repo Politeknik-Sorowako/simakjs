@@ -71,4 +71,21 @@ export class PelanggaranService {
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .orderBy(desc(pelanggaran.tanggal));
   }
+
+  static async updatePelanggaran(id: number, data: Partial<{
+    tanggal: string;
+    jenisPelanggaran: string;
+    bobotPoin: number;
+    keterangan: string;
+  }>) {
+    if (data.bobotPoin !== undefined && (data.bobotPoin <= 0 || data.bobotPoin > 100)) {
+      throw new Error('Bobot poin pelanggaran harus bernilai antara 1 dan 100.');
+    }
+    const [updated] = await db
+      .update(pelanggaran)
+      .set(data)
+      .where(eq(pelanggaran.id, id))
+      .returning();
+    return updated || null;
+  }
 }

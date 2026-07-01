@@ -39,4 +39,20 @@ export class BapService {
     const [newBap] = await db.insert(bap).values(data).returning();
     return newBap;
   }
+
+  static async update(id: number, data: Partial<{
+    tanggal: string;
+    pertemuanKe: number;
+    materi: string;
+    durasiMenit: number;
+    cpmkId: number;
+    dosenId: number;
+  }>) {
+    const [updatedBap] = await db
+      .update(bap)
+      .set(data)
+      .where(eq(bap.id, id))
+      .returning();
+    return updatedBap || null;
+  }
 }

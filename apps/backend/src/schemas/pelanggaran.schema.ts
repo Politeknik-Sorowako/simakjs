@@ -72,3 +72,36 @@ export const getAllPelanggaranSchema = {
     }))
   }
 };
+
+export const updatePelanggaranSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Update Catatan Pelanggaran',
+    description: 'Memperbarui data pelanggaran mahasiswa berdasarkan ID.'
+  },
+  params: t.Object({
+    id: t.Numeric()
+  }),
+  body: t.Partial(t.Object({
+    tanggal: t.Optional(t.String()),
+    jenisPelanggaran: t.Optional(t.String()),
+    bobotPoin: t.Optional(t.Integer()),
+    keterangan: t.Optional(t.String()),
+  })),
+  response: {
+    200: t.Object({
+      id: t.Integer(),
+      mahasiswaId: t.Integer(),
+      tanggal: t.String(),
+      jenisPelanggaran: t.String(),
+      bobotPoin: t.Integer(),
+      keterangan: t.String(),
+      dibuatOleh: t.Union([t.Integer(), t.Null()]),
+      createdAt: t.Any(),
+      updatedAt: t.Any(),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  }
+};

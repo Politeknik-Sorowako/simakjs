@@ -19,6 +19,7 @@ import LaporanKompensasi from './routes/LaporanKompensasi';
 import Bimbingan from './routes/Bimbingan';
 import Pelanggaran from './routes/Pelanggaran';
 import Khs from './routes/Khs';
+import InputNilai from './routes/InputNilai';
 import Yudisium from './routes/Yudisium';
 import { PddiktiSync } from './routes/PddiktiSync';
 import Pengguna from './routes/Pengguna';
@@ -148,6 +149,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
             <Khs />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/input-nilai"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+            <InputNilai />
           </ProtectedRoute>
         }
       />

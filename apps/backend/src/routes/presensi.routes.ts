@@ -5,7 +5,8 @@ import {
   bayarKompensasiSchema,
   getKompensasiMahasiswaDetailSchema,
   getByBapSchema,
-  getLaporanKompensasiSchema
+  getLaporanKompensasiSchema,
+  updateKompensasiBayarSchema
 } from '../schemas/presensi.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
 
@@ -15,5 +16,6 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .get('/bap/:bapId', PresensiController.getByBap, getByBapSchema)
   .get('/kompensasi/laporan', PresensiController.getLaporanKompensasi, getLaporanKompensasiSchema)
   .get('/kompensasi/mahasiswa/:mahasiswaId', PresensiController.getKompensasiDetail, getKompensasiMahasiswaDetailSchema)
-  .post('/kompensasi/bayar', PresensiController.bayarKompensasi, bayarKompensasiSchema);
+  .post('/kompensasi/bayar', PresensiController.bayarKompensasi, bayarKompensasiSchema)
+  .put('/kompensasi/bayar/:id', PresensiController.updateKompensasiBayar, updateKompensasiBayarSchema);
 

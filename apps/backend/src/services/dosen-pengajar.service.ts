@@ -67,6 +67,16 @@ export class DosenPengajarService {
   }
 
   static async create(data: CreateDosenPengajarDto) {
+    const existing = await db.query.dosenPengajarKelas.findFirst({
+      where: and(
+        eq(dosenPengajarKelas.dosenId, data.dosenId),
+        eq(dosenPengajarKelas.kelasKuliahId, data.kelasKuliahId)
+      )
+    });
+    if (existing) {
+      throw new Error('Dosen sudah di-plot pada kelas ini.');
+    }
+
     const [newPlotting] = await db
       .insert(dosenPengajarKelas)
       .values({
