@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest']);
 export const jenisKelaminEnum = pgEnum('jenis_kelamin', ['L', 'P']);
-export const tagihanStatusEnum = pgEnum('tagihan_status', ['belum_bayar', 'lunas']);
+export const tagihanStatusEnum = pgEnum('tagihan_status', ['belum_bayar', 'cicilan', 'lunas']);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -135,6 +135,7 @@ export const tagihan = pgTable('tagihan', {
   mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
   periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   nominal: integer('nominal').notNull(),
+  nominalTerbayar: integer('nominal_terbayar').default(0).notNull(),
   status: tagihanStatusEnum('status').notNull().default('belum_bayar'),
   tanggalBayar: timestamp('tanggal_bayar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -370,6 +371,7 @@ export const bimbinganThread = pgTable('bimbingan_thread', {
   bimbinganId: integer('bimbingan_id').notNull().references(() => bimbingan.id, { onDelete: 'cascade' }),
   senderRole: roleEnum('sender_role').notNull(),
   pesan: text('pesan').notNull(),
+  tipe: varchar('tipe', { length: 10 }).default('uts').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

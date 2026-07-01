@@ -2,6 +2,7 @@ import { t } from 'elysia';
 
 export const bimbinganThreadBody = t.Object({
   pesan: t.String({ minLength: 1, maxLength: 1000, default: 'Halo, saya ingin berkonsultasi mengenai rencana studi saya.' }),
+  tipe: t.Optional(t.String({ default: 'uts' }))
 });
 
 export const bimbinganUpdateBody = t.Object({
@@ -30,6 +31,7 @@ export const getBimbinganSchema = {
         id: t.Optional(t.Integer({ default: 1 })),
         senderRole: t.Optional(t.String({ default: 'mahasiswa' })),
         pesan: t.Optional(t.String({ default: 'Halo, saya ingin berkonsultasi mengenai rencana studi saya.' })),
+        tipe: t.Optional(t.String({ default: 'uts' })),
         createdAt: t.Optional(t.Any())
       })))
     })
@@ -52,6 +54,7 @@ export const createBimbinganThreadSchema = {
       bimbinganId: t.Optional(t.Integer({ default: 1 })),
       senderRole: t.Optional(t.String({ default: 'mahasiswa' })),
       pesan: t.Optional(t.String({ default: 'Halo, saya ingin berkonsultasi mengenai rencana studi saya.' })),
+      tipe: t.Optional(t.String({ default: 'uts' })),
       createdAt: t.Optional(t.Any())
     })
   }

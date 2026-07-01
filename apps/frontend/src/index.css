@@ -67,3 +67,60 @@ html.dark td {
 html.dark svg {
   stroke: currentColor;
 }
+
+@media print {
+  /* Hide navigation sidebar, headers, tables, buttons, and non-modal components */
+  aside,
+  header,
+  nav,
+  .print\:hidden,
+  .flex-col.gap-6 > div:not(.fixed),
+  table:not(#print-area-invoice table):not(#print-area-receipt table):not(#print-area-khs table):not(#print-area-transkrip table):not(#print-area-ujian table),
+  .flex.justify-between.items-center.mt-4 {
+    display: none !important;
+  }
+
+  /* Flatten flex and grid layouts of parent elements to standard blocks for printing */
+  html, body, #root, #root > div, main, .min-h-screen, .flex, .flex-col {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Make fixed modal wrapper container behave as a simple block */
+  div.fixed.inset-0.z-50 {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    backdrop-filter: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: auto !important;
+  }
+
+  /* Format content wrapper within modal for printing */
+  div.fixed.inset-0.z-50 > div {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: white !important;
+  }
+
+  /* Hide modal controls: close buttons, form footers, header dividers */
+  div.fixed.inset-0.z-50 button,
+  div.fixed.inset-0.z-50 .border-t.pt-4,
+  div.fixed.inset-0.z-50 .flex.justify-between.items-center.border-b {
+    display: none !important;
+  }
+}

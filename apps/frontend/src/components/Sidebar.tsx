@@ -211,6 +211,21 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </div>
         </Show>
 
+        <Show when={role() === 'admin' || role() === 'mahasiswa'}>
+          <A
+            href="/keuangan"
+            onClick={() => props.onClose()}
+            activeClass="text-blue-400 font-semibold border-l-2 border-blue-500 pl-2 bg-slate-850/40"
+            inactiveClass="hover:bg-slate-800/60 hover:text-white"
+            class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
+          >
+            <svg class="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Keuangan & SPP
+          </A>
+        </Show>
+
         {/* Academic / KRS Menu for Dosen, Mahasiswa, or Admin */}
         <div class="pt-2">
           <button

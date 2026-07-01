@@ -46,7 +46,8 @@ export class TagihanController {
       return { error: 'Akses ditolak.' };
     }
     try {
-      const count = await TagihanService.generateTagihanPeriode(body.periodeId);
+      const nominal = body.nominal !== undefined ? Number(body.nominal) : undefined;
+      const count = await TagihanService.generateTagihanPeriode(body.periodeId, nominal);
       set.status = 201;
       return { message: 'Tagihan berhasil dibuat secara massal', count };
     } catch (e: any) {
@@ -55,7 +56,7 @@ export class TagihanController {
     }
   }
 
-  static async bayar({ params, set, getCurrentUser }: AuthContext) {
+  static async bayar({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -63,7 +64,8 @@ export class TagihanController {
     }
     try {
       const tagihanId = parseInt(params.id);
-      const updated = await TagihanService.bayarTagihan(tagihanId);
+      const nominalBayar = body?.nominalBayar !== undefined ? Number(body.nominalBayar) : undefined;
+      const updated = await TagihanService.bayarTagihan(tagihanId, nominalBayar);
       return {
         message: 'Pembayaran berhasil dan mahasiswa diaktifkan',
         tagihan: {
