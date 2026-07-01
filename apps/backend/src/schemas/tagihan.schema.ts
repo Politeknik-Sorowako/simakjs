@@ -1,7 +1,8 @@
 import { t } from 'elysia';
 
 export const generateTagihanBody = t.Object({
-  periodeId: t.String({ default: '20231' })
+  periodeId: t.String({ default: '20231' }),
+  nominal: t.Optional(t.Numeric({ default: 5000000 }))
 });
 
 export const tagihanResponseObject = t.Object({
@@ -9,6 +10,7 @@ export const tagihanResponseObject = t.Object({
   mahasiswaId: t.Integer({ default: 1 }),
   periodeId: t.String({ default: '20231' }),
   nominal: t.Numeric({ default: 5000000 }),
+  nominalTerbayar: t.Numeric({ default: 0 }),
   status: t.String({ default: 'belum_bayar' }),
   tanggalBayar: t.Any(),
   createdAt: t.Any(),
@@ -80,6 +82,9 @@ export const bayarTagihanSchema = {
   params: t.Object({
     id: t.Numeric()
   }),
+  body: t.Optional(t.Object({
+    nominalBayar: t.Optional(t.Numeric())
+  })),
   response: {
     200: t.Object({
       message: t.String({ default: 'Pembayaran berhasil dan mahasiswa diaktifkan' }),

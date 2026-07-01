@@ -3,9 +3,10 @@ import { tagihan, mahasiswa } from '../models/schema';
 import { count, eq, ilike, or, and } from 'drizzle-orm';
 
 export class TagihanService {
-  static async generateTagihanPeriode(periodeId: string) {
+  static async generateTagihanPeriode(periodeId: string, nominalAmount?: number) {
     const students = await db.select().from(mahasiswa);
     let createdCount = 0;
+    const finalNominal = nominalAmount !== undefined ? nominalAmount : 5000000;
 
     for (const student of students) {
       // Check if tagihan already exists for this student in this period
@@ -24,7 +25,8 @@ export class TagihanService {
         await db.insert(tagihan).values({
           mahasiswaId: student.id,
           periodeId: periodeId,
-          nominal: 5000000,
+          nominal: finalNominal,
+          nominalTerbayar: 0,
           status: 'belum_bayar'
         });
 
@@ -41,7 +43,7 @@ export class TagihanService {
     return createdCount;
   }
 
-  static async bayarTagihan(tagihanId: number) {
+  static async bayarTagihan(tagihanId: number, nominalBayar?: number) {
     const [tag] = await db.select().from(tagihan).where(eq(tagihan.id, tagihanId)).limit(1);
     if (!tag) {
       throw new Error('Tagihan tidak ditemukan');
@@ -51,19 +53,29 @@ export class TagihanService {
       throw new Error('Tagihan sudah lunas');
     }
 
+    const currentTerbayar = Number(tag.nominalTerbayar) || 0;
+    const totalBill = Number(tag.nominal) || 0;
+    const finalNominalBayar = nominalBayar !== undefined ? nominalBayar : (totalBill - currentTerbayar);
+
+    const newTerbayar = currentTerbayar + finalNominalBayar;
+    const isFullyPaid = newTerbayar >= totalBill;
+
     const [updatedTagihan] = await db
       .update(tagihan)
       .set({
-        status: 'lunas',
-        tanggalBayar: new Date()
+        nominalTerbayar: newTerbayar,
+        status: isFullyPaid ? 'lunas' : 'belum_bayar',
+        tanggalBayar: isFullyPaid ? new Date() : null
       })
       .where(eq(tagihan.id, tagihanId))
       .returning();
 
-    await db
-      .update(mahasiswa)
-      .set({ status: 'aktif' })
-      .where(eq(mahasiswa.id, tag.mahasiswaId));
+    if (isFullyPaid) {
+      await db
+        .update(mahasiswa)
+        .set({ status: 'aktif' })
+        .where(eq(mahasiswa.id, tag.mahasiswaId));
+    }
 
     return updatedTagihan;
   }
@@ -103,6 +115,7 @@ export class TagihanService {
         mahasiswaId: tagihan.mahasiswaId,
         periodeId: tagihan.periodeId,
         nominal: tagihan.nominal,
+        nominalTerbayar: tagihan.nominalTerbayar,
         status: tagihan.status,
         tanggalBayar: tagihan.tanggalBayar,
         createdAt: tagihan.createdAt,
@@ -141,6 +154,7 @@ export class TagihanService {
         mahasiswaId: tagihan.mahasiswaId,
         periodeId: tagihan.periodeId,
         nominal: tagihan.nominal,
+        nominalTerbayar: tagihan.nominalTerbayar,
         status: tagihan.status,
         tanggalBayar: tagihan.tanggalBayar,
         createdAt: tagihan.createdAt,

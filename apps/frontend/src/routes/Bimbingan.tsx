@@ -1,6 +1,6 @@
-import { Show, createResource, createSignal, For } from 'solid-js';
+import { Show, createResource, createSignal, For, createEffect, onCleanup } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
-import { bimbinganController, Bimbingan as BimbinganData } from '../controllers/bimbinganController';
+import { bimbinganController, BimbinganThread } from '../controllers/bimbinganController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { dosenController } from '../controllers/dosenController';
 import { MainLayout } from '../components/MainLayout';
@@ -13,8 +13,15 @@ export default function Bimbingan() {
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
   const [selectedMhsNama, setSelectedMhsNama] = createSignal<string>('');
 
-  // Messages input
+  // Selected Academic Period (for History)
+  const [selectedPeriode, setSelectedPeriode] = createSignal<string>('');
+
+  // Messages input & category
   const [messageText, setMessageText] = createSignal('');
+  const [chatType, setChatType] = createSignal<'uts' | 'uas'>('uts');
+
+  // Local state for live chat messages
+  const [messages, setMessages] = createSignal<BimbinganThread[]>([]);
 
   // Dosen inputs for ringkasan and approval
   const [ringkasanText, setRingkasanText] = createSignal('');
@@ -45,12 +52,12 @@ export default function Bimbingan() {
     }
   );
 
-  // Load student's own bimbingan
+  // Load student's own bimbingan (active or selected period)
   const [studentBimbingan, { refetch: refetchStudentBimb }] = createResource(
-    () => mhsProfile()?.id,
-    async (id) => {
+    () => ({ id: mhsProfile()?.id, period: selectedPeriode() }),
+    async ({ id, period }) => {
       if (!id) return null;
-      return await bimbinganController.getByMhsId(id);
+      return await bimbinganController.getByMhsId(id, period || undefined);
     }
   );
 
@@ -78,15 +85,66 @@ export default function Bimbingan() {
 
   // Selected student bimbingan details
   const [selectedBimbingan, { refetch: refetchSelectedBimb }] = createResource(
-    selectedMhsId,
-    async (id) => {
+    () => ({ id: selectedMhsId(), period: selectedPeriode() }),
+    async ({ id, period }) => {
       if (!id) return null;
-      const bimb = await bimbinganController.getByMhsId(id);
+      const bimb = await bimbinganController.getByMhsId(id, period || undefined);
       setRingkasanText(bimb.ringkasan || '');
       setIsApprovedStatus(bimb.isApproved);
       return bimb;
     }
   );
+
+  // Sync messages from resource to local signal
+  createEffect(() => {
+    const activeBimb = user()?.role === 'mahasiswa' ? studentBimbingan() : selectedBimbingan();
+    if (activeBimb && activeBimb.thread) {
+      setMessages(activeBimb.thread);
+    } else {
+      setMessages([]);
+    }
+  });
+
+  // Real-time WebSocket connection
+  let ws: WebSocket | null = null;
+  createEffect(() => {
+    const activeBimb = user()?.role === 'mahasiswa' ? studentBimbingan() : selectedBimbingan();
+    if (ws) {
+      ws.close();
+      ws = null;
+    }
+    if (activeBimb && activeBimb.id) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      // Connect to Elysia WebSocket
+      ws = new WebSocket(`${protocol}//${host}/api/bimbingan/ws/${activeBimb.id}`);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'new_message' && data.message) {
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === data.message.id)) return prev;
+              return [data.message, ...prev];
+            });
+          }
+        } catch (e) {
+          console.error('WS parse error:', e);
+        }
+      };
+    }
+  });
+
+  onCleanup(() => {
+    if (ws) ws.close();
+  });
+
+  // Calculate UTS / UAS counts
+  const utsCount = () => messages().filter((m) => m.tipe === 'uts').length;
+  const uasCount = () => messages().filter((m) => m.tipe === 'uas').length;
+
+  const currentBimbinganData = () => {
+    return user()?.role === 'mahasiswa' ? studentBimbingan() : selectedBimbingan();
+  };
 
   const handleSendMessage = async (e: Event) => {
     e.preventDefault();
@@ -97,13 +155,10 @@ export default function Bimbingan() {
     if (!targetId) return;
 
     try {
-      await bimbinganController.sendThread(targetId, text);
+      const newMsg = await bimbinganController.sendThread(targetId, text, chatType());
       setMessageText('');
-      if (user()?.role === 'mahasiswa') {
-        refetchStudentBimb();
-      } else {
-        refetchSelectedBimb();
-      }
+      // Optimistic/immediate local update
+      setMessages((prev) => [newMsg, ...prev]);
     } catch (err: any) {
       alert(err.message || 'Gagal mengirim pesan.');
     }
@@ -136,51 +191,73 @@ export default function Bimbingan() {
             <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">Bimbingan Akademik</h1>
             <p class="text-sm text-gray-500">Modul bimbingan wali & persetujuan prasyarat UTS/UAS</p>
           </div>
-          <Show when={user()?.role === 'mahasiswa' && studentBimbingan()}>
-            <div class="flex items-center gap-3">
-              <span class="text-sm text-gray-400 font-medium">Status Kelayakan Ujian:</span>
-              <Show
-                when={studentBimbingan()?.isApproved}
-                fallback={
-                  <span class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-full text-xs font-bold border border-rose-100 animate-pulse">
-                    Belum Layak Ujian (Bimbingan Kurang)
+          
+          {/* Status Kelayakan (Mahasiswa) & Dropdown Periode */}
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <Show when={currentBimbinganData()?.availablePeriodes}>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 font-semibold uppercase">Periode:</span>
+                <select
+                  class="border border-gray-200 rounded-lg px-2.5 py-1 text-xs bg-white focus:outline-none text-slate-900"
+                  value={selectedPeriode() || currentBimbinganData()?.periodeId}
+                  onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
+                >
+                  <For each={currentBimbinganData()?.availablePeriodes}>
+                    {(p) => <option value={p}>{p}</option>}
+                  </For>
+                </select>
+              </div>
+            </Show>
+
+            <Show when={user()?.role === 'mahasiswa' && studentBimbingan()}>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-gray-400 font-medium">Ujian:</span>
+                <Show
+                  when={studentBimbingan()?.isApproved}
+                  fallback={
+                    <span class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-full text-xs font-bold border border-rose-100">
+                      Bimbingan Kurang
+                    </span>
+                  }
+                >
+                  <span class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100">
+                    Layak Ujian
                   </span>
-                }
-              >
-                <span class="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full text-xs font-bold border border-emerald-100">
-                  Disetujui Layak Ujian
-                </span>
-              </Show>
-            </div>
-          </Show>
+                </Show>
+              </div>
+            </Show>
+          </div>
         </div>
 
-        {/* Content based on role */}
+        {/* --- MAHASISWA VIEW --- */}
         <Show when={user()?.role === 'mahasiswa'}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Chat Thread Panel */}
             <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col h-[600px] overflow-hidden">
               <div class="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
                 <h3 class="font-bold text-gray-800">Konsultasi Dosen PA</h3>
-                <span class="text-xs text-gray-400 font-semibold">Live Chat</span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded">UTS: {utsCount()}/1</span>
+                  <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded">UAS: {uasCount()}/3</span>
+                </div>
               </div>
 
               {/* Message List */}
               <div class="flex-1 p-6 overflow-y-auto flex flex-col-reverse gap-4 bg-gray-50/30">
-                <Show when={studentBimbingan()?.thread && studentBimbingan()!.thread.length > 0} fallback={
+                <Show when={messages().length > 0} fallback={
                   <div class="flex-1 flex flex-col items-center justify-center text-center p-8">
                     <span class="text-4xl mb-2">💬</span>
                     <p class="text-gray-400 text-sm">Belum ada percakapan. Mulai bimbingan dengan mengirim pesan di bawah.</p>
                   </div>
                 }>
-                  <For each={studentBimbingan()?.thread}>
+                  <For each={messages()}>
                     {(msg) => (
                       <div class={`flex flex-col max-w-[80%] ${msg.senderRole === 'mahasiswa' ? 'self-end items-end' : 'self-start items-start'}`}>
                         <div class={`p-3 rounded-2xl text-sm ${msg.senderRole === 'mahasiswa' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none shadow-sm'}`}>
                           {msg.pesan}
                         </div>
                         <span class="text-[10px] text-gray-400 mt-1 uppercase tracking-wider font-medium">
-                          {msg.senderRole} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {msg.senderRole} • {msg.tipe.toUpperCase()} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                     )}
@@ -189,20 +266,44 @@ export default function Bimbingan() {
               </div>
 
               {/* Chat Input */}
-              <form onSubmit={handleSendMessage} class="p-4 border-t border-gray-100 bg-white flex gap-3">
-                <input
-                  type="text"
-                  placeholder="Tulis pesan bimbingan..."
-                  value={messageText()}
-                  onInput={(e) => setMessageText(e.currentTarget.value)}
-                  class="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                />
-                <button
-                  type="submit"
-                  class="px-5 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-200"
-                >
-                  Kirim
-                </button>
+              <form onSubmit={handleSendMessage} class="p-4 border-t border-gray-100 bg-white flex flex-col gap-3">
+                <div class="flex items-center gap-4 text-xs font-semibold text-gray-500">
+                  <span>Tipe Bimbingan:</span>
+                  <label class="flex items-center gap-1.5 cursor-pointer text-slate-900">
+                    <input
+                      type="radio"
+                      name="chatType"
+                      checked={chatType() === 'uts'}
+                      onChange={() => setChatType('uts')}
+                    />
+                    Persiapan UTS
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer text-slate-900">
+                    <input
+                      type="radio"
+                      name="chatType"
+                      checked={chatType() === 'uas'}
+                      onChange={() => setChatType('uas')}
+                    />
+                    Persiapan UAS
+                  </label>
+                </div>
+                
+                <div class="flex gap-3">
+                  <input
+                    type="text"
+                    placeholder="Tulis pesan bimbingan..."
+                    value={messageText()}
+                    onInput={(e) => setMessageText(e.currentTarget.value)}
+                    class="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-slate-900"
+                  />
+                  <button
+                    type="submit"
+                    class="px-5 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-200"
+                  >
+                    Kirim
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -222,7 +323,7 @@ export default function Bimbingan() {
           </div>
         </Show>
 
-        {/* Dosen & Admin View */}
+        {/* --- DOSEN & ADMIN VIEW --- */}
         <Show when={user()?.role === 'dosen' || user()?.role === 'admin'}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* List Mahasiswa */}
@@ -290,39 +391,69 @@ export default function Bimbingan() {
                   <div class="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col h-full overflow-hidden">
                     <div class="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
                       <h3 class="font-bold text-gray-800 text-sm">Chat: {selectedMhsNama()}</h3>
+                      <div class="flex items-center gap-1.5">
+                        <span class="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[9px] font-bold rounded">UTS: {utsCount()}/1</span>
+                        <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-bold rounded">UAS: {uasCount()}/3</span>
+                      </div>
                     </div>
+                    
                     <div class="flex-1 p-4 overflow-y-auto flex flex-col-reverse gap-4 bg-gray-50/30">
-                      <Show when={selectedBimbingan()?.thread && selectedBimbingan()!.thread.length > 0} fallback={
+                      <Show when={messages().length > 0} fallback={
                         <div class="flex-1 flex flex-col items-center justify-center text-center p-6">
                           <span class="text-3xl mb-2">💬</span>
                           <p class="text-gray-400 text-xs">Belum ada obrolan.</p>
                         </div>
                       }>
-                        <For each={selectedBimbingan()?.thread}>
+                        <For each={messages()}>
                           {(msg) => (
                             <div class={`flex flex-col max-w-[85%] ${msg.senderRole === 'dosen' || msg.senderRole === 'admin' ? 'self-end items-end' : 'self-start items-start'}`}>
                               <div class={`p-3 rounded-2xl text-xs ${msg.senderRole === 'dosen' || msg.senderRole === 'admin' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none shadow-sm'}`}>
                                 {msg.pesan}
                               </div>
                               <span class="text-[9px] text-gray-400 mt-1 uppercase tracking-wider font-semibold">
-                                {msg.senderRole} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {msg.senderRole} • {msg.tipe.toUpperCase()} • {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                           )}
                         </For>
                       </Show>
                     </div>
-                    <form onSubmit={handleSendMessage} class="p-3 border-t border-gray-100 bg-white flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Balas konsultasi..."
-                        value={messageText()}
-                        onInput={(e) => setMessageText(e.currentTarget.value)}
-                        class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
-                      />
-                      <button type="submit" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700">
-                        Kirim
-                      </button>
+
+                    <form onSubmit={handleSendMessage} class="p-3 border-t border-gray-100 bg-white flex flex-col gap-2">
+                      <div class="flex items-center gap-3 text-[10px] font-semibold text-gray-400">
+                        <span>Kategori Pesan:</span>
+                        <label class="flex items-center gap-1 cursor-pointer text-slate-900">
+                          <input
+                            type="radio"
+                            name="lecturerChatType"
+                            checked={chatType() === 'uts'}
+                            onChange={() => setChatType('uts')}
+                          />
+                          UTS
+                        </label>
+                        <label class="flex items-center gap-1 cursor-pointer text-slate-900">
+                          <input
+                            type="radio"
+                            name="lecturerChatType"
+                            checked={chatType() === 'uas'}
+                            onChange={() => setChatType('uas')}
+                          />
+                          UAS
+                        </label>
+                      </div>
+
+                      <div class="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Balas konsultasi..."
+                          value={messageText()}
+                          onInput={(e) => setMessageText(e.currentTarget.value)}
+                          class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                        />
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700">
+                          Kirim
+                        </button>
+                      </div>
                     </form>
                   </div>
 
@@ -335,7 +466,7 @@ export default function Bimbingan() {
                       <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <div class="flex flex-col">
                           <span class="text-xs font-bold text-gray-700">Setujui Kelayakan Ujian</span>
-                          <span class="text-[10px] text-gray-400">Persetujuan untuk UTS & UAS</span>
+                          <span class="text-[10px] text-gray-400">Persetujuan kelayakan UTS & UAS</span>
                         </div>
                         <input
                           type="checkbox"
@@ -353,7 +484,7 @@ export default function Bimbingan() {
                           placeholder="Tulis ringkasan konsultasi mahasiswa di sini..."
                           value={ringkasanText()}
                           onInput={(e) => setRingkasanText(e.currentTarget.value)}
-                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none"
+                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none text-slate-900"
                         />
                       </div>
 

@@ -193,8 +193,13 @@ export class KhsService {
     });
 
     const hasBimbinganApproved = bimb?.isApproved === true;
-    const threadCount = bimb?.thread?.length || 0;
-    const bimbinganEligible = hasBimbinganApproved || threadCount >= 3;
+    const thread = bimb?.thread || [];
+    const utsThreadCount = thread.filter(t => t.tipe === 'uts').length;
+    const uasThreadCount = thread.filter(t => t.tipe === 'uas').length;
+
+    const utsEligible = hasBimbinganApproved || utsThreadCount >= 1;
+    const uasEligible = hasBimbinganApproved || uasThreadCount >= 3;
+    const bimbinganEligible = utsEligible && uasEligible;
 
     const studentKrs = await db
       .select({
@@ -293,7 +298,10 @@ export class KhsService {
       periodeId: activePeriodeId,
       bimbingan: {
         isApproved: bimb?.isApproved || false,
-        interactionsCount: threadCount,
+        utsInteractionsCount: utsThreadCount,
+        uasInteractionsCount: uasThreadCount,
+        utsEligible,
+        uasEligible,
         eligible: bimbinganEligible
       },
       classes: classEligibility,
