@@ -10,7 +10,7 @@ export const tagihanResponseObject = t.Object({
   periodeId: t.String({ default: '20231' }),
   nominal: t.Numeric({ default: 5000000 }),
   status: t.String({ default: 'belum_bayar' }),
-  tanggalBayar: t.Union([t.String(), t.Null()], { default: null }),
+  tanggalBayar: t.Any(),
   createdAt: t.Any(),
   updatedAt: t.Any(),
   mahasiswa: t.Union([
