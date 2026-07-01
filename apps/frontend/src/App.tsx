@@ -107,7 +107,7 @@ function AppContent() {
       <Route
         path="/keuangan"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'mahasiswa']}>
             <KeuanganDashboard />
           </ProtectedRoute>
         }

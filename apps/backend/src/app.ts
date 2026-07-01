@@ -73,7 +73,19 @@ app.use(
   })
   .use(jwtPlugin)
   .ws('/bimbingan/ws/:bimbinganId', {
-    open(ws) {
+    async open(ws) {
+      const token = ws.data.query?.token;
+      if (!token) {
+        ws.send(JSON.stringify({ error: 'Unauthorized: Missing token' }));
+        ws.close();
+        return;
+      }
+      const payload = await ws.data.jwt.verify(token);
+      if (!payload) {
+        ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
+        ws.close();
+        return;
+      }
       ws.subscribe(`bimbingan-${ws.data.params.bimbinganId}`);
     }
   })

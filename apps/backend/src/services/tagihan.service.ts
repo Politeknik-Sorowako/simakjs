@@ -57,14 +57,22 @@ export class TagihanService {
     const totalBill = Number(tag.nominal) || 0;
     const finalNominalBayar = nominalBayar !== undefined ? nominalBayar : (totalBill - currentTerbayar);
 
+    if (finalNominalBayar <= 0) {
+      throw new Error('Nominal pembayaran harus lebih besar dari 0');
+    }
+    if (finalNominalBayar > (totalBill - currentTerbayar)) {
+      throw new Error('Nominal pembayaran melebihi sisa tagihan');
+    }
+
     const newTerbayar = currentTerbayar + finalNominalBayar;
     const isFullyPaid = newTerbayar >= totalBill;
+    const determinedStatus = isFullyPaid ? 'lunas' : 'cicilan';
 
     const [updatedTagihan] = await db
       .update(tagihan)
       .set({
         nominalTerbayar: newTerbayar,
-        status: isFullyPaid ? 'lunas' : 'belum_bayar',
+        status: determinedStatus,
         tanggalBayar: isFullyPaid ? new Date() : null
       })
       .where(eq(tagihan.id, tagihanId))

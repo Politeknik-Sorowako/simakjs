@@ -116,8 +116,9 @@ export default function Bimbingan() {
     if (activeBimb && activeBimb.id) {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.host;
-      // Connect to Elysia WebSocket
-      ws = new WebSocket(`${protocol}//${host}/api/bimbingan/ws/${activeBimb.id}`);
+      const jwtToken = auth.token() || '';
+      // Connect to Elysia WebSocket with token auth
+      ws = new WebSocket(`${protocol}//${host}/api/bimbingan/ws/${activeBimb.id}?token=${encodeURIComponent(jwtToken)}`);
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);

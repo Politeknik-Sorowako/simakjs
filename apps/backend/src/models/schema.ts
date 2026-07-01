@@ -3,7 +3,7 @@ import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest']);
 export const jenisKelaminEnum = pgEnum('jenis_kelamin', ['L', 'P']);
-export const tagihanStatusEnum = pgEnum('tagihan_status', ['belum_bayar', 'lunas']);
+export const tagihanStatusEnum = pgEnum('tagihan_status', ['belum_bayar', 'cicilan', 'lunas']);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

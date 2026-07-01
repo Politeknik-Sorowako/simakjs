@@ -167,7 +167,9 @@ export default function Yudisium() {
     }
   };
 
-  const initializeStudentForm = () => {
+  const [isEditMode, setIsEditMode] = createSignal(false);
+
+  createEffect(() => {
     const data = myYudisium();
     if (data) {
       setJudulTa(data.judulTa || '');
@@ -176,8 +178,7 @@ export default function Yudisium() {
       setBebasLab(data.bebasLab || false);
       setBuktiPembayaranWisuda(data.buktiPembayaranWisuda || false);
     }
-    return '';
-  };
+  });
 
   return (
     <MainLayout>
@@ -192,9 +193,19 @@ export default function Yudisium() {
         {/* --- STUDENT VIEW --- */}
         <Show when={role() === 'mahasiswa'}>
           <Show when={!myYudisium.loading} fallback={<div class="text-center py-10 text-gray-400">Memuat data pengajuan...</div>}>
-            <Show when={myYudisium()} fallback={
+            <Show when={myYudisium() && !isEditMode()} fallback={
               <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm max-w-2xl">
-                <h3 class="font-bold text-gray-800 border-b pb-2 mb-4">Form Pengajuan Yudisium Mandiri</h3>
+                <div class="flex justify-between items-center border-b pb-2 mb-4">
+                  <h3 class="font-bold text-gray-800">Form Pengajuan Yudisium Mandiri</h3>
+                  <Show when={myYudisium()}>
+                    <button 
+                      onClick={() => setIsEditMode(false)}
+                      class="px-3 py-1 bg-gray-100 hover:bg-gray-250 text-gray-700 text-xs font-bold rounded-lg transition-colors"
+                    >
+                      Batal Edit
+                    </button>
+                  </Show>
+                </div>
                 <form onSubmit={handleStudentSubmit} class="flex flex-col gap-4">
                   <div class="flex flex-col gap-1.5">
                     <label class="text-xs font-bold text-gray-700">Judul Tugas Akhir / Skripsi</label>
@@ -260,8 +271,6 @@ export default function Yudisium() {
                 </form>
               </div>
             }>
-              {/* Show Submitted Status */}
-              {initializeStudentForm()}
               <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
                   <div class="flex items-center justify-between border-b pb-2">
@@ -289,9 +298,9 @@ export default function Yudisium() {
                     <div>
                       <span class="text-xs text-gray-400 block font-semibold">BERKAS ADMINISTRASI</span>
                       <ul class="list-disc pl-5 mt-1 flex flex-col gap-1 text-xs">
-                        <li>Bebas Pustaka: <span class={myYudisium()?.bebasPerpustakaan ? 'text-emerald-650 font-bold' : 'text-rose-650 font-bold'}>{myYudisium()?.bebasPerpustakaan ? 'TERPENUHI' : 'BELUM'}</span></li>
-                        <li>Bebas Lab/Bengkel: <span class={myYudisium()?.bebasLab ? 'text-emerald-650 font-bold' : 'text-rose-650 font-bold'}>{myYudisium()?.bebasLab ? 'TERPENUHI' : 'BELUM'}</span></li>
-                        <li>Bukti Bayar Wisuda: <span class={myYudisium()?.buktiPembayaranWisuda ? 'text-emerald-650 font-bold' : 'text-rose-650 font-bold'}>{myYudisium()?.buktiPembayaranWisuda ? 'TERPENUHI' : 'BELUM'}</span></li>
+                        <li>Bebas Pustaka: <span class={myYudisium()?.bebasPerpustakaan ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{myYudisium()?.bebasPerpustakaan ? 'TERPENUHI' : 'BELUM'}</span></li>
+                        <li>Bebas Lab/Bengkel: <span class={myYudisium()?.bebasLab ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{myYudisium()?.bebasLab ? 'TERPENUHI' : 'BELUM'}</span></li>
+                        <li>Bukti Bayar Wisuda: <span class={myYudisium()?.buktiPembayaranWisuda ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>{myYudisium()?.buktiPembayaranWisuda ? 'TERPENUHI' : 'BELUM'}</span></li>
                       </ul>
                     </div>
                     <Show when={myYudisium()?.catatan}>
@@ -308,7 +317,7 @@ export default function Yudisium() {
                   <p class="text-xs text-gray-400">Anda dapat memperbarui judul TA atau checklist jika ada revisi berkas admin.</p>
                   <button
                     onClick={() => {
-                      // Allow re-edit by forcing show form via state clearing
+                      setIsEditMode(true);
                       toast.showToast('Silakan sesuaikan data pada form.', 'info');
                     }}
                     class="mt-2 py-2 bg-gray-50 border border-gray-200 text-gray-700 font-bold rounded-xl text-xs hover:bg-gray-100 transition-colors"
@@ -491,15 +500,15 @@ export default function Yudisium() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-gray-800 text-sm">Verifikasi Pengajuan Yudisium</h3>
-                <button onClick={() => setShowVerifyModal(false)} class="text-gray-400 hover:text-gray-650">❌</button>
+                <button onClick={() => setShowVerifyModal(false)} class="text-gray-400 hover:text-gray-600">❌</button>
               </div>
               
               <form onSubmit={handleAdminVerify} class="flex flex-col gap-4">
                 <div class="text-xs text-gray-600 flex flex-col gap-1 font-medium">
-                  <p>Nama: <span class="font-bold text-gray-850">{selectedSubmission()?.mahasiswa?.nama}</span></p>
-                  <p>NIM: <span class="font-bold text-gray-850">{selectedSubmission()?.mahasiswa?.nim}</span></p>
-                  <p>Prodi: <span class="font-bold text-gray-850">{selectedSubmission()?.prodi?.nama}</span></p>
-                  <p>Judul TA: <span class="font-bold text-gray-850">{selectedSubmission()?.judulTa}</span></p>
+                  <p>Nama: <span class="font-bold text-gray-800">{selectedSubmission()?.mahasiswa?.nama}</span></p>
+                  <p>NIM: <span class="font-bold text-gray-800">{selectedSubmission()?.mahasiswa?.nim}</span></p>
+                  <p>Prodi: <span class="font-bold text-gray-800">{selectedSubmission()?.prodi?.nama}</span></p>
+                  <p>Judul TA: <span class="font-bold text-gray-800">{selectedSubmission()?.judulTa}</span></p>
                 </div>
 
                 <div class="flex flex-col gap-1.5">
