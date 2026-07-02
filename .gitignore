@@ -7,7 +7,7 @@ dist
 .bun-build
 *.log
 issue.md
-prompt.md
+prompt*.md
 prompt-frontend.md
 .agents
 *.lock

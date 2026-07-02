@@ -27,19 +27,21 @@ export default function Bimbingan() {
   const [ringkasanText, setRingkasanText] = createSignal('');
   const [isApprovedStatus, setIsApprovedStatus] = createSignal(false);
 
-  // BKD Form Signals
-  const [permasalahanText, setPermasalahanText] = createSignal('');
-  const [solusiText, setSolusiText] = createSignal('');
-  const [tanggalBimbinganText, setTanggalBimbinganText] = createSignal('');
-  const [statusBkdStatus, setStatusBkdStatus] = createSignal(false);
+  // BKD Sesi Modal Inputs
+  const [showSesiModal, setShowSesiModal] = createSignal(false);
+  const [editingSesiId, setEditingSesiId] = createSignal<number | null>(null);
+  const [pertemuanKeInput, setPertemuanKeInput] = createSignal(1);
+  const [tanggalInput, setTanggalInput] = createSignal(new Date().toISOString().split('T')[0]);
+  const [permasalahanInput, setPermasalahanInput] = createSignal('');
+  const [solusiInput, setSolusiInput] = createSignal('');
+  const [statusBkdInput, setStatusBkdInput] = createSignal(true);
 
-  // Rekap BKD Modal Signals
-  const [showRekapBkdModal, setShowRekapBkdModal] = createSignal(false);
-  const [rekapBkdData, { refetch: refetchRekapBkd }] = createResource(
-    () => ({ open: showRekapBkdModal(), pId: selectedPeriode(), dProfile: dosenProfile() }),
-    async ({ open, pId, dProfile }) => {
-      if (!open) return { data: [] };
-      return await bimbinganController.getRekapBkd(dProfile?.id || undefined, pId || undefined);
+  // Load Akademik Summary Resource
+  const [akademikSummary, { refetch: refetchAkademik }] = createResource(
+    () => (user()?.role === 'mahasiswa' ? mhsProfile()?.id : selectedMhsId()),
+    async (id) => {
+      if (!id) return null;
+      return await bimbinganController.getAkademikSummary(id);
     }
   );
 
@@ -65,6 +67,16 @@ export default function Bimbingan() {
       if (!email) return null;
       const res = await dosenController.getAll(email, 1, 1);
       return res.data[0] || null;
+    }
+  );
+
+  // Rekap BKD Modal Signals
+  const [showRekapBkdModal, setShowRekapBkdModal] = createSignal(false);
+  const [rekapBkdData, { refetch: refetchRekapBkd }] = createResource(
+    () => ({ open: showRekapBkdModal(), pId: selectedPeriode(), dProfile: dosenProfile() }),
+    async ({ open, pId, dProfile }) => {
+      if (!open) return { data: [] };
+      return await bimbinganController.getRekapBkd(dProfile?.id || undefined, pId || undefined);
     }
   );
 
@@ -107,10 +119,6 @@ export default function Bimbingan() {
       const bimb = await bimbinganController.getByMhsId(id, period || undefined);
       setRingkasanText(bimb.ringkasan || '');
       setIsApprovedStatus(bimb.isApproved);
-      setPermasalahanText(bimb.permasalahan || '');
-      setSolusiText(bimb.solusi || '');
-      setTanggalBimbinganText(bimb.tanggalBimbingan || '');
-      setStatusBkdStatus(bimb.statusBkd);
       return bimb;
     }
   );
@@ -126,18 +134,10 @@ export default function Bimbingan() {
       }
       setRingkasanText(activeBimb.ringkasan || '');
       setIsApprovedStatus(activeBimb.isApproved);
-      setPermasalahanText(activeBimb.permasalahan || '');
-      setSolusiText(activeBimb.solusi || '');
-      setTanggalBimbinganText(activeBimb.tanggalBimbingan || '');
-      setStatusBkdStatus(activeBimb.statusBkd);
     } else {
       setMessages([]);
       setRingkasanText('');
       setIsApprovedStatus(false);
-      setPermasalahanText('');
-      setSolusiText('');
-      setTanggalBimbinganText('');
-      setStatusBkdStatus(false);
     }
   });
 
@@ -210,16 +210,93 @@ export default function Bimbingan() {
       await bimbinganController.updateBimbingan(targetId, {
         ringkasan: ringkasanText(),
         isApproved: isApprovedStatus(),
-        permasalahan: permasalahanText(),
-        solusi: solusiText(),
-        tanggalBimbingan: tanggalBimbinganText() || undefined,
-        statusBkd: statusBkdStatus(),
       });
-      alert('Catatan bimbingan & laporan BKD berhasil diperbarui.');
+      alert('Kelayakan ujian & ringkasan bimbingan berhasil diperbarui.');
       refetchSelectedBimb();
       refetchMonitoring();
     } catch (err: any) {
       alert(err.message || 'Gagal memperbarui bimbingan.');
+    }
+  };
+
+  const handleClearChat = async () => {
+    const targetId = user()?.role === 'mahasiswa' ? mhsProfile()?.id : selectedMhsId();
+    if (!targetId) return;
+    if (!confirm('Apakah Anda yakin ingin mengosongkan seluruh pesan obrolan di thread ini?')) return;
+
+    try {
+      await bimbinganController.clearChatThread(targetId);
+      setMessages([]);
+      alert('Pesan obrolan berhasil dikosongkan.');
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengosongkan obrolan.');
+    }
+  };
+
+  const handleOpenAddSesi = () => {
+    setEditingSesiId(null);
+    const activeBimb = selectedBimbingan();
+    const currentCount = activeBimb?.sesi?.length || 0;
+    setPertemuanKeInput(currentCount + 1);
+    setTanggalInput(new Date().toISOString().split('T')[0]);
+    setPermasalahanInput('');
+    setSolusiInput('');
+    setStatusBkdInput(true);
+    setShowSesiModal(true);
+  };
+
+  const handleOpenEditSesi = (sesi: any) => {
+    setEditingSesiId(sesi.id);
+    setPertemuanKeInput(sesi.pertemuanKe);
+    setTanggalInput(new Date(sesi.tanggalBimbingan).toISOString().split('T')[0]);
+    setPermasalahanInput(sesi.permasalahan);
+    setSolusiInput(sesi.solusi);
+    setStatusBkdInput(sesi.statusBkd);
+    setShowSesiModal(true);
+  };
+
+  const handleSaveSesi = async (e: Event) => {
+    e.preventDefault();
+    const targetMhsId = selectedMhsId();
+    if (!targetMhsId) return;
+
+    try {
+      const payload = {
+        pertemuanKe: pertemuanKeInput(),
+        tanggalBimbingan: tanggalInput(),
+        permasalahan: permasalahanInput(),
+        solusi: solusiInput(),
+        statusBkd: statusBkdInput(),
+      };
+
+      if (editingSesiId()) {
+        await bimbinganController.updateSesi(editingSesiId()!, payload);
+      } else {
+        await bimbinganController.addSesi(targetMhsId, payload);
+      }
+
+      setShowSesiModal(false);
+      refetchSelectedBimb();
+      refetchMonitoring();
+      refetchRekapBkd();
+      refetchAkademik();
+      alert('Sesi bimbingan berhasil disimpan.');
+    } catch (err: any) {
+      alert(err.message || 'Gagal menyimpan sesi bimbingan.');
+    }
+  };
+
+  const handleDeleteSesi = async (sesiId: number) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus sesi bimbingan ini?')) return;
+    try {
+      await bimbinganController.deleteSesi(sesiId);
+      refetchSelectedBimb();
+      refetchMonitoring();
+      refetchRekapBkd();
+      refetchAkademik();
+      alert('Sesi bimbingan berhasil dihapus.');
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus sesi bimbingan.');
     }
   };
 
@@ -364,43 +441,40 @@ export default function Bimbingan() {
                 
                 <Show when={studentBimbingan()?.ringkasan}>
                   <div class="flex flex-col gap-1">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ringkasan & Masukan</span>
-                    <div class="p-3.5 bg-indigo-50/50 border border-indigo-100/50 rounded-xl text-xs text-indigo-900 whitespace-pre-line leading-relaxed">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Catatan Kelayakan / Ringkasan</span>
+                    <div class="p-3 bg-blue-50/50 border border-blue-100/50 rounded-xl text-xs text-blue-900 leading-relaxed">
                       {studentBimbingan()?.ringkasan}
                     </div>
                   </div>
                 </Show>
 
-                <Show when={studentBimbingan()?.permasalahan}>
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Permasalahan</span>
-                    <div class="p-3.5 bg-rose-50/50 border border-rose-100/50 rounded-xl text-xs text-rose-900 whitespace-pre-line leading-relaxed">
-                      {studentBimbingan()?.permasalahan}
-                    </div>
-                  </div>
-                </Show>
-
-                <Show when={studentBimbingan()?.solusi}>
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Solusi / Saran Masukan</span>
-                    <div class="p-3.5 bg-emerald-50/50 border border-emerald-100/50 rounded-xl text-xs text-emerald-900 whitespace-pre-line leading-relaxed">
-                      {studentBimbingan()?.solusi}
-                    </div>
-                  </div>
-                </Show>
-
-                <Show when={studentBimbingan()?.tanggalBimbingan}>
-                  <div class="flex justify-between items-center text-xs text-gray-600 border-t pt-2 mt-2">
-                    <span>Tanggal Bimbingan:</span>
-                    <span class="font-bold">
-                      {new Date(studentBimbingan()!.tanggalBimbingan!).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-                    </span>
-                  </div>
-                </Show>
-
-                <Show when={!studentBimbingan()?.ringkasan && !studentBimbingan()?.permasalahan && !studentBimbingan()?.solusi}>
-                  <p class="text-sm text-gray-400 italic">Belum ada catatan atau riwayat bimbingan BKD dari Dosen PA Anda.</p>
-                </Show>
+                <div class="flex flex-col gap-3">
+                  <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Riwayat Sesi Pertemuan</span>
+                  <Show when={studentBimbingan()?.sesi && studentBimbingan()!.sesi.length > 0} fallback={
+                    <p class="text-xs text-gray-400 italic">Belum ada sesi bimbingan yang tercatat.</p>
+                  }>
+                    <For each={studentBimbingan()?.sesi}>
+                      {(sesi) => (
+                        <div class="p-3 bg-gray-50 border border-gray-150 rounded-xl flex flex-col gap-2">
+                          <div class="flex items-center justify-between border-b pb-1">
+                            <span class="font-bold text-xs text-gray-700">Pertemuan Ke-{sesi.pertemuanKe}</span>
+                            <span class="text-[10px] text-gray-400 font-mono">
+                              {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                            </span>
+                          </div>
+                          <div class="flex flex-col gap-1">
+                            <span class="text-[9px] font-bold text-rose-500 uppercase">Permasalahan:</span>
+                            <p class="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed">{sesi.permasalahan}</p>
+                          </div>
+                          <div class="flex flex-col gap-1">
+                            <span class="text-[9px] font-bold text-emerald-600 uppercase">Solusi / Masukan:</span>
+                            <p class="text-xs text-gray-800 whitespace-pre-wrap leading-relaxed">{sesi.solusi}</p>
+                          </div>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </div>     </Show>
               </div>
             </div>
           </div>
@@ -473,7 +547,16 @@ export default function Bimbingan() {
                   {/* Chat Panel */}
                   <div class="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col h-full overflow-hidden">
                     <div class="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
-                      <h3 class="font-bold text-gray-800 text-sm">Chat: {selectedMhsNama()}</h3>
+                      <div class="flex flex-col">
+                        <h3 class="font-bold text-gray-800 text-sm">Chat: {selectedMhsNama()}</h3>
+                        <button
+                          type="button"
+                          onClick={handleClearChat}
+                          class="text-[10px] text-red-500 hover:text-red-700 font-bold mt-0.5 text-left"
+                        >
+                          🗑️ Kosongkan Chat
+                        </button>
+                      </div>
                       <div class="flex items-center gap-1.5">
                         <span class="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[9px] font-bold rounded">UTS: {utsCount()}/1</span>
                         <span class="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-bold rounded">UAS: {uasCount()}/3</span>
@@ -540,12 +623,91 @@ export default function Bimbingan() {
                     </form>
                   </div>
 
-                  {/* Form Approval & Ringkasan */}
-                  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between h-full overflow-y-auto">
-                    <form onSubmit={handleUpdateBimbingan} class="flex flex-col gap-4">
-                      <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Catatan Bimbingan PA</h3>
+                  {/* Form Approval, Resume Akademik, & Timeline Sesi */}
+                  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto">
+                    
+                    {/* Resume Akademik */}
+                    <div class="flex flex-col gap-3">
+                      <h3 class="font-extrabold text-gray-800 text-sm border-b pb-2">📊 Resume Akademik</h3>
+                      <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="p-3 bg-red-50 border border-red-100 rounded-xl flex flex-col gap-0.5">
+                          <span class="text-[10px] text-red-600 font-bold uppercase">Pelanggaran</span>
+                          <span class="text-sm font-black text-red-700">{akademikSummary()?.poinPelanggaran || 0} Poin</span>
+                        </div>
+                        <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5">
+                          <span class="text-[10px] text-orange-600 font-bold uppercase">Jam Kompensasi</span>
+                          <span class="text-sm font-black text-orange-700">{akademikSummary()?.sisaKompensasi || 0} Menit</span>
+                        </div>
+                        <div class="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex flex-col gap-0.5">
+                          <span class="text-[10px] text-emerald-600 font-bold uppercase">IPK Kumulatif</span>
+                          <span class="text-sm font-black text-emerald-700">{akademikSummary()?.ipk || '0.00'}</span>
+                        </div>
+                        <div class="p-3 bg-blue-50 border border-blue-100 rounded-xl flex flex-col gap-0.5">
+                          <span class="text-[10px] text-blue-600 font-bold uppercase">IPS Sem. Lalu</span>
+                          <span class="text-sm font-black text-blue-700">{akademikSummary()?.ipsSemesterLalu || '0.00'}</span>
+                        </div>
+                      </div>
+                    </div>
 
-                      {/* Approval Toggle */}
+                    {/* Timeline Sesi Bimbingan */}
+                    <div class="flex flex-col gap-3">
+                      <div class="flex justify-between items-center border-b pb-2">
+                        <h3 class="font-extrabold text-gray-800 text-sm">📅 Sesi Bimbingan</h3>
+                        <button
+                          type="button"
+                          onClick={handleOpenAddSesi}
+                          class="px-2.5 py-1 bg-blue-600 text-white font-bold rounded-lg text-[10px] hover:bg-blue-700"
+                        >
+                          + Tambah Sesi
+                        </button>
+                      </div>
+
+                      <div class="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto">
+                        <Show when={selectedBimbingan()?.sesi && selectedBimbingan()!.sesi.length > 0} fallback={
+                          <p class="text-xs text-gray-400 italic">Belum ada sesi bimbingan. Minimal 3 kali per semester.</p>
+                        }>
+                          <For each={selectedBimbingan()?.sesi}>
+                            {(sesi) => (
+                              <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col gap-1.5 relative">
+                                <div class="flex items-center justify-between border-b border-slate-200 pb-1">
+                                  <span class="font-bold text-xs text-slate-700">Sesi Ke-{sesi.pertemuanKe}</span>
+                                  <div class="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditSesi(sesi)}
+                                      class="text-[10px] text-blue-600 font-bold"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteSesi(sesi.id)}
+                                      class="text-[10px] text-red-500 font-bold"
+                                    >
+                                      Hapus
+                                    </button>
+                                  </div>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Tanggal: {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })}</p>
+                                <p class="text-xs text-slate-800"><strong class="text-rose-600 text-[10px] block uppercase">Permasalahan:</strong> {sesi.permasalahan}</p>
+                                <p class="text-xs text-slate-800"><strong class="text-emerald-600 text-[10px] block uppercase">Solusi:</strong> {sesi.solusi}</p>
+                                <div class="mt-1 flex items-center justify-between text-[10px]">
+                                  <span class="text-gray-400 font-semibold">Lapor BKD:</span>
+                                  <span class={`font-bold px-1.5 py-0.5 rounded text-[9px] ${sesi.statusBkd ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-150 text-gray-500'}`}>
+                                    {sesi.statusBkd ? 'YA' : 'TIDAK'}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </For>
+                        </Show>
+                      </div>
+                    </div>
+
+                    {/* Ringkasan & Approval */}
+                    <form onSubmit={handleUpdateBimbingan} class="flex flex-col gap-4 border-t pt-4">
+                      <h3 class="font-extrabold text-gray-800 text-sm">🔑 Status Kelayakan & Ringkasan</h3>
+                      
                       <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
                         <div class="flex flex-col">
                           <span class="text-xs font-bold text-gray-700">Setujui Kelayakan Ujian</span>
@@ -559,74 +721,115 @@ export default function Bimbingan() {
                         />
                       </div>
 
-                      {/* Permasalahan */}
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-gray-700">Permasalahan Mahasiswa</label>
-                        <textarea
-                          rows="3"
-                          placeholder="Tulis permasalahan akademis/non-akademis mahasiswa..."
-                          value={permasalahanText()}
-                          onInput={(e) => setPermasalahanText(e.currentTarget.value)}
-                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none text-slate-900"
-                        />
-                      </div>
-
-                      {/* Solusi */}
-                      <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-gray-700">Solusi / Rekomendasi Dosen PA</label>
-                        <textarea
-                          rows="3"
-                          placeholder="Tulis solusi, tindak lanjut, atau saran yang Anda berikan..."
-                          value={solusiText()}
-                          onInput={(e) => setSolusiText(e.currentTarget.value)}
-                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none text-slate-900"
-                        />
-                      </div>
-
-                      {/* Tanggal Bimbingan */}
-                      <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-gray-700">Tanggal Bimbingan</label>
-                        <input
-                          type="date"
-                          value={tanggalBimbinganText() || ''}
-                          onChange={(e) => setTanggalBimbinganText(e.currentTarget.value)}
-                          class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
-                        />
-                      </div>
-
-                      {/* BKD Audit Checkbox */}
-                      <div class="flex items-center justify-between p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
-                        <div class="flex flex-col">
-                          <span class="text-xs font-bold text-blue-800">Lapor Beban Kerja Dosen (BKD)</span>
-                          <span class="text-[10px] text-blue-600">Sertakan bimbingan ini ke laporan BKD resmi</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={statusBkdStatus()}
-                          onChange={(e) => setStatusBkdStatus(e.currentTarget.checked)}
-                          class="w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
-                        />
-                      </div>
-
-                      {/* Summary Text Area */}
-                      <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-gray-700">Ringkasan Bimbingan / Catatan Internal</label>
+                        <label class="text-xs font-bold text-gray-700">Ringkasan Bimbingan / Masukan Global</label>
                         <textarea
                           rows="2"
-                          placeholder="Catatan tambahan (opsional)..."
+                          placeholder="Ringkasan bimbingan untuk satu semester..."
                           value={ringkasanText()}
                           onInput={(e) => setRingkasanText(e.currentTarget.value)}
-                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none text-slate-900"
+                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 text-slate-950 resize-none"
                         />
                       </div>
 
                       <button
                         type="submit"
-                        class="w-full mt-2 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-100"
+                        class="w-full py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 transition-all shadow-sm"
                       >
-                        Simpan Catatan & Update
+                        Update Kelayakan & Ringkasan
                       </button>
                     </form>
+
+                  </div>
+
+                  {/* --- MODAL TAMBAH / EDIT SESI BIMBINGAN --- */}
+                  <Show when={showSesiModal()}>
+                    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+                        <h3 class="font-extrabold text-gray-800 text-base">
+                          {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'}
+                        </h3>
+                        
+                        <form onSubmit={handleSaveSesi} class="flex flex-col gap-4">
+                          <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-gray-650">Pertemuan Ke</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={pertemuanKeInput()}
+                              onInput={(e) => setPertemuanKeInput(parseInt(e.currentTarget.value) || 1)}
+                              class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-950"
+                              required
+                            />
+                          </div>
+
+                          <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-gray-650">Tanggal Pertemuan</label>
+                            <input
+                              type="date"
+                              value={tanggalInput()}
+                              onChange={(e) => setTanggalInput(e.currentTarget.value)}
+                              class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-950"
+                              required
+                            />
+                          </div>
+
+                          <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-gray-650">Permasalahan</label>
+                            <textarea
+                              rows="3"
+                              placeholder="Tulis permasalahan akademis/non-akademis..."
+                              value={permasalahanInput()}
+                              onInput={(e) => setPermasalahanInput(e.currentTarget.value)}
+                              class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 text-slate-950"
+                              required
+                            />
+                          </div>
+
+                          <div class="flex flex-col gap-1">
+                            <label class="text-xs font-bold text-gray-650">Solusi / Rekomendasi</label>
+                            <textarea
+                              rows="3"
+                              placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
+                              value={solusiInput()}
+                              onInput={(e) => setSolusiInput(e.currentTarget.value)}
+                              class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 text-slate-950"
+                              required
+                            />
+                          </div>
+
+                          <div class="flex items-center justify-between p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                            <div class="flex flex-col">
+                              <span class="text-xs font-bold text-blue-800">Lapor Beban Kerja Dosen (BKD)</span>
+                              <span class="text-[10px] text-blue-600">Sertakan sesi ini ke laporan BKD resmi</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={statusBkdInput()}
+                              onChange={(e) => setStatusBkdInput(e.currentTarget.checked)}
+                              class="w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
+                            />
+                          </div>
+
+                          <div class="flex justify-end gap-2 mt-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowSesiModal(false)}
+                              class="px-4 py-2 border border-gray-200 text-gray-600 font-bold rounded-xl text-xs"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              type="submit"
+                              class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700"
+                            >
+                              Simpan Sesi
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </Show>
                   </div>
                 </div>
               </Show>
@@ -689,9 +892,10 @@ export default function Bimbingan() {
                         <th class="border border-gray-300 p-2.5 w-8 text-center">No</th>
                         <th class="border border-gray-300 p-2.5 w-44">Nama Mahasiswa</th>
                         <th class="border border-gray-300 p-2.5 w-24 text-center">NIM</th>
+                        <th class="border border-gray-300 p-2.5 w-20 text-center">Total Sesi</th>
                         <th class="border border-gray-300 p-2.5">Permasalahan</th>
                         <th class="border border-gray-300 p-2.5">Solusi / Saran Masukan</th>
-                        <th class="border border-gray-300 p-2.5 w-24 text-center">Tanggal</th>
+                        <th class="border border-gray-300 p-2.5 w-28 text-center">Tanggal Sesi</th>
                         <th class="border border-gray-300 p-2.5 w-20 text-center">Lapor BKD</th>
                       </tr>
                     </thead>
@@ -700,7 +904,7 @@ export default function Bimbingan() {
                         each={rekapBkdData()?.data}
                         fallback={
                           <tr>
-                            <td colspan="7" class="border border-gray-300 p-6 text-center text-gray-400 italic">
+                            <td colspan="8" class="border border-gray-300 p-6 text-center text-gray-400 italic">
                               Tidak ada riwayat bimbingan resmi tercatat untuk periode ini.
                             </td>
                           </tr>
@@ -711,15 +915,45 @@ export default function Bimbingan() {
                             <td class="border border-gray-300 p-2.5 text-center">{idx() + 1}</td>
                             <td class="border border-gray-300 p-2.5 font-bold">{item.mahasiswa?.nama}</td>
                             <td class="border border-gray-300 p-2.5 text-center">{item.mahasiswa?.nim}</td>
-                            <td class="border border-gray-300 p-2.5 whitespace-pre-line leading-relaxed">{item.permasalahan || '-'}</td>
-                            <td class="border border-gray-300 p-2.5 whitespace-pre-line leading-relaxed">{item.solusi || '-'}</td>
-                            <td class="border border-gray-300 p-2.5 text-center">
-                              {item.tanggalBimbingan
-                                ? new Date(item.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })
-                                : '-'}
+                            <td class="border border-gray-300 p-2.5 text-center font-bold">{item.totalSesi || 0} Kali</td>
+                            <td class="border border-gray-300 p-2 text-xs leading-relaxed">
+                              <For each={item.sesi}>
+                                {(s) => (
+                                  <div class="mb-1.5 pb-1.5 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                                    <strong>P-{s.pertemuanKe}:</strong> {s.permasalahan}
+                                  </div>
+                                )}
+                              </For>
+                              <Show when={!item.sesi || item.sesi.length === 0}>
+                                <span class="text-gray-400 italic">-</span>
+                              </Show>
+                            </td>
+                            <td class="border border-gray-300 p-2 text-xs leading-relaxed">
+                              <For each={item.sesi}>
+                                {(s) => (
+                                  <div class="mb-1.5 pb-1.5 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                                    <strong>P-{s.pertemuanKe}:</strong> {s.solusi}
+                                  </div>
+                                )}
+                              </For>
+                              <Show when={!item.sesi || item.sesi.length === 0}>
+                                <span class="text-gray-400 italic">-</span>
+                              </Show>
+                            </td>
+                            <td class="border border-gray-300 p-2 text-center text-xs">
+                              <For each={item.sesi}>
+                                {(s) => (
+                                  <div class="mb-1.5 pb-1.5 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0 font-mono">
+                                    {new Date(s.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'short' })}
+                                  </div>
+                                )}
+                              </For>
+                              <Show when={!item.sesi || item.sesi.length === 0}>
+                                <span class="text-gray-400 italic">-</span>
+                              </Show>
                             </td>
                             <td class="border border-gray-300 p-2.5 text-center">
-                              <span class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.statusBkd ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-100 text-gray-500'}`}>
+                              <span class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.statusBkd ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-150 text-gray-500'}`}>
                                 {item.statusBkd ? 'YA' : 'TIDAK'}
                               </span>
                             </td>

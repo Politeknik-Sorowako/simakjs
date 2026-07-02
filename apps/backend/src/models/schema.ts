@@ -380,6 +380,18 @@ export const bimbinganThread = pgTable('bimbingan_thread', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const sesiBimbingan = pgTable('sesi_bimbingan', {
+  id: serial('id').primaryKey(),
+  bimbinganId: integer('bimbingan_id').notNull().references(() => bimbingan.id, { onDelete: 'cascade' }),
+  pertemuanKe: integer('pertemuan_ke').notNull(),
+  tanggalBimbingan: date('tanggal_bimbingan').notNull(),
+  permasalahan: text('permasalahan').notNull(),
+  solusi: text('solusi').notNull(),
+  statusBkd: boolean('status_bkd').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
 export const pelanggaran = pgTable('pelanggaran', {
   id: serial('id').primaryKey(),
   mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
@@ -406,11 +418,19 @@ export const bimbinganRelations = relations(bimbingan, ({ one, many }) => ({
     references: [periodeAkademik.id],
   }),
   thread: many(bimbinganThread),
+  sesi: many(sesiBimbingan),
 }));
 
 export const bimbinganThreadRelations = relations(bimbinganThread, ({ one }) => ({
   bimbingan: one(bimbingan, {
     fields: [bimbinganThread.bimbinganId],
+    references: [bimbingan.id],
+  }),
+}));
+
+export const sesiBimbinganRelations = relations(sesiBimbingan, ({ one }) => ({
+  bimbingan: one(bimbingan, {
+    fields: [sesiBimbingan.bimbinganId],
     references: [bimbingan.id],
   }),
 }));

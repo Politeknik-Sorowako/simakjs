@@ -1,7 +1,10 @@
 import { BimbinganService } from '../services/bimbingan.service';
+import { PresensiService } from '../services/presensi.service';
+import { PelanggaranService } from '../services/pelanggaran.service';
+import { KhsService } from '../services/khs.service';
 import { AuthContext } from '../utils/types';
 import { db } from '../utils/db';
-import { mahasiswa, dosen } from '../models/schema';
+import { mahasiswa, dosen, periodeAkademik } from '../models/schema';
 import { eq } from 'drizzle-orm';
 
 export class BimbinganController {
@@ -176,7 +179,13 @@ export class BimbinganController {
       return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen yang dapat mengakses monitoring.' };
     }
 
-    return await BimbinganService.getMonitoringBimbingan();
+    let dosenId: number | undefined = undefined;
+    if (user.role === 'dosen') {
+      const dId = await BimbinganController.getDosenIdByEmail(user.email);
+      dosenId = dId || undefined;
+    }
+
+    return await BimbinganService.getMonitoringBimbingan(dosenId);
   }
 
   static async getRekapBkd({ query, set, getCurrentUser }: AuthContext) {
@@ -204,6 +213,179 @@ export class BimbinganController {
     } catch (e: any) {
       set.status = 400;
       return { error: e.message || 'Gagal mengambil rekap BKD.' };
+    }
+  }
+
+  static async getAkademikSummary(ctx: AuthContext<any, any>) {
+    const { params, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const mhsId = parseInt(params.mhsId);
+    if (isNaN(mhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    try {
+      let sisaKompensasi = 0;
+      try {
+        const komDetail = await PresensiService.getKompensasiDetail(mhsId);
+        sisaKompensasi = komDetail.summary.sisaKompensasi;
+      } catch (e) {}
+
+      let poinPelanggaran = 0;
+      try {
+        const pelDetail = await PelanggaranService.getPelanggaranByMahasiswa(mhsId);
+        poinPelanggaran = pelDetail.totalPoin;
+      } catch (e) {}
+
+      const activePeriode = await BimbinganService.getActivePeriode();
+      let ipsSemesterLalu = 0;
+      let ipk = 0;
+
+      if (activePeriode) {
+        const periodes = await db
+          .select()
+          .from(periodeAkademik)
+          .orderBy(periodeAkademik.id);
+        
+        const activeIdx = periodes.findIndex(p => p.id === activePeriode.id);
+        if (activeIdx > 0) {
+          const prevPeriode = periodes[activeIdx - 1];
+          try {
+            const prevKhs = await KhsService.getKhs(mhsId, prevPeriode.id);
+            ipsSemesterLalu = prevKhs.ipSemester;
+          } catch (e) {}
+        }
+      }
+
+      try {
+        const activePId = activePeriode?.id || '20251';
+        const currentKhs = await KhsService.getKhs(mhsId, activePId);
+        ipk = currentKhs.ipk;
+      } catch (e) {}
+
+      return {
+        sisaKompensasi,
+        poinPelanggaran,
+        ipk,
+        ipsSemesterLalu
+      };
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal memproses data akademik.' };
+    }
+  }
+
+  static async addSesi(ctx: AuthContext) {
+    const { params, body, set, getCurrentUser } = ctx as any;
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const mhsId = parseInt(params.mhsId);
+    if (isNaN(mhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    try {
+      const bimb = await BimbinganService.getOrCreateBimbingan(mhsId);
+      const newSesi = await BimbinganService.addSesiBimbingan(bimb.id, {
+        pertemuanKe: body.pertemuanKe,
+        tanggalBimbingan: new Date(body.tanggalBimbingan),
+        permasalahan: body.permasalahan,
+        solusi: body.solusi,
+        statusBkd: body.statusBkd ?? true,
+      });
+      set.status = 201;
+      return newSesi;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal membuat sesi bimbingan.' };
+    }
+  }
+
+  static async updateSesi(ctx: AuthContext) {
+    const { params, body, set, getCurrentUser } = ctx as any;
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const sesiId = parseInt(params.sesiId);
+    if (isNaN(sesiId)) {
+      set.status = 400;
+      return { error: 'ID Sesi tidak valid.' };
+    }
+
+    try {
+      const data: any = {};
+      if (body.pertemuanKe !== undefined) data.pertemuanKe = body.pertemuanKe;
+      if (body.tanggalBimbingan !== undefined) data.tanggalBimbingan = new Date(body.tanggalBimbingan);
+      if (body.permasalahan !== undefined) data.permasalahan = body.permasalahan;
+      if (body.solusi !== undefined) data.solusi = body.solusi;
+      if (body.statusBkd !== undefined) data.statusBkd = body.statusBkd;
+
+      const updated = await BimbinganService.updateSesiBimbingan(sesiId, data);
+      return updated;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal meng-update sesi bimbingan.' };
+    }
+  }
+
+  static async deleteSesi(ctx: AuthContext) {
+    const { params, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const sesiId = parseInt(params.sesiId);
+    if (isNaN(sesiId)) {
+      set.status = 400;
+      return { error: 'ID Sesi tidak valid.' };
+    }
+
+    try {
+      const deleted = await BimbinganService.deleteSesiBimbingan(sesiId);
+      return deleted;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal menghapus sesi bimbingan.' };
+    }
+  }
+
+  static async clearChat(ctx: AuthContext) {
+    const { params, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const mhsId = parseInt(params.mhsId);
+    if (isNaN(mhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    try {
+      const bimb = await BimbinganService.getOrCreateBimbingan(mhsId);
+      const res = await BimbinganService.clearChatThread(bimb.id);
+      return res;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal mengosongkan chat thread.' };
     }
   }
 }
