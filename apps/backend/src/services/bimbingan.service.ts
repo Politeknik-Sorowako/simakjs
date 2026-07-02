@@ -65,6 +65,10 @@ export class BimbinganService {
         periodeId: reqPeriodeId,
         ringkasan: null,
         isApproved: false,
+        permasalahan: null,
+        solusi: null,
+        tanggalBimbingan: null,
+        statusBkd: false,
         thread: [],
         availablePeriodes,
       };
@@ -90,6 +94,10 @@ export class BimbinganService {
         periodeId: activePeriode.id,
         ringkasan: null,
         isApproved: false,
+        permasalahan: null,
+        solusi: null,
+        tanggalBimbingan: null,
+        statusBkd: false,
       })
       .returning();
 
@@ -113,7 +121,7 @@ export class BimbinganService {
     return newMsg;
   }
 
-  static async updateBimbingan(bimbinganId: number, data: { ringkasan?: string; isApproved?: boolean }) {
+  static async updateBimbingan(bimbinganId: number, data: { ringkasan?: string; isApproved?: boolean; permasalahan?: string; solusi?: string; tanggalBimbingan?: Date; statusBkd?: boolean }) {
     const [updated] = await db
       .update(bimbingan)
       .set({
@@ -166,8 +174,45 @@ export class BimbinganService {
         bimbinganId: bimb?.id || null,
         ringkasan: bimb?.ringkasan || null,
         isApproved: bimb?.isApproved || false,
+        permasalahan: bimb?.permasalahan || null,
+        solusi: bimb?.solusi || null,
+        tanggalBimbingan: bimb?.tanggalBimbingan || null,
+        statusBkd: bimb?.statusBkd || false,
         createdAt: bimb?.createdAt || null,
       };
     });
+  }
+
+  static async getRekapBimbinganDosen(dosenId?: number, periodeId?: string) {
+    const filterPeriodeId = periodeId || (await this.getActivePeriode())?.id;
+    if (!filterPeriodeId) {
+      return [];
+    }
+
+    const conditions = [eq(bimbingan.periodeId, filterPeriodeId)];
+    if (dosenId !== undefined) {
+      conditions.push(eq(bimbingan.dosenId, dosenId));
+    }
+
+    return await db
+      .select({
+        id: bimbingan.id,
+        mahasiswaId: bimbingan.mahasiswaId,
+        dosenId: bimbingan.dosenId,
+        periodeId: bimbingan.periodeId,
+        ringkasan: bimbingan.ringkasan,
+        isApproved: bimbingan.isApproved,
+        permasalahan: bimbingan.permasalahan,
+        solusi: bimbingan.solusi,
+        tanggalBimbingan: bimbingan.tanggalBimbingan,
+        statusBkd: bimbingan.statusBkd,
+        mahasiswa: {
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama
+        }
+      })
+      .from(bimbingan)
+      .innerJoin(mahasiswa, eq(bimbingan.mahasiswaId, mahasiswa.id))
+      .where(and(...conditions));
   }
 }

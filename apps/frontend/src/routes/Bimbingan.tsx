@@ -27,6 +27,22 @@ export default function Bimbingan() {
   const [ringkasanText, setRingkasanText] = createSignal('');
   const [isApprovedStatus, setIsApprovedStatus] = createSignal(false);
 
+  // BKD Form Signals
+  const [permasalahanText, setPermasalahanText] = createSignal('');
+  const [solusiText, setSolusiText] = createSignal('');
+  const [tanggalBimbinganText, setTanggalBimbinganText] = createSignal('');
+  const [statusBkdStatus, setStatusBkdStatus] = createSignal(false);
+
+  // Rekap BKD Modal Signals
+  const [showRekapBkdModal, setShowRekapBkdModal] = createSignal(false);
+  const [rekapBkdData, { refetch: refetchRekapBkd }] = createResource(
+    () => ({ open: showRekapBkdModal(), pId: selectedPeriode(), dProfile: dosenProfile() }),
+    async ({ open, pId, dProfile }) => {
+      if (!open) return { data: [] };
+      return await bimbinganController.getRekapBkd(dProfile?.id || undefined, pId || undefined);
+    }
+  );
+
   // Load profiles
   const [mhsProfile] = createResource(
     () => {
@@ -91,6 +107,10 @@ export default function Bimbingan() {
       const bimb = await bimbinganController.getByMhsId(id, period || undefined);
       setRingkasanText(bimb.ringkasan || '');
       setIsApprovedStatus(bimb.isApproved);
+      setPermasalahanText(bimb.permasalahan || '');
+      setSolusiText(bimb.solusi || '');
+      setTanggalBimbinganText(bimb.tanggalBimbingan || '');
+      setStatusBkdStatus(bimb.statusBkd);
       return bimb;
     }
   );
@@ -98,10 +118,26 @@ export default function Bimbingan() {
   // Sync messages from resource to local signal
   createEffect(() => {
     const activeBimb = user()?.role === 'mahasiswa' ? studentBimbingan() : selectedBimbingan();
-    if (activeBimb && activeBimb.thread) {
-      setMessages(activeBimb.thread);
+    if (activeBimb) {
+      if (activeBimb.thread) {
+        setMessages(activeBimb.thread);
+      } else {
+        setMessages([]);
+      }
+      setRingkasanText(activeBimb.ringkasan || '');
+      setIsApprovedStatus(activeBimb.isApproved);
+      setPermasalahanText(activeBimb.permasalahan || '');
+      setSolusiText(activeBimb.solusi || '');
+      setTanggalBimbinganText(activeBimb.tanggalBimbingan || '');
+      setStatusBkdStatus(activeBimb.statusBkd);
     } else {
       setMessages([]);
+      setRingkasanText('');
+      setIsApprovedStatus(false);
+      setPermasalahanText('');
+      setSolusiText('');
+      setTanggalBimbinganText('');
+      setStatusBkdStatus(false);
     }
   });
 
@@ -174,8 +210,12 @@ export default function Bimbingan() {
       await bimbinganController.updateBimbingan(targetId, {
         ringkasan: ringkasanText(),
         isApproved: isApprovedStatus(),
+        permasalahan: permasalahanText(),
+        solusi: solusiText(),
+        tanggalBimbingan: tanggalBimbinganText() || undefined,
+        statusBkd: statusBkdStatus(),
       });
-      alert('Bimbingan berhasil diperbarui.');
+      alert('Catatan bimbingan & laporan BKD berhasil diperbarui.');
       refetchSelectedBimb();
       refetchMonitoring();
     } catch (err: any) {
@@ -195,6 +235,15 @@ export default function Bimbingan() {
           
           {/* Status Kelayakan (Mahasiswa) & Dropdown Periode */}
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <Show when={user()?.role === 'dosen' || user()?.role === 'admin' || user()?.role === 'prodi'}>
+              <button
+                onClick={() => setShowRekapBkdModal(true)}
+                class="px-3 py-1.5 bg-blue-600 text-white font-bold rounded-lg text-xs hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+              >
+                🖨️ Cetak Laporan BKD
+              </button>
+            </Show>
+
             <Show when={currentBimbinganData()?.availablePeriodes}>
               <div class="flex items-center gap-2">
                 <span class="text-xs text-gray-400 font-semibold uppercase">Periode:</span>
@@ -312,12 +361,45 @@ export default function Bimbingan() {
             <div class="flex flex-col gap-6">
               <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
                 <h3 class="font-bold text-gray-800 border-b pb-2">Catatan Dosen PA</h3>
-                <Show when={studentBimbingan()?.ringkasan} fallback={
-                  <p class="text-sm text-gray-400 italic">Belum ada catatan atau ringkasan bimbingan dari Dosen PA Anda.</p>
-                }>
-                  <div class="p-4 bg-indigo-50/50 border border-indigo-100/50 rounded-xl text-sm text-indigo-900 whitespace-pre-line leading-relaxed">
-                    {studentBimbingan()?.ringkasan}
+                
+                <Show when={studentBimbingan()?.ringkasan}>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Ringkasan & Masukan</span>
+                    <div class="p-3.5 bg-indigo-50/50 border border-indigo-100/50 rounded-xl text-xs text-indigo-900 whitespace-pre-line leading-relaxed">
+                      {studentBimbingan()?.ringkasan}
+                    </div>
                   </div>
+                </Show>
+
+                <Show when={studentBimbingan()?.permasalahan}>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Permasalahan</span>
+                    <div class="p-3.5 bg-rose-50/50 border border-rose-100/50 rounded-xl text-xs text-rose-900 whitespace-pre-line leading-relaxed">
+                      {studentBimbingan()?.permasalahan}
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={studentBimbingan()?.solusi}>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Solusi / Saran Masukan</span>
+                    <div class="p-3.5 bg-emerald-50/50 border border-emerald-100/50 rounded-xl text-xs text-emerald-900 whitespace-pre-line leading-relaxed">
+                      {studentBimbingan()?.solusi}
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={studentBimbingan()?.tanggalBimbingan}>
+                  <div class="flex justify-between items-center text-xs text-gray-600 border-t pt-2 mt-2">
+                    <span>Tanggal Bimbingan:</span>
+                    <span class="font-bold">
+                      {new Date(studentBimbingan()!.tanggalBimbingan!).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                    </span>
+                  </div>
+                </Show>
+
+                <Show when={!studentBimbingan()?.ringkasan && !studentBimbingan()?.permasalahan && !studentBimbingan()?.solusi}>
+                  <p class="text-sm text-gray-400 italic">Belum ada catatan atau riwayat bimbingan BKD dari Dosen PA Anda.</p>
                 </Show>
               </div>
             </div>
@@ -461,7 +543,7 @@ export default function Bimbingan() {
                   {/* Form Approval & Ringkasan */}
                   <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex flex-col justify-between h-full overflow-y-auto">
                     <form onSubmit={handleUpdateBimbingan} class="flex flex-col gap-4">
-                      <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Tindakan Dosen PA</h3>
+                      <h3 class="font-bold text-gray-800 text-sm border-b pb-2">Catatan Bimbingan PA</h3>
 
                       {/* Approval Toggle */}
                       <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
@@ -477,12 +559,61 @@ export default function Bimbingan() {
                         />
                       </div>
 
+                      {/* Permasalahan */}
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-bold text-gray-700">Permasalahan Mahasiswa</label>
+                        <textarea
+                          rows="3"
+                          placeholder="Tulis permasalahan akademis/non-akademis mahasiswa..."
+                          value={permasalahanText()}
+                          onInput={(e) => setPermasalahanText(e.currentTarget.value)}
+                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none text-slate-900"
+                        />
+                      </div>
+
+                      {/* Solusi */}
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-bold text-gray-700">Solusi / Rekomendasi Dosen PA</label>
+                        <textarea
+                          rows="3"
+                          placeholder="Tulis solusi, tindak lanjut, atau saran yang Anda berikan..."
+                          value={solusiText()}
+                          onInput={(e) => setSolusiText(e.currentTarget.value)}
+                          class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none text-slate-900"
+                        />
+                      </div>
+
+                      {/* Tanggal Bimbingan */}
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-bold text-gray-700">Tanggal Bimbingan</label>
+                        <input
+                          type="date"
+                          value={tanggalBimbinganText() || ''}
+                          onChange={(e) => setTanggalBimbinganText(e.currentTarget.value)}
+                          class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                        />
+                      </div>
+
+                      {/* BKD Audit Checkbox */}
+                      <div class="flex items-center justify-between p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
+                        <div class="flex flex-col">
+                          <span class="text-xs font-bold text-blue-800">Lapor Beban Kerja Dosen (BKD)</span>
+                          <span class="text-[10px] text-blue-600">Sertakan bimbingan ini ke laporan BKD resmi</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={statusBkdStatus()}
+                          onChange={(e) => setStatusBkdStatus(e.currentTarget.checked)}
+                          class="w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
+                        />
+                      </div>
+
                       {/* Summary Text Area */}
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-gray-700">Ringkasan Bimbingan & Masukan</label>
+                        <label class="text-xs font-bold text-gray-700">Ringkasan Bimbingan / Catatan Internal</label>
                         <textarea
-                          rows="8"
-                          placeholder="Tulis ringkasan konsultasi mahasiswa di sini..."
+                          rows="2"
+                          placeholder="Catatan tambahan (opsional)..."
                           value={ringkasanText()}
                           onInput={(e) => setRingkasanText(e.currentTarget.value)}
                           class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none text-slate-900"
@@ -491,14 +622,125 @@ export default function Bimbingan() {
 
                       <button
                         type="submit"
-                        class="w-full mt-2 py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-sm shadow-emerald-100"
+                        class="w-full mt-2 py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-100"
                       >
-                        Simpan Perubahan
+                        Simpan Catatan & Update
                       </button>
                     </form>
                   </div>
                 </div>
               </Show>
+            </div>
+          </div>
+        </Show>
+
+        {/* --- MODAL PRATINJAU / CETAK REKAP BKD --- */}
+        <Show when={showRekapBkdModal()}>
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:static print:bg-white print:p-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-6 print:shadow-none print:p-0 print:max-w-full">
+              {/* Modal header (hidden in print) */}
+              <div class="flex justify-between items-center border-b pb-3 print:hidden">
+                <h3 class="font-extrabold text-gray-800 text-base">Pratinjau Laporan BKD Bimbingan Akademik</h3>
+                <div class="flex gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5"
+                  >
+                    🖨️ Cetak / Unduh PDF
+                  </button>
+                  <button
+                    onClick={() => setShowRekapBkdModal(false)}
+                    class="px-3.5 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 font-bold rounded-xl text-xs"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+
+              {/* Printable Area */}
+              <div class="flex flex-col gap-6 font-serif">
+                {/* Kop Surat */}
+                <div class="flex flex-col items-center justify-center border-b-2 border-double border-gray-800 pb-4 text-center">
+                  <h2 class="text-xl font-bold tracking-wider text-gray-900">POLITEKNIK SOROWAKO</h2>
+                  <p class="text-[10px] text-gray-500 italic mt-0.5">Program Diploma Terapan / Sarjana Terapan Teknik Informatika</p>
+                  <p class="text-[9px] text-gray-400 mt-0.5">Website: simak.politeknik-sorowako.ac.id | Telp: +62 475 321 000</p>
+                </div>
+
+                {/* Surat Title */}
+                <div class="text-center my-3">
+                  <h3 class="text-sm font-extrabold text-gray-900 tracking-wide uppercase underline">REKAPITULASI CATATAN BIMBINGAN AKADEMIK DOSEN WALI</h3>
+                  <p class="text-xs text-gray-600 mt-1">
+                    Periode Akademik: <span class="font-bold">{selectedPeriode() || currentBimbinganData()?.periodeId}</span>
+                  </p>
+                </div>
+
+                {/* Meta data */}
+                <div class="grid grid-cols-2 text-xs text-gray-800 gap-2 border bg-gray-50/50 p-4 rounded-xl print:border-none print:bg-transparent print:p-0">
+                  <p>Nama Dosen PA: <span class="font-bold">{dosenProfile()?.nama || 'Dosen Wali'}</span></p>
+                  <p>NIP Dosen: <span class="font-bold">{dosenProfile()?.nip || '-'}</span></p>
+                  <p>Tanggal Cetak: <span class="font-bold">{new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</span></p>
+                </div>
+
+                {/* BKD Table */}
+                <div class="overflow-x-auto">
+                  <table class="w-full border-collapse border border-gray-300 text-[11px] text-left">
+                    <thead>
+                      <tr class="bg-gray-100 text-gray-800 font-bold">
+                        <th class="border border-gray-300 p-2.5 w-8 text-center">No</th>
+                        <th class="border border-gray-300 p-2.5 w-44">Nama Mahasiswa</th>
+                        <th class="border border-gray-300 p-2.5 w-24 text-center">NIM</th>
+                        <th class="border border-gray-300 p-2.5">Permasalahan</th>
+                        <th class="border border-gray-300 p-2.5">Solusi / Saran Masukan</th>
+                        <th class="border border-gray-300 p-2.5 w-24 text-center">Tanggal</th>
+                        <th class="border border-gray-300 p-2.5 w-20 text-center">Lapor BKD</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <For
+                        each={rekapBkdData()?.data}
+                        fallback={
+                          <tr>
+                            <td colspan="7" class="border border-gray-300 p-6 text-center text-gray-400 italic">
+                              Tidak ada riwayat bimbingan resmi tercatat untuk periode ini.
+                            </td>
+                          </tr>
+                        }
+                      >
+                        {(item, idx) => (
+                          <tr class="hover:bg-gray-50/50">
+                            <td class="border border-gray-300 p-2.5 text-center">{idx() + 1}</td>
+                            <td class="border border-gray-300 p-2.5 font-bold">{item.mahasiswa?.nama}</td>
+                            <td class="border border-gray-300 p-2.5 text-center">{item.mahasiswa?.nim}</td>
+                            <td class="border border-gray-300 p-2.5 whitespace-pre-line leading-relaxed">{item.permasalahan || '-'}</td>
+                            <td class="border border-gray-300 p-2.5 whitespace-pre-line leading-relaxed">{item.solusi || '-'}</td>
+                            <td class="border border-gray-300 p-2.5 text-center">
+                              {item.tanggalBimbingan
+                                ? new Date(item.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })
+                                : '-'}
+                            </td>
+                            <td class="border border-gray-300 p-2.5 text-center">
+                              <span class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.statusBkd ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-gray-100 text-gray-500'}`}>
+                                {item.statusBkd ? 'YA' : 'TIDAK'}
+                              </span>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Tanda Tangan */}
+                <div class="flex justify-end mt-12 print:mt-20">
+                  <div class="text-center text-xs text-gray-800 flex flex-col gap-16">
+                    <p>Dosen Penasehat Akademik,</p>
+                    <div>
+                      <p class="font-extrabold underline">{dosenProfile()?.nama}</p>
+                      <p class="text-[10px] text-gray-500">NIP. {dosenProfile()?.nip || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Show>

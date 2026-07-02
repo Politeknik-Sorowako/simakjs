@@ -178,4 +178,32 @@ export class BimbinganController {
 
     return await BimbinganService.getMonitoringBimbingan();
   }
+
+  static async getRekapBkd({ query, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    let dosenId: number | null = null;
+    if (user.role === 'dosen') {
+      dosenId = await BimbinganController.getDosenIdByEmail(user.email);
+      if (!dosenId) {
+        set.status = 400;
+        return { error: 'Profil Dosen Anda tidak ditemukan.' };
+      }
+    } else {
+      dosenId = query?.dosenId ? parseInt(query.dosenId) : null;
+    }
+
+    try {
+      const periodeId = query?.periodeId || undefined;
+      const data = await BimbinganService.getRekapBimbinganDosen(dosenId || undefined, periodeId);
+      return { data };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal mengambil rekap BKD.' };
+    }
+  }
 }
