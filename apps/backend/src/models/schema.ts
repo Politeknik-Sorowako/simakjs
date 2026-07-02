@@ -362,6 +362,10 @@ export const bimbingan = pgTable('bimbingan', {
   periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   ringkasan: text('ringkasan'),
   isApproved: boolean('is_approved').default(false).notNull(),
+  permasalahan: text('permasalahan'),
+  solusi: text('solusi'),
+  tanggalBimbingan: date('tanggal_bimbingan'),
+  statusBkd: boolean('status_bkd').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
@@ -605,3 +609,71 @@ export const rencanaEvaluasiRelations = relations(rencanaEvaluasi, ({ one }) => 
   }),
 }));
 
+// NEW TABLES FOR FINANCIAL AND GRADING CONFIGURATIONS
+
+export const transaksiPembayaran = pgTable('transaksi_pembayaran', {
+  id: serial('id').primaryKey(),
+  tagihanId: integer('tagihan_id').notNull().references(() => tagihan.id, { onDelete: 'cascade' }),
+  nominalBayar: integer('nominal_bayar').notNull(),
+  tanggalTransaksi: timestamp('tanggal_transaksi').defaultNow().notNull(),
+  petugasId: integer('petugas_id').references(() => users.id, { onDelete: 'set null' }),
+  isVoid: boolean('is_void').default(false).notNull(),
+  catatanKoreksi: text('catatan_koreksi'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const transaksiPembayaranRelations = relations(transaksiPembayaran, ({ one }) => ({
+  tagihan: one(tagihan, {
+    fields: [transaksiPembayaran.tagihanId],
+    references: [tagihan.id],
+  }),
+  petugas: one(users, {
+    fields: [transaksiPembayaran.petugasId],
+    references: [users.id],
+  }),
+}));
+
+export const skemaTarif = pgTable('skema_tarif', {
+  id: serial('id').primaryKey(),
+  angkatan: varchar('angkatan', { length: 4 }).notNull(), // misal "2024"
+  programStudiId: integer('program_studi_id').notNull().references(() => programStudi.id, { onDelete: 'restrict' }),
+  nominal: integer('nominal').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const skemaTarifRelations = relations(skemaTarif, ({ one }) => ({
+  programStudi: one(programStudi, {
+    fields: [skemaTarif.programStudiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const konversiNilai = pgTable('konversi_nilai', {
+  id: serial('id').primaryKey(),
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }), // Nullable = Berlaku Global
+  nilaiHuruf: varchar('nilai_huruf', { length: 5 }).notNull(),
+  bobotIndeks: numeric('bobot_indeks', { precision: 3, scale: 2 }).notNull(),
+  nilaiMin: numeric('nilai_min', { precision: 5, scale: 2 }).notNull(),
+  nilaiMax: numeric('nilai_max', { precision: 5, scale: 2 }).notNull(),
+  predikat: varchar('predikat', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const konversiNilaiRelations = relations(konversiNilai, ({ one }) => ({
+  programStudi: one(programStudi, {
+    fields: [konversiNilai.programStudiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const skalaPredikatKelulusan = pgTable('skala_predikat_kelulusan', {
+  id: serial('id').primaryKey(),
+  ipkMin: numeric('ipk_min', { precision: 3, scale: 2 }).notNull(),
+  ipkMax: numeric('ipk_max', { precision: 3, scale: 2 }).notNull(),
+  predikat: varchar('predikat', { length: 100 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
