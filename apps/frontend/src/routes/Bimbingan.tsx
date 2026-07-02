@@ -474,7 +474,7 @@ export default function Bimbingan() {
                       )}
                     </For>
                   </Show>
-                </div>     </Show>
+                </div>
               </div>
             </div>
           </div>
@@ -830,7 +830,6 @@ export default function Bimbingan() {
                       </div>
                     </div>
                   </Show>
-                  </div>
                 </div>
               </Show>
             </div>
