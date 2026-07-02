@@ -13,6 +13,33 @@ export interface Tagihan {
   mahasiswa?: Mahasiswa | null;
 }
 
+export interface TransaksiPembayaran {
+  id: number;
+  tagihanId: number;
+  nominalBayar: number;
+  tanggalTransaksi: string;
+  petugasId?: number | null;
+  isVoid: boolean;
+  catatanKoreksi?: string | null;
+  petugas?: {
+    id: number;
+    nama: string;
+    email: string;
+  } | null;
+}
+
+export interface SkemaTarif {
+  id: number;
+  angkatan: string;
+  programStudiId: number;
+  nominal: number;
+  programStudi?: {
+    id: number;
+    nama: string;
+    kode: string;
+  } | null;
+}
+
 export const tagihanController = {
   async getAll(search?: string, status?: string, page?: number, limit?: number): Promise<PaginatedResponse<Tagihan>> {
     const params = new URLSearchParams();
@@ -31,10 +58,45 @@ export const tagihanController = {
     });
   },
 
-  async bayar(id: number, nominalBayar?: number): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
+  async bayar(id: number, nominalBayar?: number, catatanKoreksi?: string): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
     return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/${id}/bayar`, {
       method: 'POST',
-      body: nominalBayar !== undefined ? JSON.stringify({ nominalBayar }) : undefined
+      body: JSON.stringify({ nominalBayar, catatanKoreksi })
+    });
+  },
+
+  async updateNominal(id: number, nominal: number): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
+    return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ nominal })
+    });
+  },
+
+  async getRiwayatTransaksi(tagihanId: number): Promise<{ data: TransaksiPembayaran[] }> {
+    return fetchApi<{ data: TransaksiPembayaran[] }>(`/tagihan/${tagihanId}/transaksi`);
+  },
+
+  async voidTransaksi(transaksiId: number, catatan: string): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
+    return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/transaksi/${transaksiId}/void`, {
+      method: 'POST',
+      body: JSON.stringify({ catatan })
+    });
+  },
+
+  async getAllTarif(): Promise<{ data: SkemaTarif[] }> {
+    return fetchApi<{ data: SkemaTarif[] }>('/tagihan/tarif');
+  },
+
+  async createTarif(angkatan: string, programStudiId: number, nominal: number): Promise<{ message: string; data: SkemaTarif }> {
+    return fetchApi<{ message: string; data: SkemaTarif }>('/tagihan/tarif', {
+      method: 'POST',
+      body: JSON.stringify({ angkatan, programStudiId, nominal })
+    });
+  },
+
+  async deleteTarif(id: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/tagihan/tarif/${id}`, {
+      method: 'DELETE'
     });
   },
 };

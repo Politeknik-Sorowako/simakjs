@@ -269,4 +269,198 @@ describe('9. Tagihan (/tagihan)', () => {
     const approveBody = await approveRes.json();
     expect(approveBody.count).toBeGreaterThan(0);
   });
+
+  it('harus mendukung konfigurasi skema tarif, log transaksi, void, dan tarif khusus mahasiswa pasca-cuti', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-new@test.com', 'admin');
+
+    // 1. Create Skema Tarif
+    const tarifRes = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          angkatan: '8888', // Diambil dari 4 digit NIM mahasiswa ("88888888")
+          programStudiId: prodiId,
+          nominal: 3500000, // Tarif khusus angkatan 8888
+        }),
+      })
+    );
+    expect(tarifRes.status).toBe(200);
+
+    // 2. Generate Tagihan - Harus memakai nominal tarif khusus angkatan 8888 (3.500.000)
+    await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          periodeId: '20231',
+        }),
+      })
+    );
+
+    // Dapatkan tagihan yang di-generate
+    const listRes = await app.handle(
+      new Request('http://localhost/tagihan?limit=1', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+        },
+      })
+    );
+    const listBody = await listRes.json();
+    const tag = listBody.data[0];
+    expect(tag.nominal).toBe(3500000); // Terbukti menggunakan tarif angkatan 8888!
+
+    const tagihanId = tag.id;
+
+    // 3. Bayar Cicilan Pertama (1.500.000)
+    const bayar1Res = await app.handle(
+      new Request(`http://localhost/tagihan/${tagihanId}/bayar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          nominalBayar: 1500000,
+        }),
+      })
+    );
+    expect(bayar1Res.status).toBe(200);
+    const bayar1Body = await bayar1Res.json();
+    expect(bayar1Body.tagihan.status).toBe('cicilan');
+
+    // 4. Periksa Log Transaksi Pembayaran
+    const logRes = await app.handle(
+      new Request(`http://localhost/tagihan/${tagihanId}/transaksi`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+        },
+      })
+    );
+    expect(logRes.status).toBe(200);
+    const logBody = await logRes.json();
+    expect(logBody.data.length).toBe(1);
+    expect(logBody.data[0].nominalBayar).toBe(1500000);
+    expect(logBody.data[0].isVoid).toBe(false);
+
+    const transaksiId = logBody.data[0].id;
+
+    // 5. Batalkan Transaksi Pembayaran (Void)
+    const voidRes = await app.handle(
+      new Request(`http://localhost/tagihan/transaksi/${transaksiId}/void`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          catatan: 'Salah input nominal',
+        }),
+      })
+    );
+    expect(voidRes.status).toBe(200);
+    const voidBody = await voidRes.json();
+    expect(voidBody.tagihan.nominalTerbayar).toBe(0);
+    expect(voidBody.tagihan.status).toBe('belum_bayar');
+
+    // 6. Test Tarif Mahasiswa Pasca-Cuti
+    // Ubah status mahasiswa menjadi 'cuti'
+    await app.handle(
+      new Request(`http://localhost/mahasiswa/${mhsId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          status: 'cuti',
+        }),
+      })
+    );
+
+    // Daftarkan periode akademik 20251 terlebih dahulu
+    await app.handle(
+      new Request('http://localhost/periode-akademik', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          id: '20251',
+          nama: '2025/2026 Ganjil',
+          aktif: true,
+        }),
+      })
+    );
+
+    // Buat tarif untuk angkatan berjalan (misal periode 20251 -> angkatan 2025)
+    await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          angkatan: '2025',
+          programStudiId: prodiId,
+          nominal: 4000000,
+        }),
+      })
+    );
+
+    // Generate tagihan periode 20251 untuk mahasiswa cuti
+    await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          periodeId: '20251',
+        }),
+      })
+    );
+
+    // Dapatkan tagihan mahasiswa cuti di periode 20251
+    const cutiTagihanRes = await app.handle(
+      new Request(`http://localhost/tagihan?search=Mahasiswa Tagihan`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+        },
+      })
+    );
+    const cutiTagihanBody = await cutiTagihanRes.json();
+    const tag2025 = cutiTagihanBody.data.find((t: any) => t.periodeId === '20251');
+    expect(tag2025).toBeDefined();
+    expect(tag2025.nominal).toBe(4000000); // Harus menggunakan tarif 2025 alih-alih tarif angkatan 8888!
+
+    // 7. Test Edit Nominal Tagihan secara Manual (PUT /tagihan/:id)
+    const editRes = await app.handle(
+      new Request(`http://localhost/tagihan/${tag2025.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          nominal: 4500000,
+        }),
+      })
+    );
+    expect(editRes.status).toBe(200);
+    const editBody = await editRes.json();
+    expect(editBody.tagihan.nominal).toBe(4500000);
+  });
 });
