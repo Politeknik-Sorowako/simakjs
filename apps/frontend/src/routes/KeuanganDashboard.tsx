@@ -410,7 +410,7 @@ export default function KeuanganDashboard() {
                   </div>
                   <div class="text-right">
                     <p>Periode: <span class="text-slate-900 font-bold">{selectedPrintItem()?.periodeId}</span></p>
-                    <p>Status: <span class="text-slate-900 font-extrabold uppercase text-blue-600">{selectedPrintItem()?.status}</span></p>
+                    <p>Status: <span class="text-slate-900 font-extrabold uppercase">{selectedPrintItem()?.status}</span></p>
                   </div>
                 </div>
                 <table class="w-full text-left text-xs border border-gray-200 border-collapse">

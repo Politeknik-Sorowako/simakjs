@@ -637,7 +637,7 @@ export const transaksiPembayaranRelations = relations(transaksiPembayaran, ({ on
 export const skemaTarif = pgTable('skema_tarif', {
   id: serial('id').primaryKey(),
   angkatan: varchar('angkatan', { length: 4 }).notNull(), // misal "2024"
-  programStudiId: integer('program_studi_id').notNull().references(() => programStudi.id, { onDelete: 'restrict' }),
+  programStudiId: integer('program_studi_id').notNull().references(() => programStudi.id, { onDelete: 'cascade' }),
   nominal: integer('nominal').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
@@ -652,7 +652,7 @@ export const skemaTarifRelations = relations(skemaTarif, ({ one }) => ({
 
 export const konversiNilai = pgTable('konversi_nilai', {
   id: serial('id').primaryKey(),
-  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }), // Nullable = Berlaku Global
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'cascade' }), // Nullable = Berlaku Global
   nilaiHuruf: varchar('nilai_huruf', { length: 5 }).notNull(),
   bobotIndeks: numeric('bobot_indeks', { precision: 3, scale: 2 }).notNull(),
   nilaiMin: numeric('nilai_min', { precision: 5, scale: 2 }).notNull(),
