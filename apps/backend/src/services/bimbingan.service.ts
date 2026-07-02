@@ -183,10 +183,15 @@ export class BimbinganService {
     });
   }
 
-  static async getRekapBimbinganDosen(dosenId: number, periodeId?: string) {
+  static async getRekapBimbinganDosen(dosenId?: number, periodeId?: string) {
     const filterPeriodeId = periodeId || (await this.getActivePeriode())?.id;
     if (!filterPeriodeId) {
       return [];
+    }
+
+    const conditions = [eq(bimbingan.periodeId, filterPeriodeId)];
+    if (dosenId !== undefined) {
+      conditions.push(eq(bimbingan.dosenId, dosenId));
     }
 
     return await db
@@ -208,11 +213,6 @@ export class BimbinganService {
       })
       .from(bimbingan)
       .innerJoin(mahasiswa, eq(bimbingan.mahasiswaId, mahasiswa.id))
-      .where(
-        and(
-          eq(bimbingan.dosenId, dosenId),
-          eq(bimbingan.periodeId, filterPeriodeId)
-        )
-      );
+      .where(and(...conditions));
   }
 }

@@ -189,18 +189,17 @@ export class BimbinganController {
     let dosenId: number | null = null;
     if (user.role === 'dosen') {
       dosenId = await BimbinganController.getDosenIdByEmail(user.email);
+      if (!dosenId) {
+        set.status = 400;
+        return { error: 'Profil Dosen Anda tidak ditemukan.' };
+      }
     } else {
       dosenId = query?.dosenId ? parseInt(query.dosenId) : null;
     }
 
-    if (!dosenId) {
-      set.status = 400;
-      return { error: 'ID Dosen harus ditentukan atau Anda harus bertindak sebagai Dosen.' };
-    }
-
     try {
       const periodeId = query?.periodeId || undefined;
-      const data = await BimbinganService.getRekapBimbinganDosen(dosenId, periodeId);
+      const data = await BimbinganService.getRekapBimbinganDosen(dosenId || undefined, periodeId);
       return { data };
     } catch (e: any) {
       set.status = 400;
