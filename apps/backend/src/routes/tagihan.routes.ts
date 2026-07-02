@@ -12,6 +12,7 @@ export const tagihanRoutes = new Elysia({ prefix: '/tagihan' })
   .get('/', TagihanController.getAll, getTagihanSchema)
   .post('/generate', TagihanController.generate, generateTagihanSchema)
   .post('/:id/bayar', TagihanController.bayar, bayarTagihanSchema)
+  .put('/:id', TagihanController.updateNominal)
   
   // Audit trail transaksi pembayaran
   .get('/:id/transaksi', TagihanController.getRiwayat)

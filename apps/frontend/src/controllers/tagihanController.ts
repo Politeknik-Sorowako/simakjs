@@ -65,6 +65,13 @@ export const tagihanController = {
     });
   },
 
+  async updateNominal(id: number, nominal: number): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
+    return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ nominal })
+    });
+  },
+
   async getRiwayatTransaksi(tagihanId: number): Promise<{ data: TransaksiPembayaran[] }> {
     return fetchApi<{ data: TransaksiPembayaran[] }>(`/tagihan/${tagihanId}/transaksi`);
   },

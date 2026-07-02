@@ -22,14 +22,18 @@ export class TagihanService {
         .limit(1);
 
       if (!existing) {
-        // Tentukan angkatan masuk mahasiswa dari NIM
-        let angkatan = student.nim.substring(0, 4);
-        if (!/^\d{4}$/.test(angkatan)) {
-          angkatan = '2024';
+        // Tentukan angkatan masuk mahasiswa (prioritas kolom angkatan)
+        let angkatan = student.angkatan;
+        if (!angkatan || !/^\d{4}$/.test(angkatan)) {
+          angkatan = student.nim.substring(0, 4);
+          if (!/^\d{4}$/.test(angkatan)) {
+            angkatan = '2024';
+          }
         }
 
-        // Mahasiswa pasca-cuti mengikuti kelompok angkatan periode baru saat ini
-        if (student.status === 'cuti') {
+        // Mahasiswa pasca-cuti mengikuti kelompok angkatan periode berjalan saat ini
+        // jika kolom angkatan tidak di-override secara manual/eksplisit
+        if (student.status === 'cuti' && (!student.angkatan || !/^\d{4}$/.test(student.angkatan))) {
           if (periodeId.length >= 4) {
             angkatan = periodeId.substring(0, 4);
           }
@@ -72,6 +76,39 @@ export class TagihanService {
     }
 
     return createdCount;
+  }
+
+  static async updateNominal(tagihanId: number, nominalBaru: number) {
+    if (isNaN(nominalBaru) || nominalBaru <= 0) {
+      throw new Error('Nominal tagihan baru tidak valid');
+    }
+
+    const [tag] = await db.select().from(tagihan).where(eq(tagihan.id, tagihanId)).limit(1);
+    if (!tag) {
+      throw new Error('Tagihan tidak ditemukan');
+    }
+
+    const currentTerbayar = Number(tag.nominalTerbayar) || 0;
+    const isFullyPaid = currentTerbayar >= nominalBaru;
+    const determinedStatus = isFullyPaid ? 'lunas' : (currentTerbayar > 0 ? 'cicilan' : 'belum_bayar');
+
+    const [updated] = await db
+      .update(tagihan)
+      .set({
+        nominal: nominalBaru,
+        status: determinedStatus,
+        tanggalBayar: isFullyPaid ? (tag.tanggalBayar || new Date()) : null
+      })
+      .where(eq(tagihan.id, tagihanId))
+      .returning();
+
+    // Sinkronkan status aktif mahasiswa
+    await db
+      .update(mahasiswa)
+      .set({ status: isFullyPaid ? 'aktif' : 'non_aktif' })
+      .where(eq(mahasiswa.id, tag.mahasiswaId));
+
+    return updated;
   }
 
   static async bayarTagihan(tagihanId: number, nominalBayar?: number, petugasId?: number, catatanKoreksi?: string) {

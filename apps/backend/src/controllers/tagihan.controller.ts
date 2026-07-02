@@ -56,6 +56,26 @@ export class TagihanController {
     }
   }
 
+  static async updateNominal({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    try {
+      const tagihanId = parseInt(params.id);
+      const nominal = Number(body.nominal);
+      const updated = await TagihanService.updateNominal(tagihanId, nominal);
+      return {
+        message: 'Nominal tagihan berhasil diperbarui',
+        tagihan: updated
+      };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal mengubah nominal tagihan' };
+    }
+  }
+
   static async bayar({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {

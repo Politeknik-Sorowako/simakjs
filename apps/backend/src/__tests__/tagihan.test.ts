@@ -445,5 +445,22 @@ describe('9. Tagihan (/tagihan)', () => {
     const tag2025 = cutiTagihanBody.data.find((t: any) => t.periodeId === '20251');
     expect(tag2025).toBeDefined();
     expect(tag2025.nominal).toBe(4000000); // Harus menggunakan tarif 2025 alih-alih tarif angkatan 8888!
+
+    // 7. Test Edit Nominal Tagihan secara Manual (PUT /tagihan/:id)
+    const editRes = await app.handle(
+      new Request(`http://localhost/tagihan/${tag2025.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          nominal: 4500000,
+        }),
+      })
+    );
+    expect(editRes.status).toBe(200);
+    const editBody = await editRes.json();
+    expect(editBody.tagihan.nominal).toBe(4500000);
   });
 });

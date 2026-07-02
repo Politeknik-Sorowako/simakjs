@@ -34,6 +34,9 @@ export default function KeuanganDashboard() {
   const [showPrintReceipt, setShowPrintReceipt] = createSignal(false);
   const [selectedPrintItem, setSelectedPrintItem] = createSignal<Tagihan | null>(null);
 
+  const [showEditModal, setShowEditModal] = createSignal(false);
+  const [editNominal, setEditNominal] = createSignal(0);
+
   // Modal Skema Tarif Signals
   const [showTarifModal, setShowTarifModal] = createSignal(false);
   const [tarifList, { refetch: refetchTarif }] = createResource(
@@ -212,6 +215,33 @@ export default function KeuanganDashboard() {
     }
   };
 
+  const handleEdit = (item: Tagihan) => {
+    setSelectedTagihan(item);
+    setEditNominal(item.nominal);
+    setShowEditModal(true);
+  };
+
+  const submitEdit = async (e: Event) => {
+    e.preventDefault();
+    const item = selectedTagihan();
+    if (!item) return;
+
+    const nominal = editNominal();
+    if (isNaN(nominal) || nominal <= 0) {
+      toast.showToast('Nominal tagihan tidak valid', 'error');
+      return;
+    }
+
+    try {
+      const res = await tagihanController.updateNominal(item.id, nominal);
+      toast.showToast(res.message, 'success');
+      setShowEditModal(false);
+      refetch();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal mengubah nominal tagihan', 'error');
+    }
+  };
+
   const handlePrintInvoice = (item: Tagihan) => {
     setSelectedPrintItem(item);
     setShowPrintInvoice(true);
@@ -346,6 +376,15 @@ export default function KeuanganDashboard() {
                           Input Bayar
                         </Button>
                       </Show>
+                    </Show>
+
+                    <Show when={role() !== 'mahasiswa'}>
+                      <button
+                        onClick={() => handleEdit(item)}
+                        class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
+                      >
+                        ⚙️ Edit Nominal
+                      </button>
                     </Show>
 
                     <button
@@ -823,6 +862,50 @@ export default function KeuanganDashboard() {
                   Tutup
                 </Button>
               </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* --- MODAL EDIT NOMINAL TAGIHAN (NEW) --- */}
+        <Show when={showEditModal()}>
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+              <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-gray-800 text-sm">Edit Nominal Tagihan</h3>
+                <button onClick={() => setShowEditModal(false)} class="text-gray-400 hover:text-gray-600">❌</button>
+              </div>
+              <form onSubmit={submitEdit} class="flex flex-col gap-4">
+                <div class="text-xs text-gray-600 flex flex-col gap-1 font-medium bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <p>Mahasiswa: <span class="font-bold text-gray-800">{selectedTagihan()?.mahasiswa?.nama}</span></p>
+                  <p>NIM: <span class="font-bold text-gray-800">{selectedTagihan()?.mahasiswa?.nim}</span></p>
+                  <p>Nominal Lama: <span class="font-bold text-gray-800">{formatRupiah(selectedTagihan()?.nominal || 0)}</span></p>
+                  <p>Sudah Terbayar: <span class="font-bold text-emerald-600">{formatRupiah(selectedTagihan()?.nominalTerbayar || 0)}</span></p>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Nominal Tagihan Baru (Rp)</label>
+                  <input
+                    type="number"
+                    value={editNominal()}
+                    onInput={(e) => setEditNominal(parseInt(e.currentTarget.value))}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+                <div class="flex justify-end gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    class="px-3 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 rounded-xl border border-gray-200 transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-4 py-2 text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 rounded-xl shadow-sm transition-all"
+                  >
+                    Simpan Perubahan
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </Show>

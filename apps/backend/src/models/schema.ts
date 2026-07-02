@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boolean, numeric, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boolean, numeric, index, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest']);
@@ -54,6 +54,7 @@ export const mahasiswa = pgTable('mahasiswa', {
   nim: varchar('nim', { length: 50 }).notNull().unique(),
   nama: varchar('nama', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  angkatan: varchar('angkatan', { length: 4 }), // misal "2024"
   programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
   dosenPaId: integer('dosen_pa_id').references(() => dosen.id, { onDelete: 'set null' }),
   status: varchar('status', { length: 50 }).notNull().default('aktif'), // aktif, cuti, lulus, drop_out
@@ -641,7 +642,9 @@ export const skemaTarif = pgTable('skema_tarif', {
   nominal: integer('nominal').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
-});
+}, (t) => ({
+  unq: unique('skema_tarif_angkatan_prodi_unique').on(t.angkatan, t.programStudiId)
+}));
 
 export const skemaTarifRelations = relations(skemaTarif, ({ one }) => ({
   programStudi: one(programStudi, {
