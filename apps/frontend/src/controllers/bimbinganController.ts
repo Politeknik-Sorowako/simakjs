@@ -16,6 +16,10 @@ export interface Bimbingan {
   periodeId: string;
   ringkasan: string | null;
   isApproved: boolean;
+  permasalahan: string | null;
+  solusi: string | null;
+  tanggalBimbingan: string | null;
+  statusBkd: boolean;
   createdAt: string;
   updatedAt: string;
   thread: BimbinganThread[];
@@ -31,6 +35,10 @@ export interface BimbinganMonitoring {
   bimbinganId: number | null;
   ringkasan: string | null;
   isApproved: boolean;
+  permasalahan: string | null;
+  solusi: string | null;
+  tanggalBimbingan: string | null;
+  statusBkd: boolean;
   createdAt: string | null;
 }
 
@@ -66,7 +74,7 @@ export const bimbinganController = {
     });
   },
 
-  async updateBimbingan(mhsId: number, data: { ringkasan?: string; isApproved?: boolean }): Promise<Bimbingan> {
+  async updateBimbingan(mhsId: number, data: { ringkasan?: string; isApproved?: boolean; permasalahan?: string; solusi?: string; tanggalBimbingan?: string; statusBkd?: boolean }): Promise<Bimbingan> {
     return fetchApi<Bimbingan>(`/bimbingan/mahasiswa/${mhsId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -75,6 +83,14 @@ export const bimbinganController = {
 
   async getMonitoring(): Promise<BimbinganMonitoring[]> {
     return fetchApi<BimbinganMonitoring[]>('/bimbingan/monitoring');
+  },
+
+  async getRekapBkd(dosenId?: number, periodeId?: string): Promise<{ data: (Bimbingan & { mahasiswa: { nim: string; nama: string } })[] }> {
+    const params = new URLSearchParams();
+    if (dosenId) params.append('dosenId', String(dosenId));
+    if (periodeId) params.append('periodeId', periodeId);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<{ data: (Bimbingan & { mahasiswa: { nim: string; nama: string } })[] }>(`/bimbingan/rekap-bkd${query}`);
   },
 
   async createPelanggaran(data: Omit<Pelanggaran, 'id'>): Promise<Pelanggaran> {
