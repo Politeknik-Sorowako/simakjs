@@ -394,4 +394,65 @@ export class CsvImportService {
 
     return result;
   }
+
+  static async importDosenPaMapping(csvText: string): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+    }
+
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const result: ImportResult = { successCount: 0, errors: [] };
+
+    const nimIdx = headers.indexOf('nim');
+    let nipIdx = headers.indexOf('nip_dosen_pa');
+    if (nipIdx === -1) nipIdx = headers.indexOf('nip_dosen');
+    if (nipIdx === -1) nipIdx = headers.indexOf('nip');
+
+    if (nimIdx === -1 || nipIdx === -1) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header "nim" dan "nip_dosen_pa" (atau "nip_dosen" / "nip").' }]
+      };
+    }
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (row.length < Math.max(nimIdx, nipIdx) + 1) continue;
+
+      const nimVal = row[nimIdx].trim();
+      const nipVal = row[nipIdx].trim();
+      const lineNum = i + 1;
+
+      if (!nimVal) {
+        result.errors.push({ line: lineNum, error: 'Kolom NIM tidak boleh kosong.' });
+        continue;
+      }
+
+      const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nimVal));
+      if (!mhs) {
+        result.errors.push({ line: lineNum, error: `Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.` });
+        continue;
+      }
+
+      let dosenId: number | null = null;
+      if (nipVal) {
+        const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.nip, nipVal));
+        if (!dsn) {
+          result.errors.push({ line: lineNum, error: `Dosen dengan NIP "${nipVal}" tidak ditemukan.` });
+          continue;
+        }
+        dosenId = dsn.id;
+      }
+
+      try {
+        await db.update(mahasiswa).set({ dosenPaId: dosenId }).where(eq(mahasiswa.id, mhs.id));
+        result.successCount++;
+      } catch (err: any) {
+        result.errors.push({ line: lineNum, error: `Gagal memperbarui relasi Dosen PA untuk NIM "${nimVal}": ${err.message}` });
+      }
+    }
+
+    return result;
+  }
 }

@@ -7,12 +7,14 @@ export interface Mahasiswa {
   nama: string;
   email: string;
   programStudiId: number | null;
+  dosenPaId?: number | null;
   status: string;
   namaIbuKandung: string;
   nik: string;
   jenisKelamin: 'L' | 'P';
   tanggalLahir: string;
   programStudi?: Prodi | null;
+  dosenPa?: { id: number; nama: string; nip: string; email: string } | null;
   idPddikti?: string | null;
   isSynced?: boolean;
 }

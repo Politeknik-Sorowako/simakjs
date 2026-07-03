@@ -206,13 +206,14 @@ describe('Bimbingan & Pelanggaran API', () => {
 
     it('dosen PA harus sukses mencatat riwayat bimbingan BKD (permasalahan, solusi, tanggal, status BKD)', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/bimbingan/mahasiswa/${mhsId}`, {
-          method: 'PUT',
+        new Request(`http://localhost/bimbingan/mahasiswa/${mhsId}/sesi`, {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
+            pertemuanKe: 1,
             permasalahan: 'Kesulitan memahami materi Pemrograman Web.',
             solusi: 'Disarankan mengikuti bimbingan tambahan dengan asisten lab.',
             tanggalBimbingan: '2023-10-10',
@@ -220,7 +221,7 @@ describe('Bimbingan & Pelanggaran API', () => {
           }),
         })
       );
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       const data = await response.json();
       expect(data.permasalahan).toBe('Kesulitan memahami materi Pemrograman Web.');
       expect(data.solusi).toBe('Disarankan mengikuti bimbingan tambahan dengan asisten lab.');

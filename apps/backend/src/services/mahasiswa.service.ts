@@ -1,12 +1,13 @@
 import { db } from '../utils/db';
 import { mahasiswa } from '../models/schema';
-import { count, eq, ilike, or } from 'drizzle-orm';
+import { count, eq, ilike, or, and } from 'drizzle-orm';
 
 export interface CreateMahasiswaDto {
   nim: string;
   nama: string;
   email: string;
   programStudiId: number;
+  dosenPaId?: number | null;
   status?: string;
   idPddikti?: string;
   namaIbuKandung: string;
@@ -16,16 +17,26 @@ export interface CreateMahasiswaDto {
 }
 
 export class MahasiswaService {
-  static async getAll(page = 1, limit = 10, search = '') {
+  static async getAll(page = 1, limit = 10, search = '', dosenPaId?: number) {
     const offset = (page - 1) * limit;
-    let whereClause = undefined;
-
+    
+    let conditions = [];
     if (search) {
-      whereClause = or(
-        ilike(mahasiswa.nama, `%${search}%`),
-        ilike(mahasiswa.nim, `%${search}%`),
-        ilike(mahasiswa.email, `%${search}%`)
+      conditions.push(
+        or(
+          ilike(mahasiswa.nama, `%${search}%`),
+          ilike(mahasiswa.nim, `%${search}%`),
+          ilike(mahasiswa.email, `%${search}%`)
+        )
       );
+    }
+    if (dosenPaId !== undefined) {
+      conditions.push(eq(mahasiswa.dosenPaId, dosenPaId));
+    }
+
+    let whereClause = undefined;
+    if (conditions.length > 0) {
+      whereClause = and(...conditions);
     }
 
     const [totalResult] = await db
@@ -40,7 +51,8 @@ export class MahasiswaService {
       limit,
       offset,
       with: {
-        programStudi: true
+        programStudi: true,
+        dosenPa: true
       }
     });
 
@@ -61,7 +73,8 @@ export class MahasiswaService {
     const data = await db.query.mahasiswa.findFirst({
       where: eq(mahasiswa.id, id),
       with: {
-        programStudi: true
+        programStudi: true,
+        dosenPa: true
       }
     });
     return data || null;

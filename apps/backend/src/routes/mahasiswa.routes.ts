@@ -14,6 +14,7 @@ export const mahasiswaRoutes = new Elysia({ prefix: '/mahasiswa' })
   .get('/', MahasiswaController.getAll, getMahasiswaSchema)
   .post('/', MahasiswaController.create, createMahasiswaSchema)
   .post('/import', MahasiswaController.importCsv)
+  .post('/import-pa', MahasiswaController.importPaCsv)
   .get('/:id', MahasiswaController.getById, getMahasiswaByIdSchema)
   .put('/:id', MahasiswaController.update, updateMahasiswaSchema)
   .delete('/:id', MahasiswaController.delete, deleteMahasiswaSchema);

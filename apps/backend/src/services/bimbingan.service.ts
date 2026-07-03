@@ -1,6 +1,6 @@
 import { db } from '../utils/db';
-import { bimbingan, bimbinganThread, mahasiswa, dosen, periodeAkademik } from '../models/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { bimbingan, bimbinganThread, mahasiswa, dosen, periodeAkademik, sesiBimbingan } from '../models/schema';
+import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 
 export class BimbinganService {
   static async getActivePeriode() {
@@ -49,9 +49,17 @@ export class BimbinganService {
         .where(eq(bimbinganThread.bimbinganId, existing.id))
         .orderBy(desc(bimbinganThread.createdAt));
 
+      // Ambil semua sesi bimbingan
+      const sesiList = await db
+        .select()
+        .from(sesiBimbingan)
+        .where(eq(sesiBimbingan.bimbinganId, existing.id))
+        .orderBy(asc(sesiBimbingan.pertemuanKe));
+
       return {
         ...existing,
         thread: threadMessages,
+        sesi: sesiList,
         availablePeriodes,
       };
     }
@@ -70,6 +78,7 @@ export class BimbinganService {
         tanggalBimbingan: null,
         statusBkd: false,
         thread: [],
+        sesi: [],
         availablePeriodes,
       };
     }
@@ -104,6 +113,7 @@ export class BimbinganService {
     return {
       ...newBimbingan,
       thread: [],
+      sesi: [],
       availablePeriodes,
     };
   }
@@ -138,14 +148,52 @@ export class BimbinganService {
     return record;
   }
 
-  static async getMonitoringBimbingan() {
+  static async addSesiBimbingan(bimbinganId: number, data: { pertemuanKe: number; tanggalBimbingan: Date; permasalahan: string; solusi: string; statusBkd: boolean }) {
+    const [newSesi] = await db
+      .insert(sesiBimbingan)
+      .values({
+        bimbinganId,
+        ...data,
+      })
+      .returning();
+    return newSesi;
+  }
+
+  static async updateSesiBimbingan(sesiId: number, data: { pertemuanKe?: number; tanggalBimbingan?: Date; permasalahan?: string; solusi?: string; statusBkd?: boolean }) {
+    const [updatedSesi] = await db
+      .update(sesiBimbingan)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(sesiBimbingan.id, sesiId))
+      .returning();
+    return updatedSesi;
+  }
+
+  static async deleteSesiBimbingan(sesiId: number) {
+    const [deletedSesi] = await db
+      .delete(sesiBimbingan)
+      .where(eq(sesiBimbingan.id, sesiId))
+      .returning();
+    return deletedSesi;
+  }
+
+  static async clearChatThread(bimbinganId: number) {
+    await db
+      .delete(bimbinganThread)
+      .where(eq(bimbinganThread.bimbinganId, bimbinganId));
+    return { success: true };
+  }
+
+  static async getMonitoringBimbingan(dosenId?: number) {
     const activePeriode = await this.getActivePeriode();
     if (!activePeriode) {
       return [];
     }
 
     // Ambil daftar mahasiswa
-    const listMahasiswa = await db
+    const queryBuilder = db
       .select({
         id: mahasiswa.id,
         nim: mahasiswa.nim,
@@ -155,6 +203,12 @@ export class BimbinganService {
       })
       .from(mahasiswa)
       .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id));
+
+    if (dosenId !== undefined) {
+      queryBuilder.where(eq(mahasiswa.dosenPaId, dosenId));
+    }
+
+    const listMahasiswa = await queryBuilder;
 
     // Ambil semua bimbingan untuk periode aktif
     const listBimbingan = await db
@@ -167,13 +221,29 @@ export class BimbinganService {
       mapBimbingan.set(b.mahasiswaId, b);
     }
 
+    // Ambil rekap total sesi per bimbingan
+    const allSesi = await db
+      .select({
+        id: sesiBimbingan.id,
+        bimbinganId: sesiBimbingan.bimbinganId,
+      })
+      .from(sesiBimbingan);
+
+    const sesiCountMap = new Map<number, number>();
+    for (const s of allSesi) {
+      const currentVal = sesiCountMap.get(s.bimbinganId) || 0;
+      sesiCountMap.set(s.bimbinganId, currentVal + 1);
+    }
+
     return listMahasiswa.map((mhs) => {
       const bimb = mapBimbingan.get(mhs.id);
+      const totalSesi = bimb ? (sesiCountMap.get(bimb.id) || 0) : 0;
       return {
         ...mhs,
         bimbinganId: bimb?.id || null,
         ringkasan: bimb?.ringkasan || null,
         isApproved: bimb?.isApproved || false,
+        totalSesi,
         permasalahan: bimb?.permasalahan || null,
         solusi: bimb?.solusi || null,
         tanggalBimbingan: bimb?.tanggalBimbingan || null,
@@ -194,7 +264,7 @@ export class BimbinganService {
       conditions.push(eq(bimbingan.dosenId, dosenId));
     }
 
-    return await db
+    const bimbinganList = await db
       .select({
         id: bimbingan.id,
         mahasiswaId: bimbingan.mahasiswaId,
@@ -202,10 +272,6 @@ export class BimbinganService {
         periodeId: bimbingan.periodeId,
         ringkasan: bimbingan.ringkasan,
         isApproved: bimbingan.isApproved,
-        permasalahan: bimbingan.permasalahan,
-        solusi: bimbingan.solusi,
-        tanggalBimbingan: bimbingan.tanggalBimbingan,
-        statusBkd: bimbingan.statusBkd,
         mahasiswa: {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama
@@ -214,5 +280,33 @@ export class BimbinganService {
       .from(bimbingan)
       .innerJoin(mahasiswa, eq(bimbingan.mahasiswaId, mahasiswa.id))
       .where(and(...conditions));
+
+    if (bimbinganList.length === 0) {
+      return [];
+    }
+
+    const bimbIds = bimbinganList.map(b => b.id);
+    const sesiList = await db
+      .select()
+      .from(sesiBimbingan)
+      .where(inArray(sesiBimbingan.bimbinganId, bimbIds))
+      .orderBy(asc(sesiBimbingan.pertemuanKe));
+
+    const sesiMap = new Map<number, typeof sesiBimbingan.$inferSelect[]>();
+    for (const s of sesiList) {
+      const arr = sesiMap.get(s.bimbinganId) || [];
+      arr.push(s);
+      sesiMap.set(s.bimbinganId, arr);
+    }
+
+    return bimbinganList.map((b) => {
+      const sesi = sesiMap.get(b.id) || [];
+      return {
+        ...b,
+        sesi,
+        totalSesi: sesi.length,
+        statusBkd: sesi.some(s => s.statusBkd),
+      };
+    });
   }
 }
