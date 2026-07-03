@@ -304,7 +304,7 @@ export default function Bimbingan() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header */}
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm print:hidden">
           <div>
             <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">Bimbingan Akademik</h1>
             <p class="text-sm text-gray-500">Modul bimbingan wali & persetujuan prasyarat UTS/UAS</p>
@@ -358,7 +358,7 @@ export default function Bimbingan() {
 
         {/* --- MAHASISWA VIEW --- */}
         <Show when={user()?.role === 'mahasiswa'}>
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* Chat Thread Panel */}
             <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col h-[600px] overflow-hidden">
               <div class="p-4 border-b border-gray-50 bg-gray-50/50 flex items-center justify-between">
@@ -482,7 +482,7 @@ export default function Bimbingan() {
 
         {/* --- DOSEN & ADMIN VIEW --- */}
         <Show when={user()?.role === 'dosen' || user()?.role === 'admin'}>
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* List Mahasiswa */}
             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden h-[600px] flex flex-col">
               <div class="p-4 border-b border-gray-50 bg-gray-50/50">
@@ -838,8 +838,8 @@ export default function Bimbingan() {
 
         {/* --- MODAL PRATINJAU / CETAK REKAP BKD --- */}
         <Show when={showRekapBkdModal()}>
-          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:static print:bg-white print:p-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-6 print:shadow-none print:p-0 print:max-w-full">
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static print:z-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-4 print:shadow-none print:p-0 print:max-w-full">
               {/* Modal header (hidden in print) */}
               <div class="flex justify-between items-center border-b pb-3 print:hidden">
                 <h3 class="font-extrabold text-gray-800 text-base">Pratinjau Laporan BKD Bimbingan Akademik</h3>
@@ -860,7 +860,7 @@ export default function Bimbingan() {
               </div>
 
               {/* Printable Area */}
-              <div class="flex flex-col gap-6 font-serif">
+              <div class="flex flex-col gap-4 font-serif" id="print-area-bkd">
                 {/* Kop Surat */}
                 <div class="flex flex-col items-center justify-center border-b-2 border-double border-gray-800 pb-4 text-center">
                   <h2 class="text-xl font-bold tracking-wider text-gray-900">POLITEKNIK SOROWAKO</h2>

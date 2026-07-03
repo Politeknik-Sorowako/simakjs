@@ -5,6 +5,7 @@ export const mahasiswaBody = t.Object({
   nama: t.String({ default: 'Budi Santoso' }),
   email: t.String({ format: 'email', default: 'budi@test.com' }),
   programStudiId: t.Integer({ default: 1 }),
+  dosenPaId: t.Optional(t.Union([t.Integer(), t.Null()])),
   status: t.Optional(t.String({ default: 'aktif' })),
   idPddikti: t.Optional(t.String()),
   namaIbuKandung: t.String({ default: 'Ibu Budi' }),
@@ -13,18 +14,19 @@ export const mahasiswaBody = t.Object({
   tanggalLahir: t.String({ default: '2000-01-01' })
 });
 
-export const updateMahasiswaBody = t.Partial(t.Object({
-  nim: t.String(),
-  nama: t.String(),
-  email: t.String({ format: 'email' }),
-  programStudiId: t.Integer(),
-  status: t.String(),
-  idPddikti: t.String(),
-  namaIbuKandung: t.String(),
-  nik: t.String({ minLength: 16, maxLength: 16 }),
-  jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')]),
-  tanggalLahir: t.String()
-}));
+export const updateMahasiswaBody = t.Object({
+  nim: t.Optional(t.String()),
+  nama: t.Optional(t.String()),
+  email: t.Optional(t.String({ format: 'email' })),
+  programStudiId: t.Optional(t.Integer()),
+  dosenPaId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  status: t.Optional(t.String()),
+  idPddikti: t.Optional(t.String()),
+  namaIbuKandung: t.Optional(t.String()),
+  nik: t.Optional(t.String({ minLength: 16, maxLength: 16 })),
+  jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')])),
+  tanggalLahir: t.Optional(t.String())
+});
 
 export const getMahasiswaSchema = {
   detail: {
@@ -46,6 +48,7 @@ export const getMahasiswaSchema = {
           nama: t.String({ default: 'Budi Santoso' }),
           email: t.String({ default: 'budi@test.com' }),
           programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+          dosenPaId: t.Union([t.Integer(), t.Null()], { default: null }),
           status: t.String({ default: 'aktif' }),
           namaIbuKandung: t.String({ default: 'Ibu Budi' }),
           nik: t.String({ default: '1234567890123456' }),
@@ -64,7 +67,18 @@ export const getMahasiswaSchema = {
               jenjang: t.String()
             }),
             t.Null()
-          ])
+          ]),
+          dosenPa: t.Optional(
+            t.Union([
+              t.Object({
+                id: t.Integer(),
+                nip: t.String(),
+                nama: t.String(),
+                email: t.String()
+              }),
+              t.Null()
+            ])
+          )
         })
       ),
       meta: t.Object({
@@ -91,6 +105,7 @@ export const createMahasiswaSchema = {
       nama: t.String({ default: 'Budi Santoso' }),
       email: t.String({ default: 'budi@test.com' }),
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      dosenPaId: t.Union([t.Integer(), t.Null()], { default: null }),
       status: t.String({ default: 'aktif' }),
       namaIbuKandung: t.String({ default: 'Ibu Budi' }),
       nik: t.String({ default: '1234567890123456' }),
@@ -127,6 +142,7 @@ export const getMahasiswaByIdSchema = {
       nama: t.String({ default: 'Budi Santoso' }),
       email: t.String({ default: 'budi@test.com' }),
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      dosenPaId: t.Union([t.Integer(), t.Null()], { default: null }),
       status: t.String({ default: 'aktif' }),
       namaIbuKandung: t.String({ default: 'Ibu Budi' }),
       nik: t.String({ default: '1234567890123456' }),
@@ -145,7 +161,18 @@ export const getMahasiswaByIdSchema = {
           jenjang: t.String()
         }),
         t.Null()
-      ])
+      ]),
+      dosenPa: t.Optional(
+        t.Union([
+          t.Object({
+            id: t.Integer(),
+            nip: t.String(),
+            nama: t.String(),
+            email: t.String()
+          }),
+          t.Null()
+        ])
+      )
     }),
     404: t.Object({
       error: t.String({ default: 'Data tidak ditemukan' })
@@ -170,6 +197,7 @@ export const updateMahasiswaSchema = {
       nama: t.String({ default: 'Budi Santoso' }),
       email: t.String({ default: 'budi@test.com' }),
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
+      dosenPaId: t.Union([t.Integer(), t.Null()], { default: null }),
       status: t.String({ default: 'aktif' }),
       namaIbuKandung: t.String({ default: 'Ibu Budi' }),
       nik: t.String({ default: '1234567890123456' }),
