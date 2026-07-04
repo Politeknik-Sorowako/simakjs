@@ -671,8 +671,8 @@ export class CsvImportService {
             throw new Error(`Kelas Kuliah "${namaKelasVal}" untuk MK "${kodeMkVal}" pada Periode "${periodeVal}" tidak ditemukan.`);
           }
 
-          // Check for duplicate KRS
-          const [existing] = await tx.select()
+          // Check for exact duplicate KRS (same student, same class)
+          const [exactDuplicate] = await tx.select({ id: krs.id })
             .from(krs)
             .where(
               and(
@@ -682,8 +682,25 @@ export class CsvImportService {
             )
             .limit(1);
 
-          if (existing) {
-            continue;
+          if (exactDuplicate) {
+            continue; // Silently skip exact duplicate
+          }
+
+          // Check if student has already contracted another class of the same course in this period
+          const [existingSameCourse] = await tx.select({ id: krs.id, namaKelas: kelasKuliah.namaKelas })
+            .from(krs)
+            .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+            .where(
+              and(
+                eq(krs.mahasiswaId, mhs.id),
+                eq(kelasKuliah.mataKuliahId, mk.id),
+                eq(kelasKuliah.periodeId, periodeVal)
+              )
+            )
+            .limit(1);
+
+          if (existingSameCourse) {
+            throw new Error(`Mahasiswa sudah mengontrak mata kuliah "${kodeMkVal}" pada kelas "${existingSameCourse.namaKelas}" di periode "${periodeVal}".`);
           }
 
           await tx.insert(krs).values({
