@@ -1,6 +1,6 @@
 import { db } from '../utils/db';
-import { pengajuanCuti, mahasiswa, periodeAkademik } from '../models/schema';
-import { count, eq, and, desc } from 'drizzle-orm';
+import { pengajuanCuti, mahasiswa } from '../models/schema';
+import { count, eq, and, desc, inArray, or, like, sql } from 'drizzle-orm';
 
 export interface CreateCutiDto {
   mahasiswaId: number;
@@ -9,8 +9,14 @@ export interface CreateCutiDto {
 }
 
 export class CutiService {
+  static hitungSemesterBerakhir(mulai: string): string {
+    const tahun = parseInt(mulai.slice(0, 4));
+    const semester = parseInt(mulai.slice(4));
+    if (semester === 1) return `${tahun}2`;
+    return `${tahun + 1}1`;
+  }
+
   static async create(data: CreateCutiDto) {
-    // Check if duplicate for the same period
     const existing = await db.query.pengajuanCuti.findFirst({
       where: and(
         eq(pengajuanCuti.mahasiswaId, data.mahasiswaId),
@@ -32,6 +38,48 @@ export class CutiService {
     return newCuti;
   }
 
+  static async inputByAdmin(data: {
+    mahasiswaId: number;
+    periodeId: string;
+    alasan: string;
+    semesterMulaiCuti?: string;
+    semesterBerakhirCuti?: string;
+    noSuratIzin?: string;
+    tanggalSuratIzin?: string;
+  }) {
+    const existing = await db.query.pengajuanCuti.findFirst({
+      where: and(
+        eq(pengajuanCuti.mahasiswaId, data.mahasiswaId),
+        eq(pengajuanCuti.periodeId, data.periodeId)
+      )
+    });
+
+    if (existing) {
+      throw new Error('Mahasiswa sudah memiliki catatan cuti pada periode ini.');
+    }
+
+    const semesterMulai = data.semesterMulaiCuti || data.periodeId;
+    const semesterBerakhir = data.semesterBerakhirCuti || CutiService.hitungSemesterBerakhir(semesterMulai);
+
+    const [newCuti] = await db.insert(pengajuanCuti).values({
+      mahasiswaId: data.mahasiswaId,
+      periodeId: data.periodeId,
+      alasan: data.alasan,
+      status: 'disetujui_prodi',
+      semesterMulaiCuti: semesterMulai,
+      semesterBerakhirCuti: semesterBerakhir,
+      noSuratIzin: data.noSuratIzin,
+      tanggalSuratIzin: data.tanggalSuratIzin ? new Date(data.tanggalSuratIzin).toISOString().split('T')[0] : null,
+    }).returning();
+
+    await db
+      .update(mahasiswa)
+      .set({ status: 'cuti' })
+      .where(eq(mahasiswa.id, data.mahasiswaId));
+
+    return newCuti;
+  }
+
   static async getAll(params: {
     page?: number;
     limit?: number;
@@ -44,53 +92,13 @@ export class CutiService {
     const limit = params.limit || 10;
     const offset = (page - 1) * limit;
 
-    const conditions = [];
-
-    if (params.periodeId) {
-      conditions.push(eq(pengajuanCuti.periodeId, params.periodeId));
-    }
-    if (params.status) {
-      conditions.push(eq(pengajuanCuti.status, params.status));
-    }
-    if (params.mahasiswaId) {
-      conditions.push(eq(pengajuanCuti.mahasiswaId, params.mahasiswaId));
-    }
-
-    // Filter by Dosen PA
-    if (params.dosenPaId) {
-      // We need to join with mahasiswa table
-      const subquery = await db
-        .select({ id: mahasiswa.id })
-        .from(mahasiswa)
-        .where(eq(mahasiswa.dosenPaId, params.dosenPaId));
-      
-      const mhsIds = subquery.map(m => m.id);
-      if (mhsIds.length === 0) {
-        return { data: [], meta: { total: 0, page, limit, totalPages: 0 } };
-      }
-      // Dosen PA can only see cuti requests from their bimbingan
-      // Using an inArray or manually filtering in memory. Let's filter by checking if mahasiswaId is in advisee list.
-      // Drizzle support inArray: import { inArray } from 'drizzle-orm';
-      // For simplicity:
-      conditions.push(
-        and(
-          // Since we need to match many, let's query with a custom where.
-        )
-      );
-    }
-
-    let whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    // We can also query using findMany
     const data = await db.query.pengajuanCuti.findMany({
-      where: (table, { eq, and, inArray }) => {
+      where: (table, { eq, and: andFn }) => {
         const conds = [];
         if (params.periodeId) conds.push(eq(table.periodeId, params.periodeId));
         if (params.status) conds.push(eq(table.status, params.status));
         if (params.mahasiswaId) conds.push(eq(table.mahasiswaId, params.mahasiswaId));
-        
-        // Return final conditions
-        return conds.length > 0 ? and(...conds) : undefined;
+        return conds.length > 0 ? andFn(...conds) : undefined;
       },
       limit,
       offset,
@@ -106,23 +114,70 @@ export class CutiService {
       }
     });
 
-    // If filter by dosenPaId is active, filter in memory
     let filteredData = data;
     if (params.dosenPaId) {
       filteredData = data.filter(d => d.mahasiswa?.dosenPaId === params.dosenPaId);
     }
 
-    const total = filteredData.length; // Approximate for pagination in memory if filtered
+    const total = filteredData.length;
     const totalPages = Math.ceil(total / limit);
 
     return {
       data: filteredData,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages
+      meta: { total, page, limit, totalPages }
+    };
+  }
+
+  static async getMahasiswaCuti(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    periodeId?: string;
+  }) {
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const offset = (page - 1) * limit;
+
+    const conditions = [eq(mahasiswa.status, 'cuti')];
+
+    if (params.search) {
+      conditions.push(
+        or(
+          like(mahasiswa.nama, `%${params.search}%`),
+          like(mahasiswa.nim, `%${params.search}%`)
+        )
+      );
+    }
+
+    const mahasiswaData = await db.query.mahasiswa.findMany({
+      where: and(...conditions),
+      limit,
+      offset,
+      orderBy: [desc(mahasiswa.updatedAt)],
+      with: {
+        programStudi: true,
+        dosenPa: true,
+        pengajuanCuti: {
+          where: (table, { eq: eqFn }) => params.periodeId ? eqFn(table.periodeId, params.periodeId) : undefined,
+          with: {
+            periodeAkademik: true
+          },
+          orderBy: [desc(pengajuanCuti.createdAt)],
+          limit: 1
+        }
       }
+    });
+
+    const [{ count: total }] = await db
+      .select({ count: count() })
+      .from(mahasiswa)
+      .where(and(...conditions));
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: mahasiswaData,
+      meta: { total, page, limit, totalPages }
     };
   }
 
@@ -157,7 +212,6 @@ export class CutiService {
     if (payload.action === 'reject') {
       nextStatus = 'ditolak';
     } else {
-      // Action is approve
       if (role === 'dosen') {
         if (cuti.status !== 'pending') {
           throw new Error('Hanya pengajuan berstatus PENDING yang dapat disetujui Dosen PA.');
@@ -193,7 +247,6 @@ export class CutiService {
       .where(eq(pengajuanCuti.id, id))
       .returning();
 
-    // Side effect: If final approval, update student status to cuti
     if (nextStatus === 'disetujui_prodi') {
       await db
         .update(mahasiswa)
@@ -204,18 +257,52 @@ export class CutiService {
     return updated;
   }
 
-  static async delete(id: number, mahasiswaId?: number) {
+  static async aktifKembali(id: number) {
     const cuti = await this.getById(id);
     if (!cuti) {
       throw new Error('Pengajuan cuti tidak ditemukan.');
     }
 
-    if (mahasiswaId && cuti.mahasiswaId !== mahasiswaId) {
+    if (cuti.status !== 'disetujui_prodi') {
+      throw new Error('Hanya pengajuan cuti yang sudah disetujui final yang dapat diaktifkan kembali.');
+    }
+
+    const [updated] = await db
+      .update(pengajuanCuti)
+      .set({
+        status: 'kembali_aktif',
+        updatedAt: new Date()
+      })
+      .where(eq(pengajuanCuti.id, id))
+      .returning();
+
+    await db
+      .update(mahasiswa)
+      .set({ status: 'aktif' })
+      .where(eq(mahasiswa.id, cuti.mahasiswaId));
+
+    return updated;
+  }
+
+  static async delete(id: number, mahasiswaId?: number, isAdmin?: boolean) {
+    const cuti = await this.getById(id);
+    if (!cuti) {
+      throw new Error('Pengajuan cuti tidak ditemukan.');
+    }
+
+    if (mahasiswaId && cuti.mahasiswaId !== mahasiswaId && !isAdmin) {
       throw new Error('Anda tidak memiliki akses untuk menghapus pengajuan ini.');
     }
 
-    if (cuti.status !== 'pending') {
+    if (!isAdmin && cuti.status !== 'pending') {
       throw new Error('Hanya pengajuan berstatus PENDING yang dapat dihapus.');
+    }
+
+    if (cuti.status === 'disetujui_prodi') {
+      await db
+        .update(mahasiswa)
+        .set({ status: 'aktif' })
+        .where(eq(mahasiswa.id, cuti.mahasiswaId));
     }
 
     const [deleted] = await db

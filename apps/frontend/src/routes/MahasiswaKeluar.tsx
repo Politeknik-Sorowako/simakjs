@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { useToast } from '../contexts/ToastContext';
 
 export default function MahasiswaKeluarPage() {
@@ -30,15 +31,7 @@ export default function MahasiswaKeluarPage() {
   // Fetch Periods
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 50));
 
-  // Search Mahasiswa for form selection
-  const [searchMhsInput, setSearchMhsInput] = createSignal('');
-  const [activeMahasiswas] = createResource(
-    () => searchMhsInput(),
-    async (search) => {
-      if (!search || search.length < 2) return { data: [] };
-      return await mahasiswaController.getAll(search, 1, 10);
-    }
-  );
+  const [mhsList, setMhsList] = createSignal<Mahasiswa[]>([]);
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -54,9 +47,8 @@ export default function MahasiswaKeluarPage() {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
 
-  const openFormModal = () => {
+  const openFormModal = async () => {
     setSelectedMhs(null);
-    setSearchMhsInput('');
     const active = periodes()?.data?.find(p => p.aktif);
     setPeriodeId(active?.id || periodes()?.data?.[0]?.id || '');
     setStatusBaru('keluar');
@@ -67,6 +59,12 @@ export default function MahasiswaKeluarPage() {
     setIpk('');
     setNomorIjazah('');
     setErrorMsg('');
+    try {
+      const result = await mahasiswaController.getAll('', 1, 500);
+      setMhsList(result.data || []);
+    } catch {
+      setMhsList([]);
+    }
     setShowModal(true);
   };
 
@@ -219,7 +217,6 @@ export default function MahasiswaKeluarPage() {
             <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">{errorMsg()}</div>
           </Show>
 
-          {/* Search Mahasiswa Section */}
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-gray-700">Cari Mahasiswa Aktif</label>
             <Show when={!selectedMhs()} fallback={
@@ -231,29 +228,15 @@ export default function MahasiswaKeluarPage() {
                 <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)}>Ganti</Button>
               </div>
             }>
-              <Input
-                placeholder="Ketik minimal 2 karakter NIM atau nama..."
-                value={searchMhsInput()}
-                onInput={(e) => setSearchMhsInput(e.currentTarget.value)}
+              <SearchableSelect
+                placeholder="Ketik NIM atau nama mahasiswa..."
+                options={mhsList().map((m) => ({ label: `${m.nama} (${m.nim})`, value: m.id }))}
+                value={null}
+                onChange={(val) => {
+                  const mhs = mhsList().find((m) => m.id === val);
+                  if (mhs) setSelectedMhs(mhs);
+                }}
               />
-              <Show when={searchMhsInput().length >= 2}>
-                <div class="border border-gray-200 rounded-lg max-h-40 overflow-y-auto bg-white shadow-sm flex flex-col divide-y divide-gray-100">
-                  <For each={activeMahasiswas()?.data} fallback={<div class="p-3 text-center text-xs text-gray-400">Mahasiswa tidak ditemukan</div>}>
-                    {(mhs) => (
-                      <div class="flex justify-between items-center p-3 hover:bg-gray-50 transition-colors">
-                        <div>
-                          <div class="text-sm font-medium text-gray-800">{mhs.nama}</div>
-                          <div class="text-xs text-gray-500">NIM: {mhs.nim} | Status: {mhs.status}</div>
-                        </div>
-                        <Button variant="secondary" size="sm" onClick={() => {
-                          setSelectedMhs(mhs);
-                          setSearchMhsInput('');
-                        }}>Pilih</Button>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </Show>
             </Show>
           </div>
 

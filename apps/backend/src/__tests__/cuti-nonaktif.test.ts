@@ -43,7 +43,6 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
         email: 'dosen@test.com',
         programStudiId: prodiId,
         jenisKelamin: 'L',
-        namaIbuKandung: 'Ibu Dosen',
         nik: '9876543210987654',
         tanggalLahir: '1980-01-01'
       })

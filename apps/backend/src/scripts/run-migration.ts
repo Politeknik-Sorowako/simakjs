@@ -11,26 +11,34 @@ const pool = new Pool({
 });
 
 async function run() {
-  const sqlPath = path.join(__dirname, '../../drizzle/0008_colossal_captain_midlands.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf-8');
-  
-  const statements = sql.split('--> statement-breakpoint');
-  
-  console.log(`Running ${statements.length} migration statements...`);
-  
+  const migrationDir = path.join(__dirname, '../../drizzle');
+  const migrations = [
+    '0008_colossal_captain_midlands.sql',
+    '0009_yellow_apocalypse.sql',
+  ];
   const client = await pool.connect();
-  for (let statement of statements) {
-    statement = statement.trim();
-    if (!statement) continue;
-    console.log(`Executing: ${statement.substring(0, 100)}...`);
-    try {
-      await client.query(statement);
-      console.log('Success.');
-    } catch (error: any) {
-      if (error.code === '42701' || error.code === '42P07') {
-        console.warn(`Warning skipped: ${error.message}`);
-      } else {
-        console.error(`Error executing statement:`, error);
+  for (const migration of migrations) {
+    const sqlPath = path.join(migrationDir, migration);
+    if (!fs.existsSync(sqlPath)) {
+      console.warn(`Migration file not found: ${migration}, skipping.`);
+      continue;
+    }
+    const sql = fs.readFileSync(sqlPath, 'utf-8');
+    const statements = sql.split('--> statement-breakpoint');
+    console.log(`Running migration ${migration} (${statements.length} statements)...`);
+    for (let statement of statements) {
+      statement = statement.trim();
+      if (!statement) continue;
+      console.log(`Executing: ${statement.substring(0, 100)}...`);
+      try {
+        await client.query(statement);
+        console.log('Success.');
+      } catch (error: any) {
+        if (error.code === '42701' || error.code === '42P07') {
+          console.warn(`Warning skipped: ${error.message}`);
+        } else {
+          console.error(`Error executing statement:`, error);
+        }
       }
     }
   }

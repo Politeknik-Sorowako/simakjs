@@ -6,7 +6,7 @@ import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, pe
 export interface UserResponse {
   id: number;
   email: string;
-  role: 'admin' | 'dosen' | 'mahasiswa';
+  role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan';
 }
 
 export interface RegisterSuccessResponse {
@@ -71,7 +71,7 @@ export async function clearDatabase() {
 }
 
 // Helper function to register and login a user, returning their JWT authorization token
-export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa') {
+export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan') {
   const registerResponse = await app.handle(
     new Request('http://localhost/auth/register', {
       method: 'POST',

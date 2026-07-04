@@ -29,7 +29,7 @@ import ResetPassword from './routes/ResetPassword';
 import Kurikulum from './routes/Kurikulum';
 import Rps from './routes/Rps';
 import CutiMahasiswa from './routes/CutiMahasiswa';
-import CutiApproval from './routes/CutiApproval';
+import ManajemenCuti from './routes/ManajemenCuti';
 import MahasiswaKeluar from './routes/MahasiswaKeluar';
 
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
@@ -222,10 +222,10 @@ function AppContent() {
         }
       />
       <Route
-        path="/approval-cuti"
+        path="/manajemen-cuti"
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'keuangan']}>
-            <CutiApproval />
+            <ManajemenCuti />
           </ProtectedRoute>
         }
       />

@@ -708,7 +708,9 @@ export const pengajuanCuti = pgTable('pengajuan_cuti', {
   mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
   periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id),
   alasan: text('alasan').notNull(),
-  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, disetujui_pa, disetujui_keuangan, disetujui_prodi, ditolak
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, disetujui_pa, disetujui_keuangan, disetujui_prodi, ditolak, kembali_aktif
+  semesterMulaiCuti: varchar('semester_mulai_cuti', { length: 5 }),
+  semesterBerakhirCuti: varchar('semester_berakhir_cuti', { length: 5 }),
   catatan: text('catatan'),
   noSuratIzin: varchar('no_surat_izin_cuti', { length: 100 }),
   tanggalSuratIzin: date('tgl_surat_izin_cuti'),

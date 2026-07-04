@@ -48,6 +48,31 @@ export class CutiController {
     }
   }
 
+  static async inputByAdmin({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || !['admin', 'prodi'].includes(user.role)) {
+      set.status = 403;
+      return { error: 'Hanya Admin atau Prodi yang dapat menginput cuti mahasiswa.' };
+    }
+
+    try {
+      const data = await CutiService.inputByAdmin({
+        mahasiswaId: body.mahasiswaId,
+        periodeId: body.periodeId,
+        alasan: body.alasan,
+        semesterMulaiCuti: body.semesterMulaiCuti,
+        semesterBerakhirCuti: body.semesterBerakhirCuti,
+        noSuratIzin: body.noSuratIzin,
+        tanggalSuratIzin: body.tanggalSuratIzin
+      });
+      set.status = 201;
+      return data;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async getAll({ query, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -85,6 +110,21 @@ export class CutiController {
       mahasiswaId: filterMhsId,
       dosenPaId: filterDsnId
     });
+  }
+
+  static async getMahasiswaCuti({ query, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest') {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const page = query?.page ? parseInt(query.page) : 1;
+    const limit = query?.limit ? parseInt(query.limit) : 10;
+    const search = query?.search;
+    const periodeId = query?.periodeId;
+
+    return await CutiService.getMahasiswaCuti({ page, limit, search, periodeId });
   }
 
   static async getById({ params, set, getCurrentUser }: AuthContext) {
@@ -147,6 +187,22 @@ export class CutiController {
     }
   }
 
+  static async aktifKembali({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || ['mahasiswa', 'guest'].includes(user.role)) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya admin/prodi/dosen yang dapat mengaktifkan kembali.' };
+    }
+
+    try {
+      const data = await CutiService.aktifKembali(parseInt(params.id));
+      return { message: 'Mahasiswa berhasil diaktifkan kembali.', data };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async delete({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user) {
@@ -154,7 +210,9 @@ export class CutiController {
       return { error: 'Akses ditolak.' };
     }
 
+    const isAdmin = ['admin', 'prodi'].includes(user.role);
     let filterMhsId: number | undefined = undefined;
+
     if (user.role === 'mahasiswa') {
       const myMhsId = await CutiController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
@@ -165,7 +223,7 @@ export class CutiController {
     }
 
     try {
-      const data = await CutiService.delete(parseInt(params.id), filterMhsId);
+      const data = await CutiService.delete(parseInt(params.id), filterMhsId, isAdmin);
       return { message: 'Pengajuan cuti berhasil dihapus.', data };
     } catch (e: any) {
       set.status = 400;

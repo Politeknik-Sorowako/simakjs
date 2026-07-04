@@ -7,13 +7,19 @@ export interface CutiRequest {
   mahasiswaId: number;
   periodeId: string;
   alasan: string;
-  status: 'pending' | 'disetujui_pa' | 'disetujui_keuangan' | 'disetujui_prodi' | 'ditolak';
+  status: 'pending' | 'disetujui_pa' | 'disetujui_keuangan' | 'disetujui_prodi' | 'ditolak' | 'kembali_aktif';
+  semesterMulaiCuti?: string | null;
+  semesterBerakhirCuti?: string | null;
   catatan?: string | null;
   noSuratIzin?: string | null;
   tanggalSuratIzin?: string | null;
   mahasiswa?: Mahasiswa;
   periodeAkademik?: { id: string; nama: string };
   createdAt: string;
+}
+
+export interface MahasiswaCuti extends Mahasiswa {
+  pengajuanCuti?: CutiRequest[];
 }
 
 export const cutiController = {
@@ -38,11 +44,42 @@ export const cutiController = {
     });
   },
 
+  async inputByAdmin(data: {
+    mahasiswaId: number;
+    periodeId: string;
+    alasan: string;
+    semesterMulaiCuti?: string;
+    semesterBerakhirCuti?: string;
+    noSuratIzin?: string;
+    tanggalSuratIzin?: string;
+  }): Promise<CutiRequest> {
+    return fetchApi<CutiRequest>('/cuti/input', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   async approve(id: number, data: { action: 'approve' | 'reject'; catatan?: string; noSuratIzin?: string; tanggalSuratIzin?: string }): Promise<CutiRequest> {
     return fetchApi<CutiRequest>(`/cuti/${id}/approve`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  async aktifKembali(id: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/cuti/${id}/aktif-kembali`, {
+      method: 'PUT',
+    });
+  },
+
+  async getMahasiswaCuti(page?: number, limit?: number, search?: string, periodeId?: string): Promise<PaginatedResponse<MahasiswaCuti>> {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    if (search) params.append('search', search);
+    if (periodeId) params.append('periodeId', periodeId);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<PaginatedResponse<MahasiswaCuti>>(`/cuti/mahasiswa-cuti${queryString}`);
   },
 
   async delete(id: number): Promise<{ message: string }> {
