@@ -28,6 +28,9 @@ import ForgotPassword from './routes/ForgotPassword';
 import ResetPassword from './routes/ResetPassword';
 import Kurikulum from './routes/Kurikulum';
 import Rps from './routes/Rps';
+import CutiMahasiswa from './routes/CutiMahasiswa';
+import CutiApproval from './routes/CutiApproval';
+import MahasiswaKeluar from './routes/MahasiswaKeluar';
 
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
 
@@ -207,6 +210,30 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen']}>
             <Rps />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pengajuan-cuti"
+        element={
+          <ProtectedRoute allowedRoles={['mahasiswa']}>
+            <CutiMahasiswa />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/approval-cuti"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'keuangan']}>
+            <CutiApproval />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/penonaktifan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <MahasiswaKeluar />
           </ProtectedRoute>
         }
       />

@@ -1,0 +1,3336 @@
+{
+  "id": "10be4523-22bc-4244-b75d-c03888b64d5f",
+  "prevId": "9f49b4ff-b57f-4fc8-83d1-906dda60f4a4",
+  "version": "6",
+  "dialect": "postgresql",
+  "tables": {
+    "public.bap": {
+      "name": "bap",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kelas_kuliah_id": {
+          "name": "kelas_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pertemuan_ke": {
+          "name": "pertemuan_ke",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "materi": {
+          "name": "materi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "durasi_menit": {
+          "name": "durasi_menit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cpmk_id": {
+          "name": "cpmk_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dosen_id": {
+          "name": "dosen_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bap_kelas_kuliah_id_kelas_kuliah_id_fk": {
+          "name": "bap_kelas_kuliah_id_kelas_kuliah_id_fk",
+          "tableFrom": "bap",
+          "tableTo": "kelas_kuliah",
+          "columnsFrom": [
+            "kelas_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bap_cpmk_id_cpmk_id_fk": {
+          "name": "bap_cpmk_id_cpmk_id_fk",
+          "tableFrom": "bap",
+          "tableTo": "cpmk",
+          "columnsFrom": [
+            "cpmk_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "bap_dosen_id_dosen_id_fk": {
+          "name": "bap_dosen_id_dosen_id_fk",
+          "tableFrom": "bap",
+          "tableTo": "dosen",
+          "columnsFrom": [
+            "dosen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.bimbingan": {
+      "name": "bimbingan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dosen_id": {
+          "name": "dosen_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "periode_id": {
+          "name": "periode_id",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ringkasan": {
+          "name": "ringkasan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_approved": {
+          "name": "is_approved",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "permasalahan": {
+          "name": "permasalahan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "solusi": {
+          "name": "solusi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal_bimbingan": {
+          "name": "tanggal_bimbingan",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_bkd": {
+          "name": "status_bkd",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bimbingan_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "bimbingan_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "bimbingan",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bimbingan_dosen_id_dosen_id_fk": {
+          "name": "bimbingan_dosen_id_dosen_id_fk",
+          "tableFrom": "bimbingan",
+          "tableTo": "dosen",
+          "columnsFrom": [
+            "dosen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "bimbingan_periode_id_periode_akademik_id_fk": {
+          "name": "bimbingan_periode_id_periode_akademik_id_fk",
+          "tableFrom": "bimbingan",
+          "tableTo": "periode_akademik",
+          "columnsFrom": [
+            "periode_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.bimbingan_thread": {
+      "name": "bimbingan_thread",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bimbingan_id": {
+          "name": "bimbingan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sender_role": {
+          "name": "sender_role",
+          "type": "user_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pesan": {
+          "name": "pesan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipe": {
+          "name": "tipe",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'uts'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "bimbingan_thread_bimbingan_id_bimbingan_id_fk": {
+          "name": "bimbingan_thread_bimbingan_id_bimbingan_id_fk",
+          "tableFrom": "bimbingan_thread",
+          "tableTo": "bimbingan",
+          "columnsFrom": [
+            "bimbingan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.cpmk": {
+      "name": "cpmk",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mata_kuliah_id": {
+          "name": "mata_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "cpmk_mata_kuliah_id_mata_kuliah_id_fk": {
+          "name": "cpmk_mata_kuliah_id_mata_kuliah_id_fk",
+          "tableFrom": "cpmk",
+          "tableTo": "mata_kuliah",
+          "columnsFrom": [
+            "mata_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.dosen": {
+      "name": "dosen",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nip": {
+          "name": "nip",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "program_studi_id": {
+          "name": "program_studi_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nidn": {
+          "name": "nidn",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nik": {
+          "name": "nik",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jenis_kelamin": {
+          "name": "jenis_kelamin",
+          "type": "jenis_kelamin",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal_lahir": {
+          "name": "tanggal_lahir",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tempat_lahir": {
+          "name": "tempat_lahir",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_agama": {
+          "name": "id_agama",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "dosen_program_studi_id_program_studi_id_fk": {
+          "name": "dosen_program_studi_id_program_studi_id_fk",
+          "tableFrom": "dosen",
+          "tableTo": "program_studi",
+          "columnsFrom": [
+            "program_studi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dosen_nip_unique": {
+          "name": "dosen_nip_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "nip"
+          ]
+        },
+        "dosen_email_unique": {
+          "name": "dosen_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        },
+        "dosen_id_pddikti_unique": {
+          "name": "dosen_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        },
+        "dosen_nidn_unique": {
+          "name": "dosen_nidn_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "nidn"
+          ]
+        }
+      }
+    },
+    "public.dosen_pengajar_kelas": {
+      "name": "dosen_pengajar_kelas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "dosen_id": {
+          "name": "dosen_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kelas_kuliah_id": {
+          "name": "kelas_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sks_beban_mengajar": {
+          "name": "sks_beban_mengajar",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "dosen_pengajar_kelas_dosen_id_dosen_id_fk": {
+          "name": "dosen_pengajar_kelas_dosen_id_dosen_id_fk",
+          "tableFrom": "dosen_pengajar_kelas",
+          "tableTo": "dosen",
+          "columnsFrom": [
+            "dosen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "dosen_pengajar_kelas_kelas_kuliah_id_kelas_kuliah_id_fk": {
+          "name": "dosen_pengajar_kelas_kelas_kuliah_id_kelas_kuliah_id_fk",
+          "tableFrom": "dosen_pengajar_kelas",
+          "tableTo": "kelas_kuliah",
+          "columnsFrom": [
+            "kelas_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dosen_pengajar_kelas_id_pddikti_unique": {
+          "name": "dosen_pengajar_kelas_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.kelas_kuliah": {
+      "name": "kelas_kuliah",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mata_kuliah_id": {
+          "name": "mata_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "periode_id": {
+          "name": "periode_id",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama_kelas": {
+          "name": "nama_kelas",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_locked": {
+          "name": "is_locked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "tanggal_mulai_efektif": {
+          "name": "tanggal_mulai_efektif",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal_akhir_efektif": {
+          "name": "tanggal_akhir_efektif",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "kelas_kuliah_mata_kuliah_id_mata_kuliah_id_fk": {
+          "name": "kelas_kuliah_mata_kuliah_id_mata_kuliah_id_fk",
+          "tableFrom": "kelas_kuliah",
+          "tableTo": "mata_kuliah",
+          "columnsFrom": [
+            "mata_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "kelas_kuliah_periode_id_periode_akademik_id_fk": {
+          "name": "kelas_kuliah_periode_id_periode_akademik_id_fk",
+          "tableFrom": "kelas_kuliah",
+          "tableTo": "periode_akademik",
+          "columnsFrom": [
+            "periode_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "kelas_kuliah_id_pddikti_unique": {
+          "name": "kelas_kuliah_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.kompensasi_bayar": {
+      "name": "kompensasi_bayar",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_menit": {
+          "name": "jumlah_menit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "petugas_id": {
+          "name": "petugas_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "kompensasi_bayar_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "kompensasi_bayar_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "kompensasi_bayar",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "kompensasi_bayar_petugas_id_users_id_fk": {
+          "name": "kompensasi_bayar_petugas_id_users_id_fk",
+          "tableFrom": "kompensasi_bayar",
+          "tableTo": "users",
+          "columnsFrom": [
+            "petugas_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.komponen_nilai": {
+      "name": "komponen_nilai",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kelas_kuliah_id": {
+          "name": "kelas_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bobot": {
+          "name": "bobot",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "komponen_nilai_kelas_kuliah_id_kelas_kuliah_id_fk": {
+          "name": "komponen_nilai_kelas_kuliah_id_kelas_kuliah_id_fk",
+          "tableFrom": "komponen_nilai",
+          "tableTo": "kelas_kuliah",
+          "columnsFrom": [
+            "kelas_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.konversi_nilai": {
+      "name": "konversi_nilai",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "program_studi_id": {
+          "name": "program_studi_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nilai_huruf": {
+          "name": "nilai_huruf",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bobot_indeks": {
+          "name": "bobot_indeks",
+          "type": "numeric(3, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai_min": {
+          "name": "nilai_min",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai_max": {
+          "name": "nilai_max",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "predikat": {
+          "name": "predikat",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "konversi_nilai_program_studi_id_program_studi_id_fk": {
+          "name": "konversi_nilai_program_studi_id_program_studi_id_fk",
+          "tableFrom": "konversi_nilai",
+          "tableTo": "program_studi",
+          "columnsFrom": [
+            "program_studi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.krs": {
+      "name": "krs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kelas_kuliah_id": {
+          "name": "kelas_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai_angka": {
+          "name": "nilai_angka",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nilai_huruf": {
+          "name": "nilai_huruf",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nilai_indeks": {
+          "name": "nilai_indeks",
+          "type": "numeric(3, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_approved": {
+          "name": "is_approved",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "approved_by_id": {
+          "name": "approved_by_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "approved_at": {
+          "name": "approved_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "krs_mahasiswa_id_idx": {
+          "name": "krs_mahasiswa_id_idx",
+          "columns": [
+            "mahasiswa_id"
+          ],
+          "isUnique": false
+        },
+        "krs_kelas_kuliah_id_idx": {
+          "name": "krs_kelas_kuliah_id_idx",
+          "columns": [
+            "kelas_kuliah_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "krs_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "krs_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "krs",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "krs_kelas_kuliah_id_kelas_kuliah_id_fk": {
+          "name": "krs_kelas_kuliah_id_kelas_kuliah_id_fk",
+          "tableFrom": "krs",
+          "tableTo": "kelas_kuliah",
+          "columnsFrom": [
+            "kelas_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "krs_approved_by_id_dosen_id_fk": {
+          "name": "krs_approved_by_id_dosen_id_fk",
+          "tableFrom": "krs",
+          "tableTo": "dosen",
+          "columnsFrom": [
+            "approved_by_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "krs_id_pddikti_unique": {
+          "name": "krs_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.kurikulum": {
+      "name": "kurikulum",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "program_studi_id": {
+          "name": "program_studi_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semester_mulai": {
+          "name": "semester_mulai",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_sks_lulus": {
+          "name": "jumlah_sks_lulus",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_sks_wajib": {
+          "name": "jumlah_sks_wajib",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jumlah_sks_pilihan": {
+          "name": "jumlah_sks_pilihan",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_aktif": {
+          "name": "is_aktif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "kurikulum_program_studi_id_program_studi_id_fk": {
+          "name": "kurikulum_program_studi_id_program_studi_id_fk",
+          "tableFrom": "kurikulum",
+          "tableTo": "program_studi",
+          "columnsFrom": [
+            "program_studi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "kurikulum_semester_mulai_periode_akademik_id_fk": {
+          "name": "kurikulum_semester_mulai_periode_akademik_id_fk",
+          "tableFrom": "kurikulum",
+          "tableTo": "periode_akademik",
+          "columnsFrom": [
+            "semester_mulai"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "kurikulum_kode_unique": {
+          "name": "kurikulum_kode_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kode"
+          ]
+        },
+        "kurikulum_id_pddikti_unique": {
+          "name": "kurikulum_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.kurikulum_mata_kuliah": {
+      "name": "kurikulum_mata_kuliah",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kurikulum_id": {
+          "name": "kurikulum_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mata_kuliah_id": {
+          "name": "mata_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semester": {
+          "name": "semester",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sks_mata_kuliah": {
+          "name": "sks_mata_kuliah",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sks_tatap_muka": {
+          "name": "sks_tatap_muka",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sks_praktek": {
+          "name": "sks_praktek",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sks_praktek_lapangan": {
+          "name": "sks_praktek_lapangan",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "sks_simulasi": {
+          "name": "sks_simulasi",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "is_wajib": {
+          "name": "is_wajib",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "kurikulum_mata_kuliah_kurikulum_id_kurikulum_id_fk": {
+          "name": "kurikulum_mata_kuliah_kurikulum_id_kurikulum_id_fk",
+          "tableFrom": "kurikulum_mata_kuliah",
+          "tableTo": "kurikulum",
+          "columnsFrom": [
+            "kurikulum_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "kurikulum_mata_kuliah_mata_kuliah_id_mata_kuliah_id_fk": {
+          "name": "kurikulum_mata_kuliah_mata_kuliah_id_mata_kuliah_id_fk",
+          "tableFrom": "kurikulum_mata_kuliah",
+          "tableTo": "mata_kuliah",
+          "columnsFrom": [
+            "mata_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.mahasiswa": {
+      "name": "mahasiswa",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nim": {
+          "name": "nim",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "angkatan": {
+          "name": "angkatan",
+          "type": "varchar(4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "program_studi_id": {
+          "name": "program_studi_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dosen_pa_id": {
+          "name": "dosen_pa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'aktif'"
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nama_ibu_kandung": {
+          "name": "nama_ibu_kandung",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nik": {
+          "name": "nik",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis_kelamin": {
+          "name": "jenis_kelamin",
+          "type": "jenis_kelamin",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_lahir": {
+          "name": "tanggal_lahir",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tempat_lahir": {
+          "name": "tempat_lahir",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_agama": {
+          "name": "id_agama",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jalan": {
+          "name": "jalan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rt": {
+          "name": "rt",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rw": {
+          "name": "rw",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kode_pos": {
+          "name": "kode_pos",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kewarganegaraan": {
+          "name": "kewarganegaraan",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'ID'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "mahasiswa_program_studi_id_program_studi_id_fk": {
+          "name": "mahasiswa_program_studi_id_program_studi_id_fk",
+          "tableFrom": "mahasiswa",
+          "tableTo": "program_studi",
+          "columnsFrom": [
+            "program_studi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "mahasiswa_dosen_pa_id_dosen_id_fk": {
+          "name": "mahasiswa_dosen_pa_id_dosen_id_fk",
+          "tableFrom": "mahasiswa",
+          "tableTo": "dosen",
+          "columnsFrom": [
+            "dosen_pa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "mahasiswa_nim_unique": {
+          "name": "mahasiswa_nim_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "nim"
+          ]
+        },
+        "mahasiswa_email_unique": {
+          "name": "mahasiswa_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        },
+        "mahasiswa_id_pddikti_unique": {
+          "name": "mahasiswa_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        },
+        "mahasiswa_nik_unique": {
+          "name": "mahasiswa_nik_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "nik"
+          ]
+        }
+      }
+    },
+    "public.mahasiswa_keluar": {
+      "name": "mahasiswa_keluar",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "periode_id": {
+          "name": "periode_id",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_baru": {
+          "name": "status_baru",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_keluar": {
+          "name": "tanggal_keluar",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alasan_keluar": {
+          "name": "alasan_keluar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_sk_yudisium": {
+          "name": "no_sk_yudisium",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal_sk_yudisium": {
+          "name": "tanggal_sk_yudisium",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ipk": {
+          "name": "ipk",
+          "type": "numeric(3, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nomor_ijazah": {
+          "name": "nomor_ijazah",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "mahasiswa_keluar_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "mahasiswa_keluar_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "mahasiswa_keluar",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "mahasiswa_keluar_periode_id_periode_akademik_id_fk": {
+          "name": "mahasiswa_keluar_periode_id_periode_akademik_id_fk",
+          "tableFrom": "mahasiswa_keluar",
+          "tableTo": "periode_akademik",
+          "columnsFrom": [
+            "periode_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "mahasiswa_keluar_id_pddikti_unique": {
+          "name": "mahasiswa_keluar_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.mata_kuliah": {
+      "name": "mata_kuliah",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sks_total": {
+          "name": "sks_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sks_tatap_muka": {
+          "name": "sks_tatap_muka",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sks_praktek": {
+          "name": "sks_praktek",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sks_praktek_lapangan": {
+          "name": "sks_praktek_lapangan",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "sks_simulasi": {
+          "name": "sks_simulasi",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "program_studi_id": {
+          "name": "program_studi_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "mata_kuliah_program_studi_id_program_studi_id_fk": {
+          "name": "mata_kuliah_program_studi_id_program_studi_id_fk",
+          "tableFrom": "mata_kuliah",
+          "tableTo": "program_studi",
+          "columnsFrom": [
+            "program_studi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "mata_kuliah_kode_unique": {
+          "name": "mata_kuliah_kode_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kode"
+          ]
+        },
+        "mata_kuliah_id_pddikti_unique": {
+          "name": "mata_kuliah_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.nilai_komponen_mahasiswa": {
+      "name": "nilai_komponen_mahasiswa",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "krs_id": {
+          "name": "krs_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "komponen_nilai_id": {
+          "name": "komponen_nilai_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai": {
+          "name": "nilai",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "nilai_komponen_mahasiswa_krs_id_krs_id_fk": {
+          "name": "nilai_komponen_mahasiswa_krs_id_krs_id_fk",
+          "tableFrom": "nilai_komponen_mahasiswa",
+          "tableTo": "krs",
+          "columnsFrom": [
+            "krs_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "nilai_komponen_mahasiswa_komponen_nilai_id_komponen_nilai_id_fk": {
+          "name": "nilai_komponen_mahasiswa_komponen_nilai_id_komponen_nilai_id_fk",
+          "tableFrom": "nilai_komponen_mahasiswa",
+          "tableTo": "komponen_nilai",
+          "columnsFrom": [
+            "komponen_nilai_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.password_resets": {
+      "name": "password_resets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "password_resets_token_unique": {
+          "name": "password_resets_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      }
+    },
+    "public.pelanggaran": {
+      "name": "pelanggaran",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis_pelanggaran": {
+          "name": "jenis_pelanggaran",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bobot_poin": {
+          "name": "bobot_poin",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dibuat_oleh": {
+          "name": "dibuat_oleh",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pelanggaran_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "pelanggaran_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "pelanggaran",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "pelanggaran_dibuat_oleh_users_id_fk": {
+          "name": "pelanggaran_dibuat_oleh_users_id_fk",
+          "tableFrom": "pelanggaran",
+          "tableTo": "users",
+          "columnsFrom": [
+            "dibuat_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.pengajuan_cuti": {
+      "name": "pengajuan_cuti",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "periode_id": {
+          "name": "periode_id",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alasan": {
+          "name": "alasan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_surat_izin_cuti": {
+          "name": "no_surat_izin_cuti",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tgl_surat_izin_cuti": {
+          "name": "tgl_surat_izin_cuti",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pengajuan_cuti_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "pengajuan_cuti_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "pengajuan_cuti",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "pengajuan_cuti_periode_id_periode_akademik_id_fk": {
+          "name": "pengajuan_cuti_periode_id_periode_akademik_id_fk",
+          "tableFrom": "pengajuan_cuti",
+          "tableTo": "periode_akademik",
+          "columnsFrom": [
+            "periode_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pengajuan_cuti_id_pddikti_unique": {
+          "name": "pengajuan_cuti_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.pengajuan_yudisium": {
+      "name": "pengajuan_yudisium",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bebas_perpustakaan": {
+          "name": "bebas_perpustakaan",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "bebas_lab": {
+          "name": "bebas_lab",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "bukti_pembayaran_wisuda": {
+          "name": "bukti_pembayaran_wisuda",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "skor_toefl": {
+          "name": "skor_toefl",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "judul_ta": {
+          "name": "judul_ta",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'diajukan'"
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pengajuan_yudisium_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "pengajuan_yudisium_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "pengajuan_yudisium",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pengajuan_yudisium_mahasiswa_id_unique": {
+          "name": "pengajuan_yudisium_mahasiswa_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "mahasiswa_id"
+          ]
+        }
+      }
+    },
+    "public.periode_akademik": {
+      "name": "periode_akademik",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(5)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aktif": {
+          "name": "aktif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "periode_akademik_id_pddikti_unique": {
+          "name": "periode_akademik_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.presensi": {
+      "name": "presensi",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bap_id": {
+          "name": "bap_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "presensi_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "durasi_mangkir": {
+          "name": "durasi_mangkir",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "presensi_bap_id_bap_id_fk": {
+          "name": "presensi_bap_id_bap_id_fk",
+          "tableFrom": "presensi",
+          "tableTo": "bap",
+          "columnsFrom": [
+            "bap_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "presensi_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "presensi_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "presensi",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.program_studi": {
+      "name": "program_studi",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenjang": {
+          "name": "jenjang",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_synced": {
+          "name": "is_synced",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "last_sync_at": {
+          "name": "last_sync_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "program_studi_kode_unique": {
+          "name": "program_studi_kode_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kode"
+          ]
+        },
+        "program_studi_id_pddikti_unique": {
+          "name": "program_studi_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.rencana_evaluasi": {
+      "name": "rencana_evaluasi",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mata_kuliah_id": {
+          "name": "mata_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama_evaluasi": {
+          "name": "nama_evaluasi",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bobot_evaluasi": {
+          "name": "bobot_evaluasi",
+          "type": "numeric(5, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "rencana_evaluasi_mata_kuliah_id_mata_kuliah_id_fk": {
+          "name": "rencana_evaluasi_mata_kuliah_id_mata_kuliah_id_fk",
+          "tableFrom": "rencana_evaluasi",
+          "tableTo": "mata_kuliah",
+          "columnsFrom": [
+            "mata_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rencana_evaluasi_id_pddikti_unique": {
+          "name": "rencana_evaluasi_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.rps": {
+      "name": "rps",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mata_kuliah_id": {
+          "name": "mata_kuliah_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "periode_id": {
+          "name": "periode_id",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deskripsi": {
+          "name": "deskripsi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cpl_prodi": {
+          "name": "cpl_prodi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "rps_mata_kuliah_id_mata_kuliah_id_fk": {
+          "name": "rps_mata_kuliah_id_mata_kuliah_id_fk",
+          "tableFrom": "rps",
+          "tableTo": "mata_kuliah",
+          "columnsFrom": [
+            "mata_kuliah_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "rps_periode_id_periode_akademik_id_fk": {
+          "name": "rps_periode_id_periode_akademik_id_fk",
+          "tableFrom": "rps",
+          "tableTo": "periode_akademik",
+          "columnsFrom": [
+            "periode_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.rps_topik": {
+      "name": "rps_topik",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "rps_id": {
+          "name": "rps_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pertemuan_ke": {
+          "name": "pertemuan_ke",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "topik": {
+          "name": "topik",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sub_topik": {
+          "name": "sub_topik",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metode": {
+          "name": "metode",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cpmk_id": {
+          "name": "cpmk_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "id_pddikti": {
+          "name": "id_pddikti",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "rps_topik_rps_id_rps_id_fk": {
+          "name": "rps_topik_rps_id_rps_id_fk",
+          "tableFrom": "rps_topik",
+          "tableTo": "rps",
+          "columnsFrom": [
+            "rps_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "rps_topik_cpmk_id_cpmk_id_fk": {
+          "name": "rps_topik_cpmk_id_cpmk_id_fk",
+          "tableFrom": "rps_topik",
+          "tableTo": "cpmk",
+          "columnsFrom": [
+            "cpmk_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "rps_topik_id_pddikti_unique": {
+          "name": "rps_topik_id_pddikti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id_pddikti"
+          ]
+        }
+      }
+    },
+    "public.sesi_bimbingan": {
+      "name": "sesi_bimbingan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bimbingan_id": {
+          "name": "bimbingan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pertemuan_ke": {
+          "name": "pertemuan_ke",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_bimbingan": {
+          "name": "tanggal_bimbingan",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permasalahan": {
+          "name": "permasalahan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "solusi": {
+          "name": "solusi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_bkd": {
+          "name": "status_bkd",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "sesi_bimbingan_bimbingan_id_bimbingan_id_fk": {
+          "name": "sesi_bimbingan_bimbingan_id_bimbingan_id_fk",
+          "tableFrom": "sesi_bimbingan",
+          "tableTo": "bimbingan",
+          "columnsFrom": [
+            "bimbingan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.skala_predikat_kelulusan": {
+      "name": "skala_predikat_kelulusan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ipk_min": {
+          "name": "ipk_min",
+          "type": "numeric(3, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ipk_max": {
+          "name": "ipk_max",
+          "type": "numeric(3, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "predikat": {
+          "name": "predikat",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.skema_tarif": {
+      "name": "skema_tarif",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "angkatan": {
+          "name": "angkatan",
+          "type": "varchar(4)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "program_studi_id": {
+          "name": "program_studi_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal": {
+          "name": "nominal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "skema_tarif_program_studi_id_program_studi_id_fk": {
+          "name": "skema_tarif_program_studi_id_program_studi_id_fk",
+          "tableFrom": "skema_tarif",
+          "tableTo": "program_studi",
+          "columnsFrom": [
+            "program_studi_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "skema_tarif_angkatan_prodi_unique": {
+          "name": "skema_tarif_angkatan_prodi_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "angkatan",
+            "program_studi_id"
+          ]
+        }
+      }
+    },
+    "public.tagihan": {
+      "name": "tagihan",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "mahasiswa_id": {
+          "name": "mahasiswa_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "periode_id": {
+          "name": "periode_id",
+          "type": "varchar(5)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal": {
+          "name": "nominal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal_terbayar": {
+          "name": "nominal_terbayar",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "status": {
+          "name": "status",
+          "type": "tagihan_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'belum_bayar'"
+        },
+        "tanggal_bayar": {
+          "name": "tanggal_bayar",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tagihan_mahasiswa_id_mahasiswa_id_fk": {
+          "name": "tagihan_mahasiswa_id_mahasiswa_id_fk",
+          "tableFrom": "tagihan",
+          "tableTo": "mahasiswa",
+          "columnsFrom": [
+            "mahasiswa_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "tagihan_periode_id_periode_akademik_id_fk": {
+          "name": "tagihan_periode_id_periode_akademik_id_fk",
+          "tableFrom": "tagihan",
+          "tableTo": "periode_akademik",
+          "columnsFrom": [
+            "periode_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.transaksi_pembayaran": {
+      "name": "transaksi_pembayaran",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "tagihan_id": {
+          "name": "tagihan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal_bayar": {
+          "name": "nominal_bayar",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_transaksi": {
+          "name": "tanggal_transaksi",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "petugas_id": {
+          "name": "petugas_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_void": {
+          "name": "is_void",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "catatan_koreksi": {
+          "name": "catatan_koreksi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "transaksi_pembayaran_tagihan_id_tagihan_id_fk": {
+          "name": "transaksi_pembayaran_tagihan_id_tagihan_id_fk",
+          "tableFrom": "transaksi_pembayaran",
+          "tableTo": "tagihan",
+          "columnsFrom": [
+            "tagihan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "transaksi_pembayaran_petugas_id_users_id_fk": {
+          "name": "transaksi_pembayaran_petugas_id_users_id_fk",
+          "tableFrom": "transaksi_pembayaran",
+          "tableTo": "users",
+          "columnsFrom": [
+            "petugas_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "user_role",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'mahasiswa'"
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "theme": {
+          "name": "theme",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'light'"
+        },
+        "avatar": {
+          "name": "avatar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      }
+    }
+  },
+  "enums": {
+    "public.jenis_kelamin": {
+      "name": "jenis_kelamin",
+      "schema": "public",
+      "values": [
+        "L",
+        "P"
+      ]
+    },
+    "public.presensi_status": {
+      "name": "presensi_status",
+      "schema": "public",
+      "values": [
+        "hadir",
+        "sakit",
+        "izin",
+        "telat",
+        "alpa"
+      ]
+    },
+    "public.user_role": {
+      "name": "user_role",
+      "schema": "public",
+      "values": [
+        "admin",
+        "dosen",
+        "mahasiswa",
+        "prodi",
+        "keuangan",
+        "guest"
+      ]
+    },
+    "public.tagihan_status": {
+      "name": "tagihan_status",
+      "schema": "public",
+      "values": [
+        "belum_bayar",
+        "cicilan",
+        "lunas"
+      ]
+    }
+  },
+  "schemas": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

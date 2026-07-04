@@ -347,6 +347,48 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   Sinkronisasi PDDIKTI
                 </A>
               </Show>
+              <Show when={role() === 'mahasiswa'}>
+                <A
+                  href="/pengajuan-cuti"
+                  onClick={() => props.onClose()}
+                  activeClass="text-blue-400 font-semibold"
+                  inactiveClass="hover:text-white text-gray-400"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2H3v12a2 2 0 002 2z" />
+                  </svg>
+                  Pengajuan Cuti
+                </A>
+              </Show>
+              <Show when={role() !== 'mahasiswa' && role() !== 'guest'}>
+                <A
+                  href="/approval-cuti"
+                  onClick={() => props.onClose()}
+                  activeClass="text-blue-400 font-semibold"
+                  inactiveClass="hover:text-white text-gray-400"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Persetujuan Cuti
+                </A>
+              </Show>
+              <Show when={role() === 'admin' || role() === 'prodi'}>
+                <A
+                  href="/penonaktifan"
+                  onClick={() => props.onClose()}
+                  activeClass="text-blue-400 font-semibold"
+                  inactiveClass="hover:text-white text-gray-400"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Penonaktifan Mahasiswa
+                </A>
+              </Show>
             </div>
           </Show>
         </div>

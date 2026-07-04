@@ -1,7 +1,7 @@
 import { app } from '../app';
 import { db } from '../utils/db';
 import { eq } from 'drizzle-orm';
-import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar, bimbingan, bimbinganThread, pelanggaran, komponenNilai, nilaiKomponenMahasiswa, pengajuanYudisium, transaksiPembayaran, skemaTarif, konversiNilai, skalaPredikatKelulusan } from '../models/schema';
+import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar, bimbingan, bimbinganThread, pelanggaran, komponenNilai, nilaiKomponenMahasiswa, pengajuanYudisium, transaksiPembayaran, skemaTarif, konversiNilai, skalaPredikatKelulusan, pengajuanCuti, mahasiswaKeluar } from '../models/schema';
 
 export interface UserResponse {
   id: number;
@@ -43,6 +43,8 @@ export interface MahasiswaSuccessResponse {
 
 // Helper function to clear all database tables to ensure test independence
 export async function clearDatabase() {
+  await db.delete(pengajuanCuti);
+  await db.delete(mahasiswaKeluar);
   await db.delete(transaksiPembayaran);
   await db.delete(skemaTarif);
   await db.delete(konversiNilai);
