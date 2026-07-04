@@ -1,6 +1,6 @@
 import { db } from '../utils/db';
-import { mahasiswa, dosen, mataKuliah, programStudi } from '../models/schema';
-import { eq } from 'drizzle-orm';
+import { mahasiswa, dosen, mataKuliah, programStudi, users, krs, kelasKuliah } from '../models/schema';
+import { eq, and } from 'drizzle-orm';
 
 export interface ImportResult {
   successCount: number;
@@ -452,6 +452,252 @@ export class CsvImportService {
         result.errors.push({ line: lineNum, error: `Gagal memperbarui relasi Dosen PA untuk NIM "${nimVal}": ${err.message}` });
       }
     }
+
+    return result;
+  }
+
+  static async importUsers(csvText: string): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+    }
+
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const result: ImportResult = { successCount: 0, errors: [] };
+
+    const emailIdx = headers.indexOf('email');
+    const namaIdx = headers.indexOf('nama');
+    const roleIdx = headers.indexOf('role');
+    const passwordIdx = headers.indexOf('password');
+
+    if (emailIdx === -1 || namaIdx === -1 || roleIdx === -1) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: email, nama, role' }]
+      };
+    }
+
+    const validRoles = ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest'];
+
+    try {
+      await db.transaction(async (tx) => {
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          const lineNum = i + 1;
+          if (row.length < headers.length) continue;
+
+          const emailVal = row[emailIdx].trim().toLowerCase();
+          const namaVal = row[namaIdx].trim();
+          const roleVal = row[roleIdx].trim().toLowerCase();
+          let passwordVal = emailVal;
+          if (passwordIdx !== -1 && row[passwordIdx] && row[passwordIdx].trim()) {
+            passwordVal = row[passwordIdx].trim();
+          }
+
+          if (!emailVal || !namaVal || !roleVal) {
+            throw new Error(`Baris ${lineNum}: Kolom email, nama, dan role wajib diisi.`);
+          }
+
+          if (!validRoles.includes(roleVal)) {
+            throw new Error(`Baris ${lineNum}: Role "${roleVal}" tidak valid. Role yang diizinkan: ${validRoles.join(', ')}`);
+          }
+
+          // Check if email already exists
+          const [existingUser] = await tx
+            .select()
+            .from(users)
+            .where(eq(users.email, emailVal))
+            .limit(1);
+
+          if (existingUser) {
+            throw new Error(`Baris ${lineNum}: Email "${emailVal}" sudah terdaftar.`);
+          }
+
+          const hashedPassword = await Bun.password.hash(passwordVal, {
+            algorithm: 'bcrypt',
+            cost: 10,
+          });
+
+          await tx.insert(users).values({
+            email: emailVal,
+            password: hashedPassword,
+            nama: namaVal,
+            role: roleVal as any,
+            isActive: true,
+          });
+        }
+      });
+      result.successCount = rows.length - 1;
+    } catch (err: any) {
+      result.successCount = 0;
+      result.errors.push({ line: 0, error: err.message || 'Gagal menyimpan data.' });
+    }
+
+    return result;
+  }
+
+  static async generateAccounts(targetType: 'mahasiswa' | 'dosen', ids: number[]): Promise<{ successCount: number; errors: string[] }> {
+    const errors: string[] = [];
+    let successCount = 0;
+
+    if (!ids || ids.length === 0) {
+      return { successCount: 0, errors: ['Tidak ada data terpilih.'] };
+    }
+
+    await db.transaction(async (tx) => {
+      for (const id of ids) {
+        let email = '';
+        let nama = '';
+        let role: 'mahasiswa' | 'dosen' = 'mahasiswa';
+
+        if (targetType === 'mahasiswa') {
+          const [mhs] = await tx.select().from(mahasiswa).where(eq(mahasiswa.id, id)).limit(1);
+          if (!mhs) {
+            errors.push(`Mahasiswa dengan ID ${id} tidak ditemukan.`);
+            continue;
+          }
+          email = mhs.email;
+          nama = mhs.nama;
+          role = 'mahasiswa';
+        } else {
+          const [dsn] = await tx.select().from(dosen).where(eq(dosen.id, id)).limit(1);
+          if (!dsn) {
+            errors.push(`Dosen dengan ID ${id} tidak ditemukan.`);
+            continue;
+          }
+          email = dsn.email;
+          nama = dsn.nama;
+          role = 'dosen';
+        }
+
+        if (!email) {
+          errors.push(`Gagal membuat akun untuk ${nama} (${targetType} ID: ${id}): Email kosong.`);
+          continue;
+        }
+
+        // Check if user already exists
+        const [existing] = await tx.select().from(users).where(eq(users.email, email)).limit(1);
+        if (existing) {
+          errors.push(`Akun dengan email "${email}" (${nama}) sudah terdaftar.`);
+          continue;
+        }
+
+        const hashedPassword = await Bun.password.hash(email, {
+          algorithm: 'bcrypt',
+          cost: 10,
+        });
+
+        await tx.insert(users).values({
+          email,
+          password: hashedPassword,
+          nama,
+          role,
+          isActive: true,
+        });
+        successCount++;
+      }
+    });
+
+    return { successCount, errors };
+  }
+
+  static async importKrs(csvText: string): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+    }
+
+    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const result: ImportResult = { successCount: 0, errors: [] };
+
+    const nimIdx = headers.indexOf('nim');
+    const kodeMkIdx = headers.indexOf('kode_mata_kuliah');
+    const namaKelasIdx = headers.indexOf('nama_kelas');
+    const periodeIdx = headers.indexOf('periode_id');
+
+    if (nimIdx === -1 || kodeMkIdx === -1 || namaKelasIdx === -1 || periodeIdx === -1) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, kode_mata_kuliah, nama_kelas, periode_id' }]
+      };
+    }
+
+    await db.transaction(async (tx) => {
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        const lineNum = i + 1;
+        if (row.length < headers.length) continue;
+
+        const nimVal = row[nimIdx].trim();
+        const kodeMkVal = row[kodeMkIdx].trim();
+        const namaKelasVal = row[namaKelasIdx].trim();
+        const periodeVal = row[periodeIdx].trim();
+
+        if (!nimVal || !kodeMkVal || !namaKelasVal || !periodeVal) {
+          result.errors.push({ line: lineNum, error: 'Semua kolom (nim, kode_mata_kuliah, nama_kelas, periode_id) wajib diisi.' });
+          continue;
+        }
+
+        try {
+          // Find Mahasiswa
+          const [mhs] = await tx.select().from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
+          if (!mhs) {
+            throw new Error(`Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.`);
+          }
+
+          if (mhs.status !== 'aktif') {
+            throw new Error(`Mahasiswa dengan NIM "${nimVal}" tidak berstatus aktif.`);
+          }
+
+          // Find Mata Kuliah
+          const [mk] = await tx.select().from(mataKuliah).where(eq(mataKuliah.kode, kodeMkVal)).limit(1);
+          if (!mk) {
+            throw new Error(`Mata Kuliah dengan kode "${kodeMkVal}" tidak ditemukan.`);
+          }
+
+          // Find Kelas Kuliah
+          const [kelas] = await tx.select()
+            .from(kelasKuliah)
+            .where(
+              and(
+                eq(kelasKuliah.mataKuliahId, mk.id),
+                eq(kelasKuliah.namaKelas, namaKelasVal),
+                eq(kelasKuliah.periodeId, periodeVal)
+              )
+            )
+            .limit(1);
+
+          if (!kelas) {
+            throw new Error(`Kelas Kuliah "${namaKelasVal}" untuk MK "${kodeMkVal}" pada Periode "${periodeVal}" tidak ditemukan.`);
+          }
+
+          // Check for duplicate KRS
+          const [existing] = await tx.select()
+            .from(krs)
+            .where(
+              and(
+                eq(krs.mahasiswaId, mhs.id),
+                eq(krs.kelasKuliahId, kelas.id)
+              )
+            )
+            .limit(1);
+
+          if (existing) {
+            continue;
+          }
+
+          await tx.insert(krs).values({
+            mahasiswaId: mhs.id,
+            kelasKuliahId: kelas.id,
+            isApproved: false
+          });
+
+          result.successCount++;
+        } catch (err: any) {
+          result.errors.push({ line: lineNum, error: err.message });
+        }
+      }
+    });
 
     return result;
   }

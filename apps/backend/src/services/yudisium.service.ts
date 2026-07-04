@@ -1,5 +1,5 @@
 import { db } from '../utils/db';
-import { pengajuanYudisium, mahasiswa, programStudi, komponenNilai, nilaiKomponenMahasiswa, krs, kelasKuliah } from '../models/schema';
+import { pengajuanYudisium, mahasiswa, programStudi, komponenNilai, nilaiKomponenMahasiswa, krs, kelasKuliah, konversiNilai, mataKuliah } from '../models/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 
 export class YudisiumService {
@@ -232,6 +232,38 @@ export class YudisiumService {
       throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
     }
 
+    // Get programStudiId of this class to determine the conversion rules
+    const [kelasInfo] = await db
+      .select({ programStudiId: mataKuliah.programStudiId })
+      .from(kelasKuliah)
+      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .where(eq(kelasKuliah.id, kelasKuliahId))
+      .limit(1);
+    const prodiId = kelasInfo?.programStudiId || null;
+
+    // Load conversion rules
+    const allRules = await db.select().from(konversiNilai);
+    const prodiRules = allRules.filter(r => r.programStudiId === prodiId);
+    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter(r => r.programStudiId === null);
+
+    const getGradeFromRules = (score: number) => {
+      for (const rule of activeRules) {
+        const min = parseFloat(rule.nilaiMin);
+        const max = parseFloat(rule.nilaiMax);
+        if (score >= min && score <= max) {
+          return { huruf: rule.nilaiHuruf, indeks: parseFloat(rule.bobotIndeks) };
+        }
+      }
+      // Fallback statis
+      if (score >= 80) return { huruf: 'A', indeks: 4.0 };
+      if (score >= 75) return { huruf: 'B+', indeks: 3.5 };
+      if (score >= 70) return { huruf: 'B', indeks: 3.0 };
+      if (score >= 65) return { huruf: 'C+', indeks: 2.5 };
+      if (score >= 60) return { huruf: 'C', indeks: 2.0 };
+      if (score >= 50) return { huruf: 'D', indeks: 1.0 };
+      return { huruf: 'E', indeks: 0.0 };
+    };
+
     const components = await this.getKomponen(kelasKuliahId);
     const compMap = new Map<number, number>();
     for (const c of components) {
@@ -284,7 +316,7 @@ export class YudisiumService {
         // Update KRS only if weights are correct (e.g. all components are entered)
         if (registeredWeight === 100) {
           const finalScoreFixed = parseFloat(finalScore.toFixed(2));
-          const conversion = this.getNilaiHurufDanIndeks(finalScoreFixed);
+          const conversion = getGradeFromRules(finalScoreFixed);
 
           const [updatedKrs] = await tx
             .update(krs)
@@ -304,20 +336,96 @@ export class YudisiumService {
     });
   }
 
-  private static getNilaiHurufDanIndeks(score: number) {
-    if (score >= 80) return { huruf: 'A', indeks: 4.0 };
-    if (score >= 75) return { huruf: 'B+', indeks: 3.5 };
-    if (score >= 70) return { huruf: 'B', indeks: 3.0 };
-    if (score >= 65) return { huruf: 'C+', indeks: 2.5 };
-    if (score >= 60) return { huruf: 'C', indeks: 2.0 };
-    if (score >= 50) return { huruf: 'D', indeks: 1.0 };
-    return { huruf: 'E', indeks: 0.0 };
-  }
-
   static async lockKelas(kelasKuliahId: number) {
     const [updated] = await db
       .update(kelasKuliah)
       .set({ isLocked: true, updatedAt: new Date() })
+      .where(eq(kelasKuliah.id, kelasKuliahId))
+      .returning();
+    if (!updated) {
+      throw new Error('Kelas kuliah tidak ditemukan.');
+    }
+
+    // Recalculate grades for all students in this class
+    const components = await this.getKomponen(kelasKuliahId);
+    const compMap = new Map<number, number>();
+    let totalWeight = 0;
+    for (const c of components) {
+      compMap.set(c.id, c.bobot);
+      totalWeight += c.bobot;
+    }
+
+    const [kelasInfo] = await db
+      .select({ programStudiId: mataKuliah.programStudiId })
+      .from(kelasKuliah)
+      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .where(eq(kelasKuliah.id, kelasKuliahId))
+      .limit(1);
+    const prodiId = kelasInfo?.programStudiId || null;
+
+    const allRules = await db.select().from(konversiNilai);
+    const prodiRules = allRules.filter(r => r.programStudiId === prodiId);
+    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter(r => r.programStudiId === null);
+
+    const getGradeFromRules = (score: number) => {
+      for (const rule of activeRules) {
+        const min = parseFloat(rule.nilaiMin);
+        const max = parseFloat(rule.nilaiMax);
+        if (score >= min && score <= max) {
+          return { huruf: rule.nilaiHuruf, indeks: parseFloat(rule.bobotIndeks) };
+        }
+      }
+      if (score >= 80) return { huruf: 'A', indeks: 4.0 };
+      if (score >= 75) return { huruf: 'B+', indeks: 3.5 };
+      if (score >= 70) return { huruf: 'B', indeks: 3.0 };
+      if (score >= 65) return { huruf: 'C+', indeks: 2.5 };
+      if (score >= 60) return { huruf: 'C', indeks: 2.0 };
+      if (score >= 50) return { huruf: 'D', indeks: 1.0 };
+      return { huruf: 'E', indeks: 0.0 };
+    };
+
+    const krsRecords = await db
+      .select()
+      .from(krs)
+      .where(eq(krs.kelasKuliahId, kelasKuliahId));
+
+    for (const krsItem of krsRecords) {
+      const studentGrades = await db
+        .select()
+        .from(nilaiKomponenMahasiswa)
+        .where(eq(nilaiKomponenMahasiswa.krsId, krsItem.id));
+
+      let finalScore = 0;
+      let registeredWeight = 0;
+      for (const g of studentGrades) {
+        const weight = compMap.get(g.komponenNilaiId) || 0;
+        finalScore += parseFloat(g.nilai) * (weight / 100);
+        registeredWeight += weight;
+      }
+
+      if (totalWeight === 100 && registeredWeight === 100) {
+        const finalScoreFixed = parseFloat(finalScore.toFixed(2));
+        const conversion = getGradeFromRules(finalScoreFixed);
+
+        await db
+          .update(krs)
+          .set({
+            nilaiAngka: String(finalScoreFixed),
+            nilaiHuruf: conversion.huruf,
+            nilaiIndeks: String(conversion.indeks),
+            updatedAt: new Date()
+          })
+          .where(eq(krs.id, krsItem.id));
+      }
+    }
+
+    return updated;
+  }
+
+  static async unlockKelas(kelasKuliahId: number) {
+    const [updated] = await db
+      .update(kelasKuliah)
+      .set({ isLocked: false, updatedAt: new Date() })
       .where(eq(kelasKuliah.id, kelasKuliahId))
       .returning();
     if (!updated) {

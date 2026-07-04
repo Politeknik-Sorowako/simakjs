@@ -23,7 +23,9 @@ export const getKelasSchema = {
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
-    search: t.Optional(t.String({ default: '' }))
+    search: t.Optional(t.String({ default: '' })),
+    programStudiId: t.Optional(t.Numeric()),
+    periodeId: t.Optional(t.String())
   }),
   response: {
     200: t.Object({
@@ -33,6 +35,7 @@ export const getKelasSchema = {
           mataKuliahId: t.Integer({ default: 1 }),
           periodeId: t.String({ default: '20231' }),
           namaKelas: t.String({ default: '4A' }),
+          isLocked: t.Boolean({ default: false }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
           lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
@@ -119,6 +122,7 @@ export const getKelasByIdSchema = {
       mataKuliahId: t.Integer({ default: 1 }),
       periodeId: t.String({ default: '20231' }),
       namaKelas: t.String({ default: '4A' }),
+      isLocked: t.Boolean({ default: false }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),

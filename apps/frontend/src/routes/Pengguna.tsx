@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 
 export default function Pengguna() {
   const toast = useToast();
@@ -14,6 +15,7 @@ export default function Pengguna() {
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
   const [actionLoading, setActionLoading] = createSignal<number | null>(null);
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   const [usersRes, { refetch }] = createResource(
     () => ({ page: page(), search: search() }),
@@ -59,15 +61,27 @@ export default function Pengguna() {
             <p class="text-sm text-gray-500">Aktivasi akun, pencarian, dan manajemen otorisasi peran (role) pengguna SIMAK.</p>
           </div>
           
-          <div class="w-full md:w-72">
-            <input
-              type="text"
-              placeholder="Cari nama atau email..."
-              onInput={handleSearchInput}
-              class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none shadow-sm"
-            />
+          <div class="flex items-center gap-3 w-full md:w-auto">
+            <div class="w-full md:w-72">
+              <input
+                type="text"
+                placeholder="Cari nama atau email..."
+                onInput={handleSearchInput}
+                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none shadow-sm"
+              />
+            </div>
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor Pengguna</Button>
           </div>
         </div>
+
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          importUrl="/users/import"
+          templateHeaders={['email', 'nama', 'role']}
+          title="Pengguna"
+          onSuccess={() => refetch()}
+        />
 
         <Show when={usersRes.loading}>
           <div class="flex justify-center py-12 text-gray-400">Memuat data pengguna...</div>

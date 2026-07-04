@@ -29,6 +29,8 @@ import ResetPassword from './routes/ResetPassword';
 import Kurikulum from './routes/Kurikulum';
 import Rps from './routes/Rps';
 
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
+
 function AppContent() {
   const auth = useAuth();
 
@@ -228,7 +230,9 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <AppContent />
+        <WorkspaceProvider>
+          <AppContent />
+        </WorkspaceProvider>
       </AuthProvider>
     </ToastProvider>
   );

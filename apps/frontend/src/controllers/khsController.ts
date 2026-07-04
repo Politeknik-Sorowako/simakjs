@@ -137,6 +137,12 @@ export const khsController = {
     });
   },
 
+  async unlockKelas(kelasKuliahId: number): Promise<any> {
+    return fetchApi<any>(`/yudisium/kelas/${kelasKuliahId}/unlock`, {
+      method: 'POST'
+    });
+  },
+
   async getPddiktiStats(): Promise<any> {
     return fetchApi<any>('/pddikti/stats');
   },
@@ -144,6 +150,43 @@ export const khsController = {
   async syncPddikti(): Promise<any> {
     return fetchApi<any>('/pddikti/sync', {
       method: 'POST'
+    });
+  },
+
+  // --- KONVERSI NILAI ---
+  async getAllKonversi(programStudiId?: number): Promise<any[]> {
+    const url = programStudiId ? `/khs/konversi?programStudiId=${programStudiId}` : '/khs/konversi';
+    return fetchApi<any[]>(url);
+  },
+
+  async saveKonversi(data: any): Promise<any> {
+    return fetchApi<any>('/khs/konversi', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deleteKonversi(id: number): Promise<any> {
+    return fetchApi<any>(`/khs/konversi/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
+  // --- SKALA PREDIKAT KELULUSAN ---
+  async getAllPredikat(): Promise<any[]> {
+    return fetchApi<any[]>('/khs/predikat');
+  },
+
+  async savePredikat(data: any): Promise<any> {
+    return fetchApi<any>('/khs/predikat', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  async deletePredikat(id: number): Promise<any> {
+    return fetchApi<any>(`/khs/predikat/${id}`, {
+      method: 'DELETE'
     });
   }
 };

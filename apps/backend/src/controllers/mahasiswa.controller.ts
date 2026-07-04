@@ -14,7 +14,7 @@ export class MahasiswaController {
     return mhs ? mhs.id : null;
   }
 
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery & { programStudiId?: string }>) {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -23,6 +23,7 @@ export class MahasiswaController {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
+    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
 
     if (user.role === 'mahasiswa') {
       const myMhsId = await MahasiswaController.getMahasiswaIdByEmail(user.email);
@@ -50,10 +51,10 @@ export class MahasiswaController {
           meta: { total: 0, page, limit, totalPages: 0 }
         };
       }
-      return await MahasiswaService.getAll(page, limit, search, dsn.id);
+      return await MahasiswaService.getAll(page, limit, search, dsn.id, programStudiId);
     }
 
-    return await MahasiswaService.getAll(page, limit, search);
+    return await MahasiswaService.getAll(page, limit, search, undefined, programStudiId);
   }
 
   static async getById({ params, set, getCurrentUser }: AuthContext) {

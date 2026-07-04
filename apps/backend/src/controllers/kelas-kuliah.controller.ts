@@ -2,11 +2,13 @@ import { KelasKuliahService } from '../services/kelas-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class KelasKuliahController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
+  static async getAll({ query }: AuthContext<any, PaginationQuery & { programStudiId?: string; periodeId?: string }>) {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
-    return await KelasKuliahService.getAll(page, limit, search);
+    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+    const periodeId = query?.periodeId || undefined;
+    return await KelasKuliahService.getAll(page, limit, search, programStudiId, periodeId);
   }
 
   static async getById({ params, set }: AuthContext) {

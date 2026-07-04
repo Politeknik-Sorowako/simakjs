@@ -56,17 +56,13 @@ export const getTranskripSchema = {
       mahasiswa: t.Optional(t.Object({
         id: t.Optional(t.Integer({ default: 1 })),
         nim: t.Optional(t.String({ default: '202301001' })),
-        nama: t.Optional(t.String({ default: 'Andi Pratama' }))
+        nama: t.Optional(t.String({ default: 'Andi Pratama' })),
+        prodi: t.Optional(t.String({ default: '-' }))
       })),
-      transkripList: t.Optional(t.Array(t.Object({
-        mataKuliahKode: t.Optional(t.String({ default: 'MK001' })),
-        mataKuliahNama: t.Optional(t.String({ default: 'Dasar Pemrograman' })),
-        sks: t.Optional(t.Integer({ default: 3 })),
-        nilaiHuruf: t.Optional(t.String({ default: 'A' })),
-        nilaiIndeks: t.Optional(t.Union([t.String(), t.Number(), t.Null()], { default: '4.00' }))
-      }))),
+      transkripList: t.Optional(t.Array(t.Any())),
       totalSksLulus: t.Optional(t.Integer({ default: 84 })),
-      ipk: t.Optional(t.Number({ default: 3.65 }))
+      ipk: t.Optional(t.Number({ default: 3.65 })),
+      predikatKelulusan: t.Optional(t.String({ default: '-' }))
     })
   }
 };
@@ -97,5 +93,36 @@ export const getExamEligibilitySchema = {
       overallEligible: t.Optional(t.Boolean({ default: true }))
     })
   }
+};
+
+export const saveKonversiNilaiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Simpan / Tambahkan Aturan Konversi Nilai',
+    description: 'Menyimpan aturan rentang nilai angka ke huruf.'
+  },
+  body: t.Object({
+    id: t.Optional(t.Integer()),
+    programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
+    nilaiHuruf: t.String({ minLength: 1, maxLength: 5 }),
+    bobotIndeks: t.Union([t.String(), t.Number()]),
+    nilaiMin: t.Union([t.String(), t.Number()]),
+    nilaiMax: t.Union([t.String(), t.Number()]),
+    predikat: t.String({ minLength: 1, maxLength: 50 })
+  })
+};
+
+export const saveSkalaPredikatSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Simpan / Tambahkan Aturan Skala Predikat Kelulusan',
+    description: 'Menyimpan aturan rentang IPK ke predikat kelulusan.'
+  },
+  body: t.Object({
+    id: t.Optional(t.Integer()),
+    ipkMin: t.Union([t.String(), t.Number()]),
+    ipkMax: t.Union([t.String(), t.Number()]),
+    predikat: t.String({ minLength: 1, maxLength: 100 })
+  })
 };
 

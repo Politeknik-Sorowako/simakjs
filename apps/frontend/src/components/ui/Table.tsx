@@ -1,7 +1,7 @@
 import { JSX } from 'solid-js';
 
 interface TableProps {
-  headers: string[];
+  headers: (string | JSX.Element)[];
   children: JSX.Element;
 }
 

@@ -16,10 +16,10 @@ export default function InputNilai() {
   // Selected State
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
   const [editableComponents, setEditableComponents] = createSignal<Array<{ name: string; bobot: number }>>([]);
-  const [inputGrades, setInputGrades] = createSignal<Record<string, number>>({});
+  const [inputGrades, setInputGrades] = createSignal<Record<string, string>>({});
 
   // 1. Load all Kelas Kuliah for Lecturer/Admin
-  const [classes] = createResource(
+  const [classes, { refetch: refetchClasses }] = createResource(
     () => {
       if (role() !== 'mahasiswa') return true;
       return null;
@@ -62,6 +62,22 @@ export default function InputNilai() {
 
   const selectedClassDetails = () => classes()?.find(c => c.id === selectedKelasId()) || null;
   const isClassLocked = () => selectedClassDetails()?.isLocked || false;
+  const selectedProdiId = () => selectedClassDetails()?.mataKuliah?.programStudiId || null;
+
+  const [konversiRules] = createResource(
+    () => ({ prodiId: selectedProdiId() }),
+    async ({ prodiId }) => {
+      try {
+        const rules = await khsController.getAllKonversi();
+        const prodiRules = rules.filter(r => r.programStudiId === prodiId);
+        return prodiRules.length > 0 ? prodiRules : rules.filter(r => r.programStudiId === null);
+      } catch (e) {
+        return [];
+      }
+    }
+  );
+
+  const isRulesMissing = () => selectedKelasId() && konversiRules() && konversiRules().length === 0;
 
   // 4. Load RPS Rencana Evaluasi for the selected class's Mata Kuliah
   const [rencanaEvals] = createResource(
@@ -93,11 +109,11 @@ export default function InputNilai() {
   createEffect(() => {
     const sg = studentsGrades();
     if (sg) {
-      const initial: Record<string, number> = {};
+      const initial: Record<string, string> = {};
       for (const stud of sg) {
         if (stud.nilaiKomponen) {
           for (const val of stud.nilaiKomponen) {
-            initial[`${stud.krsId}_${val.komponenNilaiId}`] = parseFloat(val.nilai) || 0;
+            initial[`${stud.krsId}_${val.komponenNilaiId}`] = val.nilai !== undefined && val.nilai !== null ? val.nilai.toString() : '';
           }
         }
       }
@@ -176,10 +192,12 @@ export default function InputNilai() {
   };
 
   // Handle student grade change
-  const handleGradeChange = (krsId: number, komponenNilaiId: number, value: number) => {
+  const handleGradeChange = (krsId: number, komponenNilaiId: number, value: string) => {
+    // Only allow numbers, dot, and comma
+    const sanitized = value.replace(/[^0-9.,]/g, '');
     setInputGrades(prev => ({
       ...prev,
-      [`${krsId}_${komponenNilaiId}`]: value
+      [`${krsId}_${komponenNilaiId}`]: sanitized
     }));
   };
 
@@ -191,7 +209,8 @@ export default function InputNilai() {
     let totalBobot = 0;
     for (const c of list) {
       const val = inputGrades()[`${stud.krsId}_${c.id}`];
-      const grade = val !== undefined && !isNaN(Number(val)) ? Number(val) : 0;
+      const cleanedVal = val ? val.replace(',', '.') : '';
+      const grade = cleanedVal !== '' && !isNaN(Number(cleanedVal)) ? Number(cleanedVal) : 0;
       totalScore += grade * (c.bobot / 100);
       totalBobot += c.bobot;
     }
@@ -201,12 +220,24 @@ export default function InputNilai() {
     const finalScore = parseFloat(totalScore.toFixed(2));
     
     let huruf = 'E';
-    if (finalScore >= 80) huruf = 'A';
-    else if (finalScore >= 75) huruf = 'B+';
-    else if (finalScore >= 70) huruf = 'B';
-    else if (finalScore >= 65) huruf = 'C+';
-    else if (finalScore >= 60) huruf = 'C';
-    else if (finalScore >= 50) huruf = 'D';
+    const rules = konversiRules();
+    if (rules && rules.length > 0) {
+      for (const rule of rules) {
+        const min = parseFloat(rule.nilaiMin.toString());
+        const max = parseFloat(rule.nilaiMax.toString());
+        if (finalScore >= min && finalScore <= max) {
+          huruf = rule.nilaiHuruf;
+          break;
+        }
+      }
+    } else {
+      if (finalScore >= 80) huruf = 'A';
+      else if (finalScore >= 75) huruf = 'B+';
+      else if (finalScore >= 70) huruf = 'B';
+      else if (finalScore >= 65) huruf = 'C+';
+      else if (finalScore >= 60) huruf = 'C';
+      else if (finalScore >= 50) huruf = 'D';
+    }
 
     return {
       score: finalScore,
@@ -226,9 +257,10 @@ export default function InputNilai() {
     const payload = list.map(stud => {
       const nilaiKomponenList = comps.map(c => {
         const val = inputGrades()[`${stud.krsId}_${c.id}`];
+        const cleanedVal = val ? val.replace(',', '.') : '';
         return {
           komponenNilaiId: c.id!,
-          nilai: val !== undefined && !isNaN(Number(val)) ? Number(val) : 0
+          nilai: cleanedVal !== '' && !isNaN(Number(cleanedVal)) ? Number(cleanedVal) : 0
         };
       });
       return {
@@ -255,9 +287,24 @@ export default function InputNilai() {
       await khsController.lockKelas(id);
       toast.showToast('Nilai kelas berhasil dikunci!', 'success');
       refetchStudentsGrades();
-      classes.refetch();
+      refetchClasses();
     } catch (e: any) {
       toast.showToast(e.message || 'Gagal mengunci kelas.', 'error');
+    }
+  };
+
+  const handleUnlockKelas = async () => {
+    const id = selectedKelasId();
+    if (!id) return;
+    if (!confirm('Apakah Anda yakin ingin membuka kunci nilai kelas ini? Setelah dibuka, komponen dan nilai dapat diubah kembali.')) return;
+
+    try {
+      await khsController.unlockKelas(id);
+      toast.showToast('Kunci nilai kelas berhasil dibuka!', 'success');
+      refetchStudentsGrades();
+      refetchClasses();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal membuka kunci kelas.', 'error');
     }
   };
 
@@ -295,6 +342,13 @@ export default function InputNilai() {
             </div>
           </div>
         </div>
+
+        <Show when={isRulesMissing()}>
+          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 shadow-sm">
+            <span class="font-bold flex items-center gap-1.5 text-rose-800 text-sm">⚠️ Peringatan: Aturan Konversi Belum Ditetapkan</span>
+            <span>Aturan konversi nilai belum ditetapkan untuk program studi ini atau secara global. Silakan hubungi Admin untuk menetapkan aturan konversi di tab Aturan Konversi (halaman KHS) terlebih dahulu agar penginputan nilai dapat diproses dengan benar.</span>
+          </div>
+        </Show>
 
         <Show when={selectedKelasId()} fallback={
           <div class="bg-white p-12 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
@@ -389,9 +443,19 @@ export default function InputNilai() {
                 <div class="flex gap-2">
                   <Show when={components() && components().length > 0}>
                     <Show when={!isClassLocked()} fallback={
-                      <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl">
-                        🔒 Nilai Kelas Telah Dikunci (Selesai)
-                      </span>
+                      <div class="flex items-center gap-2">
+                        <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl">
+                          🔒 Nilai Kelas Telah Dikunci (Selesai)
+                        </span>
+                        <Show when={role() === 'admin' || role() === 'prodi' || role() === 'dosen'}>
+                          <button
+                            onClick={handleUnlockKelas}
+                            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm"
+                          >
+                            🔓 Buka Kunci
+                          </button>
+                        </Show>
+                      </div>
                     }>
                       <button
                         onClick={handleSaveGrades}
@@ -445,13 +509,11 @@ export default function InputNilai() {
                             {(c) => (
                               <td class="p-3 text-center">
                                 <input
-                                  type="number"
-                                  min="0"
-                                  max="100"
-                                  placeholder="0"
+                                  type="text"
+                                  placeholder="0.00"
                                   disabled={isClassLocked()}
-                                  value={inputGrades()[`${stud.krsId}_${c.id}`] || ''}
-                                  onInput={(e) => handleGradeChange(stud.krsId, c.id!, parseFloat(e.currentTarget.value) || 0)}
+                                  value={inputGrades()[`${stud.krsId}_${c.id}`] !== undefined ? inputGrades()[`${stud.krsId}_${c.id}`] : ''}
+                                  onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
                                   class="border border-gray-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400 text-slate-900"
                                 />
                               </td>

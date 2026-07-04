@@ -53,4 +53,11 @@ export const userController = {
       body: JSON.stringify(payload),
     });
   },
+
+  async generateAccounts(targetType: 'mahasiswa' | 'dosen', ids: number[]): Promise<{ successCount: number; errors: string[] }> {
+    return fetchApi<{ successCount: number; errors: string[] }>('/users/generate-accounts', {
+      method: 'POST',
+      body: JSON.stringify({ targetType, ids }),
+    });
+  },
 };

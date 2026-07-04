@@ -1,20 +1,75 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
+import { createSignal, createResource, Show, For, createEffect } from 'solid-js';
 import { krsController, Krs as IKrs } from '../controllers/krsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useAuth } from '../contexts/AuthContext';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { useToast } from '../contexts/ToastContext';
 
 export default function Krs() {
   const auth = useAuth();
   const toast = useToast();
+  const workspace = useWorkspace();
   const role = () => auth.user()?.role;
   const userEmail = () => auth.user()?.email;
+
+  const [showImportModal, setShowImportModal] = createSignal(false);
+
+  const [activeTab, setActiveTab] = createSignal<'kelola' | 'massal'>('kelola');
+  const [selectedPeriode, setSelectedPeriode] = createSignal('');
+  const [selectedMhsIds, setSelectedMhsIds] = createSignal<number[]>([]);
+
+  // Load all academic periods
+  const [periodes] = createResource(async () => {
+    try {
+      const res = await periodeAkademikController.getAll(undefined, 1, 100);
+      return res.data;
+    } catch (e) {
+      return [];
+    }
+  });
+
+  createEffect(() => {
+    const wsPeriode = workspace.selectedPeriodeId();
+    if (wsPeriode) {
+      setSelectedPeriode(wsPeriode);
+      return;
+    }
+    const list = periodes();
+    if (list && list.length > 0) {
+      const active = list.find(p => p.aktif);
+      if (active) {
+        setSelectedPeriode(active.id);
+      } else {
+        setSelectedPeriode(list[0].id);
+      }
+    }
+  });
+
+  // Fetch pending students for batch approval
+  const [pendingStudents, { refetch: refetchPending }] = createResource(
+    () => ({
+      periodeId: selectedPeriode(),
+      tab: activeTab(),
+      role: role()
+    }),
+    async ({ periodeId, tab, role }) => {
+      if (role === 'mahasiswa' || tab !== 'massal' || !periodeId) return [];
+      try {
+        return await krsController.getPendingStudents(periodeId);
+      } catch (e: any) {
+        toast.showToast(e.message || 'Gagal memuat mahasiswa pending', 'error');
+        return [];
+      }
+    }
+  );
 
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
@@ -141,13 +196,11 @@ export default function Krs() {
   };
 
   const handleApproveAll = async () => {
-    const firstItem = krsData()?.data?.[0];
-    if (!firstItem) return;
-    if (!confirm(`Apakah Anda yakin ingin menyetujui seluruh KRS untuk mahasiswa ${firstItem.mahasiswa?.nama}?`)) return;
+    if (!confirm('Apakah Anda yakin ingin menyetujui seluruh KRS pending untuk semua mahasiswa di periode ini?')) return;
 
     try {
-      await krsController.approve(firstItem.mahasiswaId, firstItem.kelasKuliah?.periodeId || '20231');
-      toast.showToast('KRS mahasiswa berhasil disetujui', 'success');
+      await krsController.approve(null as any, selectedPeriode() || '20252');
+      toast.showToast('Seluruh KRS pending berhasil disetujui', 'success');
       refetch();
     } catch (e: any) {
       toast.showToast(e.message || 'Gagal menyetujui KRS', 'error');
@@ -165,6 +218,31 @@ export default function Krs() {
     }
   };
 
+  const handleApproveBatch = async () => {
+    const ids = selectedMhsIds();
+    if (ids.length === 0) {
+      toast.showToast('Silakan pilih setidaknya satu mahasiswa.', 'error');
+      return;
+    }
+    const periodeId = selectedPeriode();
+    if (!periodeId) {
+      toast.showToast('Periode akademik tidak terpilih.', 'error');
+      return;
+    }
+
+    if (!confirm(`Apakah Anda yakin ingin menyetujui KRS untuk ${ids.length} mahasiswa terpilih?`)) return;
+
+    try {
+      await krsController.approveBatch(ids, periodeId);
+      toast.showToast('KRS untuk mahasiswa terpilih berhasil disetujui.', 'success');
+      setSelectedMhsIds([]);
+      refetchPending();
+      refetch();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal menyetujui KRS secara massal.', 'error');
+    }
+  };
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -177,12 +255,17 @@ export default function Krs() {
                 : 'Kelola pendaftaran kontrak rencana studi dan input nilai indeks mahasiswa.'}
             </p>
           </div>
-          <Button
-            disabled={role() === 'mahasiswa' && mahasiswaProfile()?.status !== 'aktif'}
-            onClick={openAddModal}
-          >
-            + Tambah Kontrak KRS
-          </Button>
+          <div class="flex gap-2">
+            <Show when={role() === 'admin'}>
+              <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor KRS</Button>
+            </Show>
+            <Button
+              disabled={role() === 'mahasiswa' && mahasiswaProfile()?.status !== 'aktif'}
+              onClick={openAddModal}
+            >
+              + Tambah Kontrak KRS
+            </Button>
+          </div>
         </div>
 
         {/* Warning Banner if Mahasiswa is not active */}
@@ -201,7 +284,7 @@ export default function Krs() {
           <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
             <div>
               <h4 class="text-sm font-bold text-yellow-800">KRS Mahasiswa Menunggu Persetujuan</h4>
-              <p class="text-xs text-yellow-600 font-medium mt-0.5">Terdapat beberapa kontrak KRS pending untuk mahasiswa {krsData()?.data?.[0]?.mahasiswa?.nama || 'ini'}.</p>
+              <p class="text-xs text-yellow-600 font-medium mt-0.5">Terdapat beberapa kontrak KRS pending pada periode ini.</p>
             </div>
             <Button variant="primary" onClick={handleApproveAll} class="!py-1.5 !px-4 text-xs">
               Setujui Semua KRS
@@ -209,92 +292,180 @@ export default function Krs() {
           </div>
         </Show>
 
-        {/* Search Filter for Admins / Dosen */}
-        <Show when={role() !== 'mahasiswa'}>
-          <div class="max-w-xs">
-            <Input
-              placeholder="Cari NIM atau Nama..."
-              value={search()}
-              onInput={(e) => {
-                setSearch(e.currentTarget.value);
-                setPage(1);
-              }}
-            />
+        {/* Tab Switcher (Only for admin and dosen) */}
+        <Show when={role() === 'admin' || role() === 'dosen'}>
+          <div class="flex gap-2 border-b border-gray-100 pb-3">
+            <button
+              onClick={() => setActiveTab('kelola')}
+              class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab() === 'kelola'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-150'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Kelola KRS
+            </button>
+            <button
+              onClick={() => setActiveTab('massal')}
+              class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                activeTab() === 'massal'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-150'
+                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Persetujuan Massal KRS
+            </button>
           </div>
         </Show>
 
-        <Show when={!krsData.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
-          <Table headers={['Mahasiswa', 'Kelas Kuliah', 'Periode', 'Nilai Angka', 'Nilai Huruf', 'Nilai Indeks', 'Status', 'Aksi']}>
-            <For each={krsData()?.data}>
-              {(item) => (
-                <tr class="hover:bg-gray-50/50 transition-colors">
-                  <td class="px-6 py-4">
-                    <div class="font-medium text-gray-800">{item.mahasiswa?.nama}</div>
-                    <div class="text-xs text-gray-400 font-mono">{item.mahasiswa?.nim}</div>
-                  </td>
-                  <td class="px-6 py-4 text-gray-700">{item.kelasKuliah?.namaKelas}</td>
-                  <td class="px-6 py-4 text-gray-500 font-mono text-xs">{item.kelasKuliah?.periodeId}</td>
-                  <td class="px-6 py-4 font-mono font-semibold">{item.nilaiAngka || '-'}</td>
-                  <td class="px-6 py-4 font-bold text-blue-600">{item.nilaiHuruf || '-'}</td>
-                  <td class="px-6 py-4 font-mono">{item.nilaiIndeks || '-'}</td>
-                  <td class="px-6 py-4">
-                    <span
-                      class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        item.isApproved
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                      }`}
-                    >
-                      {item.isApproved ? 'Disetujui' : 'Pending'}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 flex gap-2">
-                    <Show when={role() !== 'mahasiswa'}>
-                      <Button variant="secondary" onClick={() => openGradeModal(item)} class="!py-1 !px-2.5 text-xs">
-                        Input Nilai
+        <Show when={activeTab() === 'kelola' || role() === 'mahasiswa'}>
+          {/* Search Filter for Admins / Dosen */}
+          <Show when={role() !== 'mahasiswa'}>
+            <div class="max-w-xs">
+              <Input
+                placeholder="Cari NIM atau Nama..."
+                value={search()}
+                onInput={(e) => {
+                  setSearch(e.currentTarget.value);
+                  setPage(1);
+                }}
+              />
+            </div>
+          </Show>
+
+          <Show when={!krsData.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+            <Table headers={['Mahasiswa', 'Kelas Kuliah', 'Periode', 'Nilai Angka', 'Nilai Huruf', 'Nilai Indeks', 'Status', 'Aksi']}>
+              <For each={krsData()?.data}>
+                {(item) => (
+                  <tr class="hover:bg-gray-50/50 transition-colors">
+                    <td class="px-6 py-4">
+                      <div class="font-medium text-gray-800">{item.mahasiswa?.nama}</div>
+                      <div class="text-xs text-gray-400 font-mono">{item.mahasiswa?.nim}</div>
+                    </td>
+                    <td class="px-6 py-4 text-gray-700">{item.kelasKuliah?.namaKelas}</td>
+                    <td class="px-6 py-4 text-gray-500 font-mono text-xs">{item.kelasKuliah?.periodeId}</td>
+                    <td class="px-6 py-4 font-mono font-semibold">{item.nilaiAngka || '-'}</td>
+                    <td class="px-6 py-4 font-bold text-blue-600">{item.nilaiHuruf || '-'}</td>
+                    <td class="px-6 py-4 font-mono">{item.nilaiIndeks || '-'}</td>
+                    <td class="px-6 py-4">
+                      <span
+                        class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          item.isApproved
+                            ? 'bg-green-50 text-green-700 border border-green-200'
+                            : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                        }`}
+                      >
+                        {item.isApproved ? 'Disetujui' : 'Pending'}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 flex gap-2">
+                      <Show when={role() !== 'mahasiswa'}>
+                        <Button variant="secondary" onClick={() => openGradeModal(item)} class="!py-1 !px-2.5 text-xs">
+                          Input Nilai
+                        </Button>
+                      </Show>
+                      <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
+                        Batal
                       </Button>
-                    </Show>
-                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
-                      Batal
-                    </Button>
+                    </td>
+                  </tr>
+                )}
+              </For>
+              <Show when={krsData()?.data.length === 0}>
+                <tr>
+                  <td colspan="8" class="px-6 py-10 text-center text-gray-400">
+                    Tidak ada kontrak KRS ditemukan.
                   </td>
                 </tr>
-              )}
-            </For>
-            <Show when={krsData()?.data.length === 0}>
-              <tr>
-                <td colspan="8" class="px-6 py-10 text-center text-gray-400">
-                  Tidak ada kontrak KRS ditemukan.
-                </td>
-              </tr>
-            </Show>
-          </Table>
+              </Show>
+            </Table>
 
-          {/* Pagination */}
-          <Show when={krsData() && krsData()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-gray-500">
-                Menampilkan halaman {page()} dari {krsData()?.meta.totalPages} ({krsData()?.meta.total} total data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= krsData()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, krsData()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
+            {/* Pagination */}
+            <Show when={krsData() && krsData()!.meta.totalPages > 1}>
+              <div class="flex justify-between items-center mt-4">
+                <span class="text-xs text-gray-500">
+                  Menampilkan halaman {page()} dari {krsData()?.meta.totalPages} ({krsData()?.meta.total} total data)
+                </span>
+                <div class="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={page() === 1}
+                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                    class="!py-1 !px-3"
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={page() >= krsData()!.meta.totalPages}
+                    onClick={() => setPage((p) => Math.min(p + 1, krsData()!.meta.totalPages))}
+                    class="!py-1 !px-3"
+                  >
+                    Berikutnya
+                  </Button>
+                </div>
               </div>
+            </Show>
+          </Show>
+        </Show>
+
+        <Show when={activeTab() === 'massal' && role() !== 'mahasiswa'}>
+          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+            <div>
+              <h3 class="font-bold text-gray-800">Daftar Mahasiswa dengan KRS Pending</h3>
+              <p class="text-xs text-gray-400 mt-0.5">Pilih satu atau beberapa mahasiswa untuk disetujui KRS-nya sekaligus.</p>
             </div>
+            <Button
+              variant="primary"
+              onClick={handleApproveBatch}
+              disabled={selectedMhsIds().length === 0}
+              class="shadow-sm shadow-blue-150"
+            >
+              🔓 Setujui KRS Terpilih ({selectedMhsIds().length})
+            </Button>
+          </div>
+
+          <Show when={!pendingStudents.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+            <Table headers={['Pilih', 'NIM', 'Nama Mahasiswa', 'Email', 'Status']}>
+              <For each={pendingStudents()} fallback={
+                <tr>
+                  <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">
+                    Tidak ada mahasiswa dengan kontrak KRS pending di periode ini.
+                  </td>
+                </tr>
+              }>
+                {(student) => {
+                  const isChecked = () => selectedMhsIds().includes(student.id);
+                  const toggleCheck = () => {
+                    if (isChecked()) {
+                      setSelectedMhsIds(selectedMhsIds().filter(id => id !== student.id));
+                    } else {
+                      setSelectedMhsIds([...selectedMhsIds(), student.id]);
+                    }
+                  };
+                  return (
+                    <tr class="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={toggleCheck}>
+                      <td class="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked()}
+                          onChange={toggleCheck}
+                          class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                        />
+                      </td>
+                      <td class="px-6 py-4 font-mono text-gray-700">{student.nim}</td>
+                      <td class="px-6 py-4 font-bold text-gray-900">{student.nama}</td>
+                      <td class="px-6 py-4 text-gray-500">{student.email}</td>
+                      <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                          Pending
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }}
+              </For>
+            </Table>
           </Show>
         </Show>
 
@@ -392,6 +563,18 @@ export default function Krs() {
             </div>
           </form>
         </Modal>
+
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          importUrl="/krs/import"
+          templateHeaders={['nim', 'kode_mata_kuliah', 'nama_kelas', 'periode_id']}
+          title="KRS"
+          onSuccess={() => {
+            refetch();
+            refetchPending();
+          }}
+        />
       </div>
     </MainLayout>
   );

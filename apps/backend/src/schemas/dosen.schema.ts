@@ -33,7 +33,8 @@ export const getDosenSchema = {
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
-    search: t.Optional(t.String({ default: '' }))
+    search: t.Optional(t.String({ default: '' })),
+    programStudiId: t.Optional(t.Numeric())
   }),
   response: {
     200: t.Object({

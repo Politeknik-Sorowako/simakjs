@@ -3,18 +3,52 @@ import { useAuth } from '../contexts/AuthContext';
 import { khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { prodiController } from '../controllers/prodiController';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 export default function Khs() {
   const auth = useAuth();
   const toast = useToast();
+  const workspace = useWorkspace();
   const user = () => auth.user();
   const role = () => user()?.role;
 
-  const [activeTab, setActiveTab] = createSignal<'khs' | 'transkrip'>('khs');
+  const [activeTab, setActiveTab] = createSignal<'khs' | 'transkrip' | 'konversi'>('khs');
   const [selectedPeriode, setSelectedPeriode] = createSignal(''); // Dynamic Period selection
+
+  // Konversi Nilai states
+  const [showKonversiModal, setShowKonversiModal] = createSignal(false);
+  const [konversiId, setKonversiId] = createSignal<number | null>(null);
+  const [konversiProdiId, setKonversiProdiId] = createSignal<string>('');
+  const [nilaiHuruf, setNilaiHuruf] = createSignal('');
+  const [nilaiIndeks, setNilaiIndeks] = createSignal('');
+  const [nilaiMin, setNilaiMin] = createSignal('');
+  const [nilaiMax, setNilaiMax] = createSignal('');
+  const [predikat, setPredikat] = createSignal('');
+
+  const [konversis, { refetch: refetchKonversis }] = createResource(
+    () => {
+      if (role() === 'admin') return true;
+      return null;
+    },
+    async () => {
+      return await khsController.getAllKonversi();
+    }
+  );
+
+  const [prodis] = createResource(
+    () => {
+      if (role() === 'admin') return true;
+      return null;
+    },
+    async () => {
+      const res = await prodiController.getAll(undefined, 1, 100);
+      return res.data;
+    }
+  );
 
   // Load all academic periods
   const [periodes] = createResource(async () => {
@@ -27,6 +61,11 @@ export default function Khs() {
   });
 
   createEffect(() => {
+    const wsPeriode = workspace.selectedPeriodeId();
+    if (wsPeriode) {
+      setSelectedPeriode(wsPeriode);
+      return;
+    }
     const list = periodes();
     if (list && list.length > 0) {
       const active = list.find(p => p.aktif);
@@ -93,7 +132,7 @@ export default function Khs() {
     () => {
       const mId = selectedMhsId();
       const pId = selectedPeriode();
-      if (!mId) return null;
+      if (!mId || !pId) return null;
       return { mhsId: mId, periodeId: pId };
     },
     async ({ mhsId, periodeId }) => {
@@ -109,6 +148,41 @@ export default function Khs() {
       return await khsController.getTranskrip(mhsId);
     }
   );
+
+  const handleSaveKonversi = async (e: Event) => {
+    e.preventDefault();
+    if (!nilaiHuruf().trim() || !nilaiIndeks() || !nilaiMin() || !nilaiMax() || !predikat().trim()) {
+      toast.showToast('Semua kolom wajib diisi.', 'error');
+      return;
+    }
+    try {
+      await khsController.saveKonversi({
+        id: konversiId() || undefined,
+        programStudiId: konversiProdiId() ? parseInt(konversiProdiId()) : null,
+        nilaiHuruf: nilaiHuruf().toUpperCase(),
+        bobotIndeks: parseFloat(nilaiIndeks()),
+        nilaiMin: parseFloat(nilaiMin()),
+        nilaiMax: parseFloat(nilaiMax()),
+        predikat: predikat()
+      });
+      toast.showToast('Aturan konversi nilai berhasil disimpan.', 'success');
+      setShowKonversiModal(false);
+      refetchKonversis();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal menyimpan aturan konversi.', 'error');
+    }
+  };
+
+  const handleDeleteKonversi = async (id: number) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus aturan konversi ini?')) return;
+    try {
+      await khsController.deleteKonversi(id);
+      toast.showToast('Aturan konversi nilai berhasil dihapus.', 'success');
+      refetchKonversis();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal menghapus aturan konversi.', 'error');
+    }
+  };
 
   return (
     <MainLayout>
@@ -133,11 +207,19 @@ export default function Khs() {
             >
               Transkrip Nilai
             </button>
+            <Show when={role() === 'admin'}>
+              <button
+                onClick={() => setActiveTab('konversi')}
+                class={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab() === 'konversi' ? 'bg-blue-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Aturan Konversi Nilai
+              </button>
+            </Show>
           </div>
         </div>
 
         {/* Admin/Dosen Student Selector */}
-        <Show when={role() !== 'mahasiswa'}>
+        <Show when={role() !== 'mahasiswa' && activeTab() !== 'konversi'}>
           <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
             <h3 class="font-bold text-gray-700 text-sm">Pilih Mahasiswa & Periode</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -208,13 +290,93 @@ export default function Khs() {
 
 
 
+        {/* Aturan Konversi Nilai View */}
+        <Show when={activeTab() === 'konversi' && role() === 'admin'}>
+          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+            <h3 class="font-bold text-gray-800">Aturan Konversi Nilai Akademik</h3>
+            <button
+              onClick={() => {
+                setKonversiId(null);
+                setKonversiProdiId('');
+                setNilaiHuruf('');
+                setNilaiIndeks('');
+                setNilaiMin('');
+                setNilaiMax('');
+                setPredikat('');
+                setShowKonversiModal(true);
+              }}
+              class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-150"
+            >
+              ➕ Tambah Aturan Konversi
+            </button>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
+                  <th class="p-3">Program Studi</th>
+                  <th class="p-3">Nilai Huruf</th>
+                  <th class="p-3">Nilai Indeks</th>
+                  <th class="p-3">Nilai Minimum Angka</th>
+                  <th class="p-3">Nilai Maksimum Angka</th>
+                  <th class="p-3">Predikat</th>
+                  <th class="p-3">Aksi</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
+                <For each={konversis()} fallback={
+                  <tr>
+                    <td colspan="7" class="p-4 text-center text-gray-400 italic">Belum ada aturan konversi nilai terdaftar.</td>
+                  </tr>
+                }>
+                  {(konv) => (
+                    <tr class="hover:bg-gray-50/20">
+                      <td class="p-3 font-semibold text-gray-800">{konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}</td>
+                      <td class="p-3 font-bold text-blue-600">{konv.nilaiHuruf}</td>
+                      <td class="p-3 font-mono">{parseFloat(konv.bobotIndeks).toFixed(2)}</td>
+                      <td class="p-3 font-mono">{parseFloat(konv.nilaiMin).toFixed(2)}</td>
+                      <td class="p-3 font-mono">{parseFloat(konv.nilaiMax).toFixed(2)}</td>
+                      <td class="p-3 font-medium text-gray-800">{konv.predikat}</td>
+                      <td class="p-3 flex gap-2">
+                        <button
+                          onClick={() => {
+                            setKonversiId(konv.id);
+                            setKonversiProdiId(konv.programStudiId ? konv.programStudiId.toString() : '');
+                            setNilaiHuruf(konv.nilaiHuruf);
+                            setNilaiIndeks(konv.bobotIndeks.toString());
+                            setNilaiMin(konv.nilaiMin.toString());
+                            setNilaiMax(konv.nilaiMax.toString());
+                            setPredikat(konv.predikat);
+                            setShowKonversiModal(true);
+                          }}
+                          class="px-2.5 py-1 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteKonversi(konv.id)}
+                          class="px-2.5 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg hover:bg-rose-100 transition-colors"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </For>
+              </tbody>
+            </table>
+          </div>
+        </Show>
+
         {/* Content Area */}
-        <Show when={selectedMhsId()} fallback={
-            <div class="bg-white p-12 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
-              Silakan cari dan pilih mahasiswa terlebih dahulu untuk menampilkan data akademik.
-            </div>
-          }>
-            <Show when={activeTab() === 'khs'}>
+        <Show when={activeTab() !== 'konversi'}>
+          <Show when={selectedMhsId()} fallback={
+              <div class="bg-white p-12 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+                Silakan cari dan pilih mahasiswa terlebih dahulu untuk menampilkan data akademik.
+              </div>
+            }>
+              <Show when={activeTab() === 'khs'}>
               <Show when={khsData.loading}>
                 <div class="text-center py-12 text-gray-400">Memuat data KHS...</div>
               </Show>
@@ -340,11 +502,11 @@ export default function Khs() {
                   <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
                       <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">IPK Kumulatif (Transcript)</span>
-                      <span class="text-3xl font-extrabold text-blue-600">{transkripData()?.summary?.ipk?.toFixed(2)}</span>
+                      <span class="text-3xl font-extrabold text-blue-600">{transkripData()?.ipk?.toFixed(2)}</span>
                     </div>
                     <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
                       <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Total SKS Lulus</span>
-                      <span class="text-3xl font-extrabold text-indigo-600">{transkripData()?.summary?.totalSks} SKS</span>
+                      <span class="text-3xl font-extrabold text-indigo-600">{transkripData()?.totalSksLulus} SKS</span>
                     </div>
                   </div>
 
@@ -406,6 +568,7 @@ export default function Khs() {
               </Show>
             </Show>
           </Show>
+        </Show>
 
         {/* PRINTABLE OVERLAY MODALS */}
         <Show when={showPrintUjian()}>
@@ -579,8 +742,8 @@ export default function Khs() {
                     <p>Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span></p>
                   </div>
                   <div class="text-right">
-                    <p>IPK Kumulatif: <span class="text-gray-900 font-extrabold text-blue-600">{transkripData()?.summary?.ipk?.toFixed(2)}</span></p>
-                    <p>Total SKS Lulus: <span class="text-gray-900 font-bold">{transkripData()?.summary?.totalSks} SKS</span></p>
+                    <p>IPK Kumulatif: <span class="text-gray-900 font-extrabold text-blue-600">{transkripData()?.ipk?.toFixed(2)}</span></p>
+                    <p>Total SKS Lulus: <span class="text-gray-900 font-bold">{transkripData()?.totalSksLulus} SKS</span></p>
                   </div>
                 </div>
 
@@ -628,6 +791,106 @@ export default function Khs() {
                   🖨️ Cetak Sekarang
                 </button>
               </div>
+            </div>
+          </div>
+        </Show>
+        {/* --- ADMIN KONVERSI NILAI MODAL --- */}
+        <Show when={showKonversiModal()}>
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+              <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-gray-800 text-sm">
+                  {konversiId() ? 'Edit Aturan Konversi Nilai' : 'Tambah Aturan Konversi Nilai'}
+                </h3>
+                <button onClick={() => setShowKonversiModal(false)} class="text-gray-400 hover:text-gray-600">❌</button>
+              </div>
+
+              <form onSubmit={handleSaveKonversi} class="flex flex-col gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Program Studi (Pilih jika aturan khusus prodi)</label>
+                  <select
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900 bg-white font-medium"
+                    value={konversiProdiId()}
+                    onChange={(e) => setKonversiProdiId(e.currentTarget.value)}
+                  >
+                    <option value="">-- Aturan Global (Semua Prodi) --</option>
+                    <For each={prodis()}>
+                      {(p) => <option value={p.id}>{p.nama}</option>}
+                    </For>
+                  </select>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Nilai Huruf</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: A, B+, C"
+                    value={nilaiHuruf()}
+                    onInput={(e) => setNilaiHuruf(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Nilai Indeks (Bobot)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.00"
+                    max="4.00"
+                    placeholder="Contoh: 4.00"
+                    value={nilaiIndeks()}
+                    onInput={(e) => setNilaiIndeks(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Nilai Minimum Angka</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.00"
+                    max="100.00"
+                    placeholder="Contoh: 80.00"
+                    value={nilaiMin()}
+                    onInput={(e) => setNilaiMin(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Nilai Maksimum Angka</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.00"
+                    max="100.00"
+                    placeholder="Contoh: 100.00"
+                    value={nilaiMax()}
+                    onInput={(e) => setNilaiMax(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Predikat</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Istimewa, Amat Baik"
+                    value={predikat()}
+                    onInput={(e) => setPredikat(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  class="w-full py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                >
+                  Simpan Aturan Konversi
+                </button>
+              </form>
             </div>
           </div>
         </Show>

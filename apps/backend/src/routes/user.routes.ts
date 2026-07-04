@@ -7,4 +7,6 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   .get('/', UserController.getAll)
   .put('/profile', UserController.updateProfile)
   .put('/:id/activate', UserController.toggleActive)
-  .put('/:id/role', UserController.updateRole);
+  .put('/:id/role', UserController.updateRole)
+  .post('/import', UserController.importCsv)
+  .post('/generate-accounts', UserController.generateAccounts);

@@ -78,6 +78,24 @@ export default function Yudisium() {
   const [adminStatus, setAdminStatus] = createSignal<'diajukan' | 'diverifikasi' | 'disetujui' | 'ditolak'>('diajukan');
   const [adminCatatan, setAdminCatatan] = createSignal('');
 
+  // Skala Predikat Kelulusan states
+  const [activeTab, setActiveTab] = createSignal<'pengajuan' | 'predikat'>('pengajuan');
+  const [showPredikatModal, setShowPredikatModal] = createSignal(false);
+  const [predikatId, setPredikatId] = createSignal<number | null>(null);
+  const [ipkMin, setIpkMin] = createSignal('');
+  const [ipkMax, setIpkMax] = createSignal('');
+  const [predikatText, setPredikatText] = createSignal('');
+
+  const [predikats, { refetch: refetchPredikats }] = createResource(
+    () => {
+      if (role() === 'admin') return true;
+      return null;
+    },
+    async () => {
+      return await khsController.getAllPredikat();
+    }
+  );
+
   // Handle student submit/update
   const handleStudentSubmit = async (e: Event) => {
     e.preventDefault();
@@ -179,6 +197,38 @@ export default function Yudisium() {
       setBuktiPembayaranWisuda(data.buktiPembayaranWisuda || false);
     }
   });
+
+  const handleSavePredikat = async (e: Event) => {
+    e.preventDefault();
+    if (!ipkMin() || !ipkMax() || !predikatText().trim()) {
+      toast.showToast('Semua kolom wajib diisi.', 'error');
+      return;
+    }
+    try {
+      await khsController.savePredikat({
+        id: predikatId() || undefined,
+        ipkMin: ipkMin(),
+        ipkMax: ipkMax(),
+        predikat: predikatText()
+      });
+      toast.showToast('Skala predikat kelulusan berhasil disimpan.', 'success');
+      setShowPredikatModal(false);
+      refetchPredikats();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal menyimpan skala predikat.', 'error');
+    }
+  };
+
+  const handleDeletePredikat = async (id: number) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus skala predikat ini?')) return;
+    try {
+      await khsController.deletePredikat(id);
+      toast.showToast('Skala predikat kelulusan berhasil dihapus.', 'success');
+      refetchPredikats();
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal menghapus skala predikat.', 'error');
+    }
+  };
 
   return (
     <MainLayout>
@@ -332,76 +382,170 @@ export default function Yudisium() {
 
         {/* --- ADMIN & DOSEN VIEW --- */}
         <Show when={role() === 'admin' || role() === 'dosen'}>
-          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm">
-            <h3 class="font-bold text-gray-800">Daftar Pengajuan Yudisium Mahasiswa</h3>
-            <button
-              onClick={() => setShowInputModal(true)}
-              class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-150"
-            >
-              ➕ Input Yudisium Mahasiswa
-            </button>
-          </div>
+          {/* Tab Switcher (Only for admin) */}
+          <Show when={role() === 'admin'}>
+            <div class="flex gap-2 border-b border-gray-100 pb-3 mb-6">
+              <button
+                onClick={() => setActiveTab('pengajuan')}
+                class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab() === 'pengajuan'
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-150'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Daftar Pengajuan
+              </button>
+              <button
+                onClick={() => setActiveTab('predikat')}
+                class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  activeTab() === 'predikat'
+                    ? 'bg-blue-600 text-white shadow-sm shadow-blue-150'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Pengaturan Skala Predikat Kelulusan
+              </button>
+            </div>
+          </Show>
 
-          <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
-                  <th class="p-3">Mahasiswa</th>
-                  <th class="p-3">Program Studi</th>
-                  <th class="p-3">Judul TA</th>
-                  <th class="p-3">Skor TOEFL</th>
-                  <th class="p-3">Checklist Berkas</th>
-                  <th class="p-3">Status</th>
-                  <th class="p-3">Aksi</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
-                <For each={allYudisium()} fallback={
-                  <tr>
-                    <td colspan="7" class="p-4 text-center text-gray-400 italic">Belum ada pengajuan yudisium terdaftar.</td>
+          <Show when={activeTab() === 'pengajuan' || role() === 'dosen'}>
+            <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+              <h3 class="font-bold text-gray-800">Daftar Pengajuan Yudisium Mahasiswa</h3>
+              <button
+                onClick={() => setShowInputModal(true)}
+                class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-150"
+              >
+                ➕ Input Yudisium Mahasiswa
+              </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
+                    <th class="p-3">Mahasiswa</th>
+                    <th class="p-3">Program Studi</th>
+                    <th class="p-3">Judul TA</th>
+                    <th class="p-3">Skor TOEFL</th>
+                    <th class="p-3">Checklist Berkas</th>
+                    <th class="p-3">Status</th>
+                    <th class="p-3">Aksi</th>
                   </tr>
-                }>
-                  {(item) => (
-                    <tr class="hover:bg-gray-50/20">
-                      <td class="p-3">
-                        <div class="flex flex-col">
-                          <span class="font-bold text-gray-800">{item.mahasiswa?.nama}</span>
-                          <span class="text-[10px] text-gray-400">NIM: {item.mahasiswa?.nim}</span>
-                        </div>
-                      </td>
-                      <td class="p-3">{item.prodi?.nama}</td>
-                      <td class="p-3 max-w-[200px] truncate" title={item.judulTa}>{item.judulTa}</td>
-                      <td class="p-3">{item.skorToefl}</td>
-                      <td class="p-3 whitespace-nowrap">
-                        <span class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasPerpustakaan ? 'bg-emerald-50 text-emerald-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Pustaka</span>
-                        <span class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasLab ? 'bg-emerald-50 text-emerald-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Lab</span>
-                        <span class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${item.buktiPembayaranWisuda ? 'bg-emerald-50 text-emerald-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Bayar</span>
-                      </td>
-                      <td class="p-3">
-                        <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          item.status === 'disetujui'
-                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                            : item.status === 'ditolak'
-                            ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                            : 'bg-amber-50 text-amber-600 border border-amber-100'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td class="p-3">
-                        <button
-                          onClick={() => openVerifyModal(item)}
-                          class="px-3 py-1.5 bg-blue-600 text-white font-bold rounded-lg text-[10px] hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
-                        >
-                          Verifikasi
-                        </button>
-                      </td>
+                </thead>
+                <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
+                  <For each={allYudisium()} fallback={
+                    <tr>
+                      <td colspan="7" class="p-4 text-center text-gray-400 italic">Belum ada pengajuan yudisium terdaftar.</td>
                     </tr>
-                  )}
-                </For>
-              </tbody>
-            </table>
-          </div>
+                  }>
+                    {(item) => (
+                      <tr class="hover:bg-gray-50/20">
+                        <td class="p-3">
+                          <div class="flex flex-col">
+                            <span class="font-bold text-gray-800">{item.mahasiswa?.nama}</span>
+                            <span class="text-[10px] text-gray-400">NIM: {item.mahasiswa?.nim}</span>
+                          </div>
+                        </td>
+                        <td class="p-3">{item.prodi?.nama}</td>
+                        <td class="p-3 max-w-[200px] truncate" title={item.judulTa}>{item.judulTa}</td>
+                        <td class="p-3">{item.skorToefl}</td>
+                        <td class="p-3 whitespace-nowrap">
+                          <span class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasPerpustakaan ? 'bg-emerald-50 text-emerald-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Pustaka</span>
+                          <span class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasLab ? 'bg-emerald-50 text-emerald-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Lab</span>
+                          <span class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${item.buktiPembayaranWisuda ? 'bg-emerald-50 text-emerald-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Bayar</span>
+                        </td>
+                        <td class="p-3">
+                          <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            item.status === 'disetujui'
+                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                              : item.status === 'ditolak'
+                              ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                              : 'bg-amber-50 text-amber-600 border border-amber-100'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td class="p-3">
+                          <button
+                            onClick={() => openVerifyModal(item)}
+                            class="px-3 py-1.5 bg-blue-600 text-white font-bold rounded-lg text-[10px] hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                          >
+                            Verifikasi
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </Show>
+
+          <Show when={activeTab() === 'predikat' && role() === 'admin'}>
+            <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+              <h3 class="font-bold text-gray-800">Skala Predikat Kelulusan Yudisium</h3>
+              <button
+                onClick={() => {
+                  setPredikatId(null);
+                  setIpkMin('');
+                  setIpkMax('');
+                  setPredikatText('');
+                  setShowPredikatModal(true);
+                }}
+                class="px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-150"
+              >
+                ➕ Tambah Skala Predikat
+              </button>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
+                    <th class="p-3">IPK Min</th>
+                    <th class="p-3">IPK Max</th>
+                    <th class="p-3">Predikat Kelulusan</th>
+                    <th class="p-3">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
+                  <For each={predikats()} fallback={
+                    <tr>
+                      <td colspan="4" class="p-4 text-center text-gray-400 italic">Belum ada aturan skala predikat kelulusan.</td>
+                    </tr>
+                  }>
+                    {(pred) => (
+                      <tr class="hover:bg-gray-50/20">
+                        <td class="p-3 font-mono">{parseFloat(pred.ipkMin).toFixed(2)}</td>
+                        <td class="p-3 font-mono">{parseFloat(pred.ipkMax).toFixed(2)}</td>
+                        <td class="p-3 font-bold text-gray-800">{pred.predikat}</td>
+                        <td class="p-3 flex gap-2">
+                          <button
+                            onClick={() => {
+                              setPredikatId(pred.id);
+                              setIpkMin(pred.ipkMin);
+                              setIpkMax(pred.ipkMax);
+                              setPredikatText(pred.predikat);
+                              setShowPredikatModal(true);
+                            }}
+                            class="px-2.5 py-1 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeletePredikat(pred.id)}
+                            class="px-2.5 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg hover:bg-rose-100 transition-colors"
+                          >
+                            Hapus
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </Show>
         </Show>
 
         {/* --- ADMIN MANUAL INPUT MODAL --- */}
@@ -541,6 +685,68 @@ export default function Yudisium() {
                   class="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-sm"
                 >
                   Simpan Status Verifikasi
+                </button>
+              </form>
+            </div>
+          </div>
+        </Show>
+
+        {/* --- ADMIN SCALE PREDIKAT MODAL --- */}
+        <Show when={showPredikatModal()}>
+          <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+              <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-gray-800 text-sm">
+                  {predikatId() ? 'Edit Skala Predikat Kelulusan' : 'Tambah Skala Predikat Kelulusan'}
+                </h3>
+                <button onClick={() => setShowPredikatModal(false)} class="text-gray-400 hover:text-gray-600">❌</button>
+              </div>
+
+              <form onSubmit={handleSavePredikat} class="flex flex-col gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">IPK Minimum</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.00"
+                    max="4.00"
+                    placeholder="Contoh: 3.51"
+                    value={ipkMin()}
+                    onInput={(e) => setIpkMin(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">IPK Maksimum</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.00"
+                    max="4.00"
+                    placeholder="Contoh: 4.00"
+                    value={ipkMax()}
+                    onInput={(e) => setIpkMax(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs font-bold text-gray-700">Predikat Kelulusan</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Dengan Pujian (Cum Laude)"
+                    value={predikatText()}
+                    onInput={(e) => setPredikatText(e.currentTarget.value)}
+                    class="border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  class="w-full py-2.5 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm"
+                >
+                  Simpan Aturan Predikat
                 </button>
               </form>
             </div>

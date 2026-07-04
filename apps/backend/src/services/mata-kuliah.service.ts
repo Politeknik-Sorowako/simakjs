@@ -1,6 +1,6 @@
 import { db } from '../utils/db';
 import { mataKuliah } from '../models/schema';
-import { count, eq, ilike, or } from 'drizzle-orm';
+import { count, eq, ilike, or, and } from 'drizzle-orm';
 
 export interface CreateMataKuliahDto {
   kode: string;
@@ -13,15 +13,25 @@ export interface CreateMataKuliahDto {
 }
 
 export class MataKuliahService {
-  static async getAll(page = 1, limit = 10, search = '') {
+  static async getAll(page = 1, limit = 10, search = '', programStudiId?: number) {
     const offset = (page - 1) * limit;
-    let whereClause = undefined;
+    let conditions = [];
 
     if (search) {
-      whereClause = or(
-        ilike(mataKuliah.nama, `%${search}%`),
-        ilike(mataKuliah.kode, `%${search}%`)
+      conditions.push(
+        or(
+          ilike(mataKuliah.nama, `%${search}%`),
+          ilike(mataKuliah.kode, `%${search}%`)
+        )
       );
+    }
+    if (programStudiId !== undefined) {
+      conditions.push(eq(mataKuliah.programStudiId, programStudiId));
+    }
+
+    let whereClause = undefined;
+    if (conditions.length > 0) {
+      whereClause = and(...conditions);
     }
 
     const [totalResult] = await db

@@ -3,11 +3,12 @@ import { CsvImportService } from '../services/csv-import.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class MataKuliahController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
+  static async getAll({ query }: AuthContext<any, PaginationQuery & { programStudiId?: string }>) {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
-    return await MataKuliahService.getAll(page, limit, search);
+    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+    return await MataKuliahService.getAll(page, limit, search, programStudiId);
   }
 
   static async getById({ params, set }: AuthContext) {

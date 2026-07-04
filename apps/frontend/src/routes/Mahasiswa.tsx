@@ -2,6 +2,7 @@ import { createSignal, createResource, Show, For } from 'solid-js';
 import { mahasiswaController, Mahasiswa as IMahasiswa } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
 import { dosenController } from '../controllers/dosenController';
+import { userController } from '../controllers/userController';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -9,18 +10,33 @@ import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Mahasiswa() {
+  const toast = useToast();
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [showImportPaModal, setShowImportPaModal] = createSignal(false);
+  const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
+  const [bulkLoading, setBulkLoading] = createSignal(false);
+
+  const auth = useAuth();
+  const workspace = useWorkspace();
+  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   // Fetch Mahasiswa Data
   const [mahasiswas, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit() }),
-    ({ search, page, limit }) => mahasiswaController.getAll(search, page, limit)
+    () => ({
+      search: search(),
+      page: page(),
+      limit: limit(),
+      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null
+    }),
+    ({ search, page, limit, prodiId }) => mahasiswaController.getAll(search, page, limit, prodiId || undefined)
   );
 
   // Fetch Program Studi for Dropdowns
@@ -106,6 +122,49 @@ export default function Mahasiswa() {
     }
   };
 
+  const toggleSelectAll = () => {
+    const list = mahasiswas()?.data || [];
+    if (selectedIds().length === list.length && list.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(list.map(item => item.id));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    if (selectedIds().includes(id)) {
+      setSelectedIds(selectedIds().filter(x => x !== id));
+    } else {
+      setSelectedIds([...selectedIds(), id]);
+    }
+  };
+
+  const isAllSelected = () => {
+    const list = mahasiswas()?.data || [];
+    return list.length > 0 && selectedIds().length === list.length;
+  };
+
+  const handleBulkCreateAccount = async () => {
+    const ids = selectedIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin membuatkan akun secara massal untuk ${ids.length} mahasiswa terpilih?`)) return;
+
+    setBulkLoading(true);
+    try {
+      const res = await userController.generateAccounts('mahasiswa', ids);
+      if (res.errors && res.errors.length > 0) {
+        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'warning');
+      } else {
+        toast.showToast(`Berhasil membuat ${res.successCount} akun mahasiswa.`, 'success');
+      }
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal membuat akun secara massal.', 'error');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('Apakah Anda yakin ingin menghapus Mahasiswa ini?')) return;
     try {
@@ -125,6 +184,11 @@ export default function Mahasiswa() {
             <p class="text-sm text-gray-500">Kelola informasi data mahasiswa aktif dan administrasi akademik.</p>
           </div>
           <div class="flex gap-2">
+            <Show when={selectedIds().length > 0}>
+              <Button variant="success" disabled={bulkLoading()} onClick={handleBulkCreateAccount}>
+                {bulkLoading() ? 'Memproses...' : `🔑 Buat Akun (${selectedIds().length})`}
+              </Button>
+            </Show>
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor Mahasiswa</Button>
             <Button variant="secondary" onClick={() => setShowImportPaModal(true)}>📥 Impor Relasi PA</Button>
             <Button onClick={openAddModal}>+ Tambah Mahasiswa</Button>
@@ -161,10 +225,26 @@ export default function Mahasiswa() {
         </div>
 
         <Show when={!mahasiswas.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
-          <Table headers={['NIM', 'Nama', 'Email', 'Program Studi', 'Dosen Wali (PA)', 'Status', 'Aksi']}>
+          <Table headers={[
+            <input
+              type="checkbox"
+              checked={isAllSelected()}
+              onChange={toggleSelectAll}
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />,
+            'NIM', 'Nama', 'Email', 'Program Studi', 'Dosen Wali (PA)', 'Status', 'Aksi'
+          ]}>
           <For each={mahasiswas()?.data}>
             {(item) => (
               <tr class="hover:bg-gray-50/50 transition-colors">
+                <td class="px-6 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds().includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </td>
                 <td class="px-6 py-4 font-mono text-gray-600 font-semibold">{item.nim}</td>
                 <td class="px-6 py-4 font-medium text-gray-800">{item.nama}</td>
                 <td class="px-6 py-4 text-gray-500">{item.email}</td>

@@ -100,9 +100,12 @@ export const getAllYudisiumSchema = {
         nama: t.String({ default: 'Andi Pratama' }),
         status: t.String({ default: 'aktif' })
       })),
-      prodi: t.Optional(t.Object({
-        nama: t.String({ default: 'Teknik Informatika' })
-      }))
+      prodi: t.Optional(t.Union([
+        t.Object({
+          nama: t.Union([t.String(), t.Null()])
+        }),
+        t.Null()
+      ]))
     }))
   }
 };
@@ -250,6 +253,26 @@ export const lockKelasYudisiumSchema = {
       periodeId: t.Optional(t.String({ default: '20261' })),
       nama: t.Optional(t.String({ default: 'Kelas A' })),
       isLocked: t.Optional(t.Boolean({ default: true }))
+    })
+  }
+};
+
+export const unlockKelasYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Buka Kunci Nilai Kelas',
+    description: 'Membuka kunci nilai suatu Kelas Kuliah agar dapat diubah kembali.'
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric()
+  }),
+  response: {
+    200: t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      mataKuliahId: t.Optional(t.Integer({ default: 1 })),
+      periodeId: t.Optional(t.String({ default: '20261' })),
+      nama: t.Optional(t.String({ default: 'Kelas A' })),
+      isLocked: t.Optional(t.Boolean({ default: false }))
     })
   }
 };

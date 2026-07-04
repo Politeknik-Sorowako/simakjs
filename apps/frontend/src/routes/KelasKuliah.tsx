@@ -10,17 +10,30 @@ import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function KelasKuliah() {
   const toast = useToast();
+  const auth = useAuth();
+  const workspace = useWorkspace();
+  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
+
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
 
   // Fetch Kelas Data
   const [kelas, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit() }),
-    ({ search, page, limit }) => kelasKuliahController.getAll(search, page, limit)
+    () => ({
+      search: search(),
+      page: page(),
+      limit: limit(),
+      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
+      periodeId: isGlobalFilterActive() ? workspace.selectedPeriodeId() : null
+    }),
+    ({ search, page, limit, prodiId, periodeId }) =>
+      kelasKuliahController.getAll(search, page, limit, prodiId || undefined, periodeId || undefined)
   );
 
   // Fetch Dropdown Data

@@ -17,11 +17,12 @@ export interface Dosen {
 }
 
 export const dosenController = {
-  async getAll(search?: string, page?: number, limit?: number): Promise<PaginatedResponse<Dosen>> {
+  async getAll(search?: string, page?: number, limit?: number, programStudiId?: number): Promise<PaginatedResponse<Dosen>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
+    if (programStudiId) params.append('programStudiId', String(programStudiId));
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Dosen>>(`/dosen${queryString}`);
   },

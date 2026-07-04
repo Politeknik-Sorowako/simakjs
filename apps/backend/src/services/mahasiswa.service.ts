@@ -17,7 +17,7 @@ export interface CreateMahasiswaDto {
 }
 
 export class MahasiswaService {
-  static async getAll(page = 1, limit = 10, search = '', dosenPaId?: number) {
+  static async getAll(page = 1, limit = 10, search = '', dosenPaId?: number, programStudiId?: number) {
     const offset = (page - 1) * limit;
     
     let conditions = [];
@@ -32,6 +32,9 @@ export class MahasiswaService {
     }
     if (dosenPaId !== undefined) {
       conditions.push(eq(mahasiswa.dosenPaId, dosenPaId));
+    }
+    if (programStudiId !== undefined) {
+      conditions.push(eq(mahasiswa.programStudiId, programStudiId));
     }
 
     let whereClause = undefined;
