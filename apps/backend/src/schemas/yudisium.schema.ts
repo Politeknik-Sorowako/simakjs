@@ -68,9 +68,12 @@ export const getYudisiumSchema = {
         nama: t.String({ default: 'Andi Pratama' }),
         status: t.String({ default: 'aktif' })
       })),
-      prodi: t.Optional(t.Object({
-        nama: t.String({ default: 'Teknik Informatika' })
-      }))
+      prodi: t.Optional(t.Union([
+        t.Object({
+          nama: t.Union([t.String(), t.Null()])
+        }),
+        t.Null()
+      ]))
     }),
     404: t.Object({
       error: t.String({ default: 'Pengajuan yudisium tidak ditemukan' })

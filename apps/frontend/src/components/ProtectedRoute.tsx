@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
-  allowedRoles?: ('admin' | 'dosen' | 'mahasiswa')[];
+  allowedRoles?: ('admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest')[];
 }
 
 export function ProtectedRoute(props: ProtectedRouteProps) {

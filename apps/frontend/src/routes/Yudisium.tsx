@@ -1,4 +1,4 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
+import { createSignal, createResource, Show, For, createEffect } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
 import { khsController, PengajuanYudisium } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
@@ -33,10 +33,10 @@ export default function Yudisium() {
     }
   );
 
-  // Load all yudisium submissions (for Admin/Dosen)
+  // Load all yudisium submissions (for Admin/Dosen/Prodi)
   const [allYudisium, { refetch: refetchAllYudisium }] = createResource(
     () => {
-      if (role() === 'admin' || role() === 'dosen') return true;
+      if (role() === 'admin' || role() === 'dosen' || role() === 'prodi') return true;
       return null;
     },
     async () => {
@@ -47,7 +47,7 @@ export default function Yudisium() {
   // Load all students list (for Admin Input Dropdown)
   const [studentsList] = createResource(
     () => {
-      if (role() === 'admin' || role() === 'dosen') return true;
+      if (role() === 'admin' || role() === 'dosen' || role() === 'prodi') return true;
       return null;
     },
     async () => {
@@ -380,8 +380,8 @@ export default function Yudisium() {
           </Show>
         </Show>
 
-        {/* --- ADMIN & DOSEN VIEW --- */}
-        <Show when={role() === 'admin' || role() === 'dosen'}>
+        {/* --- ADMIN, DOSEN & PRODI VIEW --- */}
+        <Show when={role() === 'admin' || role() === 'dosen' || role() === 'prodi'}>
           {/* Tab Switcher (Only for admin) */}
           <Show when={role() === 'admin'}>
             <div class="flex gap-2 border-b border-gray-100 pb-3 mb-6">
@@ -408,7 +408,7 @@ export default function Yudisium() {
             </div>
           </Show>
 
-          <Show when={activeTab() === 'pengajuan' || role() === 'dosen'}>
+          <Show when={activeTab() === 'pengajuan' || role() === 'dosen' || role() === 'prodi'}>
             <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
               <h3 class="font-bold text-gray-800">Daftar Pengajuan Yudisium Mahasiswa</h3>
               <button

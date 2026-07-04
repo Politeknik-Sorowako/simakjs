@@ -133,7 +133,7 @@ function AppContent() {
       <Route
         path="/bimbingan"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
             <Bimbingan />
           </ProtectedRoute>
         }
@@ -157,7 +157,7 @@ function AppContent() {
       <Route
         path="/input-nilai"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
             <InputNilai />
           </ProtectedRoute>
         }
@@ -165,7 +165,7 @@ function AppContent() {
       <Route
         path="/yudisium"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
             <Yudisium />
           </ProtectedRoute>
         }
