@@ -656,7 +656,7 @@ export default function Yudisium() {
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                  <label class="text-xs font-bold text-gray-700">Tentukan Status</label>
+                  <label class="text-xs font-bold text-gray-700">Status Kelulusan Yudisium</label>
                   <select
                     class="border border-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-blue-500 text-slate-900 bg-white font-semibold"
                     value={adminStatus()}
@@ -664,7 +664,7 @@ export default function Yudisium() {
                   >
                     <option value="diajukan">Diajukan</option>
                     <option value="diverifikasi">Diverifikasi</option>
-                    <option value="disetujui">Disetujui (Lulus Yudisium)</option>
+                    <option value="disetujui">Disetujui (Dinyatakan LULUS)</option>
                     <option value="ditolak">Ditolak</option>
                   </select>
                 </div>
@@ -673,7 +673,7 @@ export default function Yudisium() {
                   <label class="text-xs font-bold text-gray-700">Catatan / Keterangan</label>
                   <textarea
                     rows="3"
-                    placeholder="Tulis alasan jika ditolak, atau catatan revisi berkas..."
+                    placeholder="Tulis alasan jika ditolak, atau catatan wisuda..."
                     value={adminCatatan()}
                     onInput={(e) => setAdminCatatan(e.currentTarget.value)}
                     class="border border-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-blue-500 resize-none text-slate-900"
@@ -684,7 +684,7 @@ export default function Yudisium() {
                   type="submit"
                   class="w-full py-2.5 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-sm"
                 >
-                  Simpan Status Verifikasi
+                  Simpan Verifikasi
                 </button>
               </form>
             </div>
