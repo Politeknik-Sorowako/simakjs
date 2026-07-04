@@ -15,11 +15,13 @@ export interface KelasKuliah {
 }
 
 export const kelasKuliahController = {
-  async getAll(search?: string, page?: number, limit?: number): Promise<PaginatedResponse<KelasKuliah>> {
+  async getAll(search?: string, page?: number, limit?: number, programStudiId?: number, periodeId?: string): Promise<PaginatedResponse<KelasKuliah>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
+    if (programStudiId) params.append('programStudiId', String(programStudiId));
+    if (periodeId) params.append('periodeId', String(periodeId));
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<KelasKuliah>>(`/kelas-kuliah${queryString}`);
   },

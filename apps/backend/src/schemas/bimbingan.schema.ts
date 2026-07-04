@@ -7,7 +7,11 @@ export const bimbinganThreadBody = t.Object({
 
 export const bimbinganUpdateBody = t.Object({
   ringkasan: t.Optional(t.String({ maxLength: 2000 })),
-  isApproved: t.Boolean({ default: true }),
+  isApproved: t.Optional(t.Boolean({ default: true })),
+  permasalahan: t.Optional(t.String()),
+  solusi: t.Optional(t.String()),
+  tanggalBimbingan: t.Optional(t.Any()),
+  statusBkd: t.Optional(t.Boolean({ default: false }))
 });
 
 export const getBimbinganSchema = {
@@ -27,6 +31,17 @@ export const getBimbinganSchema = {
       periodeId: t.Optional(t.Union([t.String(), t.Null()], { default: '20261' })),
       ringkasan: t.Optional(t.Union([t.String(), t.Null()], { default: 'Siswa aktif berkonsultasi mengenai pemilihan mata kuliah pilihan.' })),
       isApproved: t.Optional(t.Boolean({ default: true })),
+      sesi: t.Optional(t.Array(t.Object({
+        id: t.Optional(t.Integer()),
+        bimbinganId: t.Optional(t.Integer()),
+        pertemuanKe: t.Optional(t.Integer()),
+        tanggalBimbingan: t.Optional(t.Any()),
+        permasalahan: t.Optional(t.String()),
+        solusi: t.Optional(t.String()),
+        statusBkd: t.Optional(t.Boolean()),
+        createdAt: t.Optional(t.Any()),
+        updatedAt: t.Optional(t.Any()),
+      }))),
       thread: t.Optional(t.Array(t.Object({
         id: t.Optional(t.Integer({ default: 1 })),
         senderRole: t.Optional(t.String({ default: 'mahasiswa' })),
@@ -77,7 +92,11 @@ export const updateBimbinganSchema = {
       dosenId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
       periodeId: t.Optional(t.Union([t.String(), t.Null()], { default: '20261' })),
       ringkasan: t.Optional(t.Union([t.String(), t.Null()], { default: 'Mahasiswa sudah melengkapi revisi draft TA.' })),
-      isApproved: t.Optional(t.Boolean({ default: true }))
+      isApproved: t.Optional(t.Boolean({ default: true })),
+      permasalahan: t.Optional(t.Union([t.String(), t.Null()])),
+      solusi: t.Optional(t.Union([t.String(), t.Null()])),
+      tanggalBimbingan: t.Optional(t.Any()),
+      statusBkd: t.Optional(t.Boolean({ default: false })),
     })
   }
 };
@@ -98,6 +117,10 @@ export const getBimbinganMonitoringSchema = {
       isApproved: t.Optional(t.Boolean({ default: true })),
       bimbinganId: t.Optional(t.Union([t.Integer(), t.Null()])),
       ringkasan: t.Optional(t.Union([t.String(), t.Null()])),
+      permasalahan: t.Optional(t.Union([t.String(), t.Null()])),
+      solusi: t.Optional(t.Union([t.String(), t.Null()])),
+      tanggalBimbingan: t.Optional(t.Any()),
+      statusBkd: t.Optional(t.Boolean({ default: false })),
       createdAt: t.Optional(t.Any()),
       updatedAt: t.Optional(t.Any()),
     }))

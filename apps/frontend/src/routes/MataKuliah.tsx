@@ -7,8 +7,14 @@ import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function MataKuliah() {
+  const auth = useAuth();
+  const workspace = useWorkspace();
+  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
+
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
@@ -16,8 +22,13 @@ export default function MataKuliah() {
 
   // Fetch Mata Kuliah Data
   const [matkuls, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit() }),
-    ({ search, page, limit }) => mataKuliahController.getAll(search, page, limit)
+    () => ({
+      search: search(),
+      page: page(),
+      limit: limit(),
+      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null
+    }),
+    ({ search, page, limit, prodiId }) => mataKuliahController.getAll(search, page, limit, prodiId || undefined)
   );
 
   // Fetch Program Studi for Dropdown

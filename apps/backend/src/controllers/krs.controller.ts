@@ -3,6 +3,7 @@ import { AuthContext, PaginationQuery } from '../utils/types';
 import { db } from '../utils/db';
 import { mahasiswa } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { CsvImportService } from '../services/csv-import.service';
 
 export class KrsController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
@@ -127,5 +128,58 @@ export class KrsController {
       return { error: 'Data tidak ditemukan' };
     }
     return { message: 'KRS berhasil dihapus' };
+  }
+
+  static async getPendingStudents({ query, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const periodeId = query?.periodeId;
+    if (!periodeId) {
+      set.status = 400;
+      return { error: 'periodeId wajib disertakan.' };
+    }
+    try {
+      return await KrsService.getPendingStudents(periodeId);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal mengambil mahasiswa pending' };
+    }
+  }
+
+  static async approveBatch({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    try {
+      const updated = await KrsService.approveBatchKrs(body.mahasiswaIds, body.periodeId, user.email);
+      return { message: 'KRS mahasiswa terpilih berhasil disetujui', count: updated.length, data: updated };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal menyetujui KRS secara massal' };
+    }
+  }
+
+  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    if (!file) {
+      set.status = 400;
+      return { error: 'File CSV tidak ditemukan.' };
+    }
+
+    const text = await file.text();
+    const result = await CsvImportService.importKrs(text);
+    return result;
   }
 }

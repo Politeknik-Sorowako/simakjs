@@ -2,6 +2,7 @@ import { db } from '../utils/db';
 import { users } from '../models/schema';
 import { eq, count, ilike, or } from 'drizzle-orm';
 import { AuthContext } from '../utils/types';
+import { CsvImportService } from '../services/csv-import.service';
 
 export class UserController {
   static async getAll({ query, set, getCurrentUser }: AuthContext) {
@@ -237,5 +238,43 @@ export class UserController {
       set.status = 500;
       return { error: 'Gagal memperbarui profil', details: error.message };
     }
+  }
+
+  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    if (!file) {
+      set.status = 400;
+      return { error: 'File CSV tidak ditemukan.' };
+    }
+
+    const text = await file.text();
+    const result = await CsvImportService.importUsers(text);
+    return result;
+  }
+
+  static async generateAccounts({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+
+    const targetType = (body as any)?.targetType;
+    const ids = (body as any)?.ids;
+
+    if (!targetType || !ids || !Array.isArray(ids)) {
+      set.status = 400;
+      return { error: 'Parameter targetType dan ids (array) wajib diisi.' };
+    }
+
+    const result = await CsvImportService.generateAccounts(targetType, ids);
+    return result;
   }
 }

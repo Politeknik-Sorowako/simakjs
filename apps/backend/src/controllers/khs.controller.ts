@@ -120,4 +120,85 @@ export class KhsController {
       return { error: err.message || 'Gagal memproses kelayakan ujian.' };
     }
   }
+
+  // --- KONVERSI NILAI ---
+
+  static async getAllKonversi({ query, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login.' };
+    }
+    const prodiId = (query as any)?.programStudiId ? parseInt((query as any).programStudiId) : undefined;
+    return await KhsService.getAllKonversi(prodiId);
+  }
+
+  static async saveKonversi({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin dan Prodi.' };
+    }
+    try {
+      return await KhsService.saveKonversi(body as any);
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal menyimpan konversi nilai.' };
+    }
+  }
+
+  static async deleteKonversi({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const id = parseInt(params.id);
+    if (isNaN(id)) {
+      set.status = 400;
+      return { error: 'ID tidak valid' };
+    }
+    await KhsService.deleteKonversi(id);
+    return { message: 'Aturan konversi nilai berhasil dihapus' };
+  }
+
+  // --- SKALA PREDIKAT KELULUSAN ---
+
+  static async getAllPredikat({ set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login.' };
+    }
+    return await KhsService.getAllPredikat();
+  }
+
+  static async savePredikat({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      return await KhsService.savePredikat(body as any);
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal menyimpan skala predikat.' };
+    }
+  }
+
+  static async deletePredikat({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    const id = parseInt(params.id);
+    if (isNaN(id)) {
+      set.status = 400;
+      return { error: 'ID tidak valid' };
+    }
+    await KhsService.deletePredikat(id);
+    return { message: 'Skala predikat kelulusan berhasil dihapus' };
+  }
 }

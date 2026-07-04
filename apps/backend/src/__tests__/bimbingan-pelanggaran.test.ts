@@ -203,6 +203,45 @@ describe('Bimbingan & Pelanggaran API', () => {
       );
       expect(response.status).toBe(403);
     });
+
+    it('dosen PA harus sukses mencatat riwayat bimbingan BKD (permasalahan, solusi, tanggal, status BKD)', async () => {
+      const response = await app.handle(
+        new Request(`http://localhost/bimbingan/mahasiswa/${mhsId}/sesi`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${dosenToken}`,
+          },
+          body: JSON.stringify({
+            pertemuanKe: 1,
+            permasalahan: 'Kesulitan memahami materi Pemrograman Web.',
+            solusi: 'Disarankan mengikuti bimbingan tambahan dengan asisten lab.',
+            tanggalBimbingan: '2023-10-10',
+            statusBkd: true,
+          }),
+        })
+      );
+      expect(response.status).toBe(201);
+      const data = await response.json();
+      expect(data.permasalahan).toBe('Kesulitan memahami materi Pemrograman Web.');
+      expect(data.solusi).toBe('Disarankan mengikuti bimbingan tambahan dengan asisten lab.');
+      expect(data.statusBkd).toBe(true);
+
+      // Verify the BKD report endpoint returns this record
+      const rekapRes = await app.handle(
+        new Request(`http://localhost/bimbingan/rekap-bkd?periodeId=${periodeId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${dosenToken}`,
+          },
+        })
+      );
+      expect(rekapRes.status).toBe(200);
+      const rekapBody = await rekapRes.json();
+      expect(rekapBody.data.length).toBe(1);
+      expect(rekapBody.data[0].mahasiswa.nim).toBe('20200001');
+      expect(rekapBody.data[0].statusBkd).toBe(true);
+    });
   });
 
   describe('Pelanggaran/Kedisiplinan API', () => {

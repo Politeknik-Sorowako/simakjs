@@ -29,6 +29,8 @@ import ResetPassword from './routes/ResetPassword';
 import Kurikulum from './routes/Kurikulum';
 import Rps from './routes/Rps';
 
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
+
 function AppContent() {
   const auth = useAuth();
 
@@ -131,7 +133,7 @@ function AppContent() {
       <Route
         path="/bimbingan"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
             <Bimbingan />
           </ProtectedRoute>
         }
@@ -155,7 +157,7 @@ function AppContent() {
       <Route
         path="/input-nilai"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
             <InputNilai />
           </ProtectedRoute>
         }
@@ -163,7 +165,7 @@ function AppContent() {
       <Route
         path="/yudisium"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
             <Yudisium />
           </ProtectedRoute>
         }
@@ -228,7 +230,9 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <AppContent />
+        <WorkspaceProvider>
+          <AppContent />
+        </WorkspaceProvider>
       </AuthProvider>
     </ToastProvider>
   );

@@ -1,6 +1,6 @@
 import { db } from '../utils/db';
 import { dosen } from '../models/schema';
-import { count, eq, ilike, or } from 'drizzle-orm';
+import { count, eq, ilike, or, and } from 'drizzle-orm';
 
 export interface CreateDosenDto {
   nip: string;
@@ -15,16 +15,26 @@ export interface CreateDosenDto {
 }
 
 export class DosenService {
-  static async getAll(page = 1, limit = 10, search = '') {
+  static async getAll(page = 1, limit = 10, search = '', programStudiId?: number) {
     const offset = (page - 1) * limit;
-    let whereClause = undefined;
+    let conditions = [];
 
     if (search) {
-      whereClause = or(
-        ilike(dosen.nama, `%${search}%`),
-        ilike(dosen.nip, `%${search}%`),
-        ilike(dosen.email, `%${search}%`)
+      conditions.push(
+        or(
+          ilike(dosen.nama, `%${search}%`),
+          ilike(dosen.nip, `%${search}%`),
+          ilike(dosen.email, `%${search}%`)
+        )
       );
+    }
+    if (programStudiId !== undefined) {
+      conditions.push(eq(dosen.programStudiId, programStudiId));
+    }
+
+    let whereClause = undefined;
+    if (conditions.length > 0) {
+      whereClause = and(...conditions);
     }
 
     const [totalResult] = await db

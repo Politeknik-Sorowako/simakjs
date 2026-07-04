@@ -174,4 +174,20 @@ export class YudisiumController {
       return { error: e.message || 'Gagal mengunci nilai kelas.' };
     }
   }
+
+  static async unlockKelas({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Anda tidak memiliki wewenang untuk membuka kunci nilai kelas.' };
+    }
+
+    try {
+      const result = await YudisiumService.unlockKelas(parseInt(params.kelasKuliahId));
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal membuka kunci nilai kelas.' };
+    }
+  }
 }

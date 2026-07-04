@@ -1,4 +1,4 @@
-import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boolean, numeric, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, varchar, integer, timestamp, pgEnum, date, boolean, numeric, index, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest']);
@@ -54,6 +54,7 @@ export const mahasiswa = pgTable('mahasiswa', {
   nim: varchar('nim', { length: 50 }).notNull().unique(),
   nama: varchar('nama', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
+  angkatan: varchar('angkatan', { length: 4 }), // misal "2024"
   programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
   dosenPaId: integer('dosen_pa_id').references(() => dosen.id, { onDelete: 'set null' }),
   status: varchar('status', { length: 50 }).notNull().default('aktif'), // aktif, cuti, lulus, drop_out
@@ -362,6 +363,10 @@ export const bimbingan = pgTable('bimbingan', {
   periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   ringkasan: text('ringkasan'),
   isApproved: boolean('is_approved').default(false).notNull(),
+  permasalahan: text('permasalahan'),
+  solusi: text('solusi'),
+  tanggalBimbingan: date('tanggal_bimbingan'),
+  statusBkd: boolean('status_bkd').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
@@ -373,6 +378,18 @@ export const bimbinganThread = pgTable('bimbingan_thread', {
   pesan: text('pesan').notNull(),
   tipe: varchar('tipe', { length: 10 }).default('uts').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const sesiBimbingan = pgTable('sesi_bimbingan', {
+  id: serial('id').primaryKey(),
+  bimbinganId: integer('bimbingan_id').notNull().references(() => bimbingan.id, { onDelete: 'cascade' }),
+  pertemuanKe: integer('pertemuan_ke').notNull(),
+  tanggalBimbingan: date('tanggal_bimbingan').notNull(),
+  permasalahan: text('permasalahan').notNull(),
+  solusi: text('solusi').notNull(),
+  statusBkd: boolean('status_bkd').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
 
 export const pelanggaran = pgTable('pelanggaran', {
@@ -401,11 +418,19 @@ export const bimbinganRelations = relations(bimbingan, ({ one, many }) => ({
     references: [periodeAkademik.id],
   }),
   thread: many(bimbinganThread),
+  sesi: many(sesiBimbingan),
 }));
 
 export const bimbinganThreadRelations = relations(bimbinganThread, ({ one }) => ({
   bimbingan: one(bimbingan, {
     fields: [bimbinganThread.bimbinganId],
+    references: [bimbingan.id],
+  }),
+}));
+
+export const sesiBimbinganRelations = relations(sesiBimbingan, ({ one }) => ({
+  bimbingan: one(bimbingan, {
+    fields: [sesiBimbingan.bimbinganId],
     references: [bimbingan.id],
   }),
 }));
@@ -605,3 +630,73 @@ export const rencanaEvaluasiRelations = relations(rencanaEvaluasi, ({ one }) => 
   }),
 }));
 
+// NEW TABLES FOR FINANCIAL AND GRADING CONFIGURATIONS
+
+export const transaksiPembayaran = pgTable('transaksi_pembayaran', {
+  id: serial('id').primaryKey(),
+  tagihanId: integer('tagihan_id').notNull().references(() => tagihan.id, { onDelete: 'cascade' }),
+  nominalBayar: integer('nominal_bayar').notNull(),
+  tanggalTransaksi: timestamp('tanggal_transaksi').defaultNow().notNull(),
+  petugasId: integer('petugas_id').references(() => users.id, { onDelete: 'set null' }),
+  isVoid: boolean('is_void').default(false).notNull(),
+  catatanKoreksi: text('catatan_koreksi'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const transaksiPembayaranRelations = relations(transaksiPembayaran, ({ one }) => ({
+  tagihan: one(tagihan, {
+    fields: [transaksiPembayaran.tagihanId],
+    references: [tagihan.id],
+  }),
+  petugas: one(users, {
+    fields: [transaksiPembayaran.petugasId],
+    references: [users.id],
+  }),
+}));
+
+export const skemaTarif = pgTable('skema_tarif', {
+  id: serial('id').primaryKey(),
+  angkatan: varchar('angkatan', { length: 4 }).notNull(), // misal "2024"
+  programStudiId: integer('program_studi_id').notNull().references(() => programStudi.id, { onDelete: 'cascade' }),
+  nominal: integer('nominal').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+}, (t) => ({
+  unq: unique('skema_tarif_angkatan_prodi_unique').on(t.angkatan, t.programStudiId)
+}));
+
+export const skemaTarifRelations = relations(skemaTarif, ({ one }) => ({
+  programStudi: one(programStudi, {
+    fields: [skemaTarif.programStudiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const konversiNilai = pgTable('konversi_nilai', {
+  id: serial('id').primaryKey(),
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'cascade' }), // Nullable = Berlaku Global
+  nilaiHuruf: varchar('nilai_huruf', { length: 5 }).notNull(),
+  bobotIndeks: numeric('bobot_indeks', { precision: 3, scale: 2 }).notNull(),
+  nilaiMin: numeric('nilai_min', { precision: 5, scale: 2 }).notNull(),
+  nilaiMax: numeric('nilai_max', { precision: 5, scale: 2 }).notNull(),
+  predikat: varchar('predikat', { length: 50 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const konversiNilaiRelations = relations(konversiNilai, ({ one }) => ({
+  programStudi: one(programStudi, {
+    fields: [konversiNilai.programStudiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const skalaPredikatKelulusan = pgTable('skala_predikat_kelulusan', {
+  id: serial('id').primaryKey(),
+  ipkMin: numeric('ipk_min', { precision: 3, scale: 2 }).notNull(),
+  ipkMax: numeric('ipk_max', { precision: 3, scale: 2 }).notNull(),
+  predikat: varchar('predikat', { length: 100 }).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});

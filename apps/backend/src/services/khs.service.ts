@@ -1,5 +1,5 @@
 import { db } from '../utils/db';
-import { krs, mahasiswa, kelasKuliah, mataKuliah, tagihan, bimbingan, bap, presensi } from '../models/schema';
+import { krs, mahasiswa, kelasKuliah, mataKuliah, tagihan, bimbingan, bap, presensi, konversiNilai, skalaPredikatKelulusan } from '../models/schema';
 import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { PresensiService } from './presensi.service';
 
@@ -172,12 +172,44 @@ export class KhsService {
 
     const ipk = totalSks > 0 ? parseFloat((weightedPoints / totalSks).toFixed(2)) : 0.0;
 
-    return {
-      transkripList: list,
-      summary: {
-        totalSks,
-        ipk
+    // Get dynamic predikat
+    let predikatKelulusan = '-';
+    const predikats = await db.select().from(skalaPredikatKelulusan);
+    for (const p of predikats) {
+      const min = parseFloat(p.ipkMin);
+      const max = parseFloat(p.ipkMax);
+      if (ipk >= min && ipk <= max) {
+        predikatKelulusan = p.predikat;
+        break;
       }
+    }
+
+    const mhsDetail = await db.query.mahasiswa.findFirst({
+      where: eq(mahasiswa.id, mahasiswaId),
+      with: {
+        programStudi: true
+      }
+    });
+
+    const formattedList = list.map(item => ({
+      mataKuliahKode: item.mataKuliah.kode,
+      mataKuliahNama: item.mataKuliah.nama,
+      sks: item.mataKuliah.sksTotal,
+      nilaiHuruf: item.nilaiHuruf || '-',
+      nilaiIndeks: item.nilaiIndeks || '0.00'
+    }));
+
+    return {
+      mahasiswa: mhsDetail ? {
+        id: mhsDetail.id,
+        nim: mhsDetail.nim,
+        nama: mhsDetail.nama,
+        prodi: mhsDetail.programStudi?.nama || '-'
+      } : undefined,
+      transkripList: formattedList,
+      totalSksLulus: totalSks,
+      ipk,
+      predikatKelulusan
     };
   }
 
@@ -307,5 +339,91 @@ export class KhsService {
       classes: classEligibility,
       overallEligible
     };
+  }
+
+  // --- KONVERSI NILAI ---
+
+  static async getAllKonversi(programStudiId?: number) {
+    let whereClause = undefined;
+    if (programStudiId !== undefined) {
+      whereClause = eq(konversiNilai.programStudiId, programStudiId);
+    }
+    return await db.select().from(konversiNilai).where(whereClause);
+  }
+
+  static async saveKonversi(data: {
+    id?: number;
+    programStudiId?: number | null;
+    nilaiHuruf: string;
+    bobotIndeks: string | number;
+    nilaiMin: string | number;
+    nilaiMax: string | number;
+    predikat: string;
+  }) {
+    const payload = {
+      programStudiId: data.programStudiId || null,
+      nilaiHuruf: data.nilaiHuruf,
+      bobotIndeks: String(data.bobotIndeks),
+      nilaiMin: String(data.nilaiMin),
+      nilaiMax: String(data.nilaiMax),
+      predikat: data.predikat,
+    };
+
+    if (data.id) {
+      const [updated] = await db
+        .update(konversiNilai)
+        .set(payload)
+        .where(eq(konversiNilai.id, data.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(konversiNilai)
+        .values(payload)
+        .returning();
+      return created;
+    }
+  }
+
+  static async deleteKonversi(id: number) {
+    await db.delete(konversiNilai).where(eq(konversiNilai.id, id));
+  }
+
+  // --- SKALA PREDIKAT KELULUSAN ---
+
+  static async getAllPredikat() {
+    return await db.select().from(skalaPredikatKelulusan);
+  }
+
+  static async savePredikat(data: {
+    id?: number;
+    ipkMin: string | number;
+    ipkMax: string | number;
+    predikat: string;
+  }) {
+    const payload = {
+      ipkMin: String(data.ipkMin),
+      ipkMax: String(data.ipkMax),
+      predikat: data.predikat,
+    };
+
+    if (data.id) {
+      const [updated] = await db
+        .update(skalaPredikatKelulusan)
+        .set(payload)
+        .where(eq(skalaPredikatKelulusan.id, data.id))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(skalaPredikatKelulusan)
+        .values(payload)
+        .returning();
+      return created;
+    }
+  }
+
+  static async deletePredikat(id: number) {
+    await db.delete(skalaPredikatKelulusan).where(eq(skalaPredikatKelulusan.id, id));
   }
 }

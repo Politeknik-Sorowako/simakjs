@@ -1,9 +1,41 @@
 import { useAuth } from '../contexts/AuthContext';
 import { userController } from '../controllers/userController';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { prodiController } from '../controllers/prodiController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { createResource, Show, For } from 'solid-js';
 
 export function Navbar(props: { onToggleSidebar: () => void }) {
   const auth = useAuth();
+  const workspace = useWorkspace();
   const currentTheme = () => auth.user()?.theme || 'light';
+  const role = () => auth.user()?.role;
+
+  // Load Prodis for admin global filter
+  const [prodis] = createResource(
+    () => role() === 'admin',
+    async () => {
+      try {
+        const res = await prodiController.getAll(undefined, 1, 100);
+        return res.data;
+      } catch (_) {
+        return [];
+      }
+    }
+  );
+
+  // Load Periodes for admin global filter
+  const [periodes] = createResource(
+    () => role() === 'admin',
+    async () => {
+      try {
+        const res = await periodeAkademikController.getAll(undefined, 1, 100);
+        return res.data;
+      } catch (_) {
+        return [];
+      }
+    }
+  );
 
   const toggleTheme = async () => {
     const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
@@ -36,6 +68,43 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
 
         <h2 class="text-md font-bold text-gray-800 dark:text-white hidden sm:block">Sistem Informasi Akademik</h2>
       </div>
+
+      {/* Global Filter for Admin */}
+      <Show when={role() === 'admin'}>
+        <div class="hidden md:flex items-center gap-3 bg-gray-50 dark:bg-slate-800/40 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-800">
+          <div class="flex items-center gap-1.5 text-xs">
+            <span class="text-gray-500 font-semibold dark:text-slate-400">Prodi:</span>
+            <select
+              onChange={(e) => {
+                const val = e.currentTarget.value;
+                workspace.setSelectedProdiId(val ? parseInt(val) : null);
+              }}
+              class="bg-transparent border-0 font-bold text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
+            >
+              <option value="" selected={workspace.selectedProdiId() === null}>Semua Prodi</option>
+              <For each={prodis()}>
+                {(p) => <option value={p.id} selected={workspace.selectedProdiId() === p.id}>{p.nama}</option>}
+              </For>
+            </select>
+          </div>
+          <div class="h-4 w-px bg-gray-300 dark:bg-slate-700"></div>
+          <div class="flex items-center gap-1.5 text-xs">
+            <span class="text-gray-500 font-semibold dark:text-slate-400">Periode:</span>
+            <select
+              onChange={(e) => {
+                const val = e.currentTarget.value;
+                workspace.setSelectedPeriodeId(val || null);
+              }}
+              class="bg-transparent border-0 font-bold text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
+            >
+              <option value="" selected={workspace.selectedPeriodeId() === null}>Semua Periode</option>
+              <For each={periodes()}>
+                {(p) => <option value={p.id} selected={workspace.selectedPeriodeId() === p.id}>{p.nama}</option>}
+              </For>
+            </select>
+          </div>
+        </div>
+      </Show>
 
       <div class="flex items-center gap-4">
 

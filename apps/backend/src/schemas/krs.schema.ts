@@ -39,6 +39,7 @@ export const getKrsSchema = {
           nilaiAngka: t.Union([t.String(), t.Null()], { default: null }),
           nilaiHuruf: t.Union([t.String(), t.Null()], { default: null }),
           nilaiIndeks: t.Union([t.String(), t.Null()], { default: null }),
+          isApproved: t.Boolean({ default: false }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
           lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
@@ -117,6 +118,7 @@ export const getKrsByIdSchema = {
       nilaiAngka: t.Union([t.String(), t.Null()], { default: null }),
       nilaiHuruf: t.Union([t.String(), t.Null()], { default: null }),
       nilaiIndeks: t.Union([t.String(), t.Null()], { default: null }),
+      isApproved: t.Boolean({ default: false }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
@@ -202,7 +204,7 @@ export const deleteKrsSchema = {
 };
 
 export const approveKrsBody = t.Object({
-  mahasiswaId: t.Integer({ default: 1 }),
+  mahasiswaId: t.Optional(t.Union([t.Integer(), t.Null()])),
   periodeId: t.String({ default: '20231' })
 });
 
@@ -223,6 +225,44 @@ export const approveKrsSchema = {
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak.' })
+    })
+  }
+};
+
+export const getPendingStudentsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Daftar Mahasiswa Pending KRS',
+    description: 'Mengambil mahasiswa yang memiliki kontrak KRS pending/belum disetujui di periode tertentu.'
+  },
+  query: t.Object({
+    periodeId: t.String({ default: '20231' })
+  }),
+  response: {
+    200: t.Array(t.Object({
+      id: t.Integer({ default: 1 }),
+      nim: t.String({ default: '202301001' }),
+      nama: t.String({ default: 'Andi Pratama' }),
+      email: t.String({ default: 'andi@gmail.com' }),
+      status: t.String({ default: 'aktif' })
+    }))
+  }
+};
+
+export const approveBatchKrsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Persetujuan KRS Massal',
+    description: 'Menyetujui KRS beberapa mahasiswa sekaligus di periode tertentu.'
+  },
+  body: t.Object({
+    mahasiswaIds: t.Array(t.Integer(), { default: [1] }),
+    periodeId: t.String({ default: '20231' })
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'KRS mahasiswa terpilih berhasil disetujui' }),
+      count: t.Integer({ default: 1 })
     })
   }
 };

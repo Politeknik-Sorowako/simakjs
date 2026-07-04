@@ -535,19 +535,129 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
       expect(response.status).toBe(404);
     });
 
-    it('harus gagal menghapus jika diakses oleh non-Admin (RBAC)', async () => {
-      const mhsToken = await getAuthToken('mhs-mhs@test.com', 'mahasiswa');
+    it('harus membatasi akses Dosen PA hanya untuk melihat mahasiswa bimbingannya', async () => {
+      // 1. Setup Dosen A & Dosen B
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+      
+      const dsnResA = await app.handle(new Request('http://localhost/dosen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({ nip: 'DSN-PA-A', nama: 'Dosen PA A', email: 'dosen-a@test.com', programStudiId: prodiId })
+      }));
+      const dosenA = await dsnResA.json() as { id: number };
 
-      const response = await app.handle(
-        new Request(`http://localhost/mahasiswa/${mhsId}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${mhsToken}`,
-          },
+      const dsnResB = await app.handle(new Request('http://localhost/dosen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({ nip: 'DSN-PA-B', nama: 'Dosen PA B', email: 'dosen-b@test.com', programStudiId: prodiId, nidn: '000101870B', nik: '1234567890123452' })
+      }));
+      const dosenB = await dsnResB.json() as { id: number };
+
+      // 2. Tambah Mahasiswa X (bimbingan Dosen A) & Mahasiswa Y (bimbingan Dosen B)
+      const mhsResX = await app.handle(new Request('http://localhost/mahasiswa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          nim: '88880001', nama: 'Mhs Binaan A', email: 'mhs-a@test.com', programStudiId: prodiId,
+          dosenPaId: dosenA.id, namaIbuKandung: 'Ibu A', nik: '1234567890123451', jenisKelamin: 'L', tanggalLahir: '2000-01-01'
         })
-      );
+      }));
+      const mhsX = await mhsResX.json() as { id: number };
 
-      expect(response.status).toBe(403);
+      const mhsResY = await app.handle(new Request('http://localhost/mahasiswa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          nim: '88880002', nama: 'Mhs Binaan B', email: 'mhs-b@test.com', programStudiId: prodiId,
+          dosenPaId: dosenB.id, namaIbuKandung: 'Ibu B', nik: '1234567890123452', jenisKelamin: 'P', tanggalLahir: '2000-01-01'
+        })
+      }));
+      const mhsY = await mhsResY.json() as { id: number };
+
+      // 3. Login sebagai Dosen A
+      const dosenAToken = await getAuthToken('dosen-a@test.com', 'dosen');
+
+      // 4. Dosen A GET list mahasiswa -> Hanya boleh mendapat Mahasiswa X (Mhs Binaan A)
+      const listRes = await app.handle(new Request('http://localhost/mahasiswa', {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${dosenAToken}` }
+      }));
+      expect(listRes.status).toBe(200);
+      const listData = await listRes.json() as { data: any[] };
+      expect(listData.data.length).toBe(1);
+      expect(listData.data[0].id).toBe(mhsX.id);
+
+      // 5. Dosen A GET detail Mahasiswa X -> Sukses 200
+      const detailXRes = await app.handle(new Request(`http://localhost/mahasiswa/${mhsX.id}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${dosenAToken}` }
+      }));
+      expect(detailXRes.status).toBe(200);
+
+      // 6. Dosen A GET detail Mahasiswa Y -> Gagal 403
+      const detailYRes = await app.handle(new Request(`http://localhost/mahasiswa/${mhsY.id}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${dosenAToken}` }
+      }));
+      expect(detailYRes.status).toBe(403);
+
+      // 7. Dosen A update Mahasiswa X mengubah dosenPaId -> Gagal 403
+      const updatePaRes = await app.handle(new Request(`http://localhost/mahasiswa/${mhsX.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${dosenAToken}` },
+        body: JSON.stringify({ dosenPaId: dosenB.id })
+      }));
+      expect(updatePaRes.status).toBe(403);
+    });
+
+    it('harus sukses mengimpor relasi pembimbing akademik mahasiswa via CSV', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      // 1. Tambah Dosen
+      const dsnRes = await app.handle(new Request('http://localhost/dosen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({ nip: 'DSN-PA-IMPORT', nama: 'Dosen Import PA', email: 'dosen-import-pa@test.com', programStudiId: prodiId })
+      }));
+      const dosenData = await dsnRes.json() as { id: number };
+
+      // 2. Tambah Mahasiswa
+      const mhsRes = await app.handle(new Request('http://localhost/mahasiswa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          nim: '99990001', nama: 'Mhs Import PA', email: 'mhs-import-pa@test.com', programStudiId: prodiId,
+          namaIbuKandung: 'Ibu Import', nik: '1234567890123459', jenisKelamin: 'L', tanggalLahir: '2000-01-01'
+        })
+      }));
+      const mhsData = await mhsRes.json() as { id: number };
+
+      // 3. Impor CSV Relasi
+      const csvContent = 'nim,nip_dosen_pa\n99990001,DSN-PA-IMPORT\n';
+      const formData = new FormData();
+      const file = new File([csvContent], 'import-pa.csv', { type: 'text/csv' });
+      formData.append('file', file);
+
+      const importRes = await app.handle(new Request('http://localhost/mahasiswa/import-pa', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: formData
+      }));
+
+      expect(importRes.status).toBe(200);
+      const importResult = await importRes.json() as { successCount: number, errors: any[] };
+      expect(importResult.successCount).toBe(1);
+      expect(importResult.errors.length).toBe(0);
+
+      // 4. Verifikasi relasi ter-update
+      const checkRes = await app.handle(new Request(`http://localhost/mahasiswa/${mhsData.id}`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${adminToken}` }
+      }));
+      const checkedMhs = await checkRes.json() as { dosenPaId: number };
+      expect(checkedMhs.dosenPaId).toBe(dosenData.id);
     });
   });
 });

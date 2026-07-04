@@ -69,17 +69,6 @@ html.dark svg {
 }
 
 @media print {
-  /* Hide navigation sidebar, headers, tables, buttons, and non-modal components */
-  aside,
-  header,
-  nav,
-  .print\:hidden,
-  .flex-col.gap-6 > div:not(.fixed),
-  table:not(#print-area-invoice table):not(#print-area-receipt table):not(#print-area-khs table):not(#print-area-transkrip table):not(#print-area-ujian table),
-  .flex.justify-between.items-center.mt-4 {
-    display: none !important;
-  }
-
   /* Flatten flex and grid layouts of parent elements to standard blocks for printing */
   html, body, #root, #root > div, main, .min-h-screen, .flex, .flex-col {
     display: block !important;
@@ -115,9 +104,21 @@ html.dark svg {
     width: 100% !important;
     max-width: 100% !important;
     background: white !important;
+    display: block !important;
   }
 
-  /* Hide modal controls: close buttons, form footers, header dividers */
+  /* Hide navigation sidebar, headers, tables, buttons, and non-modal components */
+  aside,
+  header,
+  nav,
+  aside.flex,
+  header.flex,
+  nav.flex,
+  .print\:hidden,
+  div.print\:hidden,
+  .flex-col.gap-6 > div:not(.fixed),
+  table:not(#print-area-invoice table):not(#print-area-receipt table):not(#print-area-khs table):not(#print-area-transkrip table):not(#print-area-ujian table):not(#print-area-bkd table),
+  .flex.justify-between.items-center.mt-4,
   div.fixed.inset-0.z-50 button,
   div.fixed.inset-0.z-50 .border-t.pt-4,
   div.fixed.inset-0.z-50 .flex.justify-between.items-center.border-b {

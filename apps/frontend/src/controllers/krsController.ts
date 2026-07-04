@@ -56,4 +56,15 @@ export const krsController = {
       body: JSON.stringify({ mahasiswaId, periodeId }),
     });
   },
+
+  async getPendingStudents(periodeId: string): Promise<any[]> {
+    return fetchApi<any[]>(`/krs/pending-students?periodeId=${periodeId}`);
+  },
+
+  async approveBatch(mahasiswaIds: number[], periodeId: string): Promise<{ message: string; count: number }> {
+    return fetchApi<{ message: string; count: number }>('/krs/approve-batch', {
+      method: 'POST',
+      body: JSON.stringify({ mahasiswaIds, periodeId }),
+    });
+  },
 };

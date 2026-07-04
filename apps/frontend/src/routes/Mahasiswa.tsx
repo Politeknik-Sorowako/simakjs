@@ -1,27 +1,49 @@
 import { createSignal, createResource, Show, For } from 'solid-js';
 import { mahasiswaController, Mahasiswa as IMahasiswa } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
+import { dosenController } from '../controllers/dosenController';
+import { userController } from '../controllers/userController';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Mahasiswa() {
+  const toast = useToast();
   const [search, setSearch] = createSignal('');
   const [page, setPage] = createSignal(1);
   const [limit] = createSignal(10);
   const [showImportModal, setShowImportModal] = createSignal(false);
+  const [showImportPaModal, setShowImportPaModal] = createSignal(false);
+  const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
+  const [bulkLoading, setBulkLoading] = createSignal(false);
+
+  const auth = useAuth();
+  const workspace = useWorkspace();
+  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   // Fetch Mahasiswa Data
   const [mahasiswas, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit() }),
-    ({ search, page, limit }) => mahasiswaController.getAll(search, page, limit)
+    () => ({
+      search: search(),
+      page: page(),
+      limit: limit(),
+      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null
+    }),
+    ({ search, page, limit, prodiId }) => mahasiswaController.getAll(search, page, limit, prodiId || undefined)
   );
 
   // Fetch Program Studi for Dropdowns
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
+
+  // Fetch Dosen list for PA dropdown selector
+  const [dosens] = createResource(() => dosenController.getAll(undefined, 1, 1000));
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -30,6 +52,7 @@ export default function Mahasiswa() {
   const [nama, setNama] = createSignal('');
   const [email, setEmail] = createSignal('');
   const [prodiId, setProdiId] = createSignal<number>(0);
+  const [dosenPaId, setDosenPaId] = createSignal<number | null>(null);
   const [status, setStatus] = createSignal('aktif');
   const [namaIbu, setNamaIbu] = createSignal('');
   const [nik, setNik] = createSignal('');
@@ -44,6 +67,7 @@ export default function Mahasiswa() {
     setEmail('');
     const firstProdi = prodis()?.data?.[0]?.id || 0;
     setProdiId(firstProdi);
+    setDosenPaId(null);
     setStatus('aktif');
     setNamaIbu('');
     setNik('');
@@ -59,6 +83,7 @@ export default function Mahasiswa() {
     setNama(item.nama);
     setEmail(item.email);
     setProdiId(item.programStudiId || 0);
+    setDosenPaId(item.dosenPaId || null);
     setStatus(item.status);
     setNamaIbu(item.namaIbuKandung || '');
     setNik(item.nik || '');
@@ -77,6 +102,7 @@ export default function Mahasiswa() {
         nama: nama(),
         email: email(),
         programStudiId: Number(prodiId()),
+        dosenPaId: dosenPaId() ? Number(dosenPaId()) : null,
         status: status(),
         namaIbuKandung: namaIbu(),
         nik: nik(),
@@ -93,6 +119,49 @@ export default function Mahasiswa() {
       refetch();
     } catch (e: any) {
       setErrorMsg(e.message || 'Gagal menyimpan data');
+    }
+  };
+
+  const toggleSelectAll = () => {
+    const list = mahasiswas()?.data || [];
+    if (selectedIds().length === list.length && list.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(list.map(item => item.id));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    if (selectedIds().includes(id)) {
+      setSelectedIds(selectedIds().filter(x => x !== id));
+    } else {
+      setSelectedIds([...selectedIds(), id]);
+    }
+  };
+
+  const isAllSelected = () => {
+    const list = mahasiswas()?.data || [];
+    return list.length > 0 && selectedIds().length === list.length;
+  };
+
+  const handleBulkCreateAccount = async () => {
+    const ids = selectedIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin membuatkan akun secara massal untuk ${ids.length} mahasiswa terpilih?`)) return;
+
+    setBulkLoading(true);
+    try {
+      const res = await userController.generateAccounts('mahasiswa', ids);
+      if (res.errors && res.errors.length > 0) {
+        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'warning');
+      } else {
+        toast.showToast(`Berhasil membuat ${res.successCount} akun mahasiswa.`, 'success');
+      }
+      setSelectedIds([]);
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal membuat akun secara massal.', 'error');
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -115,7 +184,13 @@ export default function Mahasiswa() {
             <p class="text-sm text-gray-500">Kelola informasi data mahasiswa aktif dan administrasi akademik.</p>
           </div>
           <div class="flex gap-2">
-            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Show when={selectedIds().length > 0}>
+              <Button variant="success" disabled={bulkLoading()} onClick={handleBulkCreateAccount}>
+                {bulkLoading() ? 'Memproses...' : `🔑 Buat Akun (${selectedIds().length})`}
+              </Button>
+            </Show>
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor Mahasiswa</Button>
+            <Button variant="secondary" onClick={() => setShowImportPaModal(true)}>📥 Impor Relasi PA</Button>
             <Button onClick={openAddModal}>+ Tambah Mahasiswa</Button>
           </div>
         </div>
@@ -126,6 +201,15 @@ export default function Mahasiswa() {
           importUrl="/mahasiswa/import"
           templateHeaders={['nim', 'nama', 'email', 'programStudiKode', 'status', 'namaIbuKandung', 'nik', 'jenisKelamin', 'tanggalLahir', 'tempatLahir', 'idAgama', 'jalan', 'rt', 'rw', 'kodePos', 'kewarganegaraan']}
           title="Mahasiswa"
+          onSuccess={() => refetch()}
+        />
+
+        <ImportCsvModal
+          show={showImportPaModal()}
+          onClose={() => setShowImportPaModal(false)}
+          importUrl="/mahasiswa/import-pa"
+          templateHeaders={['nim', 'nip_dosen_pa']}
+          title="Relasi Pembimbing Akademik"
           onSuccess={() => refetch()}
         />
 
@@ -141,40 +225,57 @@ export default function Mahasiswa() {
         </div>
 
         <Show when={!mahasiswas.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
-          <Table headers={['NIM', 'Nama', 'Email', 'Program Studi', 'Status', 'Aksi']}>
-            <For each={mahasiswas()?.data}>
-              {(item) => (
-                <tr class="hover:bg-gray-50/50 transition-colors">
-                  <td class="px-6 py-4 font-mono text-gray-600 font-semibold">{item.nim}</td>
-                  <td class="px-6 py-4 font-medium text-gray-800">{item.nama}</td>
-                  <td class="px-6 py-4 text-gray-500">{item.email}</td>
-                  <td class="px-6 py-4 text-gray-600">{item.programStudi?.nama || '-'}</td>
-                  <td class="px-6 py-4">
-                    <span class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                      item.status === 'aktif' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                    }`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 flex gap-2">
-                    <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
-                      Edit
-                    </Button>
-                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5">
-                      Hapus
-                    </Button>
-                  </td>
-                </tr>
-              )}
-            </For>
-            <Show when={mahasiswas()?.data.length === 0}>
-              <tr>
-                <td colspan="6" class="px-6 py-10 text-center text-gray-400">
-                  Tidak ada data mahasiswa ditemukan.
+          <Table headers={[
+            <input
+              type="checkbox"
+              checked={isAllSelected()}
+              onChange={toggleSelectAll}
+              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />,
+            'NIM', 'Nama', 'Email', 'Program Studi', 'Dosen Wali (PA)', 'Status', 'Aksi'
+          ]}>
+          <For each={mahasiswas()?.data}>
+            {(item) => (
+              <tr class="hover:bg-gray-50/50 transition-colors">
+                <td class="px-6 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds().includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                </td>
+                <td class="px-6 py-4 font-mono text-gray-600 font-semibold">{item.nim}</td>
+                <td class="px-6 py-4 font-medium text-gray-800">{item.nama}</td>
+                <td class="px-6 py-4 text-gray-500">{item.email}</td>
+                <td class="px-6 py-4 text-gray-600">{item.programStudi?.nama || '-'}</td>
+                <td class="px-6 py-4 text-gray-600">{item.dosenPa?.nama || '-'}</td>
+                <td class="px-6 py-4">
+                  <span class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                    item.status === 'aktif' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                  }`}>
+                    {item.status}
+                  </span>
+                </td>
+                <td class="px-6 py-4 flex gap-2">
+                  <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
+                    Edit
+                  </Button>
+                  <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5">
+                    Hapus
+                  </Button>
                 </td>
               </tr>
-            </Show>
-          </Table>
+            )}
+          </For>
+          <Show when={mahasiswas()?.data.length === 0}>
+            <tr>
+              <td colspan="7" class="px-6 py-10 text-center text-gray-400">
+                Tidak ada data mahasiswa ditemukan.
+              </td>
+            </tr>
+          </Show>
+        </Table>
 
           {/* Pagination */}
           <Show when={mahasiswas() && mahasiswas()!.meta.totalPages > 1}>
@@ -285,6 +386,13 @@ export default function Mahasiswa() {
                   { label: 'Lulus', value: 'lulus' },
                   { label: 'Drop Out', value: 'drop_out' },
                 ]}
+              />
+              <SearchableSelect
+                label="Dosen Wali / PA"
+                placeholder="Cari Dosen Wali / PA..."
+                options={dosens()?.data.map((d) => ({ label: `${d.nama} (${d.nip})`, value: d.id })) || []}
+                value={dosenPaId()}
+                onChange={(val) => setDosenPaId(val ? Number(val) : null)}
               />
             </div>
             <div class="flex justify-end gap-2 border-t pt-4">
