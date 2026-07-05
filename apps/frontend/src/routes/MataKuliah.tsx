@@ -110,8 +110,8 @@ export default function MataKuliah() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-800">Mata Kuliah</h1>
-            <p class="text-sm text-gray-500">Kelola daftar kurikulum mata kuliah, SKS, dan program studi terkait.</p>
+            <h1 class="text-2xl font-extrabold text-brand-gray-800">Mata Kuliah</h1>
+            <p class="text-sm text-brand-gray-500">Kelola daftar kurikulum mata kuliah, SKS, dan program studi terkait.</p>
           </div>
           <div class="flex gap-2">
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
@@ -150,18 +150,18 @@ export default function MataKuliah() {
           />
         </div>
 
-        <Show when={!matkuls.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+        <Show when={!matkuls.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
           <Table headers={['Kode', 'Nama', 'SKS Total', 'Teori / Praktek', 'Program Studi', 'Aksi']}>
             <For each={matkuls()?.data}>
               {(item) => (
-                <tr class="hover:bg-gray-50/50 transition-colors">
-                  <td class="px-6 py-4 font-mono text-gray-600 font-semibold">{item.kode}</td>
-                  <td class="px-6 py-4 font-medium text-gray-800">{item.nama}</td>
-                  <td class="px-6 py-4 font-semibold text-gray-700">{item.sksTotal} SKS</td>
-                  <td class="px-6 py-4 text-xs text-gray-500">
+                <tr class="hover:bg-brand-50/50 transition-colors">
+                  <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.kode}</td>
+                  <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
+                  <td class="px-6 py-4 font-semibold text-brand-gray-700">{item.sksTotal} SKS</td>
+                  <td class="px-6 py-4 text-xs text-brand-gray-500">
                     Tatap Muka: {item.sksTatapMuka || 0} / Praktek: {item.sksPraktek || 0}
                   </td>
-                  <td class="px-6 py-4 text-gray-600">{item.programStudi?.nama || '-'}</td>
+                  <td class="px-6 py-4 text-brand-gray-600">{item.programStudi?.nama || '-'}</td>
                   <td class="px-6 py-4 flex gap-2">
                     <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
                       Edit
@@ -175,7 +175,7 @@ export default function MataKuliah() {
             </For>
             <Show when={matkuls()?.data.length === 0}>
               <tr>
-                <td colspan="6" class="px-6 py-10 text-center text-gray-400">
+                <td colspan="6" class="px-6 py-10 text-center text-brand-gray-400">
                   Tidak ada data mata kuliah ditemukan.
                 </td>
               </tr>
@@ -185,7 +185,7 @@ export default function MataKuliah() {
           {/* Pagination */}
           <Show when={matkuls() && matkuls()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-gray-500">
+              <span class="text-xs text-brand-gray-500">
                 Menampilkan halaman {page()} dari {matkuls()?.meta.totalPages} ({matkuls()?.meta.total} total data)
               </span>
               <div class="flex gap-2">

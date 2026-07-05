@@ -1,75 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Work+Sans:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f3f4f6;
-  color: #1f2937;
-  transition: background-color 0.2s ease, color 0.2s ease;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-brand-50/40 text-gray-800 transition-colors duration-200;
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+
+  ::selection {
+    @apply bg-accent-400/30 text-brand-900;
+  }
+
+  html.dark ::selection {
+    @apply bg-accent-400/20 text-accent-100;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-brand-gray-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-gray-400;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb {
+    @apply bg-slate-700;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
 }
 
-html.dark body {
-  background-color: #0f172a;
-  color: #f1f5f9;
+@layer components {
+  /* Card base pattern */
+  .card {
+    @apply bg-white border border-brand-gray-100 rounded-2xl shadow-card transition-all duration-200;
+  }
+
+  .card-hover {
+    @apply card hover:shadow-card-hover hover:border-brand-gray-200 hover:-translate-y-0.5;
+  }
+
+  html.dark .card {
+    @apply bg-slate-900 border-slate-800 shadow-card-dark;
+  }
+
+  html.dark .card-hover {
+    @apply hover:border-slate-700;
+  }
+
+  /* Page wrapper */
+  .page-container {
+    @apply max-w-7xl mx-auto space-y-6;
+  }
+
+  /* Section heading */
+  .section-heading {
+    @apply text-lg font-heading font-semibold text-brand-900 dark:text-white;
+  }
+
+  /* Subtle gradient background for content area */
+  .content-gradient {
+    @apply bg-gradient-to-br from-brand-50/30 via-transparent to-accent-50/20;
+  }
+
+  html.dark .content-gradient {
+    @apply from-slate-950 via-transparent to-slate-950;
+  }
 }
 
-html.dark h1,
-html.dark .text-gray-850,
-html.dark .text-gray-800 {
-  color: #ffffff !important;
-}
-
-html.dark h2,
-html.dark h3,
-html.dark .text-gray-700 {
-  color: #f1f5f9 !important;
-}
-
-html.dark p,
-html.dark .text-gray-500 {
-  color: #cbd5e1 !important;
-}
-
-html.dark .bg-white {
-  background-color: #0f172a !important;
-}
-
-html.dark .bg-gray-50,
-html.dark .bg-gray-50\/75 {
-  background-color: #0b0f19 !important;
-}
-
-html.dark .border-gray-100,
-html.dark .border-gray-200,
-html.dark .divide-gray-100 {
-  border-color: #1e293b !important;
-  divide-color: #1e293b !important;
-}
-
-html.dark .text-gray-900 {
-  color: #ffffff !important;
-}
-
-html.dark .text-gray-600 {
-  color: #94a3b8 !important;
-}
-
-html.dark td {
-  color: #e2e8f0 !important;
-}
-
-html.dark svg {
-  stroke: currentColor;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }
 
 @media print {
-  /* Flatten flex and grid layouts of parent elements to standard blocks for printing */
   html, body, #root, #root > div, main, .min-h-screen, .flex, .flex-col {
     display: block !important;
     position: static !important;
@@ -82,7 +113,6 @@ html.dark svg {
     padding: 0 !important;
   }
 
-  /* Make fixed modal wrapper container behave as a simple block */
   div.fixed.inset-0.z-50 {
     position: static !important;
     display: block !important;
@@ -95,7 +125,6 @@ html.dark svg {
     z-index: auto !important;
   }
 
-  /* Format content wrapper within modal for printing */
   div.fixed.inset-0.z-50 > div {
     box-shadow: none !important;
     border: none !important;
@@ -107,7 +136,6 @@ html.dark svg {
     display: block !important;
   }
 
-  /* Hide navigation sidebar, headers, tables, buttons, and non-modal components */
   aside,
   header,
   nav,

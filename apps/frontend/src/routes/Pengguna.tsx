@@ -57,8 +57,8 @@ export default function Pengguna() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex flex-col gap-1">
-            <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">Manajemen Pengguna</h1>
-            <p class="text-sm text-gray-500">
+            <h1 class="text-2xl font-extrabold text-brand-gray-800 tracking-tight">Manajemen Pengguna</h1>
+            <p class="text-sm text-brand-gray-500">
               Aktivasi akun, pencarian, dan manajemen otorisasi peran (role) pengguna SIMAK.
             </p>
           </div>
@@ -69,7 +69,7 @@ export default function Pengguna() {
                 type="text"
                 placeholder="Cari nama atau email..."
                 onInput={handleSearchInput}
-                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none shadow-sm"
+                class="w-full rounded-lg border border-brand-gray-300 bg-white px-4 py-2 text-sm text-brand-gray-900 focus:border-brand-500 focus:outline-none shadow-sm"
               />
             </div>
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
@@ -88,20 +88,20 @@ export default function Pengguna() {
         />
 
         <Show when={usersRes.loading}>
-          <div class="flex justify-center py-12 text-gray-400">Memuat data pengguna...</div>
+          <div class="flex justify-center py-12 text-brand-gray-400">Memuat data pengguna...</div>
         </Show>
 
         <Show when={!usersRes.loading && usersRes()}>
-          <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div class="bg-white rounded-xl shadow-sm border border-brand-gray-100 overflow-hidden">
             <Table headers={['Nama', 'Email', 'Role / Peran', 'Status', 'Aksi']}>
               <For each={usersRes()?.data}>
                 {(user) => (
-                  <tr class="hover:bg-gray-50/50 transition-colors">
-                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-gray-800">{user.nama}</td>
-                    <td class="whitespace-nowrap px-6 py-4 text-gray-500">{user.email}</td>
-                    <td class="whitespace-nowrap px-6 py-4 text-gray-600">
+                  <tr class="hover:bg-brand-gray-50/50 transition-colors">
+                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-brand-gray-800">{user.nama}</td>
+                    <td class="whitespace-nowrap px-6 py-4 text-brand-gray-500">{user.email}</td>
+                    <td class="whitespace-nowrap px-6 py-4 text-brand-gray-600">
                       <select
-                        class="rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 focus:border-blue-500 focus:outline-none shadow-sm"
+                        class="rounded-md border border-brand-gray-300 bg-white px-2 py-1 text-xs font-medium text-brand-gray-700 focus:border-brand-500 focus:outline-none shadow-sm"
                         value={user.role}
                         onChange={async (e) => {
                           const newRole = e.currentTarget.value;
@@ -133,7 +133,7 @@ export default function Pengguna() {
                           </span>
                         }
                       >
-                        <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
+                        <span class="inline-flex items-center rounded-md bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-emerald-600/10">
                           Aktif
                         </span>
                       </Show>
@@ -153,7 +153,7 @@ export default function Pengguna() {
             </Table>
 
             {/* Pagination Controls */}
-            <div class="flex items-center justify-between border-t border-gray-100 bg-white px-6 py-4">
+            <div class="flex items-center justify-between border-t border-brand-gray-100 bg-white px-6 py-4">
               <div class="flex flex-1 justify-between sm:hidden">
                 <Button variant="secondary" onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page() === 1}>
                   Sebelumnya
@@ -168,10 +168,10 @@ export default function Pengguna() {
               </div>
               <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                 <div>
-                  <p class="text-sm text-gray-500">
-                    Menampilkan Halaman <span class="font-semibold text-gray-700">{page()}</span> dari{' '}
-                    <span class="font-semibold text-gray-700">{usersRes()?.meta?.totalPages || 1}</span> ({' '}
-                    <span class="font-semibold text-gray-700">{usersRes()?.meta?.total || 0}</span> total pengguna)
+                  <p class="text-sm text-brand-gray-500">
+                    Menampilkan Halaman <span class="font-semibold text-brand-gray-700">{page()}</span> dari{' '}
+                    <span class="font-semibold text-brand-gray-700">{usersRes()?.meta?.totalPages || 1}</span> ({' '}
+                    <span class="font-semibold text-brand-gray-700">{usersRes()?.meta?.total || 0}</span> total pengguna)
                   </p>
                 </div>
                 <div class="flex gap-2">
