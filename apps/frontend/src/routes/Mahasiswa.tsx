@@ -1,18 +1,18 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { mahasiswaController, Mahasiswa as IMahasiswa } from '../controllers/mahasiswaController';
-import { prodiController } from '../controllers/prodiController';
-import { dosenController } from '../controllers/dosenController';
-import { userController } from '../controllers/userController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { useAuth } from '../contexts/AuthContext';
+import { dosenController } from '../controllers/dosenController';
+import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { prodiController } from '../controllers/prodiController';
+import { userController } from '../controllers/userController';
 
 export default function Mahasiswa() {
   const toast = useToast();
@@ -34,9 +34,9 @@ export default function Mahasiswa() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null
+      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
     }),
-    ({ search, page, limit, prodiId }) => mahasiswaController.getAll(search, page, limit, prodiId || undefined)
+    ({ search, page, limit, prodiId }) => mahasiswaController.getAll(search, page, limit, prodiId || undefined),
   );
 
   // Fetch Program Studi for Dropdowns
@@ -127,13 +127,13 @@ export default function Mahasiswa() {
     if (selectedIds().length === list.length && list.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(list.map(item => item.id));
+      setSelectedIds(list.map((item) => item.id));
     }
   };
 
   const toggleSelect = (id: number) => {
     if (selectedIds().includes(id)) {
-      setSelectedIds(selectedIds().filter(x => x !== id));
+      setSelectedIds(selectedIds().filter((x) => x !== id));
     } else {
       setSelectedIds([...selectedIds(), id]);
     }
@@ -147,13 +147,17 @@ export default function Mahasiswa() {
   const handleBulkCreateAccount = async () => {
     const ids = selectedIds();
     if (ids.length === 0) return;
-    if (!confirm(`Apakah Anda yakin ingin membuatkan akun secara massal untuk ${ids.length} mahasiswa terpilih?`)) return;
+    if (!confirm(`Apakah Anda yakin ingin membuatkan akun secara massal untuk ${ids.length} mahasiswa terpilih?`))
+      return;
 
     setBulkLoading(true);
     try {
       const res = await userController.generateAccounts('mahasiswa', ids);
       if (res.errors && res.errors.length > 0) {
-        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'warning');
+        toast.showToast(
+          `Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`,
+          'warning',
+        );
       } else {
         toast.showToast(`Berhasil membuat ${res.successCount} akun mahasiswa.`, 'success');
       }
@@ -189,8 +193,12 @@ export default function Mahasiswa() {
                 {bulkLoading() ? 'Memproses...' : `🔑 Buat Akun (${selectedIds().length})`}
               </Button>
             </Show>
-            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor Mahasiswa</Button>
-            <Button variant="secondary" onClick={() => setShowImportPaModal(true)}>📥 Impor Relasi PA</Button>
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor Mahasiswa
+            </Button>
+            <Button variant="secondary" onClick={() => setShowImportPaModal(true)}>
+              📥 Impor Relasi PA
+            </Button>
             <Button onClick={openAddModal}>+ Tambah Mahasiswa</Button>
           </div>
         </div>
@@ -199,7 +207,24 @@ export default function Mahasiswa() {
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
           importUrl="/mahasiswa/import"
-          templateHeaders={['nim', 'nama', 'email', 'programStudiKode', 'status', 'namaIbuKandung', 'nik', 'jenisKelamin', 'tanggalLahir', 'tempatLahir', 'idAgama', 'jalan', 'rt', 'rw', 'kodePos', 'kewarganegaraan']}
+          templateHeaders={[
+            'nim',
+            'nama',
+            'email',
+            'programStudiKode',
+            'status',
+            'namaIbuKandung',
+            'nik',
+            'jenisKelamin',
+            'tanggalLahir',
+            'tempatLahir',
+            'idAgama',
+            'jalan',
+            'rt',
+            'rw',
+            'kodePos',
+            'kewarganegaraan',
+          ]}
           title="Mahasiswa"
           onSuccess={() => refetch()}
         />
@@ -225,63 +250,76 @@ export default function Mahasiswa() {
         </div>
 
         <Show when={!mahasiswas.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
-          <Table headers={[
-            <input
-              type="checkbox"
-              checked={isAllSelected()}
-              onChange={toggleSelectAll}
-              class="rounded border-brand-gray-300 text-brand-800 focus:ring-brand-700"
-            />,
-            'NIM', 'Nama', 'Email', 'Program Studi', 'Dosen Wali (PA)', 'Status', 'Aksi'
-          ]}>
-          <For each={mahasiswas()?.data}>
-            {(item) => (
-              <tr class="hover:bg-brand-50/50 transition-colors">
-                <td class="px-6 py-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds().includes(item.id)}
-                    onChange={() => toggleSelect(item.id)}
-                    class="rounded border-brand-gray-300 text-brand-800 focus:ring-brand-700"
-                  />
-                </td>
-                <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.nim}</td>
-                <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
-                <td class="px-6 py-4 text-brand-gray-500">{item.email}</td>
-                <td class="px-6 py-4 text-brand-gray-600">{item.programStudi?.nama || '-'}</td>
-                <td class="px-6 py-4 text-brand-gray-600">{item.dosenPa?.nama || '-'}</td>
-                <td class="px-6 py-4">
-                  <span class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                    item.status === 'aktif' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-accent-50 text-accent-700 border border-accent-100'
-                  }`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td class="px-6 py-4 flex gap-2">
-                  <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
-                    Edit
-                  </Button>
-                  <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5">
-                    Hapus
-                  </Button>
+          <Table
+            headers={[
+              <input
+                type="checkbox"
+                checked={isAllSelected()}
+                onChange={toggleSelectAll}
+                class="rounded border-brand-gray-300 text-brand-600 focus:ring-brand-500"
+              />,
+              'NIM',
+              'Nama',
+              'Email',
+              'Program Studi',
+              'Dosen Wali (PA)',
+              'Status',
+              'Aksi',
+            ]}
+          >
+            <For each={mahasiswas()?.data}>
+              {(item) => (
+                <tr class="hover:bg-brand-gray-50/50 transition-colors">
+                  <td class="px-6 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds().includes(item.id)}
+                      onChange={() => toggleSelect(item.id)}
+                      class="rounded border-brand-gray-300 text-brand-600 focus:ring-brand-500"
+                    />
+                  </td>
+                  <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.nim}</td>
+                  <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
+                  <td class="px-6 py-4 text-brand-gray-500">{item.email}</td>
+                  <td class="px-6 py-4 text-brand-gray-600">{item.programStudi?.nama || '-'}</td>
+                  <td class="px-6 py-4 text-brand-gray-600">{item.dosenPa?.nama || '-'}</td>
+                  <td class="px-6 py-4">
+                    <span
+                      class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                        item.status === 'aktif'
+                          ? 'bg-accent-50 text-accent-700 border border-accent-100'
+                          : 'bg-accent-50 text-accent-700 border border-accent-100'
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 flex gap-2">
+                    <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
+                      Edit
+                    </Button>
+                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5">
+                      Hapus
+                    </Button>
+                  </td>
+                </tr>
+              )}
+            </For>
+            <Show when={mahasiswas()?.data.length === 0}>
+              <tr>
+                <td colspan="7" class="px-6 py-10 text-center text-brand-gray-400">
+                  Tidak ada data mahasiswa ditemukan.
                 </td>
               </tr>
-            )}
-          </For>
-          <Show when={mahasiswas()?.data.length === 0}>
-            <tr>
-              <td colspan="7" class="px-6 py-10 text-center text-brand-gray-400">
-                Tidak ada data mahasiswa ditemukan.
-              </td>
-            </tr>
-          </Show>
-        </Table>
+            </Show>
+          </Table>
 
           {/* Pagination */}
           <Show when={mahasiswas() && mahasiswas()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
               <span class="text-xs text-brand-gray-500">
-                Menampilkan halaman {page()} dari {mahasiswas()?.meta.totalPages} ({mahasiswas()?.meta.total} total data)
+                Menampilkan halaman {page()} dari {mahasiswas()?.meta.totalPages} ({mahasiswas()?.meta.total} total
+                data)
               </span>
               <div class="flex gap-2">
                 <Button
@@ -305,7 +343,11 @@ export default function Mahasiswa() {
           </Show>
         </Show>
 
-        <Modal show={showModal()} title={editId() ? 'Edit Data Mahasiswa' : 'Tambah Mahasiswa'} onClose={() => setShowModal(false)}>
+        <Modal
+          show={showModal()}
+          title={editId() ? 'Edit Data Mahasiswa' : 'Tambah Mahasiswa'}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">
@@ -340,9 +382,7 @@ export default function Mahasiswa() {
                 label="Program Studi"
                 value={prodiId()}
                 onChange={(e) => setProdiId(Number(e.currentTarget.value))}
-                selectOptions={
-                  prodis()?.data.map((p) => ({ label: `${p.jenjang} - ${p.nama}`, value: p.id })) || []
-                }
+                selectOptions={prodis()?.data.map((p) => ({ label: `${p.jenjang} - ${p.nama}`, value: p.id })) || []}
               />
               <Input
                 label="NIK (16 Digit)"
@@ -399,9 +439,7 @@ export default function Mahasiswa() {
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Simpan
-              </Button>
+              <Button type="submit">Simpan</Button>
             </div>
           </form>
         </Modal>

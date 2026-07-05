@@ -1,9 +1,9 @@
-import { createSignal, createResource, Show, For, createEffect } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { khsController, PengajuanYudisium } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
-import { MainLayout } from '../components/MainLayout';
-import { useToast } from '../contexts/ToastContext';
 
 export default function Yudisium() {
   const auth = useAuth();
@@ -21,7 +21,7 @@ export default function Yudisium() {
       if (!email) return null;
       const res = await mahasiswaController.getAll(email, 1, 1);
       return res.data[0] || null;
-    }
+    },
   );
 
   // Load student's own yudisium submission
@@ -30,7 +30,7 @@ export default function Yudisium() {
     async (mhsId) => {
       if (!mhsId) return null;
       return await khsController.getPengajuanYudisium(mhsId);
-    }
+    },
   );
 
   // Load all yudisium submissions (for Admin/Dosen/Prodi)
@@ -41,7 +41,7 @@ export default function Yudisium() {
     },
     async () => {
       return await khsController.getAllYudisium();
-    }
+    },
   );
 
   // Load all students list (for Admin Input Dropdown)
@@ -53,7 +53,7 @@ export default function Yudisium() {
     async () => {
       const res = await mahasiswaController.getAll('', 1, 100);
       return res.data || [];
-    }
+    },
   );
 
   // Form states for Student Submission
@@ -93,7 +93,7 @@ export default function Yudisium() {
     },
     async () => {
       return await khsController.getAllPredikat();
-    }
+    },
   );
 
   // Handle student submit/update
@@ -113,7 +113,7 @@ export default function Yudisium() {
         skorToefl: Number(skorToefl()),
         bebasPerpustakaan: bebasPerpustakaan(),
         bebasLab: bebasLab(),
-        buktiPembayaranWisuda: buktiPembayaranWisuda()
+        buktiPembayaranWisuda: buktiPembayaranWisuda(),
       });
       toast.showToast('Pengajuan yudisium berhasil dikirim.', 'success');
       refetchMyYudisium();
@@ -141,7 +141,7 @@ export default function Yudisium() {
         skorToefl: Number(adminSkorToefl()),
         bebasPerpustakaan: adminBebasPerpustakaan(),
         bebasLab: adminBebasLab(),
-        buktiPembayaranWisuda: adminBuktiPembayaranWisuda()
+        buktiPembayaranWisuda: adminBuktiPembayaranWisuda(),
       });
       toast.showToast('Pengajuan yudisium mahasiswa berhasil disimpan.', 'success');
       setShowInputModal(false);
@@ -175,7 +175,7 @@ export default function Yudisium() {
     try {
       await khsController.updateYudisiumStatus(item.mahasiswaId, {
         status: adminStatus(),
-        catatan: adminCatatan()
+        catatan: adminCatatan(),
       });
       toast.showToast('Status yudisium berhasil diperbarui.', 'success');
       setShowVerifyModal(false);
@@ -209,7 +209,7 @@ export default function Yudisium() {
         id: predikatId() || undefined,
         ipkMin: ipkMin(),
         ipkMax: ipkMax(),
-        predikat: predikatText()
+        predikat: predikatText(),
       });
       toast.showToast('Skala predikat kelulusan berhasil disimpan.', 'success');
       setShowPredikatModal(false);
@@ -236,102 +236,114 @@ export default function Yudisium() {
         <div class="bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 class="text-2xl font-extrabold text-brand-gray-800">Evaluasi & Yudisium Wisuda</h1>
-            <p class="text-sm text-brand-gray-500 font-medium">Pengajuan yudisium wisuda, kelengkapan berkas administrasi, dan evaluasi kelulusan</p>
+            <p class="text-sm text-brand-gray-500 font-medium">
+              Pengajuan yudisium wisuda, kelengkapan berkas administrasi, dan evaluasi kelulusan
+            </p>
           </div>
         </div>
 
         {/* --- STUDENT VIEW --- */}
         <Show when={role() === 'mahasiswa'}>
-          <Show when={!myYudisium.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Memuat data pengajuan...</div>}>
-            <Show when={myYudisium() && !isEditMode()} fallback={
-              <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm max-w-2xl">
-                <div class="flex justify-between items-center border-b pb-2 mb-4">
-                  <h3 class="font-bold text-brand-gray-800">Form Pengajuan Yudisium Mandiri</h3>
-                  <Show when={myYudisium()}>
-                    <button 
-                      onClick={() => setIsEditMode(false)}
-                      class="px-3 py-1 bg-brand-gray-100 hover:bg-brand-gray-250 text-brand-gray-700 text-xs font-bold rounded-lg transition-colors"
+          <Show
+            when={!myYudisium.loading}
+            fallback={<div class="text-center py-10 text-brand-gray-400">Memuat data pengajuan...</div>}
+          >
+            <Show
+              when={myYudisium() && !isEditMode()}
+              fallback={
+                <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm max-w-2xl">
+                  <div class="flex justify-between items-center border-b pb-2 mb-4">
+                    <h3 class="font-bold text-brand-gray-800">Form Pengajuan Yudisium Mandiri</h3>
+                    <Show when={myYudisium()}>
+                      <button
+                        onClick={() => setIsEditMode(false)}
+                        class="px-3 py-1 bg-brand-gray-100 hover:bg-brand-gray-250 text-brand-gray-700 text-xs font-bold rounded-lg transition-colors"
+                      >
+                        Batal Edit
+                      </button>
+                    </Show>
+                  </div>
+                  <form onSubmit={handleStudentSubmit} class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-xs font-bold text-brand-gray-700">Judul Tugas Akhir / Skripsi</label>
+                      <textarea
+                        rows="3"
+                        placeholder="Tulis judul TA Anda secara lengkap..."
+                        value={judulTa()}
+                        onInput={(e) => setJudulTa(e.currentTarget.value)}
+                        class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 resize-none text-brand-gray-900"
+                      />
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-xs font-bold text-brand-gray-700">Skor TOEFL</label>
+                      <input
+                        type="number"
+                        value={skorToefl()}
+                        onInput={(e) => setSkorToefl(parseInt(e.currentTarget.value))}
+                        class="border border-brand-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
+                      />
+                    </div>
+
+                    <div class="p-4 bg-brand-gray-50 rounded-xl border border-brand-gray-100 flex flex-col gap-2.5">
+                      <span class="text-xs uppercase font-extrabold tracking-wider text-brand-gray-400">
+                        Deklarasi Mandiri Kelengkapan Administrasi:
+                      </span>
+
+                      <label class="flex items-center gap-3 text-xs font-bold text-brand-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={bebasPerpustakaan()}
+                          onChange={(e) => setBebasPerpustakaan(e.currentTarget.checked)}
+                          class="w-4 h-4 text-brand-600 border-brand-gray-300 rounded focus:ring-brand-500"
+                        />
+                        Bebas Pinjaman Perpustakaan (Bebas Pustaka)
+                      </label>
+
+                      <label class="flex items-center gap-3 text-xs font-bold text-brand-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={bebasLab()}
+                          onChange={(e) => setBebasLab(e.currentTarget.checked)}
+                          class="w-4 h-4 text-brand-600 border-brand-gray-300 rounded focus:ring-brand-500"
+                        />
+                        Bebas Inventaris Laboratorium / Bengkel
+                      </label>
+
+                      <label class="flex items-center gap-3 text-xs font-bold text-brand-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={buktiPembayaranWisuda()}
+                          onChange={(e) => setBuktiPembayaranWisuda(e.currentTarget.checked)}
+                          class="w-4 h-4 text-brand-600 border-brand-gray-300 rounded focus:ring-brand-500"
+                        />
+                        Telah Melakukan Pembayaran Biaya Wisuda
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      class="px-5 py-3 bg-brand-600 text-white font-bold rounded-xl text-sm hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-blue-200 self-start"
                     >
-                      Batal Edit
+                      Ajukan Yudisium
                     </button>
-                  </Show>
+                  </form>
                 </div>
-                <form onSubmit={handleStudentSubmit} class="flex flex-col gap-4">
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-xs font-bold text-brand-gray-700">Judul Tugas Akhir / Skripsi</label>
-                    <textarea
-                      rows="3"
-                      placeholder="Tulis judul TA Anda secara lengkap..."
-                      value={judulTa()}
-                      onInput={(e) => setJudulTa(e.currentTarget.value)}
-                      class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-700 resize-none text-slate-900"
-                    />
-                  </div>
-
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-xs font-bold text-brand-gray-700">Skor TOEFL</label>
-                    <input
-                      type="number"
-                      value={skorToefl()}
-                      onInput={(e) => setSkorToefl(parseInt(e.currentTarget.value))}
-                      class="border border-brand-gray-200 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-brand-700 text-slate-900"
-                    />
-                  </div>
-
-                  <div class="p-4 bg-brand-50 rounded-xl border border-brand-gray-100 flex flex-col gap-2.5">
-                    <span class="text-xs uppercase font-extrabold tracking-wider text-brand-gray-400">Deklarasi Mandiri Kelengkapan Administrasi:</span>
-                    
-                    <label class="flex items-center gap-3 text-xs font-bold text-brand-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={bebasPerpustakaan()}
-                        onChange={(e) => setBebasPerpustakaan(e.currentTarget.checked)}
-                        class="w-4 h-4 text-brand-800 border-brand-gray-300 rounded focus:ring-brand-700"
-                      />
-                      Bebas Pinjaman Perpustakaan (Bebas Pustaka)
-                    </label>
-
-                    <label class="flex items-center gap-3 text-xs font-bold text-brand-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={bebasLab()}
-                        onChange={(e) => setBebasLab(e.currentTarget.checked)}
-                        class="w-4 h-4 text-brand-800 border-brand-gray-300 rounded focus:ring-brand-700"
-                      />
-                      Bebas Inventaris Laboratorium / Bengkel
-                    </label>
-
-                    <label class="flex items-center gap-3 text-xs font-bold text-brand-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={buktiPembayaranWisuda()}
-                        onChange={(e) => setBuktiPembayaranWisuda(e.currentTarget.checked)}
-                        class="w-4 h-4 text-brand-800 border-brand-gray-300 rounded focus:ring-brand-700"
-                      />
-                      Telah Melakukan Pembayaran Biaya Wisuda
-                    </label>
-                  </div>
-
-                  <button
-                    type="submit"
-                    class="px-5 py-3 bg-brand-800 text-white font-bold rounded-xl text-sm hover:bg-brand-900 active:scale-95 transition-all shadow-sm shadow-brand-200 self-start"
-                  >
-                    Ajukan Yudisium
-                  </button>
-                </form>
-              </div>
-            }>
+              }
+            >
               <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4">
                   <div class="flex items-center justify-between border-b pb-2">
                     <h3 class="font-bold text-brand-gray-800">Detail Pengajuan Yudisium</h3>
-                    <span class={`px-3 py-1.5 rounded-full text-xs font-bold ${
-                      myYudisium()?.status === 'disetujui'
-                        ? 'bg-green-50 text-green-600 border border-green-100'
-                        : myYudisium()?.status === 'ditolak'
-                        ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                        : 'bg-amber-50 text-amber-600 border border-amber-100'
-                    }`}>
+                    <span
+                      class={`px-3 py-1.5 rounded-full text-xs font-bold ${
+                        myYudisium()?.status === 'disetujui'
+                          ? 'bg-accent-50 text-accent-600 border border-accent-100'
+                          : myYudisium()?.status === 'ditolak'
+                            ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                            : 'bg-accent-50 text-accent-600 border border-accent-100'
+                      }`}
+                    >
                       STATUS: {myYudisium()?.status?.toUpperCase()}
                     </span>
                   </div>
@@ -348,13 +360,40 @@ export default function Yudisium() {
                     <div>
                       <span class="text-xs text-brand-gray-400 block font-semibold">BERKAS ADMINISTRASI</span>
                       <ul class="list-disc pl-5 mt-1 flex flex-col gap-1 text-xs">
-                        <li>Bebas Pustaka: <span class={myYudisium()?.bebasPerpustakaan ? 'text-green-600 font-bold' : 'text-rose-600 font-bold'}>{myYudisium()?.bebasPerpustakaan ? 'TERPENUHI' : 'BELUM'}</span></li>
-                        <li>Bebas Lab/Bengkel: <span class={myYudisium()?.bebasLab ? 'text-green-600 font-bold' : 'text-rose-600 font-bold'}>{myYudisium()?.bebasLab ? 'TERPENUHI' : 'BELUM'}</span></li>
-                        <li>Bukti Bayar Wisuda: <span class={myYudisium()?.buktiPembayaranWisuda ? 'text-green-600 font-bold' : 'text-rose-600 font-bold'}>{myYudisium()?.buktiPembayaranWisuda ? 'TERPENUHI' : 'BELUM'}</span></li>
+                        <li>
+                          Bebas Pustaka:{' '}
+                          <span
+                            class={
+                              myYudisium()?.bebasPerpustakaan ? 'text-accent-600 font-bold' : 'text-rose-600 font-bold'
+                            }
+                          >
+                            {myYudisium()?.bebasPerpustakaan ? 'TERPENUHI' : 'BELUM'}
+                          </span>
+                        </li>
+                        <li>
+                          Bebas Lab/Bengkel:{' '}
+                          <span
+                            class={myYudisium()?.bebasLab ? 'text-accent-600 font-bold' : 'text-rose-600 font-bold'}
+                          >
+                            {myYudisium()?.bebasLab ? 'TERPENUHI' : 'BELUM'}
+                          </span>
+                        </li>
+                        <li>
+                          Bukti Bayar Wisuda:{' '}
+                          <span
+                            class={
+                              myYudisium()?.buktiPembayaranWisuda
+                                ? 'text-accent-600 font-bold'
+                                : 'text-rose-600 font-bold'
+                            }
+                          >
+                            {myYudisium()?.buktiPembayaranWisuda ? 'TERPENUHI' : 'BELUM'}
+                          </span>
+                        </li>
                       </ul>
                     </div>
                     <Show when={myYudisium()?.catatan}>
-                      <div class="p-3 bg-amber-50 border border-amber-100 text-amber-800 rounded-xl text-xs">
+                      <div class="p-3 bg-accent-50 border border-accent-100 text-accent-800 rounded-xl text-xs">
                         <span class="font-bold block mb-1">Catatan Verifikator:</span>
                         {myYudisium()?.catatan}
                       </div>
@@ -364,13 +403,15 @@ export default function Yudisium() {
 
                 <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-3">
                   <h3 class="font-bold text-brand-gray-800 border-b pb-2">Update Berkas</h3>
-                  <p class="text-xs text-brand-gray-400">Anda dapat memperbarui judul TA atau checklist jika ada revisi berkas admin.</p>
+                  <p class="text-xs text-brand-gray-400">
+                    Anda dapat memperbarui judul TA atau checklist jika ada revisi berkas admin.
+                  </p>
                   <button
                     onClick={() => {
                       setIsEditMode(true);
                       toast.showToast('Silakan sesuaikan data pada form.', 'info');
                     }}
-                    class="mt-2 py-2 bg-brand-50 border border-brand-gray-200 text-brand-gray-700 font-bold rounded-xl text-xs hover:bg-brand-gray-100 transition-colors"
+                    class="mt-2 py-2 bg-brand-gray-50 border border-brand-gray-200 text-brand-gray-700 font-bold rounded-xl text-xs hover:bg-brand-gray-100 transition-colors"
                   >
                     Edit Data Pengajuan
                   </button>
@@ -389,8 +430,8 @@ export default function Yudisium() {
                 onClick={() => setActiveTab('pengajuan')}
                 class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                   activeTab() === 'pengajuan'
-                    ? 'bg-brand-800 text-white shadow-sm shadow-brand-150'
-                    : 'bg-white border border-brand-gray-200 text-brand-gray-600 hover:bg-brand-50'
+                    ? 'bg-brand-600 text-white shadow-sm shadow-blue-150'
+                    : 'bg-white border border-brand-gray-200 text-brand-gray-600 hover:bg-brand-gray-50'
                 }`}
               >
                 Daftar Pengajuan
@@ -399,8 +440,8 @@ export default function Yudisium() {
                 onClick={() => setActiveTab('predikat')}
                 class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                   activeTab() === 'predikat'
-                    ? 'bg-brand-800 text-white shadow-sm shadow-brand-150'
-                    : 'bg-white border border-brand-gray-200 text-brand-gray-600 hover:bg-brand-50'
+                    ? 'bg-brand-600 text-white shadow-sm shadow-blue-150'
+                    : 'bg-white border border-brand-gray-200 text-brand-gray-600 hover:bg-brand-gray-50'
                 }`}
               >
                 Pengaturan Skala Predikat Kelulusan
@@ -413,7 +454,7 @@ export default function Yudisium() {
               <h3 class="font-bold text-brand-gray-800">Daftar Pengajuan Yudisium Mahasiswa</h3>
               <button
                 onClick={() => setShowInputModal(true)}
-                class="px-4 py-2 bg-brand-800 text-white font-bold rounded-xl text-xs hover:bg-brand-900 active:scale-95 transition-all shadow-sm shadow-brand-150"
+                class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-blue-150"
               >
                 ➕ Input Yudisium Mahasiswa
               </button>
@@ -422,7 +463,7 @@ export default function Yudisium() {
             <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm overflow-x-auto">
               <table class="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr class="border-b border-brand-gray-100 bg-brand-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
+                  <tr class="border-b border-brand-gray-100 bg-brand-gray-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
                     <th class="p-3">Mahasiswa</th>
                     <th class="p-3">Program Studi</th>
                     <th class="p-3">Judul TA</th>
@@ -433,13 +474,18 @@ export default function Yudisium() {
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50 text-brand-gray-600 font-medium">
-                  <For each={allYudisium()} fallback={
-                    <tr>
-                      <td colspan="7" class="p-4 text-center text-brand-gray-400 italic">Belum ada pengajuan yudisium terdaftar.</td>
-                    </tr>
-                  }>
+                  <For
+                    each={allYudisium()}
+                    fallback={
+                      <tr>
+                        <td colspan="7" class="p-4 text-center text-brand-gray-400 italic">
+                          Belum ada pengajuan yudisium terdaftar.
+                        </td>
+                      </tr>
+                    }
+                  >
                     {(item) => (
-                      <tr class="hover:bg-brand-50/20">
+                      <tr class="hover:bg-brand-gray-50/20">
                         <td class="p-3">
                           <div class="flex flex-col">
                             <span class="font-bold text-brand-gray-800">{item.mahasiswa?.nama}</span>
@@ -447,28 +493,44 @@ export default function Yudisium() {
                           </div>
                         </td>
                         <td class="p-3">{item.prodi?.nama}</td>
-                        <td class="p-3 max-w-[200px] truncate" title={item.judulTa}>{item.judulTa}</td>
+                        <td class="p-3 max-w-[200px] truncate" title={item.judulTa}>
+                          {item.judulTa}
+                        </td>
                         <td class="p-3">{item.skorToefl}</td>
                         <td class="p-3 whitespace-nowrap">
-                          <span class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasPerpustakaan ? 'bg-green-50 text-green-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Pustaka</span>
-                          <span class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasLab ? 'bg-green-50 text-green-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Lab</span>
-                          <span class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${item.buktiPembayaranWisuda ? 'bg-green-50 text-green-600 border' : 'bg-rose-50 text-rose-600 border'}`}>Bayar</span>
+                          <span
+                            class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasPerpustakaan ? 'bg-accent-50 text-accent-600 border' : 'bg-rose-50 text-rose-600 border'}`}
+                          >
+                            Pustaka
+                          </span>
+                          <span
+                            class={`mr-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${item.bebasLab ? 'bg-accent-50 text-accent-600 border' : 'bg-rose-50 text-rose-600 border'}`}
+                          >
+                            Lab
+                          </span>
+                          <span
+                            class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${item.buktiPembayaranWisuda ? 'bg-accent-50 text-accent-600 border' : 'bg-rose-50 text-rose-600 border'}`}
+                          >
+                            Bayar
+                          </span>
                         </td>
                         <td class="p-3">
-                          <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            item.status === 'disetujui'
-                              ? 'bg-green-50 text-green-600 border border-green-100'
-                              : item.status === 'ditolak'
-                              ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                              : 'bg-amber-50 text-amber-600 border border-amber-100'
-                          }`}>
+                          <span
+                            class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              item.status === 'disetujui'
+                                ? 'bg-accent-50 text-accent-600 border border-accent-100'
+                                : item.status === 'ditolak'
+                                  ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                                  : 'bg-accent-50 text-accent-600 border border-accent-100'
+                            }`}
+                          >
                             {item.status}
                           </span>
                         </td>
                         <td class="p-3">
                           <button
                             onClick={() => openVerifyModal(item)}
-                            class="px-3 py-1.5 bg-brand-800 text-white font-bold rounded-lg text-[10px] hover:bg-brand-900 active:scale-95 transition-all shadow-sm"
+                            class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-[10px] hover:bg-brand-700 active:scale-95 transition-all shadow-sm"
                           >
                             Verifikasi
                           </button>
@@ -492,7 +554,7 @@ export default function Yudisium() {
                   setPredikatText('');
                   setShowPredikatModal(true);
                 }}
-                class="px-4 py-2 bg-brand-800 text-white font-bold rounded-xl text-xs hover:bg-brand-900 active:scale-95 transition-all shadow-sm shadow-brand-150"
+                class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-blue-150"
               >
                 ➕ Tambah Skala Predikat
               </button>
@@ -501,7 +563,7 @@ export default function Yudisium() {
             <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm overflow-x-auto">
               <table class="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr class="border-b border-brand-gray-100 bg-brand-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
+                  <tr class="border-b border-brand-gray-100 bg-brand-gray-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
                     <th class="p-3">IPK Min</th>
                     <th class="p-3">IPK Max</th>
                     <th class="p-3">Predikat Kelulusan</th>
@@ -509,13 +571,18 @@ export default function Yudisium() {
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50 text-brand-gray-600 font-medium">
-                  <For each={predikats()} fallback={
-                    <tr>
-                      <td colspan="4" class="p-4 text-center text-brand-gray-400 italic">Belum ada aturan skala predikat kelulusan.</td>
-                    </tr>
-                  }>
+                  <For
+                    each={predikats()}
+                    fallback={
+                      <tr>
+                        <td colspan="4" class="p-4 text-center text-brand-gray-400 italic">
+                          Belum ada aturan skala predikat kelulusan.
+                        </td>
+                      </tr>
+                    }
+                  >
                     {(pred) => (
-                      <tr class="hover:bg-brand-50/20">
+                      <tr class="hover:bg-brand-gray-50/20">
                         <td class="p-3 font-mono">{parseFloat(pred.ipkMin).toFixed(2)}</td>
                         <td class="p-3 font-mono">{parseFloat(pred.ipkMax).toFixed(2)}</td>
                         <td class="p-3 font-bold text-brand-gray-800">{pred.predikat}</td>
@@ -554,20 +621,26 @@ export default function Yudisium() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-brand-gray-800 text-sm">Input Yudisium Mahasiswa (Admin)</h3>
-                <button onClick={() => setShowInputModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">❌</button>
+                <button onClick={() => setShowInputModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                  ❌
+                </button>
               </div>
-              
+
               <form onSubmit={handleAdminSubmit} class="flex flex-col gap-4">
                 <div class="flex flex-col gap-1.5">
                   <label class="text-xs font-bold text-brand-gray-700">Pilih Mahasiswa</label>
                   <select
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-700 text-slate-900 bg-white font-medium"
+                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900 bg-white font-medium"
                     value={adminSelectedMhsId() || ''}
                     onChange={(e) => setAdminSelectedMhsId(parseInt(e.currentTarget.value))}
                   >
                     <option value="">-- Pilih Mahasiswa --</option>
                     <For each={studentsList()}>
-                      {(student) => <option value={student.id}>{student.nama} ({student.nim})</option>}
+                      {(student) => (
+                        <option value={student.id}>
+                          {student.nama} ({student.nim})
+                        </option>
+                      )}
                     </For>
                   </select>
                 </div>
@@ -579,7 +652,7 @@ export default function Yudisium() {
                     placeholder="Tulis judul Tugas Akhir..."
                     value={adminJudulTa()}
                     onInput={(e) => setAdminJudulTa(e.currentTarget.value)}
-                    class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-700 resize-none text-slate-900"
+                    class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 resize-none text-brand-gray-900"
                   />
                 </div>
 
@@ -589,19 +662,21 @@ export default function Yudisium() {
                     type="number"
                     value={adminSkorToefl()}
                     onInput={(e) => setAdminSkorToefl(parseInt(e.currentTarget.value))}
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-700 text-slate-900"
+                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
                   />
                 </div>
 
-                <div class="p-3 bg-brand-50 rounded-xl border border-brand-gray-100 flex flex-col gap-2.5">
-                  <span class="text-xs uppercase font-extrabold tracking-wider text-brand-gray-400">Verifikasi Kelengkapan Berkas:</span>
-                  
+                <div class="p-3 bg-brand-gray-50 rounded-xl border border-brand-gray-100 flex flex-col gap-2.5">
+                  <span class="text-xs uppercase font-extrabold tracking-wider text-brand-gray-400">
+                    Verifikasi Kelengkapan Berkas:
+                  </span>
+
                   <label class="flex items-center gap-3 text-xs font-bold text-brand-gray-700">
                     <input
                       type="checkbox"
                       checked={adminBebasPerpustakaan()}
                       onChange={(e) => setAdminBebasPerpustakaan(e.currentTarget.checked)}
-                      class="w-4 h-4 text-brand-800 border-brand-gray-300 rounded focus:ring-brand-700"
+                      class="w-4 h-4 text-brand-600 border-brand-gray-300 rounded focus:ring-brand-500"
                     />
                     Bebas Pinjaman Perpustakaan (Bebas Pustaka)
                   </label>
@@ -611,7 +686,7 @@ export default function Yudisium() {
                       type="checkbox"
                       checked={adminBebasLab()}
                       onChange={(e) => setAdminBebasLab(e.currentTarget.checked)}
-                      class="w-4 h-4 text-brand-800 border-brand-gray-300 rounded focus:ring-brand-700"
+                      class="w-4 h-4 text-brand-600 border-brand-gray-300 rounded focus:ring-brand-500"
                     />
                     Bebas Inventaris Laboratorium / Bengkel
                   </label>
@@ -621,7 +696,7 @@ export default function Yudisium() {
                       type="checkbox"
                       checked={adminBuktiPembayaranWisuda()}
                       onChange={(e) => setAdminBuktiPembayaranWisuda(e.currentTarget.checked)}
-                      class="w-4 h-4 text-brand-800 border-brand-gray-300 rounded focus:ring-brand-700"
+                      class="w-4 h-4 text-brand-600 border-brand-gray-300 rounded focus:ring-brand-500"
                     />
                     Telah Melakukan Pembayaran Biaya Wisuda
                   </label>
@@ -629,7 +704,7 @@ export default function Yudisium() {
 
                 <button
                   type="submit"
-                  class="w-full py-2.5 bg-brand-800 text-white font-bold rounded-xl text-xs hover:bg-brand-900 active:scale-95 transition-all shadow-sm shadow-brand-150"
+                  class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-blue-150"
                 >
                   Simpan Pengajuan Yudisium
                 </button>
@@ -644,21 +719,31 @@ export default function Yudisium() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-brand-gray-800 text-sm">Verifikasi Pengajuan Yudisium</h3>
-                <button onClick={() => setShowVerifyModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">❌</button>
+                <button onClick={() => setShowVerifyModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                  ❌
+                </button>
               </div>
-              
+
               <form onSubmit={handleAdminVerify} class="flex flex-col gap-4">
                 <div class="text-xs text-brand-gray-600 flex flex-col gap-1 font-medium">
-                  <p>Nama: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.mahasiswa?.nama}</span></p>
-                  <p>NIM: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.mahasiswa?.nim}</span></p>
-                  <p>Prodi: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.prodi?.nama}</span></p>
-                  <p>Judul TA: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.judulTa}</span></p>
+                  <p>
+                    Nama: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.mahasiswa?.nama}</span>
+                  </p>
+                  <p>
+                    NIM: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.mahasiswa?.nim}</span>
+                  </p>
+                  <p>
+                    Prodi: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.prodi?.nama}</span>
+                  </p>
+                  <p>
+                    Judul TA: <span class="font-bold text-brand-gray-800">{selectedSubmission()?.judulTa}</span>
+                  </p>
                 </div>
 
                 <div class="flex flex-col gap-1.5">
                   <label class="text-xs font-bold text-brand-gray-700">Status Kelulusan Yudisium</label>
                   <select
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-brand-700 text-slate-900 bg-white font-semibold"
+                    class="border border-brand-gray-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900 bg-white font-semibold"
                     value={adminStatus()}
                     onChange={(e) => setAdminStatus(e.currentTarget.value as any)}
                   >
@@ -676,13 +761,13 @@ export default function Yudisium() {
                     placeholder="Tulis alasan jika ditolak, atau catatan wisuda..."
                     value={adminCatatan()}
                     onInput={(e) => setAdminCatatan(e.currentTarget.value)}
-                    class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-700 resize-none text-slate-900"
+                    class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 resize-none text-brand-gray-900"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  class="w-full py-2.5 bg-green-600 text-white font-bold rounded-xl text-xs hover:bg-green-700 active:scale-95 transition-all shadow-sm"
+                  class="w-full py-2.5 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
                 >
                   Simpan Verifikasi
                 </button>
@@ -699,7 +784,9 @@ export default function Yudisium() {
                 <h3 class="font-bold text-brand-gray-800 text-sm">
                   {predikatId() ? 'Edit Skala Predikat Kelulusan' : 'Tambah Skala Predikat Kelulusan'}
                 </h3>
-                <button onClick={() => setShowPredikatModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">❌</button>
+                <button onClick={() => setShowPredikatModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                  ❌
+                </button>
               </div>
 
               <form onSubmit={handleSavePredikat} class="flex flex-col gap-4">
@@ -713,7 +800,7 @@ export default function Yudisium() {
                     placeholder="Contoh: 3.51"
                     value={ipkMin()}
                     onInput={(e) => setIpkMin(e.currentTarget.value)}
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-700 text-slate-900"
+                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
                   />
                 </div>
 
@@ -727,7 +814,7 @@ export default function Yudisium() {
                     placeholder="Contoh: 4.00"
                     value={ipkMax()}
                     onInput={(e) => setIpkMax(e.currentTarget.value)}
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-700 text-slate-900"
+                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
                   />
                 </div>
 
@@ -738,13 +825,13 @@ export default function Yudisium() {
                     placeholder="Contoh: Dengan Pujian (Cum Laude)"
                     value={predikatText()}
                     onInput={(e) => setPredikatText(e.currentTarget.value)}
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-700 text-slate-900"
+                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  class="w-full py-2.5 bg-brand-800 text-white font-bold rounded-xl text-xs hover:bg-brand-900 active:scale-95 transition-all shadow-sm"
+                  class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm"
                 >
                   Simpan Aturan Predikat
                 </button>

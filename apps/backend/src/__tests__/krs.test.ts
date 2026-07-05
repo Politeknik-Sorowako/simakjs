@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -17,16 +17,16 @@ describe('8. KRS (/krs)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'TI-KRS-SETUP',
           nama: 'Teknik Informatika KRS Setup',
           jenjang: 'D4',
         }),
-      })
+      }),
     );
-    const prodiData = await prodiRes.json() as { id: number };
+    const prodiData = (await prodiRes.json()) as { id: number };
     prodiId = prodiData.id;
 
     const mhsRes = await app.handle(
@@ -34,7 +34,7 @@ describe('8. KRS (/krs)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           nim: '99999999',
@@ -46,9 +46,9 @@ describe('8. KRS (/krs)', () => {
           jenisKelamin: 'L',
           tanggalLahir: '2002-01-01',
         }),
-      })
+      }),
     );
-    const mhsData = await mhsRes.json() as { id: number };
+    const mhsData = (await mhsRes.json()) as { id: number };
     mhsId = mhsData.id;
 
     const mkRes = await app.handle(
@@ -56,7 +56,7 @@ describe('8. KRS (/krs)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'MKKRS001',
@@ -64,9 +64,9 @@ describe('8. KRS (/krs)', () => {
           sksTotal: 2,
           programStudiId: prodiId,
         }),
-      })
+      }),
     );
-    const mkData = await mkRes.json() as { id: number };
+    const mkData = (await mkRes.json()) as { id: number };
     mkId = mkData.id;
 
     await app.handle(
@@ -74,14 +74,14 @@ describe('8. KRS (/krs)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           id: '20233',
           nama: '2023/2024 Pendek',
           aktif: true,
         }),
-      })
+      }),
     );
 
     const kelasRes = await app.handle(
@@ -89,16 +89,16 @@ describe('8. KRS (/krs)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           mataKuliahId: mkId,
           periodeId: '20233',
           namaKelas: 'TI-KRS-A',
         }),
-      })
+      }),
     );
-    const kelasData = await kelasRes.json() as { id: number };
+    const kelasData = (await kelasRes.json()) as { id: number };
     kelasId = kelasData.id;
   });
 
@@ -111,13 +111,13 @@ describe('8. KRS (/krs)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
             kelasKuliahId: kelasId,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
@@ -133,12 +133,12 @@ describe('8. KRS (/krs)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: 'invalid-id', // type error
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -155,7 +155,7 @@ describe('8. KRS (/krs)', () => {
             mahasiswaId: mhsId,
             kelasKuliahId: kelasId,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -170,13 +170,13 @@ describe('8. KRS (/krs)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
             kelasKuliahId: kelasId,
           }),
-        })
+        }),
       );
     });
 
@@ -186,9 +186,9 @@ describe('8. KRS (/krs)', () => {
         new Request('http://localhost/krs', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -206,15 +206,15 @@ describe('8. KRS (/krs)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
             kelasKuliahId: kelasId,
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       krsId = data.id;
     });
 
@@ -224,9 +224,9 @@ describe('8. KRS (/krs)', () => {
         new Request(`http://localhost/krs/${krsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -239,9 +239,9 @@ describe('8. KRS (/krs)', () => {
         new Request('http://localhost/krs/999999', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
       expect(response.status).toBe(404);
     });
@@ -257,15 +257,15 @@ describe('8. KRS (/krs)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
             kelasKuliahId: kelasId,
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       krsId = data.id;
     });
 
@@ -277,19 +277,19 @@ describe('8. KRS (/krs)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
-            nilaiAngka: 85.50,
+            nilaiAngka: 85.5,
             nilaiHuruf: 'A',
-            nilaiIndeks: 4.00,
+            nilaiIndeks: 4.0,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(Number(body.nilaiAngka)).toBe(85.50);
+      expect(Number(body.nilaiAngka)).toBe(85.5);
       expect(body.nilaiHuruf).toBe('A');
     });
 
@@ -301,12 +301,12 @@ describe('8. KRS (/krs)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
-            nilaiAngka: 85.50,
+            nilaiAngka: 85.5,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -323,15 +323,15 @@ describe('8. KRS (/krs)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
             kelasKuliahId: kelasId,
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       krsId = data.id;
     });
 
@@ -342,9 +342,9 @@ describe('8. KRS (/krs)', () => {
         new Request(`http://localhost/krs/${krsId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -357,9 +357,9 @@ describe('8. KRS (/krs)', () => {
         new Request('http://localhost/krs/999999', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(404);

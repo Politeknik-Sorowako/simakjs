@@ -1,15 +1,18 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { periodeAkademikController, PeriodeAkademik as IPeriode } from '../controllers/periodeAkademikController';
+import { createResource, createSignal, For, Show } from 'solid-js';
+import { z } from 'zod';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
-import { z } from 'zod';
+import { PeriodeAkademik as IPeriode, periodeAkademikController } from '../controllers/periodeAkademikController';
 
 const periodeSchema = z.object({
-  id: z.string().length(5, { message: 'ID Periode harus tepat 5 karakter angka (contoh: 20231)' }).regex(/^\d+$/, { message: 'ID Periode harus berupa angka' }),
+  id: z
+    .string()
+    .length(5, { message: 'ID Periode harus tepat 5 karakter angka (contoh: 20231)' })
+    .regex(/^\d+$/, { message: 'ID Periode harus berupa angka' }),
   nama: z.string().min(3, { message: 'Nama Periode minimal harus 3 karakter' }),
   aktif: z.boolean(),
 });
@@ -30,7 +33,7 @@ export default function PeriodeAkademik() {
         toast.showToast(e.message || 'Gagal memuat data periode akademik', 'error');
         throw e;
       }
-    }
+    },
   );
 
   // Form State
@@ -128,7 +131,10 @@ export default function PeriodeAkademik() {
           when={!periodes.loading}
           fallback={
             <div class="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-brand-gray-100 shadow-sm gap-4">
-              <div class="w-10 h-10 border-4 border-brand-800 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+              <div
+                class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"
+                aria-hidden="true"
+              />
               <p class="text-sm font-medium text-brand-gray-500 animate-pulse">Memuat data periode akademik...</p>
             </div>
           }
@@ -136,21 +142,35 @@ export default function PeriodeAkademik() {
           <Table headers={['ID / Kode', 'Nama Semester', 'Status', 'Aksi']}>
             <For each={periodes()?.data}>
               {(item) => (
-                <tr class="hover:bg-brand-50/50 transition-colors">
+                <tr class="hover:bg-brand-gray-50/50 transition-colors">
                   <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.id}</td>
                   <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
                   <td class="px-6 py-4">
-                    <span class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                      item.aktif ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-brand-50 text-brand-gray-600 border border-brand-gray-150'
-                    }`}>
+                    <span
+                      class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                        item.aktif
+                          ? 'bg-green-50 text-green-700 border border-green-100'
+                          : 'bg-brand-gray-50 text-brand-gray-600 border border-brand-gray-150'
+                      }`}
+                    >
                       {item.aktif ? 'Aktif' : 'Nonaktif'}
                     </span>
                   </td>
                   <td class="px-6 py-4 flex gap-2">
-                    <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5" aria-label={`Ubah periode ${item.nama}`}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => openEditModal(item)}
+                      class="!py-1 !px-2.5"
+                      aria-label={`Ubah periode ${item.nama}`}
+                    >
                       Edit
                     </Button>
-                    <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5" aria-label={`Hapus periode ${item.nama}`}>
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDelete(item.id)}
+                      class="!py-1 !px-2.5"
+                      aria-label={`Hapus periode ${item.nama}`}
+                    >
                       Hapus
                     </Button>
                   </td>
@@ -196,7 +216,11 @@ export default function PeriodeAkademik() {
           </Show>
         </Show>
 
-        <Modal show={showModal()} title={editId() ? 'Edit Periode Akademik' : 'Tambah Periode Akademik'} onClose={() => setShowModal(false)}>
+        <Modal
+          show={showModal()}
+          title={editId() ? 'Edit Periode Akademik' : 'Tambah Periode Akademik'}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">

@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia';
 import { ProdiController } from '../controllers/prodi.controller';
-import {
-  getProdiSchema,
-  createProdiSchema,
-  getProdiByIdSchema,
-  updateProdiSchema,
-  deleteProdiSchema
-} from '../schemas/prodi.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createProdiSchema,
+  deleteProdiSchema,
+  getProdiByIdSchema,
+  getProdiSchema,
+  updateProdiSchema,
+} from '../schemas/prodi.schema';
 
 export const prodiRoutes = new Elysia({ prefix: '/prodi' })
   .use(authMiddleware)

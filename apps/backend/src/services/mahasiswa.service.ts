@@ -1,6 +1,6 @@
+import { and, count, eq, ilike, or } from 'drizzle-orm';
+import { dosen, mahasiswa } from '../models/schema';
 import { db } from '../utils/db';
-import { mahasiswa } from '../models/schema';
-import { count, eq, ilike, or, and } from 'drizzle-orm';
 
 export interface CreateMahasiswaDto {
   nim: string;
@@ -19,15 +19,15 @@ export interface CreateMahasiswaDto {
 export class MahasiswaService {
   static async getAll(page = 1, limit = 10, search = '', dosenPaId?: number, programStudiId?: number) {
     const offset = (page - 1) * limit;
-    
+
     let conditions = [];
     if (search) {
       conditions.push(
         or(
           ilike(mahasiswa.nama, `%${search}%`),
           ilike(mahasiswa.nim, `%${search}%`),
-          ilike(mahasiswa.email, `%${search}%`)
-        )
+          ilike(mahasiswa.email, `%${search}%`),
+        ),
       );
     }
     if (dosenPaId !== undefined) {
@@ -42,21 +42,18 @@ export class MahasiswaService {
       whereClause = and(...conditions);
     }
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(mahasiswa)
-      .where(whereClause);
-    
+    const [totalResult] = await db.select({ total: count() }).from(mahasiswa).where(whereClause);
+
     const total = totalResult?.total || 0;
-    
+
     const data = await db.query.mahasiswa.findMany({
       where: whereClause,
       limit,
       offset,
       with: {
         programStudi: true,
-        dosenPa: true
-      }
+        dosenPa: true,
+      },
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -67,8 +64,8 @@ export class MahasiswaService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -77,8 +74,8 @@ export class MahasiswaService {
       where: eq(mahasiswa.id, id),
       with: {
         programStudi: true,
-        dosenPa: true
-      }
+        dosenPa: true,
+      },
     });
     return data || null;
   }
@@ -89,19 +86,22 @@ export class MahasiswaService {
   }
 
   static async update(id: number, data: Partial<CreateMahasiswaDto>) {
-    const [updatedMhs] = await db
-      .update(mahasiswa)
-      .set(data)
-      .where(eq(mahasiswa.id, id))
-      .returning();
+    const [updatedMhs] = await db.update(mahasiswa).set(data).where(eq(mahasiswa.id, id)).returning();
     return updatedMhs || null;
   }
 
   static async delete(id: number) {
-    const [deletedMhs] = await db
-      .delete(mahasiswa)
-      .where(eq(mahasiswa.id, id))
-      .returning();
+    const [deletedMhs] = await db.delete(mahasiswa).where(eq(mahasiswa.id, id)).returning();
     return deletedMhs || null;
+  }
+
+  static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
+    return mhs ? mhs.id : null;
+  }
+
+  static async getDosenIdByEmail(email: string): Promise<number | null> {
+    const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, email));
+    return dsn ? dsn.id : null;
   }
 }

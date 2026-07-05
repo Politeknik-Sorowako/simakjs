@@ -1,15 +1,12 @@
-import { PelanggaranService } from '../services/pelanggaran.service';
-import { AuthContext } from '../utils/types';
-import { db } from '../utils/db';
-import { mahasiswa } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { mahasiswa } from '../models/schema';
+import { PelanggaranService } from '../services/pelanggaran.service';
+import { db } from '../utils/db';
+import { AuthContext } from '../utils/types';
 
 export class PelanggaranController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
@@ -23,7 +20,7 @@ export class PelanggaranController {
     try {
       const payload = {
         ...body,
-        dibuatOleh: user.id
+        dibuatOleh: user.id,
       };
       const newViolation = await PelanggaranService.createPelanggaran(payload);
       set.status = 201;

@@ -11,7 +11,7 @@ export const mahasiswaBody = t.Object({
   namaIbuKandung: t.String({ default: 'Ibu Budi' }),
   nik: t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' }),
   jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' }),
-  tanggalLahir: t.String({ default: '2000-01-01' })
+  tanggalLahir: t.String({ default: '2000-01-01' }),
 });
 
 export const updateMahasiswaBody = t.Object({
@@ -25,20 +25,21 @@ export const updateMahasiswaBody = t.Object({
   namaIbuKandung: t.Optional(t.String()),
   nik: t.Optional(t.String({ minLength: 16, maxLength: 16 })),
   jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')])),
-  tanggalLahir: t.Optional(t.String())
+  tanggalLahir: t.Optional(t.String()),
 });
 
 export const getMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],
     summary: 'Daftar Mahasiswa',
-    description: 'Mengambil semua data mahasiswa yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
+    description:
+      'Mengambil semua data mahasiswa yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
-    programStudiId: t.Optional(t.Numeric())
+    programStudiId: t.Optional(t.Numeric()),
   }),
   response: {
     200: t.Object({
@@ -65,9 +66,9 @@ export const getMahasiswaSchema = {
               id: t.Integer(),
               kode: t.String(),
               nama: t.String(),
-              jenjang: t.String()
+              jenjang: t.String(),
             }),
-            t.Null()
+            t.Null(),
           ]),
           dosenPa: t.Optional(
             t.Union([
@@ -75,28 +76,29 @@ export const getMahasiswaSchema = {
                 id: t.Integer(),
                 nip: t.String(),
                 nama: t.String(),
-                email: t.String()
+                email: t.String(),
               }),
-              t.Null()
-            ])
-          )
-        })
+              t.Null(),
+            ]),
+          ),
+        }),
       ),
       meta: t.Object({
         total: t.Integer({ default: 1 }),
         page: t.Integer({ default: 1 }),
         limit: t.Integer({ default: 10 }),
-        totalPages: t.Integer({ default: 1 })
-      })
-    })
-  }
+        totalPages: t.Integer({ default: 1 }),
+      }),
+    }),
+  },
 };
 
 export const createMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],
     summary: 'Tambah Mahasiswa Baru',
-    description: 'Menambahkan mahasiswa baru lengkap dengan data wajib PDDIKTI (Hanya dapat diakses Admin / Dosen dengan token JWT).'
+    description:
+      'Menambahkan mahasiswa baru lengkap dengan data wajib PDDIKTI (Hanya dapat diakses Admin / Dosen dengan token JWT).',
   },
   body: mahasiswaBody,
   response: {
@@ -116,25 +118,25 @@ export const createMahasiswaSchema = {
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
       createdAt: t.Any(),
-      updatedAt: t.Any()
+      updatedAt: t.Any(),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak.' })
+      error: t.String({ default: 'Akses ditolak.' }),
     }),
     422: t.Object({
-      message: t.String({ default: 'Validation error message...' })
-    })
-  }
+      message: t.String({ default: 'Validation error message...' }),
+    }),
+  },
 };
 
 export const getMahasiswaByIdSchema = {
   detail: {
     tags: ['Mahasiswa'],
     summary: 'Detail Mahasiswa',
-    description: 'Mengambil satu data mahasiswa berdasarkan ID beserta relasi program studi.'
+    description: 'Mengambil satu data mahasiswa berdasarkan ID beserta relasi program studi.',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   response: {
     200: t.Object({
@@ -159,9 +161,9 @@ export const getMahasiswaByIdSchema = {
           id: t.Integer(),
           kode: t.String(),
           nama: t.String(),
-          jenjang: t.String()
+          jenjang: t.String(),
         }),
-        t.Null()
+        t.Null(),
       ]),
       dosenPa: t.Optional(
         t.Union([
@@ -169,26 +171,26 @@ export const getMahasiswaByIdSchema = {
             id: t.Integer(),
             nip: t.String(),
             nama: t.String(),
-            email: t.String()
+            email: t.String(),
           }),
-          t.Null()
-        ])
-      )
+          t.Null(),
+        ]),
+      ),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };
 
 export const updateMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],
     summary: 'Perbarui Mahasiswa',
-    description: 'Memperbarui data mahasiswa berdasarkan ID (Hanya dapat diakses oleh Admin/Dosen).'
+    description: 'Memperbarui data mahasiswa berdasarkan ID (Hanya dapat diakses oleh Admin/Dosen).',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   body: updateMahasiswaBody,
   response: {
@@ -208,35 +210,35 @@ export const updateMahasiswaSchema = {
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
       createdAt: t.Any(),
-      updatedAt: t.Any()
+      updatedAt: t.Any(),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak.' })
+      error: t.String({ default: 'Akses ditolak.' }),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };
 
 export const deleteMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],
     summary: 'Hapus Mahasiswa',
-    description: 'Menghapus data mahasiswa berdasarkan ID (Hanya dapat diakses oleh Admin/Dosen).'
+    description: 'Menghapus data mahasiswa berdasarkan ID (Hanya dapat diakses oleh Admin/Dosen).',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   response: {
     200: t.Object({
-      message: t.String({ default: 'Mahasiswa berhasil dihapus' })
+      message: t.String({ default: 'Mahasiswa berhasil dihapus' }),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak.' })
+      error: t.String({ default: 'Akses ditolak.' }),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };

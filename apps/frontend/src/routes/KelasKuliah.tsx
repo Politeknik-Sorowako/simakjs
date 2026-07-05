@@ -1,17 +1,17 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { kelasKuliahController, KelasKuliah as IKelas } from '../controllers/kelasKuliahController';
-import { mataKuliahController } from '../controllers/mataKuliahController';
-import { periodeAkademikController } from '../controllers/periodeAkademikController';
-import { dosenController } from '../controllers/dosenController';
-import { dosenPengajarController } from '../controllers/dosenPengajarController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { useAuth } from '../contexts/AuthContext';
+import { dosenController } from '../controllers/dosenController';
+import { dosenPengajarController } from '../controllers/dosenPengajarController';
+import { KelasKuliah as IKelas, kelasKuliahController } from '../controllers/kelasKuliahController';
+import { mataKuliahController } from '../controllers/mataKuliahController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
 
 export default function KelasKuliah() {
   const toast = useToast();
@@ -30,10 +30,10 @@ export default function KelasKuliah() {
       page: page(),
       limit: limit(),
       prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
-      periodeId: isGlobalFilterActive() ? workspace.selectedPeriodeId() : null
+      periodeId: isGlobalFilterActive() ? workspace.selectedPeriodeId() : null,
     }),
     ({ search, page, limit, prodiId, periodeId }) =>
-      kelasKuliahController.getAll(search, page, limit, prodiId || undefined, periodeId || undefined)
+      kelasKuliahController.getAll(search, page, limit, prodiId || undefined, periodeId || undefined),
   );
 
   // Fetch Dropdown Data
@@ -116,7 +116,7 @@ export default function KelasKuliah() {
       await dosenPengajarController.create({
         dosenId: Number(plotDosenId()),
         kelasKuliahId: Number(plotKelasId()),
-        sksBebanMengajar: Number(plotSks())
+        sksBebanMengajar: Number(plotSks()),
       });
       setShowPlotModal(false);
       toast.showToast('Dosen berhasil di-plot ke kelas', 'success');
@@ -175,17 +175,18 @@ export default function KelasKuliah() {
           <Table headers={['Nama Kelas', 'Mata Kuliah', 'Periode Akademik', 'Dosen Pengajar', 'Aksi']}>
             <For each={kelas()?.data}>
               {(item) => (
-                <tr class="hover:bg-brand-50/50 transition-colors">
+                <tr class="hover:bg-brand-gray-50/50 transition-colors">
                   <td class="px-6 py-4 font-semibold text-brand-gray-800">{item.namaKelas}</td>
                   <td class="px-6 py-4 text-brand-gray-700">
-                    {item.mataKuliah?.nama} <span class="text-xs text-brand-gray-400 font-mono">({item.mataKuliah?.kode})</span>
+                    {item.mataKuliah?.nama}{' '}
+                    <span class="text-xs text-brand-gray-400 font-mono">({item.mataKuliah?.kode})</span>
                   </td>
                   <td class="px-6 py-4 text-brand-gray-600">{item.periodeAkademik?.nama || item.periodeId}</td>
                   <td class="px-6 py-4 text-brand-gray-700">
                     <div class="flex flex-wrap gap-1.5 items-center">
                       <For each={item.dosenPengajarKelas}>
                         {(dp) => (
-                          <span class="inline-flex items-center gap-1 bg-brand-50 text-brand-900 border border-brand-100 rounded px-2 py-0.5 text-xs font-semibold">
+                          <span class="inline-flex items-center gap-1 bg-brand-50 text-brand-700 border border-brand-100 rounded px-2 py-0.5 text-xs font-semibold">
                             {dp.dosen?.nama} ({dp.sksBebanMengajar || 0} SKS)
                             <button
                               onClick={() => handleUnplot(dp.id)}
@@ -199,7 +200,7 @@ export default function KelasKuliah() {
                       </For>
                       <button
                         onClick={() => openPlotModal(item)}
-                        class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border border-dashed border-brand-300 text-brand-800 hover:bg-brand-50/55 rounded transition-all focus:outline-none"
+                        class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border border-dashed border-brand-300 text-brand-600 hover:bg-brand-50/55 rounded transition-all focus:outline-none"
                       >
                         + Plot Dosen
                       </button>
@@ -254,7 +255,11 @@ export default function KelasKuliah() {
         </Show>
 
         {/* Modal Add/Edit Kelas */}
-        <Modal show={showModal()} title={editId() ? 'Edit Kelas Kuliah' : 'Tambah Kelas Kuliah'} onClose={() => setShowModal(false)}>
+        <Modal
+          show={showModal()}
+          title={editId() ? 'Edit Kelas Kuliah' : 'Tambah Kelas Kuliah'}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">
@@ -266,18 +271,14 @@ export default function KelasKuliah() {
               label="Mata Kuliah"
               value={matkulId()}
               onChange={(e) => setMatkulId(Number(e.currentTarget.value))}
-              selectOptions={
-                matkuls()?.data.map((m) => ({ label: `${m.kode} - ${m.nama}`, value: m.id })) || []
-              }
+              selectOptions={matkuls()?.data.map((m) => ({ label: `${m.kode} - ${m.nama}`, value: m.id })) || []}
             />
             <Input
               isSelect
               label="Periode Akademik"
               value={periodeId()}
               onChange={(e) => setPeriodeId(e.currentTarget.value)}
-              selectOptions={
-                periodes()?.data.map((p) => ({ label: p.nama, value: p.id })) || []
-              }
+              selectOptions={periodes()?.data.map((p) => ({ label: p.nama, value: p.id })) || []}
             />
             <Input
               label="Nama Kelas"
@@ -290,9 +291,7 @@ export default function KelasKuliah() {
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Simpan
-              </Button>
+              <Button type="submit">Simpan</Button>
             </div>
           </form>
         </Modal>
@@ -310,9 +309,7 @@ export default function KelasKuliah() {
               label="Dosen"
               value={plotDosenId()}
               onChange={(e) => setPlotDosenId(Number(e.currentTarget.value))}
-              selectOptions={
-                dosens()?.data.map((d) => ({ label: `${d.nip} - ${d.nama}`, value: d.id })) || []
-              }
+              selectOptions={dosens()?.data.map((d) => ({ label: `${d.nip} - ${d.nama}`, value: d.id })) || []}
             />
             <Input
               type="number"
@@ -325,9 +322,7 @@ export default function KelasKuliah() {
               <Button type="button" variant="secondary" onClick={() => setShowPlotModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Plot Dosen
-              </Button>
+              <Button type="submit">Plot Dosen</Button>
             </div>
           </form>
         </Modal>

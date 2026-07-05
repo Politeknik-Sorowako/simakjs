@@ -1,11 +1,11 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { prodiController, Prodi } from '../controllers/prodiController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { Prodi, prodiController } from '../controllers/prodiController';
 
 export default function ProgramStudi() {
   const [search, setSearch] = createSignal('');
@@ -16,7 +16,7 @@ export default function ProgramStudi() {
   // Fetch data
   const [prodis, { refetch }] = createResource(
     () => ({ search: search(), page: page(), limit: limit() }),
-    ({ search, page, limit }) => prodiController.getAll(search, page, limit)
+    ({ search, page, limit }) => prodiController.getAll(search, page, limit),
   );
 
   // Form State
@@ -81,7 +81,9 @@ export default function ProgramStudi() {
             <p class="text-sm text-brand-gray-500 dark:text-brand-gray-400">Kelola daftar program studi vokasi yang tersedia.</p>
           </div>
           <div class="flex gap-2">
-            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor CSV
+            </Button>
             <Button onClick={openAddModal}>+ Tambah Prodi</Button>
           </div>
         </div>
@@ -169,7 +171,11 @@ export default function ProgramStudi() {
         </Show>
 
         {/* Modal Form */}
-        <Modal show={showModal()} title={editId() ? 'Edit Program Studi' : 'Tambah Program Studi'} onClose={() => setShowModal(false)}>
+        <Modal
+          show={showModal()}
+          title={editId() ? 'Edit Program Studi' : 'Tambah Program Studi'}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">
@@ -205,9 +211,7 @@ export default function ProgramStudi() {
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Simpan
-              </Button>
+              <Button type="submit">Simpan</Button>
             </div>
           </form>
         </Modal>

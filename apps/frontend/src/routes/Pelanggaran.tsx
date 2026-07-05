@@ -1,12 +1,12 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { useAuth } from '../contexts/AuthContext';
-import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
-import { mahasiswaController } from '../controllers/mahasiswaController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
+import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
+import { mahasiswaController } from '../controllers/mahasiswaController';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -22,7 +22,7 @@ export default function Pelanggaran() {
       if (!email) return null;
       const res = await mahasiswaController.getAll(email, 1, 1);
       return res.data[0] || null;
-    }
+    },
   );
 
   // Load student's own violations
@@ -31,7 +31,7 @@ export default function Pelanggaran() {
     async (id) => {
       if (!id) return null;
       return await bimbinganController.getPelanggaranByMhsId(id);
-    }
+    },
   );
 
   // Load all violations (for Admin/Dosen)
@@ -42,7 +42,7 @@ export default function Pelanggaran() {
     },
     async () => {
       return await bimbinganController.getAllPelanggaran();
-    }
+    },
   );
 
   // List of all students for the form dropdown (Admin/Dosen)
@@ -54,7 +54,7 @@ export default function Pelanggaran() {
     async () => {
       const res = await mahasiswaController.getAll(undefined, 1, 100);
       return res.data;
-    }
+    },
   );
 
   // Form State
@@ -131,7 +131,7 @@ export default function Pelanggaran() {
           <Show when={user()?.role === 'admin' || user()?.role === 'dosen'}>
             <button
               onClick={openAddModal}
-              class="px-5 py-2.5 bg-brand-800 hover:bg-brand-900 text-white font-bold rounded-xl text-sm transition-all active:scale-95 shadow-sm shadow-brand-200"
+              class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all active:scale-95 shadow-sm shadow-blue-200"
             >
               + Catat Pelanggaran
             </button>
@@ -147,15 +147,17 @@ export default function Pelanggaran() {
               <div class="flex flex-col gap-2 items-center justify-center py-6">
                 <span
                   class={`text-6xl font-extrabold ${
-                    (studentViolations()?.totalPoin || 0) > 25 ? 'text-red-600 animate-pulse' : 'text-green-600'
+                    (studentViolations()?.totalPoin || 0) > 25 ? 'text-rose-600 animate-pulse' : 'text-accent-600'
                   }`}
                 >
                   {studentViolations.loading ? '...' : studentViolations()?.totalPoin || 0}
                 </span>
                 <span class="text-xs font-semibold uppercase tracking-wider text-brand-gray-400">Total Poin Pelanggaran</span>
               </div>
-              <div class="p-3.5 bg-brand-50 border border-brand-gray-100 rounded-xl">
-                <p class="text-[10px] text-brand-gray-400 leading-relaxed uppercase tracking-wider font-semibold">Batas Poin Kelayakan (BPA):</p>
+              <div class="p-3.5 bg-brand-gray-50 border border-brand-gray-100 rounded-xl">
+                <p class="text-[10px] text-brand-gray-400 leading-relaxed uppercase tracking-wider font-semibold">
+                  Batas Poin Kelayakan (BPA):
+                </p>
                 <ul class="text-[11px] text-brand-gray-500 list-disc pl-4 mt-1 flex flex-col gap-0.5 font-medium">
                   <li>Total poin &gt; 25: Peringatan Keras (SP-1)</li>
                   <li>Total poin &gt; 50: Skorsing Akademik (SP-2)</li>
@@ -178,7 +180,7 @@ export default function Pelanggaran() {
                 <div class="overflow-x-auto">
                   <table class="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr class="border-b border-brand-gray-100 bg-brand-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
+                      <tr class="border-b border-brand-gray-100 bg-brand-gray-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
                         <th class="p-3">Tanggal</th>
                         <th class="p-3">Jenis Pelanggaran</th>
                         <th class="p-3">Bobot Poin</th>
@@ -188,11 +190,11 @@ export default function Pelanggaran() {
                     <tbody class="divide-y divide-gray-50 font-medium text-brand-gray-600">
                       <For each={studentViolations()?.pelanggaranList}>
                         {(item) => (
-                          <tr class="hover:bg-brand-50/20">
+                          <tr class="hover:bg-brand-gray-50/20">
                             <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
                             <td class="p-3">{item.jenisPelanggaran}</td>
                             <td class="p-3">
-                              <span class="px-2 py-0.5 bg-red-50 text-red-600 rounded border border-red-100 font-bold">
+                              <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold">
                                 {item.bobotPoin} Poin
                               </span>
                             </td>
@@ -223,7 +225,7 @@ export default function Pelanggaran() {
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr class="border-b border-brand-gray-100 bg-brand-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
+                    <tr class="border-b border-brand-gray-100 bg-brand-gray-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
                       <th class="p-3">Mahasiswa</th>
                       <th class="p-3">NIM</th>
                       <th class="p-3">Program Studi</th>
@@ -239,14 +241,14 @@ export default function Pelanggaran() {
                   <tbody class="divide-y divide-gray-50 font-medium text-brand-gray-600">
                     <For each={allViolations()}>
                       {(item) => (
-                        <tr class="hover:bg-brand-50/20">
+                        <tr class="hover:bg-brand-gray-50/20">
                           <td class="p-3 font-bold text-brand-gray-800">{item.namaMahasiswa}</td>
                           <td class="p-3 whitespace-nowrap">{item.nim}</td>
                           <td class="p-3">{item.prodiNama}</td>
                           <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
                           <td class="p-3">{item.jenisPelanggaran}</td>
                           <td class="p-3">
-                            <span class="px-2 py-0.5 bg-red-50 text-red-600 rounded border border-red-100 font-bold">
+                            <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold">
                               {item.bobotPoin}
                             </span>
                           </td>
@@ -273,10 +275,14 @@ export default function Pelanggaran() {
         </Show>
 
         {/* Modal Entry Pelanggaran */}
-        <Modal show={showModal()} onClose={() => setShowModal(false)} title={editPelanggaranId() ? "Edit Catatan Pelanggaran" : "Catat Pelanggaran Baru"}>
+        <Modal
+          show={showModal()}
+          onClose={() => setShowModal(false)}
+          title={editPelanggaranId() ? 'Edit Catatan Pelanggaran' : 'Catat Pelanggaran Baru'}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
-              <div class="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold border border-red-100">
+              <div class="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold border border-rose-100">
                 {errorMsg()}
               </div>
             </Show>
@@ -287,10 +293,14 @@ export default function Pelanggaran() {
               <select
                 value={mahasiswaId()}
                 onChange={(e) => setMahasiswaId(parseInt(e.currentTarget.value))}
-                class="border border-brand-gray-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-brand-700"
+                class="border border-brand-gray-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-brand-500"
               >
                 <For each={students()}>
-                  {(item) => <option value={item.id}>{item.nama} ({item.nim})</option>}
+                  {(item) => (
+                    <option value={item.id}>
+                      {item.nama} ({item.nim})
+                    </option>
+                  )}
                 </For>
               </select>
             </div>
@@ -321,7 +331,7 @@ export default function Pelanggaran() {
                 max="100"
                 value={bobotPoin()}
                 onInput={(e) => setBobotPoin(parseInt(e.currentTarget.value))}
-                class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-700"
+                class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500"
               />
             </div>
 
@@ -333,7 +343,7 @@ export default function Pelanggaran() {
                 placeholder="Tulis kronologi singkat atau rincian pelanggaran..."
                 value={keterangan()}
                 onInput={(e) => setKeterangan(e.currentTarget.value)}
-                class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-700 resize-none"
+                class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 resize-none"
               />
             </div>
 

@@ -1,6 +1,6 @@
+import { and, eq } from 'drizzle-orm';
+import { dosen, kelasKuliah, krs, mahasiswa, mataKuliah, programStudi, users } from '../models/schema';
 import { db } from '../utils/db';
-import { mahasiswa, dosen, mataKuliah, programStudi, users, krs, kelasKuliah } from '../models/schema';
-import { eq, and } from 'drizzle-orm';
 
 export interface ImportResult {
   successCount: number;
@@ -33,7 +33,7 @@ export class CsvImportService {
           i++; // Skip \n
         }
         row.push(currentToken.trim());
-        if (row.length > 0 && row.some(cell => cell !== '')) {
+        if (row.length > 0 && row.some((cell) => cell !== '')) {
           lines.push(row);
         }
         row = [];
@@ -44,7 +44,7 @@ export class CsvImportService {
     }
     if (currentToken || row.length > 0) {
       row.push(currentToken.trim());
-      if (row.some(cell => cell !== '')) {
+      if (row.some((cell) => cell !== '')) {
         lines.push(row);
       }
     }
@@ -57,13 +57,13 @@ export class CsvImportService {
       return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
     }
 
-    const headers = rows[0].map(h => h.toLowerCase());
+    const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
     const batchData: any[] = [];
 
     // Caching prodi
     const prodis = await db.select().from(programStudi);
-    const prodiMap = new Map(prodis.map(p => [p.kode.toLowerCase(), p.id]));
+    const prodiMap = new Map(prodis.map((p) => [p.kode.toLowerCase(), p.id]));
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -113,7 +113,8 @@ export class CsvImportService {
       if (mode === 'update') {
         for (const item of batchData) {
           try {
-            await db.insert(mahasiswa)
+            await db
+              .insert(mahasiswa)
               .values(item)
               .onConflictDoUpdate({
                 target: mahasiswa.nim,
@@ -133,7 +134,7 @@ export class CsvImportService {
                   rw: item.rw,
                   kodePos: item.kodePos,
                   kewarganegaraan: item.kewarganegaraan,
-                }
+                },
               });
             result.successCount++;
           } catch (err: any) {
@@ -143,9 +144,7 @@ export class CsvImportService {
       } else {
         try {
           // default is skip (ON CONFLICT DO NOTHING)
-          await db.insert(mahasiswa)
-            .values(batchData)
-            .onConflictDoNothing({ target: mahasiswa.nim });
+          await db.insert(mahasiswa).values(batchData).onConflictDoNothing({ target: mahasiswa.nim });
           result.successCount = batchData.length;
         } catch (err: any) {
           result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
@@ -162,12 +161,12 @@ export class CsvImportService {
       return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
     }
 
-    const headers = rows[0].map(h => h.toLowerCase());
+    const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
     const batchData: any[] = [];
 
     const prodis = await db.select().from(programStudi);
-    const prodiMap = new Map(prodis.map(p => [p.kode.toLowerCase(), p.id]));
+    const prodiMap = new Map(prodis.map((p) => [p.kode.toLowerCase(), p.id]));
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -206,7 +205,8 @@ export class CsvImportService {
       if (mode === 'update') {
         for (const item of batchData) {
           try {
-            await db.insert(dosen)
+            await db
+              .insert(dosen)
               .values(item)
               .onConflictDoUpdate({
                 target: dosen.nip,
@@ -220,7 +220,7 @@ export class CsvImportService {
                   tanggalLahir: item.tanggalLahir,
                   tempatLahir: item.tempatLahir,
                   idAgama: item.idAgama,
-                }
+                },
               });
             result.successCount++;
           } catch (err: any) {
@@ -229,9 +229,7 @@ export class CsvImportService {
         }
       } else {
         try {
-          await db.insert(dosen)
-            .values(batchData)
-            .onConflictDoNothing({ target: dosen.nip });
+          await db.insert(dosen).values(batchData).onConflictDoNothing({ target: dosen.nip });
           result.successCount = batchData.length;
         } catch (err: any) {
           result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
@@ -248,12 +246,12 @@ export class CsvImportService {
       return { successCount: 0, errors: [{ line: 1, error: 'CSV is empty' }] };
     }
 
-    const headers = rows[0].map(h => h.toLowerCase());
+    const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
     const batchData: any[] = [];
 
     const prodis = await db.select().from(programStudi);
-    const prodiMap = new Map(prodis.map(p => [p.kode.toLowerCase(), p.id]));
+    const prodiMap = new Map(prodis.map((p) => [p.kode.toLowerCase(), p.id]));
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -295,7 +293,8 @@ export class CsvImportService {
       if (mode === 'update') {
         for (const item of batchData) {
           try {
-            await db.insert(mataKuliah)
+            await db
+              .insert(mataKuliah)
               .values(item)
               .onConflictDoUpdate({
                 target: mataKuliah.kode,
@@ -307,18 +306,19 @@ export class CsvImportService {
                   sksPraktekLapangan: item.sksPraktekLapangan,
                   sksSimulasi: item.sksSimulasi,
                   programStudiId: item.programStudiId,
-                }
+                },
               });
             result.successCount++;
           } catch (err: any) {
-            result.errors.push({ line: 0, error: `Gagal menyimpan data Mata Kuliah Kode ${item.kode}: ${err.message}` });
+            result.errors.push({
+              line: 0,
+              error: `Gagal menyimpan data Mata Kuliah Kode ${item.kode}: ${err.message}`,
+            });
           }
         }
       } else {
         try {
-          await db.insert(mataKuliah)
-            .values(batchData)
-            .onConflictDoNothing({ target: mataKuliah.kode });
+          await db.insert(mataKuliah).values(batchData).onConflictDoNothing({ target: mataKuliah.kode });
           result.successCount = batchData.length;
         } catch (err: any) {
           result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
@@ -335,7 +335,7 @@ export class CsvImportService {
       return { successCount: 0, errors: [{ line: 1, error: 'CSV is empty' }] };
     }
 
-    const headers = rows[0].map(h => h.toLowerCase());
+    const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
     const batchData: any[] = [];
 
@@ -366,25 +366,27 @@ export class CsvImportService {
       if (mode === 'update') {
         for (const item of batchData) {
           try {
-            await db.insert(programStudi)
+            await db
+              .insert(programStudi)
               .values(item)
               .onConflictDoUpdate({
                 target: programStudi.kode,
                 set: {
                   nama: item.nama,
                   jenjang: item.jenjang,
-                }
+                },
               });
             result.successCount++;
           } catch (err: any) {
-            result.errors.push({ line: 0, error: `Gagal menyimpan data Program Studi Kode ${item.kode}: ${err.message}` });
+            result.errors.push({
+              line: 0,
+              error: `Gagal menyimpan data Program Studi Kode ${item.kode}: ${err.message}`,
+            });
           }
         }
       } else {
         try {
-          await db.insert(programStudi)
-            .values(batchData)
-            .onConflictDoNothing({ target: programStudi.kode });
+          await db.insert(programStudi).values(batchData).onConflictDoNothing({ target: programStudi.kode });
           result.successCount = batchData.length;
         } catch (err: any) {
           result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
@@ -401,7 +403,7 @@ export class CsvImportService {
       return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
     }
 
-    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
     const result: ImportResult = { successCount: 0, errors: [] };
 
     const nimIdx = headers.indexOf('nim');
@@ -412,7 +414,9 @@ export class CsvImportService {
     if (nimIdx === -1 || nipIdx === -1) {
       return {
         successCount: 0,
-        errors: [{ line: 1, error: 'CSV harus memiliki kolom header "nim" dan "nip_dosen_pa" (atau "nip_dosen" / "nip").' }]
+        errors: [
+          { line: 1, error: 'CSV harus memiliki kolom header "nim" dan "nip_dosen_pa" (atau "nip_dosen" / "nip").' },
+        ],
       };
     }
 
@@ -449,7 +453,10 @@ export class CsvImportService {
         await db.update(mahasiswa).set({ dosenPaId: dosenId }).where(eq(mahasiswa.id, mhs.id));
         result.successCount++;
       } catch (err: any) {
-        result.errors.push({ line: lineNum, error: `Gagal memperbarui relasi Dosen PA untuk NIM "${nimVal}": ${err.message}` });
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal memperbarui relasi Dosen PA untuk NIM "${nimVal}": ${err.message}`,
+        });
       }
     }
 
@@ -462,7 +469,7 @@ export class CsvImportService {
       return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
     }
 
-    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
     const result: ImportResult = { successCount: 0, errors: [] };
 
     const emailIdx = headers.indexOf('email');
@@ -473,7 +480,7 @@ export class CsvImportService {
     if (emailIdx === -1 || namaIdx === -1 || roleIdx === -1) {
       return {
         successCount: 0,
-        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: email, nama, role' }]
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: email, nama, role' }],
       };
     }
 
@@ -499,15 +506,13 @@ export class CsvImportService {
           }
 
           if (!validRoles.includes(roleVal)) {
-            throw new Error(`Baris ${lineNum}: Role "${roleVal}" tidak valid. Role yang diizinkan: ${validRoles.join(', ')}`);
+            throw new Error(
+              `Baris ${lineNum}: Role "${roleVal}" tidak valid. Role yang diizinkan: ${validRoles.join(', ')}`,
+            );
           }
 
           // Check if email already exists
-          const [existingUser] = await tx
-            .select()
-            .from(users)
-            .where(eq(users.email, emailVal))
-            .limit(1);
+          const [existingUser] = await tx.select().from(users).where(eq(users.email, emailVal)).limit(1);
 
           if (existingUser) {
             throw new Error(`Baris ${lineNum}: Email "${emailVal}" sudah terdaftar.`);
@@ -536,7 +541,10 @@ export class CsvImportService {
     return result;
   }
 
-  static async generateAccounts(targetType: 'mahasiswa' | 'dosen', ids: number[]): Promise<{ successCount: number; errors: string[] }> {
+  static async generateAccounts(
+    targetType: 'mahasiswa' | 'dosen',
+    ids: number[],
+  ): Promise<{ successCount: number; errors: string[] }> {
     const errors: string[] = [];
     let successCount = 0;
 
@@ -607,7 +615,7 @@ export class CsvImportService {
       return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
     }
 
-    const headers = rows[0].map(h => h.toLowerCase().trim());
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
     const result: ImportResult = { successCount: 0, errors: [] };
 
     const nimIdx = headers.indexOf('nim');
@@ -618,7 +626,7 @@ export class CsvImportService {
     if (nimIdx === -1 || kodeMkIdx === -1 || namaKelasIdx === -1 || periodeIdx === -1) {
       return {
         successCount: 0,
-        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, kode_mata_kuliah, nama_kelas, periode_id' }]
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, kode_mata_kuliah, nama_kelas, periode_id' }],
       };
     }
 
@@ -634,7 +642,10 @@ export class CsvImportService {
         const periodeVal = row[periodeIdx].trim();
 
         if (!nimVal || !kodeMkVal || !namaKelasVal || !periodeVal) {
-          result.errors.push({ line: lineNum, error: 'Semua kolom (nim, kode_mata_kuliah, nama_kelas, periode_id) wajib diisi.' });
+          result.errors.push({
+            line: lineNum,
+            error: 'Semua kolom (nim, kode_mata_kuliah, nama_kelas, periode_id) wajib diisi.',
+          });
           continue;
         }
 
@@ -656,30 +667,29 @@ export class CsvImportService {
           }
 
           // Find Kelas Kuliah
-          const [kelas] = await tx.select()
+          const [kelas] = await tx
+            .select()
             .from(kelasKuliah)
             .where(
               and(
                 eq(kelasKuliah.mataKuliahId, mk.id),
                 eq(kelasKuliah.namaKelas, namaKelasVal),
-                eq(kelasKuliah.periodeId, periodeVal)
-              )
+                eq(kelasKuliah.periodeId, periodeVal),
+              ),
             )
             .limit(1);
 
           if (!kelas) {
-            throw new Error(`Kelas Kuliah "${namaKelasVal}" untuk MK "${kodeMkVal}" pada Periode "${periodeVal}" tidak ditemukan.`);
+            throw new Error(
+              `Kelas Kuliah "${namaKelasVal}" untuk MK "${kodeMkVal}" pada Periode "${periodeVal}" tidak ditemukan.`,
+            );
           }
 
           // Check for exact duplicate KRS (same student, same class)
-          const [exactDuplicate] = await tx.select({ id: krs.id })
+          const [exactDuplicate] = await tx
+            .select({ id: krs.id })
             .from(krs)
-            .where(
-              and(
-                eq(krs.mahasiswaId, mhs.id),
-                eq(krs.kelasKuliahId, kelas.id)
-              )
-            )
+            .where(and(eq(krs.mahasiswaId, mhs.id), eq(krs.kelasKuliahId, kelas.id)))
             .limit(1);
 
           if (exactDuplicate) {
@@ -687,26 +697,29 @@ export class CsvImportService {
           }
 
           // Check if student has already contracted another class of the same course in this period
-          const [existingSameCourse] = await tx.select({ id: krs.id, namaKelas: kelasKuliah.namaKelas })
+          const [existingSameCourse] = await tx
+            .select({ id: krs.id, namaKelas: kelasKuliah.namaKelas })
             .from(krs)
             .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
             .where(
               and(
                 eq(krs.mahasiswaId, mhs.id),
                 eq(kelasKuliah.mataKuliahId, mk.id),
-                eq(kelasKuliah.periodeId, periodeVal)
-              )
+                eq(kelasKuliah.periodeId, periodeVal),
+              ),
             )
             .limit(1);
 
           if (existingSameCourse) {
-            throw new Error(`Mahasiswa sudah mengontrak mata kuliah "${kodeMkVal}" pada kelas "${existingSameCourse.namaKelas}" di periode "${periodeVal}".`);
+            throw new Error(
+              `Mahasiswa sudah mengontrak mata kuliah "${kodeMkVal}" pada kelas "${existingSameCourse.namaKelas}" di periode "${periodeVal}".`,
+            );
           }
 
           await tx.insert(krs).values({
             mahasiswaId: mhs.id,
             kelasKuliahId: kelas.id,
-            isApproved: false
+            isApproved: false,
           });
 
           result.successCount++;

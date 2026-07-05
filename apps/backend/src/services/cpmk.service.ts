@@ -1,6 +1,6 @@
-import { db } from '../utils/db';
-import { cpmk } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { cpmk } from '../models/schema';
+import { db } from '../utils/db';
 
 export class CpmkService {
   static async getByMataKuliah(mataKuliahId: number) {

@@ -1,7 +1,7 @@
 import { fetchApi } from '../utils/api';
-import { PaginatedResponse } from './prodiController';
 import { MataKuliah } from './mataKuliahController';
 import { PeriodeAkademik } from './periodeAkademikController';
+import { PaginatedResponse } from './prodiController';
 
 export interface KelasKuliah {
   id: number;
@@ -15,7 +15,13 @@ export interface KelasKuliah {
 }
 
 export const kelasKuliahController = {
-  async getAll(search?: string, page?: number, limit?: number, programStudiId?: number, periodeId?: string): Promise<PaginatedResponse<KelasKuliah>> {
+  async getAll(
+    search?: string,
+    page?: number,
+    limit?: number,
+    programStudiId?: number,
+    periodeId?: string,
+  ): Promise<PaginatedResponse<KelasKuliah>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));

@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia';
 import { MahasiswaController } from '../controllers/mahasiswa.controller';
-import {
-  getMahasiswaSchema,
-  createMahasiswaSchema,
-  getMahasiswaByIdSchema,
-  updateMahasiswaSchema,
-  deleteMahasiswaSchema
-} from '../schemas/mahasiswa.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createMahasiswaSchema,
+  deleteMahasiswaSchema,
+  getMahasiswaByIdSchema,
+  getMahasiswaSchema,
+  updateMahasiswaSchema,
+} from '../schemas/mahasiswa.schema';
 
 export const mahasiswaRoutes = new Elysia({ prefix: '/mahasiswa' })
   .use(authMiddleware)

@@ -1,19 +1,19 @@
-import { createSignal, createResource, Show, For, createMemo } from 'solid-js';
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
-import { presensiController, KompensasiDetailResponse } from '../controllers/presensiController';
+import { KompensasiDetailResponse, presensiController } from '../controllers/presensiController';
 
 export default function LaporanKompensasi() {
   const toast = useToast();
-  
+
   // Modal State
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
   const [showPayModal, setShowPayModal] = createSignal(false);
   const [editingPay, setEditingPay] = createSignal<any | null>(null);
-  
+
   // Payment Form State
   const [jumlahMenit, setJumlahMenit] = createSignal(60);
   const [keterangan, setKeterangan] = createSignal('');
@@ -30,10 +30,11 @@ export default function LaporanKompensasi() {
     const list = laporan() || [];
     const q = search().toLowerCase();
     if (!q) return list;
-    return list.filter(item => 
-      item.nama.toLowerCase().includes(q) || 
-      item.nim.toLowerCase().includes(q) || 
-      (item.prodiNama || '').toLowerCase().includes(q)
+    return list.filter(
+      (item) =>
+        item.nama.toLowerCase().includes(q) ||
+        item.nim.toLowerCase().includes(q) ||
+        (item.prodiNama || '').toLowerCase().includes(q),
     );
   });
 
@@ -101,7 +102,7 @@ export default function LaporanKompensasi() {
       setShowPayModal(false);
       setKeterangan('');
       setJumlahMenit(60);
-      
+
       // Refresh data
       refetchDetail();
       refetchLaporan();
@@ -126,7 +127,7 @@ export default function LaporanKompensasi() {
             <input
               type="text"
               placeholder="Cari NIM, Nama, atau Prodi..."
-              class="w-full bg-brand-50 border border-brand-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-700"
+              class="w-full bg-brand-gray-50 border border-brand-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               value={search()}
               onInput={(e) => setSearch(e.currentTarget.value)}
             />
@@ -141,7 +142,7 @@ export default function LaporanKompensasi() {
           <div class="overflow-x-auto">
             <table class="w-full text-left text-sm border-collapse">
               <thead>
-                <tr class="border-b border-brand-gray-100 text-brand-gray-400 uppercase text-xs font-semibold bg-brand-50/50">
+                <tr class="border-b border-brand-gray-100 text-brand-gray-400 uppercase text-xs font-semibold bg-brand-gray-50/50">
                   <th class="py-3 px-6">Mahasiswa</th>
                   <th class="py-3 px-6">Program Studi</th>
                   <th class="py-3 px-6 text-center">Akumulasi Mangkir</th>
@@ -172,21 +173,27 @@ export default function LaporanKompensasi() {
                     }
                   >
                     {(item) => (
-                      <tr class="border-b border-brand-gray-50 hover:bg-brand-50/30 transition-colors">
+                      <tr class="border-b border-brand-gray-50 hover:bg-brand-gray-50/30 transition-colors">
                         <td class="py-4 px-6">
                           <div class="font-bold text-brand-gray-800">{item.nama}</div>
                           <div class="text-xs text-brand-gray-400">{item.nim}</div>
                         </td>
                         <td class="py-4 px-6 text-brand-gray-600 font-semibold">{item.prodiNama || '-'}</td>
                         <td class="py-4 px-6 text-center text-red-500 font-bold">{item.totalKompensasi} Menit</td>
-                        <td class="py-4 px-6 text-center text-green-600 font-bold">{item.totalDibayar} Menit</td>
+                        <td class="py-4 px-6 text-center text-accent-600 font-bold">{item.totalDibayar} Menit</td>
                         <td class="py-4 px-6 text-center">
-                          <span class={`px-3 py-1 rounded-full text-xs font-extrabold ${item.sisaKompensasi > 0 ? 'bg-red-50 text-red-700 animate-pulse' : 'bg-green-50 text-green-700'}`}>
+                          <span
+                            class={`px-3 py-1 rounded-full text-xs font-extrabold ${item.sisaKompensasi > 0 ? 'bg-red-50 text-red-700 animate-pulse' : 'bg-accent-50 text-accent-700'}`}
+                          >
                             {item.sisaKompensasi} Menit
                           </span>
                         </td>
                         <td class="py-4 px-6 text-center">
-                          <Button onClick={() => handleOpenDetail(item.id)} variant="primary" class="!px-4 !py-1.5 text-xs font-bold">
+                          <Button
+                            onClick={() => handleOpenDetail(item.id)}
+                            variant="primary"
+                            class="!px-4 !py-1.5 text-xs font-bold"
+                          >
                             Kelola Detail
                           </Button>
                         </td>
@@ -202,11 +209,14 @@ export default function LaporanKompensasi() {
 
       {/* Modal Detail Mahasiswa */}
       <Modal isOpen={selectedMhsId() !== null} onClose={handleCloseDetail} title="Detail Riwayat Jam Kompensasi">
-        <Show when={!mhsDetail.loading && mhsDetail()} fallback={<div class="p-6 text-center text-brand-gray-400">Memuat riwayat...</div>}>
+        <Show
+          when={!mhsDetail.loading && mhsDetail()}
+          fallback={<div class="p-6 text-center text-brand-gray-400">Memuat riwayat...</div>}
+        >
           {(detail) => (
             <div class="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-2">
               {/* Profile Card */}
-              <div class="bg-brand-50 rounded-2xl p-5 border border-brand-gray-100 flex items-center justify-between">
+              <div class="bg-brand-gray-50 rounded-2xl p-5 border border-brand-gray-100 flex items-center justify-between">
                 <div>
                   <h3 class="font-bold text-brand-gray-800 text-lg">{detail().mahasiswa.nama}</h3>
                   <p class="text-sm text-brand-gray-500">NIM: {detail().mahasiswa.nim}</p>
@@ -230,9 +240,13 @@ export default function LaporanKompensasi() {
                       {(log) => (
                         <div class="bg-white border border-brand-gray-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center">
                           <div class="flex flex-col gap-0.5">
-                            <span class="font-bold text-brand-gray-700">{log.bapMateri} (Pertemuan {log.bapPertemuan})</span>
+                            <span class="font-bold text-brand-gray-700">
+                              {log.bapMateri} (Pertemuan {log.bapPertemuan})
+                            </span>
                             <span class="text-brand-gray-400">{new Date(log.bapTanggal).toLocaleDateString('id-ID')}</span>
-                            <span class="font-semibold text-accent-600">Status: {log.status.toUpperCase()} ({log.durasiMangkir} Menit)</span>
+                            <span class="font-semibold text-accent-600">
+                              Status: {log.status.toUpperCase()} ({log.durasiMangkir} Menit)
+                            </span>
                           </div>
                           <span class="font-bold text-red-600 font-mono">+{log.poinKompensasi}m</span>
                         </div>
@@ -252,7 +266,9 @@ export default function LaporanKompensasi() {
                   <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
                     <For
                       each={detail().payments}
-                      fallback={<p class="text-xs text-brand-gray-400 italic">Belum ada penyelesaian kompensasi yang dilaporkan.</p>}
+                      fallback={
+                        <p class="text-xs text-brand-gray-400 italic">Belum ada penyelesaian kompensasi yang dilaporkan.</p>
+                      }
                     >
                       {(pay) => (
                         <div class="bg-white border border-brand-gray-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center">
@@ -261,7 +277,7 @@ export default function LaporanKompensasi() {
                             <span class="text-brand-gray-400">{new Date(pay.tanggal).toLocaleDateString('id-ID')}</span>
                           </div>
                           <div class="flex items-center gap-2">
-                            <span class="font-bold text-green-600 font-mono">-{pay.jumlahMenit}m</span>
+                            <span class="font-bold text-accent-600 font-mono">-{pay.jumlahMenit}m</span>
                             <Button
                               onClick={() => openEditPaymentModal(pay)}
                               variant="secondary"
@@ -288,7 +304,11 @@ export default function LaporanKompensasi() {
       </Modal>
 
       {/* Modal Input Payment */}
-      <Modal isOpen={showPayModal()} onClose={() => setShowPayModal(false)} title={editingPay() ? "Edit Penyelesaian Jam Kompensasi" : "Input Penyelesaian Jam Kompensasi"}>
+      <Modal
+        isOpen={showPayModal()}
+        onClose={() => setShowPayModal(false)}
+        title={editingPay() ? 'Edit Penyelesaian Jam Kompensasi' : 'Input Penyelesaian Jam Kompensasi'}
+      >
         <form onSubmit={handleSavePayment} class="flex flex-col gap-4">
           <Input
             type="number"
@@ -310,7 +330,7 @@ export default function LaporanKompensasi() {
           <div class="flex flex-col gap-1">
             <label class="text-sm font-semibold text-brand-gray-600">Keterangan Kegiatan Kompensasi</label>
             <textarea
-              class="w-full bg-brand-50 border border-brand-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-700"
+              class="w-full bg-brand-gray-50 border border-brand-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               rows="3"
               placeholder="Misal: Menyapu dan mengepel Lab Komputer Vokasi"
               value={keterangan()}

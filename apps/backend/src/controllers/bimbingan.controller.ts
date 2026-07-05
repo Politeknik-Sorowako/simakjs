@@ -1,28 +1,22 @@
-import { BimbinganService } from '../services/bimbingan.service';
-import { PresensiService } from '../services/presensi.service';
-import { PelanggaranService } from '../services/pelanggaran.service';
-import { KhsService } from '../services/khs.service';
-import { AuthContext } from '../utils/types';
-import { db } from '../utils/db';
-import { mahasiswa, dosen, periodeAkademik } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { dosen, mahasiswa, periodeAkademik } from '../models/schema';
+import { BimbinganService } from '../services/bimbingan.service';
+import { KhsService } from '../services/khs.service';
+import { PelanggaranService } from '../services/pelanggaran.service';
+import { PresensiService } from '../services/presensi.service';
+import { db } from '../utils/db';
+import { AuthContext } from '../utils/types';
 
 export class BimbinganController {
   // Helper to map email to student profile ID
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
   // Helper to map email to dosen profile ID
   private static async getDosenIdByEmail(email: string): Promise<number | null> {
-    const [dsn] = await db
-      .select({ id: dosen.id })
-      .from(dosen)
-      .where(eq(dosen.email, email));
+    const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, email));
     return dsn ? dsn.id : null;
   }
 
@@ -113,13 +107,16 @@ export class BimbinganController {
     try {
       const bimbData = await BimbinganService.getOrCreateBimbingan(targetMhsId);
       const newMsg = await BimbinganService.addThreadMessage(bimbData.id, senderRole, body.pesan, body.tipe);
-      
+
       // Publish live update to WebSocket subscribers
       if (server) {
-        server.publish(`bimbingan-${bimbData.id}`, JSON.stringify({
-          type: 'new_message',
-          message: newMsg
-        }));
+        server.publish(
+          `bimbingan-${bimbData.id}`,
+          JSON.stringify({
+            type: 'new_message',
+            message: newMsg,
+          }),
+        );
       }
 
       set.status = 201;
@@ -248,12 +245,9 @@ export class BimbinganController {
       let ipk = 0;
 
       if (activePeriode) {
-        const periodes = await db
-          .select()
-          .from(periodeAkademik)
-          .orderBy(periodeAkademik.id);
-        
-        const activeIdx = periodes.findIndex(p => p.id === activePeriode.id);
+        const periodes = await db.select().from(periodeAkademik).orderBy(periodeAkademik.id);
+
+        const activeIdx = periodes.findIndex((p) => p.id === activePeriode.id);
         if (activeIdx > 0) {
           const prevPeriode = periodes[activeIdx - 1];
           try {
@@ -273,7 +267,7 @@ export class BimbinganController {
         sisaKompensasi,
         poinPelanggaran,
         ipk,
-        ipsSemesterLalu
+        ipsSemesterLalu,
       };
     } catch (err: any) {
       set.status = 400;

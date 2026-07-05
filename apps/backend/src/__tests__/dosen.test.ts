@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -14,16 +14,16 @@ describe('4. Dosen (/dosen)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'TI-DOSEN-SETUP',
           nama: 'Teknik Informatika Dosen Setup',
           jenjang: 'D4',
         }),
-      })
+      }),
     );
-    const data = await response.json() as { id: number };
+    const data = (await response.json()) as { id: number };
     prodiId = data.id;
   });
 
@@ -36,7 +36,7 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nip: '199001012020011001',
@@ -48,7 +48,7 @@ describe('4. Dosen (/dosen)', () => {
             jenisKelamin: 'L',
             tanggalLahir: '1990-01-01',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
@@ -65,14 +65,14 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nip: '199001012020011001',
             nama: '', // invalid
             email: 'invalid-email',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -96,10 +96,10 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify(payload),
-        })
+        }),
       );
 
       const response = await app.handle(
@@ -107,14 +107,14 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             ...payload,
             email: 'other@test.com',
             nidn: '0001019002',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(409); // Conflict (23505 unique constraint)
@@ -128,7 +128,7 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             nip: '199001012020011001',
@@ -136,7 +136,7 @@ describe('4. Dosen (/dosen)', () => {
             email: 'dosenuji@test.com',
             programStudiId: prodiId,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -148,8 +148,26 @@ describe('4. Dosen (/dosen)', () => {
     beforeEach(async () => {
       token = await getAuthToken('admin-dosen-setup@test.com', 'admin');
       const items = [
-        { nip: '111', nama: 'Dosen Satu', email: 'dosen1@test.com', programStudiId: prodiId, nidn: '101', nik: '1234567890123451', jenisKelamin: 'L', tanggalLahir: '1980-01-01' },
-        { nip: '222', nama: 'Dosen Dua', email: 'dosen2@test.com', programStudiId: prodiId, nidn: '102', nik: '1234567890123452', jenisKelamin: 'P', tanggalLahir: '1981-02-02' },
+        {
+          nip: '111',
+          nama: 'Dosen Satu',
+          email: 'dosen1@test.com',
+          programStudiId: prodiId,
+          nidn: '101',
+          nik: '1234567890123451',
+          jenisKelamin: 'L',
+          tanggalLahir: '1980-01-01',
+        },
+        {
+          nip: '222',
+          nama: 'Dosen Dua',
+          email: 'dosen2@test.com',
+          programStudiId: prodiId,
+          nidn: '102',
+          nik: '1234567890123452',
+          jenisKelamin: 'P',
+          tanggalLahir: '1981-02-02',
+        },
       ];
       for (const item of items) {
         await app.handle(
@@ -157,10 +175,10 @@ describe('4. Dosen (/dosen)', () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify(item),
-          })
+          }),
         );
       }
     });
@@ -170,9 +188,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request('http://localhost/dosen', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
+            Authorization: `Bearer ${token}`,
+          },
+        }),
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -185,9 +203,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request('http://localhost/dosen?page=1&limit=1', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
+            Authorization: `Bearer ${token}`,
+          },
+        }),
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -199,9 +217,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request('http://localhost/dosen?search=Satu', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
+            Authorization: `Bearer ${token}`,
+          },
+        }),
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -215,17 +233,15 @@ describe('4. Dosen (/dosen)', () => {
         new Request('http://localhost/dosen', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${guestToken}`
-          }
-        })
+            Authorization: `Bearer ${guestToken}`,
+          },
+        }),
       );
       expect(response.status).toBe(403);
     });
 
     it('harus gagal mengambil list dosen jika tanpa token (Guest)', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/dosen', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/dosen', { method: 'GET' }));
       expect(response.status).toBe(403);
     });
   });
@@ -241,7 +257,7 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             nip: '199001012020011001',
@@ -253,9 +269,9 @@ describe('4. Dosen (/dosen)', () => {
             jenisKelamin: 'L',
             tanggalLahir: '1990-01-01',
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       dosenId = data.id;
     });
 
@@ -264,9 +280,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request(`http://localhost/dosen/${dosenId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
+            Authorization: `Bearer ${token}`,
+          },
+        }),
       );
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -278,9 +294,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request('http://localhost/dosen/999999', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
+            Authorization: `Bearer ${token}`,
+          },
+        }),
       );
       expect(response.status).toBe(404);
     });
@@ -296,7 +312,7 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nip: '199001012020011001',
@@ -308,9 +324,9 @@ describe('4. Dosen (/dosen)', () => {
             jenisKelamin: 'L',
             tanggalLahir: '1990-01-01',
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       dosenId = data.id;
     });
 
@@ -322,12 +338,12 @@ describe('4. Dosen (/dosen)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: 'Dosen Uji Coba Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -343,12 +359,12 @@ describe('4. Dosen (/dosen)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: 'Dosen Uji Coba Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -362,12 +378,12 @@ describe('4. Dosen (/dosen)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             nama: 'Dosen Uji Coba Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -384,7 +400,7 @@ describe('4. Dosen (/dosen)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nip: '199001012020011001',
@@ -396,9 +412,9 @@ describe('4. Dosen (/dosen)', () => {
             jenisKelamin: 'L',
             tanggalLahir: '1990-01-01',
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       dosenId = data.id;
     });
 
@@ -409,9 +425,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request(`http://localhost/dosen/${dosenId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -421,9 +437,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request(`http://localhost/dosen/${dosenId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${adminToken}`
-          }
-        })
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
       );
       expect(checkResponse.status).toBe(404);
     });
@@ -435,9 +451,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request('http://localhost/dosen/999999', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -450,9 +466,9 @@ describe('4. Dosen (/dosen)', () => {
         new Request(`http://localhost/dosen/${dosenId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(403);

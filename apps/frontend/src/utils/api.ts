@@ -30,7 +30,7 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
 
   let data: any;
   const isJson = response.headers.get('content-type')?.includes('application/json');
-  
+
   if (isJson) {
     data = await response.json();
   } else {

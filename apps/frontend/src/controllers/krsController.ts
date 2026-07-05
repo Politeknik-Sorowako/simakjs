@@ -1,7 +1,7 @@
 import { fetchApi } from '../utils/api';
-import { PaginatedResponse } from './prodiController';
-import { Mahasiswa } from './mahasiswaController';
 import { KelasKuliah } from './kelasKuliahController';
+import { Mahasiswa } from './mahasiswaController';
+import { PaginatedResponse } from './prodiController';
 
 export interface Krs {
   id: number;

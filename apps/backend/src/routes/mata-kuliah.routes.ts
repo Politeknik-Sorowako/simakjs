@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia';
 import { MataKuliahController } from '../controllers/mata-kuliah.controller';
-import {
-  getMataKuliahSchema,
-  createMataKuliahSchema,
-  getMataKuliahByIdSchema,
-  updateMataKuliahSchema,
-  deleteMataKuliahSchema
-} from '../schemas/mata-kuliah.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createMataKuliahSchema,
+  deleteMataKuliahSchema,
+  getMataKuliahByIdSchema,
+  getMataKuliahSchema,
+  updateMataKuliahSchema,
+} from '../schemas/mata-kuliah.schema';
 
 export const mataKuliahRoutes = new Elysia({ prefix: '/mata-kuliah' })
   .use(authMiddleware)

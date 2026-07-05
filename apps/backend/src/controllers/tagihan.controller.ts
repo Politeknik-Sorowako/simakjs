@@ -1,15 +1,12 @@
+import { and, eq } from 'drizzle-orm';
+import { mahasiswa, programStudi, skemaTarif } from '../models/schema';
 import { TagihanService } from '../services/tagihan.service';
-import { AuthContext } from '../utils/types';
 import { db } from '../utils/db';
-import { mahasiswa, skemaTarif, programStudi } from '../models/schema';
-import { eq, and } from 'drizzle-orm';
+import { AuthContext } from '../utils/types';
 
 export class TagihanController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
@@ -30,7 +27,7 @@ export class TagihanController {
       if (!myMhsId) {
         return {
           data: [],
-          meta: { total: 0, page, limit, totalPages: 0 }
+          meta: { total: 0, page, limit, totalPages: 0 },
         };
       }
       filterMhsId = myMhsId;
@@ -68,7 +65,7 @@ export class TagihanController {
       const updated = await TagihanService.updateNominal(tagihanId, nominal);
       return {
         message: 'Nominal tagihan berhasil diperbarui',
-        tagihan: updated
+        tagihan: updated,
       };
     } catch (e: any) {
       set.status = 400;
@@ -91,8 +88,8 @@ export class TagihanController {
         tagihan: {
           id: updated.id,
           status: updated.status,
-          tanggalBayar: updated.tanggalBayar
-        }
+          tanggalBayar: updated.tanggalBayar,
+        },
       };
     } catch (e: any) {
       if (e.message === 'Tagihan tidak ditemukan') {
@@ -119,8 +116,8 @@ export class TagihanController {
         tagihan: {
           id: updated.id,
           status: updated.status,
-          nominalTerbayar: updated.nominalTerbayar
-        }
+          nominalTerbayar: updated.nominalTerbayar,
+        },
       };
     } catch (e: any) {
       set.status = 400;
@@ -159,8 +156,8 @@ export class TagihanController {
         programStudi: {
           id: programStudi.id,
           nama: programStudi.nama,
-          kode: programStudi.kode
-        }
+          kode: programStudi.kode,
+        },
       })
       .from(skemaTarif)
       .leftJoin(programStudi, eq(skemaTarif.programStudiId, programStudi.id));
@@ -181,12 +178,7 @@ export class TagihanController {
       const [existing] = await db
         .select()
         .from(skemaTarif)
-        .where(
-          and(
-            eq(skemaTarif.angkatan, angkatan),
-            eq(skemaTarif.programStudiId, programStudiId)
-          )
-        )
+        .where(and(eq(skemaTarif.angkatan, angkatan), eq(skemaTarif.programStudiId, programStudiId)))
         .limit(1);
 
       if (existing) {
@@ -202,7 +194,7 @@ export class TagihanController {
           .values({
             angkatan,
             programStudiId,
-            nominal
+            nominal,
           })
           .returning();
         return { message: 'Tarif angkatan berhasil ditambahkan', data: created };

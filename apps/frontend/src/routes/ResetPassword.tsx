@@ -1,20 +1,22 @@
-import { createSignal, Show, onMount } from 'solid-js';
-import { useNavigate, useSearchParams, A } from '@solidjs/router';
-import { authController } from '../controllers/authController';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
+import { A, useNavigate, useSearchParams } from '@solidjs/router';
+import { createSignal, onMount, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { authController } from '../controllers/authController';
 
-const resetSchema = z.object({
-  password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
-  confirmPassword: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
-}).refine(data => data.password === data.confirmPassword, {
-  message: 'Konfirmasi password tidak cocok',
-  path: ['confirmPassword']
-});
+const resetSchema = z
+  .object({
+    password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+    confirmPassword: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Konfirmasi password tidak cocok',
+    path: ['confirmPassword'],
+  });
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -40,15 +42,18 @@ export default function ResetPassword() {
   createEffect(() => {
     const t = token();
     if (t) {
-      authController.getResetTokenDetails(t).then(data => {
-        if (data.email) {
-          setUsername(data.email);
-        }
-      }).catch(err => {
-        // We do not show error here since it might be a user typing an invalid token.
-        // Or if it was loaded from URL, we could show error, but we'll let submit handle validation.
-        setUsername('');
-      });
+      authController
+        .getResetTokenDetails(t)
+        .then((data) => {
+          if (data.email) {
+            setUsername(data.email);
+          }
+        })
+        .catch((err) => {
+          // We do not show error here since it might be a user typing an invalid token.
+          // Or if it was loaded from URL, we could show error, but we'll let submit handle validation.
+          setUsername('');
+        });
     } else {
       setUsername('');
     }
@@ -89,7 +94,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-100 via-slate-50 to-blue-50 dark:from-slate-950 dark:via-indigo-950 dark:to-slate-950 overflow-hidden px-4 transition-colors duration-200">
+    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-100 via-slate-50 to-brand-50 dark:from-slate-950 dark:via-indigo-950 dark:to-slate-950 overflow-hidden px-4 transition-colors duration-200">
       {/* Floating Theme Toggle in Top Right */}
       <div class="absolute top-4 right-4 z-50">
         <button
@@ -102,23 +107,33 @@ export default function ResetPassword() {
         >
           {auth.theme() === 'light' ? (
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
             </svg>
           ) : (
-            <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+            <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"
+              />
             </svg>
           )}
         </button>
       </div>
 
       <div class="absolute -top-40 -left-40 w-96 h-96 bg-brand-500/10 dark:bg-brand-500/20 rounded-full blur-[128px] pointer-events-none" />
-      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[128px] pointer-events-none" />
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-accent-500/10 dark:bg-accent-500/20 rounded-full blur-[128px] pointer-events-none" />
 
-      <div class="w-full max-w-md bg-white dark:bg-slate-900/60 dark:backdrop-blur-xl border border-brand-gray-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-slate-800 dark:text-white transition-all duration-200">
+      <div class="w-full max-w-md bg-white dark:bg-brand-gray-900/60 dark:backdrop-blur-xl border border-brand-gray-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-brand-gray-800 dark:text-white transition-all duration-200">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
-          <h2 class="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Atur Ulang Kata Sandi</h2>
+          <h2 class="text-2xl font-bold tracking-tight text-brand-gray-800 dark:text-white">Atur Ulang Kata Sandi</h2>
           <p class="text-sm text-brand-gray-500 dark:text-brand-gray-400">Masukkan kata sandi baru untuk akun Anda.</p>
         </div>
 
@@ -135,7 +150,7 @@ export default function ResetPassword() {
               label="Username (Email)"
               value={username()}
               disabled={true}
-              class="!bg-slate-50 dark:!bg-slate-950/40 !border-brand-gray-250 dark:!border-white/10 focus:!ring-0 !text-slate-800 dark:!text-white"
+              class="!bg-brand-gray-50 dark:!bg-brand-gray-950/40 !border-brand-gray-250 dark:!border-white/10 focus:!ring-0 !text-brand-gray-800 dark:!text-white"
             />
           </Show>
 
@@ -146,7 +161,7 @@ export default function ResetPassword() {
             value={token()}
             onInput={(e) => setToken(e.currentTarget.value)}
             disabled={loading() || !!searchParams.token}
-            class="!bg-slate-50 dark:!bg-slate-950/40 !border-brand-gray-250 dark:!border-white/10 !text-slate-800 dark:!text-white focus:!ring-brand-700/30"
+            class="!bg-brand-gray-50 dark:!bg-brand-gray-950/40 !border-brand-gray-250 dark:!border-white/10 !text-brand-gray-800 dark:!text-white focus:!ring-brand-700/30"
           />
 
           <Input
@@ -156,7 +171,7 @@ export default function ResetPassword() {
             value={password()}
             onInput={(e) => setPassword(e.currentTarget.value)}
             disabled={loading()}
-            class="!bg-slate-50 dark:!bg-slate-950/40 !border-brand-gray-250 dark:!border-white/10 !text-slate-800 dark:!text-white focus:!ring-brand-700/30"
+            class="!bg-brand-gray-50 dark:!bg-brand-gray-950/40 !border-brand-gray-250 dark:!border-white/10 !text-brand-gray-800 dark:!text-white focus:!ring-brand-700/30"
           />
 
           <Input
@@ -166,7 +181,7 @@ export default function ResetPassword() {
             value={confirmPassword()}
             onInput={(e) => setConfirmPassword(e.currentTarget.value)}
             disabled={loading()}
-            class="!bg-slate-50 dark:!bg-slate-950/40 !border-brand-gray-250 dark:!border-white/10 !text-slate-800 dark:!text-white focus:!ring-brand-700/30"
+            class="!bg-brand-gray-50 dark:!bg-brand-gray-950/40 !border-brand-gray-250 dark:!border-white/10 !text-brand-gray-800 dark:!text-white focus:!ring-brand-700/30"
           />
 
           <Button type="submit" disabled={loading()} class="w-full mt-2 py-3">
@@ -177,7 +192,7 @@ export default function ResetPassword() {
         <div class="text-center">
           <A
             href="/login"
-            class="text-xs text-brand-800 dark:text-blue-400 hover:text-brand-900 dark:hover:text-blue-300 font-semibold transition-colors focus:outline-none"
+            class="text-xs text-brand-800 dark:text-brand-400 hover:text-brand-900 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
           >
             Kembali ke Halaman Masuk
           </A>

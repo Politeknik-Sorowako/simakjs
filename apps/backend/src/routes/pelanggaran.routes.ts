@@ -1,12 +1,12 @@
 import { Elysia } from 'elysia';
 import { PelanggaranController } from '../controllers/pelanggaran.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   createPelanggaranSchema,
-  getPelanggaranMahasiswaSchema,
   getAllPelanggaranSchema,
-  updatePelanggaranSchema
+  getPelanggaranMahasiswaSchema,
+  updatePelanggaranSchema,
 } from '../schemas/pelanggaran.schema';
-import { authMiddleware } from '../middlewares/auth.middleware';
 
 export const pelanggaranRoutes = new Elysia({ prefix: '/pelanggaran' })
   .use(authMiddleware)

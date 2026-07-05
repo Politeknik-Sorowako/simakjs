@@ -20,7 +20,12 @@ export interface Mahasiswa {
 }
 
 export const mahasiswaController = {
-  async getAll(search?: string, page?: number, limit?: number, programStudiId?: number): Promise<PaginatedResponse<Mahasiswa>> {
+  async getAll(
+    search?: string,
+    page?: number,
+    limit?: number,
+    programStudiId?: number,
+  ): Promise<PaginatedResponse<Mahasiswa>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));

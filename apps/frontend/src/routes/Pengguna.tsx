@@ -1,11 +1,11 @@
-import { createResource, For, Show, createSignal } from 'solid-js';
-import { userController, UserItem } from '../controllers/userController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Table } from '../components/ui/Table';
-import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { UserItem, userController } from '../controllers/userController';
 
 export default function Pengguna() {
   const toast = useToast();
@@ -21,7 +21,7 @@ export default function Pengguna() {
     () => ({ page: page(), search: search() }),
     async ({ page, search }) => {
       return userController.getAll(page, 10, search);
-    }
+    },
   );
 
   const handleToggleActive = async (user: UserItem) => {
@@ -58,19 +58,23 @@ export default function Pengguna() {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex flex-col gap-1">
             <h1 class="text-2xl font-extrabold text-brand-gray-800 tracking-tight">Manajemen Pengguna</h1>
-            <p class="text-sm text-brand-gray-500">Aktivasi akun, pencarian, dan manajemen otorisasi peran (role) pengguna SIMAK.</p>
+            <p class="text-sm text-brand-gray-500">
+              Aktivasi akun, pencarian, dan manajemen otorisasi peran (role) pengguna SIMAK.
+            </p>
           </div>
-          
+
           <div class="flex items-center gap-3 w-full md:w-auto">
             <div class="w-full md:w-72">
               <input
                 type="text"
                 placeholder="Cari nama atau email..."
                 onInput={handleSearchInput}
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-4 py-2 text-sm text-brand-gray-900 focus:border-brand-700 focus:outline-none shadow-sm"
+                class="w-full rounded-lg border border-brand-gray-300 bg-white px-4 py-2 text-sm text-brand-gray-900 focus:border-brand-500 focus:outline-none shadow-sm"
               />
             </div>
-            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor Pengguna</Button>
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor Pengguna
+            </Button>
           </div>
         </div>
 
@@ -92,16 +96,12 @@ export default function Pengguna() {
             <Table headers={['Nama', 'Email', 'Role / Peran', 'Status', 'Aksi']}>
               <For each={usersRes()?.data}>
                 {(user) => (
-                  <tr class="hover:bg-brand-50/50 transition-colors">
-                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-brand-gray-800">
-                      {user.nama}
-                    </td>
-                    <td class="whitespace-nowrap px-6 py-4 text-brand-gray-500">
-                      {user.email}
-                    </td>
+                  <tr class="hover:bg-brand-gray-50/50 transition-colors">
+                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-brand-gray-800">{user.nama}</td>
+                    <td class="whitespace-nowrap px-6 py-4 text-brand-gray-500">{user.email}</td>
                     <td class="whitespace-nowrap px-6 py-4 text-brand-gray-600">
                       <select
-                        class="rounded-md border border-brand-gray-300 bg-white px-2 py-1 text-xs font-medium text-brand-gray-700 focus:border-brand-700 focus:outline-none shadow-sm"
+                        class="rounded-md border border-brand-gray-300 bg-white px-2 py-1 text-xs font-medium text-brand-gray-700 focus:border-brand-500 focus:outline-none shadow-sm"
                         value={user.role}
                         onChange={async (e) => {
                           const newRole = e.currentTarget.value;
@@ -133,7 +133,7 @@ export default function Pengguna() {
                           </span>
                         }
                       >
-                        <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/10">
+                        <span class="inline-flex items-center rounded-md bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-emerald-600/10">
                           Aktif
                         </span>
                       </Show>
@@ -155,11 +155,7 @@ export default function Pengguna() {
             {/* Pagination Controls */}
             <div class="flex items-center justify-between border-t border-brand-gray-100 bg-white px-6 py-4">
               <div class="flex flex-1 justify-between sm:hidden">
-                <Button
-                  variant="secondary"
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  disabled={page() === 1}
-                >
+                <Button variant="secondary" onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page() === 1}>
                   Sebelumnya
                 </Button>
                 <Button
