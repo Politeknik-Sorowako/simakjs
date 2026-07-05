@@ -1,9 +1,6 @@
+import { Resend } from 'resend';
 import { AuthService } from '../services/auth.service';
 import { AuthContext } from '../utils/types';
-import { db } from '../utils/db';
-import { users, passwordResets } from '../models/schema';
-import { eq } from 'drizzle-orm';
-import { Resend } from 'resend';
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
@@ -22,7 +19,12 @@ export class AuthController {
     }
   }
 
-  static async login({ body, jwt, set, cookie }: AuthContext & { jwt: { sign: (payload: Record<string, any>) => Promise<string> } }) {
+  static async login({
+    body,
+    jwt,
+    set,
+    cookie,
+  }: AuthContext & { jwt: { sign: (payload: Record<string, any>) => Promise<string> } }) {
     const user = await AuthService.validateUser(body.email, body.password);
     if (!user) {
       set.status = 401;
@@ -39,13 +41,13 @@ export class AuthController {
       role: user.role,
       theme: user.theme,
     });
-    
+
     // Set token in httpOnly cookie
     if (cookie && cookie.access_token) {
       cookie.access_token.set({
         value: token,
         httpOnly: true,
-        secure: false, // Set to false to support dev without https
+        secure: process.env.NODE_ENV === 'production',
         path: '/',
         sameSite: 'strict',
         maxAge: 7 * 24 * 60 * 60, // 7 days
@@ -86,14 +88,14 @@ export class AuthController {
             set.status = 429;
             return { error: 'Terlalu banyak permintaan reset password. Silakan coba lagi dalam 15 menit.' };
           }
-          // limitRecord.count++;
+          limitRecord.count++;
         }
       } else {
         rateLimitMap.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
       }
 
       // Check if user exists
-      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      const user = await AuthService.findByEmail(email);
       if (!user) {
         set.status = 404;
         return { error: 'Email tidak terdaftar' };
@@ -104,17 +106,11 @@ export class AuthController {
       const expiresAt = new Date(Date.now() + 3600000); // 1 hour expiration
 
       // Delete old tokens and insert new one
-      await db.delete(passwordResets).where(eq(passwordResets.email, email));
-      await db.insert(passwordResets).values({
-        email,
-        token,
-        expiresAt,
-      });
+      await AuthService.createPasswordReset(email, token, expiresAt);
 
       // Send reset link using Resend API if API Key is configured
       const resendApiKey = process.env.RESEND_API_KEY;
       if (resendApiKey) {
-        
         const domainName = process.env.DOMAIN_NAME || 'localhost';
         const protocol = domainName === 'localhost' ? 'http' : 'https';
         const port = domainName === 'localhost' ? ':8080' : '';
@@ -122,11 +118,11 @@ export class AuthController {
 
         try {
           const resend = new Resend(resendApiKey);
-          const {data, error} = await resend.emails.send({            
-              from: 'SIMAK Vokasi <onboarding@resend.dev>',
-              to: [email],
-              subject: 'Reset Kata Sandi - SIMAK Vokasi',
-              html: `
+          const { data, error } = await resend.emails.send({
+            from: 'SIMAK Vokasi <onboarding@resend.dev>',
+            to: [email],
+            subject: 'Reset Kata Sandi - SIMAK Vokasi',
+            html: `
                 <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
                   <h2 style="color: #1e3a8a; margin-bottom: 16px;">SIMAK Vokasi</h2>
                   <p>Halo,</p>
@@ -137,7 +133,7 @@ export class AuthController {
                   </div>
                   <p style="color: #64748b; font-size: 12px;">Jika Anda tidak meminta ini, abaikan email ini.</p>
                 </div>
-              `,            
+              `,
           });
 
           if (!error) {
@@ -155,8 +151,8 @@ export class AuthController {
       }
 
       return {
-        message: 'Link/token reset password berhasil dibuat',
-        token,
+        message:
+          'Link/token reset password berhasil dibuat. Silakan cek email Anda (atau lihat log server untuk development).',
       };
     } catch (error: any) {
       set.status = 500;
@@ -180,7 +176,7 @@ export class AuthController {
       }
 
       // Find token
-      const [resetRecord] = await db.select().from(passwordResets).where(eq(passwordResets.token, token)).limit(1);
+      const resetRecord = await AuthService.getPasswordReset(token);
       if (!resetRecord) {
         set.status = 400;
         return { error: 'Token reset password tidak valid atau kedaluwarsa' };
@@ -188,29 +184,24 @@ export class AuthController {
 
       // Check expiration
       if (resetRecord.expiresAt < new Date()) {
-        await db.delete(passwordResets).where(eq(passwordResets.id, resetRecord.id));
+        await AuthService.deletePasswordReset(resetRecord.id);
         set.status = 400;
         return { error: 'Token reset password telah kedaluwarsa' };
       }
 
       // Find user
-      const [user] = await db.select().from(users).where(eq(users.email, resetRecord.email)).limit(1);
+      const user = await AuthService.findByEmail(resetRecord.email);
       if (!user) {
         set.status = 404;
         return { error: 'Pengguna tidak ditemukan' };
       }
 
-      // Hash password
-      const hashedPassword = await Bun.password.hash(password, {
-        algorithm: 'bcrypt',
-        cost: 10,
-      });
-
-      // Update password
-      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, user.id));
+      // Hash and update password
+      const hashedPassword = await AuthService.hashPassword(password);
+      await AuthService.updatePassword(user.id, hashedPassword);
 
       // Clean up token
-      await db.delete(passwordResets).where(eq(passwordResets.id, resetRecord.id));
+      await AuthService.deletePasswordReset(resetRecord.id);
 
       return {
         message: 'Password Anda berhasil diubah. Silakan login kembali.',
@@ -228,19 +219,19 @@ export class AuthController {
         set.status = 400;
         return { error: 'Token wajib diisi' };
       }
-      
-      const [resetRecord] = await db.select().from(passwordResets).where(eq(passwordResets.token, token)).limit(1);
+
+      const resetRecord = await AuthService.getPasswordReset(token);
       if (!resetRecord) {
         set.status = 400;
         return { error: 'Token reset password tidak valid atau kedaluwarsa' };
       }
-      
+
       if (resetRecord.expiresAt < new Date()) {
-        await db.delete(passwordResets).where(eq(passwordResets.id, resetRecord.id));
+        await AuthService.deletePasswordReset(resetRecord.id);
         set.status = 400;
         return { error: 'Token reset password telah kedaluwarsa' };
       }
-      
+
       return { email: resetRecord.email };
     } catch (error: any) {
       set.status = 500;
@@ -248,4 +239,3 @@ export class AuthController {
     }
   }
 }
-

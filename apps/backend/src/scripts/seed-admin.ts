@@ -1,6 +1,6 @@
-import { db } from '../utils/db';
-import { users } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { users } from '../models/schema';
+import { db } from '../utils/db';
 
 async function seed() {
   console.log('Seeding initial active admin...');
@@ -16,7 +16,8 @@ async function seed() {
   });
 
   if (existing) {
-    await db.update(users)
+    await db
+      .update(users)
       .set({
         nama: 'Admin SIMAK',
         password: hashedPassword,

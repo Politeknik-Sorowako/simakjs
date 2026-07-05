@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -14,16 +14,16 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'TI-MK-SETUP',
           nama: 'Teknik Informatika MK Setup',
           jenjang: 'D4',
         }),
-      })
+      }),
     );
-    const data = await response.json() as { id: number };
+    const data = (await response.json()) as { id: number };
     prodiId = data.id;
   });
 
@@ -36,7 +36,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'MKTEST001',
@@ -46,7 +46,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
             sksPraktek: 2,
             programStudiId: prodiId,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
@@ -63,13 +63,13 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'MKTEST001',
             sksTotal: 'invalid', // type error
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -83,7 +83,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             kode: 'MKTEST001',
@@ -91,7 +91,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
             sksTotal: 4,
             programStudiId: prodiId,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -106,7 +106,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'MKTEST001',
@@ -114,14 +114,12 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
             sksTotal: 3,
             programStudiId: prodiId,
           }),
-        })
+        }),
       );
     });
 
     it('harus sukses mengambil list mata kuliah', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/mata-kuliah', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/mata-kuliah', { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.data.length).toBeGreaterThan(0);
@@ -138,7 +136,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'MKTEST001',
@@ -146,25 +144,21 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
             sksTotal: 3,
             programStudiId: prodiId,
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       mkId = data.id;
     });
 
     it('harus sukses mengambil detail mata kuliah berdasarkan ID valid', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/mata-kuliah/${mkId}`, { method: 'GET' })
-      );
+      const response = await app.handle(new Request(`http://localhost/mata-kuliah/${mkId}`, { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.kode).toBe('MKTEST001');
     });
 
     it('harus mengembalikan error 404 jika ID tidak ditemukan', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/mata-kuliah/999999', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/mata-kuliah/999999', { method: 'GET' }));
       expect(response.status).toBe(404);
     });
   });
@@ -179,7 +173,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'MKTEST001',
@@ -187,9 +181,9 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
             sksTotal: 3,
             programStudiId: prodiId,
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       mkId = data.id;
     });
 
@@ -201,12 +195,12 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: 'Struktur Data Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -222,12 +216,12 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: 'Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -244,7 +238,7 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'MKTEST001',
@@ -252,9 +246,9 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
             sksTotal: 3,
             programStudiId: prodiId,
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       mkId = data.id;
     });
 
@@ -265,9 +259,9 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
         new Request(`http://localhost/mata-kuliah/${mkId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -280,9 +274,9 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
         new Request('http://localhost/mata-kuliah/999999', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(404);

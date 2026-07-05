@@ -1,12 +1,12 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { useAuth } from '../contexts/AuthContext';
-import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
-import { mahasiswaController } from '../controllers/mahasiswaController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
+import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
+import { mahasiswaController } from '../controllers/mahasiswaController';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -22,7 +22,7 @@ export default function Pelanggaran() {
       if (!email) return null;
       const res = await mahasiswaController.getAll(email, 1, 1);
       return res.data[0] || null;
-    }
+    },
   );
 
   // Load student's own violations
@@ -31,7 +31,7 @@ export default function Pelanggaran() {
     async (id) => {
       if (!id) return null;
       return await bimbinganController.getPelanggaranByMhsId(id);
-    }
+    },
   );
 
   // Load all violations (for Admin/Dosen)
@@ -42,7 +42,7 @@ export default function Pelanggaran() {
     },
     async () => {
       return await bimbinganController.getAllPelanggaran();
-    }
+    },
   );
 
   // List of all students for the form dropdown (Admin/Dosen)
@@ -54,7 +54,7 @@ export default function Pelanggaran() {
     async () => {
       const res = await mahasiswaController.getAll(undefined, 1, 100);
       return res.data;
-    }
+    },
   );
 
   // Form State
@@ -155,7 +155,9 @@ export default function Pelanggaran() {
                 <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">Total Poin Pelanggaran</span>
               </div>
               <div class="p-3.5 bg-gray-50 border border-gray-100 rounded-xl">
-                <p class="text-[10px] text-gray-400 leading-relaxed uppercase tracking-wider font-semibold">Batas Poin Kelayakan (BPA):</p>
+                <p class="text-[10px] text-gray-400 leading-relaxed uppercase tracking-wider font-semibold">
+                  Batas Poin Kelayakan (BPA):
+                </p>
                 <ul class="text-[11px] text-gray-500 list-disc pl-4 mt-1 flex flex-col gap-0.5 font-medium">
                   <li>Total poin &gt; 25: Peringatan Keras (SP-1)</li>
                   <li>Total poin &gt; 50: Skorsing Akademik (SP-2)</li>
@@ -273,7 +275,11 @@ export default function Pelanggaran() {
         </Show>
 
         {/* Modal Entry Pelanggaran */}
-        <Modal show={showModal()} onClose={() => setShowModal(false)} title={editPelanggaranId() ? "Edit Catatan Pelanggaran" : "Catat Pelanggaran Baru"}>
+        <Modal
+          show={showModal()}
+          onClose={() => setShowModal(false)}
+          title={editPelanggaranId() ? 'Edit Catatan Pelanggaran' : 'Catat Pelanggaran Baru'}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold border border-rose-100">
@@ -290,7 +296,11 @@ export default function Pelanggaran() {
                 class="border border-gray-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-blue-500"
               >
                 <For each={students()}>
-                  {(item) => <option value={item.id}>{item.nama} ({item.nim})</option>}
+                  {(item) => (
+                    <option value={item.id}>
+                      {item.nama} ({item.nim})
+                    </option>
+                  )}
                 </For>
               </select>
             </div>

@@ -1,6 +1,6 @@
 import { fetchApi } from '../utils/api';
-import { PaginatedResponse } from './prodiController';
 import { Mahasiswa } from './mahasiswaController';
+import { PaginatedResponse } from './prodiController';
 
 export interface Tagihan {
   id: number;
@@ -58,17 +58,21 @@ export const tagihanController = {
     });
   },
 
-  async bayar(id: number, nominalBayar?: number, catatanKoreksi?: string): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
+  async bayar(
+    id: number,
+    nominalBayar?: number,
+    catatanKoreksi?: string,
+  ): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
     return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/${id}/bayar`, {
       method: 'POST',
-      body: JSON.stringify({ nominalBayar, catatanKoreksi })
+      body: JSON.stringify({ nominalBayar, catatanKoreksi }),
     });
   },
 
   async updateNominal(id: number, nominal: number): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
     return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/${id}`, {
       method: 'PUT',
-      body: JSON.stringify({ nominal })
+      body: JSON.stringify({ nominal }),
     });
   },
 
@@ -79,7 +83,7 @@ export const tagihanController = {
   async voidTransaksi(transaksiId: number, catatan: string): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
     return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/transaksi/${transaksiId}/void`, {
       method: 'POST',
-      body: JSON.stringify({ catatan })
+      body: JSON.stringify({ catatan }),
     });
   },
 
@@ -87,16 +91,20 @@ export const tagihanController = {
     return fetchApi<{ data: SkemaTarif[] }>('/tagihan/tarif');
   },
 
-  async createTarif(angkatan: string, programStudiId: number, nominal: number): Promise<{ message: string; data: SkemaTarif }> {
+  async createTarif(
+    angkatan: string,
+    programStudiId: number,
+    nominal: number,
+  ): Promise<{ message: string; data: SkemaTarif }> {
     return fetchApi<{ message: string; data: SkemaTarif }>('/tagihan/tarif', {
       method: 'POST',
-      body: JSON.stringify({ angkatan, programStudiId, nominal })
+      body: JSON.stringify({ angkatan, programStudiId, nominal }),
     });
   },
 
   async deleteTarif(id: number): Promise<{ message: string }> {
     return fetchApi<{ message: string }>(`/tagihan/tarif/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
   },
 };

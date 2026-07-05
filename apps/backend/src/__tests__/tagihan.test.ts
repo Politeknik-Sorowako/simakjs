@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -18,16 +18,16 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'TI-TAGIHAN-SETUP',
           nama: 'Teknik Informatika Tagihan Setup',
           jenjang: 'D4',
         }),
-      })
+      }),
     );
-    const prodiData = await prodiRes.json() as { id: number };
+    const prodiData = (await prodiRes.json()) as { id: number };
     prodiId = prodiData.id;
 
     // Create Mahasiswa
@@ -36,7 +36,7 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           nim: '88888888',
@@ -48,9 +48,9 @@ describe('9. Tagihan (/tagihan)', () => {
           jenisKelamin: 'L',
           tanggalLahir: '2002-01-01',
         }),
-      })
+      }),
     );
-    const mhsData = await mhsRes.json() as { id: number };
+    const mhsData = (await mhsRes.json()) as { id: number };
     mhsId = mhsData.id;
 
     // Create MK
@@ -59,7 +59,7 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'MKTAG001',
@@ -67,9 +67,9 @@ describe('9. Tagihan (/tagihan)', () => {
           sksTotal: 3,
           programStudiId: prodiId,
         }),
-      })
+      }),
     );
-    const mkData = await mkRes.json() as { id: number };
+    const mkData = (await mkRes.json()) as { id: number };
     mkId = mkData.id;
 
     // Create Periode
@@ -78,14 +78,14 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           id: '20231',
           nama: '2023/2024 Ganjil',
           aktif: true,
         }),
-      })
+      }),
     );
 
     // Create Kelas
@@ -94,16 +94,16 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           mataKuliahId: mkId,
           periodeId: '20231',
           namaKelas: 'TI-TAG-A',
         }),
-      })
+      }),
     );
-    const kelasData = await kelasRes.json() as { id: number };
+    const kelasData = (await kelasRes.json()) as { id: number };
     kelasId = kelasData.id;
   });
 
@@ -115,12 +115,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           periodeId: '20231',
         }),
-      })
+      }),
     );
 
     expect(generateRes.status).toBe(201);
@@ -132,9 +132,9 @@ describe('9. Tagihan (/tagihan)', () => {
       new Request(`http://localhost/mahasiswa/${mhsId}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
-      })
+      }),
     );
     const mhsBody = await checkMhsRes.json();
     expect(mhsBody.status).toBe('non_aktif');
@@ -149,12 +149,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           periodeId: '20231',
         }),
-      })
+      }),
     );
 
     // Try creating KRS, should fail
@@ -163,13 +163,13 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           mahasiswaId: mhsId,
           kelasKuliahId: kelasId,
         }),
-      })
+      }),
     );
 
     expect(krsRes.status).toBe(400);
@@ -187,7 +187,7 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           nip: '987654321',
@@ -195,7 +195,7 @@ describe('9. Tagihan (/tagihan)', () => {
           email: 'dosen-tagihan@test.com',
           programStudiId: prodiId,
         }),
-      })
+      }),
     );
 
     // Generate tagihan
@@ -204,12 +204,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           periodeId: '20231',
         }),
-      })
+      }),
     );
 
     // Get tagihan list to find the tagihan ID
@@ -217,9 +217,9 @@ describe('9. Tagihan (/tagihan)', () => {
       new Request('http://localhost/tagihan?limit=1', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
-      })
+      }),
     );
     const listBody = await listRes.json();
     const tagihanId = listBody.data[0].id;
@@ -229,9 +229,9 @@ describe('9. Tagihan (/tagihan)', () => {
       new Request(`http://localhost/tagihan/${tagihanId}/bayar`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
-      })
+      }),
     );
     expect(payRes.status).toBe(200);
 
@@ -241,13 +241,13 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           mahasiswaId: mhsId,
           kelasKuliahId: kelasId,
         }),
-      })
+      }),
     );
     expect(krsRes.status).toBe(201);
 
@@ -257,13 +257,13 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${dosenToken}`,
+          Authorization: `Bearer ${dosenToken}`,
         },
         body: JSON.stringify({
           mahasiswaId: mhsId,
           periodeId: '20231',
         }),
-      })
+      }),
     );
     expect(approveRes.status).toBe(200);
     const approveBody = await approveRes.json();
@@ -279,14 +279,14 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           angkatan: '8888', // Diambil dari 4 digit NIM mahasiswa ("88888888")
           programStudiId: prodiId,
           nominal: 3500000, // Tarif khusus angkatan 8888
         }),
-      })
+      }),
     );
     expect(tarifRes.status).toBe(200);
 
@@ -296,12 +296,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           periodeId: '20231',
         }),
-      })
+      }),
     );
 
     // Dapatkan tagihan yang di-generate
@@ -309,9 +309,9 @@ describe('9. Tagihan (/tagihan)', () => {
       new Request('http://localhost/tagihan?limit=1', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
-      })
+      }),
     );
     const listBody = await listRes.json();
     const tag = listBody.data[0];
@@ -325,12 +325,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           nominalBayar: 1500000,
         }),
-      })
+      }),
     );
     expect(bayar1Res.status).toBe(200);
     const bayar1Body = await bayar1Res.json();
@@ -341,9 +341,9 @@ describe('9. Tagihan (/tagihan)', () => {
       new Request(`http://localhost/tagihan/${tagihanId}/transaksi`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
-      })
+      }),
     );
     expect(logRes.status).toBe(200);
     const logBody = await logRes.json();
@@ -359,12 +359,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           catatan: 'Salah input nominal',
         }),
-      })
+      }),
     );
     expect(voidRes.status).toBe(200);
     const voidBody = await voidRes.json();
@@ -378,12 +378,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           status: 'cuti',
         }),
-      })
+      }),
     );
 
     // Daftarkan periode akademik 20251 terlebih dahulu
@@ -392,14 +392,14 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           id: '20251',
           nama: '2025/2026 Ganjil',
           aktif: true,
         }),
-      })
+      }),
     );
 
     // Buat tarif untuk angkatan berjalan (misal periode 20251 -> angkatan 2025)
@@ -408,14 +408,14 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           angkatan: '2025',
           programStudiId: prodiId,
           nominal: 4000000,
         }),
-      })
+      }),
     );
 
     // Generate tagihan periode 20251 untuk mahasiswa cuti
@@ -424,12 +424,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           periodeId: '20251',
         }),
-      })
+      }),
     );
 
     // Dapatkan tagihan mahasiswa cuti di periode 20251
@@ -437,9 +437,9 @@ describe('9. Tagihan (/tagihan)', () => {
       new Request(`http://localhost/tagihan?search=Mahasiswa Tagihan`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
-      })
+      }),
     );
     const cutiTagihanBody = await cutiTagihanRes.json();
     const tag2025 = cutiTagihanBody.data.find((t: any) => t.periodeId === '20251');
@@ -452,12 +452,12 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           nominal: 4500000,
         }),
-      })
+      }),
     );
     expect(editRes.status).toBe(200);
     const editBody = await editRes.json();

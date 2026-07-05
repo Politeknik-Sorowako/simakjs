@@ -1,8 +1,5 @@
 import { BapService } from '../services/bap.service';
 import { AuthContext } from '../utils/types';
-import { db } from '../utils/db';
-import { dosen, dosenPengajarKelas } from '../models/schema';
-import { eq } from 'drizzle-orm';
 
 export class BapController {
   static async getByKelas({ params, set, getCurrentUser }: AuthContext) {
@@ -32,29 +29,20 @@ export class BapController {
 
     let dosenId = body.dosenId;
     if (user.role === 'dosen') {
-      const dosenProfile = await db.query.dosen.findFirst({
-        where: eq(dosen.email, user.email),
-      });
+      const dosenProfile = await BapService.getDosenByEmail(user.email);
       if (!dosenProfile) {
         set.status = 400;
         return { error: 'Profil dosen tidak ditemukan.' };
       }
       dosenId = dosenProfile.id;
     } else {
-      // Check if body.dosenId exists
-      const dsnExists = await db.query.dosen.findFirst({
-        where: eq(dosen.id, dosenId)
-      });
+      const dsnExists = await BapService.getDosenById(dosenId);
       if (!dsnExists) {
-        // Find a teaching dosen for this class
-        const pengajar = await db.query.dosenPengajarKelas.findFirst({
-          where: eq(dosenPengajarKelas.kelasKuliahId, body.kelasKuliahId),
-        });
+        const pengajar = await BapService.getFirstTeachingDosen(body.kelasKuliahId);
         if (pengajar) {
           dosenId = pengajar.dosenId;
         } else {
-          // Fallback to any dosen
-          const anyDosen = await db.query.dosen.findFirst();
+          const anyDosen = await BapService.getAnyDosen();
           if (anyDosen) {
             dosenId = anyDosen.id;
           } else {
@@ -82,9 +70,7 @@ export class BapController {
 
     let dosenId = body.dosenId;
     if (user.role === 'dosen') {
-      const dosenProfile = await db.query.dosen.findFirst({
-        where: eq(dosen.email, user.email),
-      });
+      const dosenProfile = await BapService.getDosenByEmail(user.email);
       if (dosenProfile) {
         dosenId = dosenProfile.id;
       }

@@ -6,7 +6,7 @@ dist
 .output
 .bun-build
 *.log
-issue.md
+issue*.md
 prompt*.md
 prompt-frontend.md
 .agents

@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia';
 import { KelasKuliahController } from '../controllers/kelas-kuliah.controller';
-import {
-  getKelasSchema,
-  createKelasSchema,
-  getKelasByIdSchema,
-  updateKelasSchema,
-  deleteKelasSchema
-} from '../schemas/kelas-kuliah.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createKelasSchema,
+  deleteKelasSchema,
+  getKelasByIdSchema,
+  getKelasSchema,
+  updateKelasSchema,
+} from '../schemas/kelas-kuliah.schema';
 
 export const kelasKuliahRoutes = new Elysia({ prefix: '/kelas-kuliah' })
   .use(authMiddleware)

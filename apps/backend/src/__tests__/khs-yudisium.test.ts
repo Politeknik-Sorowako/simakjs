@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { app } from '../app';
-import { clearDatabase, getAuthToken } from './test-helper';
-import { db } from '../utils/db';
-import { programStudi, mahasiswa, periodeAkademik, tagihan, mataKuliah, kelasKuliah, krs } from '../models/schema';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
+import { app } from '../app';
+import { kelasKuliah, krs, mahasiswa, mataKuliah, periodeAkademik, programStudi, tagihan } from '../models/schema';
+import { db } from '../utils/db';
+import { clearDatabase, getAuthToken } from './test-helper';
 
 describe('KHS, Grade Components & Yudisium API', () => {
   let adminToken: string;
   let dosenToken: string;
   let mhsToken: string;
-  
+
   let prodiId: number;
   let mhsId: number;
   const periodeId = '20231';
@@ -25,25 +25,31 @@ describe('KHS, Grade Components & Yudisium API', () => {
     mhsToken = await getAuthToken('mhs@test.com', 'mahasiswa');
 
     // Seed Prodi
-    const [prodi] = await db.insert(programStudi).values({
-      kode: 'TI',
-      nama: 'Teknik Informatika',
-      jenjang: 'D4',
-    }).returning();
+    const [prodi] = await db
+      .insert(programStudi)
+      .values({
+        kode: 'TI',
+        nama: 'Teknik Informatika',
+        jenjang: 'D4',
+      })
+      .returning();
     prodiId = prodi.id;
 
     // Seed Mahasiswa
-    const [mhs] = await db.insert(mahasiswa).values({
-      nim: '20200001',
-      nama: 'Mahasiswa Test',
-      email: 'mhs@test.com',
-      programStudiId: prodiId,
-      status: 'aktif',
-      namaIbuKandung: 'Ibu Test',
-      nik: '1234567890123456',
-      jenisKelamin: 'L',
-      tanggalLahir: '2000-01-01',
-    }).returning();
+    const [mhs] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '20200001',
+        nama: 'Mahasiswa Test',
+        email: 'mhs@test.com',
+        programStudiId: prodiId,
+        status: 'aktif',
+        namaIbuKandung: 'Ibu Test',
+        nik: '1234567890123456',
+        jenisKelamin: 'L',
+        tanggalLahir: '2000-01-01',
+      })
+      .returning();
     mhsId = mhs.id;
 
     // Seed Active Periode
@@ -54,28 +60,37 @@ describe('KHS, Grade Components & Yudisium API', () => {
     });
 
     // Seed Mata Kuliah
-    const [mk] = await db.insert(mataKuliah).values({
-      kode: 'MK001',
-      nama: 'Pemrograman Web',
-      sksTotal: 3,
-      programStudiId: prodiId
-    }).returning();
+    const [mk] = await db
+      .insert(mataKuliah)
+      .values({
+        kode: 'MK001',
+        nama: 'Pemrograman Web',
+        sksTotal: 3,
+        programStudiId: prodiId,
+      })
+      .returning();
     mkId = mk.id;
 
     // Seed Kelas
-    const [kelas] = await db.insert(kelasKuliah).values({
-      mataKuliahId: mkId,
-      periodeId: periodeId,
-      namaKelas: 'TI-3A'
-    }).returning();
+    const [kelas] = await db
+      .insert(kelasKuliah)
+      .values({
+        mataKuliahId: mkId,
+        periodeId: periodeId,
+        namaKelas: 'TI-3A',
+      })
+      .returning();
     kelasId = kelas.id;
 
     // Seed KRS (Student Contracts Class)
-    const [krsRecord] = await db.insert(krs).values({
-      mahasiswaId: mhsId,
-      kelasKuliahId: kelasId,
-      isApproved: true
-    }).returning();
+    const [krsRecord] = await db
+      .insert(krs)
+      .values({
+        mahasiswaId: mhsId,
+        kelasKuliahId: kelasId,
+        isApproved: true,
+      })
+      .returning();
     krsId = krsRecord.id;
   });
 
@@ -86,16 +101,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
         mahasiswaId: mhsId,
         periodeId: periodeId,
         nominal: 5000000,
-        status: 'belum_bayar'
+        status: 'belum_bayar',
       });
 
       const response = await app.handle(
         new Request(`http://localhost/khs/mahasiswa/${mhsId}/periode/${periodeId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`
-          }
-        })
+            Authorization: `Bearer ${mhsToken}`,
+          },
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -109,16 +124,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
         mahasiswaId: mhsId,
         periodeId: periodeId,
         nominal: 5000000,
-        status: 'belum_bayar'
+        status: 'belum_bayar',
       });
 
       const response = await app.handle(
         new Request(`http://localhost/khs/mahasiswa/${mhsId}/periode/${periodeId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${adminToken}`
-          }
-        })
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -135,17 +150,17 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
             komponenList: [
               { nama: 'Tugas', bobot: 20 },
               { nama: 'UTS', bobot: 30 },
-              { nama: 'UAS', bobot: 50 }
-            ]
-          })
-        })
+              { nama: 'UAS', bobot: 50 },
+            ],
+          }),
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -159,16 +174,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
             komponenList: [
               { nama: 'Tugas', bobot: 20 },
-              { nama: 'UTS', bobot: 30 }
-            ]
-          })
-        })
+              { nama: 'UTS', bobot: 30 },
+            ],
+          }),
+        }),
       );
 
       expect(response.status).toBe(400);
@@ -181,16 +196,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
             komponenList: [
               { nama: 'UTS', bobot: 40 },
-              { nama: 'UAS', bobot: 60 }
-            ]
-          })
-        })
+              { nama: 'UAS', bobot: 60 },
+            ],
+          }),
+        }),
       );
       const comps = await compRes.json();
       const utsCompId = comps[0].id;
@@ -202,7 +217,7 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
@@ -211,21 +226,21 @@ describe('KHS, Grade Components & Yudisium API', () => {
                 krsId: krsId,
                 nilaiKomponenList: [
                   { komponenNilaiId: utsCompId, nilai: 80 },
-                  { komponenNilaiId: uasCompId, nilai: 90 }
-                ]
-              }
-            ]
-          })
-        })
+                  { komponenNilaiId: uasCompId, nilai: 90 },
+                ],
+              },
+            ],
+          }),
+        }),
       );
 
       expect(inputRes.status).toBe(200);
 
       // Verify updated KRS
       const [finalKrs] = await db.select().from(krs).where(eq(krs.id, krsId));
-      expect(parseFloat(finalKrs.nilaiAngka!)).toBe(86.00);
+      expect(parseFloat(finalKrs.nilaiAngka!)).toBe(86.0);
       expect(finalKrs.nilaiHuruf).toBe('A');
-      expect(parseFloat(finalKrs.nilaiIndeks!)).toBe(4.00);
+      expect(parseFloat(finalKrs.nilaiIndeks!)).toBe(4.0);
     });
 
     it('mengubah komponen nilai harus me-reset nilai akhir KRS mahasiswa terkait menjadi null', async () => {
@@ -234,16 +249,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
             komponenList: [
               { nama: 'UTS', bobot: 50 },
-              { nama: 'UAS', bobot: 50 }
-            ]
-          })
-        })
+              { nama: 'UAS', bobot: 50 },
+            ],
+          }),
+        }),
       );
       const comps1 = await compRes1.json();
 
@@ -252,7 +267,7 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
@@ -261,12 +276,12 @@ describe('KHS, Grade Components & Yudisium API', () => {
                 krsId: krsId,
                 nilaiKomponenList: [
                   { komponenNilaiId: comps1[0].id, nilai: 80 },
-                  { komponenNilaiId: comps1[1].id, nilai: 90 }
-                ]
-              }
-            ]
-          })
-        })
+                  { komponenNilaiId: comps1[1].id, nilai: 90 },
+                ],
+              },
+            ],
+          }),
+        }),
       );
 
       const [krsBefore] = await db.select().from(krs).where(eq(krs.id, krsId));
@@ -277,17 +292,17 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
             komponenList: [
               { nama: 'Tugas', bobot: 20 },
               { nama: 'UTS', bobot: 30 },
-              { nama: 'UAS', bobot: 50 }
-            ]
-          })
-        })
+              { nama: 'UAS', bobot: 50 },
+            ],
+          }),
+        }),
       );
 
       const [krsAfter] = await db.select().from(krs).where(eq(krs.id, krsId));
@@ -304,16 +319,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             judulTa: 'Rancang Bangun Aplikasi SIMAK Vokasi',
             skorToefl: 480,
             bebasPerpustakaan: true,
             bebasLab: true,
-            buktiPembayaranWisuda: true
-          })
-        })
+            buktiPembayaranWisuda: true,
+          }),
+        }),
       );
 
       expect(response.status).toBe(201);
@@ -329,16 +344,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             judulTa: 'Judul Wisuda',
             skorToefl: 500,
             bebasPerpustakaan: true,
             bebasLab: true,
-            buktiPembayaranWisuda: true
-          })
-        })
+            buktiPembayaranWisuda: true,
+          }),
+        }),
       );
 
       // 2. Admin Approve
@@ -347,13 +362,13 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             status: 'disetujui',
-            catatan: 'Selamat atas kelulusannya.'
-          })
-        })
+            catatan: 'Selamat atas kelulusannya.',
+          }),
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -387,16 +402,16 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${tokenMhs2}`
+            Authorization: `Bearer ${tokenMhs2}`,
           },
           body: JSON.stringify({
             judulTa: 'Judul Wisuda',
             skorToefl: 500,
             bebasPerpustakaan: true,
             bebasLab: true,
-            buktiPembayaranWisuda: true
-          })
-        })
+            buktiPembayaranWisuda: true,
+          }),
+        }),
       );
 
       await app.handle(
@@ -404,12 +419,12 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
-            status: 'disetujui'
-          })
-        })
+            status: 'disetujui',
+          }),
+        }),
       );
 
       const [mhsLulus] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, 999));
@@ -421,13 +436,13 @@ describe('KHS, Grade Components & Yudisium API', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             status: 'ditolak',
-            catatan: 'Dokumen palsu atau tidak lengkap.'
-          })
-        })
+            catatan: 'Dokumen palsu atau tidak lengkap.',
+          }),
+        }),
       );
 
       const [mhsReverted] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, 999));

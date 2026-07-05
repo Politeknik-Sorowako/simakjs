@@ -1,57 +1,42 @@
-import { MahasiswaService } from '../services/mahasiswa.service';
 import { CsvImportService } from '../services/csv-import.service';
-import { AuthContext, PaginationQuery } from '../utils/types';
-import { db } from '../utils/db';
-import { mahasiswa, dosen } from '../models/schema';
-import { eq } from 'drizzle-orm';
+import { MahasiswaService } from '../services/mahasiswa.service';
+import { AuthContext, PaginationQuery, parsePagination } from '../utils/types';
 
 export class MahasiswaController {
-  private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
-    return mhs ? mhs.id : null;
-  }
-
   static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery & { programStudiId?: string }>) {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data mahasiswa.' };
     }
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 10;
+    const { page, limit } = parsePagination(query);
     const search = query?.search || '';
     const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
 
     if (user.role === 'mahasiswa') {
-      const myMhsId = await MahasiswaController.getMahasiswaIdByEmail(user.email);
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
         return {
           data: [],
-          meta: { total: 0, page, limit, totalPages: 0 }
+          meta: { total: 0, page, limit, totalPages: 0 },
         };
       }
       const mhs = await MahasiswaService.getById(myMhsId);
       return {
         data: mhs ? [mhs] : [],
-        meta: { total: mhs ? 1 : 0, page: 1, limit, totalPages: mhs ? 1 : 0 }
+        meta: { total: mhs ? 1 : 0, page: 1, limit, totalPages: mhs ? 1 : 0 },
       };
     }
 
     if (user.role === 'dosen') {
-      const [dsn] = await db
-        .select({ id: dosen.id })
-        .from(dosen)
-        .where(eq(dosen.email, user.email));
-      if (!dsn) {
+      const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
+      if (!dsnId) {
         return {
           data: [],
-          meta: { total: 0, page, limit, totalPages: 0 }
+          meta: { total: 0, page, limit, totalPages: 0 },
         };
       }
-      return await MahasiswaService.getAll(page, limit, search, dsn.id, programStudiId);
+      return await MahasiswaService.getAll(page, limit, search, dsnId, programStudiId);
     }
 
     return await MahasiswaService.getAll(page, limit, search, undefined, programStudiId);
@@ -65,7 +50,7 @@ export class MahasiswaController {
     }
     const targetId = parseInt(params.id);
     if (user.role === 'mahasiswa') {
-      const myMhsId = await MahasiswaController.getMahasiswaIdByEmail(user.email);
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetId) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
@@ -78,11 +63,8 @@ export class MahasiswaController {
     }
 
     if (user.role === 'dosen') {
-      const [dsn] = await db
-        .select({ id: dosen.id })
-        .from(dosen)
-        .where(eq(dosen.email, user.email));
-      if (!dsn || mhs.dosenPaId !== dsn.id) {
+      const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
+      if (!dsnId || mhs.dosenPaId !== dsnId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya diizinkan mengakses data mahasiswa bimbingan Anda.' };
       }
@@ -116,11 +98,8 @@ export class MahasiswaController {
     }
 
     if (user.role === 'dosen') {
-      const [dsn] = await db
-        .select({ id: dosen.id })
-        .from(dosen)
-        .where(eq(dosen.email, user.email));
-      if (!dsn || mhs.dosenPaId !== dsn.id) {
+      const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
+      if (!dsnId || mhs.dosenPaId !== dsnId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya dapat mengubah data mahasiswa bimbingan Anda.' };
       }

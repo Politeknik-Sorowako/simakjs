@@ -1,35 +1,36 @@
-import { Routes, Route, Navigate } from '@solidjs/router';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Navigate, Route, Routes } from '@solidjs/router';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
-
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
+import BapPresensi from './routes/BapPresensi';
+import Bimbingan from './routes/Bimbingan';
+import CutiMahasiswa from './routes/CutiMahasiswa';
+import Dashboard from './routes/Dashboard';
+import Dosen from './routes/Dosen';
+import ForgotPassword from './routes/ForgotPassword';
+import InputNilai from './routes/InputNilai';
+import KelasKuliah from './routes/KelasKuliah';
+import KeuanganDashboard from './routes/KeuanganDashboard';
+import Khs from './routes/Khs';
+import Krs from './routes/Krs';
+import Kurikulum from './routes/Kurikulum';
+import LaporanKompensasi from './routes/LaporanKompensasi';
 // Routes imports
 import Login from './routes/Login';
-import Dashboard from './routes/Dashboard';
-import ProgramStudi from './routes/ProgramStudi';
 import Mahasiswa from './routes/Mahasiswa';
-import Dosen from './routes/Dosen';
-import PeriodeAkademik from './routes/PeriodeAkademik';
+import MahasiswaKeluar from './routes/MahasiswaKeluar';
+import ManajemenCuti from './routes/ManajemenCuti';
 import MataKuliah from './routes/MataKuliah';
-import KelasKuliah from './routes/KelasKuliah';
-import Krs from './routes/Krs';
-import KeuanganDashboard from './routes/KeuanganDashboard';
-import BapPresensi from './routes/BapPresensi';
-import LaporanKompensasi from './routes/LaporanKompensasi';
-import Bimbingan from './routes/Bimbingan';
-import Pelanggaran from './routes/Pelanggaran';
-import Khs from './routes/Khs';
-import InputNilai from './routes/InputNilai';
-import Yudisium from './routes/Yudisium';
 import { PddiktiSync } from './routes/PddiktiSync';
+import Pelanggaran from './routes/Pelanggaran';
 import Pengguna from './routes/Pengguna';
+import PeriodeAkademik from './routes/PeriodeAkademik';
 import Profil from './routes/Profil';
-import ForgotPassword from './routes/ForgotPassword';
+import ProgramStudi from './routes/ProgramStudi';
 import ResetPassword from './routes/ResetPassword';
-import Kurikulum from './routes/Kurikulum';
 import Rps from './routes/Rps';
-
-import { WorkspaceProvider } from './contexts/WorkspaceContext';
+import Yudisium from './routes/Yudisium';
 
 function AppContent() {
   const auth = useAuth();
@@ -210,18 +211,33 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
-
-      {/* Catch-all redirect */}
       <Route
-        path="*"
+        path="/pengajuan-cuti"
         element={
-          auth.isAuthenticated() ? (
-            <Navigate href="/dashboard" />
-          ) : (
-            <Navigate href="/login" />
-          )
+          <ProtectedRoute allowedRoles={['mahasiswa']}>
+            <CutiMahasiswa />
+          </ProtectedRoute>
         }
       />
+      <Route
+        path="/manajemen-cuti"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'keuangan']}>
+            <ManajemenCuti />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/penonaktifan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <MahasiswaKeluar />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Catch-all redirect */}
+      <Route path="*" element={auth.isAuthenticated() ? <Navigate href="/dashboard" /> : <Navigate href="/login" />} />
     </Routes>
   );
 }

@@ -1,16 +1,13 @@
-import { KrsService } from '../services/krs.service';
-import { AuthContext, PaginationQuery } from '../utils/types';
-import { db } from '../utils/db';
-import { mahasiswa } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
+import { KrsService } from '../services/krs.service';
+import { db } from '../utils/db';
+import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class KrsController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
@@ -30,7 +27,7 @@ export class KrsController {
       if (!myMhsId) {
         return {
           data: [],
-          meta: { total: 0, page, limit, totalPages: 0 }
+          meta: { total: 0, page, limit, totalPages: 0 },
         };
       }
       filterMhsId = myMhsId;

@@ -1,20 +1,22 @@
-import { createSignal, Show, onMount } from 'solid-js';
-import { useNavigate, useSearchParams, A } from '@solidjs/router';
-import { authController } from '../controllers/authController';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { useToast } from '../contexts/ToastContext';
-import { useAuth } from '../contexts/AuthContext';
+import { A, useNavigate, useSearchParams } from '@solidjs/router';
+import { createSignal, onMount, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { authController } from '../controllers/authController';
 
-const resetSchema = z.object({
-  password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
-  confirmPassword: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
-}).refine(data => data.password === data.confirmPassword, {
-  message: 'Konfirmasi password tidak cocok',
-  path: ['confirmPassword']
-});
+const resetSchema = z
+  .object({
+    password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+    confirmPassword: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Konfirmasi password tidak cocok',
+    path: ['confirmPassword'],
+  });
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -40,15 +42,18 @@ export default function ResetPassword() {
   createEffect(() => {
     const t = token();
     if (t) {
-      authController.getResetTokenDetails(t).then(data => {
-        if (data.email) {
-          setUsername(data.email);
-        }
-      }).catch(err => {
-        // We do not show error here since it might be a user typing an invalid token.
-        // Or if it was loaded from URL, we could show error, but we'll let submit handle validation.
-        setUsername('');
-      });
+      authController
+        .getResetTokenDetails(t)
+        .then((data) => {
+          if (data.email) {
+            setUsername(data.email);
+          }
+        })
+        .catch((err) => {
+          // We do not show error here since it might be a user typing an invalid token.
+          // Or if it was loaded from URL, we could show error, but we'll let submit handle validation.
+          setUsername('');
+        });
     } else {
       setUsername('');
     }
@@ -102,11 +107,21 @@ export default function ResetPassword() {
         >
           {auth.theme() === 'light' ? (
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
             </svg>
           ) : (
             <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"
+              />
             </svg>
           )}
         </button>

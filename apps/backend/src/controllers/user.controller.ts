@@ -1,8 +1,8 @@
-import { db } from '../utils/db';
+import { count, eq, ilike, or } from 'drizzle-orm';
 import { users } from '../models/schema';
-import { eq, count, ilike, or } from 'drizzle-orm';
-import { AuthContext } from '../utils/types';
 import { CsvImportService } from '../services/csv-import.service';
+import { db } from '../utils/db';
+import { AuthContext } from '../utils/types';
 
 export class UserController {
   static async getAll({ query, set, getCurrentUser }: AuthContext) {
@@ -20,16 +20,10 @@ export class UserController {
 
       let whereClause = undefined;
       if (search) {
-        whereClause = or(
-          ilike(users.nama, `%${search}%`),
-          ilike(users.email, `%${search}%`)
-        );
+        whereClause = or(ilike(users.nama, `%${search}%`), ilike(users.email, `%${search}%`));
       }
 
-      const [totalResult] = await db
-        .select({ total: count() })
-        .from(users)
-        .where(whereClause);
+      const [totalResult] = await db.select({ total: count() }).from(users).where(whereClause);
 
       const total = totalResult?.total || 0;
       const totalPages = Math.ceil(total / limit);
@@ -57,7 +51,7 @@ export class UserController {
           page,
           limit,
           totalPages,
-        }
+        },
       };
     } catch (error: any) {
       set.status = 500;
@@ -91,7 +85,8 @@ export class UserController {
         return { error: 'Anda tidak dapat menonaktifkan akun sendiri' };
       }
 
-      const [updated] = await db.update(users)
+      const [updated] = await db
+        .update(users)
         .set({ isActive: !user.isActive })
         .where(eq(users.id, userId))
         .returning();
@@ -104,7 +99,7 @@ export class UserController {
           nama: updated.nama,
           role: updated.role,
           isActive: updated.isActive,
-        }
+        },
       };
     } catch (error: any) {
       set.status = 500;
@@ -145,10 +140,7 @@ export class UserController {
         return { error: 'Anda tidak dapat mengubah peran akun sendiri' };
       }
 
-      const [updated] = await db.update(users)
-        .set({ role: newRole })
-        .where(eq(users.id, userId))
-        .returning();
+      const [updated] = await db.update(users).set({ role: newRole }).where(eq(users.id, userId)).returning();
 
       return {
         message: 'Peran pengguna berhasil diperbarui',
@@ -158,7 +150,7 @@ export class UserController {
           nama: updated.nama,
           role: updated.role,
           isActive: updated.isActive,
-        }
+        },
       };
     } catch (error: any) {
       set.status = 500;
@@ -218,10 +210,7 @@ export class UserController {
         return { error: 'Tidak ada data yang diperbarui' };
       }
 
-      const [updated] = await db.update(users)
-        .set(updateData)
-        .where(eq(users.id, currentUser.id))
-        .returning();
+      const [updated] = await db.update(users).set(updateData).where(eq(users.id, currentUser.id)).returning();
 
       return {
         message: 'Profil Anda berhasil diperbarui',
@@ -232,7 +221,7 @@ export class UserController {
           role: updated.role,
           theme: updated.theme,
           avatar: updated.avatar,
-        }
+        },
       };
     } catch (error: any) {
       set.status = 500;

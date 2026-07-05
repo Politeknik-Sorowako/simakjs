@@ -13,7 +13,10 @@ export function Table(props: TableProps) {
           <thead class="bg-gray-50/75 dark:bg-slate-950/40">
             <tr>
               {props.headers.map((h) => (
-                <th scope="col" class="px-6 py-4 font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider text-xs">
+                <th
+                  scope="col"
+                  class="px-6 py-4 font-semibold text-gray-600 dark:text-slate-400 uppercase tracking-wider text-xs"
+                >
                   {h}
                 </th>
               ))}

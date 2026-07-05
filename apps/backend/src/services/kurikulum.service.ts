@@ -1,6 +1,6 @@
-import { db } from '../utils/db';
+import { and, count, eq, ilike, or } from 'drizzle-orm';
 import { kurikulum, kurikulumMataKuliah } from '../models/schema';
-import { count, eq, ilike, or, and } from 'drizzle-orm';
+import { db } from '../utils/db';
 
 export interface CreateKurikulumDto {
   kode: string;
@@ -31,10 +31,7 @@ export class KurikulumService {
     let whereClause = undefined;
 
     if (search) {
-      whereClause = or(
-        ilike(kurikulum.nama, `%${search}%`),
-        ilike(kurikulum.kode, `%${search}%`)
-      );
+      whereClause = or(ilike(kurikulum.nama, `%${search}%`), ilike(kurikulum.kode, `%${search}%`));
     }
 
     if (prodiId) {
@@ -45,13 +42,10 @@ export class KurikulumService {
       }
     }
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(kurikulum)
-      .where(whereClause);
-    
+    const [totalResult] = await db.select({ total: count() }).from(kurikulum).where(whereClause);
+
     const total = totalResult?.total || 0;
-    
+
     const data = await db.query.kurikulum.findMany({
       where: whereClause,
       limit,
@@ -59,7 +53,7 @@ export class KurikulumService {
       with: {
         programStudi: true,
         semesterMulaiPeriode: true,
-      }
+      },
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -70,8 +64,8 @@ export class KurikulumService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -83,10 +77,10 @@ export class KurikulumService {
         semesterMulaiPeriode: true,
         kurikulumMataKuliah: {
           with: {
-            mataKuliah: true
-          }
-        }
-      }
+            mataKuliah: true,
+          },
+        },
+      },
     });
     return data || null;
   }
@@ -94,9 +88,7 @@ export class KurikulumService {
   static async create(data: CreateKurikulumDto) {
     // Jika isAktif = true, nonaktifkan kurikulum lain di prodi yang sama
     if (data.isAktif) {
-      await db.update(kurikulum)
-        .set({ isAktif: false })
-        .where(eq(kurikulum.programStudiId, data.programStudiId));
+      await db.update(kurikulum).set({ isAktif: false }).where(eq(kurikulum.programStudiId, data.programStudiId));
     }
 
     const [newKur] = await db.insert(kurikulum).values(data).returning();
@@ -107,25 +99,16 @@ export class KurikulumService {
     if (data.isAktif) {
       const existing = await this.getById(id);
       if (existing) {
-        await db.update(kurikulum)
-          .set({ isAktif: false })
-          .where(eq(kurikulum.programStudiId, existing.programStudiId));
+        await db.update(kurikulum).set({ isAktif: false }).where(eq(kurikulum.programStudiId, existing.programStudiId));
       }
     }
 
-    const [updatedKur] = await db
-      .update(kurikulum)
-      .set(data)
-      .where(eq(kurikulum.id, id))
-      .returning();
+    const [updatedKur] = await db.update(kurikulum).set(data).where(eq(kurikulum.id, id)).returning();
     return updatedKur || null;
   }
 
   static async delete(id: number) {
-    const [deletedKur] = await db
-      .delete(kurikulum)
-      .where(eq(kurikulum.id, id))
-      .returning();
+    const [deletedKur] = await db.delete(kurikulum).where(eq(kurikulum.id, id)).returning();
     return deletedKur || null;
   }
 
@@ -134,7 +117,7 @@ export class KurikulumService {
       .insert(kurikulumMataKuliah)
       .values({
         kurikulumId,
-        ...data
+        ...data,
       })
       .returning();
     return newKmk;
@@ -143,12 +126,7 @@ export class KurikulumService {
   static async removeMataKuliah(kurikulumId: number, mataKuliahId: number) {
     const [deletedKmk] = await db
       .delete(kurikulumMataKuliah)
-      .where(
-        and(
-          eq(kurikulumMataKuliah.kurikulumId, kurikulumId),
-          eq(kurikulumMataKuliah.mataKuliahId, mataKuliahId)
-        )
-      )
+      .where(and(eq(kurikulumMataKuliah.kurikulumId, kurikulumId), eq(kurikulumMataKuliah.mataKuliahId, mataKuliahId)))
       .returning();
     return deletedKmk || null;
   }

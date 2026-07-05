@@ -1,6 +1,6 @@
+import { and, count, eq } from 'drizzle-orm';
+import { dosen, dosenPengajarKelas, kelasKuliah } from '../models/schema';
 import { db } from '../utils/db';
-import { dosenPengajarKelas, dosen, kelasKuliah } from '../models/schema';
-import { count, eq, and } from 'drizzle-orm';
 
 export interface CreateDosenPengajarDto {
   dosenId: number;
@@ -12,16 +12,13 @@ export interface CreateDosenPengajarDto {
 export class DosenPengajarService {
   static async getAll(page = 1, limit = 10, kelasKuliahId?: number) {
     const offset = (page - 1) * limit;
-    
+
     let whereClause = undefined;
     if (kelasKuliahId) {
       whereClause = eq(dosenPengajarKelas.kelasKuliahId, kelasKuliahId);
     }
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(dosenPengajarKelas)
-      .where(whereClause);
+    const [totalResult] = await db.select({ total: count() }).from(dosenPengajarKelas).where(whereClause);
 
     const total = totalResult?.total || 0;
 
@@ -38,13 +35,13 @@ export class DosenPengajarService {
           id: dosen.id,
           nip: dosen.nip,
           nama: dosen.nama,
-          email: dosen.email
+          email: dosen.email,
         },
         kelasKuliah: {
           id: kelasKuliah.id,
           namaKelas: kelasKuliah.namaKelas,
-          periodeId: kelasKuliah.periodeId
-        }
+          periodeId: kelasKuliah.periodeId,
+        },
       })
       .from(dosenPengajarKelas)
       .leftJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
@@ -61,8 +58,8 @@ export class DosenPengajarService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -70,8 +67,8 @@ export class DosenPengajarService {
     const existing = await db.query.dosenPengajarKelas.findFirst({
       where: and(
         eq(dosenPengajarKelas.dosenId, data.dosenId),
-        eq(dosenPengajarKelas.kelasKuliahId, data.kelasKuliahId)
-      )
+        eq(dosenPengajarKelas.kelasKuliahId, data.kelasKuliahId),
+      ),
     });
     if (existing) {
       throw new Error('Dosen sudah di-plot pada kelas ini.');
@@ -83,7 +80,7 @@ export class DosenPengajarService {
         dosenId: data.dosenId,
         kelasKuliahId: data.kelasKuliahId,
         sksBebanMengajar: data.sksBebanMengajar,
-        idPddikti: data.idPddikti
+        idPddikti: data.idPddikti,
       })
       .returning();
 
@@ -91,10 +88,7 @@ export class DosenPengajarService {
   }
 
   static async delete(id: number) {
-    const [deletedPlotting] = await db
-      .delete(dosenPengajarKelas)
-      .where(eq(dosenPengajarKelas.id, id))
-      .returning();
+    const [deletedPlotting] = await db.delete(dosenPengajarKelas).where(eq(dosenPengajarKelas.id, id)).returning();
 
     return deletedPlotting || null;
   }

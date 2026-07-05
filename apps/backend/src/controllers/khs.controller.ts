@@ -1,18 +1,8 @@
 import { KhsService } from '../services/khs.service';
+import { MahasiswaService } from '../services/mahasiswa.service';
 import { AuthContext } from '../utils/types';
-import { db } from '../utils/db';
-import { mahasiswa } from '../models/schema';
-import { eq } from 'drizzle-orm';
 
 export class KhsController {
-  private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
-    return mhs ? mhs.id : null;
-  }
-
   static async getByMhsIdAndPeriode({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user) {
@@ -30,7 +20,7 @@ export class KhsController {
 
     // RBAC Check
     if (user.role === 'mahasiswa') {
-      const myMhsId = await KhsController.getMahasiswaIdByEmail(user.email);
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya dapat melihat KHS Anda sendiri.' };
@@ -42,7 +32,7 @@ export class KhsController {
         return {
           blocked: true,
           reason: clearance.reason,
-          detail: clearance.detail
+          detail: clearance.detail,
         };
       }
     }
@@ -51,7 +41,7 @@ export class KhsController {
       const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
       return {
         blocked: false,
-        ...khs
+        ...khs,
       };
     } catch (err: any) {
       set.status = 400;
@@ -74,7 +64,7 @@ export class KhsController {
 
     // RBAC Check
     if (user.role === 'mahasiswa') {
-      const myMhsId = await KhsController.getMahasiswaIdByEmail(user.email);
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya dapat melihat Transkrip Anda sendiri.' };
@@ -106,7 +96,7 @@ export class KhsController {
 
     // RBAC Check
     if (user.role === 'mahasiswa') {
-      const myMhsId = await KhsController.getMahasiswaIdByEmail(user.email);
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya dapat melihat kelayakan ujian Anda sendiri.' };

@@ -6,16 +6,18 @@ export const cpmkBody = t.Object({
   deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
 });
 
-export const updateCpmkBody = t.Partial(t.Object({
-  kode: t.String(),
-  deskripsi: t.String(),
-}));
+export const updateCpmkBody = t.Partial(
+  t.Object({
+    kode: t.String(),
+    deskripsi: t.String(),
+  }),
+);
 
 export const createCpmkSchema = {
   detail: {
     tags: ['CPMK'],
     summary: 'Tambah CPMK Baru',
-    description: 'Menambahkan CPMK baru untuk Mata Kuliah tertentu.'
+    description: 'Menambahkan CPMK baru untuk Mata Kuliah tertentu.',
   },
   body: cpmkBody,
   response: {
@@ -23,43 +25,44 @@ export const createCpmkSchema = {
       id: t.Integer({ default: 1 }),
       mataKuliahId: t.Integer({ default: 1 }),
       kode: t.String({ default: 'CPMK-1' }),
-      deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' })
-    })
-  }
+      deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
+    }),
+  },
 };
 
 export const getCpmkByMataKuliahSchema = {
   detail: {
     tags: ['CPMK'],
     summary: 'Daftar CPMK Mata Kuliah',
-    description: 'Mengambil daftar CPMK berdasarkan ID Mata Kuliah.'
+    description: 'Mengambil daftar CPMK berdasarkan ID Mata Kuliah.',
   },
   params: t.Object({
-    mataKuliahId: t.Numeric()
+    mataKuliahId: t.Numeric(),
   }),
   response: {
-    200: t.Array(t.Object({
-      id: t.Integer({ default: 1 }),
-      mataKuliahId: t.Integer({ default: 1 }),
-      kode: t.String({ default: 'CPMK-1' }),
-      deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' })
-    }))
-  }
+    200: t.Array(
+      t.Object({
+        id: t.Integer({ default: 1 }),
+        mataKuliahId: t.Integer({ default: 1 }),
+        kode: t.String({ default: 'CPMK-1' }),
+        deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
+      }),
+    ),
+  },
 };
 
 export const deleteCpmkSchema = {
   detail: {
     tags: ['CPMK'],
     summary: 'Hapus CPMK',
-    description: 'Menghapus CPMK berdasarkan ID.'
+    description: 'Menghapus CPMK berdasarkan ID.',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   response: {
     200: t.Object({
-      message: t.String({ default: 'CPMK berhasil dihapus' })
-    })
-  }
+      message: t.String({ default: 'CPMK berhasil dihapus' }),
+    }),
+  },
 };
-

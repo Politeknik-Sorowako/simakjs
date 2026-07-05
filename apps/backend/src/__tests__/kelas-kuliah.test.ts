@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -15,16 +15,16 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'TI-KELAS-SETUP',
           nama: 'Teknik Informatika Kelas Setup',
           jenjang: 'D4',
         }),
-      })
+      }),
     );
-    const prodiData = await prodiRes.json() as { id: number };
+    const prodiData = (await prodiRes.json()) as { id: number };
     prodiId = prodiData.id;
 
     const mkRes = await app.handle(
@@ -32,7 +32,7 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           kode: 'MKKELAS001',
@@ -40,9 +40,9 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           sksTotal: 3,
           programStudiId: prodiId,
         }),
-      })
+      }),
     );
-    const mkData = await mkRes.json() as { id: number };
+    const mkData = (await mkRes.json()) as { id: number };
     mkId = mkData.id;
 
     await app.handle(
@@ -50,14 +50,14 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${adminToken}`,
+          Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
           id: '20232',
           nama: '2023/2024 Genap',
           aktif: true,
         }),
-      })
+      }),
     );
   });
 
@@ -70,14 +70,14 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: mkId,
             periodeId: '20232',
             namaKelas: 'TI-4A',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
@@ -94,13 +94,13 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: 'invalid', // should be number
             periodeId: '20232',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -114,14 +114,14 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: mkId,
             periodeId: '20232',
             namaKelas: 'TI-4A',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -136,21 +136,19 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: mkId,
             periodeId: '20232',
             namaKelas: 'TI-4A',
           }),
-        })
+        }),
       );
     });
 
     it('harus sukses mengambil list kelas kuliah', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/kelas-kuliah', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/kelas-kuliah', { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.data.length).toBeGreaterThan(0);
@@ -167,32 +165,28 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: mkId,
             periodeId: '20232',
             namaKelas: 'TI-4A',
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       kelasId = data.id;
     });
 
     it('harus sukses mengambil detail kelas kuliah berdasarkan ID valid', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/kelas-kuliah/${kelasId}`, { method: 'GET' })
-      );
+      const response = await app.handle(new Request(`http://localhost/kelas-kuliah/${kelasId}`, { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.namaKelas).toBe('TI-4A');
     });
 
     it('harus mengembalikan error 404 jika ID tidak ditemukan', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/kelas-kuliah/999999', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/kelas-kuliah/999999', { method: 'GET' }));
       expect(response.status).toBe(404);
     });
   });
@@ -207,16 +201,16 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: mkId,
             periodeId: '20232',
             namaKelas: 'TI-4A',
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       kelasId = data.id;
     });
 
@@ -228,12 +222,12 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             namaKelas: 'TI-4A-Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -249,12 +243,12 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             namaKelas: 'Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -271,16 +265,16 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: mkId,
             periodeId: '20232',
             namaKelas: 'TI-4A',
           }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       kelasId = data.id;
     });
 
@@ -291,9 +285,9 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
         new Request(`http://localhost/kelas-kuliah/${kelasId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -306,9 +300,9 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
         new Request('http://localhost/kelas-kuliah/999999', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(404);

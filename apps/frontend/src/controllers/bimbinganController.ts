@@ -80,7 +80,17 @@ export const bimbinganController = {
     });
   },
 
-  async updateBimbingan(mhsId: number, data: { ringkasan?: string; isApproved?: boolean; permasalahan?: string; solusi?: string; tanggalBimbingan?: string; statusBkd?: boolean }): Promise<Bimbingan> {
+  async updateBimbingan(
+    mhsId: number,
+    data: {
+      ringkasan?: string;
+      isApproved?: boolean;
+      permasalahan?: string;
+      solusi?: string;
+      tanggalBimbingan?: string;
+      statusBkd?: boolean;
+    },
+  ): Promise<Bimbingan> {
     return fetchApi<Bimbingan>(`/bimbingan/mahasiswa/${mhsId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -91,26 +101,47 @@ export const bimbinganController = {
     return fetchApi<BimbinganMonitoring[]>('/bimbingan/monitoring');
   },
 
-  async getRekapBkd(dosenId?: number, periodeId?: string): Promise<{ data: (Bimbingan & { mahasiswa: { nim: string; nama: string } })[] }> {
+  async getRekapBkd(
+    dosenId?: number,
+    periodeId?: string,
+  ): Promise<{ data: (Bimbingan & { mahasiswa: { nim: string; nama: string } })[] }> {
     const params = new URLSearchParams();
     if (dosenId) params.append('dosenId', String(dosenId));
     if (periodeId) params.append('periodeId', periodeId);
     const query = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<{ data: (Bimbingan & { mahasiswa: { nim: string; nama: string } })[] }>(`/bimbingan/rekap-bkd${query}`);
+    return fetchApi<{ data: (Bimbingan & { mahasiswa: { nim: string; nama: string } })[] }>(
+      `/bimbingan/rekap-bkd${query}`,
+    );
   },
 
-  async getAkademikSummary(mhsId: number): Promise<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }> {
-    return fetchApi<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }>(`/bimbingan/mahasiswa/${mhsId}/akademik-summary`);
+  async getAkademikSummary(
+    mhsId: number,
+  ): Promise<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }> {
+    return fetchApi<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }>(
+      `/bimbingan/mahasiswa/${mhsId}/akademik-summary`,
+    );
   },
 
-  async addSesi(mhsId: number, data: { pertemuanKe: number; tanggalBimbingan: string; permasalahan: string; solusi: string; statusBkd?: boolean }): Promise<SesiBimbingan> {
+  async addSesi(
+    mhsId: number,
+    data: { pertemuanKe: number; tanggalBimbingan: string; permasalahan: string; solusi: string; statusBkd?: boolean },
+  ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/mahasiswa/${mhsId}/sesi`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  async updateSesi(sesiId: number, data: { pertemuanKe?: number; tanggalBimbingan?: string; permasalahan?: string; solusi?: string; statusBkd?: boolean }): Promise<SesiBimbingan> {
+  async updateSesi(
+    sesiId: number,
+    data: {
+      pertemuanKe?: number;
+      tanggalBimbingan?: string;
+      permasalahan?: string;
+      solusi?: string;
+      statusBkd?: boolean;
+    },
+  ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/sesi/${sesiId}`, {
       method: 'PUT',
       body: JSON.stringify(data),

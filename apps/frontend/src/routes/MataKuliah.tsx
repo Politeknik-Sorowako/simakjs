@@ -1,14 +1,14 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { mataKuliahController, MataKuliah as IMataKuliah } from '../controllers/mataKuliahController';
-import { prodiController } from '../controllers/prodiController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
-import { useWorkspace } from '../contexts/WorkspaceContext';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { MataKuliah as IMataKuliah, mataKuliahController } from '../controllers/mataKuliahController';
+import { prodiController } from '../controllers/prodiController';
 
 export default function MataKuliah() {
   const auth = useAuth();
@@ -26,9 +26,9 @@ export default function MataKuliah() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null
+      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
     }),
-    ({ search, page, limit, prodiId }) => mataKuliahController.getAll(search, page, limit, prodiId || undefined)
+    ({ search, page, limit, prodiId }) => mataKuliahController.getAll(search, page, limit, prodiId || undefined),
   );
 
   // Fetch Program Studi for Dropdown
@@ -114,7 +114,9 @@ export default function MataKuliah() {
             <p class="text-sm text-gray-500">Kelola daftar kurikulum mata kuliah, SKS, dan program studi terkait.</p>
           </div>
           <div class="flex gap-2">
-            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor CSV
+            </Button>
             <Button onClick={openAddModal}>+ Tambah Matkul</Button>
           </div>
         </div>
@@ -123,7 +125,16 @@ export default function MataKuliah() {
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
           importUrl="/mata-kuliah/import"
-          templateHeaders={['kode', 'nama', 'sksTotal', 'sksTatapMuka', 'sksPraktek', 'sksPraktekLapangan', 'sksSimulasi', 'programStudiKode']}
+          templateHeaders={[
+            'kode',
+            'nama',
+            'sksTotal',
+            'sksTatapMuka',
+            'sksPraktek',
+            'sksPraktekLapangan',
+            'sksSimulasi',
+            'programStudiKode',
+          ]}
           title="Mata Kuliah"
           onSuccess={() => refetch()}
         />
@@ -199,7 +210,11 @@ export default function MataKuliah() {
           </Show>
         </Show>
 
-        <Modal show={showModal()} title={editId() ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah'} onClose={() => setShowModal(false)}>
+        <Modal
+          show={showModal()}
+          title={editId() ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah'}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">
@@ -247,18 +262,14 @@ export default function MataKuliah() {
                 label="Program Studi"
                 value={prodiId()}
                 onChange={(e) => setProdiId(Number(e.currentTarget.value))}
-                selectOptions={
-                  prodis()?.data.map((p) => ({ label: `${p.jenjang} - ${p.nama}`, value: p.id })) || []
-                }
+                selectOptions={prodis()?.data.map((p) => ({ label: `${p.jenjang} - ${p.nama}`, value: p.id })) || []}
               />
             </div>
             <div class="flex justify-end gap-2 border-t pt-4">
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Simpan
-              </Button>
+              <Button type="submit">Simpan</Button>
             </div>
           </form>
         </Modal>

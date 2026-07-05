@@ -1,7 +1,7 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
-import { khsController } from '../controllers/khsController';
 import { useToast } from '../contexts/ToastContext';
+import { khsController } from '../controllers/khsController';
 
 export function PddiktiSync() {
   const toast = useToast();
@@ -18,22 +18,25 @@ export function PddiktiSync() {
 
   const handleSync = async () => {
     setIsSyncing(true);
-    setSyncLogs(['Menghubungkan ke Neo Feeder PDDIKTI...', 'Mengunduh data akademik lokal yang belum disinkronisasi...']);
+    setSyncLogs([
+      'Menghubungkan ke Neo Feeder PDDIKTI...',
+      'Mengunduh data akademik lokal yang belum disinkronisasi...',
+    ]);
 
     try {
       // Simulate real-time progress steps
       setTimeout(() => {
-        setSyncLogs(prev => [...prev, 'Mengunggah Program Studi dan Mata Kuliah...']);
+        setSyncLogs((prev) => [...prev, 'Mengunggah Program Studi dan Mata Kuliah...']);
       }, 800);
-      
+
       setTimeout(() => {
-        setSyncLogs(prev => [...prev, 'Memvalidasi data Mahasiswa dan Kelas Kuliah...']);
+        setSyncLogs((prev) => [...prev, 'Memvalidasi data Mahasiswa dan Kelas Kuliah...']);
       }, 1500);
 
       const res = await khsController.syncPddikti();
 
       setTimeout(() => {
-        setSyncLogs(prev => [
+        setSyncLogs((prev) => [
           ...prev,
           `Sinkronisasi Program Studi: +${res.details.prodiSynced} data`,
           `Sinkronisasi Mata Kuliah: +${res.details.mataKuliahSynced} data`,
@@ -41,15 +44,14 @@ export function PddiktiSync() {
           `Sinkronisasi Kelas Kuliah: +${res.details.kelasSynced} data`,
           `Sinkronisasi KRS & Nilai Mahasiswa: +${res.details.krsSynced} data`,
           '-------------------------------------------------------',
-          '✅ SUCCESS: Sinkronisasi Neo Feeder PDDIKTI selesai tanpa kendala!'
+          '✅ SUCCESS: Sinkronisasi Neo Feeder PDDIKTI selesai tanpa kendala!',
         ]);
         setIsSyncing(false);
         refetchStats();
         toast.showToast('Sinkronisasi PDDIKTI berhasil dilaksanakan!', 'success');
       }, 2500);
-
     } catch (e: any) {
-      setSyncLogs(prev => [...prev, `❌ ERROR: ${e.message || 'Gagal terhubung ke Neo Feeder PDDIKTI'}`]);
+      setSyncLogs((prev) => [...prev, `❌ ERROR: ${e.message || 'Gagal terhubung ke Neo Feeder PDDIKTI'}`]);
       setIsSyncing(false);
       toast.showToast('Gagal melakukan sinkronisasi PDDIKTI.', 'error');
     }
@@ -62,7 +64,9 @@ export function PddiktiSync() {
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <div>
             <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">PDDIKTI Feeder Sync</h1>
-            <p class="text-sm text-gray-500">Sinkronisasi data mahasiswa, kelas kuliah, KRS, dan nilai akhir ke pangkalan data nasional</p>
+            <p class="text-sm text-gray-500">
+              Sinkronisasi data mahasiswa, kelas kuliah, KRS, dan nilai akhir ke pangkalan data nasional
+            </p>
           </div>
           <button
             onClick={handleSync}
@@ -76,7 +80,10 @@ export function PddiktiSync() {
         </div>
 
         {/* Stats Grid */}
-        <Show when={stats()} fallback={<div class="text-center py-12 text-gray-400">Memuat status sinkronisasi...</div>}>
+        <Show
+          when={stats()}
+          fallback={<div class="text-center py-12 text-gray-400">Memuat status sinkronisasi...</div>}
+        >
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Mahasiswa Stats */}
             <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
@@ -156,7 +163,9 @@ export function PddiktiSync() {
             <div class="flex flex-col gap-2 max-h-72 overflow-y-auto">
               <For each={syncLogs()}>
                 {(log) => (
-                  <div class={`${log.startsWith('❌') ? 'text-rose-400' : log.startsWith('✅') ? 'text-emerald-450 font-bold' : 'text-gray-300'}`}>
+                  <div
+                    class={`${log.startsWith('❌') ? 'text-rose-400' : log.startsWith('✅') ? 'text-emerald-450 font-bold' : 'text-gray-300'}`}
+                  >
                     {log}
                   </div>
                 )}

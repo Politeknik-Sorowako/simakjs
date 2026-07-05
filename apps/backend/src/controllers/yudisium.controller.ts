@@ -1,15 +1,12 @@
-import { YudisiumService } from '../services/yudisium.service';
-import { AuthContext } from '../utils/types';
-import { db } from '../utils/db';
-import { mahasiswa } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { mahasiswa } from '../models/schema';
+import { YudisiumService } from '../services/yudisium.service';
+import { db } from '../utils/db';
+import { AuthContext } from '../utils/types';
 
 export class YudisiumController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
