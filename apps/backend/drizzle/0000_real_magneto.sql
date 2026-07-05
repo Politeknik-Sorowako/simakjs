@@ -1,5 +1,5 @@
 DO $$ BEGIN
- CREATE TYPE "public"."user_role" AS ENUM('admin', 'dosen', 'mahasiswa');
+ CREATE TYPE "public"."user_role" AS ENUM('admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

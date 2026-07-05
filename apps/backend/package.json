@@ -9,7 +9,7 @@
     "start:dev": "bun src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "test": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun drizzle-kit push && DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun test"
+    "test": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun run src/scripts/pre-test.ts && DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun test"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.0.0",

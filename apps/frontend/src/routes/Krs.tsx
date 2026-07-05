@@ -249,8 +249,8 @@ export default function Krs() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-800">Kartu Rencana Studi (KRS)</h1>
-            <p class="text-sm text-gray-500">
+            <h1 class="text-2xl font-extrabold text-brand-gray-800">Kartu Rencana Studi (KRS)</h1>
+            <p class="text-sm text-brand-gray-500">
               {role() === 'mahasiswa'
                 ? 'Daftar rencana studi semester aktif yang Anda kontrak.'
                 : 'Kelola pendaftaran kontrak rencana studi dan input nilai indeks mahasiswa.'}
@@ -306,13 +306,13 @@ export default function Krs() {
 
         {/* Tab Switcher (Only for admin and dosen) */}
         <Show when={role() === 'admin' || role() === 'dosen'}>
-          <div class="flex gap-2 border-b border-gray-100 pb-3">
+          <div class="flex gap-2 border-b border-brand-gray-100 pb-3">
             <button
               onClick={() => setActiveTab('kelola')}
               class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab() === 'kelola'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-150'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-brand-600 text-white shadow-sm shadow-blue-150'
+                  : 'bg-white border border-brand-gray-200 text-brand-gray-600 hover:bg-brand-gray-50'
               }`}
             >
               Kelola KRS
@@ -321,8 +321,8 @@ export default function Krs() {
               onClick={() => setActiveTab('massal')}
               class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab() === 'massal'
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-150'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  ? 'bg-brand-600 text-white shadow-sm shadow-blue-150'
+                  : 'bg-white border border-brand-gray-200 text-brand-gray-600 hover:bg-brand-gray-50'
               }`}
             >
               Persetujuan Massal KRS
@@ -345,7 +345,7 @@ export default function Krs() {
             </div>
           </Show>
 
-          <Show when={!krsData.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+          <Show when={!krsData.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
             <Table
               headers={[
                 'Mahasiswa',
@@ -360,15 +360,15 @@ export default function Krs() {
             >
               <For each={krsData()?.data}>
                 {(item) => (
-                  <tr class="hover:bg-gray-50/50 transition-colors">
+                  <tr class="hover:bg-brand-gray-50/50 transition-colors">
                     <td class="px-6 py-4">
-                      <div class="font-medium text-gray-800">{item.mahasiswa?.nama}</div>
-                      <div class="text-xs text-gray-400 font-mono">{item.mahasiswa?.nim}</div>
+                      <div class="font-medium text-brand-gray-800">{item.mahasiswa?.nama}</div>
+                      <div class="text-xs text-brand-gray-400 font-mono">{item.mahasiswa?.nim}</div>
                     </td>
-                    <td class="px-6 py-4 text-gray-700">{item.kelasKuliah?.namaKelas}</td>
-                    <td class="px-6 py-4 text-gray-500 font-mono text-xs">{item.kelasKuliah?.periodeId}</td>
+                    <td class="px-6 py-4 text-brand-gray-700">{item.kelasKuliah?.namaKelas}</td>
+                    <td class="px-6 py-4 text-brand-gray-500 font-mono text-xs">{item.kelasKuliah?.periodeId}</td>
                     <td class="px-6 py-4 font-mono font-semibold">{item.nilaiAngka || '-'}</td>
-                    <td class="px-6 py-4 font-bold text-blue-600">{item.nilaiHuruf || '-'}</td>
+                    <td class="px-6 py-4 font-bold text-brand-600">{item.nilaiHuruf || '-'}</td>
                     <td class="px-6 py-4 font-mono">{item.nilaiIndeks || '-'}</td>
                     <td class="px-6 py-4">
                       <span
@@ -396,7 +396,7 @@ export default function Krs() {
               </For>
               <Show when={krsData()?.data.length === 0}>
                 <tr>
-                  <td colspan="8" class="px-6 py-10 text-center text-gray-400">
+                  <td colspan="8" class="px-6 py-10 text-center text-brand-gray-400">
                     Tidak ada kontrak KRS ditemukan.
                   </td>
                 </tr>
@@ -406,7 +406,7 @@ export default function Krs() {
             {/* Pagination */}
             <Show when={krsData() && krsData()!.meta.totalPages > 1}>
               <div class="flex justify-between items-center mt-4">
-                <span class="text-xs text-gray-500">
+                <span class="text-xs text-brand-gray-500">
                   Menampilkan halaman {page()} dari {krsData()?.meta.totalPages} ({krsData()?.meta.total} total data)
                 </span>
                 <div class="flex gap-2">
@@ -433,10 +433,10 @@ export default function Krs() {
         </Show>
 
         <Show when={activeTab() === 'massal' && role() !== 'mahasiswa'}>
-          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
+          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-brand-gray-100 shadow-sm mb-4">
             <div>
-              <h3 class="font-bold text-gray-800">Daftar Mahasiswa dengan KRS Pending</h3>
-              <p class="text-xs text-gray-400 mt-0.5">
+              <h3 class="font-bold text-brand-gray-800">Daftar Mahasiswa dengan KRS Pending</h3>
+              <p class="text-xs text-brand-gray-400 mt-0.5">
                 Pilih satu atau beberapa mahasiswa untuk disetujui KRS-nya sekaligus.
               </p>
             </div>
@@ -452,14 +452,14 @@ export default function Krs() {
 
           <Show
             when={!pendingStudents.loading}
-            fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}
+            fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}
           >
             <Table headers={['Pilih', 'NIM', 'Nama Mahasiswa', 'Email', 'Status']}>
               <For
                 each={pendingStudents()}
                 fallback={
                   <tr>
-                    <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">
+                    <td colspan="5" class="px-6 py-10 text-center text-brand-gray-400 italic">
                       Tidak ada mahasiswa dengan kontrak KRS pending di periode ini.
                     </td>
                   </tr>
@@ -475,18 +475,18 @@ export default function Krs() {
                     }
                   };
                   return (
-                    <tr class="hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={toggleCheck}>
+                    <tr class="hover:bg-brand-gray-50/50 transition-colors cursor-pointer" onClick={toggleCheck}>
                       <td class="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={isChecked()}
                           onChange={toggleCheck}
-                          class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4 cursor-pointer"
+                          class="rounded border-brand-gray-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer"
                         />
                       </td>
-                      <td class="px-6 py-4 font-mono text-gray-700">{student.nim}</td>
-                      <td class="px-6 py-4 font-bold text-gray-900">{student.nama}</td>
-                      <td class="px-6 py-4 text-gray-500">{student.email}</td>
+                      <td class="px-6 py-4 font-mono text-brand-gray-700">{student.nim}</td>
+                      <td class="px-6 py-4 font-bold text-brand-gray-900">{student.nama}</td>
+                      <td class="px-6 py-4 text-brand-gray-500">{student.email}</td>
                       <td class="px-6 py-4">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
                           Pending
@@ -524,8 +524,8 @@ export default function Krs() {
               }
             >
               <div class="flex flex-col gap-1.5 w-full">
-                <label class="text-xs font-semibold uppercase tracking-wider text-gray-500">Mahasiswa</label>
-                <div class="px-4 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-sm font-semibold text-gray-800">
+                <label class="text-xs font-semibold uppercase tracking-wider text-brand-gray-500">Mahasiswa</label>
+                <div class="px-4 py-2.5 rounded-lg bg-brand-gray-50 border border-brand-gray-200 text-sm font-semibold text-brand-gray-800">
                   {mahasiswaProfile()?.nim} - {mahasiswaProfile()?.nama}
                 </div>
               </div>

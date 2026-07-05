@@ -21,8 +21,16 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { authMiddleware } from '../middlewares/auth.middleware';
 
-export const e2eRoutes = new Elysia({ prefix: '/e2e' }).post('/reset', async ({ set }) => {
+export const e2eRoutes = new Elysia({ prefix: '/e2e' })
+  .use(authMiddleware)
+  .post('/reset', async ({ set, getCurrentUser }) => {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya admin yang dapat mereset database.' };
+    }
   try {
     // 1. Clean Database
     await db.delete(pengajuanYudisium);
@@ -183,6 +191,6 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).post('/reset', async ({ 
   } catch (error: any) {
     console.error('Failed to reset database:', error);
     set.status = 500;
-    return { error: 'Failed to reset database', details: error.message };
+    return { error: 'Gagal mereset database' };
   }
 });

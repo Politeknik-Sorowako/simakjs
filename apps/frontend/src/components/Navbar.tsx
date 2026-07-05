@@ -54,32 +54,33 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
   };
 
   return (
-    <header class="h-16 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
+    <header class="h-16 bg-white dark:bg-brand-gray-900 border-b border-brand-gray-100 dark:border-brand-gray-800 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
       <div class="flex items-center gap-3">
         {/* Mobile Hamburger Toggle Button */}
         <button
           onClick={() => props.onToggleSidebar()}
-          class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 focus:outline-none md:hidden"
+          aria-label="Buka menu navigasi"
+          class="p-2 rounded-lg text-brand-gray-500 hover:bg-brand-gray-100 dark:hover:bg-brand-gray-800 focus:outline-none md:hidden"
         >
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
-        <h2 class="text-md font-bold text-gray-800 dark:text-white hidden sm:block">Sistem Informasi Akademik</h2>
+        <h2 class="text-md font-bold text-brand-gray-800 dark:text-white hidden sm:block">Sistem Informasi Akademik</h2>
       </div>
 
       {/* Global Filter for Admin */}
       <Show when={role() === 'admin'}>
-        <div class="hidden md:flex items-center gap-3 bg-gray-50 dark:bg-slate-800/40 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-800">
+        <div class="hidden md:flex items-center gap-3 bg-brand-gray-50 dark:bg-brand-gray-800/40 px-3 py-1.5 rounded-xl border border-brand-gray-200 dark:border-brand-gray-800">
           <div class="flex items-center gap-1.5 text-xs">
-            <span class="text-gray-500 font-semibold dark:text-slate-400">Prodi:</span>
+            <span class="text-brand-gray-500 font-semibold dark:text-brand-gray-400">Prodi:</span>
             <select
               onChange={(e) => {
                 const val = e.currentTarget.value;
                 workspace.setSelectedProdiId(val ? parseInt(val) : null);
               }}
-              class="bg-transparent border-0 font-bold text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
+              class="bg-transparent border-0 font-bold text-brand-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
             >
               <option value="" selected={workspace.selectedProdiId() === null}>
                 Semua Prodi
@@ -93,15 +94,15 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
               </For>
             </select>
           </div>
-          <div class="h-4 w-px bg-gray-300 dark:bg-slate-700"></div>
+          <div class="h-4 w-px bg-brand-gray-300 dark:bg-brand-gray-700"></div>
           <div class="flex items-center gap-1.5 text-xs">
-            <span class="text-gray-500 font-semibold dark:text-slate-400">Periode:</span>
+            <span class="text-brand-gray-500 font-semibold dark:text-brand-gray-400">Periode:</span>
             <select
               onChange={(e) => {
                 const val = e.currentTarget.value;
                 workspace.setSelectedPeriodeId(val || null);
               }}
-              class="bg-transparent border-0 font-bold text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
+              class="bg-transparent border-0 font-bold text-brand-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
             >
               <option value="" selected={workspace.selectedPeriodeId() === null}>
                 Semua Periode
@@ -122,11 +123,11 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
         {/* Night Mode Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          class="p-2.5 rounded-xl bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-white hover:bg-gray-200 dark:hover:bg-slate-750 transition-all focus:outline-none shadow-sm"
+          class="p-2.5 rounded-xl bg-brand-gray-100 dark:bg-brand-gray-800 border border-brand-gray-200 dark:border-brand-gray-700 text-brand-gray-700 dark:text-white hover:bg-brand-gray-200 dark:hover:bg-brand-gray-750 transition-all focus:outline-none shadow-sm"
           title="Beralih Mode Gelap/Terang"
         >
           {auth.theme() === 'light' ? (
-            <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-5 h-5 text-brand-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -135,7 +136,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
               />
             </svg>
           ) : (
-            <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"

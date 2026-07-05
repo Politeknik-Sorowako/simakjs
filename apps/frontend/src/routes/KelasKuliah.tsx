@@ -154,8 +154,8 @@ export default function KelasKuliah() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-800">Kelas Kuliah</h1>
-            <p class="text-sm text-gray-500">Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.</p>
+            <h1 class="text-2xl font-extrabold text-brand-gray-800">Kelas Kuliah</h1>
+            <p class="text-sm text-brand-gray-500">Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.</p>
           </div>
           <Button onClick={openAddModal}>+ Tambah Kelas</Button>
         </div>
@@ -171,22 +171,22 @@ export default function KelasKuliah() {
           />
         </div>
 
-        <Show when={!kelas.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+        <Show when={!kelas.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
           <Table headers={['Nama Kelas', 'Mata Kuliah', 'Periode Akademik', 'Dosen Pengajar', 'Aksi']}>
             <For each={kelas()?.data}>
               {(item) => (
-                <tr class="hover:bg-gray-50/50 transition-colors">
-                  <td class="px-6 py-4 font-semibold text-gray-800">{item.namaKelas}</td>
-                  <td class="px-6 py-4 text-gray-700">
+                <tr class="hover:bg-brand-gray-50/50 transition-colors">
+                  <td class="px-6 py-4 font-semibold text-brand-gray-800">{item.namaKelas}</td>
+                  <td class="px-6 py-4 text-brand-gray-700">
                     {item.mataKuliah?.nama}{' '}
-                    <span class="text-xs text-gray-400 font-mono">({item.mataKuliah?.kode})</span>
+                    <span class="text-xs text-brand-gray-400 font-mono">({item.mataKuliah?.kode})</span>
                   </td>
-                  <td class="px-6 py-4 text-gray-600">{item.periodeAkademik?.nama || item.periodeId}</td>
-                  <td class="px-6 py-4 text-gray-700">
+                  <td class="px-6 py-4 text-brand-gray-600">{item.periodeAkademik?.nama || item.periodeId}</td>
+                  <td class="px-6 py-4 text-brand-gray-700">
                     <div class="flex flex-wrap gap-1.5 items-center">
                       <For each={item.dosenPengajarKelas}>
                         {(dp) => (
-                          <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-100 rounded px-2 py-0.5 text-xs font-semibold">
+                          <span class="inline-flex items-center gap-1 bg-brand-50 text-brand-700 border border-brand-100 rounded px-2 py-0.5 text-xs font-semibold">
                             {dp.dosen?.nama} ({dp.sksBebanMengajar || 0} SKS)
                             <button
                               onClick={() => handleUnplot(dp.id)}
@@ -200,7 +200,7 @@ export default function KelasKuliah() {
                       </For>
                       <button
                         onClick={() => openPlotModal(item)}
-                        class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50/55 rounded transition-all focus:outline-none"
+                        class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border border-dashed border-brand-300 text-brand-600 hover:bg-brand-50/55 rounded transition-all focus:outline-none"
                       >
                         + Plot Dosen
                       </button>
@@ -219,7 +219,7 @@ export default function KelasKuliah() {
             </For>
             <Show when={kelas()?.data.length === 0}>
               <tr>
-                <td colspan="5" class="px-6 py-10 text-center text-gray-400">
+                <td colspan="5" class="px-6 py-10 text-center text-brand-gray-400">
                   Tidak ada data kelas kuliah ditemukan.
                 </td>
               </tr>
@@ -229,7 +229,7 @@ export default function KelasKuliah() {
           {/* Pagination */}
           <Show when={kelas() && kelas()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-gray-500">
+              <span class="text-xs text-brand-gray-500">
                 Menampilkan halaman {page()} dari {kelas()?.meta.totalPages} ({kelas()?.meta.total} total data)
               </span>
               <div class="flex gap-2">

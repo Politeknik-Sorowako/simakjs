@@ -55,7 +55,7 @@ export class UserController {
       };
     } catch (error: any) {
       set.status = 500;
-      return { error: 'Gagal mengambil data pengguna', details: error.message };
+      return { error: 'Gagal mengambil data pengguna' };
     }
   }
 
@@ -103,7 +103,7 @@ export class UserController {
       };
     } catch (error: any) {
       set.status = 500;
-      return { error: 'Gagal mengubah status aktif pengguna', details: error.message };
+      return { error: 'Gagal mengubah status aktif pengguna' };
     }
   }
 
@@ -154,7 +154,7 @@ export class UserController {
       };
     } catch (error: any) {
       set.status = 500;
-      return { error: 'Gagal memperbarui peran pengguna', details: error.message };
+      return { error: 'Gagal memperbarui peran pengguna' };
     }
   }
 
@@ -225,7 +225,7 @@ export class UserController {
       };
     } catch (error: any) {
       set.status = 500;
-      return { error: 'Gagal memperbarui profil', details: error.message };
+      return { error: 'Gagal memperbarui profil' };
     }
   }
 
