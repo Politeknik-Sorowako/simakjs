@@ -41,17 +41,18 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
     return data as T;
   }
 
-  if (response.status === 401) {
+  if (response.status === 401 && requireAuth) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
     throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
   }
 
+  const errorMessage = data?.error || data?.message || response.statusText;
+
   if (response.status === 403) {
-    throw new Error('Anda tidak memiliki akses ke sumber daya ini.');
+    throw new Error(errorMessage);
   }
 
-  const errorMessage = data?.error || data?.message || response.statusText;
   throw new Error(errorMessage);
 }
