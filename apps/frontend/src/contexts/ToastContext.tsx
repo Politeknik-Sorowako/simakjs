@@ -1,4 +1,4 @@
-import { createContext, useContext, createSignal, For, JSX } from 'solid-js';
+import { createContext, createSignal, For, JSX, useContext } from 'solid-js';
 
 export interface Toast {
   id: string;
@@ -28,7 +28,7 @@ export function ToastProvider(props: { children: JSX.Element }) {
   return (
     <ToastContext.Provider value={{ toasts, showToast }}>
       {props.children}
-      
+
       {/* Toast Portal Container */}
       <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full">
         <For each={toasts()}>
@@ -38,8 +38,8 @@ export function ToastProvider(props: { children: JSX.Element }) {
                 toast.type === 'success'
                   ? 'bg-emerald-600 border-emerald-500'
                   : toast.type === 'error'
-                  ? 'bg-rose-600 border-rose-500'
-                  : 'bg-blue-600 border-blue-500'
+                    ? 'bg-rose-600 border-rose-500'
+                    : 'bg-blue-600 border-blue-500'
               }`}
             >
               <span>{toast.message}</span>

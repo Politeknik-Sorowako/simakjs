@@ -1,14 +1,14 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { mahasiswaKeluarController } from '../controllers/mahasiswaKeluarController';
-import { mahasiswaController, Mahasiswa } from '../controllers/mahasiswaController';
-import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Table } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
+import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { mahasiswaKeluarController } from '../controllers/mahasiswaKeluarController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
 
 export default function MahasiswaKeluarPage() {
   const toast = useToast();
@@ -23,9 +23,10 @@ export default function MahasiswaKeluarPage() {
       page: page(),
       limit: limit(),
       search: searchFilter(),
-      periodeId: periodeFilter()
+      periodeId: periodeFilter(),
     }),
-    ({ page, limit, search, periodeId }) => mahasiswaKeluarController.getAll(search, page, limit, periodeId || undefined)
+    ({ page, limit, search, periodeId }) =>
+      mahasiswaKeluarController.getAll(search, page, limit, periodeId || undefined),
   );
 
   // Fetch Periods
@@ -49,7 +50,7 @@ export default function MahasiswaKeluarPage() {
 
   const openFormModal = async () => {
     setSelectedMhs(null);
-    const active = periodes()?.data?.find(p => p.aktif);
+    const active = periodes()?.data?.find((p) => p.aktif);
     setPeriodeId(active?.id || periodes()?.data?.[0]?.id || '');
     setStatusBaru('keluar');
     setTanggalKeluar(new Date().toISOString().split('T')[0]);
@@ -96,7 +97,7 @@ export default function MahasiswaKeluarPage() {
         noSk: noSk() || undefined,
         tanggalSk: tanggalSk() || undefined,
         ipk: ipk() ? Number(ipk()) : undefined,
-        nomorIjazah: nomorIjazah() || undefined
+        nomorIjazah: nomorIjazah() || undefined,
       });
       toast.showToast('Status mahasiswa berhasil diubah ke non-aktif.', 'success');
       setShowModal(false);
@@ -109,7 +110,8 @@ export default function MahasiswaKeluarPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Apakah Anda yakin ingin membatalkan status keluar mahasiswa ini dan menjadikannya aktif kembali?')) return;
+    if (!confirm('Apakah Anda yakin ingin membatalkan status keluar mahasiswa ini dan menjadikannya aktif kembali?'))
+      return;
     try {
       await mahasiswaKeluarController.delete(id);
       toast.showToast('Status mahasiswa kembali AKTIF.', 'success');
@@ -122,15 +124,21 @@ export default function MahasiswaKeluarPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'keluar':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Keluar (Resign)</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Keluar (Resign)</span>
+        );
       case 'drop_out':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">Drop Out</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">Drop Out</span>
+        );
       case 'pindah':
         return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Pindah</span>;
       case 'wafat':
         return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Wafat</span>;
       case 'non_aktif':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Non-Aktif</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Non-Aktif</span>
+        );
       default:
         return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
     }
@@ -142,7 +150,9 @@ export default function MahasiswaKeluarPage() {
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-2xl font-extrabold text-gray-800">Pencatatan Mahasiswa Keluar</h1>
-            <p class="text-sm text-gray-500">Kelola dan catat riwayat mahasiswa yang keluar, mutasi/pindah, drop out, atau wafat.</p>
+            <p class="text-sm text-gray-500">
+              Kelola dan catat riwayat mahasiswa yang keluar, mutasi/pindah, drop out, atau wafat.
+            </p>
           </div>
           <Button onClick={openFormModal}>+ Catat Keluar/DO</Button>
         </div>
@@ -168,20 +178,34 @@ export default function MahasiswaKeluarPage() {
               }}
             >
               <option value="">Semua Periode</option>
-              <For each={periodes()?.data}>
-                {(p) => <option value={p.id}>{p.nama}</option>}
-              </For>
+              <For each={periodes()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
             </select>
           </div>
         </div>
 
         <Show when={!records.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
-          <Table headers={['NIM', 'Nama Mahasiswa', 'Status Baru', 'Periode', 'Tanggal Keluar', 'Nomor SK', 'Ijazah / IPK', 'Aksi']}>
-            <For each={records()?.data} fallback={
-              <tr>
-                <td colspan="8" class="text-center py-10 text-gray-400">Tidak ada riwayat mahasiswa keluar yang ditemukan.</td>
-              </tr>
-            }>
+          <Table
+            headers={[
+              'NIM',
+              'Nama Mahasiswa',
+              'Status Baru',
+              'Periode',
+              'Tanggal Keluar',
+              'Nomor SK',
+              'Ijazah / IPK',
+              'Aksi',
+            ]}
+          >
+            <For
+              each={records()?.data}
+              fallback={
+                <tr>
+                  <td colspan="8" class="text-center py-10 text-gray-400">
+                    Tidak ada riwayat mahasiswa keluar yang ditemukan.
+                  </td>
+                </tr>
+              }
+            >
               {(item) => (
                 <tr class="hover:bg-gray-50/50 transition-colors">
                   <td class="px-6 py-4 font-mono text-sm font-semibold text-gray-600">{item.mahasiswa?.nim}</td>
@@ -202,7 +226,9 @@ export default function MahasiswaKeluarPage() {
                     </Show>
                   </td>
                   <td class="px-6 py-4">
-                    <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>Batal Keluar</Button>
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>
+                      Batal Keluar
+                    </Button>
                   </td>
                 </tr>
               )}
@@ -214,20 +240,29 @@ export default function MahasiswaKeluarPage() {
       <Modal show={showModal()} onClose={() => setShowModal(false)} title="Pencatatan Mahasiswa Keluar/Non-Aktif">
         <form onSubmit={handleSave} class="flex flex-col gap-4">
           <Show when={errorMsg()}>
-            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">{errorMsg()}</div>
+            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+              {errorMsg()}
+            </div>
           </Show>
 
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-gray-700">Cari Mahasiswa Aktif</label>
-            <Show when={!selectedMhs()} fallback={
-              <div class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div>
-                  <div class="font-semibold text-blue-900">{selectedMhs()?.nama}</div>
-                  <div class="text-xs text-blue-700">NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}</div>
+            <Show
+              when={!selectedMhs()}
+              fallback={
+                <div class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div>
+                    <div class="font-semibold text-blue-900">{selectedMhs()?.nama}</div>
+                    <div class="text-xs text-blue-700">
+                      NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}
+                    </div>
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)}>
+                    Ganti
+                  </Button>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)}>Ganti</Button>
-              </div>
-            }>
+              }
+            >
               <SearchableSelect
                 placeholder="Ketik NIM atau nama mahasiswa..."
                 options={mhsList().map((m) => ({ label: `${m.nama} (${m.nim})`, value: m.id }))}
@@ -263,9 +298,7 @@ export default function MahasiswaKeluarPage() {
                 onChange={(e) => setPeriodeId(e.currentTarget.value)}
               >
                 <option value="">-- Pilih Periode --</option>
-                <For each={periodes()?.data}>
-                  {(p) => <option value={p.id}>{p.nama}</option>}
-                </For>
+                <For each={periodes()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
               </select>
             </div>
           </div>
@@ -273,11 +306,7 @@ export default function MahasiswaKeluarPage() {
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-gray-700">Tanggal Keluar</label>
-              <Input
-                type="date"
-                value={tanggalKeluar()}
-                onInput={(e) => setTanggalKeluar(e.currentTarget.value)}
-              />
+              <Input type="date" value={tanggalKeluar()} onInput={(e) => setTanggalKeluar(e.currentTarget.value)} />
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-gray-700">IPK Terakhir</label>
@@ -294,19 +323,11 @@ export default function MahasiswaKeluarPage() {
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-gray-700">Nomor SK Yudisium/Keluar</label>
-              <Input
-                placeholder="Nomor SK"
-                value={noSk()}
-                onInput={(e) => setNoSk(e.currentTarget.value)}
-              />
+              <Input placeholder="Nomor SK" value={noSk()} onInput={(e) => setNoSk(e.currentTarget.value)} />
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-gray-700">Tanggal SK</label>
-              <Input
-                type="date"
-                value={tanggalSk()}
-                onInput={(e) => setTanggalSk(e.currentTarget.value)}
-              />
+              <Input type="date" value={tanggalSk()} onInput={(e) => setTanggalSk(e.currentTarget.value)} />
             </div>
           </div>
 
@@ -331,8 +352,12 @@ export default function MahasiswaKeluarPage() {
           </div>
 
           <div class="flex justify-end gap-2 mt-4">
-            <Button variant="secondary" onClick={() => setShowModal(false)} type="button">Batal</Button>
-            <Button type="submit" disabled={submitting()}>{submitting() ? 'Menyimpan...' : 'Simpan Data'}</Button>
+            <Button variant="secondary" onClick={() => setShowModal(false)} type="button">
+              Batal
+            </Button>
+            <Button type="submit" disabled={submitting()}>
+              {submitting() ? 'Menyimpan...' : 'Simpan Data'}
+            </Button>
           </div>
         </form>
       </Modal>

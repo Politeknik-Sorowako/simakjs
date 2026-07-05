@@ -12,11 +12,7 @@ export function Input(props: InputProps) {
 
   return (
     <div class="flex flex-col gap-1.5 w-full">
-      {props.label && (
-        <label class="text-xs font-semibold uppercase tracking-wider text-gray-500">
-          {props.label}
-        </label>
-      )}
+      {props.label && <label class="text-xs font-semibold uppercase tracking-wider text-gray-500">{props.label}</label>}
       {props.isSelect ? (
         <select
           {...(local as any)}
@@ -38,9 +34,7 @@ export function Input(props: InputProps) {
           } ${props.class || ''}`}
         />
       )}
-      {props.error && (
-        <span class="text-xs text-red-500 font-medium">{props.error}</span>
-      )}
+      {props.error && <span class="text-xs text-red-500 font-medium">{props.error}</span>}
     </div>
   );
 }

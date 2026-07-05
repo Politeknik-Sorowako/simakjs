@@ -1,5 +1,5 @@
+import { dosen, mahasiswa, programStudi, users } from '../models/schema';
 import { db } from '../utils/db';
-import { programStudi, dosen, mahasiswa, users } from '../models/schema';
 
 const DATA_PRODI = [
   { kode: 'TI', nama: 'Teknik Informatika', jenjang: 'D4' },
@@ -9,16 +9,36 @@ const DATA_PRODI = [
 
 const ANGKATAN = ['2024', '2023', '2022'];
 const DOSEN_NAMES = [
-  'Dr. Ahmad Fauzi', 'Dr. Siti Rahmawati', 'Dr. Bambang Wijaya',
-  'Dr. Dewi Sartika', 'Dr. Agus Prasetyo', 'Dr. Rina Marlina',
-  'Dr. Hendra Gunawan', 'Dr. Fitri Handayani', 'Dr. Indra Lesmana',
-  'Dr. Nia Kurniasih', 'Dr. Teguh Purnomo', 'Dr. Maya Anggraini',
-  'Dr. Adi Nugroho', 'Dr. Lina Safitri', 'Dr. Rudi Hartono',
-  'Dr. Yuni Astuti', 'Dr. Eko Purnomo', 'Dr. Ratna Dewi',
-  'Dr. Dwi Cahyono', 'Dr. Sri Wahyuni', 'Dr. Irfan Maulana',
-  'Dr. Wulan Sari', 'Dr. Arif Budiman', 'Dr. Dian Permata',
-  'Dr. Ricky Setiawan', 'Dr. Nina Wulandari', 'Dr. Faisal Rahman',
-  'Dr. Mira Susanti', 'Dr. Galih Saputra', 'Dr. Tari Puspadewi',
+  'Dr. Ahmad Fauzi',
+  'Dr. Siti Rahmawati',
+  'Dr. Bambang Wijaya',
+  'Dr. Dewi Sartika',
+  'Dr. Agus Prasetyo',
+  'Dr. Rina Marlina',
+  'Dr. Hendra Gunawan',
+  'Dr. Fitri Handayani',
+  'Dr. Indra Lesmana',
+  'Dr. Nia Kurniasih',
+  'Dr. Teguh Purnomo',
+  'Dr. Maya Anggraini',
+  'Dr. Adi Nugroho',
+  'Dr. Lina Safitri',
+  'Dr. Rudi Hartono',
+  'Dr. Yuni Astuti',
+  'Dr. Eko Purnomo',
+  'Dr. Ratna Dewi',
+  'Dr. Dwi Cahyono',
+  'Dr. Sri Wahyuni',
+  'Dr. Irfan Maulana',
+  'Dr. Wulan Sari',
+  'Dr. Arif Budiman',
+  'Dr. Dian Permata',
+  'Dr. Ricky Setiawan',
+  'Dr. Nina Wulandari',
+  'Dr. Faisal Rahman',
+  'Dr. Mira Susanti',
+  'Dr. Galih Saputra',
+  'Dr. Tari Puspadewi',
 ];
 
 function randomInt(min: number, max: number) {
@@ -40,7 +60,13 @@ async function seed() {
 
   const existingAdmin = await db.query.users.findFirst({ where: (u, { eq }) => eq(u.email, 'admin@simak.id') });
   if (!existingAdmin) {
-    await db.insert(users).values({ email: 'admin@simak.id', password: hashedPassword, nama: 'Admin SIMAK', role: 'admin', isActive: true });
+    await db.insert(users).values({
+      email: 'admin@simak.id',
+      password: hashedPassword,
+      nama: 'Admin SIMAK',
+      role: 'admin',
+      isActive: true,
+    });
     console.log('  Admin user created');
   }
 
@@ -77,9 +103,14 @@ async function seed() {
       });
       dosenCount++;
 
-      const [dosenUser] = await db.select().from(users).where((u, { eq }) => eq(u.email, email));
+      const [dosenUser] = await db
+        .select()
+        .from(users)
+        .where((u, { eq }) => eq(u.email, email));
       if (!dosenUser) {
-        await db.insert(users).values({ email, password: hashedPassword, nama: DOSEN_NAMES[i], role: 'dosen', isActive: true });
+        await db
+          .insert(users)
+          .values({ email, password: hashedPassword, nama: DOSEN_NAMES[i], role: 'dosen', isActive: true });
       }
     }
   }
@@ -90,14 +121,13 @@ async function seed() {
   let mhsCount = 0;
   for (let pi = 0; pi < prodiList.length; pi++) {
     const prodi = prodiList[pi];
-    const prodiDosen = dosenList.filter(d => d.programStudiId === prodi.id);
+    const prodiDosen = dosenList.filter((d) => d.programStudiId === prodi.id);
     const mhsPerAngkatan = Math.ceil(100 / ANGKATAN.length);
 
     let urutan = 1;
     for (const angkatan of ANGKATAN) {
-      const count = angkatan === ANGKATAN[ANGKATAN.length - 1]
-        ? 100 - (mhsPerAngkatan * (ANGKATAN.length - 1))
-        : mhsPerAngkatan;
+      const count =
+        angkatan === ANGKATAN[ANGKATAN.length - 1] ? 100 - mhsPerAngkatan * (ANGKATAN.length - 1) : mhsPerAngkatan;
 
       for (let m = 0; m < count; m++) {
         const nim = generateNim(angkatan, pi, urutan);

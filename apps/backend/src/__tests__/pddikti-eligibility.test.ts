@@ -1,15 +1,27 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { app } from '../app';
-import { clearDatabase, getAuthToken } from './test-helper';
-import { db } from '../utils/db';
-import { programStudi, mahasiswa, periodeAkademik, mataKuliah, kelasKuliah, krs, bimbingan, bap, presensi, dosen, cpmk } from '../models/schema';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
+import { app } from '../app';
+import {
+  bap,
+  bimbingan,
+  cpmk,
+  dosen,
+  kelasKuliah,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  periodeAkademik,
+  presensi,
+  programStudi,
+} from '../models/schema';
+import { db } from '../utils/db';
+import { clearDatabase, getAuthToken } from './test-helper';
 
 describe('PDDIKTI Feeder & Exam Eligibility API', () => {
   let adminToken: string;
   let dosenToken: string;
   let mhsToken: string;
-  
+
   let prodiId: number;
   let mhsId: number;
   const periodeId = '20231';
@@ -27,35 +39,44 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
     mhsToken = await getAuthToken('mhs@test.com', 'mahasiswa');
 
     // 1. Seed Prodi
-    const [prodi] = await db.insert(programStudi).values({
-      kode: 'TI',
-      nama: 'Teknik Informatika',
-      jenjang: 'D4',
-    }).returning();
+    const [prodi] = await db
+      .insert(programStudi)
+      .values({
+        kode: 'TI',
+        nama: 'Teknik Informatika',
+        jenjang: 'D4',
+      })
+      .returning();
     prodiId = prodi.id;
 
     // Seed Dosen
-    const [dsn] = await db.insert(dosen).values({
-      nidn: '12345678',
-      nip: '123456789012345678',
-      nama: 'Dosen Test',
-      email: 'dosen@test.com',
-      programStudiId: prodiId,
-    }).returning();
+    const [dsn] = await db
+      .insert(dosen)
+      .values({
+        nidn: '12345678',
+        nip: '123456789012345678',
+        nama: 'Dosen Test',
+        email: 'dosen@test.com',
+        programStudiId: prodiId,
+      })
+      .returning();
     dosenId = dsn.id;
 
     // 2. Seed Mahasiswa
-    const [mhs] = await db.insert(mahasiswa).values({
-      nim: '20200001',
-      nama: 'Mahasiswa Test',
-      email: 'mhs@test.com',
-      programStudiId: prodiId,
-      status: 'aktif',
-      namaIbuKandung: 'Ibu Test',
-      nik: '1234567890123456',
-      jenisKelamin: 'L',
-      tanggalLahir: '2000-01-01',
-    }).returning();
+    const [mhs] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '20200001',
+        nama: 'Mahasiswa Test',
+        email: 'mhs@test.com',
+        programStudiId: prodiId,
+        status: 'aktif',
+        namaIbuKandung: 'Ibu Test',
+        nik: '1234567890123456',
+        jenisKelamin: 'L',
+        tanggalLahir: '2000-01-01',
+      })
+      .returning();
     mhsId = mhs.id;
 
     // 3. Seed Active Periode
@@ -66,39 +87,51 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
     });
 
     // 4. Seed Mata Kuliah
-    const [mk] = await db.insert(mataKuliah).values({
-      kode: 'IF101',
-      nama: 'Pemrograman Dasar',
-      sksTotal: 3,
-      sksTeori: 2,
-      sksPraktik: 1,
-      semester: 1,
-      programStudiId: prodiId,
-    }).returning();
+    const [mk] = await db
+      .insert(mataKuliah)
+      .values({
+        kode: 'IF101',
+        nama: 'Pemrograman Dasar',
+        sksTotal: 3,
+        sksTeori: 2,
+        sksPraktik: 1,
+        semester: 1,
+        programStudiId: prodiId,
+      })
+      .returning();
     mkId = mk.id;
 
     // Seed CPMK
-    const [c] = await db.insert(cpmk).values({
-      mataKuliahId: mkId,
-      kode: 'CPMK-1',
-      deskripsi: 'Mampu menjelaskan konsep dasar pemrograman',
-    }).returning();
+    const [c] = await db
+      .insert(cpmk)
+      .values({
+        mataKuliahId: mkId,
+        kode: 'CPMK-1',
+        deskripsi: 'Mampu menjelaskan konsep dasar pemrograman',
+      })
+      .returning();
     cpmkId = c.id;
 
     // 5. Seed Kelas
-    const [kelas] = await db.insert(kelasKuliah).values({
-      mataKuliahId: mkId,
-      periodeId: periodeId,
-      namaKelas: 'A',
-    }).returning();
+    const [kelas] = await db
+      .insert(kelasKuliah)
+      .values({
+        mataKuliahId: mkId,
+        periodeId: periodeId,
+        namaKelas: 'A',
+      })
+      .returning();
     kelasId = kelas.id;
 
     // 6. Seed KRS
-    const [k] = await db.insert(krs).values({
-      mahasiswaId: mhsId,
-      kelasKuliahId: kelasId,
-      isApproved: true,
-    }).returning();
+    const [k] = await db
+      .insert(krs)
+      .values({
+        mahasiswaId: mhsId,
+        kelasKuliahId: kelasId,
+        isApproved: true,
+      })
+      .returning();
     krsId = k.id;
   });
 
@@ -107,8 +140,8 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       const response = await app.handle(
         new Request(`http://localhost/khs/mahasiswa/${mhsId}/periode/${periodeId}/eligibility`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${mhsToken}` }
-        })
+          headers: { Authorization: `Bearer ${mhsToken}` },
+        }),
       );
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -125,15 +158,18 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       });
 
       // 2. Seed meetings & attendance
-      const [meeting] = await db.insert(bap).values({
-        kelasKuliahId: kelasId,
-        pertemuanKe: 1,
-        materi: 'Introduction',
-        tanggal: '2023-09-01',
-        durasiMenit: 100,
-        cpmkId: cpmkId,
-        dosenId: dosenId,
-      }).returning();
+      const [meeting] = await db
+        .insert(bap)
+        .values({
+          kelasKuliahId: kelasId,
+          pertemuanKe: 1,
+          materi: 'Introduction',
+          tanggal: '2023-09-01',
+          durasiMenit: 100,
+          cpmkId: cpmkId,
+          dosenId: dosenId,
+        })
+        .returning();
 
       await db.insert(presensi).values({
         bapId: meeting.id,
@@ -145,8 +181,8 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       const response = await app.handle(
         new Request(`http://localhost/khs/mahasiswa/${mhsId}/periode/${periodeId}/eligibility`, {
           method: 'GET',
-          headers: { Authorization: `Bearer ${mhsToken}` }
-        })
+          headers: { Authorization: `Bearer ${mhsToken}` },
+        }),
       );
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -162,8 +198,8 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       const lockRes = await app.handle(
         new Request(`http://localhost/yudisium/kelas/${kelasId}/lock`, {
           method: 'POST',
-          headers: { Authorization: `Bearer ${dosenToken}` }
-        })
+          headers: { Authorization: `Bearer ${dosenToken}` },
+        }),
       );
       expect(lockRes.status).toBe(200);
 
@@ -173,13 +209,13 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${dosenToken}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
-            komponenList: [{ nama: 'Tugas', bobot: 100 }]
-          })
-        })
+            komponenList: [{ nama: 'Tugas', bobot: 100 }],
+          }),
+        }),
       );
       expect(compRes.status).toBe(400);
       const compData = await compRes.json();
@@ -193,8 +229,8 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       const statsRes = await app.handle(
         new Request('http://localhost/pddikti/stats', {
           method: 'GET',
-          headers: { Authorization: `Bearer ${adminToken}` }
-        })
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
       );
       expect(statsRes.status).toBe(200);
       const statsData = await statsRes.json();
@@ -204,8 +240,8 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       const syncRes = await app.handle(
         new Request('http://localhost/pddikti/sync', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${adminToken}` }
-        })
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
       );
       expect(syncRes.status).toBe(200);
       const syncData = await syncRes.json();
@@ -215,8 +251,8 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       const statsRes2 = await app.handle(
         new Request('http://localhost/pddikti/stats', {
           method: 'GET',
-          headers: { Authorization: `Bearer ${adminToken}` }
-        })
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
       );
       const statsData2 = await statsRes2.json();
       expect(statsData2.mahasiswa.unsynced).toBe(0);

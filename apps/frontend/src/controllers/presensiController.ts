@@ -89,7 +89,17 @@ export const presensiController = {
     return fetchApi<BAP[]>(`/bap/kelas/${kelasKuliahId}`);
   },
 
-  async getRpsTopikByKelas(kelasKuliahId: number): Promise<Array<{ id: number; rpsId: number; pertemuanKe: number; topik: string; subTopik: string | null; metode: string | null; cpmkId: number | null }>> {
+  async getRpsTopikByKelas(kelasKuliahId: number): Promise<
+    Array<{
+      id: number;
+      rpsId: number;
+      pertemuanKe: number;
+      topik: string;
+      subTopik: string | null;
+      metode: string | null;
+      cpmkId: number | null;
+    }>
+  > {
     return fetchApi<any[]>(`/bap/kelas/${kelasKuliahId}/topik`);
   },
 
@@ -108,7 +118,10 @@ export const presensiController = {
   },
 
   // Presensi
-  async saveBulkPresensi(data: { bapId: number; presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number }> }): Promise<{ message: string }> {
+  async saveBulkPresensi(data: {
+    bapId: number;
+    presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number }>;
+  }): Promise<{ message: string }> {
     return fetchApi<{ message: string }>('/presensi/bulk', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -128,14 +141,22 @@ export const presensiController = {
     return fetchApi<KompensasiDetailResponse>(`/presensi/kompensasi/mahasiswa/${mahasiswaId}`);
   },
 
-  async bayarKompensasi(data: { mahasiswaId: number; jumlahMenit: number; tanggal: string; keterangan: string }): Promise<PaymentItem> {
+  async bayarKompensasi(data: {
+    mahasiswaId: number;
+    jumlahMenit: number;
+    tanggal: string;
+    keterangan: string;
+  }): Promise<PaymentItem> {
     return fetchApi<PaymentItem>('/presensi/kompensasi/bayar', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  async updateKompensasiBayar(id: number, data: Partial<Omit<PaymentItem, 'id' | 'mahasiswaId'>>): Promise<PaymentItem> {
+  async updateKompensasiBayar(
+    id: number,
+    data: Partial<Omit<PaymentItem, 'id' | 'mahasiswaId'>>,
+  ): Promise<PaymentItem> {
     return fetchApi<PaymentItem>(`/presensi/kompensasi/bayar/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

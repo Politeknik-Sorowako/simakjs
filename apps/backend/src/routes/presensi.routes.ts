@@ -1,14 +1,14 @@
 import { Elysia } from 'elysia';
 import { PresensiController } from '../controllers/presensi.controller';
-import {
-  saveBulkPresensiSchema,
-  bayarKompensasiSchema,
-  getKompensasiMahasiswaDetailSchema,
-  getByBapSchema,
-  getLaporanKompensasiSchema,
-  updateKompensasiBayarSchema
-} from '../schemas/presensi.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  bayarKompensasiSchema,
+  getByBapSchema,
+  getKompensasiMahasiswaDetailSchema,
+  getLaporanKompensasiSchema,
+  saveBulkPresensiSchema,
+  updateKompensasiBayarSchema,
+} from '../schemas/presensi.schema';
 
 export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .use(authMiddleware)
@@ -18,4 +18,3 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .get('/kompensasi/mahasiswa/:mahasiswaId', PresensiController.getKompensasiDetail, getKompensasiMahasiswaDetailSchema)
   .post('/kompensasi/bayar', PresensiController.bayarKompensasi, bayarKompensasiSchema)
   .put('/kompensasi/bayar/:id', PresensiController.updateKompensasiBayar, updateKompensasiBayarSchema);
-

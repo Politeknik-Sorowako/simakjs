@@ -1,4 +1,4 @@
-import { createSignal, Show, For } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import { Button } from './Button';
 import { Modal } from './Modal';
 
@@ -18,7 +18,10 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [successMsg, setSuccessMsg] = createSignal('');
   const [loading, setLoading] = createSignal(false);
-  const [importReport, setImportReport] = createSignal<{ successCount: number; errors: { line: number; error: string }[] } | null>(null);
+  const [importReport, setImportReport] = createSignal<{
+    successCount: number;
+    errors: { line: number; error: string }[];
+  } | null>(null);
 
   const handleFileChange = (e: Event) => {
     const target = e.target as HTMLInputElement;
@@ -37,18 +40,18 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const rows = text.split(/\r?\n/).map(line => line.split(','));
-      setPreview(rows.slice(0, 6).filter(row => row.some(cell => cell.trim() !== '')));
+      const rows = text.split(/\r?\n/).map((line) => line.split(','));
+      setPreview(rows.slice(0, 6).filter((row) => row.some((cell) => cell.trim() !== '')));
     };
     reader.readAsText(selectedFile);
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = "data:text/csv;charset=utf-8," + props.templateHeaders.join(",") + "\n";
+    const csvContent = 'data:text/csv;charset=utf-8,' + props.templateHeaders.join(',') + '\n';
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `template_${props.title.toLowerCase().replace(/\s+/g, "_")}.csv`);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `template_${props.title.toLowerCase().replace(/\s+/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -76,9 +79,9 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
       const response = await fetch(`/api${props.importUrl}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: formData
+        body: formData,
       });
 
       if (!response.ok) {
@@ -113,13 +116,19 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
     <Modal show={props.show} onClose={props.onClose} title={`Impor Data ${props.title} via CSV`}>
       <div class="flex flex-col gap-4">
         <div class="flex justify-between items-center bg-blue-50 dark:bg-slate-800/50 p-3 rounded-lg border border-blue-100 dark:border-slate-800">
-          <span class="text-xs text-blue-800 dark:text-blue-400 font-medium">Unduh template format CSV standar terlebih dahulu</span>
-          <Button variant="secondary" onClick={handleDownloadTemplate}>Unduh Template</Button>
+          <span class="text-xs text-blue-800 dark:text-blue-400 font-medium">
+            Unduh template format CSV standar terlebih dahulu
+          </span>
+          <Button variant="secondary" onClick={handleDownloadTemplate}>
+            Unduh Template
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} class="flex flex-col gap-4">
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">Pilihan Penanganan Duplikat Key</label>
+            <label class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              Pilihan Penanganan Duplikat Key
+            </label>
             <select
               value={duplicateMode()}
               onChange={(e) => setDuplicateMode(e.currentTarget.value)}
@@ -148,9 +157,7 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-800 text-left text-xs bg-white dark:bg-slate-900">
                   <thead class="bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-400 font-bold">
                     <tr>
-                      <For each={preview()[0]}>
-                        {(h) => <th class="px-3 py-2">{h}</th>}
-                      </For>
+                      <For each={preview()[0]}>{(h) => <th class="px-3 py-2">{h}</th>}</For>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
@@ -194,8 +201,12 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
           </Show>
 
           <div class="flex justify-end gap-2 mt-2">
-            <Button variant="secondary" type="button" onClick={props.onClose}>Batal</Button>
-            <Button type="submit" disabled={loading() || !file()}>{loading() ? 'Mengimpor...' : 'Impor Sekarang'}</Button>
+            <Button variant="secondary" type="button" onClick={props.onClose}>
+              Batal
+            </Button>
+            <Button type="submit" disabled={loading() || !file()}>
+              {loading() ? 'Mengimpor...' : 'Impor Sekarang'}
+            </Button>
           </div>
         </form>
       </div>

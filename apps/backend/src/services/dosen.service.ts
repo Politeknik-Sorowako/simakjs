@@ -1,6 +1,6 @@
-import { db } from '../utils/db';
+import { and, count, eq, ilike, or } from 'drizzle-orm';
 import { dosen } from '../models/schema';
-import { count, eq, ilike, or, and } from 'drizzle-orm';
+import { db } from '../utils/db';
 
 export interface CreateDosenDto {
   nip: string;
@@ -21,11 +21,7 @@ export class DosenService {
 
     if (search) {
       conditions.push(
-        or(
-          ilike(dosen.nama, `%${search}%`),
-          ilike(dosen.nip, `%${search}%`),
-          ilike(dosen.email, `%${search}%`)
-        )
+        or(ilike(dosen.nama, `%${search}%`), ilike(dosen.nip, `%${search}%`), ilike(dosen.email, `%${search}%`)),
       );
     }
     if (programStudiId !== undefined) {
@@ -37,20 +33,17 @@ export class DosenService {
       whereClause = and(...conditions);
     }
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(dosen)
-      .where(whereClause);
-    
+    const [totalResult] = await db.select({ total: count() }).from(dosen).where(whereClause);
+
     const total = totalResult?.total || 0;
-    
+
     const data = await db.query.dosen.findMany({
       where: whereClause,
       limit,
       offset,
       with: {
-        programStudi: true
-      }
+        programStudi: true,
+      },
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -61,8 +54,8 @@ export class DosenService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -70,8 +63,8 @@ export class DosenService {
     const data = await db.query.dosen.findFirst({
       where: eq(dosen.id, id),
       with: {
-        programStudi: true
-      }
+        programStudi: true,
+      },
     });
     return data || null;
   }
@@ -82,19 +75,12 @@ export class DosenService {
   }
 
   static async update(id: number, data: Partial<CreateDosenDto>) {
-    const [updatedDosen] = await db
-      .update(dosen)
-      .set(data)
-      .where(eq(dosen.id, id))
-      .returning();
+    const [updatedDosen] = await db.update(dosen).set(data).where(eq(dosen.id, id)).returning();
     return updatedDosen || null;
   }
 
   static async delete(id: number) {
-    const [deletedDosen] = await db
-      .delete(dosen)
-      .where(eq(dosen.id, id))
-      .returning();
+    const [deletedDosen] = await db.delete(dosen).where(eq(dosen.id, id)).returning();
     return deletedDosen || null;
   }
 }

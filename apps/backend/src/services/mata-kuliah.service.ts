@@ -1,6 +1,6 @@
-import { db } from '../utils/db';
+import { and, count, eq, ilike, or } from 'drizzle-orm';
 import { mataKuliah } from '../models/schema';
-import { count, eq, ilike, or, and } from 'drizzle-orm';
+import { db } from '../utils/db';
 
 export interface CreateMataKuliahDto {
   kode: string;
@@ -18,12 +18,7 @@ export class MataKuliahService {
     let conditions = [];
 
     if (search) {
-      conditions.push(
-        or(
-          ilike(mataKuliah.nama, `%${search}%`),
-          ilike(mataKuliah.kode, `%${search}%`)
-        )
-      );
+      conditions.push(or(ilike(mataKuliah.nama, `%${search}%`), ilike(mataKuliah.kode, `%${search}%`)));
     }
     if (programStudiId !== undefined) {
       conditions.push(eq(mataKuliah.programStudiId, programStudiId));
@@ -34,20 +29,17 @@ export class MataKuliahService {
       whereClause = and(...conditions);
     }
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(mataKuliah)
-      .where(whereClause);
-    
+    const [totalResult] = await db.select({ total: count() }).from(mataKuliah).where(whereClause);
+
     const total = totalResult?.total || 0;
-    
+
     const data = await db.query.mataKuliah.findMany({
       where: whereClause,
       limit,
       offset,
       with: {
-        programStudi: true
-      }
+        programStudi: true,
+      },
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -58,8 +50,8 @@ export class MataKuliahService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -67,8 +59,8 @@ export class MataKuliahService {
     const data = await db.query.mataKuliah.findFirst({
       where: eq(mataKuliah.id, id),
       with: {
-        programStudi: true
-      }
+        programStudi: true,
+      },
     });
     return data || null;
   }
@@ -79,19 +71,12 @@ export class MataKuliahService {
   }
 
   static async update(id: number, data: Partial<CreateMataKuliahDto>) {
-    const [updatedMk] = await db
-      .update(mataKuliah)
-      .set(data)
-      .where(eq(mataKuliah.id, id))
-      .returning();
+    const [updatedMk] = await db.update(mataKuliah).set(data).where(eq(mataKuliah.id, id)).returning();
     return updatedMk || null;
   }
 
   static async delete(id: number) {
-    const [deletedMk] = await db
-      .delete(mataKuliah)
-      .where(eq(mataKuliah.id, id))
-      .returning();
+    const [deletedMk] = await db.delete(mataKuliah).where(eq(mataKuliah.id, id)).returning();
     return deletedMk || null;
   }
 }

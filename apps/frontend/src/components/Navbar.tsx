@@ -1,9 +1,9 @@
+import { createResource, For, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
-import { userController } from '../controllers/userController';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { prodiController } from '../controllers/prodiController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
-import { createResource, Show, For } from 'solid-js';
+import { prodiController } from '../controllers/prodiController';
+import { userController } from '../controllers/userController';
 
 export function Navbar(props: { onToggleSidebar: () => void }) {
   const auth = useAuth();
@@ -21,7 +21,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
       } catch (_) {
         return [];
       }
-    }
+    },
   );
 
   // Load Periodes for admin global filter
@@ -34,7 +34,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
       } catch (_) {
         return [];
       }
-    }
+    },
   );
 
   const toggleTheme = async () => {
@@ -57,7 +57,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
     <header class="h-16 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
       <div class="flex items-center gap-3">
         {/* Mobile Hamburger Toggle Button */}
-        <button 
+        <button
           onClick={() => props.onToggleSidebar()}
           class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-800 focus:outline-none md:hidden"
         >
@@ -81,9 +81,15 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
               }}
               class="bg-transparent border-0 font-bold text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
             >
-              <option value="" selected={workspace.selectedProdiId() === null}>Semua Prodi</option>
+              <option value="" selected={workspace.selectedProdiId() === null}>
+                Semua Prodi
+              </option>
               <For each={prodis()}>
-                {(p) => <option value={p.id} selected={workspace.selectedProdiId() === p.id}>{p.nama}</option>}
+                {(p) => (
+                  <option value={p.id} selected={workspace.selectedProdiId() === p.id}>
+                    {p.nama}
+                  </option>
+                )}
               </For>
             </select>
           </div>
@@ -97,9 +103,15 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
               }}
               class="bg-transparent border-0 font-bold text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-0 max-w-[150px] truncate"
             >
-              <option value="" selected={workspace.selectedPeriodeId() === null}>Semua Periode</option>
+              <option value="" selected={workspace.selectedPeriodeId() === null}>
+                Semua Periode
+              </option>
               <For each={periodes()}>
-                {(p) => <option value={p.id} selected={workspace.selectedPeriodeId() === p.id}>{p.nama}</option>}
+                {(p) => (
+                  <option value={p.id} selected={workspace.selectedPeriodeId() === p.id}>
+                    {p.nama}
+                  </option>
+                )}
               </For>
             </select>
           </div>
@@ -107,7 +119,6 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
       </Show>
 
       <div class="flex items-center gap-4">
-
         {/* Night Mode Theme Toggle Button */}
         <button
           onClick={toggleTheme}
@@ -116,11 +127,21 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
         >
           {auth.theme() === 'light' ? (
             <svg class="w-5 h-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
             </svg>
           ) : (
             <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"
+              />
             </svg>
           )}
         </button>

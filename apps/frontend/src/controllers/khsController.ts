@@ -84,17 +84,20 @@ export const khsController = {
     }
   },
 
-  async submitPengajuanYudisium(mhsId: number, data: Omit<PengajuanYudisium, 'mahasiswaId' | 'status'>): Promise<PengajuanYudisium> {
+  async submitPengajuanYudisium(
+    mhsId: number,
+    data: Omit<PengajuanYudisium, 'mahasiswaId' | 'status'>,
+  ): Promise<PengajuanYudisium> {
     return fetchApi<PengajuanYudisium>(`/yudisium/mahasiswa/${mhsId}`, {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
   async updateYudisiumStatus(mhsId: number, data: { status: string; catatan?: string }): Promise<PengajuanYudisium> {
     return fetchApi<PengajuanYudisium>(`/yudisium/mahasiswa/${mhsId}/status`, {
       method: 'PUT',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
@@ -106,10 +109,13 @@ export const khsController = {
     return fetchApi<KomponenNilai[]>(`/yudisium/kelas/${kelasKuliahId}/komponen`);
   },
 
-  async saveKomponen(kelasKuliahId: number, komponenList: Omit<KomponenNilai, 'id' | 'kelasKuliahId'>[]): Promise<KomponenNilai[]> {
+  async saveKomponen(
+    kelasKuliahId: number,
+    komponenList: Omit<KomponenNilai, 'id' | 'kelasKuliahId'>[],
+  ): Promise<KomponenNilai[]> {
     return fetchApi<KomponenNilai[]>('/yudisium/kelas/komponen', {
       method: 'POST',
-      body: JSON.stringify({ kelasKuliahId, komponenList })
+      body: JSON.stringify({ kelasKuliahId, komponenList }),
     });
   },
 
@@ -117,13 +123,16 @@ export const khsController = {
     return fetchApi<NilaiMahasiswa[]>(`/yudisium/kelas/${kelasKuliahId}/nilai`);
   },
 
-  async saveNilaiMahasiswa(kelasKuliahId: number, nilaiList: Array<{
-    krsId: number;
-    nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }>
-  }>): Promise<any> {
+  async saveNilaiMahasiswa(
+    kelasKuliahId: number,
+    nilaiList: Array<{
+      krsId: number;
+      nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }>;
+    }>,
+  ): Promise<any> {
     return fetchApi<any>('/yudisium/kelas/nilai', {
       method: 'POST',
-      body: JSON.stringify({ kelasKuliahId, nilaiList })
+      body: JSON.stringify({ kelasKuliahId, nilaiList }),
     });
   },
 
@@ -133,13 +142,13 @@ export const khsController = {
 
   async lockKelas(kelasKuliahId: number): Promise<any> {
     return fetchApi<any>(`/yudisium/kelas/${kelasKuliahId}/lock`, {
-      method: 'POST'
+      method: 'POST',
     });
   },
 
   async unlockKelas(kelasKuliahId: number): Promise<any> {
     return fetchApi<any>(`/yudisium/kelas/${kelasKuliahId}/unlock`, {
-      method: 'POST'
+      method: 'POST',
     });
   },
 
@@ -149,7 +158,7 @@ export const khsController = {
 
   async syncPddikti(): Promise<any> {
     return fetchApi<any>('/pddikti/sync', {
-      method: 'POST'
+      method: 'POST',
     });
   },
 
@@ -162,13 +171,13 @@ export const khsController = {
   async saveKonversi(data: any): Promise<any> {
     return fetchApi<any>('/khs/konversi', {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
   async deleteKonversi(id: number): Promise<any> {
     return fetchApi<any>(`/khs/konversi/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
   },
 
@@ -180,13 +189,13 @@ export const khsController = {
   async savePredikat(data: any): Promise<any> {
     return fetchApi<any>('/khs/predikat', {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     });
   },
 
   async deletePredikat(id: number): Promise<any> {
     return fetchApi<any>(`/khs/predikat/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
-  }
+  },
 };

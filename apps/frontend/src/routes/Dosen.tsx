@@ -1,16 +1,16 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
+import { createResource, createSignal, For, Show } from 'solid-js';
+import { MainLayout } from '../components/MainLayout';
+import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { dosenController, Dosen as IDosen } from '../controllers/dosenController';
 import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
-import { MainLayout } from '../components/MainLayout';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
-import { ImportCsvModal } from '../components/ui/ImportCsvModal';
-import { useToast } from '../contexts/ToastContext';
-import { useWorkspace } from '../contexts/WorkspaceContext';
-import { useAuth } from '../contexts/AuthContext';
 
 export default function Dosen() {
   const toast = useToast();
@@ -31,9 +31,9 @@ export default function Dosen() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null
+      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
     }),
-    ({ search, page, limit, prodiId }) => dosenController.getAll(search, page, limit, prodiId || undefined)
+    ({ search, page, limit, prodiId }) => dosenController.getAll(search, page, limit, prodiId || undefined),
   );
 
   // Fetch Program Studi for Dropdown
@@ -123,13 +123,13 @@ export default function Dosen() {
     if (selectedIds().length === list.length && list.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(list.map(item => item.id));
+      setSelectedIds(list.map((item) => item.id));
     }
   };
 
   const toggleSelect = (id: number) => {
     if (selectedIds().includes(id)) {
-      setSelectedIds(selectedIds().filter(x => x !== id));
+      setSelectedIds(selectedIds().filter((x) => x !== id));
     } else {
       setSelectedIds([...selectedIds(), id]);
     }
@@ -149,7 +149,10 @@ export default function Dosen() {
     try {
       const res = await userController.generateAccounts('dosen', ids);
       if (res.errors && res.errors.length > 0) {
-        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'warning');
+        toast.showToast(
+          `Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`,
+          'warning',
+        );
       } else {
         toast.showToast(`Berhasil membuat ${res.successCount} akun dosen.`, 'success');
       }
@@ -175,7 +178,9 @@ export default function Dosen() {
                 {bulkLoading() ? 'Memproses...' : `🔑 Buat Akun (${selectedIds().length})`}
               </Button>
             </Show>
-            <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor CSV</Button>
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor CSV
+            </Button>
             <Button onClick={openAddModal}>+ Tambah Dosen</Button>
           </div>
         </div>
@@ -184,7 +189,18 @@ export default function Dosen() {
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
           importUrl="/dosen/import"
-          templateHeaders={['nip', 'nama', 'email', 'programStudiKode', 'nidn', 'nik', 'jenisKelamin', 'tanggalLahir', 'tempatLahir', 'idAgama']}
+          templateHeaders={[
+            'nip',
+            'nama',
+            'email',
+            'programStudiKode',
+            'nidn',
+            'nik',
+            'jenisKelamin',
+            'tanggalLahir',
+            'tempatLahir',
+            'idAgama',
+          ]}
           title="Dosen"
           onSuccess={() => refetch()}
         />
@@ -201,15 +217,22 @@ export default function Dosen() {
         </div>
 
         <Show when={!dosens.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
-          <Table headers={[
-            <input
-              type="checkbox"
-              checked={isAllSelected()}
-              onChange={toggleSelectAll}
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />,
-            'NIP', 'Nama', 'Email', 'Program Studi', 'NIDN', 'Aksi'
-          ]}>
+          <Table
+            headers={[
+              <input
+                type="checkbox"
+                checked={isAllSelected()}
+                onChange={toggleSelectAll}
+                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />,
+              'NIP',
+              'Nama',
+              'Email',
+              'Program Studi',
+              'NIDN',
+              'Aksi',
+            ]}
+          >
             <For each={dosens()?.data}>
               {(item) => (
                 <tr class="hover:bg-gray-50/50 transition-colors">
@@ -274,7 +297,11 @@ export default function Dosen() {
           </Show>
         </Show>
 
-        <Modal show={showModal()} title={editId() ? 'Edit Data Dosen' : 'Tambah Dosen'} onClose={() => setShowModal(false)}>
+        <Modal
+          show={showModal()}
+          title={editId() ? 'Edit Data Dosen' : 'Tambah Dosen'}
+          onClose={() => setShowModal(false)}
+        >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
               <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">
@@ -309,9 +336,7 @@ export default function Dosen() {
                 label="Program Studi"
                 value={prodiId()}
                 onChange={(e) => setProdiId(Number(e.currentTarget.value))}
-                selectOptions={
-                  prodis()?.data.map((p) => ({ label: `${p.jenjang} - ${p.nama}`, value: p.id })) || []
-                }
+                selectOptions={prodis()?.data.map((p) => ({ label: `${p.jenjang} - ${p.nama}`, value: p.id })) || []}
               />
               <Input
                 label="NIDN"
@@ -346,9 +371,7 @@ export default function Dosen() {
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Simpan
-              </Button>
+              <Button type="submit">Simpan</Button>
             </div>
           </form>
         </Modal>

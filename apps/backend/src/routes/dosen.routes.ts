@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia';
 import { DosenController } from '../controllers/dosen.controller';
-import {
-  getDosenSchema,
-  createDosenSchema,
-  getDosenByIdSchema,
-  updateDosenSchema,
-  deleteDosenSchema
-} from '../schemas/dosen.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createDosenSchema,
+  deleteDosenSchema,
+  getDosenByIdSchema,
+  getDosenSchema,
+  updateDosenSchema,
+} from '../schemas/dosen.schema';
 
 export const dosenRoutes = new Elysia({ prefix: '/dosen' })
   .use(authMiddleware)

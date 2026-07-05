@@ -1,7 +1,33 @@
-import { app } from '../app';
-import { db } from '../utils/db';
 import { eq } from 'drizzle-orm';
-import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar, bimbingan, bimbinganThread, pelanggaran, komponenNilai, nilaiKomponenMahasiswa, pengajuanYudisium, transaksiPembayaran, skemaTarif, konversiNilai, skalaPredikatKelulusan, pengajuanCuti, mahasiswaKeluar } from '../models/schema';
+import { app } from '../app';
+import {
+  bap,
+  bimbingan,
+  bimbinganThread,
+  cpmk,
+  dosen,
+  dosenPengajarKelas,
+  kelasKuliah,
+  kompensasiBayar,
+  komponenNilai,
+  konversiNilai,
+  krs,
+  mahasiswa,
+  mahasiswaKeluar,
+  mataKuliah,
+  nilaiKomponenMahasiswa,
+  pelanggaran,
+  pengajuanCuti,
+  pengajuanYudisium,
+  periodeAkademik,
+  presensi,
+  programStudi,
+  skalaPredikatKelulusan,
+  skemaTarif,
+  transaksiPembayaran,
+  users,
+} from '../models/schema';
+import { db } from '../utils/db';
 
 export interface UserResponse {
   id: number;
@@ -77,7 +103,7 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: 'password123', nama: 'Test User', role }),
-    })
+    }),
   );
 
   if (registerResponse.status !== 201 && registerResponse.status !== 400) {
@@ -93,7 +119,7 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: 'password123' }),
-    })
+    }),
   );
 
   if (response.status !== 200) {
@@ -101,6 +127,6 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
     throw new Error(`getAuthToken login failed with status ${response.status}: ${errorText}`);
   }
 
-  const data = await response.json() as LoginSuccessResponse;
+  const data = (await response.json()) as LoginSuccessResponse;
   return data.token;
 }

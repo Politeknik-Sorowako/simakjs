@@ -52,7 +52,7 @@ export class PresensiController {
     }
     const payload = {
       ...body,
-      petugasId: user.id
+      petugasId: user.id,
     };
     const newPayment = await PresensiService.bayarKompensasi(payload);
     set.status = 201;

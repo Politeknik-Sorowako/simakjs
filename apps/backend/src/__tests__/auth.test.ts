@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
-import { app } from '../app';
-import { clearDatabase, RegisterSuccessResponse, LoginSuccessResponse, ErrorResponse } from './test-helper';
-import { db } from '../utils/db';
-import { users } from '../models/schema';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
+import { app } from '../app';
+import { passwordResets, users } from '../models/schema';
+import { db } from '../utils/db';
+import { clearDatabase, ErrorResponse, LoginSuccessResponse, RegisterSuccessResponse } from './test-helper';
 
 describe('1. Autentikasi (/auth)', () => {
   beforeEach(async () => {
@@ -22,11 +22,11 @@ describe('1. Autentikasi (/auth)', () => {
             nama: 'Admin Test',
             role: 'admin',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
-      const body = await response.json() as RegisterSuccessResponse;
+      const body = (await response.json()) as RegisterSuccessResponse;
       expect(body.message).toBe('Registrasi berhasil');
       expect(body.user).toBeDefined();
       expect(body.user.email).toBe('admin@test.com');
@@ -47,7 +47,7 @@ describe('1. Autentikasi (/auth)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        })
+        }),
       );
 
       const response = await app.handle(
@@ -55,11 +55,11 @@ describe('1. Autentikasi (/auth)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        })
+        }),
       );
 
       expect(response.status).toBe(400);
-      const body = await response.json() as ErrorResponse;
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error).toBe('Email sudah terdaftar');
     });
 
@@ -74,7 +74,7 @@ describe('1. Autentikasi (/auth)', () => {
             nama: 'Invalid Test',
             role: 'mahasiswa',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -91,7 +91,7 @@ describe('1. Autentikasi (/auth)', () => {
             nama: 'Short Test',
             role: 'mahasiswa',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -110,7 +110,7 @@ describe('1. Autentikasi (/auth)', () => {
             nama: 'User Test',
             role: 'mahasiswa',
           }),
-        })
+        }),
       );
     });
 
@@ -123,11 +123,11 @@ describe('1. Autentikasi (/auth)', () => {
             email: 'user@test.com',
             password: 'password123',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
-      const body = await response.json() as ErrorResponse;
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error).toBe('Akun Anda belum diaktifkan oleh Admin');
     });
 
@@ -143,11 +143,11 @@ describe('1. Autentikasi (/auth)', () => {
             email: 'user@test.com',
             password: 'password123',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json() as LoginSuccessResponse;
+      const body = (await response.json()) as LoginSuccessResponse;
       expect(body.message).toBe('Login berhasil');
       expect(body.token).toBeDefined();
       expect(body.user.email).toBe('user@test.com');
@@ -162,11 +162,11 @@ describe('1. Autentikasi (/auth)', () => {
             email: 'unregistered@test.com',
             password: 'password123',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(401);
-      const body = await response.json() as ErrorResponse;
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error).toBe('Email atau password salah');
     });
 
@@ -182,11 +182,11 @@ describe('1. Autentikasi (/auth)', () => {
             email: 'user@test.com',
             password: 'wrongpassword',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(401);
-      const body = await response.json() as ErrorResponse;
+      const body = (await response.json()) as ErrorResponse;
       expect(body.error).toBe('Email atau password salah');
     });
   });
@@ -203,7 +203,7 @@ describe('1. Autentikasi (/auth)', () => {
             nama: 'Reset Test',
             role: 'mahasiswa',
           }),
-        })
+        }),
       );
     });
 
@@ -213,13 +213,12 @@ describe('1. Autentikasi (/auth)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: 'reset@test.com' }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
-      const body = await response.json() as any;
-      expect(body.message).toBe('Link/token reset password berhasil dibuat');
-      expect(body.token).toBeDefined();
+      const body = (await response.json()) as any;
+      expect(body.message).toContain('berhasil dibuat');
     });
 
     it('harus gagal membuat token jika email tidak terdaftar', async () => {
@@ -228,7 +227,7 @@ describe('1. Autentikasi (/auth)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: 'nonexistent@test.com' }),
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -240,20 +239,28 @@ describe('1. Autentikasi (/auth)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: 'reset@test.com' }),
-        })
+        }),
       );
-      const { token } = await forgotResponse.json() as any;
+      expect(forgotResponse.status).toBe(200);
+
+      // Get token from database
+      const [resetRecord] = await db
+        .select()
+        .from(passwordResets)
+        .where(eq(passwordResets.email, 'reset@test.com'))
+        .limit(1);
+      const token = resetRecord.token;
 
       const resetResponse = await app.handle(
         new Request('http://localhost/auth/reset-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token, password: 'newpassword123' }),
-        })
+        }),
       );
 
       expect(resetResponse.status).toBe(200);
-      const resetBody = await resetResponse.json() as any;
+      const resetBody = (await resetResponse.json()) as any;
       expect(resetBody.message).toBe('Password Anda berhasil diubah. Silakan login kembali.');
 
       // Try logging in with new password (activate first)
@@ -263,7 +270,7 @@ describe('1. Autentikasi (/auth)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: 'reset@test.com', password: 'newpassword123' }),
-        })
+        }),
       );
       expect(loginResponse.status).toBe(200);
     });

@@ -1,6 +1,6 @@
-import { db } from '../utils/db';
-import { periodeAkademik } from '../models/schema';
 import { count, eq, ilike, or } from 'drizzle-orm';
+import { periodeAkademik } from '../models/schema';
+import { db } from '../utils/db';
 
 export interface CreatePeriodeDto {
   id: string;
@@ -15,25 +15,14 @@ export class PeriodeAkademikService {
     let whereClause = undefined;
 
     if (search) {
-      whereClause = or(
-        ilike(periodeAkademik.nama, `%${search}%`),
-        ilike(periodeAkademik.id, `%${search}%`)
-      );
+      whereClause = or(ilike(periodeAkademik.nama, `%${search}%`), ilike(periodeAkademik.id, `%${search}%`));
     }
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(periodeAkademik)
-      .where(whereClause);
-    
+    const [totalResult] = await db.select({ total: count() }).from(periodeAkademik).where(whereClause);
+
     const total = totalResult?.total || 0;
-    
-    const data = await db
-      .select()
-      .from(periodeAkademik)
-      .where(whereClause)
-      .limit(limit)
-      .offset(offset);
+
+    const data = await db.select().from(periodeAkademik).where(whereClause).limit(limit).offset(offset);
 
     const totalPages = Math.ceil(total / limit);
 
@@ -43,16 +32,13 @@ export class PeriodeAkademikService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
   static async getById(id: string) {
-    const [periode] = await db
-      .select()
-      .from(periodeAkademik)
-      .where(eq(periodeAkademik.id, id));
+    const [periode] = await db.select().from(periodeAkademik).where(eq(periodeAkademik.id, id));
     return periode || null;
   }
 
@@ -62,19 +48,12 @@ export class PeriodeAkademikService {
   }
 
   static async update(id: string, data: Partial<Omit<CreatePeriodeDto, 'id'>>) {
-    const [updatedPeriode] = await db
-      .update(periodeAkademik)
-      .set(data)
-      .where(eq(periodeAkademik.id, id))
-      .returning();
+    const [updatedPeriode] = await db.update(periodeAkademik).set(data).where(eq(periodeAkademik.id, id)).returning();
     return updatedPeriode || null;
   }
 
   static async delete(id: string) {
-    const [deletedPeriode] = await db
-      .delete(periodeAkademik)
-      .where(eq(periodeAkademik.id, id))
-      .returning();
+    const [deletedPeriode] = await db.delete(periodeAkademik).where(eq(periodeAkademik.id, id)).returning();
     return deletedPeriode || null;
   }
 }

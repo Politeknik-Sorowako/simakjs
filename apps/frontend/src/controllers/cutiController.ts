@@ -1,6 +1,6 @@
 import { fetchApi } from '../utils/api';
-import { PaginatedResponse } from './prodiController';
 import { Mahasiswa } from './mahasiswaController';
+import { PaginatedResponse } from './prodiController';
 
 export interface CutiRequest {
   id: number;
@@ -23,7 +23,12 @@ export interface MahasiswaCuti extends Mahasiswa {
 }
 
 export const cutiController = {
-  async getAll(page?: number, limit?: number, periodeId?: string, status?: string): Promise<PaginatedResponse<CutiRequest>> {
+  async getAll(
+    page?: number,
+    limit?: number,
+    periodeId?: string,
+    status?: string,
+  ): Promise<PaginatedResponse<CutiRequest>> {
     const params = new URLSearchParams();
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
@@ -59,7 +64,10 @@ export const cutiController = {
     });
   },
 
-  async approve(id: number, data: { action: 'approve' | 'reject'; catatan?: string; noSuratIzin?: string; tanggalSuratIzin?: string }): Promise<CutiRequest> {
+  async approve(
+    id: number,
+    data: { action: 'approve' | 'reject'; catatan?: string; noSuratIzin?: string; tanggalSuratIzin?: string },
+  ): Promise<CutiRequest> {
     return fetchApi<CutiRequest>(`/cuti/${id}/approve`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -72,7 +80,12 @@ export const cutiController = {
     });
   },
 
-  async getMahasiswaCuti(page?: number, limit?: number, search?: string, periodeId?: string): Promise<PaginatedResponse<MahasiswaCuti>> {
+  async getMahasiswaCuti(
+    page?: number,
+    limit?: number,
+    search?: string,
+    periodeId?: string,
+  ): Promise<PaginatedResponse<MahasiswaCuti>> {
     const params = new URLSearchParams();
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));

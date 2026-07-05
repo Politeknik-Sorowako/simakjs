@@ -1,4 +1,4 @@
-import { createContext, useContext, createSignal, JSX } from 'solid-js';
+import { createContext, createSignal, JSX, useContext } from 'solid-js';
 
 interface WorkspaceContextType {
   selectedProdiId: () => number | null;
@@ -15,11 +15,9 @@ export function WorkspaceProvider(props: { children: JSX.Element }) {
   const cachedPeriodeId = sessionStorage.getItem('ws_periode_id');
 
   const [selectedProdiId, setProdiIdState] = createSignal<number | null>(
-    cachedProdiId ? parseInt(cachedProdiId) : null
+    cachedProdiId ? parseInt(cachedProdiId) : null,
   );
-  const [selectedPeriodeId, setPeriodeIdState] = createSignal<string | null>(
-    cachedPeriodeId || null
-  );
+  const [selectedPeriodeId, setPeriodeIdState] = createSignal<string | null>(cachedPeriodeId || null);
 
   const setSelectedProdiId = (id: number | null) => {
     setProdiIdState(id);

@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { AuthController } from '../controllers/auth.controller';
-import { registerSchema, loginSchema } from '../schemas/auth.schema';
 import { jwtPlugin } from '../plugins/jwt.plugin';
+import { loginSchema, registerSchema } from '../schemas/auth.schema';
 
 export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(jwtPlugin)

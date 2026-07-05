@@ -1,6 +1,6 @@
+import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
+import { mahasiswa, mahasiswaKeluar, periodeAkademik } from '../models/schema';
 import { db } from '../utils/db';
-import { mahasiswaKeluar, mahasiswa, periodeAkademik } from '../models/schema';
-import { count, eq, and, desc, ilike, or } from 'drizzle-orm';
 
 export interface CreateMahasiswaKeluarDto {
   mahasiswaId: number;
@@ -36,25 +36,17 @@ export class MahasiswaKeluarService {
         noSk: data.noSk,
         tanggalSk: data.tanggalSk ? new Date(data.tanggalSk).toISOString().split('T')[0] : null,
         ipk: data.ipk ? String(data.ipk) : null,
-        nomorIjazah: data.nomorIjazah
+        nomorIjazah: data.nomorIjazah,
       })
       .returning();
 
     // Side effect: update mahasiswa status
-    await db
-      .update(mahasiswa)
-      .set({ status: data.statusBaru })
-      .where(eq(mahasiswa.id, data.mahasiswaId));
+    await db.update(mahasiswa).set({ status: data.statusBaru }).where(eq(mahasiswa.id, data.mahasiswaId));
 
     return newKeluar;
   }
 
-  static async getAll(params: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    periodeId?: string;
-  }) {
+  static async getAll(params: { page?: number; limit?: number; search?: string; periodeId?: string }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
     const offset = (page - 1) * limit;
@@ -71,20 +63,18 @@ export class MahasiswaKeluarService {
       with: {
         mahasiswa: {
           with: {
-            programStudi: true
-          }
+            programStudi: true,
+          },
         },
-        periodeAkademik: true
-      }
+        periodeAkademik: true,
+      },
     });
 
     // If search exists, filter by name or NIM in memory
     let filteredData = data;
     if (params.search) {
       const q = params.search.toLowerCase();
-      filteredData = data.filter(
-        d => d.mahasiswa?.nama.toLowerCase().includes(q) || d.mahasiswa?.nim.includes(q)
-      );
+      filteredData = data.filter((d) => d.mahasiswa?.nama.toLowerCase().includes(q) || d.mahasiswa?.nim.includes(q));
     }
 
     const total = filteredData.length;
@@ -96,14 +86,14 @@ export class MahasiswaKeluarService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
   static async delete(id: number) {
     const record = await db.query.mahasiswaKeluar.findFirst({
-      where: eq(mahasiswaKeluar.id, id)
+      where: eq(mahasiswaKeluar.id, id),
     });
 
     if (!record) {
@@ -111,16 +101,10 @@ export class MahasiswaKeluarService {
     }
 
     // Delete record
-    const [deleted] = await db
-      .delete(mahasiswaKeluar)
-      .where(eq(mahasiswaKeluar.id, id))
-      .returning();
+    const [deleted] = await db.delete(mahasiswaKeluar).where(eq(mahasiswaKeluar.id, id)).returning();
 
     // Revert status to aktif
-    await db
-      .update(mahasiswa)
-      .set({ status: 'aktif' })
-      .where(eq(mahasiswa.id, record.mahasiswaId));
+    await db.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, record.mahasiswaId));
 
     return deleted;
   }

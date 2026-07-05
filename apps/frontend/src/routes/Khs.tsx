@@ -1,13 +1,13 @@
-import { createSignal, createResource, Show, For, createEffect } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { MainLayout } from '../components/MainLayout';
+import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
-import { MainLayout } from '../components/MainLayout';
-import { Button } from '../components/ui/Button';
-import { useToast } from '../contexts/ToastContext';
-import { useWorkspace } from '../contexts/WorkspaceContext';
 
 export default function Khs() {
   const auth = useAuth();
@@ -36,7 +36,7 @@ export default function Khs() {
     },
     async () => {
       return await khsController.getAllKonversi();
-    }
+    },
   );
 
   const [prodis] = createResource(
@@ -47,7 +47,7 @@ export default function Khs() {
     async () => {
       const res = await prodiController.getAll(undefined, 1, 100);
       return res.data;
-    }
+    },
   );
 
   // Load all academic periods
@@ -68,7 +68,7 @@ export default function Khs() {
     }
     const list = periodes();
     if (list && list.length > 0) {
-      const active = list.find(p => p.aktif);
+      const active = list.find((p) => p.aktif);
       if (active) {
         setSelectedPeriode(active.id);
       } else {
@@ -100,7 +100,7 @@ export default function Khs() {
       } catch (e) {
         return null;
       }
-    }
+    },
   );
 
   // Load Mahasiswa profile if logged in as student
@@ -115,18 +115,15 @@ export default function Khs() {
       const profile = res.data[0] || null;
       if (profile) setSelectedMhsId(profile.id);
       return profile;
-    }
+    },
   );
 
   // Search Mahasiswa (Admin/Dosen only)
-  const [searchedStudents] = createResource(
-    searchNim,
-    async (nim) => {
-      if (!nim) return [];
-      const res = await mahasiswaController.getAll(nim, 1, 10);
-      return res.data;
-    }
-  );
+  const [searchedStudents] = createResource(searchNim, async (nim) => {
+    if (!nim) return [];
+    const res = await mahasiswaController.getAll(nim, 1, 10);
+    return res.data;
+  });
 
   const [khsData, { refetch: refetchKhs }] = createResource(
     () => {
@@ -137,17 +134,14 @@ export default function Khs() {
     },
     async ({ mhsId, periodeId }) => {
       return await khsController.getByMhsIdAndPeriode(mhsId, periodeId);
-    }
+    },
   );
 
   // Load Transkrip
-  const [transkripData, { refetch: refetchTranskrip }] = createResource(
-    selectedMhsId,
-    async (mhsId) => {
-      if (!mhsId) return null;
-      return await khsController.getTranskrip(mhsId);
-    }
-  );
+  const [transkripData, { refetch: refetchTranskrip }] = createResource(selectedMhsId, async (mhsId) => {
+    if (!mhsId) return null;
+    return await khsController.getTranskrip(mhsId);
+  });
 
   const handleSaveKonversi = async (e: Event) => {
     e.preventDefault();
@@ -163,7 +157,7 @@ export default function Khs() {
         bobotIndeks: parseFloat(nilaiIndeks()),
         nilaiMin: parseFloat(nilaiMin()),
         nilaiMax: parseFloat(nilaiMax()),
-        predikat: predikat()
+        predikat: predikat(),
       });
       toast.showToast('Aturan konversi nilai berhasil disimpan.', 'success');
       setShowKonversiModal(false);
@@ -193,7 +187,7 @@ export default function Khs() {
             <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">Hasil Studi Akademik</h1>
             <p class="text-sm text-gray-500">Kartu Hasil Studi (KHS) dan Transkrip Nilai Akademik Mahasiswa</p>
           </div>
-          
+
           <div class="flex gap-2">
             <button
               onClick={() => setActiveTab('khs')}
@@ -262,9 +256,7 @@ export default function Khs() {
                     onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
                     class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-500"
                   >
-                    <For each={periodes()}>
-                      {(p) => <option value={p.id}>{p.nama}</option>}
-                    </For>
+                    <For each={periodes()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
                   </select>
                 </div>
               </Show>
@@ -281,14 +273,10 @@ export default function Khs() {
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
               class="border border-gray-200 rounded-xl px-3 py-1.5 text-sm bg-white focus:outline-none focus:border-blue-500"
             >
-              <For each={periodes()}>
-                {(p) => <option value={p.id}>{p.nama}</option>}
-              </For>
+              <For each={periodes()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
             </select>
           </div>
         </Show>
-
-
 
         {/* Aturan Konversi Nilai View */}
         <Show when={activeTab() === 'konversi' && role() === 'admin'}>
@@ -325,14 +313,21 @@ export default function Khs() {
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
-                <For each={konversis()} fallback={
-                  <tr>
-                    <td colspan="7" class="p-4 text-center text-gray-400 italic">Belum ada aturan konversi nilai terdaftar.</td>
-                  </tr>
-                }>
+                <For
+                  each={konversis()}
+                  fallback={
+                    <tr>
+                      <td colspan="7" class="p-4 text-center text-gray-400 italic">
+                        Belum ada aturan konversi nilai terdaftar.
+                      </td>
+                    </tr>
+                  }
+                >
                   {(konv) => (
                     <tr class="hover:bg-gray-50/20">
-                      <td class="p-3 font-semibold text-gray-800">{konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}</td>
+                      <td class="p-3 font-semibold text-gray-800">
+                        {konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}
+                      </td>
                       <td class="p-3 font-bold text-blue-600">{konv.nilaiHuruf}</td>
                       <td class="p-3 font-mono">{parseFloat(konv.bobotIndeks).toFixed(2)}</td>
                       <td class="p-3 font-mono">{parseFloat(konv.nilaiMin).toFixed(2)}</td>
@@ -371,12 +366,15 @@ export default function Khs() {
 
         {/* Content Area */}
         <Show when={activeTab() !== 'konversi'}>
-          <Show when={selectedMhsId()} fallback={
+          <Show
+            when={selectedMhsId()}
+            fallback={
               <div class="bg-white p-12 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
                 Silakan cari dan pilih mahasiswa terlebih dahulu untuk menampilkan data akademik.
               </div>
-            }>
-              <Show when={activeTab() === 'khs'}>
+            }
+          >
+            <Show when={activeTab() === 'khs'}>
               <Show when={khsData.loading}>
                 <div class="text-center py-12 text-gray-400">Memuat data KHS...</div>
               </Show>
@@ -390,19 +388,31 @@ export default function Khs() {
                       <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
                           <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">IP Semester</span>
-                          <span class="text-3xl font-extrabold text-blue-600">{khsData()?.summary?.ipSemester?.toFixed(2)}</span>
+                          <span class="text-3xl font-extrabold text-blue-600">
+                            {khsData()?.summary?.ipSemester?.toFixed(2)}
+                          </span>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
-                          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">IPK Kumulatif</span>
-                          <span class="text-3xl font-extrabold text-indigo-600">{khsData()?.summary?.ipk?.toFixed(2)}</span>
+                          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            IPK Kumulatif
+                          </span>
+                          <span class="text-3xl font-extrabold text-indigo-600">
+                            {khsData()?.summary?.ipk?.toFixed(2)}
+                          </span>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
-                          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">SKS Terkontrak</span>
+                          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            SKS Terkontrak
+                          </span>
                           <span class="text-3xl font-extrabold text-gray-800">{khsData()?.summary?.totalSks} SKS</span>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
-                          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">SKS Kumulatif</span>
-                          <span class="text-3xl font-extrabold text-gray-800">{khsData()?.summary?.totalSksKumulatif} SKS</span>
+                          <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                            SKS Kumulatif
+                          </span>
+                          <span class="text-3xl font-extrabold text-gray-800">
+                            {khsData()?.summary?.totalSksKumulatif} SKS
+                          </span>
                         </div>
                       </div>
 
@@ -440,11 +450,16 @@ export default function Khs() {
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
-                            <For each={khsData()?.krsList} fallback={
-                              <tr>
-                                <td colspan="6" class="p-4 text-center text-gray-400 italic">Nilai belum dimasukkan atau belum disetujui Dosen PA.</td>
-                              </tr>
-                            }>
+                            <For
+                              each={khsData()?.krsList}
+                              fallback={
+                                <tr>
+                                  <td colspan="6" class="p-4 text-center text-gray-400 italic">
+                                    Nilai belum dimasukkan atau belum disetujui Dosen PA.
+                                  </td>
+                                </tr>
+                              }
+                            >
                               {(item) => (
                                 <tr class="hover:bg-gray-50/20">
                                   <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
@@ -453,13 +468,15 @@ export default function Khs() {
                                   <td class="p-3">{item.nilaiAngka || '-'}</td>
                                   <td class="p-3">
                                     <Show when={item.nilaiHuruf} fallback="-">
-                                      <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                        item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
-                                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                          : item.nilaiHuruf === 'C+' || item.nilaiHuruf === 'C'
-                                          ? 'bg-amber-50 text-amber-600 border border-amber-100'
-                                          : 'bg-rose-50 text-rose-600 border border-rose-100'
-                                      }`}>
+                                      <span
+                                        class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                          item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
+                                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                            : item.nilaiHuruf === 'C+' || item.nilaiHuruf === 'C'
+                                              ? 'bg-amber-50 text-amber-600 border border-amber-100'
+                                              : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                        }`}
+                                      >
                                         {item.nilaiHuruf}
                                       </span>
                                     </Show>
@@ -479,14 +496,19 @@ export default function Khs() {
                     <span class="text-5xl">🔒</span>
                     <h2 class="text-xl font-extrabold tracking-tight text-rose-900">Akses KHS Diblokir Sementara</h2>
                     <p class="text-sm font-medium leading-relaxed max-w-md text-rose-700">
-                      Sesuai dengan ketentuan Buku Panduan Akademik, Anda harus melunasi seluruh kewajiban administrasi sebelum dapat mengakses nilai akhir KHS.
+                      Sesuai dengan ketentuan Buku Panduan Akademik, Anda harus melunasi seluruh kewajiban administrasi
+                      sebelum dapat mengakses nilai akhir KHS.
                     </p>
                     <div class="bg-white border border-rose-100 rounded-xl p-4 w-full text-left flex flex-col gap-1.5 shadow-sm">
-                      <span class="text-xs uppercase font-extrabold tracking-wider text-rose-500">Penyebab Blokir:</span>
+                      <span class="text-xs uppercase font-extrabold tracking-wider text-rose-500">
+                        Penyebab Blokir:
+                      </span>
                       <p class="text-xs font-bold text-gray-700">{khsData()?.reason}</p>
                       <p class="text-xs text-gray-500 font-medium">{khsData()?.detail}</p>
                     </div>
-                    <p class="text-xs text-rose-600 font-bold mt-2">Silakan hubungi Bagian Keuangan atau BAAK untuk melakukan penyelesaian tanggungan.</p>
+                    <p class="text-xs text-rose-600 font-bold mt-2">
+                      Silakan hubungi Bagian Keuangan atau BAAK untuk melakukan penyelesaian tanggungan.
+                    </p>
                   </div>
                 </Show>
               </Show>
@@ -501,7 +523,9 @@ export default function Khs() {
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
-                      <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">IPK Kumulatif (Transcript)</span>
+                      <span class="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        IPK Kumulatif (Transcript)
+                      </span>
                       <span class="text-3xl font-extrabold text-blue-600">{transkripData()?.ipk?.toFixed(2)}</span>
                     </div>
                     <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-1">
@@ -534,11 +558,16 @@ export default function Khs() {
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
-                        <For each={transkripData()?.transkripList} fallback={
-                          <tr>
-                            <td colspan="7" class="p-4 text-center text-gray-400 italic">Belum ada nilai akademik terdaftar dalam transkrip.</td>
-                          </tr>
-                        }>
+                        <For
+                          each={transkripData()?.transkripList}
+                          fallback={
+                            <tr>
+                              <td colspan="7" class="p-4 text-center text-gray-400 italic">
+                                Belum ada nilai akademik terdaftar dalam transkrip.
+                              </td>
+                            </tr>
+                          }
+                        >
                           {(item) => (
                             <tr class="hover:bg-gray-50/20">
                               <td class="p-3 font-semibold text-gray-500">{item.periodeId}</td>
@@ -548,11 +577,13 @@ export default function Khs() {
                               <td class="p-3">{item.nilaiAngka || '-'}</td>
                               <td class="p-3">
                                 <Show when={item.nilaiHuruf} fallback="-">
-                                  <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                    item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
-                                      ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                                      : 'bg-amber-50 text-amber-600 border border-amber-100'
-                                  }`}>
+                                  <span
+                                    class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                      item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
+                                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                        : 'bg-amber-50 text-amber-600 border border-amber-100'
+                                    }`}
+                                  >
                                     {item.nilaiHuruf}
                                   </span>
                                 </Show>
@@ -576,25 +607,38 @@ export default function Khs() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-gray-800">Print Preview - Kartu Ujian</h3>
-                <button onClick={() => setShowPrintUjian(false)} class="text-gray-400 hover:text-gray-650">❌</button>
+                <button onClick={() => setShowPrintUjian(false)} class="text-gray-400 hover:text-gray-650">
+                  ❌
+                </button>
               </div>
-              
+
               <div class="flex flex-col gap-4 text-gray-850" id="print-area-ujian">
                 <div class="text-center border-b pb-3 flex flex-col gap-1">
                   <h2 class="text-xl font-extrabold text-blue-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">KARTU UJIAN MAHASISWA (UTS/UAS)</h3>
+                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">
+                    KARTU UJIAN MAHASISWA (UTS/UAS)
+                  </h3>
                   <p class="text-xs text-gray-400">Periode Akademik: {selectedPeriode()}</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-600 mb-2">
                   <div>
-                    <p>NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span></p>
-                    <p>Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span></p>
+                    <p>
+                      NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span>
+                    </p>
+                    <p>
+                      Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span>
+                    </p>
                   </div>
                   <div class="text-right">
-                    <p>Bimbingan PA: <span class={`font-bold ${eligibilityData()?.bimbingan?.eligible ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {eligibilityData()?.bimbingan?.eligible ? 'TERPENUHI' : 'BELUM TERPENUHI'}
-                    </span></p>
+                    <p>
+                      Bimbingan PA:{' '}
+                      <span
+                        class={`font-bold ${eligibilityData()?.bimbingan?.eligible ? 'text-emerald-600' : 'text-rose-600'}`}
+                      >
+                        {eligibilityData()?.bimbingan?.eligible ? 'TERPENUHI' : 'BELUM TERPENUHI'}
+                      </span>
+                    </p>
                   </div>
                 </div>
 
@@ -608,20 +652,33 @@ export default function Khs() {
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-gray-200 font-medium text-gray-700">
-                    <For each={eligibilityData()?.classes} fallback={
-                      <tr>
-                        <td colspan="4" class="p-4 text-center text-gray-400 italic">Memuat data kelayakan ujian...</td>
-                      </tr>
-                    }>
+                    <For
+                      each={eligibilityData()?.classes}
+                      fallback={
+                        <tr>
+                          <td colspan="4" class="p-4 text-center text-gray-400 italic">
+                            Memuat data kelayakan ujian...
+                          </td>
+                        </tr>
+                      }
+                    >
                       {(c) => (
                         <tr>
                           <td class="p-2 border-r">{c.mataKuliahKode}</td>
-                          <td class="p-2 border-r font-bold text-gray-800">{c.mataKuliahNama} ({c.namaKelas})</td>
-                          <td class="p-2 border-r text-center">{c.attendanceRate}% ({c.presentMeetings}/{c.totalMeetings})</td>
+                          <td class="p-2 border-r font-bold text-gray-800">
+                            {c.mataKuliahNama} ({c.namaKelas})
+                          </td>
+                          <td class="p-2 border-r text-center">
+                            {c.attendanceRate}% ({c.presentMeetings}/{c.totalMeetings})
+                          </td>
                           <td class="p-2 text-center">
-                            <span class={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              c.eligible ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
-                            }`}>
+                            <span
+                              class={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                c.eligible
+                                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                  : 'bg-rose-50 text-rose-600 border border-rose-100'
+                              }`}
+                            >
                               {c.eligible ? 'LAYAK' : 'TIDAK LAYAK'}
                             </span>
                           </td>
@@ -655,24 +712,39 @@ export default function Khs() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-gray-800">Print Preview - KHS</h3>
-                <button onClick={() => setShowPrintKhs(false)} class="text-gray-400 hover:text-gray-650">❌</button>
+                <button onClick={() => setShowPrintKhs(false)} class="text-gray-400 hover:text-gray-650">
+                  ❌
+                </button>
               </div>
-              
+
               <div class="flex flex-col gap-4 text-gray-850" id="print-area-khs">
                 <div class="text-center border-b pb-3 flex flex-col gap-1">
                   <h2 class="text-xl font-extrabold text-blue-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">KARTU HASIL STUDI (KHS) SEMESTER</h3>
+                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">
+                    KARTU HASIL STUDI (KHS) SEMESTER
+                  </h3>
                   <p class="text-xs text-gray-400">Periode Akademik: {selectedPeriode()}</p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-600 mb-2">
                   <div>
-                    <p>NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span></p>
-                    <p>Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span></p>
+                    <p>
+                      NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span>
+                    </p>
+                    <p>
+                      Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span>
+                    </p>
                   </div>
                   <div class="text-right">
-                    <p>IP Semester: <span class="text-gray-900 font-extrabold text-blue-600">{khsData()?.summary?.ipSemester?.toFixed(2)}</span></p>
-                    <p>SKS Terkontrak: <span class="text-gray-900 font-bold">{khsData()?.summary?.totalSks} SKS</span></p>
+                    <p>
+                      IP Semester:{' '}
+                      <span class="text-gray-900 font-extrabold text-blue-600">
+                        {khsData()?.summary?.ipSemester?.toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
+                      SKS Terkontrak: <span class="text-gray-900 font-bold">{khsData()?.summary?.totalSks} SKS</span>
+                    </p>
                   </div>
                 </div>
 
@@ -727,23 +799,36 @@ export default function Khs() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-gray-800">Print Preview - Transkrip Akademik</h3>
-                <button onClick={() => setShowPrintTranskrip(false)} class="text-gray-400 hover:text-gray-650">❌</button>
+                <button onClick={() => setShowPrintTranskrip(false)} class="text-gray-400 hover:text-gray-650">
+                  ❌
+                </button>
               </div>
-              
+
               <div class="flex flex-col gap-4 text-gray-850" id="print-area-transkrip">
                 <div class="text-center border-b pb-3 flex flex-col gap-1">
                   <h2 class="text-xl font-extrabold text-blue-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">TRANSKRIP NILAI AKADEMIK KUMULATIF</h3>
+                  <h3 class="text-sm font-bold text-gray-600 uppercase tracking-widest">
+                    TRANSKRIP NILAI AKADEMIK KUMULATIF
+                  </h3>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-600 mb-2">
                   <div>
-                    <p>NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span></p>
-                    <p>Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span></p>
+                    <p>
+                      NIM: <span class="text-gray-900 font-bold">{mhsProfile()?.nim || 'N/A'}</span>
+                    </p>
+                    <p>
+                      Nama: <span class="text-gray-900 font-bold">{mhsProfile()?.nama || 'N/A'}</span>
+                    </p>
                   </div>
                   <div class="text-right">
-                    <p>IPK Kumulatif: <span class="text-gray-900 font-extrabold text-blue-600">{transkripData()?.ipk?.toFixed(2)}</span></p>
-                    <p>Total SKS Lulus: <span class="text-gray-900 font-bold">{transkripData()?.totalSksLulus} SKS</span></p>
+                    <p>
+                      IPK Kumulatif:{' '}
+                      <span class="text-gray-900 font-extrabold text-blue-600">{transkripData()?.ipk?.toFixed(2)}</span>
+                    </p>
+                    <p>
+                      Total SKS Lulus: <span class="text-gray-900 font-bold">{transkripData()?.totalSksLulus} SKS</span>
+                    </p>
                   </div>
                 </div>
 
@@ -802,7 +887,9 @@ export default function Khs() {
                 <h3 class="font-bold text-gray-800 text-sm">
                   {konversiId() ? 'Edit Aturan Konversi Nilai' : 'Tambah Aturan Konversi Nilai'}
                 </h3>
-                <button onClick={() => setShowKonversiModal(false)} class="text-gray-400 hover:text-gray-600">❌</button>
+                <button onClick={() => setShowKonversiModal(false)} class="text-gray-400 hover:text-gray-600">
+                  ❌
+                </button>
               </div>
 
               <form onSubmit={handleSaveKonversi} class="flex flex-col gap-4">
@@ -814,9 +901,7 @@ export default function Khs() {
                     onChange={(e) => setKonversiProdiId(e.currentTarget.value)}
                   >
                     <option value="">-- Aturan Global (Semua Prodi) --</option>
-                    <For each={prodis()}>
-                      {(p) => <option value={p.id}>{p.nama}</option>}
-                    </For>
+                    <For each={prodis()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
                   </select>
                 </div>
 

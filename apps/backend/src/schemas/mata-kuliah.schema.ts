@@ -7,30 +7,33 @@ export const mataKuliahBody = t.Object({
   sksTatapMuka: t.Optional(t.Integer({ default: 2 })),
   sksPraktek: t.Optional(t.Integer({ default: 1 })),
   programStudiId: t.Optional(t.Integer({ default: 1 })),
-  idPddikti: t.Optional(t.String())
+  idPddikti: t.Optional(t.String()),
 });
 
-export const updateMataKuliahBody = t.Partial(t.Object({
-  kode: t.String(),
-  nama: t.String(),
-  sksTotal: t.Integer(),
-  sksTatapMuka: t.Integer(),
-  sksPraktek: t.Integer(),
-  programStudiId: t.Integer(),
-  idPddikti: t.String()
-}));
+export const updateMataKuliahBody = t.Partial(
+  t.Object({
+    kode: t.String(),
+    nama: t.String(),
+    sksTotal: t.Integer(),
+    sksTatapMuka: t.Integer(),
+    sksPraktek: t.Integer(),
+    programStudiId: t.Integer(),
+    idPddikti: t.String(),
+  }),
+);
 
 export const getMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Daftar Mata Kuliah',
-    description: 'Mengambil semua data mata kuliah yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
+    description:
+      'Mengambil semua data mata kuliah yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
-    programStudiId: t.Optional(t.Numeric())
+    programStudiId: t.Optional(t.Numeric()),
   }),
   response: {
     200: t.Object({
@@ -53,27 +56,27 @@ export const getMataKuliahSchema = {
               id: t.Integer(),
               kode: t.String(),
               nama: t.String(),
-              jenjang: t.String()
+              jenjang: t.String(),
             }),
-            t.Null()
-          ])
-        })
+            t.Null(),
+          ]),
+        }),
       ),
       meta: t.Object({
         total: t.Integer({ default: 1 }),
         page: t.Integer({ default: 1 }),
         limit: t.Integer({ default: 10 }),
-        totalPages: t.Integer({ default: 1 })
-      })
-    })
-  }
+        totalPages: t.Integer({ default: 1 }),
+      }),
+    }),
+  },
 };
 
 export const createMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Tambah Mata Kuliah Baru',
-    description: 'Menambahkan mata kuliah baru (Hanya dapat diakses Admin).'
+    description: 'Menambahkan mata kuliah baru (Hanya dapat diakses Admin).',
   },
   body: mataKuliahBody,
   response: {
@@ -89,22 +92,22 @@ export const createMataKuliahSchema = {
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
       createdAt: t.Any(),
-      updatedAt: t.Any()
+      updatedAt: t.Any(),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
-    })
-  }
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
+    }),
+  },
 };
 
 export const getMataKuliahByIdSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Detail Mata Kuliah',
-    description: 'Mengambil satu data mata kuliah berdasarkan ID beserta relasi program studi.'
+    description: 'Mengambil satu data mata kuliah berdasarkan ID beserta relasi program studi.',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   response: {
     200: t.Object({
@@ -125,25 +128,25 @@ export const getMataKuliahByIdSchema = {
           id: t.Integer(),
           kode: t.String(),
           nama: t.String(),
-          jenjang: t.String()
+          jenjang: t.String(),
         }),
-        t.Null()
-      ])
+        t.Null(),
+      ]),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };
 
 export const updateMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Perbarui Mata Kuliah',
-    description: 'Memperbarui data mata kuliah berdasarkan ID (Hanya dapat diakses oleh Admin).'
+    description: 'Memperbarui data mata kuliah berdasarkan ID (Hanya dapat diakses oleh Admin).',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   body: updateMataKuliahBody,
   response: {
@@ -159,35 +162,35 @@ export const updateMataKuliahSchema = {
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
       createdAt: t.Any(),
-      updatedAt: t.Any()
+      updatedAt: t.Any(),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };
 
 export const deleteMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Hapus Mata Kuliah',
-    description: 'Menghapus data mata kuliah berdasarkan ID (Hanya dapat diakses oleh Admin).'
+    description: 'Menghapus data mata kuliah berdasarkan ID (Hanya dapat diakses oleh Admin).',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   response: {
     200: t.Object({
-      message: t.String({ default: 'Mata Kuliah berhasil dihapus' })
+      message: t.String({ default: 'Mata Kuliah berhasil dihapus' }),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };

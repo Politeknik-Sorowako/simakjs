@@ -1,5 +1,5 @@
-import { app } from './app';
 import { getAuthToken } from './__tests__/test-helper';
+import { app } from './app';
 
 async function run() {
   const token = await getAuthToken('dosen@simak.id', 'dosen');
@@ -8,8 +8,8 @@ async function run() {
   // 1. Get Kelas
   const resKelas = await app.handle(
     new Request('http://localhost/kelas-kuliah', {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+      headers: { Authorization: `Bearer ${token}` },
+    }),
   );
   const dataKelas = await resKelas.json();
   console.log('Kelas result:', JSON.stringify(dataKelas, null, 2));
@@ -20,8 +20,8 @@ async function run() {
     console.log('Mata Kuliah ID:', mkId);
     const resCpmk = await app.handle(
       new Request(`http://localhost/cpmk/mata-kuliah/${mkId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     );
     const dataCpmk = await resCpmk.json();
     console.log('CPMK result:', JSON.stringify(dataCpmk, null, 2));

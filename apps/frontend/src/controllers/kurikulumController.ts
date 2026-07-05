@@ -1,6 +1,6 @@
 import { fetchApi } from '../utils/api';
-import { PaginatedResponse, Prodi } from './prodiController';
 import { MataKuliah } from './mataKuliahController';
+import { PaginatedResponse, Prodi } from './prodiController';
 
 export interface Kurikulum {
   id: number;
@@ -36,7 +36,12 @@ export interface KurikulumDetail extends Kurikulum {
 }
 
 export const kurikulumController = {
-  async getAll(search?: string, page?: number, limit?: number, prodiId?: number): Promise<PaginatedResponse<Kurikulum>> {
+  async getAll(
+    search?: string,
+    page?: number,
+    limit?: number,
+    prodiId?: number,
+  ): Promise<PaginatedResponse<Kurikulum>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
@@ -70,7 +75,10 @@ export const kurikulumController = {
     });
   },
 
-  async addMataKuliah(kurikulumId: number, data: Omit<KurikulumMataKuliah, 'id' | 'kurikulumId'>): Promise<KurikulumMataKuliah> {
+  async addMataKuliah(
+    kurikulumId: number,
+    data: Omit<KurikulumMataKuliah, 'id' | 'kurikulumId'>,
+  ): Promise<KurikulumMataKuliah> {
     return fetchApi<KurikulumMataKuliah>(`/kurikulum/${kurikulumId}/mata-kuliah`, {
       method: 'POST',
       body: JSON.stringify(data),

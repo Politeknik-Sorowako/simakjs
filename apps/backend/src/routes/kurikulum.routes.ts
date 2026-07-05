@@ -1,15 +1,15 @@
 import { Elysia } from 'elysia';
 import { KurikulumController } from '../controllers/kurikulum.controller';
-import {
-  getKurikulumSchema,
-  getKurikulumByIdSchema,
-  createKurikulumSchema,
-  updateKurikulumSchema,
-  deleteKurikulumSchema,
-  addMataKuliahSchema,
-  removeMataKuliahSchema
-} from '../schemas/kurikulum.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  addMataKuliahSchema,
+  createKurikulumSchema,
+  deleteKurikulumSchema,
+  getKurikulumByIdSchema,
+  getKurikulumSchema,
+  removeMataKuliahSchema,
+  updateKurikulumSchema,
+} from '../schemas/kurikulum.schema';
 
 export const kurikulumRoutes = new Elysia({ prefix: '/kurikulum' })
   .use(authMiddleware)

@@ -1,6 +1,16 @@
+import { and, eq, inArray } from 'drizzle-orm';
+import {
+  kelasKuliah,
+  komponenNilai,
+  konversiNilai,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  nilaiKomponenMahasiswa,
+  pengajuanYudisium,
+  programStudi,
+} from '../models/schema';
 import { db } from '../utils/db';
-import { pengajuanYudisium, mahasiswa, programStudi, komponenNilai, nilaiKomponenMahasiswa, krs, kelasKuliah, konversiNilai, mataKuliah } from '../models/schema';
-import { eq, and, inArray } from 'drizzle-orm';
 
 export class YudisiumService {
   // --- YUDISIUM ---
@@ -13,34 +23,37 @@ export class YudisiumService {
           columns: {
             nim: true,
             nama: true,
-            status: true
+            status: true,
           },
           with: {
             programStudi: {
               columns: {
-                nama: true
-              }
-            }
-          }
-        }
-      }
+                nama: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!record) return null;
 
     return {
       ...record,
-      prodi: record.mahasiswa?.programStudi ? { nama: record.mahasiswa.programStudi.nama } : undefined
+      prodi: record.mahasiswa?.programStudi ? { nama: record.mahasiswa.programStudi.nama } : undefined,
     };
   }
 
-  static async createOrUpdatePengajuan(mahasiswaId: number, data: {
-    judulTa: string;
-    skorToefl: number;
-    bebasPerpustakaan: boolean;
-    bebasLab: boolean;
-    buktiPembayaranWisuda: boolean;
-  }) {
+  static async createOrUpdatePengajuan(
+    mahasiswaId: number,
+    data: {
+      judulTa: string;
+      skorToefl: number;
+      bebasPerpustakaan: boolean;
+      bebasLab: boolean;
+      buktiPembayaranWisuda: boolean;
+    },
+  ) {
     const existing = await this.getPengajuan(mahasiswaId);
 
     if (existing) {
@@ -50,7 +63,7 @@ export class YudisiumService {
           ...data,
           status: 'diajukan', // Reset status to diajukan upon updates
           catatan: null,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(pengajuanYudisium.mahasiswaId, mahasiswaId))
         .returning();
@@ -62,33 +75,34 @@ export class YudisiumService {
       .values({
         mahasiswaId,
         ...data,
-        status: 'diajukan'
+        status: 'diajukan',
       })
       .returning();
     return created;
   }
 
-  static async updateStatus(mahasiswaId: number, status: 'diajukan' | 'diverifikasi' | 'disetujui' | 'ditolak', catatan?: string | null) {
+  static async updateStatus(
+    mahasiswaId: number,
+    status: 'diajukan' | 'diverifikasi' | 'disetujui' | 'ditolak',
+    catatan?: string | null,
+  ) {
     return await db.transaction(async (tx) => {
       const [updated] = await tx
         .update(pengajuanYudisium)
         .set({
           status,
           catatan: catatan || null,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(pengajuanYudisium.mahasiswaId, mahasiswaId))
         .returning();
 
       // If approved, update student status to 'lulus'
       if (status === 'disetujui') {
-        await tx
-          .update(mahasiswa)
-          .set({ status: 'lulus', updatedAt: new Date() })
-          .where(eq(mahasiswa.id, mahasiswaId));
+        await tx.update(mahasiswa).set({ status: 'lulus', updatedAt: new Date() }).where(eq(mahasiswa.id, mahasiswaId));
       } else {
         const currentMhs = await tx.query.mahasiswa.findFirst({
-          where: eq(mahasiswa.id, mahasiswaId)
+          where: eq(mahasiswa.id, mahasiswaId),
         });
         if (currentMhs && currentMhs.status === 'lulus') {
           await tx
@@ -118,11 +132,11 @@ export class YudisiumService {
         mahasiswa: {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
-          status: mahasiswa.status
+          status: mahasiswa.status,
         },
         prodi: {
-          nama: programStudi.nama
-        }
+          nama: programStudi.nama,
+        },
       })
       .from(pengajuanYudisium)
       .innerJoin(mahasiswa, eq(pengajuanYudisium.mahasiswaId, mahasiswa.id))
@@ -132,15 +146,12 @@ export class YudisiumService {
   // --- GRADE COMPONENTS & GRADING INTEGRITY ---
 
   static async getKomponen(kelasKuliahId: number) {
-    return await db
-      .select()
-      .from(komponenNilai)
-      .where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+    return await db.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
   }
 
   static async saveKomponen(kelasKuliahId: number, list: Array<{ nama: string; bobot: number }>) {
     const foundKelas = await db.query.kelasKuliah.findFirst({
-      where: eq(kelasKuliah.id, kelasKuliahId)
+      where: eq(kelasKuliah.id, kelasKuliahId),
     });
     if (foundKelas?.isLocked) {
       throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
@@ -162,14 +173,14 @@ export class YudisiumService {
           nilaiAngka: null,
           nilaiHuruf: null,
           nilaiIndeks: null,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         })
         .where(eq(krs.kelasKuliahId, kelasKuliahId));
 
       const inserts = list.map((item) => ({
         kelasKuliahId,
         nama: item.nama,
-        bobot: item.bobot
+        bobot: item.bobot,
       }));
 
       if (inserts.length > 0) {
@@ -189,26 +200,25 @@ export class YudisiumService {
         nama: mahasiswa.nama,
         nilaiAngka: krs.nilaiAngka,
         nilaiHuruf: krs.nilaiHuruf,
-        nilaiIndeks: krs.nilaiIndeks
+        nilaiIndeks: krs.nilaiIndeks,
       })
       .from(krs)
       .innerJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
       .where(eq(krs.kelasKuliahId, kelasKuliahId));
 
     const components = await this.getKomponen(kelasKuliahId);
-    const componentIds = components.map(c => c.id);
+    const componentIds = components.map((c) => c.id);
 
-    const grades = componentIds.length > 0 ? await db
-      .select()
-      .from(nilaiKomponenMahasiswa)
-      .where(
-        and(
-          inArray(nilaiKomponenMahasiswa.komponenNilaiId, componentIds)
-        )
-      ) : [];
+    const grades =
+      componentIds.length > 0
+        ? await db
+            .select()
+            .from(nilaiKomponenMahasiswa)
+            .where(and(inArray(nilaiKomponenMahasiswa.komponenNilaiId, componentIds)))
+        : [];
 
     // Map grades per KRS
-    const gradesMap = new Map<number, typeof nilaiKomponenMahasiswa.$inferSelect[]>();
+    const gradesMap = new Map<number, (typeof nilaiKomponenMahasiswa.$inferSelect)[]>();
     for (const g of grades) {
       const arr = gradesMap.get(g.krsId) || [];
       arr.push(g);
@@ -217,16 +227,19 @@ export class YudisiumService {
 
     return studentList.map((stud) => ({
       ...stud,
-      nilaiKomponen: gradesMap.get(stud.krsId) || []
+      nilaiKomponen: gradesMap.get(stud.krsId) || [],
     }));
   }
 
-  static async saveNilaiMahasiswa(kelasKuliahId: number, list: Array<{
-    krsId: number;
-    nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number | string }>
-  }>) {
+  static async saveNilaiMahasiswa(
+    kelasKuliahId: number,
+    list: Array<{
+      krsId: number;
+      nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number | string }>;
+    }>,
+  ) {
     const foundKelas = await db.query.kelasKuliah.findFirst({
-      where: eq(kelasKuliah.id, kelasKuliahId)
+      where: eq(kelasKuliah.id, kelasKuliahId),
     });
     if (foundKelas?.isLocked) {
       throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
@@ -243,8 +256,8 @@ export class YudisiumService {
 
     // Load conversion rules
     const allRules = await db.select().from(konversiNilai);
-    const prodiRules = allRules.filter(r => r.programStudiId === prodiId);
-    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter(r => r.programStudiId === null);
+    const prodiRules = allRules.filter((r) => r.programStudiId === prodiId);
+    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter((r) => r.programStudiId === null);
 
     const getGradeFromRules = (score: number) => {
       for (const rule of activeRules) {
@@ -275,23 +288,23 @@ export class YudisiumService {
 
       for (const item of list) {
         // Delete existing grades for this KRS and components
-        const compIds = item.nilaiKomponenList.map(v => v.komponenNilaiId);
+        const compIds = item.nilaiKomponenList.map((v) => v.komponenNilaiId);
         if (compIds.length > 0) {
           await tx
             .delete(nilaiKomponenMahasiswa)
             .where(
               and(
                 eq(nilaiKomponenMahasiswa.krsId, item.krsId),
-                inArray(nilaiKomponenMahasiswa.komponenNilaiId, compIds)
-              )
+                inArray(nilaiKomponenMahasiswa.komponenNilaiId, compIds),
+              ),
             );
         }
 
         // Insert new component grades
-        const inserts = item.nilaiKomponenList.map(v => ({
+        const inserts = item.nilaiKomponenList.map((v) => ({
           krsId: item.krsId,
           komponenNilaiId: v.komponenNilaiId,
-          nilai: String(v.nilai)
+          nilai: String(v.nilai),
         }));
 
         if (inserts.length > 0) {
@@ -324,7 +337,7 @@ export class YudisiumService {
               nilaiAngka: String(finalScoreFixed),
               nilaiHuruf: conversion.huruf,
               nilaiIndeks: String(conversion.indeks),
-              updatedAt: new Date()
+              updatedAt: new Date(),
             })
             .where(eq(krs.id, item.krsId))
             .returning();
@@ -364,8 +377,8 @@ export class YudisiumService {
     const prodiId = kelasInfo?.programStudiId || null;
 
     const allRules = await db.select().from(konversiNilai);
-    const prodiRules = allRules.filter(r => r.programStudiId === prodiId);
-    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter(r => r.programStudiId === null);
+    const prodiRules = allRules.filter((r) => r.programStudiId === prodiId);
+    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter((r) => r.programStudiId === null);
 
     const getGradeFromRules = (score: number) => {
       for (const rule of activeRules) {
@@ -384,10 +397,7 @@ export class YudisiumService {
       return { huruf: 'E', indeks: 0.0 };
     };
 
-    const krsRecords = await db
-      .select()
-      .from(krs)
-      .where(eq(krs.kelasKuliahId, kelasKuliahId));
+    const krsRecords = await db.select().from(krs).where(eq(krs.kelasKuliahId, kelasKuliahId));
 
     for (const krsItem of krsRecords) {
       const studentGrades = await db
@@ -413,7 +423,7 @@ export class YudisiumService {
             nilaiAngka: String(finalScoreFixed),
             nilaiHuruf: conversion.huruf,
             nilaiIndeks: String(conversion.indeks),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           })
           .where(eq(krs.id, krsItem.id));
       }

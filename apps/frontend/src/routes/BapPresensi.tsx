@@ -1,14 +1,14 @@
-import { createSignal, createResource, Show, For, createEffect } from 'solid-js';
-import { useAuth } from '../contexts/AuthContext';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
 import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { krsController } from '../controllers/krsController';
-import { presensiController, BAP, CPMK, PresensiItem } from '../controllers/presensiController';
+import { BAP, CPMK, PresensiItem, presensiController } from '../controllers/presensiController';
 
 export default function BapPresensi() {
   const auth = useAuth();
@@ -18,7 +18,7 @@ export default function BapPresensi() {
   // Selected state
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
   const [selectedBapId, setSelectedBapId] = createSignal<number | null>(null);
-  
+
   // Modals
   const [showBapModal, setShowBapModal] = createSignal(false);
   const [showCpmkModal, setShowCpmkModal] = createSignal(false);
@@ -36,13 +36,15 @@ export default function BapPresensi() {
   const [newCpmkDeskripsi, setNewCpmkDeskripsi] = createSignal('');
 
   // Attendance Sheet state (studentId -> { status, durasiMangkir })
-  const [attendanceSheet, setAttendanceSheet] = createSignal<Record<number, { status: string; durasiMangkir: number }>>({});
+  const [attendanceSheet, setAttendanceSheet] = createSignal<Record<number, { status: string; durasiMangkir: number }>>(
+    {},
+  );
 
   // 1. Fetch Classes
   const [kelasData] = createResource(() => kelasKuliahController.getAll(undefined, 1, 100));
 
   const activeKelasList = () => kelasData()?.data || [];
-  const selectedKelas = () => activeKelasList().find(k => k.id === selectedKelasId());
+  const selectedKelas = () => activeKelasList().find((k) => k.id === selectedKelasId());
 
   // 2. Fetch BAPs for selected Class
   const [bapData, { refetch: refetchBap }] = createResource(selectedKelasId, async (kelasId) => {
@@ -66,7 +68,7 @@ export default function BapPresensi() {
         toast.showToast('Gagal memuat CPMK', 'error');
         return [];
       }
-    }
+    },
   );
 
   // Fetch RPS Topics for selected Class
@@ -87,12 +89,12 @@ export default function BapPresensi() {
       try {
         // Load KRS entries for this class
         const res = await krsController.getAll(undefined, 1, 1000);
-        return res.data.filter(k => k.kelasKuliahId === kelasId) || [];
+        return res.data.filter((k) => k.kelasKuliahId === kelasId) || [];
       } catch (e: any) {
         toast.showToast('Gagal memuat mahasiswa kelas', 'error');
         return [];
       }
-    }
+    },
   );
 
   // 5. Fetch attendance for selected BAP
@@ -109,11 +111,11 @@ export default function BapPresensi() {
   createEffect(() => {
     const listMhs = krsData() || [];
     const saved = savedPresensi() || [];
-    
+
     const initialSheet: Record<number, { status: string; durasiMangkir: number }> = {};
-    
+
     for (const k of listMhs) {
-      const existing = saved.find(p => p.mahasiswaId === k.mahasiswaId);
+      const existing = saved.find((p) => p.mahasiswaId === k.mahasiswaId);
       if (existing) {
         initialSheet[k.mahasiswaId] = {
           status: existing.status,
@@ -126,7 +128,7 @@ export default function BapPresensi() {
         };
       }
     }
-    
+
     setAttendanceSheet(initialSheet);
   });
 
@@ -142,7 +144,7 @@ export default function BapPresensi() {
   };
 
   const openEditBap = () => {
-    const activeBap = bapData()?.find(b => b.id === selectedBapId());
+    const activeBap = bapData()?.find((b) => b.id === selectedBapId());
     if (!activeBap) return;
     setEditBapId(activeBap.id);
     setTanggal(new Date(activeBap.tanggal).toISOString().split('T')[0]);
@@ -217,7 +219,7 @@ export default function BapPresensi() {
   };
 
   const handleStatusChange = (mhsId: number, status: string) => {
-    setAttendanceSheet(prev => ({
+    setAttendanceSheet((prev) => ({
       ...prev,
       [mhsId]: {
         ...prev[mhsId],
@@ -228,7 +230,7 @@ export default function BapPresensi() {
   };
 
   const handleMangkirChange = (mhsId: number, durasi: number) => {
-    setAttendanceSheet(prev => ({
+    setAttendanceSheet((prev) => ({
       ...prev,
       [mhsId]: {
         ...prev[mhsId],
@@ -310,7 +312,12 @@ export default function BapPresensi() {
                 <For each={bapData() || []}>
                   {(b) => (
                     <option value={b.id}>
-                      Pertemuan {b.pertemuanKe} - {new Date(b.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      Pertemuan {b.pertemuanKe} -{' '}
+                      {new Date(b.tanggal).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
                     </option>
                   )}
                 </For>
@@ -326,15 +333,17 @@ export default function BapPresensi() {
             <div class="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 lg:col-span-1 h-fit">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-gray-800">Detail Berita Acara (BAP)</h3>
-                <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-xs">Edit</Button>
+                <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-xs">
+                  Edit
+                </Button>
               </div>
-              
+
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold text-gray-400 uppercase">Materi Pokok (CPMK)</span>
                 <span class="text-sm font-semibold text-blue-600">
                   {(() => {
-                    const activeBapObj = bapData()?.find(b => b.id === selectedBapId());
-                    const cpmkObj = cpmkData()?.find(c => c.id === activeBapObj?.cpmkId);
+                    const activeBapObj = bapData()?.find((b) => b.id === selectedBapId());
+                    const cpmkObj = cpmkData()?.find((c) => c.id === activeBapObj?.cpmkId);
                     return cpmkObj ? `[${cpmkObj.kode}] ${cpmkObj.deskripsi}` : 'N/A';
                   })()}
                 </span>
@@ -343,7 +352,7 @@ export default function BapPresensi() {
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold text-gray-400 uppercase">Catatan / Detail Materi</span>
                 <span class="text-sm text-gray-700">
-                  {bapData()?.find(b => b.id === selectedBapId())?.materi || '-'}
+                  {bapData()?.find((b) => b.id === selectedBapId())?.materi || '-'}
                 </span>
               </div>
 
@@ -351,13 +360,13 @@ export default function BapPresensi() {
                 <div class="flex flex-col gap-1">
                   <span class="text-xs font-semibold text-gray-400 uppercase">Pertemuan Ke</span>
                   <span class="text-sm font-bold text-gray-800">
-                    {bapData()?.find(b => b.id === selectedBapId())?.pertemuanKe || '-'}
+                    {bapData()?.find((b) => b.id === selectedBapId())?.pertemuanKe || '-'}
                   </span>
                 </div>
                 <div class="flex flex-col gap-1">
                   <span class="text-xs font-semibold text-gray-400 uppercase">Durasi Kelas</span>
                   <span class="text-sm font-bold text-gray-800">
-                    {bapData()?.find(b => b.id === selectedBapId())?.durasiMenit || 0} Menit
+                    {bapData()?.find((b) => b.id === selectedBapId())?.durasiMenit || 0} Menit
                   </span>
                 </div>
               </div>
@@ -403,8 +412,8 @@ export default function BapPresensi() {
                                           ? st === 'hadir'
                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                             : st === 'alpa'
-                                            ? 'bg-red-50 text-red-700 border-red-200'
-                                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                                              ? 'bg-red-50 text-red-700 border-red-200'
+                                              : 'bg-amber-50 text-amber-700 border-amber-200'
                                           : 'bg-transparent text-gray-400 border-gray-200 hover:bg-gray-100'
                                       }`}
                                     >
@@ -428,7 +437,9 @@ export default function BapPresensi() {
                                     type="number"
                                     min="1"
                                     value={state().durasiMangkir}
-                                    onInput={(e) => handleMangkirChange(k.mahasiswaId, parseInt(e.currentTarget.value) || 0)}
+                                    onInput={(e) =>
+                                      handleMangkirChange(k.mahasiswaId, parseInt(e.currentTarget.value) || 0)
+                                    }
                                     class="w-16 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none"
                                   />
                                   <span class="text-xs text-gray-500">Menit</span>
@@ -460,7 +471,11 @@ export default function BapPresensi() {
       </div>
 
       {/* Modal Buat BAP */}
-      <Modal isOpen={showBapModal()} onClose={() => setShowBapModal(false)} title={editBapId() ? 'Edit Jurnal Harian (BAP)' : 'Buat Jurnal Harian (BAP) Baru'}>
+      <Modal
+        isOpen={showBapModal()}
+        onClose={() => setShowBapModal(false)}
+        title={editBapId() ? 'Edit Jurnal Harian (BAP)' : 'Buat Jurnal Harian (BAP) Baru'}
+      >
         <form onSubmit={handleSaveBap} class="flex flex-col gap-4">
           <div class="grid grid-cols-2 gap-4">
             <Input
@@ -520,9 +535,9 @@ export default function BapPresensi() {
               onChange={(e) => {
                 const selectedVal = e.target.value;
                 setMateri(selectedVal);
-                
+
                 // Automatically pre-fill CPMK if the selected topic maps to one
-                const matchedTopic = rpsTopics()?.find(t => t.topik === selectedVal);
+                const matchedTopic = rpsTopics()?.find((t) => t.topik === selectedVal);
                 if (matchedTopic && matchedTopic.cpmkId) {
                   setSelectedCpmkId(matchedTopic.cpmkId);
                 }
@@ -561,7 +576,11 @@ export default function BapPresensi() {
       </Modal>
 
       {/* Modal Buat CPMK */}
-      <Modal isOpen={showCpmkModal()} onClose={() => setShowCpmkModal(false)} title="Tambah Target Capaian Pembelajaran (CPMK)">
+      <Modal
+        isOpen={showCpmkModal()}
+        onClose={() => setShowCpmkModal(false)}
+        title="Tambah Target Capaian Pembelajaran (CPMK)"
+      >
         <form onSubmit={handleCreateCpmk} class="flex flex-col gap-4">
           <Input
             type="text"
@@ -571,7 +590,7 @@ export default function BapPresensi() {
             onInput={(e) => setNewCpmkKode(e.currentTarget.value)}
             required
           />
-          
+
           <div class="flex flex-col gap-1">
             <label class="text-sm font-semibold text-gray-600">Deskripsi CPMK</label>
             <textarea

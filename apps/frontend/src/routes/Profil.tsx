@@ -1,10 +1,10 @@
 import { createSignal, Show } from 'solid-js';
-import { useAuth } from '../contexts/AuthContext';
-import { userController } from '../controllers/userController';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { userController } from '../controllers/userController';
 
 export default function Profil() {
   const auth = useAuth();
@@ -55,7 +55,7 @@ export default function Profil() {
     try {
       const res = await userController.updateProfile(nama(), password() || undefined, undefined, avatar() || undefined);
       toast.showToast(res.message, 'success');
-      
+
       // Update local auth context user
       auth.login(localStorage.getItem('token') || '', {
         ...user()!,
@@ -86,36 +86,40 @@ export default function Profil() {
             {/* Profile Picture Upload Section */}
             <div class="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/40">
               <div class="relative group">
-                <Show 
-                  when={avatar()} 
+                <Show
+                  when={avatar()}
                   fallback={
                     <div class="h-20 w-20 rounded-full bg-blue-600 border-2 border-blue-500 flex items-center justify-center font-bold text-white text-3xl uppercase shadow-lg">
                       {nama()?.[0] || user()?.email?.[0] || 'U'}
                     </div>
                   }
                 >
-                  <img src={avatar()} alt="Foto Profil" class="h-20 w-20 rounded-full object-cover border-2 border-blue-500 shadow-lg" />
+                  <img
+                    src={avatar()}
+                    alt="Foto Profil"
+                    class="h-20 w-20 rounded-full object-cover border-2 border-blue-500 shadow-lg"
+                  />
                 </Show>
               </div>
               <div class="flex-1 flex flex-col gap-1.5 items-center sm:items-start">
                 <span class="text-xs font-bold text-gray-500 dark:text-gray-400">Foto Profil</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
+                <input
+                  type="file"
+                  accept="image/*"
                   onChange={handleFileChange}
-                  class="hidden" 
+                  class="hidden"
                   id="avatar-upload-input"
                 />
                 <div class="flex gap-2">
-                  <label 
+                  <label
                     for="avatar-upload-input"
                     class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded text-xs font-bold transition-colors cursor-pointer"
                   >
                     Pilih Foto
                   </label>
                   <Show when={avatar()}>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setAvatar('')}
                       class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-750 text-white rounded text-xs font-bold transition-colors"
                     >
@@ -128,7 +132,9 @@ export default function Profil() {
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Email</label>
+              <label class="block text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                Email
+              </label>
               <div class="w-full rounded-lg border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 select-none">
                 {user()?.email}
               </div>
@@ -148,7 +154,9 @@ export default function Profil() {
 
             <div class="flex flex-col gap-1">
               <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300">Ubah Kata Sandi (Opsional)</h3>
-              <p class="text-xs text-gray-400 dark:text-gray-550">Kosongkan kolom di bawah jika Anda tidak ingin mengubah kata sandi.</p>
+              <p class="text-xs text-gray-400 dark:text-gray-550">
+                Kosongkan kolom di bawah jika Anda tidak ingin mengubah kata sandi.
+              </p>
             </div>
 
             <Input

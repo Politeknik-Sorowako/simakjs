@@ -1,6 +1,6 @@
-import { JSX, createSignal, Show } from 'solid-js';
-import { Sidebar } from './Sidebar';
+import { createSignal, JSX, Show } from 'solid-js';
 import { Navbar } from './Navbar';
+import { Sidebar } from './Sidebar';
 
 export function MainLayout(props: { children: JSX.Element }) {
   const [isOpen, setIsOpen] = createSignal(false);
@@ -9,10 +9,7 @@ export function MainLayout(props: { children: JSX.Element }) {
     <div class="min-h-screen flex bg-gray-50/50 dark:bg-slate-950 text-gray-800 dark:text-gray-100 relative overflow-hidden transition-colors duration-200">
       {/* Mobile Sidebar Backdrop Overlay */}
       <Show when={isOpen()}>
-        <div 
-          onClick={() => setIsOpen(false)}
-          class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-30 md:hidden"
-        />
+        <div onClick={() => setIsOpen(false)} class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-30 md:hidden" />
       </Show>
 
       {/* Sidebar Navigation */}
@@ -24,9 +21,7 @@ export function MainLayout(props: { children: JSX.Element }) {
         <Navbar onToggleSidebar={() => setIsOpen(!isOpen())} />
 
         {/* Content Viewport */}
-        <main class="flex-1 p-4 md:p-8 overflow-y-auto w-full mx-auto">
-          {props.children}
-        </main>
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto w-full mx-auto">{props.children}</main>
       </div>
     </div>
   );

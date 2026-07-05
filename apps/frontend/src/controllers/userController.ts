@@ -37,7 +37,12 @@ export const userController = {
     });
   },
 
-  async updateProfile(nama: string, password?: string, theme?: string, avatar?: string): Promise<{ message: string; user: any }> {
+  async updateProfile(
+    nama: string,
+    password?: string,
+    theme?: string,
+    avatar?: string,
+  ): Promise<{ message: string; user: any }> {
     const payload: Record<string, any> = { nama };
     if (password) {
       payload.password = password;
@@ -54,7 +59,10 @@ export const userController = {
     });
   },
 
-  async generateAccounts(targetType: 'mahasiswa' | 'dosen', ids: number[]): Promise<{ successCount: number; errors: string[] }> {
+  async generateAccounts(
+    targetType: 'mahasiswa' | 'dosen',
+    ids: number[],
+  ): Promise<{ successCount: number; errors: string[] }> {
     return fetchApi<{ successCount: number; errors: string[] }>('/users/generate-accounts', {
       method: 'POST',
       body: JSON.stringify({ targetType, ids }),
