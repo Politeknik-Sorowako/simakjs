@@ -1,12 +1,12 @@
-import { createSignal, Show, createEffect } from 'solid-js';
-import { useNavigate, A } from '@solidjs/router';
-import { useAuth } from '../contexts/AuthContext';
-import { authController } from '../controllers/authController';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { useToast } from '../contexts/ToastContext';
+import { A, useNavigate } from '@solidjs/router';
+import { createEffect, createSignal, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { authController } from '../controllers/authController';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Format email tidak valid' }),
@@ -43,11 +43,11 @@ export default function Login() {
     setErrorMsg('');
 
     // Zod validation
-    const formData = isRegister() 
+    const formData = isRegister()
       ? { email: email(), password: password(), nama: nama(), role: role() }
       : { email: email(), password: password() };
     const schema = isRegister() ? registerSchema : loginSchema;
-    
+
     const result = schema.safeParse(formData);
     if (!result.success) {
       const firstError = result.error.errors[0]?.message || 'Input tidak valid';
@@ -94,11 +94,21 @@ export default function Login() {
         >
           {auth.theme() === 'light' ? (
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
             </svg>
           ) : (
             <svg class="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"
+              />
             </svg>
           )}
         </button>
@@ -119,9 +129,13 @@ export default function Login() {
         </div>
 
         <Show when={errorMsg()}>
-          <div class={`p-3 rounded-lg text-xs font-semibold text-center ${
-            errorMsg().includes('sukses') ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
-          }`}>
+          <div
+            class={`p-3 rounded-lg text-xs font-semibold text-center ${
+              errorMsg().includes('sukses')
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+            }`}
+          >
             {errorMsg()}
           </div>
         </Show>
@@ -175,7 +189,7 @@ export default function Login() {
           >
             {isRegister() ? 'Sudah memiliki akun? Masuk' : 'Belum memiliki akun? Daftar'}
           </button>
-          
+
           <Show when={!isRegister()}>
             <A
               href="/forgot-password"

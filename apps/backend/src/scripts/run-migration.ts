@@ -1,6 +1,6 @@
-import { Pool } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Pool } from 'pg';
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required');
@@ -12,10 +12,7 @@ const pool = new Pool({
 
 async function run() {
   const migrationDir = path.join(__dirname, '../../drizzle');
-  const migrations = [
-    '0008_colossal_captain_midlands.sql',
-    '0009_yellow_apocalypse.sql',
-  ];
+  const migrations = ['0008_colossal_captain_midlands.sql', '0009_yellow_apocalypse.sql'];
   const client = await pool.connect();
   for (const migration of migrations) {
     const sqlPath = path.join(migrationDir, migration);

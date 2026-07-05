@@ -1,13 +1,10 @@
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { bimbingan, bimbinganThread, dosen, mahasiswa, periodeAkademik, sesiBimbingan } from '../models/schema';
 import { db } from '../utils/db';
-import { bimbingan, bimbinganThread, mahasiswa, dosen, periodeAkademik, sesiBimbingan } from '../models/schema';
-import { eq, and, desc, asc, inArray } from 'drizzle-orm';
 
 export class BimbinganService {
   static async getActivePeriode() {
-    const [active] = await db
-      .select()
-      .from(periodeAkademik)
-      .where(eq(periodeAkademik.aktif, true));
+    const [active] = await db.select().from(periodeAkademik).where(eq(periodeAkademik.aktif, true));
     return active;
   }
 
@@ -23,7 +20,7 @@ export class BimbinganService {
       .select({ periodeId: bimbingan.periodeId })
       .from(bimbingan)
       .where(eq(bimbingan.mahasiswaId, mahasiswaId));
-    const availablePeriodes = rawPeriodes.map(p => p.periodeId);
+    const availablePeriodes = rawPeriodes.map((p) => p.periodeId);
 
     // Tambahkan periode aktif jika belum ada di list
     if (activePeriode && !availablePeriodes.includes(activePeriode.id)) {
@@ -34,12 +31,7 @@ export class BimbinganService {
     const [existing] = await db
       .select()
       .from(bimbingan)
-      .where(
-        and(
-          eq(bimbingan.mahasiswaId, mahasiswaId),
-          eq(bimbingan.periodeId, reqPeriodeId)
-        )
-      );
+      .where(and(eq(bimbingan.mahasiswaId, mahasiswaId), eq(bimbingan.periodeId, reqPeriodeId)));
 
     if (existing) {
       // Ambil thread chat
@@ -118,20 +110,35 @@ export class BimbinganService {
     };
   }
 
-  static async addThreadMessage(bimbinganId: number, senderRole: 'dosen' | 'mahasiswa' | 'admin', pesan: string, tipe?: string) {
+  static async addThreadMessage(
+    bimbinganId: number,
+    senderRole: 'dosen' | 'mahasiswa' | 'admin',
+    pesan: string,
+    tipe?: string,
+  ) {
     const [newMsg] = await db
       .insert(bimbinganThread)
       .values({
         bimbinganId,
         senderRole,
         pesan,
-        tipe: tipe || 'uts'
+        tipe: tipe || 'uts',
       })
       .returning();
     return newMsg;
   }
 
-  static async updateBimbingan(bimbinganId: number, data: { ringkasan?: string; isApproved?: boolean; permasalahan?: string; solusi?: string; tanggalBimbingan?: Date; statusBkd?: boolean }) {
+  static async updateBimbingan(
+    bimbinganId: number,
+    data: {
+      ringkasan?: string;
+      isApproved?: boolean;
+      permasalahan?: string;
+      solusi?: string;
+      tanggalBimbingan?: Date;
+      statusBkd?: boolean;
+    },
+  ) {
     const [updated] = await db
       .update(bimbingan)
       .set({
@@ -148,7 +155,10 @@ export class BimbinganService {
     return record;
   }
 
-  static async addSesiBimbingan(bimbinganId: number, data: { pertemuanKe: number; tanggalBimbingan: Date; permasalahan: string; solusi: string; statusBkd: boolean }) {
+  static async addSesiBimbingan(
+    bimbinganId: number,
+    data: { pertemuanKe: number; tanggalBimbingan: Date; permasalahan: string; solusi: string; statusBkd: boolean },
+  ) {
     const [newSesi] = await db
       .insert(sesiBimbingan)
       .values({
@@ -159,7 +169,16 @@ export class BimbinganService {
     return newSesi;
   }
 
-  static async updateSesiBimbingan(sesiId: number, data: { pertemuanKe?: number; tanggalBimbingan?: Date; permasalahan?: string; solusi?: string; statusBkd?: boolean }) {
+  static async updateSesiBimbingan(
+    sesiId: number,
+    data: {
+      pertemuanKe?: number;
+      tanggalBimbingan?: Date;
+      permasalahan?: string;
+      solusi?: string;
+      statusBkd?: boolean;
+    },
+  ) {
     const [updatedSesi] = await db
       .update(sesiBimbingan)
       .set({
@@ -172,17 +191,12 @@ export class BimbinganService {
   }
 
   static async deleteSesiBimbingan(sesiId: number) {
-    const [deletedSesi] = await db
-      .delete(sesiBimbingan)
-      .where(eq(sesiBimbingan.id, sesiId))
-      .returning();
+    const [deletedSesi] = await db.delete(sesiBimbingan).where(eq(sesiBimbingan.id, sesiId)).returning();
     return deletedSesi;
   }
 
   static async clearChatThread(bimbinganId: number) {
-    await db
-      .delete(bimbinganThread)
-      .where(eq(bimbinganThread.bimbinganId, bimbinganId));
+    await db.delete(bimbinganThread).where(eq(bimbinganThread.bimbinganId, bimbinganId));
     return { success: true };
   }
 
@@ -211,10 +225,7 @@ export class BimbinganService {
     const listMahasiswa = await queryBuilder;
 
     // Ambil semua bimbingan untuk periode aktif
-    const listBimbingan = await db
-      .select()
-      .from(bimbingan)
-      .where(eq(bimbingan.periodeId, activePeriode.id));
+    const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
 
     const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
     for (const b of listBimbingan) {
@@ -237,7 +248,7 @@ export class BimbinganService {
 
     return listMahasiswa.map((mhs) => {
       const bimb = mapBimbingan.get(mhs.id);
-      const totalSesi = bimb ? (sesiCountMap.get(bimb.id) || 0) : 0;
+      const totalSesi = bimb ? sesiCountMap.get(bimb.id) || 0 : 0;
       return {
         ...mhs,
         bimbinganId: bimb?.id || null,
@@ -274,8 +285,8 @@ export class BimbinganService {
         isApproved: bimbingan.isApproved,
         mahasiswa: {
           nim: mahasiswa.nim,
-          nama: mahasiswa.nama
-        }
+          nama: mahasiswa.nama,
+        },
       })
       .from(bimbingan)
       .innerJoin(mahasiswa, eq(bimbingan.mahasiswaId, mahasiswa.id))
@@ -285,14 +296,14 @@ export class BimbinganService {
       return [];
     }
 
-    const bimbIds = bimbinganList.map(b => b.id);
+    const bimbIds = bimbinganList.map((b) => b.id);
     const sesiList = await db
       .select()
       .from(sesiBimbingan)
       .where(inArray(sesiBimbingan.bimbinganId, bimbIds))
       .orderBy(asc(sesiBimbingan.pertemuanKe));
 
-    const sesiMap = new Map<number, typeof sesiBimbingan.$inferSelect[]>();
+    const sesiMap = new Map<number, (typeof sesiBimbingan.$inferSelect)[]>();
     for (const s of sesiList) {
       const arr = sesiMap.get(s.bimbinganId) || [];
       arr.push(s);
@@ -305,7 +316,7 @@ export class BimbinganService {
         ...b,
         sesi,
         totalSesi: sesi.length,
-        statusBkd: sesi.some(s => s.statusBkd),
+        statusBkd: sesi.some((s) => s.statusBkd),
       };
     });
   }

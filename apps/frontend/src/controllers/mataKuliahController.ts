@@ -15,7 +15,12 @@ export interface MataKuliah {
 }
 
 export const mataKuliahController = {
-  async getAll(search?: string, page?: number, limit?: number, programStudiId?: number): Promise<PaginatedResponse<MataKuliah>> {
+  async getAll(
+    search?: string,
+    page?: number,
+    limit?: number,
+    programStudiId?: number,
+  ): Promise<PaginatedResponse<MataKuliah>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));

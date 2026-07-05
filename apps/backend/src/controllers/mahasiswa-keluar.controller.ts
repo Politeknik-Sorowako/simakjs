@@ -19,7 +19,7 @@ export class MahasiswaKeluarController {
         noSk: body.noSk,
         tanggalSk: body.tanggalSk,
         ipk: body.ipk,
-        nomorIjazah: body.nomorIjazah
+        nomorIjazah: body.nomorIjazah,
       });
       set.status = 201;
       return data;
@@ -45,7 +45,7 @@ export class MahasiswaKeluarController {
       page,
       limit,
       search,
-      periodeId
+      periodeId,
     });
   }
 

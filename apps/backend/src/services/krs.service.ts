@@ -1,6 +1,6 @@
+import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
+import { dosen, kelasKuliah, krs, mahasiswa } from '../models/schema';
 import { db } from '../utils/db';
-import { krs, mahasiswa, kelasKuliah, dosen } from '../models/schema';
-import { count, eq, ilike, or, and, inArray } from 'drizzle-orm';
 
 export interface CreateKrsDto {
   mahasiswaId: number;
@@ -14,15 +14,10 @@ export interface CreateKrsDto {
 export class KrsService {
   static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number) {
     const offset = (page - 1) * limit;
-    
+
     const searchConditions: any[] = [];
     if (search) {
-      searchConditions.push(
-        or(
-          ilike(mahasiswa.nama, `%${search}%`),
-          ilike(mahasiswa.nim, `%${search}%`)
-        )
-      );
+      searchConditions.push(or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`)));
     }
     if (mahasiswaId !== undefined) {
       searchConditions.push(eq(krs.mahasiswaId, mahasiswaId));
@@ -59,18 +54,18 @@ export class KrsService {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
           email: mahasiswa.email,
-          status: mahasiswa.status
+          status: mahasiswa.status,
         },
         kelasKuliah: {
           id: kelasKuliah.id,
           namaKelas: kelasKuliah.namaKelas,
-          periodeId: kelasKuliah.periodeId
+          periodeId: kelasKuliah.periodeId,
         },
         approvedBy: {
           id: dosen.id,
           nip: dosen.nip,
-          nama: dosen.nama
-        }
+          nama: dosen.nama,
+        },
       })
       .from(krs)
       .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
@@ -88,8 +83,8 @@ export class KrsService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -115,18 +110,18 @@ export class KrsService {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
           email: mahasiswa.email,
-          status: mahasiswa.status
+          status: mahasiswa.status,
         },
         kelasKuliah: {
           id: kelasKuliah.id,
           namaKelas: kelasKuliah.namaKelas,
-          periodeId: kelasKuliah.periodeId
+          periodeId: kelasKuliah.periodeId,
         },
         approvedBy: {
           id: dosen.id,
           nip: dosen.nip,
-          nama: dosen.nama
-        }
+          nama: dosen.nama,
+        },
       })
       .from(krs)
       .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
@@ -139,7 +134,7 @@ export class KrsService {
 
   static async create(data: CreateKrsDto) {
     const student = await db.query.mahasiswa.findFirst({
-      where: eq(mahasiswa.id, data.mahasiswaId)
+      where: eq(mahasiswa.id, data.mahasiswaId),
     });
 
     if (!student) {
@@ -151,10 +146,7 @@ export class KrsService {
     }
 
     const existingKrs = await db.query.krs.findFirst({
-      where: and(
-        eq(krs.mahasiswaId, data.mahasiswaId),
-        eq(krs.kelasKuliahId, data.kelasKuliahId)
-      )
+      where: and(eq(krs.mahasiswaId, data.mahasiswaId), eq(krs.kelasKuliahId, data.kelasKuliahId)),
     });
 
     if (existingKrs) {
@@ -166,7 +158,7 @@ export class KrsService {
       kelasKuliahId: data.kelasKuliahId,
       nilaiHuruf: data.nilaiHuruf,
       idPddikti: data.idPddikti,
-      isApproved: false
+      isApproved: false,
     };
     if (data.nilaiAngka !== undefined) insertData.nilaiAngka = String(data.nilaiAngka);
     if (data.nilaiIndeks !== undefined) insertData.nilaiIndeks = String(data.nilaiIndeks);
@@ -177,7 +169,7 @@ export class KrsService {
 
   static async approveKrs(mahasiswaId: number | undefined | null, periodeId: string, approvedByEmail: string) {
     let dosenRecord = await db.query.dosen.findFirst({
-      where: eq(dosen.email, approvedByEmail)
+      where: eq(dosen.email, approvedByEmail),
     });
 
     if (!dosenRecord) {
@@ -197,7 +189,7 @@ export class KrsService {
       return [];
     }
 
-    const classIds = classes.map(c => c.id);
+    const classIds = classes.map((c) => c.id);
 
     const conditions = [inArray(krs.kelasKuliahId, classIds)];
     if (mahasiswaId) {
@@ -209,7 +201,7 @@ export class KrsService {
       .set({
         isApproved: true,
         approvedById: dosenRecord.id,
-        approvedAt: new Date()
+        approvedAt: new Date(),
       })
       .where(and(...conditions))
       .returning();
@@ -222,19 +214,12 @@ export class KrsService {
     if (data.nilaiAngka !== undefined) updateData.nilaiAngka = String(data.nilaiAngka);
     if (data.nilaiIndeks !== undefined) updateData.nilaiIndeks = String(data.nilaiIndeks);
 
-    const [updatedKrs] = await db
-      .update(krs)
-      .set(updateData)
-      .where(eq(krs.id, id))
-      .returning();
+    const [updatedKrs] = await db.update(krs).set(updateData).where(eq(krs.id, id)).returning();
     return updatedKrs || null;
   }
 
   static async delete(id: number) {
-    const [deletedKrs] = await db
-      .delete(krs)
-      .where(eq(krs.id, id))
-      .returning();
+    const [deletedKrs] = await db.delete(krs).where(eq(krs.id, id)).returning();
     return deletedKrs || null;
   }
 
@@ -245,22 +230,17 @@ export class KrsService {
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
         email: mahasiswa.email,
-        status: mahasiswa.status
+        status: mahasiswa.status,
       })
       .from(mahasiswa)
       .innerJoin(krs, eq(mahasiswa.id, krs.mahasiswaId))
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-      .where(
-        and(
-          eq(kelasKuliah.periodeId, periodeId),
-          eq(krs.isApproved, false)
-        )
-      );
+      .where(and(eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, false)));
   }
 
   static async approveBatchKrs(mahasiswaIds: number[], periodeId: string, approvedByEmail: string) {
     let dosenRecord = await db.query.dosen.findFirst({
-      where: eq(dosen.email, approvedByEmail)
+      where: eq(dosen.email, approvedByEmail),
     });
 
     if (!dosenRecord) {
@@ -280,21 +260,16 @@ export class KrsService {
       return [];
     }
 
-    const classIds = classes.map(c => c.id);
+    const classIds = classes.map((c) => c.id);
 
     return await db
       .update(krs)
       .set({
         isApproved: true,
         approvedById: dosenRecord.id,
-        approvedAt: new Date()
+        approvedAt: new Date(),
       })
-      .where(
-        and(
-          inArray(krs.mahasiswaId, mahasiswaIds),
-          inArray(krs.kelasKuliahId, classIds)
-        )
-      )
+      .where(and(inArray(krs.mahasiswaId, mahasiswaIds), inArray(krs.kelasKuliahId, classIds)))
       .returning();
   }
 }

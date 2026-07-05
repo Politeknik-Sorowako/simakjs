@@ -1,6 +1,6 @@
+import { desc, eq } from 'drizzle-orm';
+import { mahasiswa, pelanggaran, programStudi } from '../models/schema';
 import { db } from '../utils/db';
-import { pelanggaran, mahasiswa, programStudi } from '../models/schema';
-import { eq, desc } from 'drizzle-orm';
 
 export class PelanggaranService {
   static async createPelanggaran(data: {
@@ -15,18 +15,12 @@ export class PelanggaranService {
       throw new Error('Bobot poin pelanggaran harus bernilai antara 1 dan 100.');
     }
 
-    const [mhs] = await db
-      .select()
-      .from(mahasiswa)
-      .where(eq(mahasiswa.id, data.mahasiswaId));
+    const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, data.mahasiswaId));
     if (!mhs) {
       throw new Error('Mahasiswa tidak ditemukan.');
     }
 
-    const [newPelanggaran] = await db
-      .insert(pelanggaran)
-      .values(data)
-      .returning();
+    const [newPelanggaran] = await db.insert(pelanggaran).values(data).returning();
     return newPelanggaran;
   }
 
@@ -72,20 +66,19 @@ export class PelanggaranService {
       .orderBy(desc(pelanggaran.tanggal));
   }
 
-  static async updatePelanggaran(id: number, data: Partial<{
-    tanggal: string;
-    jenisPelanggaran: string;
-    bobotPoin: number;
-    keterangan: string;
-  }>) {
+  static async updatePelanggaran(
+    id: number,
+    data: Partial<{
+      tanggal: string;
+      jenisPelanggaran: string;
+      bobotPoin: number;
+      keterangan: string;
+    }>,
+  ) {
     if (data.bobotPoin !== undefined && (data.bobotPoin <= 0 || data.bobotPoin > 100)) {
       throw new Error('Bobot poin pelanggaran harus bernilai antara 1 dan 100.');
     }
-    const [updated] = await db
-      .update(pelanggaran)
-      .set(data)
-      .where(eq(pelanggaran.id, id))
-      .returning();
+    const [updated] = await db.update(pelanggaran).set(data).where(eq(pelanggaran.id, id)).returning();
     return updated || null;
   }
 }

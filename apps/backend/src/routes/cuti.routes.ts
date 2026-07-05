@@ -1,15 +1,15 @@
 import { Elysia } from 'elysia';
 import { CutiController } from '../controllers/cuti.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  aktifKembaliSchema,
+  approveCutiSchema,
   createCutiSchema,
-  inputCutiSchema,
+  deleteCutiSchema,
   getCutiSchema,
   getMahasiswaCutiSchema,
-  approveCutiSchema,
-  deleteCutiSchema,
-  aktifKembaliSchema
+  inputCutiSchema,
 } from '../schemas/cuti.schema';
-import { authMiddleware } from '../middlewares/auth.middleware';
 
 export const cutiRoutes = new Elysia({ prefix: '/cuti' })
   .use(authMiddleware)

@@ -1,13 +1,13 @@
 import { Elysia } from 'elysia';
 import { PeriodeAkademikController } from '../controllers/periode-akademik.controller';
-import {
-  getPeriodeSchema,
-  createPeriodeSchema,
-  getPeriodeByIdSchema,
-  updatePeriodeSchema,
-  deletePeriodeSchema
-} from '../schemas/periode-akademik.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createPeriodeSchema,
+  deletePeriodeSchema,
+  getPeriodeByIdSchema,
+  getPeriodeSchema,
+  updatePeriodeSchema,
+} from '../schemas/periode-akademik.schema';
 
 export const periodeAkademikRoutes = new Elysia({ prefix: '/periode-akademik' })
   .use(authMiddleware)

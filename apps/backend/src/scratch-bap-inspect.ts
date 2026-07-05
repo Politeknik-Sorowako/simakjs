@@ -1,13 +1,13 @@
 import { app } from './app';
+import { cpmk, dosen, kelasKuliah } from './models/schema';
 import { db } from './utils/db';
-import { kelasKuliah, cpmk, dosen } from './models/schema';
 
 async function run() {
   // 1. Reset Database
   const resReset = await app.handle(
     new Request('http://localhost/e2e/reset', {
-      method: 'POST'
-    })
+      method: 'POST',
+    }),
   );
   console.log('Reset status:', resReset.status);
 

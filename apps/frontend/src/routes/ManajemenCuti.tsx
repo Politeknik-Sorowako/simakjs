@@ -1,15 +1,15 @@
-import { createSignal, createResource, Show, For } from 'solid-js';
-import { cutiController, CutiRequest, MahasiswaCuti } from '../controllers/cutiController';
-import { mahasiswaController, Mahasiswa } from '../controllers/mahasiswaController';
-import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Table } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
-import { useToast } from '../contexts/ToastContext';
+import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { CutiRequest, cutiController, MahasiswaCuti } from '../controllers/cutiController';
+import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
 
 type Tab = 'input' | 'approval' | 'aktif';
 
@@ -21,10 +21,14 @@ export default function ManajemenCuti() {
   const tabs: { key: Tab; label: string; visible: boolean }[] = [
     { key: 'input', label: 'Input Cuti', visible: role() === 'admin' || role() === 'prodi' },
     { key: 'approval', label: 'Persetujuan Cuti', visible: role() !== 'mahasiswa' && role() !== 'guest' },
-    { key: 'aktif', label: 'Aktifkan Kembali', visible: role() === 'admin' || role() === 'prodi' || role() === 'dosen' },
+    {
+      key: 'aktif',
+      label: 'Aktifkan Kembali',
+      visible: role() === 'admin' || role() === 'prodi' || role() === 'dosen',
+    },
   ];
 
-  const visibleTabs = () => tabs.filter(t => t.visible);
+  const visibleTabs = () => tabs.filter((t) => t.visible);
   const [activeTab, setActiveTab] = createSignal<Tab>(visibleTabs()[0]?.key || 'input');
 
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 50));
@@ -49,7 +53,8 @@ export default function ManajemenCuti() {
 
   const [inputRecords, { refetch: refetchInput }] = createResource(
     () => ({ page: inputPage(), limit: 10, search: inputSearch(), periodeId: inputPeriode() }),
-    ({ page, limit, search, periodeId }) => cutiController.getMahasiswaCuti(page, limit, search || undefined, periodeId || undefined)
+    ({ page, limit, search, periodeId }) =>
+      cutiController.getMahasiswaCuti(page, limit, search || undefined, periodeId || undefined),
   );
 
   const [mhsList, setMhsList] = createSignal<Mahasiswa[]>([]);
@@ -76,7 +81,7 @@ export default function ManajemenCuti() {
 
   const openFormModal = async () => {
     setSelectedMhs(null);
-    const active = periodes()?.data?.find(p => p.aktif);
+    const active = periodes()?.data?.find((p) => p.aktif);
     const activeId = active?.id || periodes()?.data?.[0]?.id || '';
     setInputPeriodeId(activeId);
     setSemesterMulaiCuti(activeId);
@@ -98,9 +103,18 @@ export default function ManajemenCuti() {
   const handleSaveInput = async (e: Event) => {
     e.preventDefault();
     const mhs = selectedMhs();
-    if (!mhs) { setInputError('Pilih mahasiswa terlebih dahulu.'); return; }
-    if (!inputPeriodeId()) { setInputError('Pilih periode akademik.'); return; }
-    if (!alasan()) { setInputError('Isi alasan cuti.'); return; }
+    if (!mhs) {
+      setInputError('Pilih mahasiswa terlebih dahulu.');
+      return;
+    }
+    if (!inputPeriodeId()) {
+      setInputError('Pilih periode akademik.');
+      return;
+    }
+    if (!alasan()) {
+      setInputError('Isi alasan cuti.');
+      return;
+    }
 
     setInputSubmitting(true);
     setInputError('');
@@ -153,7 +167,8 @@ export default function ManajemenCuti() {
 
   const [approvals, { refetch: refetchApprovals }] = createResource(
     () => ({ page: apprPage(), limit: 10, periodeId: apprPeriode(), status: apprStatus() }),
-    ({ page, limit, periodeId, status }) => cutiController.getAll(page, limit, periodeId || undefined, status || undefined)
+    ({ page, limit, periodeId, status }) =>
+      cutiController.getAll(page, limit, periodeId || undefined, status || undefined),
   );
 
   const [showApprModal, setShowApprModal] = createSignal(false);
@@ -198,7 +213,7 @@ export default function ManajemenCuti() {
       });
       toast.showToast(
         actionType() === 'approve' ? 'Pengajuan cuti berhasil disetujui.' : 'Pengajuan cuti ditolak.',
-        actionType() === 'approve' ? 'success' : 'warning'
+        actionType() === 'approve' ? 'success' : 'warning',
       );
       setShowApprModal(false);
       refetchApprovals();
@@ -224,16 +239,19 @@ export default function ManajemenCuti() {
 
   const [aktifList, { refetch: refetchAktif }] = createResource(
     () => ({ page: aktifPage(), limit: 10, search: aktifSearch(), periodeId: aktifPeriode() }),
-    ({ page, limit, search, periodeId }) => cutiController.getMahasiswaCuti(page, limit, search || undefined, periodeId || undefined)
+    ({ page, limit, search, periodeId }) =>
+      cutiController.getMahasiswaCuti(page, limit, search || undefined, periodeId || undefined),
   );
 
   const [processing, setProcessing] = createSignal<number | null>(null);
 
   const getStatusCuti = (item: MahasiswaCuti) => item.pengajuanCuti?.[0]?.status || '-';
-  const getPeriodeCuti = (item: MahasiswaCuti) => item.pengajuanCuti?.[0]?.periodeAkademik?.nama || item.pengajuanCuti?.[0]?.periodeId || '-';
+  const getPeriodeCuti = (item: MahasiswaCuti) =>
+    item.pengajuanCuti?.[0]?.periodeAkademik?.nama || item.pengajuanCuti?.[0]?.periodeId || '-';
   const getRentangCuti = (item: MahasiswaCuti) => {
     const cuti = item.pengajuanCuti?.[0];
-    if (cuti?.semesterMulaiCuti && cuti?.semesterBerakhirCuti) return `${cuti.semesterMulaiCuti} - ${cuti.semesterBerakhirCuti}`;
+    if (cuti?.semesterMulaiCuti && cuti?.semesterBerakhirCuti)
+      return `${cuti.semesterMulaiCuti} - ${cuti.semesterBerakhirCuti}`;
     return cuti?.semesterMulaiCuti || '-';
   };
 
@@ -285,38 +303,60 @@ export default function ManajemenCuti() {
                 <Input
                   placeholder="Cari NIM atau nama..."
                   value={inputSearch()}
-                  onInput={(e) => { setInputSearch(e.currentTarget.value); setInputPage(1); }}
+                  onInput={(e) => {
+                    setInputSearch(e.currentTarget.value);
+                    setInputPage(1);
+                  }}
                 />
               </div>
               <div class="w-48">
                 <select
                   class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   value={inputPeriode()}
-                  onChange={(e) => { setInputPeriode(e.currentTarget.value); setInputPage(1); }}
+                  onChange={(e) => {
+                    setInputPeriode(e.currentTarget.value);
+                    setInputPage(1);
+                  }}
                 >
                   <option value="">Semua Periode</option>
-                  <For each={periodes()?.data}>
-                    {(p) => <option value={p.id}>{p.nama}</option>}
-                  </For>
+                  <For each={periodes()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
                 </select>
               </div>
             </div>
             <Button onClick={openFormModal}>+ Catat Cuti</Button>
           </div>
 
-          <Show when={!inputRecords.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+          <Show
+            when={!inputRecords.loading}
+            fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}
+          >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Status', 'Periode Cuti', 'Rentang Cuti', 'No SK', 'Aksi']}>
-              <For each={inputRecords()?.data} fallback={
-                <tr><td colspan="7" class="text-center py-10 text-gray-400">Tidak ada data mahasiswa cuti.</td></tr>
-              }>
+              <For
+                each={inputRecords()?.data}
+                fallback={
+                  <tr>
+                    <td colspan="7" class="text-center py-10 text-gray-400">
+                      Tidak ada data mahasiswa cuti.
+                    </td>
+                  </tr>
+                }
+              >
                 {(item) => {
                   const cutiRecord = item.pengajuanCuti?.[0];
                   return (
                     <tr class="hover:bg-gray-50/50 transition-colors">
                       <td class="px-6 py-4 font-mono text-sm font-semibold text-gray-600">{item.nim}</td>
                       <td class="px-6 py-4 font-medium text-gray-800">{item.nama}</td>
-                      <td class="px-6 py-4">{cutiRecord ? getStatusBadge(cutiRecord.status) : <span class="text-xs text-gray-400">Tidak ada record</span>}</td>
-                      <td class="px-6 py-4 text-gray-700">{cutiRecord?.periodeAkademik?.nama || cutiRecord?.periodeId || '-'}</td>
+                      <td class="px-6 py-4">
+                        {cutiRecord ? (
+                          getStatusBadge(cutiRecord.status)
+                        ) : (
+                          <span class="text-xs text-gray-400">Tidak ada record</span>
+                        )}
+                      </td>
+                      <td class="px-6 py-4 text-gray-700">
+                        {cutiRecord?.periodeAkademik?.nama || cutiRecord?.periodeId || '-'}
+                      </td>
                       <td class="px-6 py-4 text-sm text-gray-500">
                         {cutiRecord?.semesterMulaiCuti && cutiRecord?.semesterBerakhirCuti
                           ? `${cutiRecord.semesterMulaiCuti} - ${cutiRecord.semesterBerakhirCuti}`
@@ -329,13 +369,25 @@ export default function ManajemenCuti() {
                       </td>
                       <td class="px-6 py-4">
                         <div class="flex gap-2">
-                          <Show when={cutiRecord && (cutiRecord.status === 'disetujui_prodi' || cutiRecord.status === 'pending')}>
-                            <Button variant="danger" size="sm" onClick={() => handleDeleteCuti(cutiRecord!.id, item.nama)}>
+                          <Show
+                            when={
+                              cutiRecord && (cutiRecord.status === 'disetujui_prodi' || cutiRecord.status === 'pending')
+                            }
+                          >
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDeleteCuti(cutiRecord!.id, item.nama)}
+                            >
                               Batalkan Cuti
                             </Button>
                           </Show>
                           <Show when={cutiRecord?.status === 'disetujui_prodi'}>
-                            <Button variant="primary" size="sm" onClick={() => handleAktifKembaliFromInput(cutiRecord!.id, item.nama)}>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleAktifKembaliFromInput(cutiRecord!.id, item.nama)}
+                            >
                               Kembalikan
                             </Button>
                           </Show>
@@ -356,19 +408,23 @@ export default function ManajemenCuti() {
               <select
                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 value={apprPeriode()}
-                onChange={(e) => { setApprPeriode(e.currentTarget.value); setApprPage(1); }}
+                onChange={(e) => {
+                  setApprPeriode(e.currentTarget.value);
+                  setApprPage(1);
+                }}
               >
                 <option value="">Semua Periode</option>
-                <For each={periodes()?.data}>
-                  {(p) => <option value={p.id}>{p.nama}</option>}
-                </For>
+                <For each={periodes()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
               </select>
             </div>
             <div class="w-48">
               <select
                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 value={apprStatus()}
-                onChange={(e) => { setApprStatus(e.currentTarget.value); setApprPage(1); }}
+                onChange={(e) => {
+                  setApprStatus(e.currentTarget.value);
+                  setApprPage(1);
+                }}
               >
                 <option value="">Semua Status</option>
                 <option value="pending">Menunggu PA</option>
@@ -382,16 +438,25 @@ export default function ManajemenCuti() {
 
           <Show when={!approvals.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode', 'Alasan Cuti', 'Status', 'SK Cuti', 'Aksi']}>
-              <For each={approvals()?.data} fallback={
-                <tr><td colspan="8" class="text-center py-10 text-gray-400">Tidak ada pengajuan cuti yang ditemukan.</td></tr>
-              }>
+              <For
+                each={approvals()?.data}
+                fallback={
+                  <tr>
+                    <td colspan="8" class="text-center py-10 text-gray-400">
+                      Tidak ada pengajuan cuti yang ditemukan.
+                    </td>
+                  </tr>
+                }
+              >
                 {(item) => (
                   <tr class="hover:bg-gray-50/50 transition-colors">
                     <td class="px-6 py-4 font-mono text-sm font-semibold text-gray-600">{item.mahasiswa?.nim}</td>
                     <td class="px-6 py-4 font-medium text-gray-800">{item.mahasiswa?.nama}</td>
                     <td class="px-6 py-4 text-gray-500">{item.mahasiswa?.programStudi?.nama || '-'}</td>
                     <td class="px-6 py-4 text-gray-700">{item.periodeAkademik?.nama || item.periodeId}</td>
-                    <td class="px-6 py-4 text-gray-600 max-w-xs truncate" title={item.alasan}>{item.alasan}</td>
+                    <td class="px-6 py-4 text-gray-600 max-w-xs truncate" title={item.alasan}>
+                      {item.alasan}
+                    </td>
                     <td class="px-6 py-4">{getStatusBadge(item.status)}</td>
                     <td class="px-6 py-4 text-sm text-gray-500">
                       <Show when={item.noSuratIzin} fallback={<span class="text-gray-300">-</span>}>
@@ -400,10 +465,17 @@ export default function ManajemenCuti() {
                       </Show>
                     </td>
                     <td class="px-6 py-4">
-                      <Show when={canApprove(item)} fallback={<span class="text-xs text-gray-400 italic">No action needed</span>}>
+                      <Show
+                        when={canApprove(item)}
+                        fallback={<span class="text-xs text-gray-400 italic">No action needed</span>}
+                      >
                         <div class="flex gap-2">
-                          <Button variant="success" size="sm" onClick={() => openActionModal(item, 'approve')}>Setujui</Button>
-                          <Button variant="danger" size="sm" onClick={() => openActionModal(item, 'reject')}>Tolak</Button>
+                          <Button variant="success" size="sm" onClick={() => openActionModal(item, 'approve')}>
+                            Setujui
+                          </Button>
+                          <Button variant="danger" size="sm" onClick={() => openActionModal(item, 'reject')}>
+                            Tolak
+                          </Button>
                         </div>
                       </Show>
                     </td>
@@ -422,7 +494,10 @@ export default function ManajemenCuti() {
                 type="text"
                 placeholder="Cari NIM atau Nama..."
                 value={aktifSearch()}
-                onInput={(e) => { setAktifSearch(e.currentTarget.value); setAktifPage(1); }}
+                onInput={(e) => {
+                  setAktifSearch(e.currentTarget.value);
+                  setAktifPage(1);
+                }}
                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -430,21 +505,29 @@ export default function ManajemenCuti() {
               <select
                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-800 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 value={aktifPeriode()}
-                onChange={(e) => { setAktifPeriode(e.currentTarget.value); setAktifPage(1); }}
+                onChange={(e) => {
+                  setAktifPeriode(e.currentTarget.value);
+                  setAktifPage(1);
+                }}
               >
                 <option value="">Semua Periode</option>
-                <For each={periodes()?.data}>
-                  {(p) => <option value={p.id}>{p.nama}</option>}
-                </For>
+                <For each={periodes()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
               </select>
             </div>
           </div>
 
           <Show when={!aktifList.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode Cuti', 'Rentang Cuti', 'Aksi']}>
-              <For each={aktifList()?.data} fallback={
-                <tr><td colspan="6" class="text-center py-10 text-gray-400">Tidak ada mahasiswa yang sedang cuti.</td></tr>
-              }>
+              <For
+                each={aktifList()?.data}
+                fallback={
+                  <tr>
+                    <td colspan="6" class="text-center py-10 text-gray-400">
+                      Tidak ada mahasiswa yang sedang cuti.
+                    </td>
+                  </tr>
+                }
+              >
                 {(item) => (
                   <tr class="hover:bg-gray-50/50 transition-colors">
                     <td class="px-6 py-4 font-mono text-sm font-semibold text-gray-600">{item.nim}</td>
@@ -453,11 +536,14 @@ export default function ManajemenCuti() {
                     <td class="px-6 py-4 text-gray-700">{getPeriodeCuti(item)}</td>
                     <td class="px-6 py-4 text-gray-700">{getRentangCuti(item)}</td>
                     <td class="px-6 py-4">
-                      <Show when={getStatusCuti(item) === 'disetujui_prodi'} fallback={
-                        <span class="text-xs text-gray-400 italic">
-                          {getStatusCuti(item) === 'kembali_aktif' ? 'Sudah aktif' : 'Belum disetujui final'}
-                        </span>
-                      }>
+                      <Show
+                        when={getStatusCuti(item) === 'disetujui_prodi'}
+                        fallback={
+                          <span class="text-xs text-gray-400 italic">
+                            {getStatusCuti(item) === 'kembali_aktif' ? 'Sudah aktif' : 'Belum disetujui final'}
+                          </span>
+                        }
+                      >
                         <Button
                           variant="primary"
                           size="sm"
@@ -483,20 +569,29 @@ export default function ManajemenCuti() {
       <Modal show={showInputModal()} onClose={() => setShowInputModal(false)} title="Catat Cuti Mahasiswa">
         <form onSubmit={handleSaveInput} class="flex flex-col gap-4">
           <Show when={inputError()}>
-            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">{inputError()}</div>
+            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+              {inputError()}
+            </div>
           </Show>
 
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-gray-700">Cari Mahasiswa Aktif</label>
-            <Show when={!selectedMhs()} fallback={
-              <div class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div>
-                  <div class="font-semibold text-blue-900">{selectedMhs()?.nama}</div>
-                  <div class="text-xs text-blue-700">NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}</div>
+            <Show
+              when={!selectedMhs()}
+              fallback={
+                <div class="flex justify-between items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div>
+                    <div class="font-semibold text-blue-900">{selectedMhs()?.nama}</div>
+                    <div class="text-xs text-blue-700">
+                      NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}
+                    </div>
+                  </div>
+                  <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)}>
+                    Ganti
+                  </Button>
                 </div>
-                <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)}>Ganti</Button>
-              </div>
-            }>
+              }
+            >
               <SearchableSelect
                 placeholder="Ketik NIM atau nama mahasiswa..."
                 options={mhsList().map((m) => ({ label: `${m.nama} (${m.nim})`, value: m.id }))}
@@ -518,9 +613,7 @@ export default function ManajemenCuti() {
                 onChange={(e) => setInputPeriodeId(e.currentTarget.value)}
               >
                 <option value="">-- Pilih Periode --</option>
-                <For each={periodes()?.data}>
-                  {(p) => <option value={p.id}>{p.nama}</option>}
-                </For>
+                <For each={periodes()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
               </select>
             </div>
             <div class="flex flex-col gap-1.5">
@@ -543,13 +636,20 @@ export default function ManajemenCuti() {
               <Input
                 placeholder="Otomatis 2 semester"
                 value={semesterBerakhirCuti()}
-                onInput={(e) => { setSemesterBerakhirCuti(e.currentTarget.value); setAutoBerakhir(false); }}
+                onInput={(e) => {
+                  setSemesterBerakhirCuti(e.currentTarget.value);
+                  setAutoBerakhir(false);
+                }}
               />
               <span class="text-xs text-gray-400">Default 2 semester (otomatis). Ubah untuk manual.</span>
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-gray-700">Tanggal Surat Izin</label>
-              <Input type="date" value={tanggalSuratIzin()} onInput={(e) => setTanggalSuratIzin(e.currentTarget.value)} />
+              <Input
+                type="date"
+                value={tanggalSuratIzin()}
+                onInput={(e) => setTanggalSuratIzin(e.currentTarget.value)}
+              />
             </div>
           </div>
 
@@ -574,22 +674,36 @@ export default function ManajemenCuti() {
           </div>
 
           <div class="flex justify-end gap-2 mt-4">
-            <Button variant="secondary" onClick={() => setShowInputModal(false)} type="button">Batal</Button>
-            <Button type="submit" disabled={inputSubmitting()}>{inputSubmitting() ? 'Menyimpan...' : 'Simpan Data'}</Button>
+            <Button variant="secondary" onClick={() => setShowInputModal(false)} type="button">
+              Batal
+            </Button>
+            <Button type="submit" disabled={inputSubmitting()}>
+              {inputSubmitting() ? 'Menyimpan...' : 'Simpan Data'}
+            </Button>
           </div>
         </form>
       </Modal>
 
       {/* ===================== MODAL PERSETUJUAN ===================== */}
-      <Modal show={showApprModal()} onClose={() => setShowApprModal(false)} title={actionType() === 'approve' ? 'Setujui Pengajuan Cuti' : 'Tolak Pengajuan Cuti'}>
+      <Modal
+        show={showApprModal()}
+        onClose={() => setShowApprModal(false)}
+        title={actionType() === 'approve' ? 'Setujui Pengajuan Cuti' : 'Tolak Pengajuan Cuti'}
+      >
         <form onSubmit={handleApprovalAction} class="flex flex-col gap-4">
           <Show when={apprError()}>
-            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">{apprError()}</div>
+            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+              {apprError()}
+            </div>
           </Show>
 
           <div class="text-sm text-gray-600">
-            <div><strong>Mahasiswa:</strong> {selectedRequest()?.mahasiswa?.nama} ({selectedRequest()?.mahasiswa?.nim})</div>
-            <div><strong>Periode Cuti:</strong> {selectedRequest()?.periodeAkademik?.nama || selectedRequest()?.periodeId}</div>
+            <div>
+              <strong>Mahasiswa:</strong> {selectedRequest()?.mahasiswa?.nama} ({selectedRequest()?.mahasiswa?.nim})
+            </div>
+            <div>
+              <strong>Periode Cuti:</strong> {selectedRequest()?.periodeAkademik?.nama || selectedRequest()?.periodeId}
+            </div>
           </div>
 
           <Show when={actionType() === 'approve' && (role() === 'admin' || role() === 'prodi')}>
@@ -619,8 +733,14 @@ export default function ManajemenCuti() {
           </div>
 
           <div class="flex justify-end gap-2 mt-4">
-            <Button variant="secondary" onClick={() => setShowApprModal(false)} type="button">Batal</Button>
-            <Button type="submit" variant={actionType() === 'approve' ? 'primary' : 'danger'} disabled={apprSubmitting()}>
+            <Button variant="secondary" onClick={() => setShowApprModal(false)} type="button">
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              variant={actionType() === 'approve' ? 'primary' : 'danger'}
+              disabled={apprSubmitting()}
+            >
               {apprSubmitting() ? 'Memproses...' : actionType() === 'approve' ? 'Setujui' : 'Tolak'}
             </Button>
           </div>

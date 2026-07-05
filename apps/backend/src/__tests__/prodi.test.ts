@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { clearDatabase, getAuthToken, ProdiSuccessResponse } from './test-helper';
 
@@ -16,18 +16,18 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'TI',
             nama: 'Teknik Informatika',
             jenjang: 'D4',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
-      const body = await response.json() as ProdiSuccessResponse;
+      const body = (await response.json()) as ProdiSuccessResponse;
       expect(body.id).toBeDefined();
       expect(body.kode).toBe('TI');
     });
@@ -40,13 +40,13 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 123, // invalid type (number instead of string)
             nama: 'Teknik Informatika',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -60,14 +60,14 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'TI',
             nama: 'Teknik Informatika',
             jenjang: 'D4',
           }),
-        })
+        }),
       );
 
       const response = await app.handle(
@@ -75,14 +75,14 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             kode: 'TI',
             nama: 'Teknik Informatika Lain',
             jenjang: 'D3',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(409); // Conflict (23505 unique constraint)
@@ -98,10 +98,10 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({ kode: 'TI-DSN', nama: 'TI Dosen', jenjang: 'D4' }),
-        })
+        }),
       );
       expect(resDosen.status).toBe(403);
 
@@ -111,10 +111,10 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({ kode: 'TI-MHS', nama: 'TI Mhs', jenjang: 'D4' }),
-        })
+        }),
       );
       expect(resMhs.status).toBe(403);
 
@@ -124,7 +124,7 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ kode: 'TI-GST', nama: 'TI Guest', jenjang: 'D4' }),
-        })
+        }),
       );
       expect(resGuest.status).toBe(403);
     });
@@ -145,18 +145,16 @@ describe('2. Program Studi (/prodi)', () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${adminToken}`,
+              Authorization: `Bearer ${adminToken}`,
             },
             body: JSON.stringify(item),
-          })
+          }),
         );
       }
     });
 
     it('harus sukses mengambil list prodi (Default)', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/prodi', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/prodi', { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(Array.isArray(body.data)).toBe(true);
@@ -164,9 +162,7 @@ describe('2. Program Studi (/prodi)', () => {
     });
 
     it('harus sukses menggunakan pagination (page & limit)', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/prodi?page=1&limit=2', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/prodi?page=1&limit=2', { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.data.length).toBe(2);
@@ -174,9 +170,7 @@ describe('2. Program Studi (/prodi)', () => {
     });
 
     it('harus sukses memfilter list prodi berdasarkan keyword search', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/prodi?search=Informatika', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/prodi?search=Informatika', { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.data.length).toBe(1);
@@ -194,28 +188,24 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({ kode: 'TI', nama: 'Teknik Informatika', jenjang: 'D4' }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       prodiId = data.id;
     });
 
     it('harus sukses mengambil detail prodi berdasarkan ID valid', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/prodi/${prodiId}`, { method: 'GET' })
-      );
+      const response = await app.handle(new Request(`http://localhost/prodi/${prodiId}`, { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.kode).toBe('TI');
     });
 
     it('harus mengembalikan error 404 ketika ID prodi tidak ditemukan', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/prodi/999999', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/prodi/999999', { method: 'GET' }));
       expect(response.status).toBe(404);
     });
   });
@@ -230,12 +220,12 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({ kode: 'TI', nama: 'Teknik Informatika', jenjang: 'D4' }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       prodiId = data.id;
     });
 
@@ -247,12 +237,12 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: 'Teknik Informatika Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -268,12 +258,12 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: 'Teknik Informatika Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -287,12 +277,12 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             nama: 'Teknik Informatika Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -309,12 +299,12 @@ describe('2. Program Studi (/prodi)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({ kode: 'TI', nama: 'Teknik Informatika', jenjang: 'D4' }),
-        })
+        }),
       );
-      const data = await res.json() as { id: number };
+      const data = (await res.json()) as { id: number };
       prodiId = data.id;
     });
 
@@ -325,17 +315,15 @@ describe('2. Program Studi (/prodi)', () => {
         new Request(`http://localhost/prodi/${prodiId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
 
       // Verify deletion
-      const checkResponse = await app.handle(
-        new Request(`http://localhost/prodi/${prodiId}`, { method: 'GET' })
-      );
+      const checkResponse = await app.handle(new Request(`http://localhost/prodi/${prodiId}`, { method: 'GET' }));
       expect(checkResponse.status).toBe(404);
     });
 
@@ -346,9 +334,9 @@ describe('2. Program Studi (/prodi)', () => {
         new Request('http://localhost/prodi/999999', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -361,9 +349,9 @@ describe('2. Program Studi (/prodi)', () => {
         new Request(`http://localhost/prodi/${prodiId}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(403);

@@ -1,6 +1,6 @@
-import { db } from '../utils/db';
+import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
 import { kelasKuliah, mataKuliah } from '../models/schema';
-import { count, eq, ilike, or, and, inArray } from 'drizzle-orm';
+import { db } from '../utils/db';
 
 export interface CreateKelasDto {
   mataKuliahId: number;
@@ -15,23 +15,21 @@ export class KelasKuliahService {
     let conditions = [];
 
     if (search) {
-      conditions.push(
-        or(
-          ilike(kelasKuliah.namaKelas, `%${search}%`),
-          ilike(kelasKuliah.periodeId, `%${search}%`)
-        )
-      );
+      conditions.push(or(ilike(kelasKuliah.namaKelas, `%${search}%`), ilike(kelasKuliah.periodeId, `%${search}%`)));
     }
     if (periodeId) {
       conditions.push(eq(kelasKuliah.periodeId, periodeId));
     }
     if (programStudiId !== undefined) {
-      const courses = await db.select({ id: mataKuliah.id }).from(mataKuliah).where(eq(mataKuliah.programStudiId, programStudiId));
-      const courseIds = courses.map(c => c.id);
+      const courses = await db
+        .select({ id: mataKuliah.id })
+        .from(mataKuliah)
+        .where(eq(mataKuliah.programStudiId, programStudiId));
+      const courseIds = courses.map((c) => c.id);
       if (courseIds.length === 0) {
         return {
           data: [],
-          meta: { total: 0, page, limit, totalPages: 0 }
+          meta: { total: 0, page, limit, totalPages: 0 },
         };
       }
       conditions.push(inArray(kelasKuliah.mataKuliahId, courseIds));
@@ -42,13 +40,10 @@ export class KelasKuliahService {
       whereClause = and(...conditions);
     }
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(kelasKuliah)
-      .where(whereClause);
-    
+    const [totalResult] = await db.select({ total: count() }).from(kelasKuliah).where(whereClause);
+
     const total = totalResult?.total || 0;
-    
+
     const data = await db.query.kelasKuliah.findMany({
       where: whereClause,
       limit,
@@ -58,10 +53,10 @@ export class KelasKuliahService {
         periodeAkademik: true,
         dosenPengajarKelas: {
           with: {
-            dosen: true
-          }
-        }
-      }
+            dosen: true,
+          },
+        },
+      },
     });
 
     const totalPages = Math.ceil(total / limit);
@@ -72,8 +67,8 @@ export class KelasKuliahService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -85,10 +80,10 @@ export class KelasKuliahService {
         periodeAkademik: true,
         dosenPengajarKelas: {
           with: {
-            dosen: true
-          }
-        }
-      }
+            dosen: true,
+          },
+        },
+      },
     });
     return data || null;
   }
@@ -99,19 +94,12 @@ export class KelasKuliahService {
   }
 
   static async update(id: number, data: Partial<CreateKelasDto>) {
-    const [updatedKelas] = await db
-      .update(kelasKuliah)
-      .set(data)
-      .where(eq(kelasKuliah.id, id))
-      .returning();
+    const [updatedKelas] = await db.update(kelasKuliah).set(data).where(eq(kelasKuliah.id, id)).returning();
     return updatedKelas || null;
   }
 
   static async delete(id: number) {
-    const [deletedKelas] = await db
-      .delete(kelasKuliah)
-      .where(eq(kelasKuliah.id, id))
-      .returning();
+    const [deletedKelas] = await db.delete(kelasKuliah).where(eq(kelasKuliah.id, id)).returning();
     return deletedKelas || null;
   }
 }

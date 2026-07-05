@@ -1,6 +1,6 @@
+import { and, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { mahasiswa, pengajuanCuti } from '../models/schema';
 import { db } from '../utils/db';
-import { pengajuanCuti, mahasiswa } from '../models/schema';
-import { count, eq, and, desc, inArray, or, like, sql } from 'drizzle-orm';
 
 export interface CreateCutiDto {
   mahasiswaId: number;
@@ -18,22 +18,22 @@ export class CutiService {
 
   static async create(data: CreateCutiDto) {
     const existing = await db.query.pengajuanCuti.findFirst({
-      where: and(
-        eq(pengajuanCuti.mahasiswaId, data.mahasiswaId),
-        eq(pengajuanCuti.periodeId, data.periodeId)
-      )
+      where: and(eq(pengajuanCuti.mahasiswaId, data.mahasiswaId), eq(pengajuanCuti.periodeId, data.periodeId)),
     });
 
     if (existing) {
       throw new Error('Anda sudah mengajukan cuti pada periode akademik ini.');
     }
 
-    const [newCuti] = await db.insert(pengajuanCuti).values({
-      mahasiswaId: data.mahasiswaId,
-      periodeId: data.periodeId,
-      alasan: data.alasan,
-      status: 'pending'
-    }).returning();
+    const [newCuti] = await db
+      .insert(pengajuanCuti)
+      .values({
+        mahasiswaId: data.mahasiswaId,
+        periodeId: data.periodeId,
+        alasan: data.alasan,
+        status: 'pending',
+      })
+      .returning();
 
     return newCuti;
   }
@@ -48,10 +48,7 @@ export class CutiService {
     tanggalSuratIzin?: string;
   }) {
     const existing = await db.query.pengajuanCuti.findFirst({
-      where: and(
-        eq(pengajuanCuti.mahasiswaId, data.mahasiswaId),
-        eq(pengajuanCuti.periodeId, data.periodeId)
-      )
+      where: and(eq(pengajuanCuti.mahasiswaId, data.mahasiswaId), eq(pengajuanCuti.periodeId, data.periodeId)),
     });
 
     if (existing) {
@@ -61,21 +58,21 @@ export class CutiService {
     const semesterMulai = data.semesterMulaiCuti || data.periodeId;
     const semesterBerakhir = data.semesterBerakhirCuti || CutiService.hitungSemesterBerakhir(semesterMulai);
 
-    const [newCuti] = await db.insert(pengajuanCuti).values({
-      mahasiswaId: data.mahasiswaId,
-      periodeId: data.periodeId,
-      alasan: data.alasan,
-      status: 'disetujui_prodi',
-      semesterMulaiCuti: semesterMulai,
-      semesterBerakhirCuti: semesterBerakhir,
-      noSuratIzin: data.noSuratIzin,
-      tanggalSuratIzin: data.tanggalSuratIzin ? new Date(data.tanggalSuratIzin).toISOString().split('T')[0] : null,
-    }).returning();
+    const [newCuti] = await db
+      .insert(pengajuanCuti)
+      .values({
+        mahasiswaId: data.mahasiswaId,
+        periodeId: data.periodeId,
+        alasan: data.alasan,
+        status: 'disetujui_prodi',
+        semesterMulaiCuti: semesterMulai,
+        semesterBerakhirCuti: semesterBerakhir,
+        noSuratIzin: data.noSuratIzin,
+        tanggalSuratIzin: data.tanggalSuratIzin ? new Date(data.tanggalSuratIzin).toISOString().split('T')[0] : null,
+      })
+      .returning();
 
-    await db
-      .update(mahasiswa)
-      .set({ status: 'cuti' })
-      .where(eq(mahasiswa.id, data.mahasiswaId));
+    await db.update(mahasiswa).set({ status: 'cuti' }).where(eq(mahasiswa.id, data.mahasiswaId));
 
     return newCuti;
   }
@@ -107,16 +104,16 @@ export class CutiService {
         mahasiswa: {
           with: {
             programStudi: true,
-            dosenPa: true
-          }
+            dosenPa: true,
+          },
         },
-        periodeAkademik: true
-      }
+        periodeAkademik: true,
+      },
     });
 
     let filteredData = data;
     if (params.dosenPaId) {
-      filteredData = data.filter(d => d.mahasiswa?.dosenPaId === params.dosenPaId);
+      filteredData = data.filter((d) => d.mahasiswa?.dosenPaId === params.dosenPaId);
     }
 
     const total = filteredData.length;
@@ -124,16 +121,11 @@ export class CutiService {
 
     return {
       data: filteredData,
-      meta: { total, page, limit, totalPages }
+      meta: { total, page, limit, totalPages },
     };
   }
 
-  static async getMahasiswaCuti(params: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    periodeId?: string;
-  }) {
+  static async getMahasiswaCuti(params: { page?: number; limit?: number; search?: string; periodeId?: string }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
     const offset = (page - 1) * limit;
@@ -141,12 +133,7 @@ export class CutiService {
     const conditions = [eq(mahasiswa.status, 'cuti')];
 
     if (params.search) {
-      conditions.push(
-        or(
-          like(mahasiswa.nama, `%${params.search}%`),
-          like(mahasiswa.nim, `%${params.search}%`)
-        )
-      );
+      conditions.push(or(like(mahasiswa.nama, `%${params.search}%`), like(mahasiswa.nim, `%${params.search}%`)));
     }
 
     const mahasiswaData = await db.query.mahasiswa.findMany({
@@ -158,14 +145,14 @@ export class CutiService {
         programStudi: true,
         dosenPa: true,
         pengajuanCuti: {
-          where: (table, { eq: eqFn }) => params.periodeId ? eqFn(table.periodeId, params.periodeId) : undefined,
+          where: (table, { eq: eqFn }) => (params.periodeId ? eqFn(table.periodeId, params.periodeId) : undefined),
           with: {
-            periodeAkademik: true
+            periodeAkademik: true,
           },
           orderBy: [desc(pengajuanCuti.createdAt)],
-          limit: 1
-        }
-      }
+          limit: 1,
+        },
+      },
     });
 
     const [{ count: total }] = await db
@@ -177,31 +164,38 @@ export class CutiService {
 
     return {
       data: mahasiswaData,
-      meta: { total, page, limit, totalPages }
+      meta: { total, page, limit, totalPages },
     };
   }
 
   static async getById(id: number) {
-    return await db.query.pengajuanCuti.findFirst({
-      where: eq(pengajuanCuti.id, id),
-      with: {
-        mahasiswa: {
-          with: {
-            programStudi: true,
-            dosenPa: true
-          }
+    return (
+      (await db.query.pengajuanCuti.findFirst({
+        where: eq(pengajuanCuti.id, id),
+        with: {
+          mahasiswa: {
+            with: {
+              programStudi: true,
+              dosenPa: true,
+            },
+          },
+          periodeAkademik: true,
         },
-        periodeAkademik: true
-      }
-    }) || null;
+      })) || null
+    );
   }
 
-  static async approve(id: number, role: string, userRefId: number | null, payload: {
-    action: 'approve' | 'reject';
-    catatan?: string;
-    noSuratIzin?: string;
-    tanggalSuratIzin?: string;
-  }) {
+  static async approve(
+    id: number,
+    role: string,
+    userRefId: number | null,
+    payload: {
+      action: 'approve' | 'reject';
+      catatan?: string;
+      noSuratIzin?: string;
+      tanggalSuratIzin?: string;
+    },
+  ) {
     const cuti = await this.getById(id);
     if (!cuti) {
       throw new Error('Pengajuan cuti tidak ditemukan.');
@@ -241,17 +235,16 @@ export class CutiService {
         status: nextStatus,
         catatan: payload.catatan || cuti.catatan,
         noSuratIzin: payload.noSuratIzin || cuti.noSuratIzin,
-        tanggalSuratIzin: payload.tanggalSuratIzin ? new Date(payload.tanggalSuratIzin).toISOString().split('T')[0] : cuti.tanggalSuratIzin,
-        updatedAt: new Date()
+        tanggalSuratIzin: payload.tanggalSuratIzin
+          ? new Date(payload.tanggalSuratIzin).toISOString().split('T')[0]
+          : cuti.tanggalSuratIzin,
+        updatedAt: new Date(),
       })
       .where(eq(pengajuanCuti.id, id))
       .returning();
 
     if (nextStatus === 'disetujui_prodi') {
-      await db
-        .update(mahasiswa)
-        .set({ status: 'cuti' })
-        .where(eq(mahasiswa.id, cuti.mahasiswaId));
+      await db.update(mahasiswa).set({ status: 'cuti' }).where(eq(mahasiswa.id, cuti.mahasiswaId));
     }
 
     return updated;
@@ -271,15 +264,12 @@ export class CutiService {
       .update(pengajuanCuti)
       .set({
         status: 'kembali_aktif',
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(pengajuanCuti.id, id))
       .returning();
 
-    await db
-      .update(mahasiswa)
-      .set({ status: 'aktif' })
-      .where(eq(mahasiswa.id, cuti.mahasiswaId));
+    await db.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, cuti.mahasiswaId));
 
     return updated;
   }
@@ -299,16 +289,10 @@ export class CutiService {
     }
 
     if (cuti.status === 'disetujui_prodi') {
-      await db
-        .update(mahasiswa)
-        .set({ status: 'aktif' })
-        .where(eq(mahasiswa.id, cuti.mahasiswaId));
+      await db.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, cuti.mahasiswaId));
     }
 
-    const [deleted] = await db
-      .delete(pengajuanCuti)
-      .where(eq(pengajuanCuti.id, id))
-      .returning();
+    const [deleted] = await db.delete(pengajuanCuti).where(eq(pengajuanCuti.id, id)).returning();
 
     return deleted;
   }

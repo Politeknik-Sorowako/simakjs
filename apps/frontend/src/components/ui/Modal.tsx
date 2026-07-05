@@ -10,7 +10,7 @@ interface ModalProps {
 
 export function Modal(props: ModalProps) {
   const visible = () => props.show ?? props.isOpen ?? false;
-  
+
   return (
     <Show when={visible()}>
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm transition-opacity duration-300">
@@ -26,9 +26,7 @@ export function Modal(props: ModalProps) {
               </svg>
             </button>
           </div>
-          <div class="max-h-[70vh] overflow-y-auto">
-            {props.children}
-          </div>
+          <div class="max-h-[70vh] overflow-y-auto">{props.children}</div>
         </div>
       </div>
     </Show>

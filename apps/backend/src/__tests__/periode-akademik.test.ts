@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -16,14 +16,14 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             id: '20251',
             nama: '2025/2026 Ganjil',
             aktif: true,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
@@ -39,13 +39,13 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             id: 12345, // invalid type (number instead of string)
             nama: '2025/2026 Ganjil',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(422);
@@ -59,14 +59,14 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             id: '20251',
             nama: '2025/2026 Ganjil',
             aktif: true,
           }),
-        })
+        }),
       );
 
       const response = await app.handle(
@@ -74,14 +74,14 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             id: '20251',
             nama: '2025/2026 Ganjil Duplikat',
             aktif: false,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(409); // Conflict unique ID
@@ -95,14 +95,14 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             id: '20251',
             nama: '2025/2026 Ganjil',
             aktif: true,
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -117,17 +117,15 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({ id: '20251', nama: '2025/2026 Ganjil', aktif: true }),
-        })
+        }),
       );
     });
 
     it('harus sukses mengambil list periode akademik', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/periode-akademik', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/periode-akademik', { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.data.length).toBeGreaterThan(0);
@@ -142,26 +140,22 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({ id: '20251', nama: '2025/2026 Ganjil', aktif: true }),
-        })
+        }),
       );
     });
 
     it('harus sukses mengambil detail periode berdasarkan ID valid', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/periode-akademik/20251', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/periode-akademik/20251', { method: 'GET' }));
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.nama).toBe('2025/2026 Ganjil');
     });
 
     it('harus mengembalikan error 404 jika ID tidak ditemukan', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/periode-akademik/99999', { method: 'GET' })
-      );
+      const response = await app.handle(new Request('http://localhost/periode-akademik/99999', { method: 'GET' }));
       expect(response.status).toBe(404);
     });
   });
@@ -174,10 +168,10 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({ id: '20251', nama: '2025/2026 Ganjil', aktif: true }),
-        })
+        }),
       );
     });
 
@@ -189,12 +183,12 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: '2025/2026 Ganjil Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -210,12 +204,12 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             nama: 'Terupdate',
           }),
-        })
+        }),
       );
 
       expect(response.status).toBe(404);
@@ -230,10 +224,10 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({ id: '20251', nama: '2025/2026 Ganjil', aktif: true }),
-        })
+        }),
       );
     });
 
@@ -244,9 +238,9 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
         new Request('http://localhost/periode-akademik/20251', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
@@ -259,9 +253,9 @@ describe('5. Periode Akademik (/periode-akademik)', () => {
         new Request('http://localhost/periode-akademik/99999', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
 
       expect(response.status).toBe(404);

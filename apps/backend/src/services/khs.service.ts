@@ -1,6 +1,17 @@
+import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import {
+  bap,
+  bimbingan,
+  kelasKuliah,
+  konversiNilai,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  presensi,
+  skalaPredikatKelulusan,
+  tagihan,
+} from '../models/schema';
 import { db } from '../utils/db';
-import { krs, mahasiswa, kelasKuliah, mataKuliah, tagihan, bimbingan, bap, presensi, konversiNilai, skalaPredikatKelulusan } from '../models/schema';
-import { eq, and, isNotNull, inArray } from 'drizzle-orm';
 import { PresensiService } from './presensi.service';
 
 export interface KhsSummary {
@@ -16,15 +27,15 @@ export class KhsService {
       where: and(
         eq(tagihan.mahasiswaId, mahasiswaId),
         eq(tagihan.periodeId, activePeriodeId),
-        eq(tagihan.status, 'belum_bayar')
-      )
+        eq(tagihan.status, 'belum_bayar'),
+      ),
     });
 
     if (unpaidBill) {
       return {
         bebas: false,
         reason: 'SPP Belum Lunas',
-        detail: `Terdapat tunggakan SPP sebesar Rp ${unpaidBill.nominal.toLocaleString('id-ID')} untuk periode ${activePeriodeId}.`
+        detail: `Terdapat tunggakan SPP sebesar Rp ${unpaidBill.nominal.toLocaleString('id-ID')} untuk periode ${activePeriodeId}.`,
       };
     }
 
@@ -35,7 +46,7 @@ export class KhsService {
         return {
           bebas: false,
           reason: 'Tunggakan Kompensasi',
-          detail: `Anda memiliki sisa kewajiban jam kompensasi sebanyak ${komDetail.summary.sisaKompensasi} menit.`
+          detail: `Anda memiliki sisa kewajiban jam kompensasi sebanyak ${komDetail.summary.sisaKompensasi} menit.`,
         };
       }
     } catch (e) {
@@ -56,25 +67,19 @@ export class KhsService {
         isApproved: krs.isApproved,
         kelasKuliah: {
           id: kelasKuliah.id,
-          namaKelas: kelasKuliah.namaKelas
+          namaKelas: kelasKuliah.namaKelas,
         },
         mataKuliah: {
           id: mataKuliah.id,
           kode: mataKuliah.kode,
           nama: mataKuliah.nama,
-          sksTotal: mataKuliah.sksTotal
-        }
+          sksTotal: mataKuliah.sksTotal,
+        },
       })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-      .where(
-        and(
-          eq(krs.mahasiswaId, mahasiswaId),
-          eq(kelasKuliah.periodeId, periodeId),
-          eq(krs.isApproved, true)
-        )
-      );
+      .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, true)));
 
     // Calculate Semester Stats
     let totalSks = 0;
@@ -95,18 +100,12 @@ export class KhsService {
     const allApprovedKrs = await db
       .select({
         nilaiIndeks: krs.nilaiIndeks,
-        sksTotal: mataKuliah.sksTotal
+        sksTotal: mataKuliah.sksTotal,
       })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-      .where(
-        and(
-          eq(krs.mahasiswaId, mahasiswaId),
-          eq(krs.isApproved, true),
-          isNotNull(krs.nilaiIndeks)
-        )
-      );
+      .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.isApproved, true), isNotNull(krs.nilaiIndeks)));
 
     let totalSksKumulatif = 0;
     let weightedPointsKumulatif = 0;
@@ -128,8 +127,8 @@ export class KhsService {
         totalSks,
         ipSemester,
         ipk,
-        totalSksKumulatif
-      }
+        totalSksKumulatif,
+      },
     };
   }
 
@@ -144,19 +143,13 @@ export class KhsService {
         mataKuliah: {
           kode: mataKuliah.kode,
           nama: mataKuliah.nama,
-          sksTotal: mataKuliah.sksTotal
-        }
+          sksTotal: mataKuliah.sksTotal,
+        },
       })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-      .where(
-        and(
-          eq(krs.mahasiswaId, mahasiswaId),
-          eq(krs.isApproved, true),
-          isNotNull(krs.nilaiIndeks)
-        )
-      );
+      .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.isApproved, true), isNotNull(krs.nilaiIndeks)));
 
     let totalSks = 0;
     let weightedPoints = 0;
@@ -187,47 +180,46 @@ export class KhsService {
     const mhsDetail = await db.query.mahasiswa.findFirst({
       where: eq(mahasiswa.id, mahasiswaId),
       with: {
-        programStudi: true
-      }
+        programStudi: true,
+      },
     });
 
-    const formattedList = list.map(item => ({
+    const formattedList = list.map((item) => ({
       mataKuliahKode: item.mataKuliah.kode,
       mataKuliahNama: item.mataKuliah.nama,
       sks: item.mataKuliah.sksTotal,
       nilaiHuruf: item.nilaiHuruf || '-',
-      nilaiIndeks: item.nilaiIndeks || '0.00'
+      nilaiIndeks: item.nilaiIndeks || '0.00',
     }));
 
     return {
-      mahasiswa: mhsDetail ? {
-        id: mhsDetail.id,
-        nim: mhsDetail.nim,
-        nama: mhsDetail.nama,
-        prodi: mhsDetail.programStudi?.nama || '-'
-      } : undefined,
+      mahasiswa: mhsDetail
+        ? {
+            id: mhsDetail.id,
+            nim: mhsDetail.nim,
+            nama: mhsDetail.nama,
+            prodi: mhsDetail.programStudi?.nama || '-',
+          }
+        : undefined,
       transkripList: formattedList,
       totalSksLulus: totalSks,
       ipk,
-      predikatKelulusan
+      predikatKelulusan,
     };
   }
 
   static async getExamEligibility(mahasiswaId: number, activePeriodeId: string) {
     const bimb = await db.query.bimbingan.findFirst({
-      where: and(
-        eq(bimbingan.mahasiswaId, mahasiswaId),
-        eq(bimbingan.periodeId, activePeriodeId)
-      ),
+      where: and(eq(bimbingan.mahasiswaId, mahasiswaId), eq(bimbingan.periodeId, activePeriodeId)),
       with: {
-        thread: true
-      }
+        thread: true,
+      },
     });
 
     const hasBimbinganApproved = bimb?.isApproved === true;
     const thread = bimb?.thread || [];
-    const utsThreadCount = thread.filter(t => t.tipe === 'uts').length;
-    const uasThreadCount = thread.filter(t => t.tipe === 'uas').length;
+    const utsThreadCount = thread.filter((t) => t.tipe === 'uts').length;
+    const uasThreadCount = thread.filter((t) => t.tipe === 'uas').length;
 
     const utsEligible = hasBimbinganApproved || utsThreadCount >= 1;
     const uasEligible = hasBimbinganApproved || uasThreadCount >= 3;
@@ -239,31 +231,24 @@ export class KhsService {
         kelasKuliahId: krs.kelasKuliahId,
         namaKelas: kelasKuliah.namaKelas,
         mataKuliahNama: mataKuliah.nama,
-        mataKuliahKode: mataKuliah.kode
+        mataKuliahKode: mataKuliah.kode,
       })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .where(
-        and(
-          eq(krs.mahasiswaId, mahasiswaId),
-          eq(kelasKuliah.periodeId, activePeriodeId),
-          eq(krs.isApproved, true)
-        )
+        and(eq(krs.mahasiswaId, mahasiswaId), eq(kelasKuliah.periodeId, activePeriodeId), eq(krs.isApproved, true)),
       );
 
-    const classIds = studentKrs.map(k => k.kelasKuliahId);
+    const classIds = studentKrs.map((k) => k.kelasKuliahId);
     const classEligibility = [];
 
     if (classIds.length > 0) {
       // Fetch all BAP records for these classes
-      const allBaps = await db
-        .select()
-        .from(bap)
-        .where(inArray(bap.kelasKuliahId, classIds));
+      const allBaps = await db.select().from(bap).where(inArray(bap.kelasKuliahId, classIds));
 
       // Group BAPs by class ID
-      const bapsByClass = new Map<number, typeof bap.$inferSelect[]>();
+      const bapsByClass = new Map<number, (typeof bap.$inferSelect)[]>();
       for (const b of allBaps) {
         const arr = bapsByClass.get(b.kelasKuliahId) || [];
         arr.push(b);
@@ -271,19 +256,14 @@ export class KhsService {
       }
 
       // Fetch all presensi records for these BAP records of the student
-      const bapIds = allBaps.map(b => b.id);
+      const bapIds = allBaps.map((b) => b.id);
       const presentBapIds = new Set<number>();
 
       if (bapIds.length > 0) {
         const studentPresensi = await db
           .select()
           .from(presensi)
-          .where(
-            and(
-              eq(presensi.mahasiswaId, mahasiswaId),
-              inArray(presensi.bapId, bapIds)
-            )
-          );
+          .where(and(eq(presensi.mahasiswaId, mahasiswaId), inArray(presensi.bapId, bapIds)));
 
         for (const p of studentPresensi) {
           if (p.status === 'hadir' || p.status === 'telat') {
@@ -316,14 +296,16 @@ export class KhsService {
           attendanceRate: parseFloat(attendanceRate.toFixed(2)),
           eligible: attendanceEligible && bimbinganEligible,
           reasons: {
-            attendance: attendanceEligible ? 'Lolos (>= 80%)' : `Kehadiran kurang (${attendanceRate.toFixed(1)}% < 80%)`,
-            bimbingan: bimbinganEligible ? 'Lolos' : 'Bimbingan PA belum terpenuhi (min. 3 interaksi)'
-          }
+            attendance: attendanceEligible
+              ? 'Lolos (>= 80%)'
+              : `Kehadiran kurang (${attendanceRate.toFixed(1)}% < 80%)`,
+            bimbingan: bimbinganEligible ? 'Lolos' : 'Bimbingan PA belum terpenuhi (min. 3 interaksi)',
+          },
         });
       }
     }
 
-    const overallEligible = classEligibility.every(c => c.eligible);
+    const overallEligible = classEligibility.every((c) => c.eligible);
 
     return {
       mahasiswaId,
@@ -334,10 +316,10 @@ export class KhsService {
         uasInteractionsCount: uasThreadCount,
         utsEligible,
         uasEligible,
-        eligible: bimbinganEligible
+        eligible: bimbinganEligible,
       },
       classes: classEligibility,
-      overallEligible
+      overallEligible,
     };
   }
 
@@ -370,17 +352,10 @@ export class KhsService {
     };
 
     if (data.id) {
-      const [updated] = await db
-        .update(konversiNilai)
-        .set(payload)
-        .where(eq(konversiNilai.id, data.id))
-        .returning();
+      const [updated] = await db.update(konversiNilai).set(payload).where(eq(konversiNilai.id, data.id)).returning();
       return updated;
     } else {
-      const [created] = await db
-        .insert(konversiNilai)
-        .values(payload)
-        .returning();
+      const [created] = await db.insert(konversiNilai).values(payload).returning();
       return created;
     }
   }
@@ -395,12 +370,7 @@ export class KhsService {
     return await db.select().from(skalaPredikatKelulusan);
   }
 
-  static async savePredikat(data: {
-    id?: number;
-    ipkMin: string | number;
-    ipkMax: string | number;
-    predikat: string;
-  }) {
+  static async savePredikat(data: { id?: number; ipkMin: string | number; ipkMax: string | number; predikat: string }) {
     const payload = {
       ipkMin: String(data.ipkMin),
       ipkMax: String(data.ipkMax),
@@ -415,10 +385,7 @@ export class KhsService {
         .returning();
       return updated;
     } else {
-      const [created] = await db
-        .insert(skalaPredikatKelulusan)
-        .values(payload)
-        .returning();
+      const [created] = await db.insert(skalaPredikatKelulusan).values(payload).returning();
       return created;
     }
   }

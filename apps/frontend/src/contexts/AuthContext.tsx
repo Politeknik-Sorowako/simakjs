@@ -1,4 +1,4 @@
-import { createContext, useContext, createSignal, JSX, createEffect } from 'solid-js';
+import { createContext, createEffect, createSignal, JSX, useContext } from 'solid-js';
 
 export interface User {
   id: number;

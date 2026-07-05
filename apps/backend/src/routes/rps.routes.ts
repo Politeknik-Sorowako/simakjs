@@ -1,18 +1,18 @@
 import { Elysia } from 'elysia';
 import { RpsController } from '../controllers/rps.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import {
-  getRpsSchema,
-  createRpsSchema,
-  updateRpsSchema,
   addTopikSchema,
-  updateTopikSchema,
+  createRencanaEvaluasiSchema,
+  createRpsSchema,
+  deleteRencanaEvaluasiSchema,
   deleteTopikSchema,
   getRencanaEvaluasiSchema,
-  createRencanaEvaluasiSchema,
+  getRpsSchema,
   updateRencanaEvaluasiSchema,
-  deleteRencanaEvaluasiSchema
+  updateRpsSchema,
+  updateTopikSchema,
 } from '../schemas/rps.schema';
-import { authMiddleware } from '../middlewares/auth.middleware';
 
 export const rpsRoutes = new Elysia()
   .use(authMiddleware)

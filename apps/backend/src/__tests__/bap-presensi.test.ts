@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
-import { clearDatabase, getAuthToken } from './test-helper';
+import { dosen, kelasKuliah, mahasiswa, mataKuliah, periodeAkademik, programStudi } from '../models/schema';
 import { db } from '../utils/db';
-import { programStudi, dosen, mahasiswa, mataKuliah, kelasKuliah, periodeAkademik } from '../models/schema';
+import { clearDatabase, getAuthToken } from './test-helper';
 
 describe('BAP, Presensi & Kompensasi API', () => {
   let adminToken: string;
@@ -24,32 +24,41 @@ describe('BAP, Presensi & Kompensasi API', () => {
     mhsToken = await getAuthToken('mhs@test.com', 'mahasiswa');
 
     // Seed master data
-    const [prodi] = await db.insert(programStudi).values({
-      kode: 'TI',
-      nama: 'Teknik Informatika',
-      jenjang: 'D4',
-    }).returning();
+    const [prodi] = await db
+      .insert(programStudi)
+      .values({
+        kode: 'TI',
+        nama: 'Teknik Informatika',
+        jenjang: 'D4',
+      })
+      .returning();
     prodiId = prodi.id;
 
-    const [dsn] = await db.insert(dosen).values({
-      nip: '199001012020011001',
-      nama: 'Dosen Test',
-      email: 'dosen@test.com',
-      programStudiId: prodiId,
-    }).returning();
+    const [dsn] = await db
+      .insert(dosen)
+      .values({
+        nip: '199001012020011001',
+        nama: 'Dosen Test',
+        email: 'dosen@test.com',
+        programStudiId: prodiId,
+      })
+      .returning();
     dosenId = dsn.id;
 
-    const [mhs] = await db.insert(mahasiswa).values({
-      nim: '20200001',
-      nama: 'Mahasiswa Test',
-      email: 'mhs@test.com',
-      programStudiId: prodiId,
-      status: 'aktif',
-      namaIbuKandung: 'Ibu Test',
-      nik: '1234567890123456',
-      jenisKelamin: 'L',
-      tanggalLahir: '2000-01-01',
-    }).returning();
+    const [mhs] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '20200001',
+        nama: 'Mahasiswa Test',
+        email: 'mhs@test.com',
+        programStudiId: prodiId,
+        status: 'aktif',
+        namaIbuKandung: 'Ibu Test',
+        nik: '1234567890123456',
+        jenisKelamin: 'L',
+        tanggalLahir: '2000-01-01',
+      })
+      .returning();
     mhsId = mhs.id;
 
     await db.insert(periodeAkademik).values({
@@ -58,19 +67,25 @@ describe('BAP, Presensi & Kompensasi API', () => {
       aktif: true,
     });
 
-    const [matkul] = await db.insert(mataKuliah).values({
-      kode: 'MK001',
-      nama: 'Pemrograman Web',
-      sksTotal: 3,
-      programStudiId: prodiId,
-    }).returning();
+    const [matkul] = await db
+      .insert(mataKuliah)
+      .values({
+        kode: 'MK001',
+        nama: 'Pemrograman Web',
+        sksTotal: 3,
+        programStudiId: prodiId,
+      })
+      .returning();
     matkulId = matkul.id;
 
-    const [kelas] = await db.insert(kelasKuliah).values({
-      mataKuliahId: matkulId,
-      periodeId: periodeId,
-      namaKelas: 'A',
-    }).returning();
+    const [kelas] = await db
+      .insert(kelasKuliah)
+      .values({
+        mataKuliahId: matkulId,
+        periodeId: periodeId,
+        namaKelas: 'A',
+      })
+      .returning();
     kelasId = kelas.id;
   });
 
@@ -81,14 +96,14 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: matkulId,
             kode: 'CPMK-1',
             deskripsi: 'Mampu membangun web interaktif',
           }),
-        })
+        }),
       );
       expect(response.status).toBe(201);
       const cpmkObj = await response.json();
@@ -98,9 +113,9 @@ describe('BAP, Presensi & Kompensasi API', () => {
         new Request(`http://localhost/cpmk/mata-kuliah/${matkulId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
-        })
+        }),
       );
       expect(getRes.status).toBe(200);
       const list = await getRes.json();
@@ -119,14 +134,14 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mataKuliahId: matkulId,
             kode: 'CPMK-1',
             deskripsi: 'Mampu membangun web interaktif',
           }),
-        })
+        }),
       );
       const cpmkObj = await response.json();
       cpmkId = cpmkObj.id;
@@ -139,7 +154,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             kelasKuliahId: kelasId,
@@ -150,7 +165,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
             cpmkId: cpmkId,
             dosenId: dosenId,
           }),
-        })
+        }),
       );
       expect(bapRes.status).toBe(201);
       const bapObj = await bapRes.json();
@@ -162,7 +177,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             bapId: bapId,
@@ -174,7 +189,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
               },
             ],
           }),
-        })
+        }),
       );
       expect(presRes1.status).toBe(200);
 
@@ -183,9 +198,9 @@ describe('BAP, Presensi & Kompensasi API', () => {
         new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       expect(mhsCompRes.status).toBe(200);
       let compDetail = await mhsCompRes.json();
@@ -198,7 +213,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             bapId: bapId,
@@ -209,7 +224,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
               },
             ],
           }),
-        })
+        }),
       );
       expect(presRes2.status).toBe(200);
 
@@ -218,9 +233,9 @@ describe('BAP, Presensi & Kompensasi API', () => {
         new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       compDetail = await mhsCompRes.json();
       expect(compDetail.summary.totalKompensasi).toBe(500); // 100 * 5
@@ -232,7 +247,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             bapId: bapId,
@@ -243,7 +258,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
               },
             ],
           }),
-        })
+        }),
       );
       expect(presRes3.status).toBe(200);
 
@@ -252,9 +267,9 @@ describe('BAP, Presensi & Kompensasi API', () => {
         new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       compDetail = await mhsCompRes.json();
       expect(compDetail.summary.totalKompensasi).toBe(100); // 100 * 1
@@ -266,7 +281,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
@@ -274,7 +289,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
             tanggal: '2023-09-02',
             keterangan: 'Menyapu lab jaringan',
           }),
-        })
+        }),
       );
       expect(payRes.status).toBe(201);
 
@@ -283,9 +298,9 @@ describe('BAP, Presensi & Kompensasi API', () => {
         new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       compDetail = await mhsCompRes.json();
       expect(compDetail.summary.totalKompensasi).toBe(100);
@@ -297,9 +312,9 @@ describe('BAP, Presensi & Kompensasi API', () => {
         new Request('http://localhost/presensi/kompensasi/laporan', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
-        })
+        }),
       );
       expect(reportRes.status).toBe(200);
       const reportList = await reportRes.json();
@@ -315,13 +330,13 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             jumlahMenit: 80,
             keterangan: 'Revisi kerja bakti perpustakaan',
           }),
-        })
+        }),
       );
       expect(editPayRes.status).toBe(200);
 
@@ -330,9 +345,9 @@ describe('BAP, Presensi & Kompensasi API', () => {
         new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       const updatedCompDetail = await updatedMhsCompRes.json();
       expect(updatedCompDetail.summary.totalDibayar).toBe(80);

@@ -1,17 +1,17 @@
-import { createSignal, createResource, Show, For, createEffect } from 'solid-js';
-import { krsController, Krs as IKrs } from '../controllers/krsController';
-import { mahasiswaController } from '../controllers/mahasiswaController';
-import { kelasKuliahController } from '../controllers/kelasKuliahController';
-import { periodeAkademikController } from '../controllers/periodeAkademikController';
-import { useWorkspace } from '../contexts/WorkspaceContext';
-import { useAuth } from '../contexts/AuthContext';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Table } from '../components/ui/Table';
-import { Modal } from '../components/ui/Modal';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { kelasKuliahController } from '../controllers/kelasKuliahController';
+import { Krs as IKrs, krsController } from '../controllers/krsController';
+import { mahasiswaController } from '../controllers/mahasiswaController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
 
 export default function Krs() {
   const auth = useAuth();
@@ -44,7 +44,7 @@ export default function Krs() {
     }
     const list = periodes();
     if (list && list.length > 0) {
-      const active = list.find(p => p.aktif);
+      const active = list.find((p) => p.aktif);
       if (active) {
         setSelectedPeriode(active.id);
       } else {
@@ -58,7 +58,7 @@ export default function Krs() {
     () => ({
       periodeId: selectedPeriode(),
       tab: activeTab(),
-      role: role()
+      role: role(),
     }),
     async ({ periodeId, tab, role }) => {
       if (role === 'mahasiswa' || tab !== 'massal' || !periodeId) return [];
@@ -68,7 +68,7 @@ export default function Krs() {
         toast.showToast(e.message || 'Gagal memuat mahasiswa pending', 'error');
         return [];
       }
-    }
+    },
   );
 
   const [search, setSearch] = createSignal('');
@@ -85,13 +85,13 @@ export default function Krs() {
       if (!email) return null;
       const res = await mahasiswaController.getAll(email, 1, 1);
       return res.data[0] || null;
-    }
+    },
   );
 
   // Fetch KRS data (filtered dynamically)
   const [krsData, { refetch }] = createResource(
     () => ({
-      search: role() === 'mahasiswa' ? (mahasiswaProfile()?.nim || '') : search(),
+      search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : search(),
       page: page(),
       limit: limit(),
       mhsLoaded: role() === 'mahasiswa' ? !!mahasiswaProfile() : true,
@@ -104,7 +104,7 @@ export default function Krs() {
         toast.showToast(e.message || 'Gagal memuat data KRS', 'error');
         throw e;
       }
-    }
+    },
   );
 
   // Fetch All Kelas & Mahasiswa for Forms
@@ -196,7 +196,8 @@ export default function Krs() {
   };
 
   const handleApproveAll = async () => {
-    if (!confirm('Apakah Anda yakin ingin menyetujui seluruh KRS pending untuk semua mahasiswa di periode ini?')) return;
+    if (!confirm('Apakah Anda yakin ingin menyetujui seluruh KRS pending untuk semua mahasiswa di periode ini?'))
+      return;
 
     try {
       await krsController.approve(null as any, selectedPeriode() || '20252');
@@ -257,12 +258,11 @@ export default function Krs() {
           </div>
           <div class="flex gap-2">
             <Show when={role() === 'admin'}>
-              <Button variant="secondary" onClick={() => setShowImportModal(true)}>📥 Impor KRS</Button>
+              <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+                📥 Impor KRS
+              </Button>
             </Show>
-            <Button
-              disabled={role() === 'mahasiswa' && mahasiswaProfile()?.status !== 'aktif'}
-              onClick={openAddModal}
-            >
+            <Button disabled={role() === 'mahasiswa' && mahasiswaProfile()?.status !== 'aktif'} onClick={openAddModal}>
               + Tambah Kontrak KRS
             </Button>
           </div>
@@ -274,17 +274,29 @@ export default function Krs() {
             <span class="text-base">⚠️</span>
             <div>
               <p class="font-bold">Status Registrasi: Tidak Aktif (SPP/UKT Belum Lunas)</p>
-              <p class="text-xs text-red-500 font-medium mt-1">Anda tidak diperbolehkan mengontrak KRS sebelum tagihan SPP dilunasi dan status diaktifkan kembali oleh bagian Keuangan.</p>
+              <p class="text-xs text-red-500 font-medium mt-1">
+                Anda tidak diperbolehkan mengontrak KRS sebelum tagihan SPP dilunasi dan status diaktifkan kembali oleh
+                bagian Keuangan.
+              </p>
             </div>
           </div>
         </Show>
 
         {/* Dosen PA Batch Approval Banner */}
-        <Show when={(role() === 'dosen' || role() === 'admin') && krsData()?.data && krsData()!.data.length > 0 && krsData()!.data.some(k => !k.isApproved)}>
+        <Show
+          when={
+            (role() === 'dosen' || role() === 'admin') &&
+            krsData()?.data &&
+            krsData()!.data.length > 0 &&
+            krsData()!.data.some((k) => !k.isApproved)
+          }
+        >
           <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
             <div>
               <h4 class="text-sm font-bold text-yellow-800">KRS Mahasiswa Menunggu Persetujuan</h4>
-              <p class="text-xs text-yellow-600 font-medium mt-0.5">Terdapat beberapa kontrak KRS pending pada periode ini.</p>
+              <p class="text-xs text-yellow-600 font-medium mt-0.5">
+                Terdapat beberapa kontrak KRS pending pada periode ini.
+              </p>
             </div>
             <Button variant="primary" onClick={handleApproveAll} class="!py-1.5 !px-4 text-xs">
               Setujui Semua KRS
@@ -334,7 +346,18 @@ export default function Krs() {
           </Show>
 
           <Show when={!krsData.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
-            <Table headers={['Mahasiswa', 'Kelas Kuliah', 'Periode', 'Nilai Angka', 'Nilai Huruf', 'Nilai Indeks', 'Status', 'Aksi']}>
+            <Table
+              headers={[
+                'Mahasiswa',
+                'Kelas Kuliah',
+                'Periode',
+                'Nilai Angka',
+                'Nilai Huruf',
+                'Nilai Indeks',
+                'Status',
+                'Aksi',
+              ]}
+            >
               <For each={krsData()?.data}>
                 {(item) => (
                   <tr class="hover:bg-gray-50/50 transition-colors">
@@ -413,7 +436,9 @@ export default function Krs() {
           <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-gray-100 shadow-sm mb-4">
             <div>
               <h3 class="font-bold text-gray-800">Daftar Mahasiswa dengan KRS Pending</h3>
-              <p class="text-xs text-gray-400 mt-0.5">Pilih satu atau beberapa mahasiswa untuk disetujui KRS-nya sekaligus.</p>
+              <p class="text-xs text-gray-400 mt-0.5">
+                Pilih satu atau beberapa mahasiswa untuk disetujui KRS-nya sekaligus.
+              </p>
             </div>
             <Button
               variant="primary"
@@ -425,20 +450,26 @@ export default function Krs() {
             </Button>
           </div>
 
-          <Show when={!pendingStudents.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+          <Show
+            when={!pendingStudents.loading}
+            fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}
+          >
             <Table headers={['Pilih', 'NIM', 'Nama Mahasiswa', 'Email', 'Status']}>
-              <For each={pendingStudents()} fallback={
-                <tr>
-                  <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">
-                    Tidak ada mahasiswa dengan kontrak KRS pending di periode ini.
-                  </td>
-                </tr>
-              }>
+              <For
+                each={pendingStudents()}
+                fallback={
+                  <tr>
+                    <td colspan="5" class="px-6 py-10 text-center text-gray-400 italic">
+                      Tidak ada mahasiswa dengan kontrak KRS pending di periode ini.
+                    </td>
+                  </tr>
+                }
+              >
                 {(student) => {
                   const isChecked = () => selectedMhsIds().includes(student.id);
                   const toggleCheck = () => {
                     if (isChecked()) {
-                      setSelectedMhsIds(selectedMhsIds().filter(id => id !== student.id));
+                      setSelectedMhsIds(selectedMhsIds().filter((id) => id !== student.id));
                     } else {
                       setSelectedMhsIds([...selectedMhsIds(), student.id]);
                     }
@@ -506,7 +537,10 @@ export default function Krs() {
               value={kelasId()}
               onChange={(e) => setKelasId(Number(e.currentTarget.value))}
               selectOptions={
-                kelasOptions()?.data.map((k) => ({ label: `Kelas ${k.namaKelas} (Mata Kuliah: ${k.mataKuliah?.nama || k.mataKuliahId})`, value: k.id })) || []
+                kelasOptions()?.data.map((k) => ({
+                  label: `Kelas ${k.namaKelas} (Mata Kuliah: ${k.mataKuliah?.nama || k.mataKuliahId})`,
+                  value: k.id,
+                })) || []
               }
             />
 
@@ -514,9 +548,7 @@ export default function Krs() {
               <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Kontrak Kelas
-              </Button>
+              <Button type="submit">Kontrak Kelas</Button>
             </div>
           </form>
         </Modal>
@@ -557,9 +589,7 @@ export default function Krs() {
               <Button type="button" variant="secondary" onClick={() => setShowGradeModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">
-                Simpan Nilai
-              </Button>
+              <Button type="submit">Simpan Nilai</Button>
             </div>
           </form>
         </Modal>

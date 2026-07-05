@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
-import { clearDatabase, getAuthToken } from './test-helper';
+import { dosen, mahasiswa, periodeAkademik, programStudi } from '../models/schema';
 import { db } from '../utils/db';
-import { programStudi, dosen, mahasiswa, periodeAkademik } from '../models/schema';
+import { clearDatabase, getAuthToken } from './test-helper';
 
 describe('Bimbingan & Pelanggaran API', () => {
   let adminToken: string;
@@ -29,57 +29,72 @@ describe('Bimbingan & Pelanggaran API', () => {
     mhs2Token = await getAuthToken('mhs2@test.com', 'mahasiswa');
 
     // Seed Prodi
-    const [prodi] = await db.insert(programStudi).values({
-      kode: 'TI',
-      nama: 'Teknik Informatika',
-      jenjang: 'D4',
-    }).returning();
+    const [prodi] = await db
+      .insert(programStudi)
+      .values({
+        kode: 'TI',
+        nama: 'Teknik Informatika',
+        jenjang: 'D4',
+      })
+      .returning();
     prodiId = prodi.id;
 
     // Seed Dosens
-    const [dsn] = await db.insert(dosen).values({
-      nip: '199001012020011001',
-      nama: 'Dosen Wali 1',
-      email: 'dosen@test.com',
-      programStudiId: prodiId,
-    }).returning();
+    const [dsn] = await db
+      .insert(dosen)
+      .values({
+        nip: '199001012020011001',
+        nama: 'Dosen Wali 1',
+        email: 'dosen@test.com',
+        programStudiId: prodiId,
+      })
+      .returning();
     dosenId = dsn.id;
 
-    const [dsn2] = await db.insert(dosen).values({
-      nip: '199001012020011002',
-      nama: 'Dosen Wali 2',
-      email: 'dosen2@test.com',
-      programStudiId: prodiId,
-    }).returning();
+    const [dsn2] = await db
+      .insert(dosen)
+      .values({
+        nip: '199001012020011002',
+        nama: 'Dosen Wali 2',
+        email: 'dosen2@test.com',
+        programStudiId: prodiId,
+      })
+      .returning();
     dosen2Id = dsn2.id;
 
     // Seed Mahasiswas (linking to Dosen PA)
-    const [mhs] = await db.insert(mahasiswa).values({
-      nim: '20200001',
-      nama: 'Mahasiswa Bimbingan 1',
-      email: 'mhs@test.com',
-      programStudiId: prodiId,
-      dosenPaId: dosenId,
-      status: 'aktif',
-      namaIbuKandung: 'Ibu Test',
-      nik: '1234567890123456',
-      jenisKelamin: 'L',
-      tanggalLahir: '2000-01-01',
-    }).returning();
+    const [mhs] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '20200001',
+        nama: 'Mahasiswa Bimbingan 1',
+        email: 'mhs@test.com',
+        programStudiId: prodiId,
+        dosenPaId: dosenId,
+        status: 'aktif',
+        namaIbuKandung: 'Ibu Test',
+        nik: '1234567890123456',
+        jenisKelamin: 'L',
+        tanggalLahir: '2000-01-01',
+      })
+      .returning();
     mhsId = mhs.id;
 
-    const [mhs2] = await db.insert(mahasiswa).values({
-      nim: '20200002',
-      nama: 'Mahasiswa Bimbingan 2',
-      email: 'mhs2@test.com',
-      programStudiId: prodiId,
-      dosenPaId: dosen2Id,
-      status: 'aktif',
-      namaIbuKandung: 'Ibu Test 2',
-      nik: '1234567890123457',
-      jenisKelamin: 'P',
-      tanggalLahir: '2000-02-02',
-    }).returning();
+    const [mhs2] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '20200002',
+        nama: 'Mahasiswa Bimbingan 2',
+        email: 'mhs2@test.com',
+        programStudiId: prodiId,
+        dosenPaId: dosen2Id,
+        status: 'aktif',
+        namaIbuKandung: 'Ibu Test 2',
+        nik: '1234567890123457',
+        jenisKelamin: 'P',
+        tanggalLahir: '2000-02-02',
+      })
+      .returning();
     mhs2Id = mhs2.id;
 
     // Seed active periode
@@ -96,9 +111,9 @@ describe('Bimbingan & Pelanggaran API', () => {
         new Request(`http://localhost/bimbingan/mahasiswa/${mhsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -112,9 +127,9 @@ describe('Bimbingan & Pelanggaran API', () => {
         new Request(`http://localhost/bimbingan/mahasiswa/${mhs2Id}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       expect(response.status).toBe(403);
     });
@@ -125,10 +140,10 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({ pesan: 'Halo pak PA' }),
-        })
+        }),
       );
       expect(response.status).toBe(201);
       const msg = await response.json();
@@ -142,10 +157,10 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({ pesan: 'Silakan ajukan KRS Anda.' }),
-        })
+        }),
       );
       expect(response.status).toBe(201);
       const msg = await response.json();
@@ -159,10 +174,10 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosen2Token}`,
+            Authorization: `Bearer ${dosen2Token}`,
           },
           body: JSON.stringify({ pesan: 'Mencoba mengganggu bimbingan orang lain.' }),
-        })
+        }),
       );
       expect(response.status).toBe(403);
     });
@@ -173,13 +188,13 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             ringkasan: 'Mahasiswa sudah berkonsultasi mengenai kelayakan ujian.',
             isApproved: true,
           }),
-        })
+        }),
       );
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -193,13 +208,13 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             ringkasan: 'Mencoba menyetujui sendiri.',
             isApproved: true,
           }),
-        })
+        }),
       );
       expect(response.status).toBe(403);
     });
@@ -210,7 +225,7 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
           body: JSON.stringify({
             pertemuanKe: 1,
@@ -219,7 +234,7 @@ describe('Bimbingan & Pelanggaran API', () => {
             tanggalBimbingan: '2023-10-10',
             statusBkd: true,
           }),
-        })
+        }),
       );
       expect(response.status).toBe(201);
       const data = await response.json();
@@ -232,9 +247,9 @@ describe('Bimbingan & Pelanggaran API', () => {
         new Request(`http://localhost/bimbingan/rekap-bkd?periodeId=${periodeId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${dosenToken}`,
           },
-        })
+        }),
       );
       expect(rekapRes.status).toBe(200);
       const rekapBody = await rekapRes.json();
@@ -251,7 +266,7 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
@@ -260,7 +275,7 @@ describe('Bimbingan & Pelanggaran API', () => {
             bobotPoin: 15,
             keterangan: 'Memecahkan monitor kelas praktik.',
           }),
-        })
+        }),
       );
       expect(response.status).toBe(201);
       const data = await response.json();
@@ -274,7 +289,7 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhs2Id,
@@ -283,7 +298,7 @@ describe('Bimbingan & Pelanggaran API', () => {
             bobotPoin: 5,
             keterangan: 'Keterangan palsu.',
           }),
-        })
+        }),
       );
       expect(response.status).toBe(403);
     });
@@ -295,7 +310,7 @@ describe('Bimbingan & Pelanggaran API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${adminToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             mahasiswaId: mhsId,
@@ -304,16 +319,16 @@ describe('Bimbingan & Pelanggaran API', () => {
             bobotPoin: 10,
             keterangan: 'Keterangan 1.',
           }),
-        })
+        }),
       );
 
       const response = await app.handle(
         new Request(`http://localhost/pelanggaran/mahasiswa/${mhsId}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       expect(response.status).toBe(200);
       const data = await response.json();
@@ -327,9 +342,9 @@ describe('Bimbingan & Pelanggaran API', () => {
         new Request(`http://localhost/pelanggaran/mahasiswa/${mhs2Id}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${mhsToken}`,
+            Authorization: `Bearer ${mhsToken}`,
           },
-        })
+        }),
       );
       expect(response.status).toBe(403);
     });

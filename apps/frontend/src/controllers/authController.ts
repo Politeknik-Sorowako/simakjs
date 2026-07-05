@@ -1,5 +1,5 @@
-import { fetchApi } from '../utils/api';
 import { User } from '../contexts/AuthContext';
+import { fetchApi } from '../utils/api';
 
 interface AuthResponse {
   token: string;

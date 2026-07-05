@@ -1,6 +1,6 @@
+import { and, count, eq, ilike, or, sum } from 'drizzle-orm';
+import { mahasiswa, skemaTarif, tagihan, transaksiPembayaran, users } from '../models/schema';
 import { db } from '../utils/db';
-import { tagihan, mahasiswa, transaksiPembayaran, skemaTarif, users } from '../models/schema';
-import { count, eq, ilike, or, and, sum } from 'drizzle-orm';
 
 export class TagihanService {
   static async generateTagihanPeriode(periodeId: string, nominalAmount?: number) {
@@ -13,12 +13,7 @@ export class TagihanService {
       const [existing] = await db
         .select()
         .from(tagihan)
-        .where(
-          and(
-            eq(tagihan.mahasiswaId, student.id),
-            eq(tagihan.periodeId, periodeId)
-          )
-        )
+        .where(and(eq(tagihan.mahasiswaId, student.id), eq(tagihan.periodeId, periodeId)))
         .limit(1);
 
       if (!existing) {
@@ -45,12 +40,7 @@ export class TagihanService {
           const [tarif] = await db
             .select()
             .from(skemaTarif)
-            .where(
-              and(
-                eq(skemaTarif.angkatan, angkatan),
-                eq(skemaTarif.programStudiId, student.programStudiId)
-              )
-            )
+            .where(and(eq(skemaTarif.angkatan, angkatan), eq(skemaTarif.programStudiId, student.programStudiId)))
             .limit(1);
           if (tarif) {
             nominalTagihan = tarif.nominal;
@@ -62,14 +52,11 @@ export class TagihanService {
           periodeId: periodeId,
           nominal: nominalTagihan,
           nominalTerbayar: 0,
-          status: 'belum_bayar'
+          status: 'belum_bayar',
         });
 
         // Set status to non_aktif until they pay
-        await db
-          .update(mahasiswa)
-          .set({ status: 'non_aktif' })
-          .where(eq(mahasiswa.id, student.id));
+        await db.update(mahasiswa).set({ status: 'non_aktif' }).where(eq(mahasiswa.id, student.id));
 
         createdCount++;
       }
@@ -90,14 +77,14 @@ export class TagihanService {
 
     const currentTerbayar = Number(tag.nominalTerbayar) || 0;
     const isFullyPaid = currentTerbayar >= nominalBaru;
-    const determinedStatus = isFullyPaid ? 'lunas' : (currentTerbayar > 0 ? 'cicilan' : 'belum_bayar');
+    const determinedStatus = isFullyPaid ? 'lunas' : currentTerbayar > 0 ? 'cicilan' : 'belum_bayar';
 
     const [updated] = await db
       .update(tagihan)
       .set({
         nominal: nominalBaru,
         status: determinedStatus,
-        tanggalBayar: isFullyPaid ? (tag.tanggalBayar || new Date()) : null
+        tanggalBayar: isFullyPaid ? tag.tanggalBayar || new Date() : null,
       })
       .where(eq(tagihan.id, tagihanId))
       .returning();
@@ -124,12 +111,12 @@ export class TagihanService {
 
       const currentTerbayar = Number(tag.nominalTerbayar) || 0;
       const totalBill = Number(tag.nominal) || 0;
-      const finalNominalBayar = nominalBayar !== undefined ? nominalBayar : (totalBill - currentTerbayar);
+      const finalNominalBayar = nominalBayar !== undefined ? nominalBayar : totalBill - currentTerbayar;
 
       if (finalNominalBayar <= 0) {
         throw new Error('Nominal pembayaran harus lebih besar dari 0');
       }
-      if (finalNominalBayar > (totalBill - currentTerbayar)) {
+      if (finalNominalBayar > totalBill - currentTerbayar) {
         throw new Error('Nominal pembayaran melebihi sisa tagihan');
       }
 
@@ -139,7 +126,7 @@ export class TagihanService {
         nominalBayar: finalNominalBayar,
         petugasId: petugasId || null,
         isVoid: false,
-        catatanKoreksi: catatanKoreksi || null
+        catatanKoreksi: catatanKoreksi || null,
       });
 
       const newTerbayar = currentTerbayar + finalNominalBayar;
@@ -151,16 +138,13 @@ export class TagihanService {
         .set({
           nominalTerbayar: newTerbayar,
           status: determinedStatus,
-          tanggalBayar: isFullyPaid ? new Date() : null
+          tanggalBayar: isFullyPaid ? new Date() : null,
         })
         .where(eq(tagihan.id, tagihanId))
         .returning();
 
       if (isFullyPaid) {
-        await tx
-          .update(mahasiswa)
-          .set({ status: 'aktif' })
-          .where(eq(mahasiswa.id, tag.mahasiswaId));
+        await tx.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, tag.mahasiswaId));
       }
 
       return updatedTagihan;
@@ -189,7 +173,7 @@ export class TagihanService {
         .set({
           isVoid: true,
           petugasId: petugasId || null,
-          catatanKoreksi: catatan || 'Pembatalan transaksi pembayaran'
+          catatanKoreksi: catatan || 'Pembatalan transaksi pembayaran',
         })
         .where(eq(transaksiPembayaran.id, transaksiId));
 
@@ -197,20 +181,11 @@ export class TagihanService {
       const [sumResult] = await tx
         .select({ total: sum(transaksiPembayaran.nominalBayar) })
         .from(transaksiPembayaran)
-        .where(
-          and(
-            eq(transaksiPembayaran.tagihanId, transaksi.tagihanId),
-            eq(transaksiPembayaran.isVoid, false)
-          )
-        );
+        .where(and(eq(transaksiPembayaran.tagihanId, transaksi.tagihanId), eq(transaksiPembayaran.isVoid, false)));
 
       const newTerbayar = Number(sumResult?.total) || 0;
 
-      const [tag] = await tx
-        .select()
-        .from(tagihan)
-        .where(eq(tagihan.id, transaksi.tagihanId))
-        .limit(1);
+      const [tag] = await tx.select().from(tagihan).where(eq(tagihan.id, transaksi.tagihanId)).limit(1);
 
       if (!tag) {
         throw new Error('Tagihan terkait tidak ditemukan');
@@ -230,22 +205,16 @@ export class TagihanService {
         .set({
           nominalTerbayar: newTerbayar,
           status: determinedStatus,
-          tanggalBayar: isFullyPaid ? new Date() : null
+          tanggalBayar: isFullyPaid ? new Date() : null,
         })
         .where(eq(tagihan.id, transaksi.tagihanId))
         .returning();
 
       // Sinkronkan status aktif mahasiswa
       if (!isFullyPaid) {
-        await tx
-          .update(mahasiswa)
-          .set({ status: 'non_aktif' })
-          .where(eq(mahasiswa.id, tag.mahasiswaId));
+        await tx.update(mahasiswa).set({ status: 'non_aktif' }).where(eq(mahasiswa.id, tag.mahasiswaId));
       } else {
-        await tx
-          .update(mahasiswa)
-          .set({ status: 'aktif' })
-          .where(eq(mahasiswa.id, tag.mahasiswaId));
+        await tx.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, tag.mahasiswaId));
       }
 
       return updatedTagihan;
@@ -265,8 +234,8 @@ export class TagihanService {
         petugas: {
           id: users.id,
           nama: users.nama,
-          email: users.email
-        }
+          email: users.email,
+        },
       })
       .from(transaksiPembayaran)
       .leftJoin(users, eq(transaksiPembayaran.petugasId, users.id))
@@ -279,12 +248,7 @@ export class TagihanService {
 
     const searchConditions: any[] = [];
     if (search) {
-      searchConditions.push(
-        or(
-          ilike(mahasiswa.nama, `%${search}%`),
-          ilike(mahasiswa.nim, `%${search}%`)
-        )
-      );
+      searchConditions.push(or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`)));
     }
     if (statusFilter) {
       searchConditions.push(eq(tagihan.status, statusFilter as any));
@@ -319,8 +283,8 @@ export class TagihanService {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
           email: mahasiswa.email,
-          status: mahasiswa.status
-        }
+          status: mahasiswa.status,
+        },
       })
       .from(tagihan)
       .leftJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))
@@ -336,8 +300,8 @@ export class TagihanService {
         total,
         page,
         limit,
-        totalPages
-      }
+        totalPages,
+      },
     };
   }
 
@@ -358,8 +322,8 @@ export class TagihanService {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
           email: mahasiswa.email,
-          status: mahasiswa.status
-        }
+          status: mahasiswa.status,
+        },
       })
       .from(tagihan)
       .leftJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))

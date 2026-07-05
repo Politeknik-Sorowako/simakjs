@@ -1,12 +1,12 @@
 import { Elysia } from 'elysia';
 import { BimbinganController } from '../controllers/bimbingan.controller';
-import {
-  getBimbinganSchema,
-  createBimbinganThreadSchema,
-  updateBimbinganSchema,
-  getBimbinganMonitoringSchema
-} from '../schemas/bimbingan.schema';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  createBimbinganThreadSchema,
+  getBimbinganMonitoringSchema,
+  getBimbinganSchema,
+  updateBimbinganSchema,
+} from '../schemas/bimbingan.schema';
 
 export const bimbinganRoutes = new Elysia({ prefix: '/bimbingan' })
   .use(authMiddleware)

@@ -1,9 +1,12 @@
-import { db } from '../utils/db';
-import { presensi, bap, mahasiswa, kompensasiBayar, programStudi } from '../models/schema';
 import { eq, inArray } from 'drizzle-orm';
+import { bap, kompensasiBayar, mahasiswa, presensi, programStudi } from '../models/schema';
+import { db } from '../utils/db';
 
 export class PresensiService {
-  static async saveBulkPresensi(bapId: number, presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number }>) {
+  static async saveBulkPresensi(
+    bapId: number,
+    presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number }>,
+  ) {
     const [foundBap] = await db.select().from(bap).where(eq(bap.id, bapId));
     if (!foundBap) {
       throw new Error('BAP tidak ditemukan');
@@ -112,10 +115,7 @@ export class PresensiService {
 
     const totalKompensasi = historyKompensasi.reduce((sum, item) => sum + item.poinKompensasi, 0);
 
-    const payments = await db
-      .select()
-      .from(kompensasiBayar)
-      .where(eq(kompensasiBayar.mahasiswaId, mahasiswaId));
+    const payments = await db.select().from(kompensasiBayar).where(eq(kompensasiBayar.mahasiswaId, mahasiswaId));
 
     const totalDibayar = payments.reduce((sum, p) => sum + p.jumlahMenit, 0);
     const sisaKompensasi = Math.max(0, totalKompensasi - totalDibayar);
@@ -194,16 +194,15 @@ export class PresensiService {
     return newPayment;
   }
 
-  static async updateKompensasiBayar(id: number, data: Partial<{
-    jumlahMenit: number;
-    tanggal: string;
-    keterangan: string;
-  }>) {
-    const [updated] = await db
-      .update(kompensasiBayar)
-      .set(data)
-      .where(eq(kompensasiBayar.id, id))
-      .returning();
+  static async updateKompensasiBayar(
+    id: number,
+    data: Partial<{
+      jumlahMenit: number;
+      tanggal: string;
+      keterangan: string;
+    }>,
+  ) {
+    const [updated] = await db.update(kompensasiBayar).set(data).where(eq(kompensasiBayar.id, id)).returning();
     return updated || null;
   }
 }

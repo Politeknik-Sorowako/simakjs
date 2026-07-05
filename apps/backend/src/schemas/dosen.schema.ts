@@ -9,32 +9,35 @@ export const dosenBody = t.Object({
   nidn: t.Optional(t.String({ default: '0001018701' })),
   nik: t.Optional(t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' })),
   jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' })),
-  tanggalLahir: t.Optional(t.String({ default: '1987-01-01' }))
+  tanggalLahir: t.Optional(t.String({ default: '1987-01-01' })),
 });
 
-export const updateDosenBody = t.Partial(t.Object({
-  nip: t.String(),
-  nama: t.String(),
-  email: t.String({ format: 'email' }),
-  programStudiId: t.Integer(),
-  idPddikti: t.String(),
-  nidn: t.String(),
-  nik: t.String({ minLength: 16, maxLength: 16 }),
-  jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')]),
-  tanggalLahir: t.String()
-}));
+export const updateDosenBody = t.Partial(
+  t.Object({
+    nip: t.String(),
+    nama: t.String(),
+    email: t.String({ format: 'email' }),
+    programStudiId: t.Integer(),
+    idPddikti: t.String(),
+    nidn: t.String(),
+    nik: t.String({ minLength: 16, maxLength: 16 }),
+    jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')]),
+    tanggalLahir: t.String(),
+  }),
+);
 
 export const getDosenSchema = {
   detail: {
     tags: ['Dosen'],
     summary: 'Daftar Dosen',
-    description: 'Mengambil semua data dosen yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.'
+    description:
+      'Mengambil semua data dosen yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
-    programStudiId: t.Optional(t.Numeric())
+    programStudiId: t.Optional(t.Numeric()),
   }),
   response: {
     200: t.Object({
@@ -59,27 +62,27 @@ export const getDosenSchema = {
               id: t.Integer(),
               kode: t.String(),
               nama: t.String(),
-              jenjang: t.String()
+              jenjang: t.String(),
             }),
-            t.Null()
-          ])
-        })
+            t.Null(),
+          ]),
+        }),
       ),
       meta: t.Object({
         total: t.Integer({ default: 1 }),
         page: t.Integer({ default: 1 }),
         limit: t.Integer({ default: 10 }),
-        totalPages: t.Integer({ default: 1 })
-      })
-    })
-  }
+        totalPages: t.Integer({ default: 1 }),
+      }),
+    }),
+  },
 };
 
 export const createDosenSchema = {
   detail: {
     tags: ['Dosen'],
     summary: 'Tambah Dosen Baru',
-    description: 'Menambahkan dosen baru lengkap dengan NIDN, NIK, dan data lainnya (Hanya dapat diakses Admin).'
+    description: 'Menambahkan dosen baru lengkap dengan NIDN, NIK, dan data lainnya (Hanya dapat diakses Admin).',
   },
   body: dosenBody,
   response: {
@@ -97,22 +100,22 @@ export const createDosenSchema = {
       jenisKelamin: t.Union([t.String(), t.Null()], { default: 'L' }),
       tanggalLahir: t.Any(),
       createdAt: t.Any(),
-      updatedAt: t.Any()
+      updatedAt: t.Any(),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
-    })
-  }
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
+    }),
+  },
 };
 
 export const getDosenByIdSchema = {
   detail: {
     tags: ['Dosen'],
     summary: 'Detail Dosen',
-    description: 'Mengambil satu data dosen berdasarkan ID beserta relasi program studi.'
+    description: 'Mengambil satu data dosen berdasarkan ID beserta relasi program studi.',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   response: {
     200: t.Object({
@@ -135,25 +138,25 @@ export const getDosenByIdSchema = {
           id: t.Integer(),
           kode: t.String(),
           nama: t.String(),
-          jenjang: t.String()
+          jenjang: t.String(),
         }),
-        t.Null()
-      ])
+        t.Null(),
+      ]),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };
 
 export const updateDosenSchema = {
   detail: {
     tags: ['Dosen'],
     summary: 'Perbarui Dosen',
-    description: 'Memperbarui data dosen berdasarkan ID (Hanya dapat diakses oleh Admin).'
+    description: 'Memperbarui data dosen berdasarkan ID (Hanya dapat diakses oleh Admin).',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   body: updateDosenBody,
   response: {
@@ -171,35 +174,35 @@ export const updateDosenSchema = {
       jenisKelamin: t.Union([t.String(), t.Null()], { default: 'L' }),
       tanggalLahir: t.Any(),
       createdAt: t.Any(),
-      updatedAt: t.Any()
+      updatedAt: t.Any(),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };
 
 export const deleteDosenSchema = {
   detail: {
     tags: ['Dosen'],
     summary: 'Hapus Dosen',
-    description: 'Menghapus data dosen berdasarkan ID (Hanya dapat diakses oleh Admin).'
+    description: 'Menghapus data dosen berdasarkan ID (Hanya dapat diakses oleh Admin).',
   },
   params: t.Object({
-    id: t.Numeric()
+    id: t.Numeric(),
   }),
   response: {
     200: t.Object({
-      message: t.String({ default: 'Dosen berhasil dihapus' })
+      message: t.String({ default: 'Dosen berhasil dihapus' }),
     }),
     403: t.Object({
-      error: t.String({ default: 'Akses ditolak. Hanya Admin.' })
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
     }),
     404: t.Object({
-      error: t.String({ default: 'Data tidak ditemukan' })
-    })
-  }
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
 };

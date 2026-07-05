@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onCleanup, Show, For } from 'solid-js';
+import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
 
 interface Option {
   label: string;
@@ -20,7 +20,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
   let containerRef: HTMLDivElement | undefined;
 
   // Dapatkan opsi terpilih saat ini
-  const selectedOption = () => props.options.find(opt => opt.value === props.value);
+  const selectedOption = () => props.options.find((opt) => opt.value === props.value);
 
   // Set pencarian awal ke label terpilih
   createEffect(() => {
@@ -38,9 +38,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
     if (!term || selectedOption()?.label.toLowerCase() === term) {
       return props.options;
     }
-    return props.options.filter(opt =>
-      opt.label.toLowerCase().includes(term)
-    );
+    return props.options.filter((opt) => opt.label.toLowerCase().includes(term));
   };
 
   // Close dropdown when clicking outside
@@ -71,11 +69,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
 
   return (
     <div ref={containerRef} class="flex flex-col gap-1.5 w-full relative">
-      {props.label && (
-        <label class="text-xs font-semibold uppercase tracking-wider text-gray-500">
-          {props.label}
-        </label>
-      )}
+      {props.label && <label class="text-xs font-semibold uppercase tracking-wider text-gray-500">{props.label}</label>}
       <div class="relative">
         <input
           type="text"
@@ -120,16 +114,12 @@ export function SearchableSelect(props: SearchableSelectProps) {
             )}
           </For>
           <Show when={filteredOptions().length === 0}>
-            <div class="px-4 py-3 text-sm text-gray-400 text-center">
-              Tidak ada hasil ditemukan.
-            </div>
+            <div class="px-4 py-3 text-sm text-gray-400 text-center">Tidak ada hasil ditemukan.</div>
           </Show>
         </div>
       </Show>
 
-      {props.error && (
-        <span class="text-xs text-red-500 font-medium">{props.error}</span>
-      )}
+      {props.error && <span class="text-xs text-red-500 font-medium">{props.error}</span>}
     </div>
   );
 }

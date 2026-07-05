@@ -1,23 +1,17 @@
-import { CutiService } from '../services/cuti.service';
-import { AuthContext } from '../utils/types';
-import { db } from '../utils/db';
-import { mahasiswa, dosen } from '../models/schema';
 import { eq } from 'drizzle-orm';
+import { dosen, mahasiswa } from '../models/schema';
+import { CutiService } from '../services/cuti.service';
+import { db } from '../utils/db';
+import { AuthContext } from '../utils/types';
 
 export class CutiController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db
-      .select({ id: mahasiswa.id })
-      .from(mahasiswa)
-      .where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
   private static async getDosenIdByEmail(email: string): Promise<number | null> {
-    const [dsn] = await db
-      .select({ id: dosen.id })
-      .from(dosen)
-      .where(eq(dosen.email, email));
+    const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, email));
     return dsn ? dsn.id : null;
   }
 
@@ -38,7 +32,7 @@ export class CutiController {
       const data = await CutiService.create({
         mahasiswaId,
         periodeId: body.periodeId,
-        alasan: body.alasan
+        alasan: body.alasan,
       });
       set.status = 201;
       return data;
@@ -63,7 +57,7 @@ export class CutiController {
         semesterMulaiCuti: body.semesterMulaiCuti,
         semesterBerakhirCuti: body.semesterBerakhirCuti,
         noSuratIzin: body.noSuratIzin,
-        tanggalSuratIzin: body.tanggalSuratIzin
+        tanggalSuratIzin: body.tanggalSuratIzin,
       });
       set.status = 201;
       return data;
@@ -108,7 +102,7 @@ export class CutiController {
       periodeId,
       status,
       mahasiswaId: filterMhsId,
-      dosenPaId: filterDsnId
+      dosenPaId: filterDsnId,
     });
   }
 
@@ -178,7 +172,7 @@ export class CutiController {
         action: body.action,
         catatan: body.catatan,
         noSuratIzin: body.noSuratIzin,
-        tanggalSuratIzin: body.tanggalSuratIzin
+        tanggalSuratIzin: body.tanggalSuratIzin,
       });
       return data;
     } catch (e: any) {

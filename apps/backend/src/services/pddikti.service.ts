@@ -1,7 +1,7 @@
-import { db } from '../utils/db';
-import { mahasiswa, kelasKuliah, krs, programStudi, mataKuliah } from '../models/schema';
-import { eq, count, isNull, and } from 'drizzle-orm';
 import crypto from 'crypto';
+import { and, count, eq, isNull } from 'drizzle-orm';
+import { kelasKuliah, krs, mahasiswa, mataKuliah, programStudi } from '../models/schema';
+import { db } from '../utils/db';
 
 export class PddiktiService {
   static async getStats() {
@@ -88,12 +88,10 @@ export class PddiktiService {
       }
 
       // 5. Sync KRS
-      const unsyncedKrs = await tx.select().from(krs).where(
-        and(
-          eq(krs.isSynced, false),
-          eq(krs.isApproved, true)
-        )
-      );
+      const unsyncedKrs = await tx
+        .select()
+        .from(krs)
+        .where(and(eq(krs.isSynced, false), eq(krs.isApproved, true)));
       for (const item of unsyncedKrs) {
         await tx
           .update(krs)

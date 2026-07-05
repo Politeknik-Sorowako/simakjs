@@ -1,7 +1,7 @@
 import { fetchApi } from '../utils/api';
-import { PaginatedResponse } from './prodiController';
 import { Dosen } from './dosenController';
 import { KelasKuliah } from './kelasKuliahController';
+import { PaginatedResponse } from './prodiController';
 
 export interface DosenPengajar {
   id: number;
