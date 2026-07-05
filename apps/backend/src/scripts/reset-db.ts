@@ -42,10 +42,24 @@ async function reset() {
   ];
 
   try {
-    console.log('- Mengosongkan seluruh tabel...');
-    const truncateQuery = `TRUNCATE TABLE ${tables.join(', ')} RESTART IDENTITY CASCADE;`;
-    await db.execute(sql.raw(truncateQuery));
-    console.log('- Seluruh tabel berhasil dikosongkan.');
+    // Kueri nama tabel yang benar-benar ada di database (public schema)
+    console.log('- Memeriksa tabel yang terdaftar di database...');
+    const dbTablesQuery = await db.execute(sql`
+      SELECT tablename 
+      FROM pg_tables 
+      WHERE schemaname = 'public';
+    `);
+    const dbTables = dbTablesQuery.rows.map((row: any) => row.tablename);
+    const tablesToTruncate = tables.filter((t) => dbTables.includes(t));
+
+    if (tablesToTruncate.length > 0) {
+      console.log(`- Mengosongkan ${tablesToTruncate.length} tabel...`);
+      const truncateQuery = `TRUNCATE TABLE ${tablesToTruncate.join(', ')} RESTART IDENTITY CASCADE;`;
+      await db.execute(sql.raw(truncateQuery));
+      console.log('- Tabel berhasil dikosongkan.');
+    } else {
+      console.log('- Tidak ada tabel yang perlu dikosongkan.');
+    }
 
     // Seed kembali user admin default agar sistem tidak terkunci
     console.log('- Membuat ulang user admin default...');
