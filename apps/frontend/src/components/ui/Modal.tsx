@@ -1,4 +1,4 @@
-import { type JSX, Show } from "solid-js";
+import { type JSX, onCleanup, onMount, Show } from "solid-js";
 
 interface ModalProps {
 	show?: boolean;
@@ -20,6 +20,20 @@ export function Modal(props: ModalProps) {
 	const isVisible = () => props.show ?? props.isOpen ?? false;
 	const width = () => maxWidthClasses[props.maxWidth || "md"];
 
+	const handleKeyDown = (e: KeyboardEvent) => {
+		if (e.key === "Escape" && isVisible()) {
+			props.onClose?.();
+		}
+	};
+
+	onMount(() => {
+		document.addEventListener("keydown", handleKeyDown);
+	});
+
+	onCleanup(() => {
+		document.removeEventListener("keydown", handleKeyDown);
+	});
+
 	return (
 		<Show when={isVisible()}>
 			<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -32,6 +46,9 @@ export function Modal(props: ModalProps) {
 				{/* Modal Content */}
 				<div
 					class={`relative w-full ${width()} bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-brand-gray-100 dark:border-slate-700 animate-scale-in`}
+					role="dialog"
+					aria-modal="true"
+					aria-label={props.title || "Dialog"}
 				>
 					{/* Header */}
 					<Show when={props.title}>
@@ -41,6 +58,7 @@ export function Modal(props: ModalProps) {
 							</h3>
 							<button
 								onClick={() => props.onClose?.()}
+								aria-label="Tutup dialog"
 								class="p-1.5 rounded-full text-brand-gray-400 hover:text-brand-gray-600 hover:bg-brand-gray-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
 							>
 								<svg

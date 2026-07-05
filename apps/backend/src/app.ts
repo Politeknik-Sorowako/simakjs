@@ -91,7 +91,43 @@ app
         ws.close();
         return;
       }
-      ws.subscribe(`bimbingan-${ws.data.params.bimbinganId}`);
+
+      const bimbinganId = Number(ws.data.params.bimbinganId);
+      if (!bimbinganId) {
+        ws.send(JSON.stringify({ error: 'Invalid bimbingan ID' }));
+        ws.close();
+        return;
+      }
+
+      const { bimbingan: bimbinganTable } = await import('./models/schema');
+      const { db } = await import('./utils/db');
+      const { eq } = await import('drizzle-orm');
+      const { mahasiswa, dosen } = await import('./models/schema');
+
+      const bimbingan = await db.query.bimbingan.findFirst({
+        where: eq(bimbinganTable.id, bimbinganId),
+        with: { mahasiswa: true, dosenPa: true },
+      });
+
+      if (!bimbingan) {
+        ws.send(JSON.stringify({ error: 'Bimbingan not found' }));
+        ws.close();
+        return;
+      }
+
+      const userRole = payload.role as string;
+      const userEmail = payload.email as string;
+      const isAdmin = userRole === 'admin';
+      const isDosenPa = userRole === 'dosen' && bimbingan.dosenPa?.email === userEmail;
+      const isMahasiswa = userRole === 'mahasiswa' && bimbingan.mahasiswa?.email === userEmail;
+
+      if (!isAdmin && !isDosenPa && !isMahasiswa) {
+        ws.send(JSON.stringify({ error: 'Forbidden: You are not a participant of this bimbingan' }));
+        ws.close();
+        return;
+      }
+
+      ws.subscribe(`bimbingan-${bimbinganId}`);
     },
   })
   .use(authMiddleware)

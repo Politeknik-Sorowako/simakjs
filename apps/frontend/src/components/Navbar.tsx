@@ -59,6 +59,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
         {/* Mobile Hamburger Toggle Button */}
         <button
           onClick={() => props.onToggleSidebar()}
+          aria-label="Buka menu navigasi"
           class="p-2 rounded-lg text-brand-gray-500 hover:bg-brand-gray-100 dark:hover:bg-brand-gray-800 focus:outline-none md:hidden"
         >
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

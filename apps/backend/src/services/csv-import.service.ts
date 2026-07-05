@@ -511,16 +511,18 @@ export class CsvImportService {
             );
           }
 
-          // Check if email already exists
           const [existingUser] = await tx.select().from(users).where(eq(users.email, emailVal)).limit(1);
 
           if (existingUser) {
             throw new Error(`Baris ${lineNum}: Email "${emailVal}" sudah terdaftar.`);
           }
 
-          const hashedPassword = await Bun.password.hash(passwordVal, {
+          const defaultPassword = crypto.randomUUID().replace(/-/g, '').slice(0, 12) + 'Aa1';
+          const finalPassword = passwordVal === emailVal ? defaultPassword : passwordVal;
+
+          const hashedPassword = await Bun.password.hash(finalPassword, {
             algorithm: 'bcrypt',
-            cost: 10,
+            cost: 12,
           });
 
           await tx.insert(users).values({
@@ -528,7 +530,7 @@ export class CsvImportService {
             password: hashedPassword,
             nama: namaVal,
             role: roleVal as any,
-            isActive: true,
+            isActive: false,
           });
         }
       });
