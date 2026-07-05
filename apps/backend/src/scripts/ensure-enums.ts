@@ -24,19 +24,20 @@ async function ensureEnums() {
   console.log('[ENSURE ENUMS] Checking PostgreSQL enum values...');
 
   for (const fix of ENUM_FIXES) {
-    const beforeClause = fix.before ? ` BEFORE '${fix.before}'` : '';
-    const query = `ALTER TYPE ${fix.name} ADD VALUE IF NOT EXISTS '${fix.value}'${beforeClause}`;
+    const { rows } = await pool.query(
+      `SELECT enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = $1`,
+      [fix.name],
+    );
+    const exists = rows.some((r: any) => r.enumlabel === fix.value);
 
-    try {
-      await pool.query(query);
-      console.log(`[ENSURE ENUMS] Added/verified ${fix.name}.${fix.value}`);
-    } catch (e: any) {
-      if (e.code === '42710' || e.message?.includes('already exists')) {
-        console.log(`[ENSURE ENUMS] ${fix.name}.${fix.value} already exists — no action needed.`);
-      } else {
-        console.warn(`[ENSURE ENUMS] Non-critical error for ${fix.name}.${fix.value}:`, e.message);
-      }
+    if (exists) {
+      console.log(`[ENSURE ENUMS] ${fix.name}.${fix.value} already exists — no action needed.`);
+      continue;
     }
+
+    const beforeClause = fix.before ? ` BEFORE '${fix.before}'` : '';
+    await pool.query(`ALTER TYPE ${fix.name} ADD VALUE '${fix.value}'${beforeClause}`);
+    console.log(`[ENSURE ENUMS] Added ${fix.name}.${fix.value}`);
   }
 
   await pool.end();
