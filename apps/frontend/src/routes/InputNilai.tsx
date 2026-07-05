@@ -312,23 +312,23 @@ export default function InputNilai() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header */}
-        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-          <h1 class="text-2xl font-extrabold text-gray-800 tracking-tight">Input Nilai Kelas</h1>
-          <p class="text-sm text-gray-500">Kelola komposisi komponen nilai dan input nilai mahasiswa per kelas kuliah</p>
+        <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm">
+          <h1 class="text-2xl font-extrabold text-brand-gray-800 tracking-tight">Input Nilai Kelas</h1>
+          <p class="text-sm text-brand-gray-500">Kelola komposisi komponen nilai dan input nilai mahasiswa per kelas kuliah</p>
         </div>
 
         {/* Class Selection Card */}
-        <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4">
-          <h3 class="font-bold text-gray-700 text-sm">Pilih Kelas Kuliah</h3>
+        <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4">
+          <h3 class="font-bold text-brand-gray-700 text-sm">Pilih Kelas Kuliah</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-gray-500">Kelas Kuliah</label>
+              <label class="text-xs font-semibold text-brand-gray-500">Kelas Kuliah</label>
               <select
                 onChange={(e) => {
                   const id = e.currentTarget.value ? parseInt(e.currentTarget.value) : null;
                   setSelectedKelasId(id);
                 }}
-                class="border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-blue-500 text-slate-900"
+                class="border border-brand-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-700 text-slate-900"
               >
                 <option value="">-- Pilih Kelas Kuliah --</option>
                 <For each={classes()}>
@@ -344,24 +344,24 @@ export default function InputNilai() {
         </div>
 
         <Show when={isRulesMissing()}>
-          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 shadow-sm">
-            <span class="font-bold flex items-center gap-1.5 text-rose-800 text-sm">⚠️ Peringatan: Aturan Konversi Belum Ditetapkan</span>
+          <div class="bg-red-50 border border-red-200 text-red-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 shadow-sm">
+            <span class="font-bold flex items-center gap-1.5 text-red-800 text-sm">⚠️ Peringatan: Aturan Konversi Belum Ditetapkan</span>
             <span>Aturan konversi nilai belum ditetapkan untuk program studi ini atau secara global. Silakan hubungi Admin untuk menetapkan aturan konversi di tab Aturan Konversi (halaman KHS) terlebih dahulu agar penginputan nilai dapat diproses dengan benar.</span>
           </div>
         </Show>
 
         <Show when={selectedKelasId()} fallback={
-          <div class="bg-white p-12 rounded-2xl border border-gray-100 shadow-sm text-center text-gray-400">
+          <div class="bg-white p-12 rounded-2xl border border-brand-gray-100 shadow-sm text-center text-brand-gray-400">
             Silakan pilih kelas kuliah terlebih dahulu untuk mengelola komponen dan nilai.
           </div>
         }>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left side: Component Weights Management */}
-            <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4 h-fit">
+            <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4 h-fit">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-gray-800">Komposisi Bobot Nilai (%)</h3>
+                <h3 class="font-bold text-brand-gray-800">Komposisi Bobot Nilai (%)</h3>
                 <Show when={isClassLocked()}>
-                  <span class="px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold rounded-lg flex items-center gap-1">
+                  <span class="px-2.5 py-1 bg-accent-50 text-accent-700 border border-accent-200 text-[10px] font-bold rounded-lg flex items-center gap-1">
                     🔒 Dikunci
                   </span>
                 </Show>
@@ -378,7 +378,7 @@ export default function InputNilai() {
                         value={comp().name}
                         disabled={isClassLocked()}
                         onInput={(e) => updateComponentField(idx, 'name', e.currentTarget.value)}
-                        class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 text-slate-900"
+                        class="border border-brand-gray-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none disabled:bg-brand-50 disabled:text-brand-gray-400 text-slate-900"
                       />
                       <input
                         type="number"
@@ -386,13 +386,13 @@ export default function InputNilai() {
                         value={comp().bobot}
                         disabled={isClassLocked()}
                         onInput={(e) => updateComponentField(idx, 'bobot', e.currentTarget.value)}
-                        class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none disabled:bg-gray-50 disabled:text-gray-400 text-slate-900 text-center"
+                        class="border border-brand-gray-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none disabled:bg-brand-50 disabled:text-brand-gray-400 text-slate-900 text-center"
                       />
-                      <span class="text-xs text-gray-400 font-bold">%</span>
+                      <span class="text-xs text-brand-gray-400 font-bold">%</span>
                       <Show when={!isClassLocked()}>
                         <button
                           onClick={() => removeComponent(idx)}
-                          class="text-rose-500 hover:text-rose-700 text-xs p-1"
+                          class="text-red-500 hover:text-red-700 text-xs p-1"
                         >
                           ❌
                         </button>
@@ -402,25 +402,25 @@ export default function InputNilai() {
                 </Index>
 
                 <div class="flex justify-between items-center mt-2">
-                  <Show when={!isClassLocked()} fallback={<span class="text-xs text-gray-400 font-medium">Pengaturan komponen dinonaktifkan.</span>}>
+                  <Show when={!isClassLocked()} fallback={<span class="text-xs text-brand-gray-400 font-medium">Pengaturan komponen dinonaktifkan.</span>}>
                     <div class="flex flex-col gap-2 align-start">
                       <button
                         onClick={addComponent}
-                        class="text-blue-600 hover:text-blue-700 font-bold text-xs flex items-center gap-1 text-left"
+                        class="text-brand-800 hover:text-brand-900 font-bold text-xs flex items-center gap-1 text-left"
                       >
                         ➕ Tambah Komponen
                       </button>
                       <Show when={rencanaEvals() && rencanaEvals().length > 0}>
                         <button
                           onClick={handleImportFromRps}
-                          class="text-emerald-600 hover:text-emerald-700 font-bold text-xs flex items-center gap-1 text-left"
+                          class="text-green-600 hover:text-green-700 font-bold text-xs flex items-center gap-1 text-left"
                         >
                           📥 Ambil Komposisi dari RPS
                         </button>
                       </Show>
                     </div>
                   </Show>
-                  <span class="text-xs font-bold text-gray-600">
+                  <span class="text-xs font-bold text-brand-gray-600">
                     Total: {editableComponents().reduce((sum, item) => sum + item.bobot, 0)}%
                   </span>
                 </div>
@@ -428,7 +428,7 @@ export default function InputNilai() {
                 <Show when={!isClassLocked()}>
                   <button
                     onClick={handleSaveComponents}
-                    class="mt-4 px-4 py-2 bg-blue-600 text-white font-bold rounded-xl text-xs hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-100"
+                    class="mt-4 px-4 py-2 bg-brand-800 text-white font-bold rounded-xl text-xs hover:bg-brand-900 active:scale-95 transition-all shadow-sm shadow-brand-100"
                   >
                     Simpan Bobot Komponen
                   </button>
@@ -437,20 +437,20 @@ export default function InputNilai() {
             </div>
 
             {/* Right side: Student Grades Table */}
-            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-gray-800">Daftar Mahasiswa & Pengisian Nilai</h3>
+                <h3 class="font-bold text-brand-gray-800">Daftar Mahasiswa & Pengisian Nilai</h3>
                 <div class="flex gap-2">
                   <Show when={components() && components().length > 0}>
                     <Show when={!isClassLocked()} fallback={
                       <div class="flex items-center gap-2">
-                        <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl">
+                        <span class="px-3 py-1.5 bg-red-50 text-red-700 border border-red-100 text-xs font-extrabold rounded-xl">
                           🔒 Nilai Kelas Telah Dikunci (Selesai)
                         </span>
                         <Show when={role() === 'admin' || role() === 'prodi' || role() === 'dosen'}>
                           <button
                             onClick={handleUnlockKelas}
-                            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm"
+                            class="px-3 py-1.5 bg-brand-800 hover:bg-brand-900 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm"
                           >
                             🔓 Buka Kunci
                           </button>
@@ -459,13 +459,13 @@ export default function InputNilai() {
                     }>
                       <button
                         onClick={handleSaveGrades}
-                        class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-sm"
+                        class="px-4 py-2 bg-green-600 text-white font-bold rounded-xl text-xs hover:bg-green-700 active:scale-95 transition-all shadow-sm"
                       >
                         Simpan Nilai
                       </button>
                       <button
                         onClick={handleLockKelas}
-                        class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs hover:bg-rose-700 active:scale-95 transition-all shadow-sm"
+                        class="px-4 py-2 bg-red-600 text-white font-bold rounded-xl text-xs hover:bg-red-700 active:scale-95 transition-all shadow-sm"
                       >
                         🔒 Kunci Nilai
                       </button>
@@ -475,13 +475,13 @@ export default function InputNilai() {
               </div>
 
               <Show when={components() && components().length > 0} fallback={
-                <div class="text-center py-12 text-gray-400 italic">
+                <div class="text-center py-12 text-brand-gray-400 italic">
                   Harap tentukan dan simpan komponen bobot nilai (kiri) terlebih dahulu sebelum menginput nilai mahasiswa.
                 </div>
               }>
                 <table class="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr class="border-b border-gray-100 bg-gray-50/50 text-gray-400 uppercase tracking-wider font-bold">
+                    <tr class="border-b border-brand-gray-100 bg-brand-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
                       <th class="p-3">Mahasiswa</th>
                       <For each={components()}>
                         {(c) => <th class="p-3 text-center">{c.nama} ({c.bobot}%)</th>}
@@ -489,20 +489,20 @@ export default function InputNilai() {
                       <th class="p-3 text-center">Nilai Akhir</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-gray-50 text-gray-600 font-medium">
+                  <tbody class="divide-y divide-gray-50 text-brand-gray-600 font-medium">
                     <For each={studentsGrades()} fallback={
                       <tr>
-                        <td colspan={components().length + 2} class="p-4 text-center text-gray-400 italic">
+                        <td colspan={components().length + 2} class="p-4 text-center text-brand-gray-400 italic">
                           Tidak ada mahasiswa terdaftar di kelas ini.
                         </td>
                       </tr>
                     }>
                       {(stud) => (
-                        <tr class="hover:bg-gray-50/20">
+                        <tr class="hover:bg-brand-50/20">
                           <td class="p-3">
                             <div class="flex flex-col">
-                              <span class="font-bold text-gray-800">{stud.nama}</span>
-                              <span class="text-[10px] text-gray-400">NIM: {stud.nim}</span>
+                              <span class="font-bold text-brand-gray-800">{stud.nama}</span>
+                              <span class="text-[10px] text-brand-gray-400">NIM: {stud.nim}</span>
                             </div>
                           </td>
                           <For each={components()}>
@@ -514,12 +514,12 @@ export default function InputNilai() {
                                   disabled={isClassLocked()}
                                   value={inputGrades()[`${stud.krsId}_${c.id}`] !== undefined ? inputGrades()[`${stud.krsId}_${c.id}`] : ''}
                                   onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
-                                  class="border border-gray-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-400 text-slate-900"
+                                  class="border border-brand-gray-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-700 disabled:bg-brand-50 disabled:text-brand-gray-400 text-slate-900"
                                 />
                               </td>
                             )}
                           </For>
-                          <td class="p-3 text-center font-extrabold text-gray-800">
+                          <td class="p-3 text-center font-extrabold text-brand-gray-800">
                             <Show
                               when={getDynamicFinalGrade(stud)}
                               fallback={

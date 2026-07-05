@@ -180,8 +180,8 @@ export default function Mahasiswa() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-800">Mahasiswa</h1>
-            <p class="text-sm text-gray-500">Kelola informasi data mahasiswa aktif dan administrasi akademik.</p>
+            <h1 class="text-2xl font-extrabold text-brand-gray-800">Mahasiswa</h1>
+            <p class="text-sm text-brand-gray-500">Kelola informasi data mahasiswa aktif dan administrasi akademik.</p>
           </div>
           <div class="flex gap-2">
             <Show when={selectedIds().length > 0}>
@@ -224,35 +224,35 @@ export default function Mahasiswa() {
           />
         </div>
 
-        <Show when={!mahasiswas.loading} fallback={<div class="text-center py-10 text-gray-400">Loading data...</div>}>
+        <Show when={!mahasiswas.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
           <Table headers={[
             <input
               type="checkbox"
               checked={isAllSelected()}
               onChange={toggleSelectAll}
-              class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              class="rounded border-brand-gray-300 text-brand-800 focus:ring-brand-700"
             />,
             'NIM', 'Nama', 'Email', 'Program Studi', 'Dosen Wali (PA)', 'Status', 'Aksi'
           ]}>
           <For each={mahasiswas()?.data}>
             {(item) => (
-              <tr class="hover:bg-gray-50/50 transition-colors">
+              <tr class="hover:bg-brand-50/50 transition-colors">
                 <td class="px-6 py-4">
                   <input
                     type="checkbox"
                     checked={selectedIds().includes(item.id)}
                     onChange={() => toggleSelect(item.id)}
-                    class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    class="rounded border-brand-gray-300 text-brand-800 focus:ring-brand-700"
                   />
                 </td>
-                <td class="px-6 py-4 font-mono text-gray-600 font-semibold">{item.nim}</td>
-                <td class="px-6 py-4 font-medium text-gray-800">{item.nama}</td>
-                <td class="px-6 py-4 text-gray-500">{item.email}</td>
-                <td class="px-6 py-4 text-gray-600">{item.programStudi?.nama || '-'}</td>
-                <td class="px-6 py-4 text-gray-600">{item.dosenPa?.nama || '-'}</td>
+                <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.nim}</td>
+                <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
+                <td class="px-6 py-4 text-brand-gray-500">{item.email}</td>
+                <td class="px-6 py-4 text-brand-gray-600">{item.programStudi?.nama || '-'}</td>
+                <td class="px-6 py-4 text-brand-gray-600">{item.dosenPa?.nama || '-'}</td>
                 <td class="px-6 py-4">
                   <span class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                    item.status === 'aktif' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                    item.status === 'aktif' ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-accent-50 text-accent-700 border border-accent-100'
                   }`}>
                     {item.status}
                   </span>
@@ -270,7 +270,7 @@ export default function Mahasiswa() {
           </For>
           <Show when={mahasiswas()?.data.length === 0}>
             <tr>
-              <td colspan="7" class="px-6 py-10 text-center text-gray-400">
+              <td colspan="7" class="px-6 py-10 text-center text-brand-gray-400">
                 Tidak ada data mahasiswa ditemukan.
               </td>
             </tr>
@@ -280,7 +280,7 @@ export default function Mahasiswa() {
           {/* Pagination */}
           <Show when={mahasiswas() && mahasiswas()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-gray-500">
+              <span class="text-xs text-brand-gray-500">
                 Menampilkan halaman {page()} dari {mahasiswas()?.meta.totalPages} ({mahasiswas()?.meta.total} total data)
               </span>
               <div class="flex gap-2">

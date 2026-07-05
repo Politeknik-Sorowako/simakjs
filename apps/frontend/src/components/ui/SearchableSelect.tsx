@@ -1,135 +1,195 @@
-import { createSignal, createEffect, onCleanup, Show, For } from 'solid-js';
+import {
+	createEffect,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+} from "solid-js";
 
-interface Option {
-  label: string;
-  value: string | number;
+interface SelectOption {
+	value: string | number;
+	label: string;
 }
 
 interface SearchableSelectProps {
-  label?: string;
-  placeholder?: string;
-  options: Option[];
-  value: string | number | null;
-  onChange: (value: string | number | null) => void;
-  error?: string;
+	label?: string;
+	placeholder?: string;
+	options: SelectOption[];
+	value?: string | number;
+	onChange?: (value: string | number) => void;
+	error?: string;
 }
 
 export function SearchableSelect(props: SearchableSelectProps) {
-  const [isOpen, setIsOpen] = createSignal(false);
-  const [search, setSearch] = createSignal('');
-  let containerRef: HTMLDivElement | undefined;
+	const [search, setSearch] = createSignal("");
+	const [isOpen, setIsOpen] = createSignal(false);
+	const [highlightIndex, setHighlightIndex] = createSignal(-1);
+	let containerRef!: HTMLDivElement;
+	let inputRef!: HTMLInputElement;
 
-  // Dapatkan opsi terpilih saat ini
-  const selectedOption = () => props.options.find(opt => opt.value === props.value);
+	const filtered = () => {
+		const q = search().toLowerCase();
+		return props.options.filter((opt) => opt.label.toLowerCase().includes(q));
+	};
 
-  // Set pencarian awal ke label terpilih
-  createEffect(() => {
-    const selected = selectedOption();
-    if (selected && !isOpen()) {
-      setSearch(selected.label);
-    } else if (!selected && !isOpen()) {
-      setSearch('');
-    }
-  });
+	const selectedLabel = () =>
+		props.options.find((o) => o.value === props.value)?.label || "";
 
-  // Filter opsi berdasarkan input pencarian
-  const filteredOptions = () => {
-    const term = search().toLowerCase();
-    if (!term || selectedOption()?.label.toLowerCase() === term) {
-      return props.options;
-    }
-    return props.options.filter(opt =>
-      opt.label.toLowerCase().includes(term)
-    );
-  };
+	const handleSelect = (value: string | number) => {
+		props.onChange?.(value);
+		setSearch("");
+		setIsOpen(false);
+		setHighlightIndex(-1);
+	};
 
-  // Close dropdown when clicking outside
-  const handleClickOutside = (e: MouseEvent) => {
-    if (containerRef && !containerRef.contains(e.target as Node)) {
-      setIsOpen(false);
-      // Restore search input to selected option label
-      const selected = selectedOption();
-      setSearch(selected ? selected.label : '');
-    }
-  };
+	const handleKeyDown = (e: KeyboardEvent) => {
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			setHighlightIndex((i) => Math.min(i + 1, filtered().length - 1));
+		} else if (e.key === "ArrowUp") {
+			e.preventDefault();
+			setHighlightIndex((i) => Math.max(i - 1, 0));
+		} else if (e.key === "Enter" && highlightIndex() >= 0) {
+			e.preventDefault();
+			handleSelect(filtered()[highlightIndex()].value);
+		} else if (e.key === "Escape") {
+			setIsOpen(false);
+			setHighlightIndex(-1);
+		}
+	};
 
-  document.addEventListener('click', handleClickOutside);
-  onCleanup(() => document.removeEventListener('click', handleClickOutside));
+	const handleClickOutside = (e: MouseEvent) => {
+		if (!containerRef.contains(e.target as Node)) {
+			setIsOpen(false);
+			setSearch("");
+			setHighlightIndex(-1);
+		}
+	};
 
-  const handleSelect = (opt: Option) => {
-    props.onChange(opt.value);
-    setSearch(opt.label);
-    setIsOpen(false);
-  };
+	onMount(() => {
+		document.addEventListener("mousedown", handleClickOutside);
+	});
 
-  const handleClear = (e: MouseEvent) => {
-    e.stopPropagation();
-    props.onChange(null);
-    setSearch('');
-    setIsOpen(false);
-  };
+	onCleanup(() => {
+		document.removeEventListener("mousedown", handleClickOutside);
+	});
 
-  return (
-    <div ref={containerRef} class="flex flex-col gap-1.5 w-full relative">
-      {props.label && (
-        <label class="text-xs font-semibold uppercase tracking-wider text-gray-500">
-          {props.label}
-        </label>
-      )}
-      <div class="relative">
-        <input
-          type="text"
-          placeholder={props.placeholder || 'Pilih opsi...'}
-          value={search()}
-          onInput={(e) => {
-            setSearch(e.currentTarget.value);
-            setIsOpen(true);
-          }}
-          onFocus={() => setIsOpen(true)}
-          class={`w-full px-4 py-2.5 pr-10 rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm shadow-sm text-slate-900 ${
-            props.error ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
-          }`}
-        />
-        <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          <Show when={props.value !== null && props.value !== ''}>
-            <button
-              type="button"
-              onClick={handleClear}
-              class="text-gray-400 hover:text-gray-600 focus:outline-none text-xs p-1"
-            >
-              ✕
-            </button>
-          </Show>
-          <span class="text-gray-400 pointer-events-none text-xs">▼</span>
-        </div>
-      </div>
+	createEffect(() => {
+		if (!isOpen()) setHighlightIndex(-1);
+	});
 
-      <Show when={isOpen()}>
-        <div class="absolute z-50 left-0 right-0 mt-1 top-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-          <For each={filteredOptions()}>
-            {(opt) => (
-              <button
-                type="button"
-                onClick={() => handleSelect(opt)}
-                class={`w-full text-left px-4 py-2 text-sm hover:bg-blue-50 transition-colors ${
-                  opt.value === props.value ? 'bg-blue-50/50 font-semibold text-blue-600' : 'text-slate-700'
-                }`}
-              >
-                {opt.label}
-              </button>
-            )}
-          </For>
-          <Show when={filteredOptions().length === 0}>
-            <div class="px-4 py-3 text-sm text-gray-400 text-center">
-              Tidak ada hasil ditemukan.
-            </div>
-          </Show>
-        </div>
-      </Show>
+	const baseInputClasses = `
+    w-full px-4 py-2.5 pr-10 rounded-xl border bg-white text-sm text-gray-900
+    placeholder:text-brand-gray-400
+    focus:outline-none focus:ring-2 focus:ring-accent-400/30 focus:border-brand-700
+    transition-all duration-200
+    dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500
+    dark:focus:ring-accent-400/20 dark:focus:border-brand-500
+  `;
 
-      {props.error && (
-        <span class="text-xs text-red-500 font-medium">{props.error}</span>
-      )}
-    </div>
-  );
+	return (
+		<div ref={containerRef} class="relative flex flex-col gap-1.5">
+			<Show when={props.label}>
+				<label class="text-xs font-semibold uppercase tracking-wider text-brand-gray-500 dark:text-slate-400">
+					{props.label}
+				</label>
+			</Show>
+
+			<div class="relative">
+				<input
+					ref={inputRef}
+					type="text"
+					value={isOpen() ? search() : selectedLabel()}
+					placeholder={props.placeholder || "Pilih..."}
+					readonly={!isOpen()}
+					onfocus={() => setIsOpen(true)}
+					onInput={(e) => setSearch(e.currentTarget.value)}
+					onkeydown={handleKeyDown}
+					class={`${baseInputClasses} ${props.error ? "border-red-500 focus:border-red-500 focus:ring-red-500/20 dark:border-red-400" : ""}`}
+				/>
+
+				{/* Clear button */}
+				<Show when={props.value && isOpen()}>
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation();
+							props.onChange?.("");
+							setSearch("");
+							inputRef.focus();
+						}}
+						class="absolute right-8 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-brand-gray-400 hover:text-brand-gray-600 hover:bg-brand-gray-100 dark:hover:text-slate-300 dark:hover:bg-slate-700"
+					>
+						<svg
+							class="w-4 h-4"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+					</button>
+				</Show>
+
+				{/* Chevron */}
+				<div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+					<svg
+						class={`w-4 h-4 text-brand-gray-400 transition-transform duration-200 ${isOpen() ? "rotate-180" : ""}`}
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 9l-7 7-7-7"
+						/>
+					</svg>
+				</div>
+			</div>
+
+			{/* Dropdown */}
+			<Show when={isOpen()}>
+				<div class="absolute z-50 w-full mt-1 bg-white dark:bg-slate-800 border border-brand-gray-200 dark:border-slate-700 rounded-xl shadow-lg max-h-60 overflow-y-auto animate-slide-down">
+					<Show
+						when={filtered().length > 0}
+						fallback={
+							<div class="px-4 py-3 text-sm text-brand-gray-500 dark:text-slate-400 text-center">
+								Tidak ada hasil ditemukan.
+							</div>
+						}
+					>
+						<For each={filtered()}>
+							{(opt, i) => (
+								<button
+									type="button"
+									onClick={() => handleSelect(opt.value)}
+									class={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+										opt.value === props.value
+											? "bg-accent-50 text-brand-900 font-semibold dark:bg-accent-900/30 dark:text-accent-400"
+											: i() === highlightIndex()
+												? "bg-brand-50 dark:bg-slate-700"
+												: "text-gray-700 hover:bg-brand-50/50 dark:text-slate-300 dark:hover:bg-slate-700/50"
+									}`}
+								>
+									{opt.label}
+								</button>
+							)}
+						</For>
+					</Show>
+				</div>
+			</Show>
+
+			<Show when={props.error}>
+				<p class="text-xs text-red-500 dark:text-red-400">{props.error}</p>
+			</Show>
+		</div>
+	);
 }

@@ -106,8 +106,8 @@ export default function PeriodeAkademik() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-800">Periode Akademik</h1>
-            <p class="text-sm text-gray-500">Kelola semester aktif dan periode akademik perkuliahan.</p>
+            <h1 class="text-2xl font-extrabold text-brand-gray-800">Periode Akademik</h1>
+            <p class="text-sm text-brand-gray-500">Kelola semester aktif dan periode akademik perkuliahan.</p>
           </div>
           <Button onClick={openAddModal}>+ Tambah Periode</Button>
         </div>
@@ -127,21 +127,21 @@ export default function PeriodeAkademik() {
         <Show
           when={!periodes.loading}
           fallback={
-            <div class="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm gap-4">
-              <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-              <p class="text-sm font-medium text-gray-500 animate-pulse">Memuat data periode akademik...</p>
+            <div class="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-brand-gray-100 shadow-sm gap-4">
+              <div class="w-10 h-10 border-4 border-brand-800 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+              <p class="text-sm font-medium text-brand-gray-500 animate-pulse">Memuat data periode akademik...</p>
             </div>
           }
         >
           <Table headers={['ID / Kode', 'Nama Semester', 'Status', 'Aksi']}>
             <For each={periodes()?.data}>
               {(item) => (
-                <tr class="hover:bg-gray-50/50 transition-colors">
-                  <td class="px-6 py-4 font-mono text-gray-600 font-semibold">{item.id}</td>
-                  <td class="px-6 py-4 font-medium text-gray-800">{item.nama}</td>
+                <tr class="hover:bg-brand-50/50 transition-colors">
+                  <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.id}</td>
+                  <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
                   <td class="px-6 py-4">
                     <span class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                      item.aktif ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-gray-50 text-gray-600 border border-gray-150'
+                      item.aktif ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-brand-50 text-brand-gray-600 border border-brand-gray-150'
                     }`}>
                       {item.aktif ? 'Aktif' : 'Nonaktif'}
                     </span>
@@ -159,7 +159,7 @@ export default function PeriodeAkademik() {
             </For>
             <Show when={periodes()?.data.length === 0}>
               <tr>
-                <td colspan="4" class="px-6 py-10 text-center text-gray-400">
+                <td colspan="4" class="px-6 py-10 text-center text-brand-gray-400">
                   Tidak ada data periode akademik ditemukan.
                 </td>
               </tr>
@@ -169,7 +169,7 @@ export default function PeriodeAkademik() {
           {/* Pagination */}
           <Show when={periodes() && periodes()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-gray-500">
+              <span class="text-xs text-brand-gray-500">
                 Menampilkan halaman {page()} dari {periodes()?.meta.totalPages} ({periodes()?.meta.total} total data)
               </span>
               <div class="flex gap-2">
