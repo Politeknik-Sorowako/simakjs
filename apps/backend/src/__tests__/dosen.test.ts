@@ -195,7 +195,7 @@ describe('4. Dosen (/dosen)', () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(Array.isArray(body.data)).toBe(true);
-      expect(body.data.length).toBe(2);
+      expect(body.data.length).toBe(3);
     });
 
     it('harus sukses menggunakan pagination (page & limit)', async () => {

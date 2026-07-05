@@ -13,11 +13,8 @@ export const registerSchema = {
     role: t.Optional(
       t.Union(
         [
-          t.Literal('admin'),
           t.Literal('dosen'),
           t.Literal('mahasiswa'),
-          t.Literal('prodi'),
-          t.Literal('keuangan'),
           t.Literal('guest'),
         ],
         { default: 'mahasiswa' },
@@ -53,12 +50,14 @@ export const loginSchema = {
   response: {
     200: t.Object({
       message: t.String({ default: 'Login berhasil' }),
-      token: t.String({ default: 'eyJhbGciOiJIUzI1NiIsInR... (JWT string)' }),
+      token: t.String({ default: 'eyJhbGciOiJIUzI1NiIsInR...' }),
       user: t.Object({
         id: t.Integer({ default: 1 }),
         email: t.String({ default: 'admin@test.com' }),
         nama: t.String({ default: 'Nama Pengguna' }),
         role: t.String({ default: 'admin' }),
+        theme: t.Optional(t.String()),
+        avatar: t.Optional(t.String()),
       }),
     }),
     401: t.Object({

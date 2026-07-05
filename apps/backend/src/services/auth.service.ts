@@ -2,16 +2,24 @@ import { eq } from 'drizzle-orm';
 import { passwordResets, users } from '../models/schema';
 import { db } from '../utils/db';
 
+async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export class AuthService {
   static async register(
     email: string,
     password: string,
     nama: string,
-    role?: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest',
+    role?: 'admin' | 'dosen' | 'mahasiswa' | 'guest',
   ) {
     const hashedPassword = await Bun.password.hash(password, {
       algorithm: 'bcrypt',
-      cost: 10,
+      cost: 12,
     });
 
     const [newUser] = await db
@@ -61,12 +69,14 @@ export class AuthService {
   }
 
   static async createPasswordReset(email: string, token: string, expiresAt: Date) {
+    const tokenHash = await hashToken(token);
     await db.delete(passwordResets).where(eq(passwordResets.email, email));
-    await db.insert(passwordResets).values({ email, token, expiresAt });
+    await db.insert(passwordResets).values({ email, token: tokenHash, expiresAt });
   }
 
   static async getPasswordReset(token: string) {
-    const [record] = await db.select().from(passwordResets).where(eq(passwordResets.token, token)).limit(1);
+    const tokenHash = await hashToken(token);
+    const [record] = await db.select().from(passwordResets).where(eq(passwordResets.token, tokenHash)).limit(1);
     return record || null;
   }
 
@@ -79,6 +89,6 @@ export class AuthService {
   }
 
   static async hashPassword(password: string) {
-    return await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 });
+    return await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 12 });
   }
 }

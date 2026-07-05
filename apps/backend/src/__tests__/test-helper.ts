@@ -29,6 +29,8 @@ import {
 } from '../models/schema';
 import { db } from '../utils/db';
 
+const ELEVATED_ROLES = ['admin', 'prodi', 'keuangan'];
+
 export interface UserResponse {
   id: number;
   email: string;
@@ -98,6 +100,47 @@ export async function clearDatabase() {
 
 // Helper function to register and login a user, returning their JWT authorization token
 export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan') {
+  // Elevated roles (admin, prodi, keuangan) must be created directly in DB
+  if (ELEVATED_ROLES.includes(role)) {
+    const hashedPassword = await Bun.password.hash('password123', { algorithm: 'bcrypt', cost: 10 });
+    await db
+      .insert(users)
+      .values({ email, password: hashedPassword, nama: 'Test User', role, isActive: true })
+      .onConflictDoNothing();
+
+    // Admin also needs a dosen record for KRS approval flow
+    if (role === 'admin') {
+      const ts = Date.now();
+      await db
+        .insert(dosen)
+        .values({
+          nip: `ADM${String(ts).slice(0, 13)}`,
+          nama: 'Test User',
+          email,
+          nik: `NIK${String(ts).slice(0, 12)}`,
+          jenisKelamin: 'L',
+          tanggalLahir: '1980-01-01',
+        })
+        .onConflictDoNothing();
+    }
+
+    const response = await app.handle(
+      new Request('http://localhost/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: 'password123' }),
+      }),
+    );
+
+    if (response.status !== 200) {
+      const errorText = await response.text();
+      throw new Error(`getAuthToken login failed with status ${response.status}: ${errorText}`);
+    }
+
+    const data = (await response.json()) as LoginSuccessResponse;
+    return data.token;
+  }
+
   const registerResponse = await app.handle(
     new Request('http://localhost/auth/register', {
       method: 'POST',

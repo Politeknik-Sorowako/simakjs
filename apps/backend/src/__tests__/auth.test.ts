@@ -17,10 +17,10 @@ describe('1. Autentikasi (/auth)', () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: 'admin@test.com',
+            email: 'dosen@test.com',
             password: 'password123',
-            nama: 'Admin Test',
-            role: 'admin',
+            nama: 'Dosen Test',
+            role: 'dosen',
           }),
         }),
       );
@@ -29,8 +29,8 @@ describe('1. Autentikasi (/auth)', () => {
       const body = (await response.json()) as RegisterSuccessResponse;
       expect(body.message).toBe('Registrasi berhasil');
       expect(body.user).toBeDefined();
-      expect(body.user.email).toBe('admin@test.com');
-      expect(body.user.role).toBe('admin');
+      expect(body.user.email).toBe('dosen@test.com');
+      expect(body.user.role).toBe('dosen');
       expect((body.user as any).password).toBeUndefined();
     });
 
@@ -218,10 +218,10 @@ describe('1. Autentikasi (/auth)', () => {
 
       expect(response.status).toBe(200);
       const body = (await response.json()) as any;
-      expect(body.message).toContain('berhasil dibuat');
+      expect(body.token).toBeDefined();
     });
 
-    it('harus gagal membuat token jika email tidak terdaftar', async () => {
+    it('harus memberikan response 200 untuk email tidak terdaftar (security: no user enumeration)', async () => {
       const response = await app.handle(
         new Request('http://localhost/auth/forgot-password', {
           method: 'POST',
@@ -230,7 +230,7 @@ describe('1. Autentikasi (/auth)', () => {
         }),
       );
 
-      expect(response.status).toBe(404);
+      expect(response.status).toBe(200);
     });
 
     it('harus sukses mereset password dengan token valid', async () => {
@@ -243,19 +243,14 @@ describe('1. Autentikasi (/auth)', () => {
       );
       expect(forgotResponse.status).toBe(200);
 
-      // Get token from database
-      const [resetRecord] = await db
-        .select()
-        .from(passwordResets)
-        .where(eq(passwordResets.email, 'reset@test.com'))
-        .limit(1);
-      const token = resetRecord.token;
+      const forgotBody = (await forgotResponse.json()) as { token: string };
+      const token = forgotBody.token;
 
       const resetResponse = await app.handle(
         new Request('http://localhost/auth/reset-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, password: 'newpassword123' }),
+          body: JSON.stringify({ token, password: 'NewPass123' }),
         }),
       );
 
@@ -269,7 +264,7 @@ describe('1. Autentikasi (/auth)', () => {
         new Request('http://localhost/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'reset@test.com', password: 'newpassword123' }),
+          body: JSON.stringify({ email: 'reset@test.com', password: 'NewPass123' }),
         }),
       );
       expect(loginResponse.status).toBe(200);

@@ -168,16 +168,12 @@ export class KrsService {
   }
 
   static async approveKrs(mahasiswaId: number | undefined | null, periodeId: string, approvedByEmail: string) {
-    let dosenRecord = await db.query.dosen.findFirst({
+    const dosenRecord = await db.query.dosen.findFirst({
       where: eq(dosen.email, approvedByEmail),
     });
 
     if (!dosenRecord) {
-      dosenRecord = await db.query.dosen.findFirst();
-    }
-
-    if (!dosenRecord) {
-      throw new Error('Dosen Pembimbing tidak ditemukan untuk melakukan approval.');
+      throw new Error('Email pengguna tidak terdaftar sebagai dosen. Approval ditolak.');
     }
 
     const classes = await db
@@ -239,16 +235,12 @@ export class KrsService {
   }
 
   static async approveBatchKrs(mahasiswaIds: number[], periodeId: string, approvedByEmail: string) {
-    let dosenRecord = await db.query.dosen.findFirst({
+    const dosenRecord = await db.query.dosen.findFirst({
       where: eq(dosen.email, approvedByEmail),
     });
 
     if (!dosenRecord) {
-      dosenRecord = await db.query.dosen.findFirst();
-    }
-
-    if (!dosenRecord) {
-      throw new Error('Dosen Pembimbing tidak ditemukan untuk melakukan approval.');
+      throw new Error('Email pengguna tidak terdaftar sebagai dosen. Approval ditolak.');
     }
 
     const classes = await db

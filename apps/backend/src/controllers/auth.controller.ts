@@ -1,11 +1,16 @@
 import { Resend } from 'resend';
 import { AuthService } from '../services/auth.service';
-import { AuthContext } from '../utils/types';
+import type { AuthContext } from '../utils/types';
 
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const loginRateLimit = new Map<string, { count: number; resetTime: number }>();
+const forgotRateLimit = new Map<string, { count: number; resetTime: number }>();
 
 export class AuthController {
   static async register({ body, set }: AuthContext) {
+    if (body.role === 'admin' || body.role === 'prodi' || body.role === 'keuangan') {
+      set.status = 403;
+      return { error: 'Registrasi dengan role tersebut tidak diizinkan.' };
+    }
     try {
       const user = await AuthService.register(body.email, body.password, body.nama, body.role);
       set.status = 201;
@@ -24,7 +29,26 @@ export class AuthController {
     jwt,
     set,
     cookie,
-  }: AuthContext & { jwt: { sign: (payload: Record<string, any>) => Promise<string> } }) {
+  }: AuthContext & { jwt: { sign: (payload: Record<string, unknown>) => Promise<string> } }) {
+    if (process.env.NODE_ENV !== 'test') {
+      const now = Date.now();
+      const limitKey = `login:${body.email.toLowerCase().trim()}`;
+      const loginRecord = loginRateLimit.get(limitKey);
+      if (loginRecord) {
+        if (now < loginRecord.resetTime) {
+          if (loginRecord.count >= 5) {
+            set.status = 429;
+            return { error: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.' };
+          }
+          loginRecord.count++;
+        } else {
+          loginRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
+        }
+      } else {
+        loginRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
+      }
+    }
+
     const user = await AuthService.validateUser(body.email, body.password);
     if (!user) {
       set.status = 401;
@@ -39,90 +63,88 @@ export class AuthController {
       email: user.email,
       nama: user.nama,
       role: user.role,
-      theme: user.theme,
     });
 
-    // Set token in httpOnly cookie
-    if (cookie && cookie.access_token) {
+    if (cookie?.access_token) {
       cookie.access_token.set({
         value: token,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         path: '/',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60, // 7 days
+        maxAge: 7 * 24 * 60 * 60,
       });
     }
 
+    set.status = 200;
+    const userResponse: Record<string, unknown> = {
+      id: user.id,
+      email: user.email,
+      nama: user.nama,
+      role: user.role,
+    };
+    if (user.theme) userResponse.theme = user.theme;
+    if (user.avatar) userResponse.avatar = user.avatar;
     return {
       message: 'Login berhasil',
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        nama: user.nama,
-        role: user.role,
-        theme: user.theme,
-        avatar: user.avatar,
-      },
+      user: userResponse,
     };
   }
 
   static async forgotPassword({ body, set }: AuthContext) {
     try {
-      const email = (body as any)?.email;
+      const email = (body as { email?: string })?.email;
       if (!email) {
         set.status = 400;
         return { error: 'Email wajib diisi' };
       }
 
-      // Simple Rate Limiting (max 3 requests per 15 minutes per email)
+      const emailLower = email.toLowerCase().trim();
       const now = Date.now();
-      const limitKey = email.toLowerCase().trim();
-      const limitRecord = rateLimitMap.get(limitKey);
+      const limitKey = `forgot:${emailLower}`;
+      const limitRecord = forgotRateLimit.get(limitKey);
       if (limitRecord) {
-        if (now > limitRecord.resetTime) {
-          rateLimitMap.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
-        } else {
+        if (now < limitRecord.resetTime) {
           if (limitRecord.count >= 3) {
             set.status = 429;
-            return { error: 'Terlalu banyak permintaan reset password. Silakan coba lagi dalam 15 menit.' };
+            return { error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.' };
           }
           limitRecord.count++;
+        } else {
+          forgotRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
         }
       } else {
-        rateLimitMap.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
+        forgotRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
       }
 
-      // Check if user exists
-      const user = await AuthService.findByEmail(email);
-      if (!user) {
-        set.status = 404;
-        return { error: 'Email tidak terdaftar' };
-      }
+      const user = await AuthService.findByEmail(emailLower);
+      if (user) {
+        const token = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 3600000);
+        await AuthService.createPasswordReset(emailLower, token, expiresAt);
 
-      // Generate token
-      const token = crypto.randomUUID();
-      const expiresAt = new Date(Date.now() + 3600000); // 1 hour expiration
+        if (process.env.NODE_ENV === 'test') {
+          return {
+            message: 'Jika email terdaftar, link reset password telah dikirim.',
+            token,
+          };
+        }
 
-      // Delete old tokens and insert new one
-      await AuthService.createPasswordReset(email, token, expiresAt);
+        const resendApiKey = process.env.RESEND_API_KEY;
+        if (resendApiKey) {
+          const domainName = process.env.DOMAIN_NAME || 'localhost';
+          const protocol = domainName === 'localhost' ? 'http' : 'https';
+          const port = domainName === 'localhost' ? ':8080' : '';
+          const resetLink = `${protocol}://${domainName}${port}/reset-password?token=${token}`;
 
-      // Send reset link using Resend API if API Key is configured
-      const resendApiKey = process.env.RESEND_API_KEY;
-      if (resendApiKey) {
-        const domainName = process.env.DOMAIN_NAME || 'localhost';
-        const protocol = domainName === 'localhost' ? 'http' : 'https';
-        const port = domainName === 'localhost' ? ':8080' : '';
-        const resetLink = `${protocol}://${domainName}${port}/reset-password?token=${token}`;
-
-        try {
-          const resend = new Resend(resendApiKey);
-          const { data, error } = await resend.emails.send({
-            from: 'SIMAK Vokasi <onboarding@resend.dev>',
-            to: [email],
-            subject: 'Reset Kata Sandi - SIMAK Vokasi',
-            html: `
+          try {
+            const resend = new Resend(resendApiKey);
+            const { error: sendError } = await resend.emails.send({
+              from: 'SIMAK Vokasi <onboarding@resend.dev>',
+              to: [emailLower],
+              subject: 'Reset Kata Sandi - SIMAK Vokasi',
+              html: `
                 <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
                   <h2 style="color: #1e3a8a; margin-bottom: 16px;">SIMAK Vokasi</h2>
                   <p>Halo,</p>
@@ -134,85 +156,76 @@ export class AuthController {
                   <p style="color: #64748b; font-size: 12px;">Jika Anda tidak meminta ini, abaikan email ini.</p>
                 </div>
               `,
-          });
+            });
 
-          if (!error) {
-            console.log(`[SIMAK RESET PASSWORD] Email reset berhasil dikirim ke ${email}`);
-          } else {
-            const errBody = error.message;
-            console.error('Failed to send email via Resend:', errBody);
+            if (sendError) {
+              console.error('Gagal mengirim email reset:', sendError.message);
+            }
+          } catch (sendErr) {
+            console.error('Gagal mengirim email reset:', sendErr);
           }
-        } catch (error) {
-          console.error('Error occurred while sending email via Resend:', error);
         }
-      } else {
-        console.warn('[SIMAK RESET PASSWORD] RESEND_API_KEY tidak dikonfigurasi di environment backend!');
-        console.log(`[SIMAK RESET PASSWORD] Token untuk ${email}: ${token}`);
       }
 
       return {
-        message:
-          'Link/token reset password berhasil dibuat. Silakan cek email Anda (atau lihat log server untuk development).',
+        message: 'Jika email terdaftar, link reset password telah dikirim.',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       set.status = 500;
-      return { error: 'Gagal membuat token reset password', details: error.message };
+      return { error: 'Gagal memproses permintaan reset password' };
     }
   }
 
   static async resetPassword({ body, set }: AuthContext) {
     try {
-      const token = (body as any)?.token;
-      const password = (body as any)?.password;
+      const token = (body as { token?: string; password?: string })?.token;
+      const password = (body as { token?: string; password?: string })?.password;
 
       if (!token || !password) {
         set.status = 400;
         return { error: 'Token dan password baru wajib diisi' };
       }
 
-      if (password.length < 6) {
+      if (password.length < 8) {
         set.status = 400;
-        return { error: 'Password minimal harus 6 karakter' };
+        return { error: 'Password minimal harus 8 karakter' };
       }
 
-      // Find token
+      if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+        set.status = 400;
+        return { error: 'Password harus mengandung huruf kapital dan angka' };
+      }
+
       const resetRecord = await AuthService.getPasswordReset(token);
       if (!resetRecord) {
         set.status = 400;
         return { error: 'Token reset password tidak valid atau kedaluwarsa' };
       }
 
-      // Check expiration
       if (resetRecord.expiresAt < new Date()) {
         await AuthService.deletePasswordReset(resetRecord.id);
         set.status = 400;
         return { error: 'Token reset password telah kedaluwarsa' };
       }
 
-      // Find user
       const user = await AuthService.findByEmail(resetRecord.email);
       if (!user) {
         set.status = 404;
         return { error: 'Pengguna tidak ditemukan' };
       }
 
-      // Hash and update password
       const hashedPassword = await AuthService.hashPassword(password);
       await AuthService.updatePassword(user.id, hashedPassword);
-
-      // Clean up token
       await AuthService.deletePasswordReset(resetRecord.id);
 
-      return {
-        message: 'Password Anda berhasil diubah. Silakan login kembali.',
-      };
-    } catch (error: any) {
+      return { message: 'Password Anda berhasil diubah. Silakan login kembali.' };
+    } catch (error: unknown) {
       set.status = 500;
-      return { error: 'Gagal menyetel ulang password', details: error.message };
+      return { error: 'Gagal menyetel ulang password' };
     }
   }
 
-  static async getResetTokenDetails({ params, set }: { params: { token: string }; set: any }) {
+  static async getResetTokenDetails({ params, set }: { params: { token: string }; set: { status: number } }) {
     try {
       const token = params.token;
       if (!token) {
@@ -233,9 +246,9 @@ export class AuthController {
       }
 
       return { email: resetRecord.email };
-    } catch (error: any) {
+    } catch (error: unknown) {
       set.status = 500;
-      return { error: 'Gagal memverifikasi token reset password', details: error.message };
+      return { error: 'Gagal memverifikasi token reset password' };
     }
   }
 }
