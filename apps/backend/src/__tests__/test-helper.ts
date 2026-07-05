@@ -1,12 +1,12 @@
 import { app } from '../app';
 import { db } from '../utils/db';
 import { eq } from 'drizzle-orm';
-import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar, bimbingan, bimbinganThread, pelanggaran, komponenNilai, nilaiKomponenMahasiswa, pengajuanYudisium, transaksiPembayaran, skemaTarif, konversiNilai, skalaPredikatKelulusan } from '../models/schema';
+import { users, programStudi, mahasiswa, dosen, krs, kelasKuliah, mataKuliah, periodeAkademik, dosenPengajarKelas, cpmk, bap, presensi, kompensasiBayar, bimbingan, bimbinganThread, pelanggaran, komponenNilai, nilaiKomponenMahasiswa, pengajuanYudisium, transaksiPembayaran, skemaTarif, konversiNilai, skalaPredikatKelulusan, pengajuanCuti, mahasiswaKeluar } from '../models/schema';
 
 export interface UserResponse {
   id: number;
   email: string;
-  role: 'admin' | 'dosen' | 'mahasiswa';
+  role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan';
 }
 
 export interface RegisterSuccessResponse {
@@ -43,6 +43,8 @@ export interface MahasiswaSuccessResponse {
 
 // Helper function to clear all database tables to ensure test independence
 export async function clearDatabase() {
+  await db.delete(pengajuanCuti);
+  await db.delete(mahasiswaKeluar);
   await db.delete(transaksiPembayaran);
   await db.delete(skemaTarif);
   await db.delete(konversiNilai);
@@ -69,7 +71,7 @@ export async function clearDatabase() {
 }
 
 // Helper function to register and login a user, returning their JWT authorization token
-export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa') {
+export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan') {
   const registerResponse = await app.handle(
     new Request('http://localhost/auth/register', {
       method: 'POST',

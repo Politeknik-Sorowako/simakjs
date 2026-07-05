@@ -188,6 +188,8 @@ export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
   bimbingan: many(bimbingan),
   pelanggaran: many(pelanggaran),
   pengajuanYudisium: one(pengajuanYudisium),
+  pengajuanCuti: many(pengajuanCuti),
+  mahasiswaKeluar: many(mahasiswaKeluar),
 }));
 
 export const dosenRelations = relations(dosen, ({ one, many }) => ({
@@ -700,3 +702,61 @@ export const skalaPredikatKelulusan = pgTable('skala_predikat_kelulusan', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
 });
+
+export const pengajuanCuti = pgTable('pengajuan_cuti', {
+  id: serial('id').primaryKey(),
+  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id),
+  alasan: text('alasan').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, disetujui_pa, disetujui_keuangan, disetujui_prodi, ditolak, kembali_aktif
+  semesterMulaiCuti: varchar('semester_mulai_cuti', { length: 5 }),
+  semesterBerakhirCuti: varchar('semester_berakhir_cuti', { length: 5 }),
+  catatan: text('catatan'),
+  noSuratIzin: varchar('no_surat_izin_cuti', { length: 100 }),
+  tanggalSuratIzin: date('tgl_surat_izin_cuti'),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const pengajuanCutiRelations = relations(pengajuanCuti, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [pengajuanCuti.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  periodeAkademik: one(periodeAkademik, {
+    fields: [pengajuanCuti.periodeId],
+    references: [periodeAkademik.id],
+  }),
+}));
+
+export const mahasiswaKeluar = pgTable('mahasiswa_keluar', {
+  id: serial('id').primaryKey(),
+  mahasiswaId: integer('mahasiswa_id').notNull().references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  periodeId: varchar('periode_id', { length: 5 }).notNull().references(() => periodeAkademik.id),
+  statusBaru: varchar('status_baru', { length: 50 }).notNull(), // keluar, drop_out, pindah, wafat, non_aktif
+  tanggalKeluar: date('tanggal_keluar').notNull(),
+  alasanKeluar: text('alasan_keluar'),
+  noSk: varchar('no_sk_yudisium', { length: 100 }),
+  tanggalSk: date('tanggal_sk_yudisium'),
+  ipk: numeric('ipk', { precision: 3, scale: 2 }),
+  nomorIjazah: varchar('nomor_ijazah', { length: 100 }),
+  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+  isSynced: boolean('is_synced').default(false).notNull(),
+  lastSyncAt: timestamp('last_sync_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull().$onUpdate(() => new Date()),
+});
+
+export const mahasiswaKeluarRelations = relations(mahasiswaKeluar, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [mahasiswaKeluar.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  periodeAkademik: one(periodeAkademik, {
+    fields: [mahasiswaKeluar.periodeId],
+    references: [periodeAkademik.id],
+  }),
+}));

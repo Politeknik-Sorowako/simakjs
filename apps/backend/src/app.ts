@@ -25,6 +25,8 @@ import { e2eRoutes } from './routes/e2e.routes';
 import { userRoutes } from './routes/user.routes';
 import { kurikulumRoutes } from './routes/kurikulum.routes';
 import { rpsRoutes } from './routes/rps.routes';
+import { cutiRoutes } from './routes/cuti.routes';
+import { mahasiswaKeluarRoutes } from './routes/mahasiswa-keluar.routes';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -111,7 +113,9 @@ app.use(
   .use(e2eRoutes)
   .use(userRoutes)
   .use(kurikulumRoutes)
-  .use(rpsRoutes);
+  .use(rpsRoutes)
+  .use(cutiRoutes)
+  .use(mahasiswaKeluarRoutes);
 
 
 
