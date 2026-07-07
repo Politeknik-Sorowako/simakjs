@@ -90,4 +90,28 @@ export const kurikulumController = {
       method: 'DELETE',
     });
   },
+
+  async copyFromKurikulum(kurikulumId: number, sourceKurikulumId: number): Promise<{ copied: number; skipped: number; sourceKode: string; sourceNama: string }> {
+    return fetchApi(`/kurikulum/${kurikulumId}/copy-from`, {
+      method: 'POST',
+      body: JSON.stringify({ sourceKurikulumId }),
+    });
+  },
+
+  async importMkCsv(kurikulumId: number, file: File): Promise<{ imported: number; skipped: number; errors: { baris: number; pesan: string }[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi(`/kurikulum/${kurikulumId}/import-mk`, {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    });
+  },
+
+  async duplicate(id: number, kodeBaru: string, namaBaru: string): Promise<{ id: number; kode: string; nama: string }> {
+    return fetchApi(`/kurikulum/${id}/duplicate`, {
+      method: 'POST',
+      body: JSON.stringify({ kodeBaru, namaBaru }),
+    });
+  },
 };

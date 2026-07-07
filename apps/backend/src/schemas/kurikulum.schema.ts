@@ -92,6 +92,76 @@ export const addMataKuliahSchema = {
   body: addMataKuliahBody,
 };
 
+export const copyFromKurikulumSchema = {
+  detail: {
+    tags: ['Kurikulum'],
+    summary: 'Salin Mata Kuliah dari Kurikulum Lain',
+    description: 'Menyalin daftar mata kuliah dari kurikulum sumber ke kurikulum target. Skip jika sudah ada (Hanya Admin).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    sourceKurikulumId: t.Integer({ default: 1 }),
+  }),
+  response: {
+    200: t.Object({
+      copied: t.Integer({ default: 0 }),
+      skipped: t.Integer({ default: 0 }),
+      sourceKode: t.String(),
+      sourceNama: t.String(),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'Kurikulum sumber tidak ditemukan' }),
+    }),
+  },
+};
+
+export const duplicateKurikulumSchema = {
+  detail: {
+    tags: ['Kurikulum'],
+    summary: 'Duplikasi Kurikulum',
+    description: 'Menduplikasi kurikulum beserta seluruh mata kuliah di dalamnya (Hanya Admin).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    kodeBaru: t.String({ default: 'KUR-2025-DUP' }),
+    namaBaru: t.String({ default: 'Duplikat Kurikulum 2024' }),
+  }),
+  response: {
+    201: t.Object({
+      id: t.Integer(),
+      kode: t.String(),
+      nama: t.String(),
+    }),
+  },
+};
+
+export const importMkCsvSchema = {
+  detail: {
+    tags: ['Kurikulum'],
+    summary: 'Impor Mata Kuliah CSV ke Kurikulum',
+    description: 'Mengimpor daftar mata kuliah dari file CSV ke dalam kurikulum (Hanya Admin).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({
+      imported: t.Integer({ default: 0 }),
+      skipped: t.Integer({ default: 0 }),
+      errors: t.Array(
+        t.Object({
+          baris: t.Integer(),
+          pesan: t.String(),
+        }),
+      ),
+    }),
+  },
+};
+
 export const removeMataKuliahSchema = {
   detail: {
     tags: ['Kurikulum'],

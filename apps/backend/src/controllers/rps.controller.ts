@@ -2,6 +2,21 @@ import { RpsService } from '../services/rps.service';
 import { AuthContext } from '../utils/types';
 
 export class RpsController {
+  static async bulkGenerate({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const result = await RpsService.bulkGenerateRps(body.kurikulumId, body.semester, body.periodeId);
+    set.status = 201;
+    return {
+      message: `${result.created.length} RPS berhasil dibuat dari kurikulum semester ${body.semester}`,
+      ...result,
+    };
+  }
+
+
   static async getRps({ query, set }: AuthContext) {
     const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
     const periodeId = query?.periodeId;
@@ -114,6 +129,22 @@ export class RpsController {
         return { error: 'Data tidak ditemukan' };
       }
       return updated;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async copyRps({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    try {
+      const newRps = await RpsService.copyRps(body.sourceRpsId, body.targetPeriodeId, body.targetMataKuliahId);
+      set.status = 201;
+      return newRps;
     } catch (e: any) {
       set.status = 400;
       return { error: e.message };

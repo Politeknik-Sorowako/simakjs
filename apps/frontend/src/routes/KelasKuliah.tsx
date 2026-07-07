@@ -1,4 +1,5 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
+import { useNavigate } from '@solidjs/router';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -14,6 +15,7 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 
 export default function KelasKuliah() {
+  const navigate = useNavigate();
   const toast = useToast();
   const auth = useAuth();
   const workspace = useWorkspace();
@@ -207,6 +209,9 @@ export default function KelasKuliah() {
                     </div>
                   </td>
                   <td class="px-6 py-4 flex gap-2">
+                    <Button variant="primary" onClick={() => navigate(`/rps?mataKuliahId=${item.mataKuliahId}&periodeId=${item.periodeId}`)} class="!py-1 !px-2.5 text-xs">
+                      RPS
+                    </Button>
                     <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5 text-xs">
                       Edit
                     </Button>

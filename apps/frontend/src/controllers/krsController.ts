@@ -67,4 +67,26 @@ export const krsController = {
       body: JSON.stringify({ mahasiswaIds, periodeId }),
     });
   },
+
+  async getRencanaStudi(mahasiswaId: number): Promise<{
+    kurikulum: { id: number; kode: string; nama: string };
+    currentSemester: number;
+    totalSksLulus: number;
+    rencanaPerSemester: {
+      semester: number;
+      mataKuliah: { id: number; mataKuliahId: number; kode: string; nama: string; sks: number; isWajib: boolean; status: string; nilaiHuruf: string | null }[];
+      totalSks: number;
+      sksLulus: number;
+    }[];
+  }> {
+    return fetchApi(`/krs/rencana-studi?mahasiswaId=${mahasiswaId}`);
+  },
+
+  async validasiKrs(mahasiswaId: number, periodeId: string): Promise<{
+    isValid: boolean;
+    warnings: { type: string; mk: string; semester?: number }[];
+    summary: { totalSksDiRencana: string; totalSksDiKrs: string; mkWajibTerpenuhi: number; mkWajibTotal: number };
+  }> {
+    return fetchApi(`/krs/validasi?mahasiswaId=${mahasiswaId}&periodeId=${periodeId}`);
+  },
 };

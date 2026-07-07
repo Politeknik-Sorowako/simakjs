@@ -3,12 +3,15 @@ import { MataKuliahService } from '../services/mata-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class MataKuliahController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery & { programStudiId?: string }>) {
+  static async getAll({ query }: AuthContext<any, PaginationQuery & { kurikulumId?: string; semester?: string; sortBy?: string; sortOrder?: string }>) {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
-    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
-    return await MataKuliahService.getAll(page, limit, search, programStudiId);
+    const kurikulumId = query?.kurikulumId ? parseInt(query.kurikulumId) : undefined;
+    const semester = query?.semester !== undefined ? parseInt(query.semester) : undefined;
+    const sortBy = query?.sortBy || 'nama';
+    const sortOrder = (query?.sortOrder as 'asc' | 'desc') || 'asc';
+    return await MataKuliahService.getAll(page, limit, search, kurikulumId, semester, sortBy, sortOrder);
   }
 
   static async getById({ params, set }: AuthContext) {

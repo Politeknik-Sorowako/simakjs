@@ -6,7 +6,6 @@ export const mataKuliahBody = t.Object({
   sksTotal: t.Integer({ default: 3 }),
   sksTatapMuka: t.Optional(t.Integer({ default: 2 })),
   sksPraktek: t.Optional(t.Integer({ default: 1 })),
-  programStudiId: t.Optional(t.Integer({ default: 1 })),
   idPddikti: t.Optional(t.String()),
 });
 
@@ -17,40 +16,48 @@ export const updateMataKuliahBody = t.Partial(
     sksTotal: t.Integer(),
     sksTatapMuka: t.Integer(),
     sksPraktek: t.Integer(),
-    programStudiId: t.Integer(),
     idPddikti: t.String(),
   }),
 );
+
+const mataKuliahResponseFields = {
+  id: t.Integer({ default: 1 }),
+  kode: t.String({ default: 'MK001' }),
+  nama: t.String({ default: 'Pemrograman Web' }),
+  sksTotal: t.Integer({ default: 3 }),
+  sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
+  sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
+  sksPraktekLapangan: t.Optional(t.Union([t.Integer(), t.Null()])),
+  sksSimulasi: t.Optional(t.Union([t.Integer(), t.Null()])),
+  idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+  isSynced: t.Boolean({ default: false }),
+  lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+  createdAt: t.Any(),
+  updatedAt: t.Any(),
+};
 
 export const getMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Daftar Mata Kuliah',
     description:
-      'Mengambil semua data mata kuliah yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.',
+      'Mengambil semua data mata kuliah dengan filter kurikulum, semester, dan sorting.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
-    programStudiId: t.Optional(t.Numeric()),
+    kurikulumId: t.Optional(t.Numeric()),
+    semester: t.Optional(t.Numeric()),
+    sortBy: t.Optional(t.String({ default: 'nama' })),
+    sortOrder: t.Optional(t.String({ default: 'asc' })),
   }),
   response: {
     200: t.Object({
       data: t.Array(
         t.Object({
-          id: t.Integer({ default: 1 }),
-          kode: t.String({ default: 'MK001' }),
-          nama: t.String({ default: 'Pemrograman Web' }),
-          sksTotal: t.Integer({ default: 3 }),
-          sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
-          sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
-          programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
-          idPddikti: t.Union([t.String(), t.Null()], { default: null }),
-          isSynced: t.Boolean({ default: false }),
-          lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-          createdAt: t.Any(),
-          updatedAt: t.Any(),
+          ...mataKuliahResponseFields,
+          semester: t.Union([t.Integer(), t.Null()], { default: null }),
           programStudi: t.Union([
             t.Object({
               id: t.Integer(),
@@ -60,6 +67,15 @@ export const getMataKuliahSchema = {
             }),
             t.Null(),
           ]),
+          kurikulum: t.Optional(
+            t.Union([
+              t.Object({
+                kode: t.String(),
+                nama: t.String(),
+              }),
+              t.Null(),
+            ]),
+          ),
         }),
       ),
       meta: t.Object({
@@ -76,24 +92,11 @@ export const createMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Tambah Mata Kuliah Baru',
-    description: 'Menambahkan mata kuliah baru (Hanya dapat diakses Admin).',
+    description: 'Menambahkan mata kuliah baru secara global (Hanya dapat diakses Admin).',
   },
   body: mataKuliahBody,
   response: {
-    201: t.Object({
-      id: t.Integer({ default: 1 }),
-      kode: t.String({ default: 'MK001' }),
-      nama: t.String({ default: 'Pemrograman Web' }),
-      sksTotal: t.Integer({ default: 3 }),
-      sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
-      sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
-      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
-      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
-      isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
-    }),
+    201: t.Object(mataKuliahResponseFields),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
     }),
@@ -104,35 +107,13 @@ export const getMataKuliahByIdSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Detail Mata Kuliah',
-    description: 'Mengambil satu data mata kuliah berdasarkan ID beserta relasi program studi.',
+    description: 'Mengambil satu data mata kuliah berdasarkan ID.',
   },
   params: t.Object({
     id: t.Numeric(),
   }),
   response: {
-    200: t.Object({
-      id: t.Integer({ default: 1 }),
-      kode: t.String({ default: 'MK001' }),
-      nama: t.String({ default: 'Pemrograman Web' }),
-      sksTotal: t.Integer({ default: 3 }),
-      sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
-      sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
-      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
-      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
-      isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
-      programStudi: t.Union([
-        t.Object({
-          id: t.Integer(),
-          kode: t.String(),
-          nama: t.String(),
-          jenjang: t.String(),
-        }),
-        t.Null(),
-      ]),
-    }),
+    200: t.Object(mataKuliahResponseFields),
     404: t.Object({
       error: t.String({ default: 'Data tidak ditemukan' }),
     }),
@@ -150,20 +131,7 @@ export const updateMataKuliahSchema = {
   }),
   body: updateMataKuliahBody,
   response: {
-    200: t.Object({
-      id: t.Integer({ default: 1 }),
-      kode: t.String({ default: 'MK001' }),
-      nama: t.String({ default: 'Pemrograman Web' }),
-      sksTotal: t.Integer({ default: 3 }),
-      sksTatapMuka: t.Union([t.Integer(), t.Null()], { default: 2 }),
-      sksPraktek: t.Union([t.Integer(), t.Null()], { default: 1 }),
-      programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
-      idPddikti: t.Union([t.String(), t.Null()], { default: null }),
-      isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
-    }),
+    200: t.Object(mataKuliahResponseFields),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
     }),

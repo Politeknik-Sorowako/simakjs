@@ -2,13 +2,22 @@ import { KelasKuliahService } from '../services/kelas-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class KelasKuliahController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery & { programStudiId?: string; periodeId?: string }>) {
+  static async getAll({ query }: AuthContext<any, PaginationQuery & { periodeId?: string }>) {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
-    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
     const periodeId = query?.periodeId || undefined;
-    return await KelasKuliahService.getAll(page, limit, search, programStudiId, periodeId);
+    return await KelasKuliahService.getAll(page, limit, search, periodeId);
+  }
+
+  static async getByMk({ query, set }: AuthContext) {
+    const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
+    const periodeId = query?.periodeId;
+    if (!mkId || !periodeId) {
+      set.status = 400;
+      return { error: 'mataKuliahId dan periodeId harus dikirim' };
+    }
+    return await KelasKuliahService.getByMk(mkId, periodeId);
   }
 
   static async getById({ params, set }: AuthContext) {

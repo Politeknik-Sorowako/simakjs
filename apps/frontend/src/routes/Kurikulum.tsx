@@ -1,10 +1,12 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
+import { API_URL } from '../utils/api';
 import { Kurikulum as IKurikulum, kurikulumController } from '../controllers/kurikulumController';
+import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
 
@@ -14,19 +16,15 @@ export default function Kurikulum() {
   const [limit] = createSignal(10);
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
 
-  // Fetch Kurikulum Data
   const [kurikulums, { refetch }] = createResource(
     () => ({ search: search(), page: page(), limit: limit(), prodiId: prodiFilter() }),
     ({ search, page, limit, prodiId }) => kurikulumController.getAll(search, page, limit, prodiId),
   );
 
-  // Fetch Program Studi for Dropdown
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
-
-  // Fetch Periode Akademik for Dropdown
   const [periodes] = createResource(() => periodeAkademikController.getAll());
 
-  // Form State
+  // Form State for CRUD
   const [showModal, setShowModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
   const [kode, setKode] = createSignal('');
@@ -38,6 +36,147 @@ export default function Kurikulum() {
   const [jumlahSksPilihan, setJumlahSksPilihan] = createSignal(24);
   const [isAktif, setIsAktif] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
+
+  // State for Manage MK Modal
+  const [showManageModal, setShowManageModal] = createSignal(false);
+  const [manageKurikulumId, setManageKurikulumId] = createSignal<number | null>(null);
+  const [kurikulumDetail, { refetch: refetchDetail }] = createResource(
+    () => manageKurikulumId(),
+    (id) => (id ? kurikulumController.getById(id) : null),
+  );
+
+  // Form for adding MK to kurikulum
+  const [addMkMataKuliahId, setAddMkMataKuliahId] = createSignal<number>(0);
+  const [addMkSemester, setAddMkSemester] = createSignal(1);
+  const [addMkSks, setAddMkSks] = createSignal(3);
+  const [addMkTatapMuka, setAddMkTatapMuka] = createSignal(2);
+  const [addMkPraktek, setAddMkPraktek] = createSignal(1);
+  const [addMkIsWajib, setAddMkIsWajib] = createSignal(true);
+  const [addMkError, setAddMkError] = createSignal('');
+  // Copy from kurikulum state
+  const [sourceKurikulumId, setSourceKurikulumId] = createSignal<number>(0);
+  const [copyResult, setCopyResult] = createSignal<{ copied: number; skipped: number; sourceKode: string; sourceNama: string } | null>(null);
+  const [copyLoading, setCopyLoading] = createSignal(false);
+
+  const handleCopyFromKurikulum = async () => {
+    const targetId = manageKurikulumId();
+    if (!targetId || !sourceKurikulumId()) return;
+    if (!confirm(`Salin semua mata kuliah dari kurikulum sumber ke "${kurikulumDetail()?.nama}"? MK yang sudah ada akan dilewati.`)) return;
+    setCopyLoading(true);
+    setCopyResult(null);
+    try {
+      const result = await kurikulumController.copyFromKurikulum(targetId, sourceKurikulumId());
+      setCopyResult(result);
+      refetchDetail();
+    } catch (e: any) {
+      alert(e.message || 'Gagal menyalin');
+    } finally {
+      setCopyLoading(false);
+    }
+  };
+
+  // Duplicate state
+  const [showDuplicateModal, setShowDuplicateModal] = createSignal(false);
+  const [dupId, setDupId] = createSignal<number | null>(null);
+  const [dupKode, setDupKode] = createSignal('');
+  const [dupNama, setDupNama] = createSignal('');
+  const [dupError, setDupError] = createSignal('');
+
+  const openDuplicateModal = (item: IKurikulum) => {
+    setDupId(item.id);
+    setDupKode(`${item.kode}-DUP`);
+    setDupNama(`Duplikat ${item.nama}`);
+    setDupError('');
+    setShowDuplicateModal(true);
+  };
+
+  const handleDuplicate = async (e: Event) => {
+    e.preventDefault();
+    setDupError('');
+    if (!dupId()) return;
+    try {
+      await kurikulumController.duplicate(dupId()!, dupKode(), dupNama());
+      setShowDuplicateModal(false);
+      refetch();
+    } catch (e: any) {
+      setDupError(e.message || 'Gagal menduplikasi');
+    }
+  };
+
+  // Import CSV state
+  const [csvImportResult, setCsvImportResult] = createSignal<{ imported: number; skipped: number; errors: { baris: number; pesan: string }[] } | null>(null);
+  const [csvImportLoading, setCsvImportLoading] = createSignal(false);
+
+  const handleImportCsv = async (e: Event) => {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file || !manageKurikulumId()) return;
+    setCsvImportLoading(true);
+    setCsvImportResult(null);
+    try {
+      const result = await kurikulumController.importMkCsv(manageKurikulumId()!, file);
+      setCsvImportResult(result);
+      refetchDetail();
+    } catch (e: any) {
+      alert(e.message || 'Gagal impor CSV');
+    } finally {
+      setCsvImportLoading(false);
+      input.value = '';
+    }
+  };
+
+  const [allMatkuls] = createResource(
+    () => manageKurikulumId(),
+    () => mataKuliahController.getAll('', 1, 500),
+  );
+
+  const openManageModal = async (id: number) => {
+    setManageKurikulumId(id);
+    setAddMkMataKuliahId(0);
+    setAddMkSemester(1);
+    setAddMkSks(3);
+    setAddMkTatapMuka(2);
+    setAddMkPraktek(1);
+    setAddMkIsWajib(true);
+    setAddMkError('');
+    setShowManageModal(true);
+  };
+
+  const handleAddMk = async (e: Event) => {
+    e.preventDefault();
+    setAddMkError('');
+    const kurId = manageKurikulumId();
+    if (!kurId || !addMkMataKuliahId()) {
+      setAddMkError('Pilih mata kuliah');
+      return;
+    }
+    try {
+      await kurikulumController.addMataKuliah(kurId, {
+        mataKuliahId: addMkMataKuliahId(),
+        semester: addMkSemester(),
+        sksMataKuliah: addMkSks(),
+        sksTatapMuka: addMkTatapMuka(),
+        sksPraktek: addMkPraktek(),
+        isWajib: addMkIsWajib(),
+      });
+      setAddMkMataKuliahId(0);
+      refetchDetail();
+    } catch (e: any) {
+      setAddMkError(e.message || 'Gagal menambahkan mata kuliah');
+    }
+  };
+
+  const handleRemoveMk = async (mkId: number) => {
+    const kurId = manageKurikulumId();
+    if (!kurId) return;
+    if (!confirm('Hapus mata kuliah ini dari kurikulum?')) return;
+    try {
+      await kurikulumController.removeMataKuliah(kurId, mkId);
+      refetchDetail();
+    } catch (e: any) {
+      alert(e.message || 'Gagal menghapus');
+    }
+  };
 
   const openAddModal = () => {
     setEditId(null);
@@ -83,7 +222,6 @@ export default function Kurikulum() {
         jumlahSksPilihan: Number(jumlahSksPilihan()),
         isAktif: isAktif(),
       };
-
       if (editId()) {
         await kurikulumController.update(editId()!, payload);
       } else {
@@ -105,6 +243,19 @@ export default function Kurikulum() {
       alert(e.message || 'Gagal menghapus data');
     }
   };
+
+  // Group MK by semester (memoized)
+  const mkBySemester = createMemo(() => {
+    const mks = kurikulumDetail()?.kurikulumMataKuliah || [];
+    const groups: { [sem: number]: any[] } = {};
+    for (const mk of mks) {
+      if (!groups[mk.semester]) groups[mk.semester] = [];
+      groups[mk.semester].push(mk);
+    }
+    return Object.entries(groups)
+      .map(([sem, items]) => ({ semester: parseInt(sem), items }))
+      .sort((a, b) => a.semester - b.semester);
+  });
 
   return (
     <MainLayout>
@@ -144,19 +295,15 @@ export default function Kurikulum() {
         <Table headers={['Kode', 'Nama Kurikulum', 'Program Studi', 'Mulai Berlaku', 'SKS (L/W/P)', 'Status', 'Aksi']}>
           <Show when={kurikulums.loading}>
             <tr>
-              <td colspan="7" class="p-8 text-center text-brand-gray-500">
-                Memuat data...
-              </td>
+              <td colspan="7" class="p-8 text-center text-brand-gray-500">Memuat data...</td>
             </tr>
           </Show>
-          <Show when={!kurikulums.loading && kurikulums()?.data.length === 0}>
+           <Show when={!kurikulums.loading && (kurikulums()?.data?.length ?? 0) === 0}>
             <tr>
-              <td colspan="7" class="p-8 text-center text-brand-gray-500">
-                Belum ada data kurikulum.
-              </td>
+              <td colspan="7" class="p-8 text-center text-brand-gray-500">Belum ada data kurikulum.</td>
             </tr>
           </Show>
-          <For each={kurikulums()?.data}>
+          <For each={kurikulums()?.data ?? []}>
             {(item) => (
               <tr class="hover:bg-brand-gray-50 dark:hover:bg-brand-gray-800/50">
                 <td class="px-6 py-4 text-sm font-medium text-brand-gray-900 dark:text-white">{item.kode}</td>
@@ -174,8 +321,14 @@ export default function Kurikulum() {
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm space-x-2">
+                  <Button variant="primary" onClick={() => openManageModal(item.id)}>
+                    MK
+                  </Button>
                   <Button variant="secondary" onClick={() => openEditModal(item)}>
                     Edit
+                  </Button>
+                  <Button variant="secondary" onClick={() => openDuplicateModal(item)}>
+                    Duplikasi
                   </Button>
                   <Button variant="danger" onClick={() => handleDelete(item.id)}>
                     Hapus
@@ -186,7 +339,24 @@ export default function Kurikulum() {
           </For>
         </Table>
 
-        {/* Modal Form */}
+        {/* Pagination */}
+        <Show when={kurikulums() && kurikulums()!.meta.totalPages > 1}>
+          <div class="flex justify-between items-center mt-4">
+            <span class="text-xs text-brand-gray-500">
+              Menampilkan halaman {page()} dari {kurikulums()?.meta.totalPages} ({kurikulums()?.meta.total} total data)
+            </span>
+            <div class="flex gap-2">
+              <Button variant="secondary" disabled={page() === 1} onClick={() => setPage((p) => Math.max(p - 1, 1))} class="!py-1 !px-3">
+                Sebelumnya
+              </Button>
+              <Button variant="secondary" disabled={page() >= kurikulums()!.meta.totalPages} onClick={() => setPage((p) => Math.min(p + 1, kurikulums()!.meta.totalPages))} class="!py-1 !px-3">
+                Berikutnya
+              </Button>
+            </div>
+          </div>
+        </Show>
+
+        {/* Modal CRUD Kurikulum */}
         <Modal
           show={showModal()}
           onClose={() => setShowModal(false)}
@@ -227,48 +397,258 @@ export default function Kurikulum() {
             <div class="grid grid-cols-3 gap-4">
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">SKS Lulus</label>
-                <Input
-                  type="number"
-                  value={jumlahSksLulus()}
-                  onInput={(e) => setJumlahSksLulus(Number(e.currentTarget.value))}
-                  required
-                />
+                <Input type="number" value={jumlahSksLulus()} onInput={(e) => setJumlahSksLulus(Number(e.currentTarget.value))} required />
               </div>
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">SKS Wajib</label>
-                <Input
-                  type="number"
-                  value={jumlahSksWajib()}
-                  onInput={(e) => setJumlahSksWajib(Number(e.currentTarget.value))}
-                  required
-                />
+                <Input type="number" value={jumlahSksWajib()} onInput={(e) => setJumlahSksWajib(Number(e.currentTarget.value))} required />
               </div>
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">SKS Pilihan</label>
-                <Input
-                  type="number"
-                  value={jumlahSksPilihan()}
-                  onInput={(e) => setJumlahSksPilihan(Number(e.currentTarget.value))}
-                  required
-                />
+                <Input type="number" value={jumlahSksPilihan()} onInput={(e) => setJumlahSksPilihan(Number(e.currentTarget.value))} required />
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="isAktif"
-                checked={isAktif()}
-                onChange={(e) => setIsAktif(e.currentTarget.checked)}
-              />
-              <label for="isAktif" class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">
-                Aktifkan Kurikulum ini
-              </label>
+              <input type="checkbox" id="isAktif" checked={isAktif()} onChange={(e) => setIsAktif(e.currentTarget.checked)} />
+              <label for="isAktif" class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Aktifkan Kurikulum ini</label>
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>
-                Batal
-              </Button>
+              <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>Batal</Button>
               <Button type="submit">Simpan</Button>
+            </div>
+          </form>
+        </Modal>
+
+        {/* Modal Kelola MK dalam Kurikulum */}
+        <Modal
+          show={showManageModal()}
+          onClose={() => setShowManageModal(false)}
+          title={`MK: ${kurikulumDetail()?.nama || ''}`}
+          maxWidth="xl"
+        >
+          <Show when={kurikulumDetail()}>
+            <div class="flex flex-col gap-6">
+              {/* Info */}
+              <div class="p-3 bg-brand-gray-50 dark:bg-brand-gray-800 rounded-lg text-sm grid grid-cols-3 gap-3">
+                <div><span class="font-semibold">Kode:</span> {kurikulumDetail()?.kode}</div>
+                <div><span class="font-semibold">Prodi:</span> {kurikulumDetail()?.programStudi?.nama}</div>
+                <div><span class="font-semibold">Mulai:</span> {kurikulumDetail()?.semesterMulai}</div>
+              </div>
+
+              {/* Daftar MK per Semester */}
+              <div class="space-y-4">
+                <h3 class="text-sm font-bold text-brand-gray-700 dark:text-gray-300">Daftar Mata Kuliah</h3>
+                <For each={mkBySemester()}>
+                  {(group) => (
+                    <div class="border border-brand-gray-100 dark:border-brand-gray-800 rounded-lg">
+                      <div class="px-4 py-2 bg-brand-50 dark:bg-brand-900/30 font-semibold text-sm text-brand-700 dark:text-brand-400">
+                        Semester {group.semester}
+                      </div>
+                      <table class="w-full text-sm">
+                        <thead>
+                          <tr class="border-b border-brand-gray-100 dark:border-brand-gray-800">
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-brand-gray-500">Kode</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-brand-gray-500">Nama</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-brand-gray-500">SKS</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-brand-gray-500">Wajib</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-brand-gray-500">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <For each={group.items}>
+                            {(item) => (
+                              <tr class="border-b border-brand-gray-50 dark:border-brand-gray-800/50 hover:bg-brand-gray-50/50 dark:hover:bg-brand-gray-800/30">
+                                <td class="px-4 py-2 font-mono text-brand-gray-600">{item.mataKuliah?.kode}</td>
+                                <td class="px-4 py-2 text-brand-gray-800 dark:text-gray-200">{item.mataKuliah?.nama}</td>
+                                <td class="px-4 py-2 text-center text-brand-gray-700">{item.sksMataKuliah}</td>
+                                <td class="px-4 py-2 text-center">
+                                  <span class={`px-2 py-0.5 rounded-full text-xs font-semibold ${item.isWajib ? 'bg-green-50 text-green-700' : 'bg-brand-gray-100 text-brand-gray-600'}`}>
+                                    {item.isWajib ? 'Ya' : 'Tidak'}
+                                  </span>
+                                </td>
+                                <td class="px-4 py-2 text-center">
+                                  <button
+                                    onClick={() => handleRemoveMk(item.mataKuliahId)}
+                                    class="text-xs text-red-600 hover:text-red-800 font-semibold"
+                                  >
+                                    Hapus
+                                  </button>
+                                </td>
+                              </tr>
+                            )}
+                          </For>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </For>
+                <Show when={mkBySemester().length === 0}>
+                  <p class="text-center text-sm text-brand-gray-400 py-6">Belum ada mata kuliah dalam kurikulum ini.</p>
+                </Show>
+              </div>
+
+              {/* Import dari Kurikulum Lain */}
+              <div class="border-t border-brand-gray-100 dark:border-brand-gray-800 pt-4">
+                <details class="group">
+                  <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-brand-gray-700 dark:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    Impor dari Kurikulum Lain
+                  </summary>
+                  <div class="mt-3 flex flex-wrap items-end gap-3">
+                    <div class="flex-1 min-w-[200px]">
+                      <label class="text-xs font-semibold text-brand-gray-500 block mb-1">Kurikulum Sumber</label>
+                      <select
+                        class="w-full h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        value={sourceKurikulumId()}
+                        onChange={(e) => setSourceKurikulumId(Number(e.currentTarget.value))}
+                      >
+                        <option value={0}>Pilih Kurikulum Sumber</option>
+                        <For each={(kurikulums()?.data ?? []).filter((k) => k.id !== manageKurikulumId())}>
+                          {(k) => <option value={k.id}>{k.nama} ({k.kode})</option>}
+                        </For>
+                      </select>
+                    </div>
+                    <Button onClick={handleCopyFromKurikulum} disabled={!sourceKurikulumId() || copyLoading()}>
+                      {copyLoading() ? 'Menyalin...' : 'Impor'}
+                    </Button>
+                  </div>
+                  <Show when={copyResult()}>
+                    <div class="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs text-green-700 dark:text-green-400">
+                      ✅ {copyResult()?.copied} MK berhasil disalin dari {copyResult()?.sourceNama}
+                      <Show when={copyResult()?.skipped}> ({copyResult()?.skipped} dilewati karena sudah ada)</Show>
+                    </div>
+                  </Show>
+                </details>
+              </div>
+
+              {/* Import CSV */}
+              <div class="border-t border-brand-gray-100 dark:border-brand-gray-800 pt-4">
+                <details class="group">
+                  <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-brand-gray-700 dark:text-gray-300">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    Impor CSV Mata Kuliah
+                  </summary>
+                  <div class="mt-3 flex flex-wrap items-end gap-3">
+                    <div class="flex-1">
+                      <label class="text-xs font-semibold text-brand-gray-500 block mb-1">File CSV (kode_mata_kuliah, semester, sks, is_wajib)</label>
+                      <div class="flex items-center gap-3">
+                        <a
+                          href={`${API_URL}/kurikulum/template-import-mk`}
+                          download
+                          class="text-xs text-brand-600 hover:text-brand-800 font-semibold underline"
+                        >
+                          Download Template CSV
+                        </a>
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleImportCsv}
+                          class="w-full text-sm text-brand-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <Show when={csvImportLoading()}>
+                    <p class="mt-2 text-xs text-brand-gray-500">Memproses...</p>
+                  </Show>
+                  <Show when={csvImportResult()}>
+                    <div class="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs text-green-700 dark:text-green-400">
+                      ✅ {csvImportResult()?.imported} MK berhasil diimpor
+                      <Show when={csvImportResult()?.skipped}> ({csvImportResult()?.skipped} dilewati)</Show>
+                    </div>
+                    <Show when={csvImportResult()?.errors.length}>
+                      <div class="mt-1 space-y-0.5">
+                        <For each={csvImportResult()?.errors}>{(err) => (
+                          <p class="text-xs text-red-600">Baris {err.baris}: {err.pesan}</p>
+                        )}</For>
+                      </div>
+                    </Show>
+                  </Show>
+                </details>
+              </div>
+
+              {/* Form Tambah MK */}
+              <div class="border-t border-brand-gray-100 dark:border-brand-gray-800 pt-4">
+                <h4 class="text-sm font-bold text-brand-gray-700 dark:text-gray-300 mb-3">Tambah Mata Kuliah</h4>
+                <form onSubmit={handleAddMk} class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Show when={addMkError()}>
+                    <div class="col-span-full p-2 bg-red-50 text-red-700 rounded text-xs">{addMkError()}</div>
+                  </Show>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-brand-gray-500">Mata Kuliah</label>
+                    <select
+                      class="h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      value={addMkMataKuliahId()}
+                      onChange={(e) => {
+                        const id = Number(e.currentTarget.value);
+                        setAddMkMataKuliahId(id);
+                        const mk = allMatkuls()?.data.find((m) => m.id === id);
+                        if (mk) {
+                          setAddMkSks(mk.sksTotal);
+                          setAddMkTatapMuka(mk.sksTatapMuka || 0);
+                          setAddMkPraktek(mk.sksPraktek || 0);
+                        }
+                      }}
+                    >
+                      <option value={0}>Pilih MK</option>
+                      <For each={allMatkuls()?.data}>{(mk) => (
+                        <option value={mk.id}>{mk.kode} - {mk.nama}</option>
+                      )}</For>
+                    </select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-brand-gray-500">Semester</label>
+                    <select
+                      class="h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      value={addMkSemester()}
+                      onChange={(e) => setAddMkSemester(Number(e.currentTarget.value))}
+                    >
+                      <For each={[1,2,3,4,5,6,7,8]}>{(s) => <option value={s}>Semester {s}</option>}</For>
+                    </select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-brand-gray-500">SKS</label>
+                    <input
+                      type="number"
+                      class="h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      value={addMkSks()}
+                      onInput={(e) => setAddMkSks(Number(e.currentTarget.value))}
+                    />
+                  </div>
+                  <div class="flex items-center gap-2 pt-5">
+                    <input type="checkbox" id="addMkWajib" checked={addMkIsWajib()} onChange={(e) => setAddMkIsWajib(e.currentTarget.checked)} />
+                    <label for="addMkWajib" class="text-xs font-semibold text-brand-gray-600">Wajib</label>
+                    <Button type="submit" class="!py-1.5 !px-3 !text-xs ml-auto">Tambah</Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </Show>
+        </Modal>
+        {/* Modal Duplikasi */}
+        <Modal
+          show={showDuplicateModal()}
+          onClose={() => setShowDuplicateModal(false)}
+          title="Duplikasi Kurikulum"
+        >
+          <form onSubmit={handleDuplicate} class="flex flex-col gap-4">
+            <Show when={dupError()}>
+              <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{dupError()}</div>
+            </Show>
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Kode Baru</label>
+              <Input type="text" value={dupKode()} onInput={(e) => setDupKode(e.currentTarget.value)} required />
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Nama Baru</label>
+              <Input type="text" value={dupNama()} onInput={(e) => setDupNama(e.currentTarget.value)} required />
+            </div>
+            <p class="text-xs text-brand-gray-500">
+              Semua mata kuliah dari kurikulum sumber akan disalin ke kurikulum baru.
+            </p>
+            <div class="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" type="button" onClick={() => setShowDuplicateModal(false)}>Batal</Button>
+              <Button type="submit">Duplikasi</Button>
             </div>
           </form>
         </Modal>
