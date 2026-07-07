@@ -1,5 +1,5 @@
-import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
-import { dosen, kelasKuliah, krs, mahasiswa } from '../models/schema';
+import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { angkatanKurikulum, dosen, kelasKuliah, krs, kurikulumMataKuliah, mahasiswa, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateKrsDto {
@@ -263,5 +263,179 @@ export class KrsService {
       })
       .where(and(inArray(krs.mahasiswaId, mahasiswaIds), inArray(krs.kelasKuliahId, classIds)))
       .returning();
+  }
+
+  static async getRencanaStudi(mahasiswaId: number) {
+    const mhs = await db.query.mahasiswa.findFirst({
+      where: eq(mahasiswa.id, mahasiswaId),
+    });
+    if (!mhs) return null;
+
+    const binding = await db.query.angkatanKurikulum.findFirst({
+      where: and(
+        eq(angkatanKurikulum.programStudiId, mhs.programStudiId),
+        eq(angkatanKurikulum.angkatan, mhs.angkatan || ''),
+        eq(angkatanKurikulum.isActive, true),
+      ),
+    });
+    if (!binding) return null;
+
+    const kurikulumData = await db.query.kurikulum.findFirst({
+      where: eq(kurikulum.id, binding.kurikulumId),
+      with: {
+        kurikulumMataKuliah: {
+          with: {
+            mataKuliah: true,
+          },
+          orderBy: (kmk, { asc }) => [asc(kmk.semester)],
+        },
+      },
+    });
+    if (!kurikulumData) return null;
+
+    // Ambil semua KRS mahasiswa yang sudah ada (sudah approve + nilai)
+    const krsMahasiswa = await db
+      .select({
+        id: krs.id,
+        kelasKuliahId: krs.kelasKuliahId,
+        mataKuliahId: kelasKuliah.mataKuliahId,
+        nilaiAngka: krs.nilaiAngka,
+        nilaiHuruf: krs.nilaiHuruf,
+        isApproved: krs.isApproved,
+        periodeId: kelasKuliah.periodeId,
+      })
+      .from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(eq(krs.mahasiswaId, mahasiswaId));
+
+    const mkMap = new Map<number, { nilaiHuruf: string | null; isApproved: boolean; periodeId: string }[]>();
+    for (const k of krsMahasiswa) {
+      const arr = mkMap.get(k.mataKuliahId) || [];
+      arr.push({ nilaiHuruf: k.nilaiHuruf, isApproved: k.isApproved, periodeId: k.periodeId });
+      mkMap.set(k.mataKuliahId, arr);
+    }
+
+    const rencanaPerSemester = kurikulumData.kurikulumMataKuliah.reduce((acc, kmk) => {
+      const semester = kmk.semester;
+      if (!acc[semester]) acc[semester] = [];
+      const krsData = mkMap.get(kmk.mataKuliahId) || [];
+      const lulus = krsData.some((k) => k.nilaiHuruf && k.nilaiHuruf !== 'E' && k.nilaiHuruf !== '');
+      const diambil = krsData.some((k) => k.isApproved);
+      acc[semester].push({
+        id: kmk.id,
+        mataKuliahId: kmk.mataKuliahId,
+        kode: kmk.mataKuliah?.kode || '',
+        nama: kmk.mataKuliah?.nama || '',
+        sks: kmk.sksMataKuliah,
+        isWajib: kmk.isWajib,
+        status: lulus ? 'lulus' : diambil ? 'diambil' : 'tersedia',
+        nilaiHuruf: lulus ? krsData.find((k) => k.nilaiHuruf)?.nilaiHuruf || null : null,
+      });
+      return acc;
+    }, {} as Record<number, any[]>);
+
+    const totalSksLulus = Object.values(rencanaPerSemester)
+      .flat()
+      .filter((mk: any) => mk.status === 'lulus')
+      .reduce((sum: number, mk: any) => sum + mk.sks, 0);
+
+    // Tentukan current semester
+    const sksPerSemester = 24; // asumsi maks SKS per semester
+    const currentSemester = Math.min(Math.floor(totalSksLulus / sksPerSemester) + 1, Object.keys(rencanaPerSemester).length);
+
+    return {
+      kurikulum: {
+        id: kurikulumData.id,
+        kode: kurikulumData.kode,
+        nama: kurikulumData.nama,
+      },
+      currentSemester,
+      totalSksLulus,
+      rencanaPerSemester: Object.entries(rencanaPerSemester).map(([sem, mk]) => ({
+        semester: parseInt(sem),
+        mataKuliah: mk,
+        totalSks: mk.reduce((sum: number, m: any) => sum + m.sks, 0),
+        sksLulus: mk.filter((m: any) => m.status === 'lulus').reduce((sum: number, m: any) => sum + m.sks, 0),
+      })),
+    };
+  }
+
+  static async validasiKrs(mahasiswaId: number, periodeId: string) {
+    const rencana = await this.getRencanaStudi(mahasiswaId);
+    if (!rencana) {
+      return null;
+    }
+
+    // Ambil KRS mahasiswa di periode ini dengan SKS dari mata kuliah
+    const krsMahasiswa = await db
+      .select({
+        id: krs.id,
+        kelasKuliahId: krs.kelasKuliahId,
+        mataKuliahId: kelasKuliah.mataKuliahId,
+        sksTotal: mataKuliah.sksTotal,
+        isApproved: krs.isApproved,
+      })
+      .from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(kelasKuliah.periodeId, periodeId)));
+
+    const mkDiKrs = krsMahasiswa.map((k) => k.mataKuliahId);
+    const mkRencanaSemesterIni = rencana.rencanaPerSemester.find((s) => s.semester === rencana.currentSemester);
+
+    const warnings: { type: string; mk: string; semester?: number }[] = [];
+
+    // MK wajib di rencana semester ini tapi tidak di KRS
+    if (mkRencanaSemesterIni) {
+      for (const mk of mkRencanaSemesterIni.mataKuliah) {
+        if (mk.isWajib && mk.status === 'tersedia' && !mkDiKrs.includes(mk.mataKuliahId)) {
+          warnings.push({ type: 'missing_required', mk: mk.nama, semester: rencana.currentSemester });
+        }
+      }
+    }
+
+    // MK di KRS tapi di luar rencana semester saat ini
+    for (const mkId of mkDiKrs) {
+      let foundInRencana = false;
+      let foundSemester = 0;
+      for (const sem of rencana.rencanaPerSemester) {
+        const mk = sem.mataKuliah.find((m: any) => m.mataKuliahId === mkId);
+        if (mk) {
+          foundInRencana = true;
+          foundSemester = sem.semester;
+          break;
+        }
+      }
+      if (foundInRencana && foundSemester !== rencana.currentSemester) {
+        const mkData = await db.query.mataKuliah.findFirst({ where: eq(mataKuliah.id, mkId) });
+        if (mkData) {
+          warnings.push({ type: 'outside_plan', mk: mkData.nama, semester: foundSemester });
+        }
+      }
+      if (!foundInRencana) {
+        const mkData = await db.query.mataKuliah.findFirst({ where: eq(mataKuliah.id, mkId) });
+        if (mkData) {
+          warnings.push({ type: 'not_in_curriculum', mk: mkData.nama });
+        }
+      }
+    }
+
+    const totalSksDiKrs = krsMahasiswa.reduce((sum, k) => sum + (k.sksTotal || 0), 0);
+    const totalSksDiRencana = mkRencanaSemesterIni?.totalSks || 0;
+    const mkWajibTerpenuhi = rencana.rencanaPerSemester
+      .flatMap((s) => s.mataKuliah)
+      .filter((m: any) => m.isWajib && (m.status === 'diambil' || m.status === 'lulus')).length;
+    const mkWajibTotal = rencana.rencanaPerSemester.flatMap((s) => s.mataKuliah).filter((m: any) => m.isWajib).length;
+
+    return {
+      isValid: warnings.length === 0,
+      warnings,
+      summary: {
+        totalSksDiRencana: totalSksDiRencana.toString(),
+        totalSksDiKrs: totalSksDiKrs.toString(),
+        mkWajibTerpenuhi,
+        mkWajibTotal,
+      },
+    };
   }
 }

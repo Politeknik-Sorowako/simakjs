@@ -128,6 +128,63 @@ export const updateRencanaEvaluasiSchema = {
   body: t.Partial(rencanaEvaluasiBody),
 };
 
+export const bulkGenerateRpsSchema = {
+  detail: {
+    tags: ['RPS'],
+    summary: 'Bulk Generate RPS dari Kurikulum',
+    description: 'Membuat RPS kosong untuk semua mata kuliah di semester tertentu dari suatu kurikulum.',
+  },
+  body: t.Object({
+    kurikulumId: t.Integer({ default: 1 }),
+    semester: t.Integer({ default: 1 }),
+    periodeId: t.String({ default: '20251' }),
+  }),
+  response: {
+    201: t.Object({
+      message: t.String({ default: 'RPS berhasil dibuat' }),
+      created: t.Array(
+        t.Object({
+          id: t.Integer(),
+          mataKuliahId: t.Integer(),
+          nama: t.String(),
+        }),
+      ),
+      skipped: t.Array(
+        t.Object({
+          mataKuliahId: t.Integer(),
+          nama: t.String(),
+          reason: t.String(),
+        }),
+      ),
+    }),
+  },
+};
+
+export const copyRpsSchema = {
+  detail: {
+    tags: ['RPS'],
+    summary: 'Copy RPS dari Periode Lain',
+    description: 'Menyalin RPS beserta topik dari periode sebelumnya ke periode baru (Akses Admin atau Dosen).',
+  },
+  body: t.Object({
+    sourceRpsId: t.Integer({ default: 1 }),
+    targetPeriodeId: t.String({ default: '20251' }),
+    targetMataKuliahId: t.Integer({ default: 1 }),
+  }),
+  response: {
+    201: t.Object({
+      id: t.Integer(),
+      mataKuliahId: t.Integer(),
+      periodeId: t.String(),
+      deskripsi: t.Union([t.String(), t.Null()]),
+      cplProdi: t.Union([t.String(), t.Null()]),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'RPS sudah ada untuk mata kuliah dan periode target' }),
+    }),
+  },
+};
+
 export const deleteRencanaEvaluasiSchema = {
   detail: {
     tags: ['Rencana Evaluasi'],

@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
+import { and, count, eq, ilike, or } from 'drizzle-orm';
 import { kelasKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -10,7 +10,7 @@ export interface CreateKelasDto {
 }
 
 export class KelasKuliahService {
-  static async getAll(page = 1, limit = 10, search = '', programStudiId?: number, periodeId?: string) {
+  static async getAll(page = 1, limit = 10, search = '', periodeId?: string) {
     const offset = (page - 1) * limit;
     let conditions = [];
 
@@ -19,20 +19,6 @@ export class KelasKuliahService {
     }
     if (periodeId) {
       conditions.push(eq(kelasKuliah.periodeId, periodeId));
-    }
-    if (programStudiId !== undefined) {
-      const courses = await db
-        .select({ id: mataKuliah.id })
-        .from(mataKuliah)
-        .where(eq(mataKuliah.programStudiId, programStudiId));
-      const courseIds = courses.map((c) => c.id);
-      if (courseIds.length === 0) {
-        return {
-          data: [],
-          meta: { total: 0, page, limit, totalPages: 0 },
-        };
-      }
-      conditions.push(inArray(kelasKuliah.mataKuliahId, courseIds));
     }
 
     let whereClause = undefined;
@@ -96,6 +82,19 @@ export class KelasKuliahService {
   static async update(id: number, data: Partial<CreateKelasDto>) {
     const [updatedKelas] = await db.update(kelasKuliah).set(data).where(eq(kelasKuliah.id, id)).returning();
     return updatedKelas || null;
+  }
+
+  static async getByMk(mataKuliahId: number, periodeId: string) {
+    return await db.query.kelasKuliah.findMany({
+      where: and(eq(kelasKuliah.mataKuliahId, mataKuliahId), eq(kelasKuliah.periodeId, periodeId)),
+      with: {
+        dosenPengajarKelas: {
+          with: {
+            dosen: true,
+          },
+        },
+      },
+    });
   }
 
   static async delete(id: number) {

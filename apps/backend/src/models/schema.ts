@@ -124,7 +124,6 @@ export const mataKuliah = pgTable('mata_kuliah', {
   sksPraktek: integer('sks_praktek'),
   sksPraktekLapangan: integer('sks_praktek_lapangan').default(0),
   sksSimulasi: integer('sks_simulasi').default(0),
-  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
   lastSyncAt: timestamp('last_sync_at'),
@@ -232,7 +231,7 @@ export const krs = pgTable(
 export const programStudiRelations = relations(programStudi, ({ many }) => ({
   mahasiswa: many(mahasiswa),
   dosen: many(dosen),
-  mataKuliah: many(mataKuliah),
+  angkatanKurikulum: many(angkatanKurikulum),
 }));
 
 export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
@@ -269,11 +268,7 @@ export const periodeAkademikRelations = relations(periodeAkademik, ({ many }) =>
   kelasKuliah: many(kelasKuliah),
 }));
 
-export const mataKuliahRelations = relations(mataKuliah, ({ one, many }) => ({
-  programStudi: one(programStudi, {
-    fields: [mataKuliah.programStudiId],
-    references: [programStudi.id],
-  }),
+export const mataKuliahRelations = relations(mataKuliah, ({ many }) => ({
   kelasKuliah: many(kelasKuliah),
   cpmk: many(cpmk),
 }));
@@ -654,6 +649,7 @@ export const kurikulum = pgTable('kurikulum', {
   jumlahSksWajib: integer('jumlah_sks_wajib').notNull(),
   jumlahSksPilihan: integer('jumlah_sks_pilihan').notNull(),
   isAktif: boolean('is_aktif').default(false).notNull(),
+  isLocked: boolean('is_locked').default(false).notNull(),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
   lastSyncAt: timestamp('last_sync_at'),
@@ -681,6 +677,29 @@ export const kurikulumMataKuliah = pgTable('kurikulum_mata_kuliah', {
   isWajib: boolean('is_wajib').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
+
+export const angkatanKurikulum = pgTable(
+  'angkatan_kurikulum',
+  {
+    id: serial('id').primaryKey(),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'cascade' }),
+    angkatan: varchar('angkatan', { length: 4 }).notNull(),
+    kurikulumId: integer('kurikulum_id')
+      .notNull()
+      .references(() => kurikulum.id, { onDelete: 'restrict' }),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique('angkatan_kurikulum_prodi_angkatan_unique').on(t.programStudiId, t.angkatan),
+  }),
+);
 
 export const rps = pgTable('rps', {
   id: serial('id').primaryKey(),
@@ -740,6 +759,7 @@ export const kurikulumRelations = relations(kurikulum, ({ one, many }) => ({
     references: [periodeAkademik.id],
   }),
   kurikulumMataKuliah: many(kurikulumMataKuliah),
+  angkatanKurikulum: many(angkatanKurikulum),
 }));
 
 export const kurikulumMataKuliahRelations = relations(kurikulumMataKuliah, ({ one }) => ({
@@ -750,6 +770,17 @@ export const kurikulumMataKuliahRelations = relations(kurikulumMataKuliah, ({ on
   mataKuliah: one(mataKuliah, {
     fields: [kurikulumMataKuliah.mataKuliahId],
     references: [mataKuliah.id],
+  }),
+}));
+
+export const angkatanKurikulumRelations = relations(angkatanKurikulum, ({ one }) => ({
+  programStudi: one(programStudi, {
+    fields: [angkatanKurikulum.programStudiId],
+    references: [programStudi.id],
+  }),
+  kurikulum: one(kurikulum, {
+    fields: [angkatanKurikulum.kurikulumId],
+    references: [kurikulum.id],
   }),
 }));
 

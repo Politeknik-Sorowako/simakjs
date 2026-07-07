@@ -107,6 +107,39 @@ export default function Krs() {
     },
   );
 
+  // Rencana Studi & Validasi
+  const [rencanaStudi, { refetch: refetchRencana }] = createResource(
+    () => mahasiswaProfile(),
+    async (profile) => {
+      if (!profile) return null;
+      try {
+        return await krsController.getRencanaStudi(profile.id);
+      } catch {
+        return null;
+      }
+    },
+  );
+  const [validasiResult, setValidasiResult] = createSignal<{
+    isValid: boolean;
+    warnings: { type: string; mk: string; semester?: number }[];
+    summary: { totalSksDiRencana: string; totalSksDiKrs: string; mkWajibTerpenuhi: number; mkWajibTotal: number };
+  } | null>(null);
+  const [validasiLoading, setValidasiLoading] = createSignal(false);
+
+  const handleValidasi = async () => {
+    if (!mahasiswaProfile()) return;
+    setValidasiLoading(true);
+    setValidasiResult(null);
+    try {
+      const result = await krsController.validasiKrs(mahasiswaProfile()!.id, selectedPeriode());
+      setValidasiResult(result);
+    } catch (e: any) {
+      toast.showToast(e.message || 'Gagal validasi KRS', 'error');
+    } finally {
+      setValidasiLoading(false);
+    }
+  };
+
   // Fetch All Kelas & Mahasiswa for Forms
   const [kelasOptions] = createResource(() => kelasKuliahController.getAll(undefined, 1, 100));
   const [mahasiswaOptions] = createResource(() => {
@@ -301,6 +334,86 @@ export default function Krs() {
             <Button variant="primary" onClick={handleApproveAll} class="!py-1.5 !px-4 text-xs">
               Setujui Semua KRS
             </Button>
+          </div>
+        </Show>
+
+        {/* Rencana Studi Panel - Mahasiswa Only */}
+        <Show when={role() === 'mahasiswa' && rencanaStudi()}>
+          <div class="bg-white dark:bg-brand-gray-900 p-4 rounded-xl shadow-sm border border-brand-gray-100 dark:border-brand-gray-800 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <h3 class="text-sm font-bold text-brand-gray-800 dark:text-white">
+                📚 Rencana Studi — {rencanaStudi()?.kurikulum.nama}
+              </h3>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-brand-gray-500">Semester {rencanaStudi()?.currentSemester}</span>
+                <span class="text-xs font-semibold text-brand-600">SKS Lulus: {rencanaStudi()?.totalSksLulus}</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <For each={rencanaStudi()?.rencanaPerSemester}>
+                {(sem) => (
+                  <div class="border border-brand-gray-100 dark:border-brand-gray-800 rounded-lg p-3">
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-xs font-bold text-brand-gray-600 dark:text-gray-400 uppercase">
+                        Semester {sem.semester}
+                      </span>
+                      <span class="text-xs text-brand-gray-500">
+                        {sem.sksLulus}/{sem.totalSks} SKS
+                      </span>
+                    </div>
+                    <div class="space-y-1">
+                      <For each={sem.mataKuliah}>
+                        {(mk) => (
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5 text-xs">
+                              <Show when={mk.status === 'lulus'}>
+                                <span class="text-green-600">✓</span>
+                              </Show>
+                              <Show when={mk.status === 'diambil'}>
+                                <span class="text-yellow-600">◐</span>
+                              </Show>
+                              <Show when={mk.status === 'tersedia'}>
+                                <span class="text-brand-gray-400">○</span>
+                              </Show>
+                              <span class={`${mk.status === 'lulus' ? 'text-green-700 dark:text-green-400' : mk.status === 'diambil' ? 'text-yellow-700 dark:text-yellow-400' : 'text-brand-gray-600 dark:text-gray-400'}`}>
+                                {mk.nama} ({mk.sks} SKS)
+                              </span>
+                            </div>
+                            <Show when={mk.nilaiHuruf}>
+                              <span class="text-xs font-bold text-brand-600 ml-1">{mk.nilaiHuruf}</span>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                )}
+              </For>
+            </div>
+
+            {/* Validasi button & result */}
+            <div class="flex justify-between items-center pt-2 border-t border-brand-gray-100 dark:border-brand-gray-800">
+              <Button onClick={handleValidasi} disabled={validasiLoading()}>
+                {validasiLoading() ? 'Memvalidasi...' : '🔍 Validasi KRS'}
+              </Button>
+              <Show when={validasiResult()}>
+                <div class="text-xs space-y-1">
+                  <Show when={validasiResult()?.isValid}>
+                    <p class="text-green-600 font-semibold">✅ KRS sesuai dengan rencana kurikulum</p>
+                  </Show>
+                  <Show when={!validasiResult()?.isValid}>
+                    <p class="text-red-600 font-semibold">⚠️ Terdapat {validasiResult()?.warnings.length} peringatan</p>
+                  </Show>
+                  <For each={validasiResult()?.warnings}>
+                    {(w) => (
+                      <p class={w.type === 'missing_required' ? 'text-orange-600' : 'text-yellow-600'}>
+                        • {w.type === 'missing_required' ? 'MK wajib belum diambil' : w.type === 'outside_plan' ? 'MK di luar rencana semester' : 'MK tidak ada di kurikulum'}: {w.mk}
+                      </p>
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </div>
           </div>
         </Show>
 

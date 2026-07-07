@@ -212,6 +212,18 @@ export const updateKelasSchema = {
   },
 };
 
+export const getKelasByMkSchema = {
+  detail: {
+    tags: ['Kelas Kuliah'],
+    summary: 'Daftar Kelas per Mata Kuliah',
+    description: 'Mengambil daftar kelas kuliah berdasarkan mata kuliah dan periode akademik.',
+  },
+  query: t.Object({
+    mataKuliahId: t.Numeric(),
+    periodeId: t.String(),
+  }),
+};
+
 export const deleteKelasSchema = {
   detail: {
     tags: ['Kelas Kuliah'],

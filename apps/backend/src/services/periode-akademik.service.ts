@@ -1,4 +1,4 @@
-import { count, eq, ilike, or } from 'drizzle-orm';
+import { count, eq, ilike, ne, or } from 'drizzle-orm';
 import { periodeAkademik } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -43,11 +43,19 @@ export class PeriodeAkademikService {
   }
 
   static async create(data: CreatePeriodeDto) {
+    // If creating as active, deactivate all others first
+    if (data.aktif === true) {
+      await db.update(periodeAkademik).set({ aktif: false });
+    }
     const [newPeriode] = await db.insert(periodeAkademik).values(data).returning();
     return newPeriode;
   }
 
   static async update(id: string, data: Partial<Omit<CreatePeriodeDto, 'id'>>) {
+    // If setting this period as active, deactivate all others first
+    if (data.aktif === true) {
+      await db.update(periodeAkademik).set({ aktif: false }).where(ne(periodeAkademik.id, id));
+    }
     const [updatedPeriode] = await db.update(periodeAkademik).set(data).where(eq(periodeAkademik.id, id)).returning();
     return updatedPeriode || null;
   }

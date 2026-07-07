@@ -245,19 +245,9 @@ export class YudisiumService {
       throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
     }
 
-    // Get programStudiId of this class to determine the conversion rules
-    const [kelasInfo] = await db
-      .select({ programStudiId: mataKuliah.programStudiId })
-      .from(kelasKuliah)
-      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-      .where(eq(kelasKuliah.id, kelasKuliahId))
-      .limit(1);
-    const prodiId = kelasInfo?.programStudiId || null;
-
-    // Load conversion rules
+    // Load global conversion rules (mata kuliah global, tidak terikat prodi)
     const allRules = await db.select().from(konversiNilai);
-    const prodiRules = allRules.filter((r) => r.programStudiId === prodiId);
-    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter((r) => r.programStudiId === null);
+    const activeRules = allRules.filter((r) => r.programStudiId === null);
 
     const getGradeFromRules = (score: number) => {
       for (const rule of activeRules) {
@@ -368,17 +358,8 @@ export class YudisiumService {
       totalWeight += c.bobot;
     }
 
-    const [kelasInfo] = await db
-      .select({ programStudiId: mataKuliah.programStudiId })
-      .from(kelasKuliah)
-      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-      .where(eq(kelasKuliah.id, kelasKuliahId))
-      .limit(1);
-    const prodiId = kelasInfo?.programStudiId || null;
-
     const allRules = await db.select().from(konversiNilai);
-    const prodiRules = allRules.filter((r) => r.programStudiId === prodiId);
-    const activeRules = prodiRules.length > 0 ? prodiRules : allRules.filter((r) => r.programStudiId === null);
+    const activeRules = allRules.filter((r) => r.programStudiId === null);
 
     const getGradeFromRules = (score: number) => {
       for (const rule of activeRules) {
