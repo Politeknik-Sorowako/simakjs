@@ -93,4 +93,26 @@ export const rpsController = {
       method: 'DELETE',
     });
   },
+
+  async getRpsBySource(sourceRpsId: number): Promise<Rps> {
+    return fetchApi<Rps>(`/rps/${sourceRpsId}`);
+  },
+
+  async copyRps(sourceRpsId: number, targetPeriodeId: string, targetMataKuliahId: number): Promise<Rps> {
+    return fetchApi<Rps>('/rps/copy', {
+      method: 'POST',
+      body: JSON.stringify({ sourceRpsId, targetPeriodeId, targetMataKuliahId }),
+    });
+  },
+
+  async bulkGenerate(kurikulumId: number, semester: number, periodeId: string): Promise<{
+    message: string;
+    created: { id: number; mataKuliahId: number; nama: string }[];
+    skipped: { mataKuliahId: number; nama: string; reason: string }[];
+  }> {
+    return fetchApi('/rps/bulk-generate', {
+      method: 'POST',
+      body: JSON.stringify({ kurikulumId, semester, periodeId }),
+    });
+  },
 };

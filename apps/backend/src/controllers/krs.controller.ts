@@ -161,6 +161,35 @@ export class KrsController {
     }
   }
 
+  static async getRencanaStudi({ query, set }: AuthContext) {
+    const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
+    if (!mahasiswaId) {
+      set.status = 400;
+      return { error: 'mahasiswaId harus dikirim' };
+    }
+    const data = await KrsService.getRencanaStudi(mahasiswaId);
+    if (!data) {
+      set.status = 404;
+      return { error: 'Tidak ada rencana studi untuk mahasiswa ini (pastikan angkatan sudah di-binding ke kurikulum)' };
+    }
+    return data;
+  }
+
+  static async validasiKrs({ query, set }: AuthContext) {
+    const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
+    const periodeId = query?.periodeId;
+    if (!mahasiswaId || !periodeId) {
+      set.status = 400;
+      return { error: 'mahasiswaId dan periodeId harus dikirim' };
+    }
+    const data = await KrsService.validasiKrs(mahasiswaId, periodeId);
+    if (!data) {
+      set.status = 404;
+      return { error: 'Data tidak ditemukan' };
+    }
+    return data;
+  }
+
   static async importCsv({ request, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {

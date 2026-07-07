@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm';
-import { rencanaEvaluasi, rps, rpsTopik } from '../models/schema';
+import { and, eq, inArray } from 'drizzle-orm';
+import { kurikulumMataKuliah, mataKuliah, rencanaEvaluasi, rps, rpsTopik } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateRpsDto {
@@ -131,5 +131,104 @@ export class RpsService {
   static async deleteRencanaEvaluasi(id: number) {
     const [deletedEval] = await db.delete(rencanaEvaluasi).where(eq(rencanaEvaluasi.id, id)).returning();
     return deletedEval || null;
+  }
+
+  static async bulkGenerateRps(kurikulumId: number, semester: number, periodeId: string) {
+    // Ambil semua MK dalam kurikulum di semester tersebut
+    const mkList = await db
+      .select({
+        id: kurikulumMataKuliah.id,
+        mataKuliahId: kurikulumMataKuliah.mataKuliahId,
+        kode: mataKuliah.kode,
+        nama: mataKuliah.nama,
+        sksTotal: mataKuliah.sksTotal,
+      })
+      .from(kurikulumMataKuliah)
+      .innerJoin(mataKuliah, eq(kurikulumMataKuliah.mataKuliahId, mataKuliah.id))
+      .where(and(eq(kurikulumMataKuliah.kurikulumId, kurikulumId), eq(kurikulumMataKuliah.semester, semester)));
+
+    const created: { id: number; mataKuliahId: number; nama: string }[] = [];
+    const skipped: { mataKuliahId: number; nama: string; reason: string }[] = [];
+
+    for (const mk of mkList) {
+      // Cek apakah RPS sudah ada
+      const existingRps = await db.query.rps.findFirst({
+        where: and(eq(rps.mataKuliahId, mk.mataKuliahId), eq(rps.periodeId, periodeId)),
+      });
+
+      if (existingRps) {
+        skipped.push({ mataKuliahId: mk.mataKuliahId, nama: mk.nama, reason: 'RPS sudah ada' });
+        continue;
+      }
+
+      const [newRps] = await db
+        .insert(rps)
+        .values({
+          mataKuliahId: mk.mataKuliahId,
+          periodeId,
+        })
+        .returning();
+
+      created.push({ id: newRps.id, mataKuliahId: newRps.mataKuliahId, nama: mk.nama });
+    }
+
+    return {
+      created,
+      skipped,
+    };
+  }
+
+  static async copyRps(sourceRpsId: number, targetPeriodeId: string, targetMataKuliahId: number) {
+    return await db.transaction(async (tx) => {
+      const source = await tx.query.rps.findFirst({
+        where: eq(rps.id, sourceRpsId),
+        with: { topik: true },
+      });
+      if (!source) throw new Error('RPS sumber tidak ditemukan');
+
+      const existing = await tx.query.rps.findFirst({
+        where: and(eq(rps.mataKuliahId, targetMataKuliahId), eq(rps.periodeId, targetPeriodeId)),
+      });
+      if (existing) throw new Error('RPS sudah ada untuk mata kuliah dan periode target');
+
+      const [newRps] = await tx
+        .insert(rps)
+        .values({ mataKuliahId: targetMataKuliahId, periodeId: targetPeriodeId, deskripsi: source.deskripsi, cplProdi: source.cplProdi })
+        .returning();
+
+      if (source.topik.length > 0) {
+        await tx.insert(rpsTopik).values(
+          source.topik.map((t) => ({
+            rpsId: newRps.id,
+            pertemuanKe: t.pertemuanKe,
+            topik: t.topik,
+            subTopik: t.subTopik,
+            metode: t.metode,
+            cpmkId: t.cpmkId,
+          })),
+        );
+      }
+
+      const sourceEvals = await tx.query.rencanaEvaluasi.findMany({
+        where: eq(rencanaEvaluasi.mataKuliahId, source.mataKuliahId),
+      });
+      const targetEvals = await tx.query.rencanaEvaluasi.findMany({
+        where: eq(rencanaEvaluasi.mataKuliahId, targetMataKuliahId),
+      });
+      const targetEvalNames = new Set(targetEvals.map((e) => e.namaEvaluasi));
+      const newEvals = sourceEvals.filter((e) => !targetEvalNames.has(e.namaEvaluasi));
+      if (newEvals.length > 0) {
+        await tx.insert(rencanaEvaluasi).values(
+          newEvals.map((e) => ({
+            mataKuliahId: targetMataKuliahId,
+            namaEvaluasi: e.namaEvaluasi,
+            bobotEvaluasi: e.bobotEvaluasi,
+            deskripsi: e.deskripsi,
+          })),
+        );
+      }
+
+      return newRps;
+    });
   }
 }

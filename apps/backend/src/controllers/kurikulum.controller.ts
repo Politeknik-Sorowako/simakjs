@@ -73,6 +73,70 @@ export class KurikulumController {
     return newKmk;
   }
 
+  static async copyFromKurikulum({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const result = await KurikulumService.copyFromKurikulum(parseInt(params.id), body.sourceKurikulumId);
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async downloadImportMkTemplate({ set }: AuthContext) {
+    const csv = `kode_mata_kuliah,semester,sks,is_wajib
+TI-001,1,3,true
+TI-002,1,2,true
+TI-003,2,3,false
+MK-001,3,2,true`;
+    set.headers['Content-Type'] = 'text/csv';
+    set.headers['Content-Disposition'] = 'attachment; filename="template-impor-mk-kurikulum.csv"';
+    return csv;
+  }
+
+  static async importMkCsv({ params, request, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      if (!file) {
+        set.status = 400;
+        return { error: 'File CSV tidak ditemukan.' };
+      }
+      const text = await file.text();
+      const result = await KurikulumService.importMkCsv(parseInt(params.id), text);
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async duplicate({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const newKur = await KurikulumService.duplicate(parseInt(params.id), body.kodeBaru, body.namaBaru);
+      set.status = 201;
+      return newKur;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async removeMataKuliah({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {

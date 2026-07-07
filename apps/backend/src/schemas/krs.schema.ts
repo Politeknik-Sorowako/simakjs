@@ -255,6 +255,84 @@ export const getPendingStudentsSchema = {
   },
 };
 
+export const getRencanaStudiSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Rencana Studi dari Kurikulum',
+    description: 'Mengambil rencana studi mahasiswa berdasarkan kurikulum aktif angkatannya, lengkap dengan progress per semester.',
+  },
+  query: t.Object({
+    mahasiswaId: t.Numeric(),
+    periodeId: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Object({
+      kurikulum: t.Object({
+        id: t.Integer(),
+        kode: t.String(),
+        nama: t.String(),
+      }),
+      currentSemester: t.Integer({ default: 1 }),
+      totalSksLulus: t.Integer({ default: 0 }),
+      rencanaPerSemester: t.Array(
+        t.Object({
+          semester: t.Integer(),
+          mataKuliah: t.Array(
+            t.Object({
+              id: t.Integer(),
+              mataKuliahId: t.Integer(),
+              kode: t.String(),
+              nama: t.String(),
+              sks: t.Integer(),
+              isWajib: t.Boolean(),
+              status: t.String(),
+              nilaiHuruf: t.Union([t.String(), t.Null()]),
+            }),
+          ),
+          totalSks: t.Integer(),
+          sksLulus: t.Integer(),
+        }),
+      ),
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Tidak ada rencana studi untuk mahasiswa ini' }),
+    }),
+  },
+};
+
+export const validasiKrsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Validasi KRS terhadap Kurikulum',
+    description: 'Memvalidasi KRS mahasiswa dengan rencana kurikulum, memberikan warning jika ada ketidaksesuaian.',
+  },
+  query: t.Object({
+    mahasiswaId: t.Numeric(),
+    periodeId: t.String(),
+  }),
+  response: {
+    200: t.Object({
+      isValid: t.Boolean(),
+      warnings: t.Array(
+        t.Object({
+          type: t.String(),
+          mk: t.String(),
+          semester: t.Optional(t.Integer()),
+        }),
+      ),
+      summary: t.Object({
+        totalSksDiRencana: t.String(),
+        totalSksDiKrs: t.String(),
+        mkWajibTerpenuhi: t.Integer(),
+        mkWajibTotal: t.Integer(),
+      }),
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
+};
+
 export const approveBatchKrsSchema = {
   detail: {
     tags: ['KRS'],

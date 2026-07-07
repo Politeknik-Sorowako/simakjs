@@ -3,6 +3,7 @@ import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
 import { authMiddleware } from './middlewares/auth.middleware';
 import { jwtPlugin } from './plugins/jwt.plugin';
+import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
 import { authRoutes } from './routes/auth.routes';
 import { bapRoutes } from './routes/bap.routes';
 import { bimbinganRoutes } from './routes/bimbingan.routes';
@@ -132,6 +133,7 @@ app
   })
   .use(authMiddleware)
   .use(authRoutes)
+  .use(angkatanKurikulumRoutes)
   .use(prodiRoutes)
   .use(mahasiswaRoutes)
   .use(dosenRoutes)

@@ -3,6 +3,8 @@ import { RpsController } from '../controllers/rps.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   addTopikSchema,
+  bulkGenerateRpsSchema,
+  copyRpsSchema,
   createRencanaEvaluasiSchema,
   createRpsSchema,
   deleteRencanaEvaluasiSchema,
@@ -18,6 +20,8 @@ export const rpsRoutes = new Elysia()
   .use(authMiddleware)
   .get('/rps', RpsController.getRps, getRpsSchema)
   .post('/rps', RpsController.createRps, createRpsSchema)
+  .post('/rps/bulk-generate', RpsController.bulkGenerate, bulkGenerateRpsSchema)
+  .post('/rps/copy', RpsController.copyRps, copyRpsSchema)
   .put('/rps/:id', RpsController.updateRps, updateRpsSchema)
   .post('/rps/:id/topik', RpsController.addTopik, addTopikSchema)
   .put('/rps/topik/:topikId', RpsController.updateTopik, updateTopikSchema)

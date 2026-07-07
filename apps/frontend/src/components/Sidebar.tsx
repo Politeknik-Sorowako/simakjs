@@ -1,11 +1,13 @@
-import { A } from '@solidjs/router';
-import { createSignal, Show } from 'solid-js';
+import { A, useLocation } from '@solidjs/router';
+import { createSignal, Show, createEffect } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const auth = useAuth();
   const role = () => auth.user()?.role;
+  const location = useLocation();
+  const path = () => location.pathname;
 
   const [isMasterOpen, setIsMasterOpen] = createSignal(false);
   const [isPerencanaanOpen, setIsPerencanaanOpen] = createSignal(false);
@@ -14,6 +16,31 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const [isEvaluasiOpen, setIsEvaluasiOpen] = createSignal(false);
   const [isLayananOpen, setIsLayananOpen] = createSignal(false);
   const [isIntegrasiOpen, setIsIntegrasiOpen] = createSignal(false);
+
+  createEffect(() => {
+    const currentPath = path();
+    if (['/program-studi', '/mahasiswa', '/dosen', '/pengguna'].includes(currentPath)) {
+      setIsMasterOpen(true);
+    }
+    if (['/kurikulum', '/angkatan-kurikulum', '/rps', '/periode-akademik', '/mata-kuliah', '/kelas-kuliah'].includes(currentPath)) {
+      setIsPerencanaanOpen(true);
+    }
+    if (['/krs', '/keuangan'].includes(currentPath)) {
+      setIsRegistrasiOpen(true);
+    }
+    if (['/jurnal-presensi', '/input-nilai', '/bimbingan', '/pelanggaran'].includes(currentPath)) {
+      setIsPelaksanaanOpen(true);
+    }
+    if (['/khs', '/yudisium', '/laporan-kompensasi'].includes(currentPath)) {
+      setIsEvaluasiOpen(true);
+    }
+    if (['/pengajuan-cuti', '/manajemen-cuti', '/penonaktifan'].includes(currentPath)) {
+      setIsLayananOpen(true);
+    }
+    if (['/pddikti'].includes(currentPath)) {
+      setIsIntegrasiOpen(true);
+    }
+  });
 
   const isAdmin = () => role() === 'admin';
   const isDosen = () => role() === 'dosen';
@@ -204,6 +231,20 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       />
                     </svg>
                     Kurikulum
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/angkatan-kurikulum"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-brand-gray-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Binding Angkatan
                   </A>
                 </Show>
                 <Show when={isAdmin() || isDosen()}>

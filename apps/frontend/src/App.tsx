@@ -3,6 +3,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
+import AngkatanKurikulum from './routes/AngkatanKurikulum';
 import BapPresensi from './routes/BapPresensi';
 import Bimbingan from './routes/Bimbingan';
 import CutiMahasiswa from './routes/CutiMahasiswa';
@@ -200,6 +201,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Kurikulum />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/angkatan-kurikulum"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AngkatanKurikulum />
           </ProtectedRoute>
         }
       />
