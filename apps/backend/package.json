@@ -8,7 +8,7 @@
     "start": "NODE_ENV=production bun src/index.ts",
     "start:dev": "bun src/index.ts",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "db:push": "bun run src/scripts/ensure-enums.ts && drizzle-kit push",
     "db:seed-test": "bun run src/scripts/seed-test-data.ts",
     "db:reset": "bun run src/scripts/reset-db.ts",
     "test": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun run src/scripts/pre-test.ts && DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun test"
@@ -17,13 +17,13 @@
     "@elysiajs/cors": "^1.0.0",
     "@elysiajs/jwt": "^1.0.0",
     "@elysiajs/swagger": "^1.0.0",
-    "drizzle-orm": "^0.30.0",
+    "drizzle-orm": "^0.45.0",
     "elysia": "^1.0.0",
     "pg": "^8.11.0",
     "resend": "^6.16.0"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.21.0",
+    "drizzle-kit": "^0.31.0",
     "@types/pg": "^8.11.0",
     "@types/bun": "latest",
     "@types/node": "^20.0.0"
