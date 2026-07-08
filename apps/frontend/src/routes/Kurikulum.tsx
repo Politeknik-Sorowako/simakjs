@@ -262,8 +262,8 @@ export default function Kurikulum() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800 dark:text-white">Kelola Kurikulum</h1>
-            <p class="text-sm text-brand-gray-500 dark:text-gray-400">
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Kelola Kurikulum</h1>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Penyusunan kurikulum per program studi sesuai dengan standar PDDIKTI
             </p>
           </div>
@@ -271,7 +271,7 @@ export default function Kurikulum() {
         </div>
 
         {/* Filter and Search */}
-        <div class="flex flex-wrap gap-4 bg-white dark:bg-brand-gray-900 p-4 rounded-xl shadow-sm border border-brand-gray-100 dark:border-brand-gray-800">
+        <div class="flex flex-wrap gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
           <div class="flex-1 min-w-[250px]">
             <Input
               type="text"
@@ -282,7 +282,7 @@ export default function Kurikulum() {
           </div>
           <div class="w-[200px]">
             <select
-              class="w-full h-10 px-3 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(e) => setProdiFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
             >
               <option value="">Semua Program Studi</option>
@@ -295,27 +295,27 @@ export default function Kurikulum() {
         <Table headers={['Kode', 'Nama Kurikulum', 'Program Studi', 'Mulai Berlaku', 'SKS (L/W/P)', 'Status', 'Aksi']}>
           <Show when={kurikulums.loading}>
             <tr>
-              <td colspan="7" class="p-8 text-center text-brand-gray-500">Memuat data...</td>
+              <td colspan="7" class="p-8 text-center text-secondary-500">Memuat data...</td>
             </tr>
           </Show>
            <Show when={!kurikulums.loading && (kurikulums()?.data?.length ?? 0) === 0}>
             <tr>
-              <td colspan="7" class="p-8 text-center text-brand-gray-500">Belum ada data kurikulum.</td>
+              <td colspan="7" class="p-8 text-center text-secondary-500">Belum ada data kurikulum.</td>
             </tr>
           </Show>
           <For each={kurikulums()?.data ?? []}>
             {(item) => (
-              <tr class="hover:bg-brand-gray-50 dark:hover:bg-brand-gray-800/50">
-                <td class="px-6 py-4 text-sm font-medium text-brand-gray-900 dark:text-white">{item.kode}</td>
-                <td class="px-6 py-4 text-sm text-brand-gray-700 dark:text-gray-300">{item.nama}</td>
-                <td class="px-6 py-4 text-sm text-brand-gray-700 dark:text-gray-300">{item.programStudi?.nama || '-'}</td>
-                <td class="px-6 py-4 text-sm text-brand-gray-700 dark:text-gray-300">{item.semesterMulai}</td>
-                <td class="px-6 py-4 text-sm text-brand-gray-700 dark:text-gray-300">
+              <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
+                <td class="px-6 py-4 text-sm font-medium text-secondary-900 dark:text-white">{item.kode}</td>
+                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.nama}</td>
+                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.programStudi?.nama || '-'}</td>
+                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.semesterMulai}</td>
+                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
                   {item.jumlahSksLulus} / {item.jumlahSksWajib} / {item.jumlahSksPilihan}
                 </td>
                 <td class="px-6 py-4 text-sm">
                   <span
-                    class={`px-2 py-1 rounded-full text-xs font-semibold ${item.isAktif ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-brand-gray-100 text-brand-gray-800 dark:bg-brand-gray-800 dark:text-gray-400'}`}
+                    class={`px-2 py-1 rounded-full text-xs font-semibold ${item.isAktif ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-secondary-100 text-secondary-800 dark:bg-secondary-800 dark:text-secondary-200'}`}
                   >
                     {item.isAktif ? 'Aktif' : 'Tidak Aktif'}
                   </span>
@@ -342,7 +342,7 @@ export default function Kurikulum() {
         {/* Pagination */}
         <Show when={kurikulums() && kurikulums()!.meta.totalPages > 1}>
           <div class="flex justify-between items-center mt-4">
-            <span class="text-xs text-brand-gray-500">
+            <span class="text-xs text-secondary-500">
               Menampilkan halaman {page()} dari {kurikulums()?.meta.totalPages} ({kurikulums()?.meta.total} total data)
             </span>
             <div class="flex gap-2">
@@ -367,17 +367,17 @@ export default function Kurikulum() {
               <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg()}</div>
             </Show>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Kode Kurikulum</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Kode Kurikulum</label>
               <Input type="text" value={kode()} onInput={(e) => setKode(e.currentTarget.value)} required />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Nama Kurikulum</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nama Kurikulum</label>
               <Input type="text" value={nama()} onInput={(e) => setNama(e.currentTarget.value)} required />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Program Studi</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
               <select
-                class="w-full h-10 px-3 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={prodiId()}
                 onChange={(e) => setProdiId(Number(e.currentTarget.value))}
               >
@@ -385,9 +385,9 @@ export default function Kurikulum() {
               </select>
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Semester Mulai Berlaku</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Semester Mulai Berlaku</label>
               <select
-                class="w-full h-10 px-3 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={semesterMulai()}
                 onChange={(e) => setSemesterMulai(e.currentTarget.value)}
               >
@@ -396,21 +396,21 @@ export default function Kurikulum() {
             </div>
             <div class="grid grid-cols-3 gap-4">
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">SKS Lulus</label>
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">SKS Lulus</label>
                 <Input type="number" value={jumlahSksLulus()} onInput={(e) => setJumlahSksLulus(Number(e.currentTarget.value))} required />
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">SKS Wajib</label>
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">SKS Wajib</label>
                 <Input type="number" value={jumlahSksWajib()} onInput={(e) => setJumlahSksWajib(Number(e.currentTarget.value))} required />
               </div>
               <div class="flex flex-col gap-1">
-                <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">SKS Pilihan</label>
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">SKS Pilihan</label>
                 <Input type="number" value={jumlahSksPilihan()} onInput={(e) => setJumlahSksPilihan(Number(e.currentTarget.value))} required />
               </div>
             </div>
             <div class="flex items-center gap-2">
               <input type="checkbox" id="isAktif" checked={isAktif()} onChange={(e) => setIsAktif(e.currentTarget.checked)} />
-              <label for="isAktif" class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Aktifkan Kurikulum ini</label>
+              <label for="isAktif" class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Aktifkan Kurikulum ini</label>
             </div>
             <div class="flex justify-end gap-2 mt-4">
               <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>Batal</Button>
@@ -429,7 +429,7 @@ export default function Kurikulum() {
           <Show when={kurikulumDetail()}>
             <div class="flex flex-col gap-6">
               {/* Info */}
-              <div class="p-3 bg-brand-gray-50 dark:bg-brand-gray-800 rounded-lg text-sm grid grid-cols-3 gap-3">
+              <div class="p-3 bg-secondary-50 dark:bg-secondary-800 rounded-lg text-sm grid grid-cols-3 gap-3">
                 <div><span class="font-semibold">Kode:</span> {kurikulumDetail()?.kode}</div>
                 <div><span class="font-semibold">Prodi:</span> {kurikulumDetail()?.programStudi?.nama}</div>
                 <div><span class="font-semibold">Mulai:</span> {kurikulumDetail()?.semesterMulai}</div>
@@ -437,32 +437,32 @@ export default function Kurikulum() {
 
               {/* Daftar MK per Semester */}
               <div class="space-y-4">
-                <h3 class="text-sm font-bold text-brand-gray-700 dark:text-gray-300">Daftar Mata Kuliah</h3>
+                <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200">Daftar Mata Kuliah</h3>
                 <For each={mkBySemester()}>
                   {(group) => (
-                    <div class="border border-brand-gray-100 dark:border-brand-gray-800 rounded-lg">
-                      <div class="px-4 py-2 bg-brand-50 dark:bg-brand-900/30 font-semibold text-sm text-brand-700 dark:text-brand-400">
+                    <div class="border border-secondary-100 dark:border-secondary-800 rounded-lg">
+                      <div class="px-4 py-2 bg-brand-50 dark:bg-brand-900/30 font-semibold text-sm text-brand-700 dark:text-white">
                         Semester {group.semester}
                       </div>
                       <table class="w-full text-sm">
                         <thead>
-                          <tr class="border-b border-brand-gray-100 dark:border-brand-gray-800">
-                            <th class="px-4 py-2 text-left text-xs font-semibold text-brand-gray-500">Kode</th>
-                            <th class="px-4 py-2 text-left text-xs font-semibold text-brand-gray-500">Nama</th>
-                            <th class="px-4 py-2 text-center text-xs font-semibold text-brand-gray-500">SKS</th>
-                            <th class="px-4 py-2 text-center text-xs font-semibold text-brand-gray-500">Wajib</th>
-                            <th class="px-4 py-2 text-center text-xs font-semibold text-brand-gray-500">Aksi</th>
+                          <tr class="border-b border-secondary-100 dark:border-secondary-800">
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-secondary-500 dark:text-secondary-200">Kode</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-secondary-500 dark:text-secondary-200">Nama</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">SKS</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">Wajib</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">Aksi</th>
                           </tr>
                         </thead>
                         <tbody>
                           <For each={group.items}>
                             {(item) => (
-                              <tr class="border-b border-brand-gray-50 dark:border-brand-gray-800/50 hover:bg-brand-gray-50/50 dark:hover:bg-brand-gray-800/30">
-                                <td class="px-4 py-2 font-mono text-brand-gray-600">{item.mataKuliah?.kode}</td>
-                                <td class="px-4 py-2 text-brand-gray-800 dark:text-gray-200">{item.mataKuliah?.nama}</td>
-                                <td class="px-4 py-2 text-center text-brand-gray-700">{item.sksMataKuliah}</td>
+                              <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
+                                <td class="px-4 py-2 font-mono text-secondary-600">{item.mataKuliah?.kode}</td>
+                                <td class="px-4 py-2 text-secondary-800 dark:text-secondary-200">{item.mataKuliah?.nama}</td>
+                                <td class="px-4 py-2 text-center text-secondary-700">{item.sksMataKuliah}</td>
                                 <td class="px-4 py-2 text-center">
-                                  <span class={`px-2 py-0.5 rounded-full text-xs font-semibold ${item.isWajib ? 'bg-green-50 text-green-700' : 'bg-brand-gray-100 text-brand-gray-600'}`}>
+                                  <span class={`px-2 py-0.5 rounded-full text-xs font-semibold ${item.isWajib ? 'bg-green-50 text-green-700' : 'bg-secondary-100 text-secondary-600'}`}>
                                     {item.isWajib ? 'Ya' : 'Tidak'}
                                   </span>
                                 </td>
@@ -483,22 +483,22 @@ export default function Kurikulum() {
                   )}
                 </For>
                 <Show when={mkBySemester().length === 0}>
-                  <p class="text-center text-sm text-brand-gray-400 py-6">Belum ada mata kuliah dalam kurikulum ini.</p>
+                  <p class="text-center text-sm text-secondary-400 py-6">Belum ada mata kuliah dalam kurikulum ini.</p>
                 </Show>
               </div>
 
               {/* Import dari Kurikulum Lain */}
-              <div class="border-t border-brand-gray-100 dark:border-brand-gray-800 pt-4">
+              <div class="border-t border-secondary-100 dark:border-secondary-800 pt-4">
                 <details class="group">
-                  <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-brand-gray-700 dark:text-gray-300">
+                  <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-secondary-700 dark:text-secondary-200">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     Impor dari Kurikulum Lain
                   </summary>
                   <div class="mt-3 flex flex-wrap items-end gap-3">
                     <div class="flex-1 min-w-[200px]">
-                      <label class="text-xs font-semibold text-brand-gray-500 block mb-1">Kurikulum Sumber</label>
+                      <label class="text-xs font-semibold text-secondary-500 block mb-1">Kurikulum Sumber</label>
                       <select
-                        class="w-full h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        class="w-full h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                         value={sourceKurikulumId()}
                         onChange={(e) => setSourceKurikulumId(Number(e.currentTarget.value))}
                       >
@@ -522,15 +522,15 @@ export default function Kurikulum() {
               </div>
 
               {/* Import CSV */}
-              <div class="border-t border-brand-gray-100 dark:border-brand-gray-800 pt-4">
+              <div class="border-t border-secondary-100 dark:border-secondary-800 pt-4">
                 <details class="group">
-                  <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-brand-gray-700 dark:text-gray-300">
+                  <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-secondary-700 dark:text-secondary-200">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     Impor CSV Mata Kuliah
                   </summary>
                   <div class="mt-3 flex flex-wrap items-end gap-3">
                     <div class="flex-1">
-                      <label class="text-xs font-semibold text-brand-gray-500 block mb-1">File CSV (kode_mata_kuliah, semester, sks, is_wajib)</label>
+                      <label class="text-xs font-semibold text-secondary-500 block mb-1">File CSV (kode_mata_kuliah, semester, sks, is_wajib)</label>
                       <div class="flex items-center gap-3">
                         <a
                           href={`${API_URL}/kurikulum/template-import-mk`}
@@ -543,13 +543,13 @@ export default function Kurikulum() {
                           type="file"
                           accept=".csv"
                           onChange={handleImportCsv}
-                          class="w-full text-sm text-brand-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
+                          class="w-full text-sm text-secondary-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
                         />
                       </div>
                     </div>
                   </div>
                   <Show when={csvImportLoading()}>
-                    <p class="mt-2 text-xs text-brand-gray-500">Memproses...</p>
+                    <p class="mt-2 text-xs text-secondary-500">Memproses...</p>
                   </Show>
                   <Show when={csvImportResult()}>
                     <div class="mt-2 p-2 bg-green-50 dark:bg-green-900/20 rounded text-xs text-green-700 dark:text-green-400">
@@ -568,16 +568,16 @@ export default function Kurikulum() {
               </div>
 
               {/* Form Tambah MK */}
-              <div class="border-t border-brand-gray-100 dark:border-brand-gray-800 pt-4">
-                <h4 class="text-sm font-bold text-brand-gray-700 dark:text-gray-300 mb-3">Tambah Mata Kuliah</h4>
+              <div class="border-t border-secondary-100 dark:border-secondary-800 pt-4">
+                <h4 class="text-sm font-bold text-secondary-700 dark:text-secondary-200 mb-3">Tambah Mata Kuliah</h4>
                 <form onSubmit={handleAddMk} class="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <Show when={addMkError()}>
                     <div class="col-span-full p-2 bg-red-50 text-red-700 rounded text-xs">{addMkError()}</div>
                   </Show>
                   <div class="flex flex-col gap-1">
-                    <label class="text-xs font-semibold text-brand-gray-500">Mata Kuliah</label>
+                    <label class="text-xs font-semibold text-secondary-500">Mata Kuliah</label>
                     <select
-                      class="h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                       value={addMkMataKuliahId()}
                       onChange={(e) => {
                         const id = Number(e.currentTarget.value);
@@ -597,9 +597,9 @@ export default function Kurikulum() {
                     </select>
                   </div>
                   <div class="flex flex-col gap-1">
-                    <label class="text-xs font-semibold text-brand-gray-500">Semester</label>
+                    <label class="text-xs font-semibold text-secondary-500">Semester</label>
                     <select
-                      class="h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                       value={addMkSemester()}
                       onChange={(e) => setAddMkSemester(Number(e.currentTarget.value))}
                     >
@@ -607,17 +607,17 @@ export default function Kurikulum() {
                     </select>
                   </div>
                   <div class="flex flex-col gap-1">
-                    <label class="text-xs font-semibold text-brand-gray-500">SKS</label>
+                    <label class="text-xs font-semibold text-secondary-500">SKS</label>
                     <input
                       type="number"
-                      class="h-9 px-2 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                       value={addMkSks()}
                       onInput={(e) => setAddMkSks(Number(e.currentTarget.value))}
                     />
                   </div>
                   <div class="flex items-center gap-2 pt-5">
                     <input type="checkbox" id="addMkWajib" checked={addMkIsWajib()} onChange={(e) => setAddMkIsWajib(e.currentTarget.checked)} />
-                    <label for="addMkWajib" class="text-xs font-semibold text-brand-gray-600">Wajib</label>
+                    <label for="addMkWajib" class="text-xs font-semibold text-secondary-600">Wajib</label>
                     <Button type="submit" class="!py-1.5 !px-3 !text-xs ml-auto">Tambah</Button>
                   </div>
                 </form>
@@ -636,14 +636,14 @@ export default function Kurikulum() {
               <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{dupError()}</div>
             </Show>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Kode Baru</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Kode Baru</label>
               <Input type="text" value={dupKode()} onInput={(e) => setDupKode(e.currentTarget.value)} required />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Nama Baru</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nama Baru</label>
               <Input type="text" value={dupNama()} onInput={(e) => setDupNama(e.currentTarget.value)} required />
             </div>
-            <p class="text-xs text-brand-gray-500">
+            <p class="text-xs text-secondary-500">
               Semua mata kuliah dari kurikulum sumber akan disalin ke kurikulum baru.
             </p>
             <div class="flex justify-end gap-2 mt-4">

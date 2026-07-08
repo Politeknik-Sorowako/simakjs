@@ -17,7 +17,7 @@ const variantClasses = {
 	primary:
 		"bg-gradient-to-r from-brand-800 to-brand-900 hover:from-brand-700 hover:to-brand-800 text-white shadow-md shadow-brand-900/20 focus:ring-brand-500/30",
 	secondary:
-		"bg-brand-gray-100 hover:bg-brand-gray-200 text-brand-gray-800 border border-brand-gray-200 focus:ring-brand-gray-400/30 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white dark:border-slate-700",
+		"bg-secondary-100 hover:bg-secondary-200 text-secondary-800 border border-secondary-200 focus:ring-secondary-400/30 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-white dark:border-secondary-700",
 	danger:
 		"bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-md shadow-red-500/20 focus:ring-red-500/30",
 	success:
@@ -25,7 +25,7 @@ const variantClasses = {
 	warning:
 		"bg-gradient-to-r from-accent-400 to-accent-500 hover:from-accent-500 hover:to-accent-600 text-brand-900 font-semibold shadow-md shadow-accent-400/20 focus:ring-accent-400/30",
 	ghost:
-		"bg-transparent hover:bg-brand-gray-100 text-brand-gray-700 dark:hover:bg-slate-800 dark:text-slate-300 focus:ring-brand-gray-400/30",
+		"bg-transparent hover:bg-secondary-100 text-secondary-700 dark:hover:bg-secondary-800 dark:text-secondary-300 focus:ring-secondary-400/30",
 	accent:
 		"bg-accent-400 hover:bg-accent-500 text-brand-900 font-semibold shadow-md shadow-accent-400/20 focus:ring-accent-400/30",
 };
@@ -52,7 +52,7 @@ export function Button(props: ButtonProps) {
 		<button
 			{...others}
 			disabled={local.disabled || local.loading}
-			class={`inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-900 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${variantClass()} ${sizeClass()} ${local.class || ""}`}
+			class={`inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-secondary-900 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${variantClass()} ${sizeClass()} ${local.class || ""}`}
 		>
 			{local.loading && (
 				<svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">

@@ -94,8 +94,8 @@ export default function AngkatanKurikulum() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800 dark:text-white">Binding Angkatan Kurikulum</h1>
-            <p class="text-sm text-brand-gray-500 dark:text-gray-400">
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Binding Angkatan Kurikulum</h1>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Mengikat angkatan mahasiswa ke kurikulum tertentu untuk menjaga konsistensi paket kurikulum antar angkatan
             </p>
           </div>
@@ -103,11 +103,11 @@ export default function AngkatanKurikulum() {
         </div>
 
         {/* Filter */}
-        <div class="flex flex-wrap gap-4 bg-white dark:bg-brand-gray-900 p-4 rounded-xl shadow-sm border border-brand-gray-100 dark:border-brand-gray-800">
+        <div class="flex flex-wrap gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
           <div class="w-[300px]">
-            <label class="block text-sm font-semibold text-brand-gray-700 dark:text-gray-300 mb-1">Program Studi</label>
+            <label class="block text-sm font-semibold text-secondary-700 dark:text-secondary-200 mb-1">Program Studi</label>
             <select
-              class="w-full h-10 px-3 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(e) => setProdiFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
             >
               <option value="">Semua Program Studi</option>
@@ -120,25 +120,25 @@ export default function AngkatanKurikulum() {
         <Table headers={['Program Studi', 'Angkatan', 'Kurikulum', 'Status', 'Aksi']}>
           <Show when={bindings.loading}>
             <tr>
-              <td colspan="5" class="p-8 text-center text-brand-gray-500">Memuat data...</td>
+              <td colspan="5" class="p-8 text-center text-secondary-500">Memuat data...</td>
             </tr>
           </Show>
           <Show when={!bindings.loading && (!bindings() || bindings()?.length === 0)}>
             <tr>
-              <td colspan="5" class="p-8 text-center text-brand-gray-500">Belum ada binding.</td>
+              <td colspan="5" class="p-8 text-center text-secondary-500">Belum ada binding.</td>
             </tr>
           </Show>
           <For each={bindings()}>
             {(item) => (
-              <tr class="hover:bg-brand-gray-50 dark:hover:bg-brand-gray-800/50">
-                <td class="px-6 py-4 text-sm text-brand-gray-900 dark:text-white">{item.programStudi?.nama || '-'}</td>
-                <td class="px-6 py-4 text-sm font-semibold text-brand-gray-700 dark:text-gray-300">{item.angkatan}</td>
-                <td class="px-6 py-4 text-sm text-brand-gray-700 dark:text-gray-300">
+              <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
+                <td class="px-6 py-4 text-sm text-secondary-900 dark:text-white">{item.programStudi?.nama || '-'}</td>
+                <td class="px-6 py-4 text-sm font-semibold text-secondary-700 dark:text-secondary-200">{item.angkatan}</td>
+                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
                   {item.kurikulum?.nama || '-'} ({item.kurikulum?.kode || '-'})
                 </td>
                 <td class="px-6 py-4 text-sm">
                   <span
-                    class={`px-2 py-1 rounded-full text-xs font-semibold ${item.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-brand-gray-100 text-brand-gray-800 dark:bg-brand-gray-800 dark:text-gray-400'}`}
+                    class={`px-2 py-1 rounded-full text-xs font-semibold ${item.isActive ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-secondary-100 text-secondary-800 dark:bg-secondary-800 dark:text-secondary-200'}`}
                   >
                     {item.isActive ? 'Aktif' : 'Tidak Aktif'}
                   </span>
@@ -163,9 +163,9 @@ export default function AngkatanKurikulum() {
               <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg()}</div>
             </Show>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Program Studi</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
               <select
-                class="w-full h-10 px-3 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={formProdiId()}
                 onChange={(e) => { setFormProdiId(Number(e.currentTarget.value)); setKurikulumId(0); }}
                 required
@@ -175,7 +175,7 @@ export default function AngkatanKurikulum() {
               </select>
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Angkatan (Tahun)</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Angkatan (Tahun)</label>
               <Input
                 type="text"
                 placeholder="Contoh: 2024"
@@ -185,9 +185,9 @@ export default function AngkatanKurikulum() {
               />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-brand-gray-700 dark:text-gray-300">Kurikulum</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Kurikulum</label>
               <select
-                class="w-full h-10 px-3 rounded-lg border border-brand-gray-300 dark:border-brand-gray-700 bg-white dark:bg-brand-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={kurikulumId()}
                 onChange={(e) => setKurikulumId(Number(e.currentTarget.value))}
                 required

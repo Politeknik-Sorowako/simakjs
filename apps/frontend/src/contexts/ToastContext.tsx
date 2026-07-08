@@ -39,13 +39,13 @@ export function ToastProvider(props: { children: JSX.Element }) {
                   ? 'bg-emerald-600 border-emerald-500'
                   : toast.type === 'error'
                     ? 'bg-rose-600 border-rose-500'
-                    : 'bg-blue-600 border-blue-500'
+                    : 'bg-accent-600 border-accent-500'
               }`}
             >
               <span>{toast.message}</span>
               <button
                 onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-                class="ml-4 text-white hover:text-gray-200 focus:outline-none"
+                class="ml-4 text-white hover:text-secondary-200 focus:outline-none"
                 aria-label="Tutup notifikasi"
               >
                 &times;

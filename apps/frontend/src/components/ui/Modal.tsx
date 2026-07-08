@@ -45,21 +45,21 @@ export function Modal(props: ModalProps) {
 
 				{/* Modal Content */}
 				<div
-					class={`relative w-full ${width()} bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-brand-gray-100 dark:border-slate-700 animate-scale-in`}
+					class={`relative w-full ${width()} bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl border border-secondary-100 dark:border-secondary-700 animate-scale-in`}
 					role="dialog"
 					aria-modal="true"
 					aria-label={props.title || "Dialog"}
 				>
 					{/* Header */}
 					<Show when={props.title}>
-						<div class="flex items-center justify-between px-6 py-4 border-b border-brand-gray-100 dark:border-slate-700">
+						<div class="flex items-center justify-between px-6 py-4 border-b border-secondary-100 dark:border-secondary-700">
 							<h3 class="text-lg font-heading font-semibold text-brand-900 dark:text-white">
 								{props.title}
 							</h3>
 							<button
 								onClick={() => props.onClose?.()}
 								aria-label="Tutup dialog"
-								class="p-1.5 rounded-full text-brand-gray-400 hover:text-brand-gray-600 hover:bg-brand-gray-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+								class="p-1.5 rounded-full text-secondary-400 hover:text-secondary-600 hover:bg-secondary-100 dark:hover:text-secondary-300 dark:hover:bg-secondary-800 transition-colors"
 							>
 								<svg
 									class="w-5 h-5"

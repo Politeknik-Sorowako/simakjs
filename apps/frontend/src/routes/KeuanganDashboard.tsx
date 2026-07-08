@@ -259,12 +259,12 @@ export default function KeuanganDashboard() {
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-brand-gray-100 shadow-sm">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900/60 dark:border-secondary-800">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800">
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">
               {role() === 'mahasiswa' ? 'Informasi Tagihan & SPP' : 'Manajemen Keuangan & SPP'}
             </h1>
-            <p class="text-sm text-brand-gray-500">
+            <p class="text-sm text-secondary-500">
               {role() === 'mahasiswa'
                 ? 'Daftar riwayat dan status pembayaran SPP/UKT perkuliahan Anda.'
                 : 'Generate tagihan massal periode akademik baru dan verifikasi pembayaran mahasiswa.'}
@@ -274,11 +274,11 @@ export default function KeuanganDashboard() {
           <Show when={role() !== 'mahasiswa'}>
             <div class="flex items-end gap-3 w-full md:w-auto">
               <div class="w-full md:w-48">
-                <label class="block text-xs font-semibold text-brand-gray-500 uppercase tracking-wider mb-1.5">
+                <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1.5">
                   Periode Akademik
                 </label>
                 <select
-                  class="w-full px-3 py-2 text-sm bg-brand-gray-50 border border-brand-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors font-medium text-brand-gray-700"
+                  class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors font-medium text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                   value={selectedPeriode()}
                   onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
                 >
@@ -307,7 +307,7 @@ export default function KeuanganDashboard() {
         </div>
 
         {/* Search & Filter */}
-        <div class="bg-white p-4 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div class="bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between dark:bg-secondary-900 dark:border-secondary-800">
           <div class="w-full md:w-80">
             <Show when={role() !== 'mahasiswa'}>
               <Input
@@ -320,9 +320,9 @@ export default function KeuanganDashboard() {
             </Show>
           </div>
           <div class="flex items-center gap-2 w-full md:w-auto justify-end">
-            <span class="text-xs font-semibold text-brand-gray-400 uppercase tracking-wider">Filter Status:</span>
+            <span class="text-xs font-semibold text-secondary-400 uppercase tracking-wider">Filter Status:</span>
             <select
-              class="px-3 py-1.5 text-xs bg-brand-gray-50 border border-brand-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors text-brand-gray-900 font-semibold"
+              class="px-3 py-1.5 text-xs bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors text-secondary-900 font-semibold dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={statusFilter()}
               onChange={(e) => setStatusFilter(e.currentTarget.value)}
             >
@@ -337,18 +337,18 @@ export default function KeuanganDashboard() {
         {/* Table */}
         <Show
           when={!tagihanData.loading}
-          fallback={<div class="text-center py-10 text-brand-gray-400">Loading data keuangan...</div>}
+          fallback={<div class="text-center py-10 text-secondary-400">Loading data keuangan...</div>}
         >
           <Table headers={['Mahasiswa', 'Periode', 'Tagihan', 'Terbayar', 'Sisa', 'Status', 'Tanggal Bayar', 'Aksi']}>
             <For each={tagihanData()?.data}>
               {(item) => (
-                <tr class="hover:bg-brand-gray-50/50 transition-colors">
+                <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                   <td class="px-6 py-4">
-                    <div class="font-semibold text-brand-gray-800">{item.mahasiswa?.nama || '-'}</div>
-                    <div class="text-xs text-brand-gray-400 font-mono">{item.mahasiswa?.nim || '-'}</div>
+                    <div class="font-semibold text-secondary-800 dark:text-white">{item.mahasiswa?.nama || '-'}</div>
+                    <div class="text-xs text-secondary-400 font-mono">{item.mahasiswa?.nim || '-'}</div>
                   </td>
-                  <td class="px-6 py-4 font-mono text-xs text-brand-gray-600">{item.periodeId}</td>
-                  <td class="px-6 py-4 font-semibold text-brand-gray-700">{formatRupiah(item.nominal)}</td>
+                  <td class="px-6 py-4 font-mono text-xs text-secondary-600">{item.periodeId}</td>
+                  <td class="px-6 py-4 font-semibold text-secondary-700">{formatRupiah(item.nominal)}</td>
                   <td class="px-6 py-4 font-semibold text-accent-600">{formatRupiah(item.nominalTerbayar || 0)}</td>
                   <td class="px-6 py-4 font-semibold text-rose-500">
                     {formatRupiah(item.nominal - (item.nominalTerbayar || 0))}
@@ -366,7 +366,7 @@ export default function KeuanganDashboard() {
                       {item.status === 'lunas' ? 'Lunas' : item.status === 'cicilan' ? 'Cicilan' : 'Belum Bayar'}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-xs font-mono text-brand-gray-500">
+                  <td class="px-6 py-4 text-xs font-mono text-secondary-500">
                     {item.tanggalBayar ? new Date(item.tanggalBayar).toLocaleString('id-ID') : '-'}
                   </td>
                   <td class="px-6 py-4 flex gap-2 items-center">
@@ -384,7 +384,7 @@ export default function KeuanganDashboard() {
                     <Show when={role() !== 'mahasiswa'}>
                       <button
                         onClick={() => handleEdit(item)}
-                        class="px-2.5 py-1 bg-accent-50 hover:bg-accent-100 text-accent-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
+                        class="px-2.5 py-1 bg-accent-50 hover:bg-accent-100 text-accent-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400"
                       >
                         ⚙️ Edit Nominal
                       </button>
@@ -392,7 +392,7 @@ export default function KeuanganDashboard() {
 
                     <button
                       onClick={() => handleOpenRiwayat(item)}
-                      class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
+                      class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1 dark:bg-brand-900/30 dark:text-brand-400"
                     >
                       🔎 Riwayat
                     </button>
@@ -400,14 +400,14 @@ export default function KeuanganDashboard() {
                     {/* Print buttons accessible to both admin & student */}
                     <button
                       onClick={() => handlePrintInvoice(item)}
-                      class="px-2.5 py-1 bg-brand-gray-100 hover:bg-brand-gray-200 text-brand-gray-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
+                      class="px-2.5 py-1 bg-secondary-100 hover:bg-secondary-200 text-secondary-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
                     >
                       📄 Cetak Tagihan
                     </button>
                     <Show when={item.status === 'lunas' || item.status === 'cicilan'}>
                       <button
                         onClick={() => handlePrintReceipt(item)}
-                        class="px-2.5 py-1 bg-accent-50 hover:bg-accent-100 text-accent-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
+                        class="px-2.5 py-1 bg-accent-50 hover:bg-accent-100 text-accent-700 font-bold rounded-lg text-xs transition-colors flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400"
                       >
                         🧾 Struk Bayar
                       </button>
@@ -418,7 +418,7 @@ export default function KeuanganDashboard() {
             </For>
             <Show when={tagihanData()?.data.length === 0}>
               <tr>
-                <td colspan="8" class="px-6 py-10 text-center text-brand-gray-400">
+                <td colspan="8" class="px-6 py-10 text-center text-secondary-400">
                   Tidak ada data tagihan ditemukan.
                 </td>
               </tr>
@@ -428,7 +428,7 @@ export default function KeuanganDashboard() {
           {/* Pagination */}
           <Show when={tagihanData() && tagihanData()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-brand-gray-500">
+              <span class="text-xs text-secondary-500">
                 Menampilkan halaman {page()} dari {tagihanData()?.meta.totalPages} ({tagihanData()?.meta.total} total
                 data)
               </span>
@@ -456,41 +456,41 @@ export default function KeuanganDashboard() {
 
         {/* --- CUSTOM GENERATE TAGIHAN MODAL --- */}
         <Show when={showGenerateModal()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-brand-gray-800 text-sm">Generate Tagihan Massal</h3>
-                <button onClick={() => setShowGenerateModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                <h3 class="font-bold text-secondary-800 text-sm dark:text-white">Generate Tagihan Massal</h3>
+                <button onClick={() => setShowGenerateModal(false)} class="text-secondary-400 hover:text-secondary-600">
                   ❌
                 </button>
               </div>
               <form onSubmit={submitGenerate} class="flex flex-col gap-4">
-                <p class="text-xs text-brand-gray-500">
+                <p class="text-xs text-secondary-500">
                   Anda akan membuat tagihan massal untuk semua mahasiswa terdaftar pada periode akademik{' '}
-                  <span class="font-bold text-brand-gray-700">{selectedPeriode()}</span>. Nominal tagihan default adalah
+                  <span class="font-bold text-secondary-700">{selectedPeriode()}</span>. Nominal tagihan default adalah
                   nominal di bawah, namun mahasiswa yang memiliki{' '}
                   <span class="font-bold text-brand-600">Skema Tarif Angkatan</span> akan disesuaikan secara otomatis.
                 </p>
                 <div class="flex flex-col gap-1.5">
-                  <label class="text-xs font-bold text-brand-gray-700">Nominal Tagihan Default (Rp)</label>
+                  <label class="text-xs font-bold text-secondary-700">Nominal Tagihan Default (Rp)</label>
                   <input
                     type="number"
                     value={generateNominal()}
                     onInput={(e) => setGenerateNominal(parseInt(e.currentTarget.value))}
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
                   <button
                     type="button"
                     onClick={() => setShowGenerateModal(false)}
-                    class="px-3 py-2 text-xs font-bold text-brand-gray-500 hover:bg-brand-gray-50 rounded-xl border border-brand-gray-200 transition-colors"
+                    class="px-3 py-2 text-xs font-bold text-secondary-500 hover:bg-secondary-50 rounded-xl border border-secondary-200 transition-colors dark:border-secondary-700"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all"
+                    class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
                   >
                     Generate Sekarang
                   </button>
@@ -502,25 +502,25 @@ export default function KeuanganDashboard() {
 
         {/* --- CUSTOM INPUT BAYAR MODAL --- */}
         <Show when={showPayModal()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-brand-gray-800 text-sm">Input Pembayaran SPP</h3>
-                <button onClick={() => setShowPayModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                <h3 class="font-bold text-secondary-800 text-sm dark:text-white">Input Pembayaran SPP</h3>
+                <button onClick={() => setShowPayModal(false)} class="text-secondary-400 hover:text-secondary-600">
                   ❌
                 </button>
               </div>
               <form onSubmit={submitBayar} class="flex flex-col gap-4">
-                <div class="text-xs text-brand-gray-600 flex flex-col gap-1 font-medium bg-brand-gray-50 p-3 rounded-xl border border-brand-gray-100">
+                <div class="text-xs text-secondary-600 flex flex-col gap-1 font-medium bg-secondary-50 p-3 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
                   <p>
-                    Mahasiswa: <span class="font-bold text-brand-gray-800">{selectedTagihan()?.mahasiswa?.nama}</span>
+                    Mahasiswa: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nama}</span>
                   </p>
                   <p>
-                    NIM: <span class="font-bold text-brand-gray-800">{selectedTagihan()?.mahasiswa?.nim}</span>
+                    NIM: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nim}</span>
                   </p>
                   <p>
                     Total Tagihan:{' '}
-                    <span class="font-bold text-brand-gray-800">{formatRupiah(selectedTagihan()?.nominal || 0)}</span>
+                    <span class="font-bold text-secondary-800 dark:text-white">{formatRupiah(selectedTagihan()?.nominal || 0)}</span>
                   </p>
                   <p>
                     Telah Dibayar:{' '}
@@ -536,35 +536,35 @@ export default function KeuanganDashboard() {
                   </p>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label class="text-xs font-bold text-brand-gray-700">Nominal Bayar (Rp)</label>
+                  <label class="text-xs font-bold text-secondary-700">Nominal Bayar (Rp)</label>
                   <input
                     type="number"
                     value={payNominal()}
                     onInput={(e) => setPayNominal(parseInt(e.currentTarget.value))}
                     max={(selectedTagihan()?.nominal || 0) - (selectedTagihan()?.nominalTerbayar || 0)}
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label class="text-xs font-bold text-brand-gray-700">Catatan Koreksi / Keterangan</label>
+                  <label class="text-xs font-bold text-secondary-700">Catatan Koreksi / Keterangan</label>
                   <textarea
                     value={payNotes()}
                     onInput={(e) => setPayNotes(e.currentTarget.value)}
                     placeholder="Contoh: Pembayaran cicilan pertama ke-1"
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900 h-16 resize-none"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 h-16 resize-none dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
                   <button
                     type="button"
                     onClick={() => setShowPayModal(false)}
-                    class="px-3 py-2 text-xs font-bold text-brand-gray-500 hover:bg-brand-gray-50 rounded-xl border border-brand-gray-200 transition-colors"
+                    class="px-3 py-2 text-xs font-bold text-secondary-500 hover:bg-secondary-50 rounded-xl border border-secondary-200 transition-colors dark:border-secondary-700"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all"
+                    class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
                   >
                     Simpan Pembayaran
                   </button>
@@ -576,48 +576,48 @@ export default function KeuanganDashboard() {
 
         {/* --- CUSTOM PRINT INVOICE MODAL --- */}
         <Show when={showPrintInvoice()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
-                <h3 class="font-bold text-brand-gray-800">Cetak Tagihan Kuliah</h3>
-                <button onClick={() => setShowPrintInvoice(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                <h3 class="font-bold text-secondary-800 dark:text-white">Cetak Tagihan Kuliah</h3>
+                <button onClick={() => setShowPrintInvoice(false)} class="text-secondary-400 hover:text-secondary-600">
                   ❌
                 </button>
               </div>
-              <div class="flex flex-col gap-4 text-brand-gray-900" id="print-area-invoice">
+              <div class="flex flex-col gap-4 text-secondary-900 dark:text-white" id="print-area-invoice">
                 <div class="text-center border-b pb-3 flex flex-col gap-1">
                   <h2 class="text-lg font-extrabold text-brand-700">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-xs font-bold text-brand-gray-550 uppercase tracking-widest">
+                  <h3 class="text-xs font-bold text-secondary-550 uppercase tracking-widest">
                     INVOICE / TAGIHAN BIAYA PENDIDIKAN
                   </h3>
                 </div>
-                <div class="grid grid-cols-2 gap-4 text-xs font-medium text-brand-gray-600 mb-2">
+                <div class="grid grid-cols-2 gap-4 text-xs font-medium text-secondary-600 mb-2">
                   <div>
                     <p>
-                      Nama: <span class="text-brand-gray-900 font-bold">{selectedPrintItem()?.mahasiswa?.nama}</span>
+                      Nama: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nama}</span>
                     </p>
                     <p>
-                      NIM: <span class="text-brand-gray-900 font-bold">{selectedPrintItem()?.mahasiswa?.nim}</span>
+                      NIM: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nim}</span>
                     </p>
                     <p>
                       Prodi:{' '}
-                      <span class="text-brand-gray-900 font-bold">
+                      <span class="text-secondary-900 font-bold dark:text-white">
                         {selectedPrintItem()?.mahasiswa?.programStudiId || '-'}
                       </span>
                     </p>
                   </div>
                   <div class="text-right">
                     <p>
-                      Periode: <span class="text-brand-gray-900 font-bold">{selectedPrintItem()?.periodeId}</span>
+                      Periode: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.periodeId}</span>
                     </p>
                     <p>
-                      Status: <span class="text-brand-gray-900 font-extrabold uppercase">{selectedPrintItem()?.status}</span>
+                      Status: <span class="text-secondary-900 font-extrabold uppercase dark:text-white">{selectedPrintItem()?.status}</span>
                     </p>
                   </div>
                 </div>
-                <table class="w-full text-left text-xs border border-brand-gray-200 border-collapse">
+                <table class="w-full text-left text-xs border border-secondary-200 border-collapse dark:border-secondary-700">
                   <thead>
-                    <tr class="bg-brand-gray-50 border-b border-brand-gray-200">
+                    <tr class="bg-secondary-50 border-b border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700">
                       <th class="p-2 border-r">Deskripsi Komponen</th>
                       <th class="p-2 text-right">Jumlah</th>
                     </tr>
@@ -627,7 +627,7 @@ export default function KeuanganDashboard() {
                       <td class="p-2 border-r">Uang Kuliah Tunggal (UKT) / SPP Semester</td>
                       <td class="p-2 text-right font-semibold">{formatRupiah(selectedPrintItem()?.nominal || 0)}</td>
                     </tr>
-                    <tr class="bg-brand-gray-50 font-bold">
+                    <tr class="bg-secondary-50 font-bold dark:bg-secondary-800">
                       <td class="p-2 border-r text-right">Total Tagihan:</td>
                       <td class="p-2 text-right text-rose-600">{formatRupiah(selectedPrintItem()?.nominal || 0)}</td>
                     </tr>
@@ -637,7 +637,7 @@ export default function KeuanganDashboard() {
                         {formatRupiah(selectedPrintItem()?.nominalTerbayar || 0)}
                       </td>
                     </tr>
-                    <tr class="bg-brand-gray-50 font-bold">
+                    <tr class="bg-secondary-50 font-bold dark:bg-secondary-800">
                       <td class="p-2 border-r text-right">Sisa Kewajiban:</td>
                       <td class="p-2 text-right text-rose-500">
                         {formatRupiah(
@@ -652,14 +652,14 @@ export default function KeuanganDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowPrintInvoice(false)}
-                  class="px-3 py-2 text-xs font-bold text-brand-gray-500 hover:bg-brand-gray-50 rounded-xl border border-brand-gray-200 transition-colors"
+                  class="px-3 py-2 text-xs font-bold text-secondary-500 hover:bg-secondary-50 rounded-xl border border-secondary-200 transition-colors dark:border-secondary-700"
                 >
                   Tutup
                 </button>
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all"
+                  class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
                 >
                   🖨️ Cetak Sekarang
                 </button>
@@ -670,38 +670,38 @@ export default function KeuanganDashboard() {
 
         {/* --- CUSTOM PRINT RECEIPT MODAL --- */}
         <Show when={showPrintReceipt()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
-                <h3 class="font-bold text-brand-gray-800">Cetak Bukti Pembayaran</h3>
-                <button onClick={() => setShowPrintReceipt(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                <h3 class="font-bold text-secondary-800 dark:text-white">Cetak Bukti Pembayaran</h3>
+                <button onClick={() => setShowPrintReceipt(false)} class="text-secondary-400 hover:text-secondary-600">
                   ❌
                 </button>
               </div>
-              <div class="flex flex-col gap-4 text-brand-gray-900" id="print-area-receipt">
+              <div class="flex flex-col gap-4 text-secondary-900 dark:text-white" id="print-area-receipt">
                 <div class="text-center border-b pb-3 flex flex-col gap-1">
                   <h2 class="text-lg font-extrabold text-accent-700">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-xs font-bold text-brand-gray-550 uppercase tracking-widest">
+                  <h3 class="text-xs font-bold text-secondary-550 uppercase tracking-widest">
                     BUKTI RESMI PEMBAYARAN SPP (RECEIPT)
                   </h3>
                 </div>
-                <div class="grid grid-cols-2 gap-4 text-xs font-medium text-brand-gray-600 mb-2">
+                <div class="grid grid-cols-2 gap-4 text-xs font-medium text-secondary-600 mb-2">
                   <div>
                     <p>
                       Nama Mahasiswa:{' '}
-                      <span class="text-brand-gray-900 font-bold">{selectedPrintItem()?.mahasiswa?.nama}</span>
+                      <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nama}</span>
                     </p>
                     <p>
-                      NIM: <span class="text-brand-gray-900 font-bold">{selectedPrintItem()?.mahasiswa?.nim}</span>
+                      NIM: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nim}</span>
                     </p>
                   </div>
                   <div class="text-right">
                     <p>
-                      Periode: <span class="text-brand-gray-900 font-bold">{selectedPrintItem()?.periodeId}</span>
+                      Periode: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.periodeId}</span>
                     </p>
                     <p>
                       Tanggal Bayar:{' '}
-                      <span class="text-brand-gray-900 font-bold">
+                      <span class="text-secondary-900 font-bold dark:text-white">
                         {selectedPrintItem()?.tanggalBayar
                           ? new Date(selectedPrintItem()?.tanggalBayar!).toLocaleDateString('id-ID')
                           : '-'}
@@ -709,9 +709,9 @@ export default function KeuanganDashboard() {
                     </p>
                   </div>
                 </div>
-                <table class="w-full text-left text-xs border border-brand-gray-200 border-collapse">
+                <table class="w-full text-left text-xs border border-secondary-200 border-collapse dark:border-secondary-700">
                   <thead>
-                    <tr class="bg-brand-gray-50 border-b border-brand-gray-200">
+                    <tr class="bg-secondary-50 border-b border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700">
                       <th class="p-2 border-r">Rincian Pembayaran</th>
                       <th class="p-2 text-right">Jumlah Terbayar</th>
                     </tr>
@@ -727,7 +727,7 @@ export default function KeuanganDashboard() {
                       <td class="p-2 border-r text-right">Total Kewajiban Tagihan:</td>
                       <td class="p-2 text-right">{formatRupiah(selectedPrintItem()?.nominal || 0)}</td>
                     </tr>
-                    <tr class="bg-brand-gray-50 font-bold">
+                    <tr class="bg-secondary-50 font-bold dark:bg-secondary-800">
                       <td class="p-2 border-r text-right">Status Pembayaran:</td>
                       <td class="p-2 text-right uppercase text-accent-600">
                         {selectedPrintItem()?.status === 'lunas' ? 'LUNAS' : 'CICILAN / SEBAGIAN'}
@@ -735,7 +735,7 @@ export default function KeuanganDashboard() {
                     </tr>
                   </tbody>
                 </table>
-                <div class="mt-6 text-center text-[10px] text-brand-gray-400 font-medium">
+                <div class="mt-6 text-center text-[10px] text-secondary-400 font-medium">
                   <p>
                     Bukti pembayaran ini sah dan dikeluarkan secara otomatis oleh sistem akademik Politeknik Sorowako.
                   </p>
@@ -745,14 +745,14 @@ export default function KeuanganDashboard() {
                 <button
                   type="button"
                   onClick={() => setShowPrintReceipt(false)}
-                  class="px-3 py-2 text-xs font-bold text-brand-gray-500 hover:bg-brand-gray-50 rounded-xl border border-brand-gray-200 transition-colors"
+                  class="px-3 py-2 text-xs font-bold text-secondary-500 hover:bg-secondary-50 rounded-xl border border-secondary-200 transition-colors dark:border-secondary-700"
                 >
                   Tutup
                 </button>
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all"
+                  class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
                 >
                   🖨️ Cetak Bukti
                 </button>
@@ -763,11 +763,11 @@ export default function KeuanganDashboard() {
 
         {/* --- MODAL SKEMA TARIF ANGKATAN (NEW) --- */}
         <Show when={showTarifModal()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-brand-gray-800 text-sm">Konfigurasi Tarif SPP per Angkatan</h3>
-                <button onClick={() => setShowTarifModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                <h3 class="font-bold text-secondary-800 text-sm dark:text-white">Konfigurasi Tarif SPP per Angkatan</h3>
+                <button onClick={() => setShowTarifModal(false)} class="text-secondary-400 hover:text-secondary-600">
                   ❌
                 </button>
               </div>
@@ -775,35 +775,35 @@ export default function KeuanganDashboard() {
               {/* Form Tambah Tarif */}
               <form
                 onSubmit={submitTarif}
-                class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-brand-gray-55/40 p-4 rounded-xl border border-brand-gray-100"
+                class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-secondary-55/40 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800"
               >
                 <div class="flex flex-col gap-1">
-                  <label class="text-[10px] font-bold text-brand-gray-500 uppercase tracking-wider">Angkatan (Tahun)</label>
+                  <label class="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">Angkatan (Tahun)</label>
                   <input
                     type="text"
                     placeholder="Misal: 2024"
                     value={newTarifAngkatan()}
                     onInput={(e) => setNewTarifAngkatan(e.currentTarget.value)}
-                    class="border border-brand-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-brand-gray-900 focus:outline-none"
+                    class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex flex-col gap-1">
-                  <label class="text-[10px] font-bold text-brand-gray-500 uppercase tracking-wider">Program Studi</label>
+                  <label class="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">Program Studi</label>
                   <select
                     onChange={(e) => setNewTarifProdi(parseInt(e.currentTarget.value))}
-                    class="border border-brand-gray-200 rounded-lg px-2 py-1.5 text-xs text-brand-gray-900 focus:outline-none"
+                    class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
                   >
                     <option value="">Pilih Prodi</option>
                     <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
                   </select>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <label class="text-[10px] font-bold text-brand-gray-500 uppercase tracking-wider">Nominal SPP (Rp)</label>
+                  <label class="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">Nominal SPP (Rp)</label>
                   <input
                     type="number"
                     value={newTarifNominal()}
                     onInput={(e) => setNewTarifNominal(parseInt(e.currentTarget.value))}
-                    class="border border-brand-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-brand-gray-900 focus:outline-none"
+                    class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <Button variant="primary" type="submit" class="!py-1.5 text-xs">
@@ -814,7 +814,7 @@ export default function KeuanganDashboard() {
               {/* Tabel Daftar Tarif */}
               <div class="max-h-72 overflow-y-auto border rounded-xl">
                 <table class="w-full text-left text-xs">
-                  <thead class="bg-brand-gray-50 sticky top-0 border-b">
+                  <thead class="bg-secondary-50 sticky top-0 border-b dark:bg-secondary-800">
                     <tr>
                       <th class="p-3">Angkatan</th>
                       <th class="p-3">Program Studi</th>
@@ -825,10 +825,10 @@ export default function KeuanganDashboard() {
                   <tbody>
                     <For each={tarifList()?.data}>
                       {(t) => (
-                        <tr class="border-b hover:bg-brand-gray-50/50">
-                          <td class="p-3 font-semibold text-brand-gray-800">{t.angkatan}</td>
-                          <td class="p-3 text-brand-gray-600">{t.programStudi?.nama || '-'}</td>
-                          <td class="p-3 font-semibold text-brand-gray-800">{formatRupiah(t.nominal)}</td>
+                        <tr class="border-b hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
+                          <td class="p-3 font-semibold text-secondary-800 dark:text-white">{t.angkatan}</td>
+                          <td class="p-3 text-secondary-600">{t.programStudi?.nama || '-'}</td>
+                          <td class="p-3 font-semibold text-secondary-800 dark:text-white">{formatRupiah(t.nominal)}</td>
                           <td class="p-3 text-center">
                             <button
                               onClick={() => handleDeleteTarif(t.id)}
@@ -842,7 +842,7 @@ export default function KeuanganDashboard() {
                     </For>
                     <Show when={!tarifList() || tarifList()!.data.length === 0}>
                       <tr>
-                        <td colspan="4" class="p-6 text-center text-brand-gray-400 italic">
+                        <td colspan="4" class="p-6 text-center text-secondary-400 italic">
                           Belum ada skema tarif angkatan terdaftar.
                         </td>
                       </tr>
@@ -862,23 +862,23 @@ export default function KeuanganDashboard() {
 
         {/* --- MODAL RIWAYAT TRANSAKSI & VOID (NEW) --- */}
         <Show when={showRiwayatModal()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-4">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
                 <div>
-                  <h3 class="font-bold text-brand-gray-800 text-sm">Riwayat Pembayaran & Koreksi</h3>
-                  <p class="text-[10px] text-brand-gray-400">
+                  <h3 class="font-bold text-secondary-800 text-sm dark:text-white">Riwayat Pembayaran & Koreksi</h3>
+                  <p class="text-[10px] text-secondary-400">
                     Mahasiswa: {selectedTagihan()?.mahasiswa?.nama} ({selectedTagihan()?.mahasiswa?.nim})
                   </p>
                 </div>
-                <button onClick={() => setShowRiwayatModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                <button onClick={() => setShowRiwayatModal(false)} class="text-secondary-400 hover:text-secondary-600">
                   ❌
                 </button>
               </div>
 
               <div class="overflow-x-auto border rounded-xl">
                 <table class="w-full text-left text-xs">
-                  <thead class="bg-brand-gray-50 border-b">
+                  <thead class="bg-secondary-50 border-b dark:bg-secondary-800">
                     <tr>
                       <th class="p-3">Waktu Transaksi</th>
                       <th class="p-3">Nominal Bayar</th>
@@ -892,14 +892,14 @@ export default function KeuanganDashboard() {
                     <For each={riwayatTransactions()?.data}>
                       {(tr) => (
                         <tr
-                          class={`border-b ${tr.isVoid ? 'bg-brand-gray-50/70 opacity-60 line-through' : 'hover:bg-brand-gray-50/50'}`}
+                          class={`border-b ${tr.isVoid ? 'bg-secondary-50/70 opacity-60 line-through' : 'hover:bg-secondary-50/50'}`}
                         >
                           <td class="p-3 font-mono text-[10px]">
                             {new Date(tr.tanggalTransaksi).toLocaleString('id-ID')}
                           </td>
-                          <td class="p-3 font-semibold text-brand-gray-800">{formatRupiah(tr.nominalBayar)}</td>
-                          <td class="p-3 text-brand-gray-600 text-[11px]">{tr.catatanKoreksi || '-'}</td>
-                          <td class="p-3 text-brand-gray-500">{tr.petugas?.nama || 'System'}</td>
+                          <td class="p-3 font-semibold text-secondary-800 dark:text-white">{formatRupiah(tr.nominalBayar)}</td>
+                          <td class="p-3 text-secondary-600 text-[11px]">{tr.catatanKoreksi || '-'}</td>
+                          <td class="p-3 text-secondary-500">{tr.petugas?.nama || 'System'}</td>
                           <td class="p-3 text-center">
                             <span
                               class={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -915,7 +915,7 @@ export default function KeuanganDashboard() {
                             <Show when={!tr.isVoid && role() !== 'mahasiswa'}>
                               <button
                                 onClick={() => handleVoid(tr.id)}
-                                class="text-[10px] font-extrabold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 border border-rose-100 transition-colors"
+                                class="text-[10px] font-extrabold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50 border border-rose-100 transition-colors dark:border-rose-800"
                               >
                                 Void / Batalkan
                               </button>
@@ -926,7 +926,7 @@ export default function KeuanganDashboard() {
                     </For>
                     <Show when={!riwayatTransactions() || riwayatTransactions()!.data.length === 0}>
                       <tr>
-                        <td colspan="6" class="p-6 text-center text-brand-gray-400 italic">
+                        <td colspan="6" class="p-6 text-center text-secondary-400 italic">
                           Belum ada transaksi pembayaran yang tercatat.
                         </td>
                       </tr>
@@ -946,25 +946,25 @@ export default function KeuanganDashboard() {
 
         {/* --- MODAL EDIT NOMINAL TAGIHAN (NEW) --- */}
         <Show when={showEditModal()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-brand-gray-800 text-sm">Edit Nominal Tagihan</h3>
-                <button onClick={() => setShowEditModal(false)} class="text-brand-gray-400 hover:text-brand-gray-600">
+                <h3 class="font-bold text-secondary-800 text-sm dark:text-white">Edit Nominal Tagihan</h3>
+                <button onClick={() => setShowEditModal(false)} class="text-secondary-400 hover:text-secondary-600">
                   ❌
                 </button>
               </div>
               <form onSubmit={submitEdit} class="flex flex-col gap-4">
-                <div class="text-xs text-brand-gray-600 flex flex-col gap-1 font-medium bg-brand-gray-50 p-3 rounded-xl border border-brand-gray-100">
+                <div class="text-xs text-secondary-600 flex flex-col gap-1 font-medium bg-secondary-50 p-3 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
                   <p>
-                    Mahasiswa: <span class="font-bold text-brand-gray-800">{selectedTagihan()?.mahasiswa?.nama}</span>
+                    Mahasiswa: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nama}</span>
                   </p>
                   <p>
-                    NIM: <span class="font-bold text-brand-gray-800">{selectedTagihan()?.mahasiswa?.nim}</span>
+                    NIM: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nim}</span>
                   </p>
                   <p>
                     Nominal Lama:{' '}
-                    <span class="font-bold text-brand-gray-800">{formatRupiah(selectedTagihan()?.nominal || 0)}</span>
+                    <span class="font-bold text-secondary-800 dark:text-white">{formatRupiah(selectedTagihan()?.nominal || 0)}</span>
                   </p>
                   <p>
                     Sudah Terbayar:{' '}
@@ -974,25 +974,25 @@ export default function KeuanganDashboard() {
                   </p>
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label class="text-xs font-bold text-brand-gray-700">Nominal Tagihan Baru (Rp)</label>
+                  <label class="text-xs font-bold text-secondary-700">Nominal Tagihan Baru (Rp)</label>
                   <input
                     type="number"
                     value={editNominal()}
                     onInput={(e) => setEditNominal(parseInt(e.currentTarget.value))}
-                    class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    class="px-3 py-2 text-xs font-bold text-brand-gray-500 hover:bg-brand-gray-50 rounded-xl border border-brand-gray-200 transition-colors"
+                    class="px-3 py-2 text-xs font-bold text-secondary-500 hover:bg-secondary-50 rounded-xl border border-secondary-200 transition-colors dark:border-secondary-700"
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all"
+                    class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
                   >
                     Simpan Perubahan
                   </button>

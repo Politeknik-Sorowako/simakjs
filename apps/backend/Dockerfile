@@ -5,6 +5,6 @@ COPY apps/backend/package.json ./apps/backend/
 RUN bun install --filter backend
 COPY apps/backend ./apps/backend
 EXPOSE 3000
-CMD ["sh", "-c", "bun run --cwd apps/backend src/scripts/pre-test.ts && bun run --cwd apps/backend start"]
+CMD ["sh", "-c", "bun run --cwd apps/backend db:push && bun run --cwd apps/backend start"]
 
 

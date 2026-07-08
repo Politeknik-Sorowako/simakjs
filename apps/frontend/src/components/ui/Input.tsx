@@ -25,14 +25,14 @@ export function Input(props: InputProps) {
 		local.id || `input-${Math.random().toString(36).slice(2, 9)}`;
 
 	const baseClasses = `
-    w-full px-4 py-2.5 rounded-xl border bg-white text-sm text-gray-900
-    placeholder:text-brand-gray-400
+    w-full px-4 py-2.5 rounded-xl border bg-white text-sm text-secondary-800
+    placeholder:text-secondary-400
     focus:outline-none focus:ring-2 focus:ring-accent-400/30 focus:border-brand-700
     transition-all duration-200
-    disabled:bg-brand-gray-50 disabled:text-brand-gray-400 disabled:cursor-not-allowed
-    dark:bg-slate-900 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-500
+    disabled:bg-secondary-50 disabled:text-secondary-400 disabled:cursor-not-allowed
+    dark:bg-secondary-900 dark:border-secondary-700 dark:text-white dark:placeholder:text-secondary-500
     dark:focus:ring-accent-400/20 dark:focus:border-brand-500
-    dark:disabled:bg-slate-800 dark:disabled:text-slate-600
+    dark:disabled:bg-secondary-800 dark:disabled:text-secondary-600
   `;
 
 	const errorClasses =
@@ -43,7 +43,7 @@ export function Input(props: InputProps) {
 			<Show when={local.label}>
 				<label
 					for={inputId()}
-					class="text-xs font-semibold uppercase tracking-wider text-brand-gray-500 dark:text-slate-400"
+					class="text-xs font-semibold uppercase tracking-wider text-secondary-500 dark:text-secondary-400"
 				>
 					{local.label}
 				</label>

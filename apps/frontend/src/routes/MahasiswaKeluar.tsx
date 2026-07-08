@@ -125,22 +125,22 @@ export default function MahasiswaKeluarPage() {
     switch (status) {
       case 'keluar':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Keluar (Resign)</span>
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Keluar (Resign)</span>
         );
       case 'drop_out':
         return (
           <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">Drop Out</span>
         );
       case 'pindah':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800">Pindah</span>;
+        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400">Pindah</span>;
       case 'wafat':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-gray-100 text-brand-gray-800">Wafat</span>;
+        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">Wafat</span>;
       case 'non_aktif':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Non-Aktif</span>
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Non-Aktif</span>
         );
       default:
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-gray-100 text-brand-gray-800">{status}</span>;
+        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">{status}</span>;
     }
   };
 
@@ -149,8 +149,8 @@ export default function MahasiswaKeluarPage() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800">Pencatatan Mahasiswa Keluar</h1>
-            <p class="text-sm text-brand-gray-500">
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Pencatatan Mahasiswa Keluar</h1>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Kelola dan catat riwayat mahasiswa yang keluar, mutasi/pindah, drop out, atau wafat.
             </p>
           </div>
@@ -170,7 +170,7 @@ export default function MahasiswaKeluarPage() {
           </div>
           <div class="w-48">
             <select
-              class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={periodeFilter()}
               onChange={(e) => {
                 setPeriodeFilter(e.currentTarget.value);
@@ -183,7 +183,7 @@ export default function MahasiswaKeluarPage() {
           </div>
         </div>
 
-        <Show when={!records.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
+        <Show when={!records.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
           <Table
             headers={[
               'NIM',
@@ -200,29 +200,29 @@ export default function MahasiswaKeluarPage() {
               each={records()?.data}
               fallback={
                 <tr>
-                  <td colspan="8" class="text-center py-10 text-brand-gray-400">
+                  <td colspan="8" class="text-center py-10 text-secondary-400 dark:text-secondary-200">
                     Tidak ada riwayat mahasiswa keluar yang ditemukan.
                   </td>
                 </tr>
               }
             >
               {(item) => (
-                <tr class="hover:bg-brand-gray-50/50 transition-colors">
-                  <td class="px-6 py-4 font-mono text-sm font-semibold text-brand-gray-600">{item.mahasiswa?.nim}</td>
-                  <td class="px-6 py-4 font-medium text-brand-gray-800">{item.mahasiswa?.nama}</td>
+                <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                  <td class="px-6 py-4 font-mono text-sm font-semibold text-secondary-600 dark:text-secondary-200">{item.mahasiswa?.nim}</td>
+                  <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.mahasiswa?.nama}</td>
                   <td class="px-6 py-4">{getStatusBadge(item.statusBaru)}</td>
-                  <td class="px-6 py-4 text-brand-gray-700">{item.periodeAkademik?.nama || item.periodeId}</td>
-                  <td class="px-6 py-4 text-sm text-brand-gray-500">{item.tanggalKeluar}</td>
-                  <td class="px-6 py-4 text-sm text-brand-gray-500">
-                    <Show when={item.noSk} fallback={<span class="text-brand-gray-300">-</span>}>
+                  <td class="px-6 py-4 text-secondary-700 dark:text-secondary-200">{item.periodeAkademik?.nama || item.periodeId}</td>
+                  <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">{item.tanggalKeluar}</td>
+                  <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">
+                    <Show when={item.noSk} fallback={<span class="text-secondary-300 dark:border-secondary-700">-</span>}>
                       <div>No SK: {item.noSk}</div>
-                      <div class="text-xs text-brand-gray-400">Tgl SK: {item.tanggalSk}</div>
+                      <div class="text-xs text-secondary-400 dark:text-secondary-200">Tgl SK: {item.tanggalSk}</div>
                     </Show>
                   </td>
-                  <td class="px-6 py-4 text-sm text-brand-gray-500">
+                  <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">
                     <div>IPK: {item.ipk || 'N/A'}</div>
                     <Show when={item.nomorIjazah}>
-                      <div class="text-xs text-brand-gray-400">Ijazah: {item.nomorIjazah}</div>
+                      <div class="text-xs text-secondary-400 dark:text-secondary-200">Ijazah: {item.nomorIjazah}</div>
                     </Show>
                   </td>
                   <td class="px-6 py-4">
@@ -240,20 +240,20 @@ export default function MahasiswaKeluarPage() {
       <Modal show={showModal()} onClose={() => setShowModal(false)} title="Pencatatan Mahasiswa Keluar/Non-Aktif">
         <form onSubmit={handleSave} class="flex flex-col gap-4">
           <Show when={errorMsg()}>
-            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100 dark:bg-red-900/30 dark:text-red-400">
               {errorMsg()}
             </div>
           </Show>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Cari Mahasiswa Aktif</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Cari Mahasiswa Aktif</label>
             <Show
               when={!selectedMhs()}
               fallback={
                 <div class="flex justify-between items-center p-3 bg-brand-50 border border-brand-200 rounded-lg">
                   <div>
                     <div class="font-semibold text-brand-900">{selectedMhs()?.nama}</div>
-                    <div class="text-xs text-brand-700">
+                    <div class="text-xs text-brand-700 dark:text-brand-400">
                       NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}
                     </div>
                   </div>
@@ -277,9 +277,9 @@ export default function MahasiswaKeluarPage() {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Status Baru</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Status Baru</label>
               <select
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={statusBaru()}
                 onChange={(e) => setStatusBaru(e.currentTarget.value)}
               >
@@ -291,9 +291,9 @@ export default function MahasiswaKeluarPage() {
               </select>
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Periode Keluar</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Periode Keluar</label>
               <select
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={periodeId()}
                 onChange={(e) => setPeriodeId(e.currentTarget.value)}
               >
@@ -305,11 +305,11 @@ export default function MahasiswaKeluarPage() {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Tanggal Keluar</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Tanggal Keluar</label>
               <Input type="date" value={tanggalKeluar()} onInput={(e) => setTanggalKeluar(e.currentTarget.value)} />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">IPK Terakhir</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">IPK Terakhir</label>
               <Input
                 type="number"
                 step="0.01"
@@ -322,17 +322,17 @@ export default function MahasiswaKeluarPage() {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Nomor SK Yudisium/Keluar</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nomor SK Yudisium/Keluar</label>
               <Input placeholder="Nomor SK" value={noSk()} onInput={(e) => setNoSk(e.currentTarget.value)} />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Tanggal SK</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Tanggal SK</label>
               <Input type="date" value={tanggalSk()} onInput={(e) => setTanggalSk(e.currentTarget.value)} />
             </div>
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Nomor Ijazah (jika lulus/lulus gelar)</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nomor Ijazah (jika lulus/lulus gelar)</label>
             <Input
               placeholder="Nomor Ijazah"
               value={nomorIjazah()}
@@ -341,10 +341,10 @@ export default function MahasiswaKeluarPage() {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Alasan Keluar/Catatan</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Alasan Keluar/Catatan</label>
             <textarea
               rows={2}
-              class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Tambahkan alasan mengapa mahasiswa ini dinonaktifkan..."
               value={alasanKeluar()}
               onInput={(e) => setAlasanKeluar(e.currentTarget.value)}

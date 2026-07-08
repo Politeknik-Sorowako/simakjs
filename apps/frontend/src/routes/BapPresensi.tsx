@@ -263,8 +263,8 @@ export default function BapPresensi() {
       <div class="flex flex-col gap-6">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-2xl font-bold text-brand-gray-800">Jurnal & Presensi Kuliah</h1>
-            <p class="text-sm text-brand-gray-500">Isi Berita Acara Perkuliahan (BAP) dan Presensi kehadiran mahasiswa</p>
+            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Jurnal & Presensi Kuliah</h1>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">Isi Berita Acara Perkuliahan (BAP) dan Presensi kehadiran mahasiswa</p>
           </div>
           <Show when={selectedKelasId()}>
             <Button onClick={openAddBap} variant="primary">
@@ -274,11 +274,11 @@ export default function BapPresensi() {
         </div>
 
         {/* Selection bar */}
-        <div class="bg-white border border-brand-gray-100 p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white border border-secondary-100 p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <div>
-            <label class="block text-sm font-semibold text-brand-gray-600 mb-2">Pilih Kelas Kuliah</label>
+            <label class="block text-sm font-semibold text-secondary-600 mb-2 dark:text-secondary-200">Pilih Kelas Kuliah</label>
             <select
-              class="w-full bg-brand-gray-50 border border-brand-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={selectedKelasId() || ''}
               onChange={(e) => {
                 const val = e.target.value;
@@ -299,9 +299,9 @@ export default function BapPresensi() {
 
           <Show when={selectedKelasId()}>
             <div>
-              <label class="block text-sm font-semibold text-brand-gray-600 mb-2">Pilih Pertemuan / BAP</label>
+              <label class="block text-sm font-semibold text-secondary-600 mb-2 dark:text-secondary-200">Pilih Pertemuan / BAP</label>
               <select
-                class="w-full bg-brand-gray-50 border border-brand-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={selectedBapId() || ''}
                 onChange={(e) => {
                   const val = e.target.value;
@@ -330,16 +330,16 @@ export default function BapPresensi() {
         <Show when={selectedKelasId() && selectedBapId()}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left BAP Summary */}
-            <div class="bg-white border border-brand-gray-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 lg:col-span-1 h-fit">
+            <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 lg:col-span-1 h-fit dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-brand-gray-800">Detail Berita Acara (BAP)</h3>
+                <h3 class="font-bold text-secondary-800 dark:text-white">Detail Berita Acara (BAP)</h3>
                 <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-xs">
                   Edit
                 </Button>
               </div>
 
               <div class="flex flex-col gap-1">
-                <span class="text-xs font-semibold text-brand-gray-400 uppercase">Materi Pokok (CPMK)</span>
+                <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">Materi Pokok (CPMK)</span>
                 <span class="text-sm font-semibold text-brand-600">
                   {(() => {
                     const activeBapObj = bapData()?.find((b) => b.id === selectedBapId());
@@ -350,22 +350,22 @@ export default function BapPresensi() {
               </div>
 
               <div class="flex flex-col gap-1">
-                <span class="text-xs font-semibold text-brand-gray-400 uppercase">Catatan / Detail Materi</span>
-                <span class="text-sm text-brand-gray-700">
+                <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">Catatan / Detail Materi</span>
+                <span class="text-sm text-secondary-700 dark:text-secondary-200">
                   {bapData()?.find((b) => b.id === selectedBapId())?.materi || '-'}
                 </span>
               </div>
 
               <div class="grid grid-cols-2 gap-4">
                 <div class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-brand-gray-400 uppercase">Pertemuan Ke</span>
-                  <span class="text-sm font-bold text-brand-gray-800">
+                  <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">Pertemuan Ke</span>
+                  <span class="text-sm font-bold text-secondary-800 dark:text-white">
                     {bapData()?.find((b) => b.id === selectedBapId())?.pertemuanKe || '-'}
                   </span>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-brand-gray-400 uppercase">Durasi Kelas</span>
-                  <span class="text-sm font-bold text-brand-gray-800">
+                  <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">Durasi Kelas</span>
+                  <span class="text-sm font-bold text-secondary-800 dark:text-white">
                     {bapData()?.find((b) => b.id === selectedBapId())?.durasiMenit || 0} Menit
                   </span>
                 </div>
@@ -373,9 +373,9 @@ export default function BapPresensi() {
             </div>
 
             {/* Right Attendance Table */}
-            <div class="bg-white border border-brand-gray-100 rounded-2xl p-6 shadow-sm lg:col-span-2 flex flex-col gap-4">
+            <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm lg:col-span-2 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex items-center justify-between border-b pb-4">
-                <h3 class="font-bold text-brand-gray-800">Presensi Kehadiran Mahasiswa</h3>
+                <h3 class="font-bold text-secondary-800 dark:text-white">Presensi Kehadiran Mahasiswa</h3>
                 <Button onClick={handleSaveAttendance} variant="success">
                   Simpan Presensi
                 </Button>
@@ -384,7 +384,7 @@ export default function BapPresensi() {
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm border-collapse">
                   <thead>
-                    <tr class="border-b border-brand-gray-100 text-brand-gray-400 uppercase text-xs font-semibold">
+                    <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold dark:border-secondary-800">
                       <th class="py-3 px-4">NIM / Nama</th>
                       <th class="py-3 px-4">Status Kehadiran</th>
                       <th class="py-3 px-4">Durasi Keterlambatan</th>
@@ -395,10 +395,10 @@ export default function BapPresensi() {
                       {(k) => {
                         const state = () => attendanceSheet()[k.mahasiswaId] || { status: 'hadir', durasiMangkir: 0 };
                         return (
-                          <tr class="border-b border-brand-gray-50 hover:bg-brand-gray-50/50">
+                          <tr class="border-b border-secondary-50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                             <td class="py-4 px-4">
-                              <div class="font-bold text-brand-gray-800">{k.mahasiswa?.nama}</div>
-                              <div class="text-xs text-brand-gray-400">{k.mahasiswa?.nim}</div>
+                              <div class="font-bold text-secondary-800 dark:text-white">{k.mahasiswa?.nama}</div>
+                              <div class="text-xs text-secondary-400 dark:text-secondary-200">{k.mahasiswa?.nim}</div>
                             </td>
                             <td class="py-4 px-4">
                               <div class="flex items-center gap-2">
@@ -414,7 +414,7 @@ export default function BapPresensi() {
                                             : st === 'alpa'
                                               ? 'bg-red-50 text-red-700 border-red-200'
                                               : 'bg-accent-50 text-accent-700 border-accent-200'
-                                          : 'bg-transparent text-brand-gray-400 border-brand-gray-200 hover:bg-brand-gray-100'
+                                          : 'bg-transparent text-secondary-400 border-secondary-200 hover:bg-secondary-100'
                                       }`}
                                     >
                                       {st.toUpperCase()}
@@ -427,7 +427,7 @@ export default function BapPresensi() {
                               <Show
                                 when={state().status === 'telat'}
                                 fallback={
-                                  <span class="text-xs text-brand-gray-400 italic">
+                                  <span class="text-xs text-secondary-400 italic dark:text-secondary-200">
                                     {state().status === 'hadir' ? '0' : 'Full Sesi'}
                                   </span>
                                 }
@@ -440,9 +440,9 @@ export default function BapPresensi() {
                                     onInput={(e) =>
                                       handleMangkirChange(k.mahasiswaId, parseInt(e.currentTarget.value) || 0)
                                     }
-                                    class="w-16 bg-brand-gray-50 border border-brand-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none"
+                                    class="w-16 bg-secondary-50 border border-secondary-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none dark:bg-secondary-800 dark:border-secondary-700"
                                   />
-                                  <span class="text-xs text-brand-gray-500">Menit</span>
+                                  <span class="text-xs text-secondary-500 dark:text-secondary-200">Menit</span>
                                 </div>
                               </Show>
                             </td>
@@ -458,13 +458,13 @@ export default function BapPresensi() {
         </Show>
 
         <Show when={selectedKelasId() && !selectedBapId()}>
-          <div class="bg-brand-gray-50 border border-dashed border-brand-gray-200 rounded-2xl p-12 text-center text-brand-gray-500">
+          <div class="bg-secondary-50 border border-dashed border-secondary-200 rounded-2xl p-12 text-center text-secondary-500 dark:bg-secondary-800 dark:border-secondary-700">
             Silakan pilih pertemuan/BAP di atas untuk mulai mengisi presensi kehadiran mahasiswa kelas ini.
           </div>
         </Show>
 
         <Show when={!selectedKelasId()}>
-          <div class="bg-brand-gray-50 border border-dashed border-brand-gray-200 rounded-2xl p-12 text-center text-brand-gray-500">
+          <div class="bg-secondary-50 border border-dashed border-secondary-200 rounded-2xl p-12 text-center text-secondary-500 dark:bg-secondary-800 dark:border-secondary-700">
             Pilih kelas kuliah pengampu Anda untuk melihat jurnal harian dan presensi mahasiswa.
           </div>
         </Show>
@@ -498,7 +498,7 @@ export default function BapPresensi() {
 
           <div class="flex flex-col gap-1.5">
             <div class="flex items-center justify-between">
-              <label class="text-sm font-semibold text-brand-gray-600">Pilih CPMK (OBE Target)</label>
+              <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Pilih CPMK (OBE Target)</label>
               <button
                 type="button"
                 onClick={() => setShowCpmkModal(true)}
@@ -508,7 +508,7 @@ export default function BapPresensi() {
               </button>
             </div>
             <select
-              class="w-full bg-brand-gray-50 border border-brand-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={selectedCpmkId() || ''}
               onChange={(e) => {
                 const val = e.target.value;
@@ -528,9 +528,9 @@ export default function BapPresensi() {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-600">Catatan / Topik Materi Kuliah (Dari RPS)</label>
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Catatan / Topik Materi Kuliah (Dari RPS)</label>
             <select
-              class="w-full bg-brand-gray-50 border border-brand-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={materi()}
               onChange={(e) => {
                 const selectedVal = e.target.value;
@@ -592,9 +592,9 @@ export default function BapPresensi() {
           />
 
           <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold text-brand-gray-600">Deskripsi CPMK</label>
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Deskripsi CPMK</label>
             <textarea
-              class="w-full bg-brand-gray-50 border border-brand-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Jelaskan capaian mata kuliah ini..."
               value={newCpmkDeskripsi()}

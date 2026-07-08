@@ -81,30 +81,30 @@ export default function CutiMahasiswa() {
     switch (status) {
       case 'pending':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Menunggu PA</span>
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Menunggu PA</span>
         );
       case 'disetujui_pa':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800">
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400">
             Disetujui PA (Menunggu Keuangan)
           </span>
         );
       case 'disetujui_keuangan':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
             Disetujui Keuangan (Menunggu Final)
           </span>
         );
       case 'disetujui_prodi':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
             Disetujui Final
           </span>
         );
       case 'ditolak':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Ditolak</span>;
+        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Ditolak</span>;
       default:
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-gray-100 text-brand-gray-800">{status}</span>;
+        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">{status}</span>;
     }
   };
 
@@ -113,15 +113,15 @@ export default function CutiMahasiswa() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800">Pengajuan Cuti</h1>
-            <p class="text-sm text-brand-gray-500">
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Pengajuan Cuti</h1>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Ajukan cuti akademik dan pantau status persetujuan dari dosen PA, keuangan, dan program studi.
             </p>
           </div>
           <Button onClick={handleOpenModal}>+ Ajukan Cuti</Button>
         </div>
 
-        <Show when={!cutis.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
+        <Show when={!cutis.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
           <Table
             headers={[
               'Periode Akademik',
@@ -137,29 +137,29 @@ export default function CutiMahasiswa() {
               each={cutis()?.data}
               fallback={
                 <tr>
-                  <td colspan="7" class="text-center py-10 text-brand-gray-400">
+                  <td colspan="7" class="text-center py-10 text-secondary-400 dark:text-secondary-200">
                     Belum ada riwayat pengajuan cuti.
                   </td>
                 </tr>
               }
             >
               {(item) => (
-                <tr class="hover:bg-brand-gray-50/50 transition-colors">
-                  <td class="px-6 py-4 font-semibold text-brand-gray-700">{item.periodeAkademik?.nama || item.periodeId}</td>
-                  <td class="px-6 py-4 text-brand-gray-600 max-w-xs truncate" title={item.alasan}>
+                <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                  <td class="px-6 py-4 font-semibold text-secondary-700 dark:text-secondary-200">{item.periodeAkademik?.nama || item.periodeId}</td>
+                  <td class="px-6 py-4 text-secondary-600 max-w-xs truncate dark:text-secondary-200" title={item.alasan}>
                     {item.alasan}
                   </td>
                   <td class="px-6 py-4">{getStatusBadge(item.status)}</td>
-                  <td class="px-6 py-4 text-sm text-brand-gray-500">
-                    <Show when={item.noSuratIzin} fallback={<span class="text-brand-gray-300">-</span>}>
+                  <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">
+                    <Show when={item.noSuratIzin} fallback={<span class="text-secondary-300 dark:border-secondary-700">-</span>}>
                       <div>No: {item.noSuratIzin}</div>
-                      <div class="text-xs text-brand-gray-400">Tgl: {item.tanggalSuratIzin}</div>
+                      <div class="text-xs text-secondary-400 dark:text-secondary-200">Tgl: {item.tanggalSuratIzin}</div>
                     </Show>
                   </td>
-                  <td class="px-6 py-4 text-sm text-brand-gray-500 italic">
-                    {item.catatan || <span class="text-brand-gray-300">-</span>}
+                  <td class="px-6 py-4 text-sm text-secondary-500 italic dark:text-secondary-200">
+                    {item.catatan || <span class="text-secondary-300 dark:border-secondary-700">-</span>}
                   </td>
-                  <td class="px-6 py-4 text-sm text-brand-gray-400">
+                  <td class="px-6 py-4 text-sm text-secondary-400 dark:text-secondary-200">
                     {new Date(item.createdAt).toLocaleDateString('id-ID')}
                   </td>
                   <td class="px-6 py-4">
@@ -179,15 +179,15 @@ export default function CutiMahasiswa() {
       <Modal show={showModal()} onClose={() => setShowModal(false)} title="Ajukan Cuti Akademik">
         <form onSubmit={handleSave} class="flex flex-col gap-4">
           <Show when={errorMsg()}>
-            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100 dark:bg-red-900/30 dark:text-red-400">
               {errorMsg()}
             </div>
           </Show>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Periode Akademik</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Periode Akademik</label>
             <select
-              class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={periodeId()}
               onChange={(e) => setPeriodeId(e.currentTarget.value)}
             >
@@ -203,10 +203,10 @@ export default function CutiMahasiswa() {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Alasan Cuti</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Alasan Cuti</label>
             <textarea
               rows={4}
-              class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Jelaskan alasan pengajuan cuti secara mendetail..."
               value={alasan()}
               onInput={(e) => setAlasan(e.currentTarget.value)}

@@ -8,11 +8,11 @@ interface CardProps extends JSX.HTMLAttributes<HTMLDivElement> {
 
 const variants = {
 	default:
-		"bg-white border border-brand-gray-100 shadow-card dark:bg-slate-900 dark:border-slate-800 dark:shadow-card-dark",
+		"bg-white border border-secondary-100 shadow-card dark:bg-secondary-900 dark:border-secondary-800 dark:shadow-card-dark",
 	bordered:
-		"bg-white border-2 border-brand-200 dark:bg-slate-900 dark:border-slate-700",
-	elevated: "bg-white shadow-card-hover dark:bg-slate-900 dark:shadow-lg",
-	ghost: "bg-brand-50/50 dark:bg-slate-800/50",
+		"bg-white border-2 border-brand-200 dark:bg-secondary-900 dark:border-secondary-700",
+	elevated: "bg-white shadow-card-hover dark:bg-secondary-900 dark:shadow-lg",
+	ghost: "bg-brand-50/50 dark:bg-secondary-800/50",
 };
 
 const paddings = {
@@ -34,7 +34,7 @@ export function Card(props: CardProps) {
 	const pad = () => paddings[local.padding || "md"];
 	const hoverClass = () =>
 		local.hover
-			? "hover:shadow-card-hover hover:border-brand-gray-200 dark:hover:border-slate-700 hover:-translate-y-0.5"
+			? "hover:shadow-card-hover hover:border-secondary-200 dark:hover:border-slate-700 hover:-translate-y-0.5"
 			: "";
 
 	return (
