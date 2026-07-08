@@ -31,7 +31,12 @@ async function waitForDatabase(connectionString: string, retries = 30, delay = 2
       await pool.end();
       return true;
     } catch (err: any) {
-      lastError = err.message || String(err);
+      // Unwrap AggregateError to get underlying connection errors
+      if (err.name === 'AggregateError' && err.errors?.length) {
+        lastError = err.errors.map((e: any) => e.message || String(e)).join('; ');
+      } else {
+        lastError = err.message || String(err);
+      }
       log('Waiting for database to be ready (attempt ' + (i + 1) + '/' + retries + ')...');
       await pool.end();
       await new Promise((resolve) => setTimeout(resolve, delay));
