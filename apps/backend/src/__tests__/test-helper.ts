@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
 import {
+  angkatanKurikulum,
   bap,
   bimbingan,
   bimbinganThread,
@@ -12,6 +13,8 @@ import {
   komponenNilai,
   konversiNilai,
   krs,
+  kurikulum,
+  kurikulumMataKuliah,
   mahasiswa,
   mahasiswaKeluar,
   mataKuliah,
@@ -22,8 +25,13 @@ import {
   periodeAkademik,
   presensi,
   programStudi,
+  rencanaEvaluasi,
+  rps,
+  rpsTopik,
+  sesiBimbingan,
   skalaPredikatKelulusan,
   skemaTarif,
+  tagihan,
   transaksiPembayaran,
   users,
 } from '../models/schema';
@@ -73,6 +81,7 @@ export interface MahasiswaSuccessResponse {
 export async function clearDatabase() {
   await db.delete(pengajuanCuti);
   await db.delete(mahasiswaKeluar);
+  await db.delete(tagihan);
   await db.delete(transaksiPembayaran);
   await db.delete(skemaTarif);
   await db.delete(konversiNilai);
@@ -80,6 +89,10 @@ export async function clearDatabase() {
   await db.delete(pengajuanYudisium);
   await db.delete(nilaiKomponenMahasiswa);
   await db.delete(komponenNilai);
+  await db.delete(rencanaEvaluasi);
+  await db.delete(rpsTopik);
+  await db.delete(rps);
+  await db.delete(sesiBimbingan);
   await db.delete(bimbinganThread);
   await db.delete(bimbingan);
   await db.delete(pelanggaran);
@@ -88,6 +101,9 @@ export async function clearDatabase() {
   await db.delete(bap);
   await db.delete(cpmk);
   await db.delete(krs);
+  await db.delete(angkatanKurikulum);
+  await db.delete(kurikulumMataKuliah);
+  await db.delete(kurikulum);
   await db.delete(dosenPengajarKelas);
   await db.delete(kelasKuliah);
   await db.delete(mataKuliah);

@@ -62,7 +62,7 @@ app
       set.status = 422;
       return { success: false, error: 'Validasi gagal', message: error.message };
     }
-    const err = error as any;
+    const err = (error as any)?.cause || error as any;
     if (err && err.code === '23505') {
       set.status = 409;
       return { success: false, error: 'Data duplikat terdeteksi. Kunci unik sudah digunakan.' };
