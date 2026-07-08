@@ -175,6 +175,16 @@ export const khsController = {
     return fetchApi<any>(url);
   },
 
+  async getYudisiumStats(periodeId?: string): Promise<any> {
+    const qs = periodeId ? '?periodeId=' + periodeId : '';
+    return fetchApi<any>('/yudisium/stats' + qs);
+  },
+
+  async getMahasiswaKeluarStats(periodeId?: string): Promise<any> {
+    const qs = periodeId ? '?periodeId=' + periodeId : '';
+    return fetchApi<any>('/mahasiswa-keluar/stats' + qs);
+  },
+
   // --- KONVERSI NILAI ---
   async getAllKonversi(programStudiId?: number): Promise<any[]> {
     const url = programStudiId ? `/khs/konversi?programStudiId=${programStudiId}` : '/khs/konversi';

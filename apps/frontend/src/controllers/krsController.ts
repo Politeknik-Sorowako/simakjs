@@ -89,4 +89,9 @@ export const krsController = {
   }> {
     return fetchApi(`/krs/validasi?mahasiswaId=${mahasiswaId}&periodeId=${periodeId}`);
   },
+
+  async getStats(periodeId?: string): Promise<any> {
+    const qs = periodeId ? '?periodeId=' + periodeId : '';
+    return fetchApi<any>('/krs/stats' + qs);
+  },
 };
