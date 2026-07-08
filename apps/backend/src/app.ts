@@ -72,10 +72,39 @@ app
       set.status = 400;
       return { success: false, error: 'Relasi tidak valid. Referensi ID tidak ditemukan.' };
     }
+    if (code === 'NOT_FOUND') {
+      set.status = 404;
+      return { success: false, error: 'Endpoint tidak ditemukan' };
+    }
     // Default fallback
     console.error(error);
     set.status = 500;
     return { success: false, error: 'Terjadi kesalahan internal server' };
+  })
+  .get('/health', async () => {
+    const checks: Record<string, string> = {};
+
+    try {
+      if (process.env.CHECK_DB_ON_HEALTH === 'true') {
+        const { db } = await import('./utils/db');
+        const { sql } = await import('drizzle-orm');
+        await db.execute(sql`SELECT 1`);
+        checks.database = 'ok';
+      }
+    } catch {
+      checks.database = 'error';
+    }
+
+    const memUsage = process.memoryUsage();
+    const memPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+    checks.memory = memPercent < 90 ? 'ok' : 'warning';
+
+    const allOk = Object.values(checks).every((c) => c === 'ok');
+    return {
+      status: allOk ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+      checks,
+    };
   })
   .use(jwtPlugin)
   .ws('/bimbingan/ws/:bimbinganId', {

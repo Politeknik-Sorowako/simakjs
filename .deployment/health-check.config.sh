@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Health check configuration
+export HEALTH_URL="${HEALTH_URL:-http://localhost:3000/health}"
+export STARTUP_WAIT_SECONDS="${STARTUP_WAIT_SECONDS:-8}"
+export HEALTH_CHECK_TIMEOUT="${HEALTH_CHECK_TIMEOUT:-10}"
+export HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-3}"
+export HEALTH_CHECK_INTERVAL="${HEALTH_CHECK_INTERVAL:-2}"
+export FAIL_ON_HEALTH_CHECK="${FAIL_ON_HEALTH_CHECK:-true}"
+
+# Backend log configuration
+export BACKEND_LOG_LINES="${BACKEND_LOG_LINES:-20}"
+export BACKEND_CONTAINER="${BACKEND_CONTAINER:-backend}"
