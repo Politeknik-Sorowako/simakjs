@@ -27,3 +27,8 @@ jobs:
             env -u GITHUB_TOKEN git pull origin main
             docker compose down
             docker compose up --build -d
+            sleep 8
+            echo "=== Backend Log ==="
+            docker compose logs backend --tail=20
+            echo "=== Health Check ==="
+            curl -f http://localhost:3000/health --connect-timeout 10 && echo " - OK" || echo " - FAILED"
