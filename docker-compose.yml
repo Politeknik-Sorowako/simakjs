@@ -10,6 +10,12 @@ services:
       - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-simak_user} -d ${POSTGRES_DB:-simak_vokasi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   backend:
     build:
@@ -33,7 +39,8 @@ services:
     volumes:
       - backup_data:/app/apps/backend/backups
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
     build:
