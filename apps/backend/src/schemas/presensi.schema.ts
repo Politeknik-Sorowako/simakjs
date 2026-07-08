@@ -133,20 +133,34 @@ export const getLaporanKompensasiSchema = {
     tags: ['Kompensasi'],
     summary: 'Laporan Rekapitulasi Kompensasi',
     description:
-      'Mengambil laporan/rekapitulasi seluruh data kompensasi mahasiswa yang memuat jumlah menit alpa/mangkir dan status penyelesaian.',
+      'Mengambil laporan/rekapitulasi data kompensasi mahasiswa dengan pagination dan filter.',
   },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '20' })),
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+  }),
   response: {
-    200: t.Array(
-      t.Object({
-        id: t.Optional(t.Integer({ default: 1 })),
-        nim: t.Optional(t.String({ default: '202301001' })),
-        nama: t.Optional(t.String({ default: 'Andi Pratama' })),
-        prodiNama: t.Optional(t.Union([t.String(), t.Null()], { default: 'Teknik Elektro' })),
-        totalKompensasi: t.Optional(t.Integer({ default: 120 })),
-        totalDibayar: t.Optional(t.Integer({ default: 60 })),
-        sisaKompensasi: t.Optional(t.Integer({ default: 60 })),
+    200: t.Object({
+      data: t.Array(
+        t.Object({
+          id: t.Integer(),
+          nim: t.String(),
+          nama: t.String(),
+          prodiNama: t.Union([t.String(), t.Null()]),
+          totalKompensasi: t.Integer(),
+          totalDibayar: t.Integer(),
+          sisaKompensasi: t.Integer(),
+        }),
+      ),
+      meta: t.Object({
+        total: t.Integer(),
+        page: t.Integer(),
+        limit: t.Integer(),
+        totalPages: t.Integer(),
       }),
-    ),
+    }),
   },
 };
 

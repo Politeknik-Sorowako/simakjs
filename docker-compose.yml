@@ -26,6 +26,12 @@ services:
       - NODE_ENV=${NODE_ENV:-development}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - DOMAIN_NAME=${DOMAIN_NAME:-localhost}
+      - PGHOST=${PGHOST:-db}
+      - PGPORT=${PGPORT:-5432}
+      - BACKUP_DIR=${BACKUP_DIR:-./backups}
+      - BACKUP_RETENTION=${BACKUP_RETENTION:-10}
+    volumes:
+      - backup_data:/app/apps/backend/backups
     depends_on:
       - db
 
@@ -44,4 +50,5 @@ services:
 
 volumes:
   pgdata:
+  backup_data:
 

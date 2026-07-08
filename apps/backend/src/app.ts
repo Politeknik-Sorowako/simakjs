@@ -97,7 +97,7 @@ app
 
     const memUsage = process.memoryUsage();
     const memPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
-    checks.memory = memPercent < 90 ? 'ok' : 'warning';
+    checks.memory = memPercent < 98 ? 'ok' : 'warning';
 
     const allOk = Object.values(checks).every((c) => c === 'ok');
     return {

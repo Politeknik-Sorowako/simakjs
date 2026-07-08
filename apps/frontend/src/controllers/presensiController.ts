@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { PaginatedResponse } from './prodiController';
 
 export interface CPMK {
   id: number;
@@ -34,6 +35,23 @@ export interface KompensasiLaporanItem {
   totalKompensasi: number;
   totalDibayar: number;
   sisaKompensasi: number;
+}
+
+export interface KompensasiStatsResponse {
+  summary: {
+    totalMahasiswa: number;
+    totalKompensasi: number;
+    totalDibayar: number;
+    totalSisa: number;
+  };
+  rekapProdi: Array<{
+    prodiNama: string;
+    jumlahMahasiswa: number;
+    totalKompensasi: number;
+    totalDibayar: number;
+    sisaKompensasi: number;
+  }>;
+  top10: KompensasiLaporanItem[];
 }
 
 export interface PaymentItem {
@@ -133,8 +151,23 @@ export const presensiController = {
   },
 
   // Kompensasi
-  async getLaporanKompensasi(): Promise<KompensasiLaporanItem[]> {
-    return fetchApi<KompensasiLaporanItem[]>('/presensi/kompensasi/laporan');
+  async getKompensasiStats(): Promise<KompensasiStatsResponse> {
+    return fetchApi<KompensasiStatsResponse>('/presensi/kompensasi/stats');
+  },
+
+  async getLaporanKompensasi(
+    page?: number,
+    limit?: number,
+    search?: string,
+    prodiId?: number,
+  ): Promise<PaginatedResponse<KompensasiLaporanItem>> {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    if (search) params.append('search', search);
+    if (prodiId) params.append('prodiId', String(prodiId));
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<PaginatedResponse<KompensasiLaporanItem>>(`/presensi/kompensasi/laporan${queryString}`);
   },
 
   async getKompensasiDetail(mahasiswaId: number): Promise<KompensasiDetailResponse> {
