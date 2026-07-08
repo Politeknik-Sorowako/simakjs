@@ -1,21 +1,41 @@
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import { join } from 'path';
+import { appendFileSync, readdirSync } from 'fs';
 import { Pool } from 'pg';
+import * as dns from 'dns';
+
+const { promises: dnsPromises } = dns;
 
 function ts() {
   return new Date().toISOString();
 }
 
+const AUDIT_LOG = process.env.AUDIT_LOG_PATH || join(process.cwd(), 'db-migrations.log');
+
 function log(msg: string) {
-  console.log('[' + ts() + '] ' + msg);
+  const entry = '[' + ts() + '] ' + msg;
+  console.log(entry);
+  try {
+    appendFileSync(AUDIT_LOG, entry + '\n');
+  } catch {
+    // audit log write failure is non-fatal
+  }
 }
 
 function runScript(name: string, scriptPath: string): boolean {
   try {
     log('Running: ' + name + '...');
-    execSync('bun run ' + scriptPath, { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
-    log('[OK] ' + name + ' completed.');
-    return true;
+    const result = spawnSync('bun', ['run', scriptPath], {
+      stdio: 'inherit',
+      timeout: 120000,
+      cwd: process.cwd(),
+      env: process.env,
+    });
+    if (result.status === 0) {
+      log('[OK] ' + name + ' completed.');
+      return true;
+    }
+    throw new Error('Exit code ' + result.status);
   } catch (err: any) {
     log('[FAILED] ' + name + ' failed: ' + (err.message || err));
     return false;
@@ -31,7 +51,6 @@ async function waitForDatabase(connectionString: string, retries = 30, delay = 2
       await pool.end();
       return true;
     } catch (err: any) {
-      // Unwrap AggregateError to get underlying connection errors
       if (err.name === 'AggregateError' && err.errors?.length) {
         lastError = err.errors.map((e: any) => e.message || String(e)).join('; ');
       } else {
@@ -47,27 +66,50 @@ async function waitForDatabase(connectionString: string, retries = 30, delay = 2
 }
 
 async function resolveDbHost(host: string): Promise<void> {
-  const { execSync } = await import('child_process');
   try {
-    execSync('getent hosts ' + host + ' 2>/dev/null || dig +short ' + host + ' 2>/dev/null || host ' + host + ' 2>/dev/null || nslookup ' + host + ' 2>/dev/null', { timeout: 5000 });
+    const addresses = await dnsPromises.resolve4(host);
+    log('  -> DNS resolved: ' + host + ' -> ' + addresses.join(', '));
   } catch {
-    // DNS resolution tools are optional
+    try {
+      const addresses = await dnsPromises.resolve6(host);
+      log('  -> DNS resolved (IPv6): ' + host + ' -> ' + addresses.join(', '));
+    } catch {
+      log('  -> DNS resolution failed for: ' + host);
+    }
+  }
+}
+
+function getDbHostFromUrl(dbUrl: string): string | null {
+  try {
+    const url = new URL(dbUrl);
+    return url.hostname || null;
+  } catch {
+    return null;
   }
 }
 
 async function diagnoseConnection(dbUrl: string): Promise<string[]> {
   const info: string[] = [];
-  const match = dbUrl.match(/postgresql:\/\/([^:]+):([^@]+)@([^:]+):?(\d*)\/(.+)/);
-  if (match) {
-    info.push('Host: ' + match[3] + ':' + (match[4] || '5432'));
-    info.push('Database: ' + match[5]);
-    info.push('User: ' + match[1]);
+  try {
+    const url = new URL(dbUrl);
+    info.push('Host: ' + url.hostname + ':' + (url.port || '5432'));
+    info.push('Database: ' + url.pathname.slice(1));
+    info.push('User: ' + decodeURIComponent(url.username));
+
+    // DNS resolution instead of ping
     try {
-      const pingResult = execSync('ping -c 1 -W 2 ' + match[3] + ' 2>&1 || echo "unreachable"').toString().trim().split('\n').pop();
-      info.push('Ping: ' + (pingResult || 'unknown'));
+      await dnsPromises.resolve4(url.hostname);
+      info.push('DNS: resolved');
     } catch {
-      info.push('Ping: failed');
+      try {
+        await dnsPromises.resolve6(url.hostname);
+        info.push('DNS: resolved (IPv6)');
+      } catch {
+        info.push('DNS: resolution failed');
+      }
     }
+  } catch {
+    info.push('Could not parse DATABASE_URL');
   }
   return info;
 }
@@ -84,10 +126,14 @@ async function main() {
     log('Verifying database connectivity...');
     log('DATABASE_URL: ' + dbUrl);
 
-    // Diagnose connection
     const diag = await diagnoseConnection(dbUrl);
     for (const line of diag) {
       log('  -> ' + line);
+    }
+
+    const dbHost = getDbHostFromUrl(dbUrl);
+    if (dbHost) {
+      await resolveDbHost(dbHost);
     }
 
     const ok = await waitForDatabase(dbUrl);
@@ -97,7 +143,7 @@ async function main() {
       log('');
       log('Possible causes:');
       log('  1. Database container is not running');
-      log('  2. Hostname "' + dbUrl.match(/@([^:]+)/)?.[1] + '" cannot be resolved');
+      log('  2. Hostname cannot be resolved');
       log('  3. Database credentials are incorrect');
       log('  4. Database server is not accepting connections yet');
       log('');
@@ -131,7 +177,6 @@ async function main() {
   let migrationOk = false;
   let migrationAttempt = '';
 
-  // Try drizzle-kit migrate first (incremental)
   try {
     log('Attempt 1: drizzle-kit migrate...');
     migrationAttempt = 'migrate';
@@ -143,7 +188,6 @@ async function main() {
     log('Attempt 2: drizzle-kit push (fallback)...');
     migrationAttempt = 'push';
 
-    // Fallback: use drizzle-kit push (creates tables directly from schema)
     try {
       execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
       log('[OK] Schema applied successfully (push).');
@@ -160,12 +204,24 @@ async function main() {
       log('Attempting auto-restore from backup...');
       const backupDir = process.env.BACKUP_DIR || join(process.cwd(), 'backups');
       try {
-        const result = execSync('ls -t ' + backupDir + '/backup_*.sql.gz 2>/dev/null | head -1').toString().trim();
-        if (result) {
-          const lastBackup = result.replace(backupDir + '/', '');
+        const files = readdirSync(backupDir)
+          .filter((f) => f.startsWith('backup_') && f.endsWith('.sql.gz'))
+          .sort()
+          .reverse();
+        if (files.length > 0) {
+          const lastBackup = files[0];
           log('Restoring from: ' + lastBackup);
-          execSync('bun run src/scripts/restore-db.ts ' + lastBackup, { stdio: 'inherit', timeout: 300000, cwd: process.cwd() });
-          log('[OK] Database restored from backup.');
+          const result = spawnSync('bun', ['run', 'src/scripts/restore-db.ts', lastBackup], {
+            stdio: 'inherit',
+            timeout: 300000,
+            cwd: process.cwd(),
+            env: process.env,
+          });
+          if (result.status === 0) {
+            log('[OK] Database restored from backup.');
+          } else {
+            throw new Error('Restore script exited with code ' + result.status);
+          }
         }
       } catch (restoreErr: any) {
         log('[WARN] Auto-restore failed. Manual restore required: bun run db:restore');

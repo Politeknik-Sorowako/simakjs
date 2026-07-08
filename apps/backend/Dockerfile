@@ -12,9 +12,11 @@ COPY apps/backend ./apps/backend
 # Create backups directory
 RUN mkdir -p ./apps/backend/backups
 
+COPY apps/backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 3000
 
-# Use safe-migrate instead of db:push (safe: auto-backup before migration)
-CMD ["sh", "-c", "bun run --cwd apps/backend db:safe-migrate && bun run --cwd apps/backend start"]
+ENTRYPOINT ["/entrypoint.sh"]
 
 
