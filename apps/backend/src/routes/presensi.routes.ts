@@ -16,6 +16,8 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .get('/bap/:bapId', PresensiController.getByBap, getByBapSchema)
   .get('/kompensasi/stats', PresensiController.getLaporanKompensasiStats)
   .get('/kompensasi/laporan', PresensiController.getLaporanKompensasi, getLaporanKompensasiSchema)
+  .get('/rekap-kehadiran', PresensiController.getRekapKehadiran)
+  .get('/rekap-kehadiran-mahasiswa', PresensiController.getRekapKehadiranMahasiswa)
   .get('/kompensasi/mahasiswa/:mahasiswaId', PresensiController.getKompensasiDetail, getKompensasiMahasiswaDetailSchema)
   .post('/kompensasi/bayar', PresensiController.bayarKompensasi, bayarKompensasiSchema)
   .put('/kompensasi/bayar/:id', PresensiController.updateKompensasiBayar, updateKompensasiBayarSchema);

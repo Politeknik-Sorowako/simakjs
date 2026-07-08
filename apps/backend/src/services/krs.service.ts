@@ -360,6 +360,47 @@ export class KrsService {
     };
   }
 
+  static async getStats(periodeId?: string) {
+    const conditions: any[] = [];
+    if (periodeId) conditions.push(eq(kelasKuliah.periodeId, periodeId));
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [total] = await db.select({ count: count() }).from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(whereClause);
+
+    const [approved] = await db.select({ count: count() }).from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(and(eq(krs.isApproved, true), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
+
+    const [pending] = await db.select({ count: count() }).from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(and(eq(krs.isApproved, false), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
+
+    const { programStudi: ps } = await import('../models/schema');
+
+    const perProdi = await db
+      .select({
+        prodiId: mahasiswa.programStudiId,
+        prodiNama: ps.nama,
+        total: count(),
+        approved: sql<number>`count(DISTINCT CASE WHEN ${krs.isApproved} THEN ${krs.id} END)`,
+      })
+      .from(krs)
+      .innerJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .leftJoin(ps, eq(mahasiswa.programStudiId, ps.id))
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(whereClause)
+      .groupBy(mahasiswa.programStudiId, ps.nama);
+
+    return {
+      total: Number(total?.count || 0),
+      approved: Number(approved?.count || 0),
+      pending: Number(pending?.count || 0),
+      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', total: Number(p.total), approved: Number(p.approved) })),
+    };
+  }
+
   static async validasiKrs(mahasiswaId: number, periodeId: string) {
     const rencana = await this.getRencanaStudi(mahasiswaId);
     if (!rencana) {

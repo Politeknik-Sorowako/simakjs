@@ -205,6 +205,17 @@ export class TagihanController {
     }
   }
 
+  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const periodeId = query?.periodeId;
+    const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+    return await TagihanService.getStats(periodeId, prodiId);
+  }
+
   static async deleteTarif({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {

@@ -12,5 +12,6 @@ export const pelanggaranRoutes = new Elysia({ prefix: '/pelanggaran' })
   .use(authMiddleware)
   .post('/', PelanggaranController.create, createPelanggaranSchema)
   .get('/mahasiswa/:mhsId', PelanggaranController.getByMhsId, getPelanggaranMahasiswaSchema)
+  .get('/rekap', PelanggaranController.getRekap)
   .get('/', PelanggaranController.getAll, getAllPelanggaranSchema)
   .put('/:id', PelanggaranController.update, updatePelanggaranSchema);

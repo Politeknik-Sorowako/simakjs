@@ -12,6 +12,8 @@ import {
 export const mahasiswaRoutes = new Elysia({ prefix: '/mahasiswa' })
   .use(authMiddleware)
   .get('/', MahasiswaController.getAll, getMahasiswaSchema)
+  .get('/stats', MahasiswaController.getStats)
+  .get('/baru', MahasiswaController.getMahasiswaBaru)
   .post('/', MahasiswaController.create, createMahasiswaSchema)
   .post('/import', MahasiswaController.importCsv)
   .post('/import-pa', MahasiswaController.importPaCsv)

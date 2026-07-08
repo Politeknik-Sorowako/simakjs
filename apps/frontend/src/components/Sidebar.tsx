@@ -14,6 +14,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const [isRegistrasiOpen, setIsRegistrasiOpen] = createSignal(false);
   const [isPelaksanaanOpen, setIsPelaksanaanOpen] = createSignal(false);
   const [isEvaluasiOpen, setIsEvaluasiOpen] = createSignal(false);
+  const [isLaporanOpen, setIsLaporanOpen] = createSignal(false);
   const [isLayananOpen, setIsLayananOpen] = createSignal(false);
   const [isIntegrasiOpen, setIsIntegrasiOpen] = createSignal(false);
 
@@ -31,8 +32,11 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (['/jurnal-presensi', '/input-nilai', '/bimbingan', '/pelanggaran'].includes(currentPath)) {
       setIsPelaksanaanOpen(true);
     }
-    if (['/khs', '/yudisium', '/laporan-kompensasi'].includes(currentPath)) {
+    if (['/khs', '/yudisium'].includes(currentPath)) {
       setIsEvaluasiOpen(true);
+    }
+    if (['/laporan-kompensasi', '/laporan/rekap-nilai', '/laporan/peringatan', '/laporan/mahasiswa-baru', '/laporan/presensi-kelas'].includes(currentPath)) {
+      setIsLaporanOpen(true);
     }
     if (['/pengajuan-cuti', '/manajemen-cuti', '/penonaktifan'].includes(currentPath)) {
       setIsLayananOpen(true);
@@ -533,9 +537,103 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                 </Show>
               </div>
             </Show>
+        {/* Laporan */}
+        <Show when={isAdmin() || isDosen() || isProdi()} >
+          <div class="px-4 mb-2">
+            <button
+              onClick={() => setIsLaporanOpen(!isLaporanOpen())}
+              class="flex items-center gap-2 w-full text-xs font-bold uppercase tracking-widest text-brand-400 hover:text-brand-300 transition-colors py-1"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Laporan
+              <svg
+                class={`w-3.5 h-3.5 transition-transform duration-200 ${isLaporanOpen() ? "transform rotate-90" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <Show when={isLaporanOpen()} >
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+                <Show when={isAdmin() || isProdi() || isDosen()} >
+                  <A
+                    href="/laporan/rekap-nilai"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    Rekap Nilai
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi() || isDosen()} >
+                  <A
+                    href="/laporan/presensi-kelas"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Presensi Kelas
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi() || isDosen()} >
+                  <A
+                    href="/laporan/peringatan"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    Peringatan
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()} >
+                  <A
+                    href="/laporan/mahasiswa-baru"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Penerimaan Mhs Baru
+                  </A>
+                </Show>
+                <Show when={isAdmin()} >
+                  <A
+                    href="/laporan-kompensasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Jam Kompensasi
+                  </A>
+                </Show>
+              </div>
+            </Show>
           </div>
         </Show>
-
         {/* Layanan Mahasiswa */}
         <Show when={notGuest()}>
           <div class="pt-2">
@@ -554,27 +652,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               </svg>
             </button>
 
-            <Show when={isLayananOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <Show when={isAdmin()}>
-                  <A
-                    href="/laporan-kompensasi"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Laporan Kompensasi
-                  </A>
-                </Show>
                 <Show when={isAdmin() || isDosen() || isMahasiswa()}>
                   <A
                     href="/pelanggaran"

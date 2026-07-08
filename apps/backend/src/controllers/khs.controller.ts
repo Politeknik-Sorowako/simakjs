@@ -191,4 +191,41 @@ export class KhsController {
     await KhsService.deletePredikat(id);
     return { message: 'Skala predikat kelulusan berhasil dihapus' };
   }
+
+  // --- REKAP NILAI ---
+
+  static async getRekapNilai({ params, query, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login.' };
+    }
+    const mhsId = parseInt(params.mhsId);
+    if (isNaN(mhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+    const periodeId = (query as any)?.periodeId as string | undefined;
+    try {
+      return await KhsService.getRekapNilai(mhsId, periodeId);
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal mengambil rekap nilai.' };
+    }
+  }
+
+  static async getRekapPerProdi({ query, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login.' };
+    }
+    const periodeId = (query as any)?.periodeId as string | undefined;
+    try {
+      return await KhsService.getRekapPerProdi(periodeId);
+    } catch (err: any) {
+      set.status = 400;
+      return { error: err.message || 'Gagal mengambil rekap per prodi.' };
+    }
+  }
 }

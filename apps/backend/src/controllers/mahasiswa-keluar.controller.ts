@@ -49,6 +49,15 @@ export class MahasiswaKeluarController {
     });
   }
 
+  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    return await MahasiswaKeluarService.getStats(query?.periodeId);
+  }
+
   static async delete({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || !['admin', 'prodi'].includes(user.role)) {

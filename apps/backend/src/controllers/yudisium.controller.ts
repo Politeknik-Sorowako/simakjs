@@ -107,6 +107,15 @@ export class YudisiumController {
     return await YudisiumService.getAllPengajuan();
   }
 
+  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    return await YudisiumService.getStats(query?.periodeId);
+  }
+
   // --- GRADE COMPONENTS CONTROLLERS ---
 
   static async getKomponen({ params }: AuthContext) {
