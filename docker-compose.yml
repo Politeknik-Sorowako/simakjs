@@ -11,11 +11,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-simak_user} -d ${POSTGRES_DB:-simak_vokasi}"]
+      test: ["CMD", "pg_isready", "-U", "simak_user"]
       interval: 5s
       timeout: 5s
-      retries: 10
-      start_period: 15s
+      retries: 15
+      start_period: 20s
 
   backend:
     build:
