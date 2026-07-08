@@ -72,11 +72,16 @@ app
       set.status = 400;
       return { success: false, error: 'Relasi tidak valid. Referensi ID tidak ditemukan.' };
     }
+    if (code === 'NOT_FOUND') {
+      set.status = 404;
+      return { success: false, error: 'Endpoint tidak ditemukan' };
+    }
     // Default fallback
     console.error(error);
     set.status = 500;
     return { success: false, error: 'Terjadi kesalahan internal server' };
   })
+  .get('/health', () => ({ status: 'ok', timestamp: new Date().toISOString() }))
   .use(jwtPlugin)
   .ws('/bimbingan/ws/:bimbinganId', {
     async open(ws) {
