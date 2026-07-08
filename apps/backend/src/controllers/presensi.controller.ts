@@ -20,13 +20,26 @@ export class PresensiController {
     return await PresensiService.getPresensiByBap(parseInt(params.bapId));
   }
 
-  static async getLaporanKompensasi({ set, getCurrentUser }: AuthContext) {
+  static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    return await PresensiService.getLaporanKompensasi();
+    const page = query?.page ? parseInt(query.page) : 1;
+    const limit = query?.limit ? parseInt(query.limit) : 20;
+    const search = query?.search;
+    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+    return await PresensiService.getLaporanKompensasi(page, limit, search, prodiId);
+  }
+
+  static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    return await PresensiService.getLaporanKompensasiStats();
   }
 
   static async getKompensasiDetail({ params, set, getCurrentUser }: AuthContext) {

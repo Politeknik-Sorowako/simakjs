@@ -9,14 +9,16 @@ export interface DosenPengajar {
   kelasKuliahId: number;
   sksBebanMengajar?: number | null;
   idPddikti?: string | null;
+  isSynced?: boolean;
   dosen?: Dosen | null;
   kelasKuliah?: KelasKuliah | null;
 }
 
 export const dosenPengajarController = {
-  async getAll(kelasKuliahId?: number, page?: number, limit?: number): Promise<PaginatedResponse<DosenPengajar>> {
+  async getAll(kelasKuliahId?: number, dosenId?: number, page?: number, limit?: number): Promise<PaginatedResponse<DosenPengajar>> {
     const params = new URLSearchParams();
     if (kelasKuliahId) params.append('kelasKuliahId', String(kelasKuliahId));
+    if (dosenId) params.append('dosenId', String(dosenId));
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     const queryString = params.toString() ? `?${params.toString()}` : '';
