@@ -127,13 +127,34 @@ async function main() {
   }
 
   // Step 3: Run Migration
-  log('Step 3/4: Running database migrations...');
+  log('Step 3/4: Applying database schema...');
+  let migrationOk = false;
+  let migrationAttempt = '';
+
+  // Try drizzle-kit migrate first (incremental)
   try {
-    log('Running drizzle-kit migrate...');
+    log('Attempt 1: drizzle-kit migrate...');
+    migrationAttempt = 'migrate';
     execSync('bunx drizzle-kit migrate', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
-    log('[OK] Migration completed.');
+    log('[OK] Migration completed (migrate).');
+    migrationOk = true;
   } catch (err: any) {
-    log('[FAILED] Migration failed: ' + (err.message || err));
+    log('[WARN] drizzle-kit migrate failed: ' + (err.message || err).split('\n')[0]);
+    log('Attempt 2: drizzle-kit push (fallback)...');
+    migrationAttempt = 'push';
+
+    // Fallback: use drizzle-kit push (creates tables directly from schema)
+    try {
+      execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
+      log('[OK] Schema applied successfully (push).');
+      migrationOk = true;
+    } catch (pushErr: any) {
+      log('[FAILED] drizzle-kit push also failed: ' + (pushErr.message || String(pushErr)).split('\n')[0]);
+    }
+  }
+
+  if (!migrationOk) {
+    log('[CRITICAL] Schema could not be applied.');
 
     if (backedUp) {
       log('Attempting auto-restore from backup...');
