@@ -25,10 +25,38 @@ jobs:
             cd /var/www/simakjs
             git remote set-url origin https://${{ secrets.GH_PAT }}@github.com/Politeknik-Sorowako/simakjs.git
             env -u GITHUB_TOKEN git pull origin main
+
+            # Source configuration
+            source .deployment/health-check.config.sh
+
             docker compose down
             docker compose up --build -d
-            sleep 8
+
+            sleep "$STARTUP_WAIT_SECONDS"
+
             echo "=== Backend Log ==="
-            docker compose logs backend --tail=20
+            docker compose logs "$BACKEND_CONTAINER" --tail="$BACKEND_LOG_LINES"
+
             echo "=== Health Check ==="
-            curl -f http://localhost:3000/health --connect-timeout 10 && echo " - OK" || echo " - FAILED"
+            for i in $(seq 1 "$HEALTH_CHECK_RETRIES"); do
+              echo "Attempt $i/$HEALTH_CHECK_RETRIES..."
+              RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" --connect-timeout "$HEALTH_CHECK_TIMEOUT") && STATUS_CODE=$? || STATUS_CODE=$?
+              if [ "$RESPONSE" = "200" ]; then
+                echo "✓ Health check passed (HTTP $RESPONSE)"
+                curl -s "$HEALTH_URL" | head -c 200
+                echo ""
+                exit 0
+              fi
+              echo "  Response: HTTP $RESPONSE"
+              [ $i -lt "$HEALTH_CHECK_RETRIES" ] && sleep "$HEALTH_CHECK_INTERVAL"
+            done
+
+            if [ "$FAIL_ON_HEALTH_CHECK" = "true" ]; then
+              echo "✗ Health check failed after $HEALTH_CHECK_RETRIES attempts"
+              echo "=== Backend Full Log ==="
+              docker compose logs "$BACKEND_CONTAINER" --tail=50
+              exit 1
+            else
+              echo "⚠ Health check failed but continuing (FAIL_ON_HEALTH_CHECK=false)"
+              exit 0
+            fi
