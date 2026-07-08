@@ -169,8 +169,8 @@ export default function Dosen() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800">Dosen</h1>
-            <p class="text-sm text-brand-gray-500">Kelola data dosen pengajar dan program studi terkait.</p>
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Dosen</h1>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">Kelola data dosen pengajar dan program studi terkait.</p>
           </div>
           <div class="flex gap-2">
             <Show when={selectedIds().length > 0}>
@@ -216,14 +216,14 @@ export default function Dosen() {
           />
         </div>
 
-        <Show when={!dosens.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
+        <Show when={!dosens.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
           <Table
             headers={[
               <input
                 type="checkbox"
                 checked={isAllSelected()}
                 onChange={toggleSelectAll}
-                class="rounded border-brand-gray-300 text-brand-600 focus:ring-brand-500"
+                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
               />,
               'NIP',
               'Nama',
@@ -235,20 +235,20 @@ export default function Dosen() {
           >
             <For each={dosens()?.data}>
               {(item) => (
-                <tr class="hover:bg-brand-gray-50/50 transition-colors">
+                <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                   <td class="px-6 py-4">
                     <input
                       type="checkbox"
                       checked={selectedIds().includes(item.id)}
                       onChange={() => toggleSelect(item.id)}
-                      class="rounded border-brand-gray-300 text-brand-600 focus:ring-brand-500"
+                      class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
                     />
                   </td>
-                  <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.nip}</td>
-                  <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
-                  <td class="px-6 py-4 text-brand-gray-500">{item.email}</td>
-                  <td class="px-6 py-4 text-brand-gray-600">{item.programStudi?.nama || '-'}</td>
-                  <td class="px-6 py-4 text-brand-gray-500">{item.nidn || '-'}</td>
+                  <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">{item.nip}</td>
+                  <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
+                  <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.email}</td>
+                  <td class="px-6 py-4 text-secondary-600 dark:text-secondary-200">{item.programStudi?.nama || '-'}</td>
+                  <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.nidn || '-'}</td>
                   <td class="px-6 py-4 flex gap-2">
                     <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
                       Edit
@@ -262,7 +262,7 @@ export default function Dosen() {
             </For>
             <Show when={dosens()?.data.length === 0}>
               <tr>
-                <td colspan="6" class="px-6 py-10 text-center text-brand-gray-400">
+                <td colspan="6" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data dosen ditemukan.
                 </td>
               </tr>
@@ -272,7 +272,7 @@ export default function Dosen() {
           {/* Pagination */}
           <Show when={dosens() && dosens()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-brand-gray-500">
+              <span class="text-xs text-secondary-500 dark:text-secondary-200">
                 Menampilkan halaman {page()} dari {dosens()?.meta.totalPages} ({dosens()?.meta.total} total data)
               </span>
               <div class="flex gap-2">
@@ -304,7 +304,7 @@ export default function Dosen() {
         >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
-              <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">
+              <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100 dark:bg-red-900/30 dark:text-red-400">
                 {errorMsg()}
               </div>
             </Show>

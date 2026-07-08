@@ -133,8 +133,8 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
 			title={`Impor Data ${props.title} via CSV`}
 		>
 			<div class="flex flex-col gap-4">
-				<div class="flex justify-between items-center bg-blue-50 dark:bg-slate-800/50 p-3 rounded-lg border border-blue-100 dark:border-slate-800">
-					<span class="text-xs text-blue-800 dark:text-blue-400 font-medium">
+				<div class="flex justify-between items-center bg-accent-50 dark:bg-secondary-800/50 p-3 rounded-lg border border-accent-100 dark:border-secondary-800">
+					<span class="text-xs text-accent-800 dark:text-accent-400 font-medium">
 						Unduh template format CSV standar terlebih dahulu
 					</span>
 					<Button variant="secondary" onClick={handleDownloadTemplate}>
@@ -144,13 +144,13 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
 
 				<form onSubmit={handleSubmit} class="flex flex-col gap-4">
 					<div class="flex flex-col gap-1.5">
-						<label class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+						<label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
 							Pilihan Penanganan Duplikat Key
 						</label>
 						<select
 							value={duplicateMode()}
 							onChange={(e) => setDuplicateMode(e.currentTarget.value)}
-							class="w-full text-sm border border-gray-300 dark:border-slate-700 rounded-lg p-2 bg-white dark:bg-slate-900 text-gray-800 dark:text-gray-200"
+							class="w-full text-sm border border-secondary-300 dark:border-secondary-700 rounded-lg p-2 bg-white dark:bg-secondary-900 text-secondary-800 dark:text-secondary-200"
 						>
 							<option value="skip">
 								Skip (Abaikan baris jika data key sudah ada)
@@ -162,39 +162,39 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
 					</div>
 
 					<div class="flex flex-col gap-1.5">
-						<label class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+						<label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
 							Pilih File CSV
 						</label>
 						<input
 							type="file"
 							accept=".csv"
 							onChange={handleFileChange}
-							class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-800 dark:file:text-white"
+							class="w-full text-sm text-secondary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 dark:file:bg-secondary-800 dark:file:text-white"
 						/>
 					</div>
 
 					{/* Preview Table */}
 					<Show when={preview().length > 0}>
 						<div class="flex flex-col gap-1.5">
-							<span class="text-xs font-semibold text-gray-500">
+							<span class="text-xs font-semibold text-secondary-500">
 								Preview 5 Baris Pertama CSV:
 							</span>
-							<div class="max-h-40 overflow-auto border border-gray-200 dark:border-slate-800 rounded-lg">
-								<table class="min-w-full divide-y divide-gray-200 dark:divide-slate-800 text-left text-xs bg-white dark:bg-slate-900">
-									<thead class="bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-400 font-bold">
+							<div class="max-h-40 overflow-auto border border-secondary-200 dark:border-secondary-800 rounded-lg">
+								<table class="min-w-full divide-y divide-secondary-200 dark:divide-secondary-800 text-left text-xs bg-white dark:bg-secondary-900">
+									<thead class="bg-secondary-50 dark:bg-secondary-800 text-secondary-600 dark:text-secondary-400 font-bold">
 										<tr>
 											<For each={preview()[0]}>
 												{(h) => <th class="px-3 py-2">{h}</th>}
 											</For>
 										</tr>
 									</thead>
-									<tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+									<tbody class="divide-y divide-secondary-100 dark:divide-secondary-800">
 										<For each={preview().slice(1)}>
 											{(row) => (
 												<tr>
 													<For each={row}>
 														{(cell) => (
-															<td class="px-3 py-1.5 text-gray-700 dark:text-gray-300">
+															<td class="px-3 py-1.5 text-secondary-700 dark:text-secondary-200">
 																{cell}
 															</td>
 														)}

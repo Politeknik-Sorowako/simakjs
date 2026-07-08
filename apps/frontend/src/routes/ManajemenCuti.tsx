@@ -42,7 +42,7 @@ export default function ManajemenCuti() {
       ditolak: { bg: 'bg-red-100', text: 'text-red-800', label: 'Ditolak' },
       kembali_aktif: { bg: 'bg-teal-100', text: 'text-teal-800', label: 'Kembali Aktif' },
     };
-    const s = map[status] || { bg: 'bg-brand-gray-100', text: 'text-brand-gray-800', label: status };
+    const s = map[status] || { bg: 'bg-secondary-100', text: 'text-secondary-800', label: status };
     return <span class={`px-2.5 py-1 text-xs font-semibold rounded-full ${s.bg} ${s.text}`}>{s.label}</span>;
   };
 
@@ -274,11 +274,11 @@ export default function ManajemenCuti() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         <div>
-          <h1 class="text-2xl font-extrabold text-brand-gray-800">Manajemen Cuti Mahasiswa</h1>
-          <p class="text-sm text-brand-gray-500">Input cuti, persetujuan, dan aktivasi kembali mahasiswa secara terpadu.</p>
+          <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Manajemen Cuti Mahasiswa</h1>
+          <p class="text-sm text-secondary-500">Input cuti, persetujuan, dan aktivasi kembali mahasiswa secara terpadu.</p>
         </div>
 
-        <div class="flex gap-1 border-b border-brand-gray-200">
+        <div class="flex gap-1 border-b border-secondary-200 dark:border-secondary-700">
           <For each={visibleTabs()}>
             {(tab) => (
               <button
@@ -286,7 +286,7 @@ export default function ManajemenCuti() {
                 class={`px-5 py-3 text-sm font-semibold transition-colors duration-150 rounded-t-lg border-b-2 -mb-px ${
                   activeTab() === tab.key
                     ? 'border-brand-600 text-brand-600 bg-brand-50/50'
-                    : 'border-transparent text-brand-gray-500 hover:text-brand-gray-700 hover:border-brand-gray-300'
+                    : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
                 }`}
               >
                 {tab.label}
@@ -311,7 +311,7 @@ export default function ManajemenCuti() {
               </div>
               <div class="w-48">
                 <select
-                  class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                  class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   value={inputPeriode()}
                   onChange={(e) => {
                     setInputPeriode(e.currentTarget.value);
@@ -328,14 +328,14 @@ export default function ManajemenCuti() {
 
           <Show
             when={!inputRecords.loading}
-            fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}
+            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
           >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Status', 'Periode Cuti', 'Rentang Cuti', 'No SK', 'Aksi']}>
               <For
                 each={inputRecords()?.data}
                 fallback={
                   <tr>
-                    <td colspan="7" class="text-center py-10 text-brand-gray-400">
+                    <td colspan="7" class="text-center py-10 text-secondary-400">
                       Tidak ada data mahasiswa cuti.
                     </td>
                   </tr>
@@ -344,26 +344,26 @@ export default function ManajemenCuti() {
                 {(item) => {
                   const cutiRecord = item.pengajuanCuti?.[0];
                   return (
-                    <tr class="hover:bg-brand-gray-50/50 transition-colors">
-                      <td class="px-6 py-4 font-mono text-sm font-semibold text-brand-gray-600">{item.nim}</td>
-                      <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
+                    <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                      <td class="px-6 py-4 font-mono text-sm font-semibold text-secondary-600">{item.nim}</td>
+                      <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
                       <td class="px-6 py-4">
                         {cutiRecord ? (
                           getStatusBadge(cutiRecord.status)
                         ) : (
-                          <span class="text-xs text-brand-gray-400">Tidak ada record</span>
+                          <span class="text-xs text-secondary-400">Tidak ada record</span>
                         )}
                       </td>
-                      <td class="px-6 py-4 text-brand-gray-700">
+                      <td class="px-6 py-4 text-secondary-700">
                         {cutiRecord?.periodeAkademik?.nama || cutiRecord?.periodeId || '-'}
                       </td>
-                      <td class="px-6 py-4 text-sm text-brand-gray-500">
+                      <td class="px-6 py-4 text-sm text-secondary-500">
                         {cutiRecord?.semesterMulaiCuti && cutiRecord?.semesterBerakhirCuti
                           ? `${cutiRecord.semesterMulaiCuti} - ${cutiRecord.semesterBerakhirCuti}`
                           : cutiRecord?.semesterMulaiCuti || '-'}
                       </td>
-                      <td class="px-6 py-4 text-sm text-brand-gray-500">
-                        <Show when={cutiRecord?.noSuratIzin} fallback={<span class="text-brand-gray-300">-</span>}>
+                      <td class="px-6 py-4 text-sm text-secondary-500">
+                        <Show when={cutiRecord?.noSuratIzin} fallback={<span class="text-secondary-300">-</span>}>
                           <div>{cutiRecord?.noSuratIzin}</div>
                         </Show>
                       </td>
@@ -406,7 +406,7 @@ export default function ManajemenCuti() {
           <div class="flex gap-4 items-center">
             <div class="w-48">
               <select
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={apprPeriode()}
                 onChange={(e) => {
                   setApprPeriode(e.currentTarget.value);
@@ -419,7 +419,7 @@ export default function ManajemenCuti() {
             </div>
             <div class="w-48">
               <select
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={apprStatus()}
                 onChange={(e) => {
                   setApprStatus(e.currentTarget.value);
@@ -436,38 +436,38 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show when={!approvals.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
+          <Show when={!approvals.loading} fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}>
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode', 'Alasan Cuti', 'Status', 'SK Cuti', 'Aksi']}>
               <For
                 each={approvals()?.data}
                 fallback={
                   <tr>
-                    <td colspan="8" class="text-center py-10 text-brand-gray-400">
+                    <td colspan="8" class="text-center py-10 text-secondary-400">
                       Tidak ada pengajuan cuti yang ditemukan.
                     </td>
                   </tr>
                 }
               >
                 {(item) => (
-                  <tr class="hover:bg-brand-gray-50/50 transition-colors">
-                    <td class="px-6 py-4 font-mono text-sm font-semibold text-brand-gray-600">{item.mahasiswa?.nim}</td>
-                    <td class="px-6 py-4 font-medium text-brand-gray-800">{item.mahasiswa?.nama}</td>
-                    <td class="px-6 py-4 text-brand-gray-500">{item.mahasiswa?.programStudi?.nama || '-'}</td>
-                    <td class="px-6 py-4 text-brand-gray-700">{item.periodeAkademik?.nama || item.periodeId}</td>
-                    <td class="px-6 py-4 text-brand-gray-600 max-w-xs truncate" title={item.alasan}>
+                  <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                    <td class="px-6 py-4 font-mono text-sm font-semibold text-secondary-600">{item.mahasiswa?.nim}</td>
+                    <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.mahasiswa?.nama}</td>
+                    <td class="px-6 py-4 text-secondary-500">{item.mahasiswa?.programStudi?.nama || '-'}</td>
+                    <td class="px-6 py-4 text-secondary-700">{item.periodeAkademik?.nama || item.periodeId}</td>
+                    <td class="px-6 py-4 text-secondary-600 max-w-xs truncate" title={item.alasan}>
                       {item.alasan}
                     </td>
                     <td class="px-6 py-4">{getStatusBadge(item.status)}</td>
-                    <td class="px-6 py-4 text-sm text-brand-gray-500">
-                      <Show when={item.noSuratIzin} fallback={<span class="text-brand-gray-300">-</span>}>
+                    <td class="px-6 py-4 text-sm text-secondary-500">
+                      <Show when={item.noSuratIzin} fallback={<span class="text-secondary-300">-</span>}>
                         <div>No: {item.noSuratIzin}</div>
-                        <div class="text-xs text-brand-gray-400">Tgl: {item.tanggalSuratIzin}</div>
+                        <div class="text-xs text-secondary-400">Tgl: {item.tanggalSuratIzin}</div>
                       </Show>
                     </td>
                     <td class="px-6 py-4">
                       <Show
                         when={canApprove(item)}
-                        fallback={<span class="text-xs text-brand-gray-400 italic">No action needed</span>}
+                        fallback={<span class="text-xs text-secondary-400 italic">No action needed</span>}
                       >
                         <div class="flex gap-2">
                           <Button variant="success" size="sm" onClick={() => openActionModal(item, 'approve')}>
@@ -498,12 +498,12 @@ export default function ManajemenCuti() {
                   setAktifSearch(e.currentTarget.value);
                   setAktifPage(1);
                 }}
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               />
             </div>
             <div class="w-48">
               <select
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={aktifPeriode()}
                 onChange={(e) => {
                   setAktifPeriode(e.currentTarget.value);
@@ -516,30 +516,30 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show when={!aktifList.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
+          <Show when={!aktifList.loading} fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}>
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode Cuti', 'Rentang Cuti', 'Aksi']}>
               <For
                 each={aktifList()?.data}
                 fallback={
                   <tr>
-                    <td colspan="6" class="text-center py-10 text-brand-gray-400">
+                    <td colspan="6" class="text-center py-10 text-secondary-400">
                       Tidak ada mahasiswa yang sedang cuti.
                     </td>
                   </tr>
                 }
               >
                 {(item) => (
-                  <tr class="hover:bg-brand-gray-50/50 transition-colors">
-                    <td class="px-6 py-4 font-mono text-sm font-semibold text-brand-gray-600">{item.nim}</td>
-                    <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
-                    <td class="px-6 py-4 text-brand-gray-500">{item.programStudi?.nama || '-'}</td>
-                    <td class="px-6 py-4 text-brand-gray-700">{getPeriodeCuti(item)}</td>
-                    <td class="px-6 py-4 text-brand-gray-700">{getRentangCuti(item)}</td>
+                  <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                    <td class="px-6 py-4 font-mono text-sm font-semibold text-secondary-600">{item.nim}</td>
+                    <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
+                    <td class="px-6 py-4 text-secondary-500">{item.programStudi?.nama || '-'}</td>
+                    <td class="px-6 py-4 text-secondary-700">{getPeriodeCuti(item)}</td>
+                    <td class="px-6 py-4 text-secondary-700">{getRentangCuti(item)}</td>
                     <td class="px-6 py-4">
                       <Show
                         when={getStatusCuti(item) === 'disetujui_prodi'}
                         fallback={
-                          <span class="text-xs text-brand-gray-400 italic">
+                          <span class="text-xs text-secondary-400 italic">
                             {getStatusCuti(item) === 'kembali_aktif' ? 'Sudah aktif' : 'Belum disetujui final'}
                           </span>
                         }
@@ -569,13 +569,13 @@ export default function ManajemenCuti() {
       <Modal show={showInputModal()} onClose={() => setShowInputModal(false)} title="Catat Cuti Mahasiswa">
         <form onSubmit={handleSaveInput} class="flex flex-col gap-4">
           <Show when={inputError()}>
-            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100 dark:bg-red-900/30 dark:text-red-400">
               {inputError()}
             </div>
           </Show>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Cari Mahasiswa Aktif</label>
+            <label class="text-sm font-semibold text-secondary-700">Cari Mahasiswa Aktif</label>
             <Show
               when={!selectedMhs()}
               fallback={
@@ -606,9 +606,9 @@ export default function ManajemenCuti() {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Periode Cuti</label>
+              <label class="text-sm font-semibold text-secondary-700">Periode Cuti</label>
               <select
-                class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={inputPeriodeId()}
                 onChange={(e) => setInputPeriodeId(e.currentTarget.value)}
               >
@@ -617,7 +617,7 @@ export default function ManajemenCuti() {
               </select>
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Semester Mulai Cuti</label>
+              <label class="text-sm font-semibold text-secondary-700">Semester Mulai Cuti</label>
               <Input
                 placeholder="Contoh: 20241"
                 value={semesterMulaiCuti()}
@@ -632,7 +632,7 @@ export default function ManajemenCuti() {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Semester Berakhir Cuti</label>
+              <label class="text-sm font-semibold text-secondary-700">Semester Berakhir Cuti</label>
               <Input
                 placeholder="Otomatis 2 semester"
                 value={semesterBerakhirCuti()}
@@ -641,10 +641,10 @@ export default function ManajemenCuti() {
                   setAutoBerakhir(false);
                 }}
               />
-              <span class="text-xs text-brand-gray-400">Default 2 semester (otomatis). Ubah untuk manual.</span>
+              <span class="text-xs text-secondary-400">Default 2 semester (otomatis). Ubah untuk manual.</span>
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Tanggal Surat Izin</label>
+              <label class="text-sm font-semibold text-secondary-700">Tanggal Surat Izin</label>
               <Input
                 type="date"
                 value={tanggalSuratIzin()}
@@ -654,7 +654,7 @@ export default function ManajemenCuti() {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Nomor Surat Izin Cuti</label>
+            <label class="text-sm font-semibold text-secondary-700">Nomor Surat Izin Cuti</label>
             <Input
               placeholder="Contoh: SK/CUTI/2024/001"
               value={noSuratIzin()}
@@ -663,10 +663,10 @@ export default function ManajemenCuti() {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Alasan Cuti</label>
+            <label class="text-sm font-semibold text-secondary-700">Alasan Cuti</label>
             <textarea
               rows={2}
-              class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Alasan cuti mahasiswa..."
               value={alasan()}
               onInput={(e) => setAlasan(e.currentTarget.value)}
@@ -692,12 +692,12 @@ export default function ManajemenCuti() {
       >
         <form onSubmit={handleApprovalAction} class="flex flex-col gap-4">
           <Show when={apprError()}>
-            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
+            <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100 dark:bg-red-900/30 dark:text-red-400">
               {apprError()}
             </div>
           </Show>
 
-          <div class="text-sm text-brand-gray-600">
+          <div class="text-sm text-secondary-600">
             <div>
               <strong>Mahasiswa:</strong> {selectedRequest()?.mahasiswa?.nama} ({selectedRequest()?.mahasiswa?.nim})
             </div>
@@ -708,7 +708,7 @@ export default function ManajemenCuti() {
 
           <Show when={actionType() === 'approve' && (role() === 'admin' || role() === 'prodi')}>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Nomor Surat Izin Cuti</label>
+              <label class="text-sm font-semibold text-secondary-700">Nomor Surat Izin Cuti</label>
               <Input
                 placeholder="misal: 123/DIR/CUTI/2024"
                 value={apprNoSurat()}
@@ -716,16 +716,16 @@ export default function ManajemenCuti() {
               />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-brand-gray-700">Tanggal Surat Izin Cuti</label>
+              <label class="text-sm font-semibold text-secondary-700">Tanggal Surat Izin Cuti</label>
               <Input type="date" value={apprTglSurat()} onInput={(e) => setApprTglSurat(e.currentTarget.value)} />
             </div>
           </Show>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-brand-gray-700">Catatan/Keterangan</label>
+            <label class="text-sm font-semibold text-secondary-700">Catatan/Keterangan</label>
             <textarea
               rows={3}
-              class="w-full rounded-lg border border-brand-gray-300 bg-white px-3 py-2 text-brand-gray-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Tambahkan catatan jika diperlukan..."
               value={apprCatatan()}
               onInput={(e) => setApprCatatan(e.currentTarget.value)}

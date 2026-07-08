@@ -306,10 +306,10 @@ export default function Bimbingan() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header */}
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm print:hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm print:hidden dark:bg-secondary-900 dark:border-secondary-800">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800 tracking-tight">Bimbingan Akademik</h1>
-            <p class="text-sm text-brand-gray-500">Modul bimbingan wali & persetujuan prasyarat UTS/UAS</p>
+            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Bimbingan Akademik</h1>
+            <p class="text-sm text-secondary-500">Modul bimbingan wali & persetujuan prasyarat UTS/UAS</p>
           </div>
 
           {/* Status Kelayakan (Mahasiswa) & Dropdown Periode */}
@@ -317,7 +317,7 @@ export default function Bimbingan() {
             <Show when={user()?.role === 'dosen' || user()?.role === 'admin' || user()?.role === 'prodi'}>
               <button
                 onClick={() => setShowRekapBkdModal(true)}
-                class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-xs hover:bg-brand-700 transition-colors flex items-center gap-1.5"
+                class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-xs hover:bg-brand-700 transition-colors flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
               >
                 🖨️ Cetak Laporan BKD
               </button>
@@ -325,9 +325,9 @@ export default function Bimbingan() {
 
             <Show when={currentBimbinganData()?.availablePeriodes}>
               <div class="flex items-center gap-2">
-                <span class="text-xs text-brand-gray-400 font-semibold uppercase">Periode:</span>
+                <span class="text-xs text-secondary-400 font-semibold uppercase">Periode:</span>
                 <select
-                  class="border border-brand-gray-200 rounded-lg px-2.5 py-1 text-xs bg-white focus:outline-none text-brand-gray-900"
+                  class="border border-secondary-200 rounded-lg px-2.5 py-1 text-xs bg-white focus:outline-none text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   value={selectedPeriode() || currentBimbinganData()?.periodeId}
                   onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
                 >
@@ -338,16 +338,16 @@ export default function Bimbingan() {
 
             <Show when={user()?.role === 'mahasiswa' && studentBimbingan()}>
               <div class="flex items-center gap-3">
-                <span class="text-sm text-brand-gray-400 font-medium">Ujian:</span>
+                <span class="text-sm text-secondary-400 font-medium">Ujian:</span>
                 <Show
                   when={studentBimbingan()?.isApproved}
                   fallback={
-                    <span class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-full text-xs font-bold border border-rose-100">
+                    <span class="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-full text-xs font-bold border border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
                       Bimbingan Kurang
                     </span>
                   }
                 >
-                  <span class="px-3 py-1.5 bg-accent-50 text-accent-600 rounded-full text-xs font-bold border border-accent-100">
+                  <span class="px-3 py-1.5 bg-accent-50 text-accent-600 rounded-full text-xs font-bold border border-accent-100 dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800">
                     Layak Ujian
                   </span>
                 </Show>
@@ -360,27 +360,27 @@ export default function Bimbingan() {
         <Show when={user()?.role === 'mahasiswa'}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* Chat Thread Panel */}
-            <div class="lg:col-span-2 bg-white rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col h-[600px] overflow-hidden">
-              <div class="p-4 border-b border-brand-gray-50 bg-brand-gray-50/50 flex items-center justify-between">
-                <h3 class="font-bold text-brand-gray-800">Konsultasi Dosen PA</h3>
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-[600px] overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+              <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800">
+                <h3 class="font-bold text-secondary-800 dark:text-white">Konsultasi Dosen PA</h3>
                 <div class="flex items-center gap-2">
-                  <span class="px-2 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded">
+                  <span class="px-2 py-0.5 bg-brand-50 text-brand-700 text-[10px] font-bold rounded dark:bg-brand-900/30 dark:text-white">
                     UTS: {utsCount()}/1
                   </span>
-                  <span class="px-2 py-0.5 bg-accent-50 text-accent-700 text-[10px] font-bold rounded">
+                  <span class="px-2 py-0.5 bg-accent-50 text-accent-700 text-[10px] font-bold rounded dark:bg-accent-900/30 dark:text-accent-400">
                     UAS: {uasCount()}/3
                   </span>
                 </div>
               </div>
 
               {/* Message List */}
-              <div class="flex-1 p-6 overflow-y-auto flex flex-col-reverse gap-4 bg-brand-gray-50/30">
+              <div class="flex-1 p-6 overflow-y-auto flex flex-col-reverse gap-4 bg-secondary-50/30 dark:bg-secondary-800">
                 <Show
                   when={messages().length > 0}
                   fallback={
                     <div class="flex-1 flex flex-col items-center justify-center text-center p-8">
                       <span class="text-4xl mb-2">💬</span>
-                      <p class="text-brand-gray-400 text-sm">
+                      <p class="text-secondary-400 text-sm">
                         Belum ada percakapan. Mulai bimbingan dengan mengirim pesan di bawah.
                       </p>
                     </div>
@@ -392,11 +392,11 @@ export default function Bimbingan() {
                         class={`flex flex-col max-w-[80%] ${msg.senderRole === 'mahasiswa' ? 'self-end items-end' : 'self-start items-start'}`}
                       >
                         <div
-                          class={`p-3 rounded-2xl text-sm ${msg.senderRole === 'mahasiswa' ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-white text-brand-gray-800 border border-brand-gray-100 rounded-tl-none shadow-sm'}`}
+                          class={`p-3 rounded-2xl text-sm ${msg.senderRole === 'mahasiswa' ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-white text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm'}`}
                         >
                           {msg.pesan}
                         </div>
-                        <span class="text-[10px] text-brand-gray-400 mt-1 uppercase tracking-wider font-medium">
+                        <span class="text-[10px] text-secondary-400 mt-1 uppercase tracking-wider font-medium">
                           {msg.senderRole} • {msg.tipe.toUpperCase()} •{' '}
                           {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
@@ -407,10 +407,10 @@ export default function Bimbingan() {
               </div>
 
               {/* Chat Input */}
-              <form onSubmit={handleSendMessage} class="p-4 border-t border-brand-gray-100 bg-white flex flex-col gap-3">
-                <div class="flex items-center gap-4 text-xs font-semibold text-brand-gray-500">
+              <form onSubmit={handleSendMessage} class="p-4 border-t border-secondary-100 bg-white flex flex-col gap-3 dark:border-secondary-800 dark:bg-secondary-900">
+                <div class="flex items-center gap-4 text-xs font-semibold text-secondary-500">
                   <span>Tipe Bimbingan:</span>
-                  <label class="flex items-center gap-1.5 cursor-pointer text-brand-gray-900">
+                  <label class="flex items-center gap-1.5 cursor-pointer text-secondary-900 dark:text-white">
                     <input
                       type="radio"
                       name="chatType"
@@ -419,7 +419,7 @@ export default function Bimbingan() {
                     />
                     Persiapan UTS
                   </label>
-                  <label class="flex items-center gap-1.5 cursor-pointer text-brand-gray-900">
+                  <label class="flex items-center gap-1.5 cursor-pointer text-secondary-900 dark:text-white">
                     <input
                       type="radio"
                       name="chatType"
@@ -436,11 +436,11 @@ export default function Bimbingan() {
                     placeholder="Tulis pesan bimbingan..."
                     value={messageText()}
                     onInput={(e) => setMessageText(e.currentTarget.value)}
-                    class="flex-1 border border-brand-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-brand-gray-900"
+                    class="flex-1 border border-secondary-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                   <button
                     type="submit"
-                    class="px-5 py-3 bg-brand-600 text-white font-bold rounded-xl text-sm hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-blue-200"
+                    class="px-5 py-3 bg-brand-600 text-white font-bold rounded-xl text-sm hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
                   >
                     Kirim
                   </button>
@@ -450,12 +450,12 @@ export default function Bimbingan() {
 
             {/* Sidebar Ringkasan */}
             <div class="flex flex-col gap-6">
-              <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4">
-                <h3 class="font-bold text-brand-gray-800 border-b pb-2">Catatan Dosen PA</h3>
+              <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+                <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Catatan Dosen PA</h3>
 
                 <Show when={studentBimbingan()?.ringkasan}>
                   <div class="flex flex-col gap-1">
-                    <span class="text-[10px] font-bold text-brand-gray-400 uppercase tracking-wider">
+                    <span class="text-[10px] font-bold text-secondary-400 uppercase tracking-wider">
                       Catatan Kelayakan / Ringkasan
                     </span>
                     <div class="p-3 bg-brand-50/50 border border-brand-100/50 rounded-xl text-xs text-brand-900 leading-relaxed">
@@ -465,29 +465,29 @@ export default function Bimbingan() {
                 </Show>
 
                 <div class="flex flex-col gap-3">
-                  <span class="text-[10px] font-bold text-brand-gray-400 uppercase tracking-wider block">
+                  <span class="text-[10px] font-bold text-secondary-400 uppercase tracking-wider block">
                     Riwayat Sesi Pertemuan
                   </span>
                   <Show
                     when={studentBimbingan()?.sesi && studentBimbingan()!.sesi.length > 0}
-                    fallback={<p class="text-xs text-brand-gray-400 italic">Belum ada sesi bimbingan yang tercatat.</p>}
+                    fallback={<p class="text-xs text-secondary-400 italic">Belum ada sesi bimbingan yang tercatat.</p>}
                   >
                     <For each={studentBimbingan()?.sesi}>
                       {(sesi) => (
-                        <div class="p-3 bg-brand-gray-50 border border-brand-gray-150 rounded-xl flex flex-col gap-2">
+                        <div class="p-3 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-2 dark:bg-secondary-800">
                           <div class="flex items-center justify-between border-b pb-1">
-                            <span class="font-bold text-xs text-brand-gray-700">Pertemuan Ke-{sesi.pertemuanKe}</span>
-                            <span class="text-[10px] text-brand-gray-400 font-mono">
+                            <span class="font-bold text-xs text-secondary-700">Pertemuan Ke-{sesi.pertemuanKe}</span>
+                            <span class="text-[10px] text-secondary-400 font-mono">
                               {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
                             </span>
                           </div>
                           <div class="flex flex-col gap-1">
                             <span class="text-[9px] font-bold text-rose-500 uppercase">Permasalahan:</span>
-                            <p class="text-xs text-brand-gray-800 whitespace-pre-wrap leading-relaxed">{sesi.permasalahan}</p>
+                            <p class="text-xs text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">{sesi.permasalahan}</p>
                           </div>
                           <div class="flex flex-col gap-1">
                             <span class="text-[9px] font-bold text-accent-600 uppercase">Solusi / Masukan:</span>
-                            <p class="text-xs text-brand-gray-800 whitespace-pre-wrap leading-relaxed">{sesi.solusi}</p>
+                            <p class="text-xs text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">{sesi.solusi}</p>
                           </div>
                         </div>
                       )}
@@ -503,18 +503,18 @@ export default function Bimbingan() {
         <Show when={user()?.role === 'dosen' || user()?.role === 'admin'}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* List Mahasiswa */}
-            <div class="bg-white rounded-2xl border border-brand-gray-100 shadow-sm overflow-hidden h-[600px] flex flex-col">
-              <div class="p-4 border-b border-brand-gray-50 bg-brand-gray-50/50">
-                <h3 class="font-bold text-brand-gray-800">
+            <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm overflow-hidden h-[600px] flex flex-col dark:bg-secondary-900 dark:border-secondary-800">
+              <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 dark:bg-secondary-800">
+                <h3 class="font-bold text-secondary-800 dark:text-white">
                   {user()?.role === 'dosen' ? 'Mahasiswa Bimbingan Anda' : 'Seluruh Progres Bimbingan'}
                 </h3>
               </div>
               <div class="flex-1 overflow-y-auto">
                 <Show
                   when={filteredMonitoring().length > 0}
-                  fallback={<div class="p-8 text-center text-brand-gray-400 text-sm">Tidak ada mahasiswa terdaftar.</div>}
+                  fallback={<div class="p-8 text-center text-secondary-400 text-sm">Tidak ada mahasiswa terdaftar.</div>}
                 >
-                  <div class="divide-y divide-gray-50">
+                  <div class="divide-y divide-secondary-50">
                     <For each={filteredMonitoring()}>
                       {(item) => (
                         <button
@@ -525,23 +525,23 @@ export default function Bimbingan() {
                           class={`w-full p-4 text-left flex flex-col gap-1 transition-all hover:bg-brand-50/30 ${selectedMhsId() === item.id ? 'bg-brand-50/60 border-l-4 border-brand-600' : ''}`}
                         >
                           <div class="flex items-center justify-between">
-                            <span class="font-bold text-brand-gray-800 text-sm">{item.nama}</span>
+                            <span class="font-bold text-secondary-800 text-sm dark:text-white">{item.nama}</span>
                             <Show
                               when={item.isApproved}
                               fallback={
-                                <span class="px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[10px] font-bold">
+                                <span class="px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[10px] font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
                                   Belum
                                 </span>
                               }
                             >
-                              <span class="px-2 py-0.5 bg-accent-50 text-accent-600 border border-accent-100 rounded text-[10px] font-bold">
+                              <span class="px-2 py-0.5 bg-accent-50 text-accent-600 border border-accent-100 rounded text-[10px] font-bold dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800">
                                 Layak
                               </span>
                             </Show>
                           </div>
-                          <span class="text-xs text-brand-gray-400">NIM: {item.nim}</span>
+                          <span class="text-xs text-secondary-400">NIM: {item.nim}</span>
                           <Show when={user()?.role === 'admin'}>
-                            <span class="text-[10px] text-brand-gray-400 italic">
+                            <span class="text-[10px] text-secondary-400 italic">
                               PA: {item.dosenPaNama || 'Belum diplot'}
                             </span>
                           </Show>
@@ -558,10 +558,10 @@ export default function Bimbingan() {
               <Show
                 when={selectedMhsId()}
                 fallback={
-                  <div class="bg-white rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col items-center justify-center text-center p-12 h-[600px]">
+                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col items-center justify-center text-center p-12 h-[600px] dark:bg-secondary-900 dark:border-secondary-800">
                     <span class="text-5xl mb-4">👈</span>
-                    <h3 class="font-bold text-brand-gray-800 text-lg">Pilih Mahasiswa</h3>
-                    <p class="text-brand-gray-400 text-sm max-w-xs mt-1">
+                    <h3 class="font-bold text-secondary-800 text-lg dark:text-white">Pilih Mahasiswa</h3>
+                    <p class="text-secondary-400 text-sm max-w-xs mt-1">
                       Pilih salah satu mahasiswa dari daftar di sebelah kiri untuk melihat percakapan bimbingan &
                       memberikan kelayakan ujian.
                     </p>
@@ -570,10 +570,10 @@ export default function Bimbingan() {
               >
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-[600px]">
                   {/* Chat Panel */}
-                  <div class="bg-white rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col h-full overflow-hidden">
-                    <div class="p-4 border-b border-brand-gray-50 bg-brand-gray-50/50 flex items-center justify-between">
+                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+                    <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800">
                       <div class="flex flex-col">
-                        <h3 class="font-bold text-brand-gray-800 text-sm">Chat: {selectedMhsNama()}</h3>
+                        <h3 class="font-bold text-secondary-800 text-sm dark:text-white">Chat: {selectedMhsNama()}</h3>
                         <button
                           type="button"
                           onClick={handleClearChat}
@@ -583,22 +583,22 @@ export default function Bimbingan() {
                         </button>
                       </div>
                       <div class="flex items-center gap-1.5">
-                        <span class="px-1.5 py-0.5 bg-brand-50 text-brand-700 text-[9px] font-bold rounded">
+                        <span class="px-1.5 py-0.5 bg-brand-50 text-brand-700 text-[9px] font-bold rounded dark:bg-brand-900/30 dark:text-white">
                           UTS: {utsCount()}/1
                         </span>
-                        <span class="px-1.5 py-0.5 bg-accent-50 text-accent-700 text-[9px] font-bold rounded">
+                        <span class="px-1.5 py-0.5 bg-accent-50 text-accent-700 text-[9px] font-bold rounded dark:bg-accent-900/30 dark:text-accent-400">
                           UAS: {uasCount()}/3
                         </span>
                       </div>
                     </div>
 
-                    <div class="flex-1 p-4 overflow-y-auto flex flex-col-reverse gap-4 bg-brand-gray-50/30">
+                    <div class="flex-1 p-4 overflow-y-auto flex flex-col-reverse gap-4 bg-secondary-50/30 dark:bg-secondary-800">
                       <Show
                         when={messages().length > 0}
                         fallback={
                           <div class="flex-1 flex flex-col items-center justify-center text-center p-6">
                             <span class="text-3xl mb-2">💬</span>
-                            <p class="text-brand-gray-400 text-xs">Belum ada obrolan.</p>
+                            <p class="text-secondary-400 text-xs">Belum ada obrolan.</p>
                           </div>
                         }
                       >
@@ -608,11 +608,11 @@ export default function Bimbingan() {
                               class={`flex flex-col max-w-[85%] ${msg.senderRole === 'dosen' || msg.senderRole === 'admin' ? 'self-end items-end' : 'self-start items-start'}`}
                             >
                               <div
-                                class={`p-3 rounded-2xl text-xs ${msg.senderRole === 'dosen' || msg.senderRole === 'admin' ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-white text-brand-gray-800 border border-brand-gray-100 rounded-tl-none shadow-sm'}`}
+                                class={`p-3 rounded-2xl text-xs ${msg.senderRole === 'dosen' || msg.senderRole === 'admin' ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-white text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm'}`}
                               >
                                 {msg.pesan}
                               </div>
-                              <span class="text-[9px] text-brand-gray-400 mt-1 uppercase tracking-wider font-semibold">
+                              <span class="text-[9px] text-secondary-400 mt-1 uppercase tracking-wider font-semibold">
                                 {msg.senderRole} • {msg.tipe.toUpperCase()} •{' '}
                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
@@ -624,11 +624,11 @@ export default function Bimbingan() {
 
                     <form
                       onSubmit={handleSendMessage}
-                      class="p-3 border-t border-brand-gray-100 bg-white flex flex-col gap-2"
+                      class="p-3 border-t border-secondary-100 bg-white flex flex-col gap-2 dark:border-secondary-800 dark:bg-secondary-900"
                     >
-                      <div class="flex items-center gap-3 text-[10px] font-semibold text-brand-gray-400">
+                      <div class="flex items-center gap-3 text-[10px] font-semibold text-secondary-400">
                         <span>Kategori Pesan:</span>
-                        <label class="flex items-center gap-1 cursor-pointer text-brand-gray-900">
+                        <label class="flex items-center gap-1 cursor-pointer text-secondary-900 dark:text-white">
                           <input
                             type="radio"
                             name="lecturerChatType"
@@ -637,7 +637,7 @@ export default function Bimbingan() {
                           />
                           UTS
                         </label>
-                        <label class="flex items-center gap-1 cursor-pointer text-brand-gray-900">
+                        <label class="flex items-center gap-1 cursor-pointer text-secondary-900 dark:text-white">
                           <input
                             type="radio"
                             name="lecturerChatType"
@@ -654,11 +654,11 @@ export default function Bimbingan() {
                           placeholder="Balas konsultasi..."
                           value={messageText()}
                           onInput={(e) => setMessageText(e.currentTarget.value)}
-                          class="flex-1 border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-900"
+                          class="flex-1 border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
                         />
                         <button
                           type="submit"
-                          class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700"
+                          class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
                         >
                           Kirim
                         </button>
@@ -667,10 +667,10 @@ export default function Bimbingan() {
                   </div>
 
                   {/* Form Approval, Resume Akademik, & Timeline Sesi */}
-                  <div class="bg-white rounded-2xl border border-brand-gray-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto">
+                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800">
                     {/* Resume Akademik */}
                     <div class="flex flex-col gap-3">
-                      <h3 class="font-extrabold text-brand-gray-800 text-sm border-b pb-2">📊 Resume Akademik</h3>
+                      <h3 class="font-extrabold text-secondary-800 text-sm border-b pb-2 dark:text-white">📊 Resume Akademik</h3>
                       <div class="grid grid-cols-2 gap-3 text-xs">
                         <div class="p-3 bg-red-50 border border-red-100 rounded-xl flex flex-col gap-0.5">
                           <span class="text-[10px] text-red-600 font-bold uppercase">Pelanggaran</span>
@@ -678,17 +678,17 @@ export default function Bimbingan() {
                             {akademikSummary()?.poinPelanggaran || 0} Poin
                           </span>
                         </div>
-                        <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5">
+                        <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
                           <span class="text-[10px] text-orange-600 font-bold uppercase">Jam Kompensasi</span>
                           <span class="text-sm font-black text-orange-700">
                             {akademikSummary()?.sisaKompensasi || 0} Menit
                           </span>
                         </div>
-                        <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl flex flex-col gap-0.5">
+                        <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl flex flex-col gap-0.5 dark:border-accent-800">
                           <span class="text-[10px] text-accent-600 font-bold uppercase">IPK Kumulatif</span>
                           <span class="text-sm font-black text-accent-700">{akademikSummary()?.ipk || '0.00'}</span>
                         </div>
-                        <div class="p-3 bg-brand-50 border border-brand-100 rounded-xl flex flex-col gap-0.5">
+                        <div class="p-3 bg-brand-50 border border-brand-100 rounded-xl flex flex-col gap-0.5 dark:border-brand-800">
                           <span class="text-[10px] text-brand-600 font-bold uppercase">IPS Sem. Lalu</span>
                           <span class="text-sm font-black text-brand-700">
                             {akademikSummary()?.ipsSemesterLalu || '0.00'}
@@ -700,11 +700,11 @@ export default function Bimbingan() {
                     {/* Timeline Sesi Bimbingan */}
                     <div class="flex flex-col gap-3">
                       <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-extrabold text-brand-gray-800 text-sm">📅 Sesi Bimbingan</h3>
+                        <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">📅 Sesi Bimbingan</h3>
                         <button
                           type="button"
                           onClick={handleOpenAddSesi}
-                          class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-[10px] hover:bg-brand-700"
+                          class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-[10px] hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
                         >
                           + Tambah Sesi
                         </button>
@@ -714,16 +714,16 @@ export default function Bimbingan() {
                         <Show
                           when={selectedBimbingan()?.sesi && selectedBimbingan()!.sesi.length > 0}
                           fallback={
-                            <p class="text-xs text-brand-gray-400 italic">
+                            <p class="text-xs text-secondary-400 italic">
                               Belum ada sesi bimbingan. Minimal 3 kali per semester.
                             </p>
                           }
                         >
                           <For each={selectedBimbingan()?.sesi}>
                             {(sesi) => (
-                              <div class="p-3 bg-brand-gray-50 border border-brand-gray-100 rounded-xl flex flex-col gap-1.5 relative">
-                                <div class="flex items-center justify-between border-b border-brand-gray-200 pb-1">
-                                  <span class="font-bold text-xs text-brand-gray-700">Sesi Ke-{sesi.pertemuanKe}</span>
+                              <div class="p-3 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-1.5 relative dark:bg-secondary-800 dark:border-secondary-800">
+                                <div class="flex items-center justify-between border-b border-secondary-200 pb-1 dark:border-secondary-700">
+                                  <span class="font-bold text-xs text-secondary-700">Sesi Ke-{sesi.pertemuanKe}</span>
                                   <div class="flex items-center gap-2">
                                     <button
                                       type="button"
@@ -741,22 +741,22 @@ export default function Bimbingan() {
                                     </button>
                                   </div>
                                 </div>
-                                <p class="text-[10px] text-brand-gray-400">
+                                <p class="text-[10px] text-secondary-400">
                                   Tanggal:{' '}
                                   {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
                                 </p>
-                                <p class="text-xs text-brand-gray-800">
+                                <p class="text-xs text-secondary-800 dark:text-white">
                                   <strong class="text-rose-600 text-[10px] block uppercase">Permasalahan:</strong>{' '}
                                   {sesi.permasalahan}
                                 </p>
-                                <p class="text-xs text-brand-gray-800">
+                                <p class="text-xs text-secondary-800 dark:text-white">
                                   <strong class="text-accent-600 text-[10px] block uppercase">Solusi:</strong>{' '}
                                   {sesi.solusi}
                                 </p>
                                 <div class="mt-1 flex items-center justify-between text-[10px]">
-                                  <span class="text-brand-gray-400 font-semibold">Lapor BKD:</span>
+                                  <span class="text-secondary-400 font-semibold">Lapor BKD:</span>
                                   <span
-                                    class={`font-bold px-1.5 py-0.5 rounded text-[9px] ${sesi.statusBkd ? 'bg-accent-100 text-accent-700' : 'bg-brand-gray-150 text-brand-gray-500'}`}
+                                    class={`font-bold px-1.5 py-0.5 rounded text-[9px] ${sesi.statusBkd ? 'bg-accent-100 text-accent-700' : 'bg-secondary-100 text-secondary-500'}`}
                                   >
                                     {sesi.statusBkd ? 'YA' : 'TIDAK'}
                                   </span>
@@ -770,35 +770,35 @@ export default function Bimbingan() {
 
                     {/* Ringkasan & Approval */}
                     <form onSubmit={handleUpdateBimbingan} class="flex flex-col gap-4 border-t pt-4">
-                      <h3 class="font-extrabold text-brand-gray-800 text-sm">🔑 Status Kelayakan & Ringkasan</h3>
+                      <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">🔑 Status Kelayakan & Ringkasan</h3>
 
-                      <div class="flex items-center justify-between p-3 bg-brand-gray-50 rounded-xl border border-brand-gray-100">
+                      <div class="flex items-center justify-between p-3 bg-secondary-50 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
                         <div class="flex flex-col">
-                          <span class="text-xs font-bold text-brand-gray-700">Setujui Kelayakan Ujian</span>
-                          <span class="text-[10px] text-brand-gray-400">Persetujuan kelayakan UTS & UAS</span>
+                          <span class="text-xs font-bold text-secondary-700">Setujui Kelayakan Ujian</span>
+                          <span class="text-[10px] text-secondary-400">Persetujuan kelayakan UTS & UAS</span>
                         </div>
                         <input
                           type="checkbox"
                           checked={isApprovedStatus()}
                           onChange={(e) => setIsApprovedStatus(e.currentTarget.checked)}
-                          class="w-4 h-4 text-brand-600 border-brand-gray-300 rounded focus:ring-brand-500"
+                          class="w-4 h-4 text-brand-600 border-secondary-300 rounded focus:ring-brand-500 dark:border-secondary-700"
                         />
                       </div>
 
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-brand-gray-700">Ringkasan Bimbingan / Masukan Global</label>
+                        <label class="text-xs font-bold text-secondary-700">Ringkasan Bimbingan / Masukan Global</label>
                         <textarea
                           rows="2"
                           placeholder="Ringkasan bimbingan untuk satu semester..."
                           value={ringkasanText()}
                           onInput={(e) => setRingkasanText(e.currentTarget.value)}
-                          class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-950 resize-none"
+                          class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 resize-none dark:border-secondary-700"
                         />
                       </div>
 
                       <button
                         type="submit"
-                        class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 transition-all shadow-sm"
+                        class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
                       >
                         Update Kelayakan & Ringkasan
                       </button>
@@ -807,56 +807,56 @@ export default function Bimbingan() {
 
                   {/* --- MODAL TAMBAH / EDIT SESI BIMBINGAN --- */}
                   <Show when={showSesiModal()}>
-                    <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4">
-                        <h3 class="font-extrabold text-brand-gray-800 text-base">
+                    <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
+                        <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">
                           {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'}
                         </h3>
 
                         <form onSubmit={handleSaveSesi} class="flex flex-col gap-4">
                           <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-brand-gray-650">Pertemuan Ke</label>
+                            <label class="text-xs font-bold text-secondary-600">Pertemuan Ke</label>
                             <input
                               type="number"
                               min="1"
                               value={pertemuanKeInput()}
                               onInput={(e) => setPertemuanKeInput(parseInt(e.currentTarget.value) || 1)}
-                              class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-950"
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
                               required
                             />
                           </div>
 
                           <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-brand-gray-650">Tanggal Pertemuan</label>
+                            <label class="text-xs font-bold text-secondary-600">Tanggal Pertemuan</label>
                             <input
                               type="date"
                               value={tanggalInput()}
                               onChange={(e) => setTanggalInput(e.currentTarget.value)}
-                              class="border border-brand-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-950"
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
                               required
                             />
                           </div>
 
                           <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-brand-gray-650">Permasalahan</label>
+                            <label class="text-xs font-bold text-secondary-600">Permasalahan</label>
                             <textarea
                               rows="3"
                               placeholder="Tulis permasalahan akademis/non-akademis..."
                               value={permasalahanInput()}
                               onInput={(e) => setPermasalahanInput(e.currentTarget.value)}
-                              class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-950"
+                              class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
                               required
                             />
                           </div>
 
                           <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-brand-gray-650">Solusi / Rekomendasi</label>
+                            <label class="text-xs font-bold text-secondary-600">Solusi / Rekomendasi</label>
                             <textarea
                               rows="3"
                               placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
                               value={solusiInput()}
                               onInput={(e) => setSolusiInput(e.currentTarget.value)}
-                              class="border border-brand-gray-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-brand-gray-950"
+                              class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
                               required
                             />
                           </div>
@@ -878,13 +878,13 @@ export default function Bimbingan() {
                             <button
                               type="button"
                               onClick={() => setShowSesiModal(false)}
-                              class="px-4 py-2 border border-brand-gray-200 text-brand-gray-600 font-bold rounded-xl text-xs"
+                              class="px-4 py-2 border border-secondary-200 text-secondary-600 font-bold rounded-xl text-xs dark:border-secondary-700"
                             >
                               Batal
                             </button>
                             <button
                               type="submit"
-                              class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700"
+                              class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
                             >
                               Simpan Sesi
                             </button>
@@ -901,21 +901,21 @@ export default function Bimbingan() {
 
         {/* --- MODAL PRATINJAU / CETAK REKAP BKD --- */}
         <Show when={showRekapBkdModal()}>
-          <div class="fixed inset-0 bg-brand-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-4 print:shadow-none print:p-0 print:max-w-full">
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static print:z-0">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-4 print:shadow-none print:p-0 print:max-w-full dark:bg-secondary-900">
               {/* Modal header (hidden in print) */}
               <div class="flex justify-between items-center border-b pb-3 print:hidden">
-                <h3 class="font-extrabold text-brand-gray-800 text-base">Pratinjau Laporan BKD Bimbingan Akademik</h3>
+                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">Pratinjau Laporan BKD Bimbingan Akademik</h3>
                 <div class="flex gap-2">
                   <button
                     onClick={() => window.print()}
-                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5"
+                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
                   >
                     🖨️ Cetak / Unduh PDF
                   </button>
                   <button
                     onClick={() => setShowRekapBkdModal(false)}
-                    class="px-3.5 py-2 border border-brand-gray-200 hover:bg-brand-gray-50 text-brand-gray-600 font-bold rounded-xl text-xs"
+                    class="px-3.5 py-2 border border-secondary-200 hover:bg-secondary-50 text-secondary-600 font-bold rounded-xl text-xs dark:border-secondary-700"
                   >
                     Tutup
                   </button>
@@ -925,29 +925,29 @@ export default function Bimbingan() {
               {/* Printable Area */}
               <div class="flex flex-col gap-4 font-serif" id="print-area-bkd">
                 {/* Kop Surat */}
-                <div class="flex flex-col items-center justify-center border-b-2 border-double border-brand-gray-800 pb-4 text-center">
-                  <h2 class="text-xl font-bold tracking-wider text-brand-gray-900">POLITEKNIK SOROWAKO</h2>
-                  <p class="text-[10px] text-brand-gray-500 italic mt-0.5">
+                <div class="flex flex-col items-center justify-center border-b-2 border-double border-secondary-800 pb-4 text-center">
+                  <h2 class="text-xl font-bold tracking-wider text-secondary-900 dark:text-white">POLITEKNIK SOROWAKO</h2>
+                  <p class="text-[10px] text-secondary-500 italic mt-0.5">
                     Program Diploma Terapan / Sarjana Terapan Teknik Informatika
                   </p>
-                  <p class="text-[9px] text-brand-gray-400 mt-0.5">
+                  <p class="text-[9px] text-secondary-400 mt-0.5">
                     Website: simak.politeknik-sorowako.ac.id | Telp: +62 475 321 000
                   </p>
                 </div>
 
                 {/* Surat Title */}
                 <div class="text-center my-3">
-                  <h3 class="text-sm font-extrabold text-brand-gray-900 tracking-wide uppercase underline">
+                  <h3 class="text-sm font-extrabold text-secondary-900 tracking-wide uppercase underline dark:text-white">
                     REKAPITULASI CATATAN BIMBINGAN AKADEMIK DOSEN WALI
                   </h3>
-                  <p class="text-xs text-brand-gray-600 mt-1">
+                  <p class="text-xs text-secondary-600 mt-1">
                     Periode Akademik:{' '}
                     <span class="font-bold">{selectedPeriode() || currentBimbinganData()?.periodeId}</span>
                   </p>
                 </div>
 
                 {/* Meta data */}
-                <div class="grid grid-cols-2 text-xs text-brand-gray-800 gap-2 border bg-brand-gray-50/50 p-4 rounded-xl print:border-none print:bg-transparent print:p-0">
+                <div class="grid grid-cols-2 text-xs text-secondary-800 gap-2 border bg-secondary-50/50 p-4 rounded-xl print:border-none print:bg-transparent print:p-0 dark:text-white dark:bg-secondary-800">
                   <p>
                     Nama Dosen PA: <span class="font-bold">{dosenProfile()?.nama || 'Dosen Wali'}</span>
                   </p>
@@ -962,17 +962,17 @@ export default function Bimbingan() {
 
                 {/* BKD Table */}
                 <div class="overflow-x-auto">
-                  <table class="w-full border-collapse border border-brand-gray-300 text-[11px] text-left">
+                  <table class="w-full border-collapse border border-secondary-300 text-[11px] text-left dark:border-secondary-700">
                     <thead>
-                      <tr class="bg-brand-gray-100 text-brand-gray-800 font-bold">
-                        <th class="border border-brand-gray-300 p-2.5 w-8 text-center">No</th>
-                        <th class="border border-brand-gray-300 p-2.5 w-44">Nama Mahasiswa</th>
-                        <th class="border border-brand-gray-300 p-2.5 w-24 text-center">NIM</th>
-                        <th class="border border-brand-gray-300 p-2.5 w-20 text-center">Total Sesi</th>
-                        <th class="border border-brand-gray-300 p-2.5">Permasalahan</th>
-                        <th class="border border-brand-gray-300 p-2.5">Solusi / Saran Masukan</th>
-                        <th class="border border-brand-gray-300 p-2.5 w-28 text-center">Tanggal Sesi</th>
-                        <th class="border border-brand-gray-300 p-2.5 w-20 text-center">Lapor BKD</th>
+                      <tr class="bg-secondary-100 dark:bg-secondary-800 text-secondary-800 font-bold dark:text-white">
+                        <th class="border border-secondary-300 p-2.5 w-8 text-center dark:border-secondary-700">No</th>
+                        <th class="border border-secondary-300 p-2.5 w-44 dark:border-secondary-700">Nama Mahasiswa</th>
+                        <th class="border border-secondary-300 p-2.5 w-24 text-center dark:border-secondary-700">NIM</th>
+                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">Total Sesi</th>
+                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">Permasalahan</th>
+                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">Solusi / Saran Masukan</th>
+                        <th class="border border-secondary-300 p-2.5 w-28 text-center dark:border-secondary-700">Tanggal Sesi</th>
+                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">Lapor BKD</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -980,59 +980,59 @@ export default function Bimbingan() {
                         each={rekapBkdData()?.data}
                         fallback={
                           <tr>
-                            <td colspan="8" class="border border-brand-gray-300 p-6 text-center text-brand-gray-400 italic">
+                            <td colspan="8" class="border border-secondary-300 p-6 text-center text-secondary-400 italic dark:border-secondary-700">
                               Tidak ada riwayat bimbingan resmi tercatat untuk periode ini.
                             </td>
                           </tr>
                         }
                       >
                         {(item, idx) => (
-                          <tr class="hover:bg-brand-gray-50/50">
-                            <td class="border border-brand-gray-300 p-2.5 text-center">{idx() + 1}</td>
-                            <td class="border border-brand-gray-300 p-2.5 font-bold">{item.mahasiswa?.nama}</td>
-                            <td class="border border-brand-gray-300 p-2.5 text-center">{item.mahasiswa?.nim}</td>
-                            <td class="border border-brand-gray-300 p-2.5 text-center font-bold">
+                          <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
+                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">{idx() + 1}</td>
+                            <td class="border border-secondary-300 p-2.5 font-bold dark:border-secondary-700">{item.mahasiswa?.nama}</td>
+                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">{item.mahasiswa?.nim}</td>
+                            <td class="border border-secondary-300 p-2.5 text-center font-bold dark:border-secondary-700">
                               {item.totalSesi || 0} Kali
                             </td>
-                            <td class="border border-brand-gray-300 p-2 text-xs leading-relaxed">
+                            <td class="border border-secondary-300 p-2 text-xs leading-relaxed dark:border-secondary-700">
                               <For each={item.sesi}>
                                 {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-brand-gray-100 last:border-0 last:mb-0 last:pb-0">
+                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 dark:border-secondary-800">
                                     <strong>P-{s.pertemuanKe}:</strong> {s.permasalahan}
                                   </div>
                                 )}
                               </For>
                               <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-brand-gray-400 italic">-</span>
+                                <span class="text-secondary-400 italic">-</span>
                               </Show>
                             </td>
-                            <td class="border border-brand-gray-300 p-2 text-xs leading-relaxed">
+                            <td class="border border-secondary-300 p-2 text-xs leading-relaxed dark:border-secondary-700">
                               <For each={item.sesi}>
                                 {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-brand-gray-100 last:border-0 last:mb-0 last:pb-0">
+                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 dark:border-secondary-800">
                                     <strong>P-{s.pertemuanKe}:</strong> {s.solusi}
                                   </div>
                                 )}
                               </For>
                               <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-brand-gray-400 italic">-</span>
+                                <span class="text-secondary-400 italic">-</span>
                               </Show>
                             </td>
-                            <td class="border border-brand-gray-300 p-2 text-center text-xs">
+                            <td class="border border-secondary-300 p-2 text-center text-xs dark:border-secondary-700">
                               <For each={item.sesi}>
                                 {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-brand-gray-100 last:border-0 last:mb-0 last:pb-0 font-mono">
+                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 font-mono dark:border-secondary-800">
                                     {new Date(s.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'short' })}
                                   </div>
                                 )}
                               </For>
                               <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-brand-gray-400 italic">-</span>
+                                <span class="text-secondary-400 italic">-</span>
                               </Show>
                             </td>
-                            <td class="border border-brand-gray-300 p-2.5 text-center">
+                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
                               <span
-                                class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.statusBkd ? 'bg-accent-50 text-accent-700 border border-accent-100' : 'bg-brand-gray-150 text-brand-gray-500'}`}
+                                class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.statusBkd ? 'bg-accent-50 text-accent-700 border border-accent-100' : 'bg-secondary-100 text-secondary-500'}`}
                               >
                                 {item.statusBkd ? 'YA' : 'TIDAK'}
                               </span>
@@ -1046,11 +1046,11 @@ export default function Bimbingan() {
 
                 {/* Tanda Tangan */}
                 <div class="flex justify-end mt-12 print:mt-20">
-                  <div class="text-center text-xs text-brand-gray-800 flex flex-col gap-16">
+                  <div class="text-center text-xs text-secondary-800 flex flex-col gap-16 dark:text-white">
                     <p>Dosen Penasehat Akademik,</p>
                     <div>
                       <p class="font-extrabold underline">{dosenProfile()?.nama}</p>
-                      <p class="text-[10px] text-brand-gray-500">NIP. {dosenProfile()?.nip || '-'}</p>
+                      <p class="text-[10px] text-secondary-500">NIP. {dosenProfile()?.nip || '-'}</p>
                     </div>
                   </div>
                 </div>

@@ -57,7 +57,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-slate-100 via-slate-50 to-brand-50 dark:from-slate-950 dark:via-indigo-950 dark:to-slate-950 overflow-hidden px-4 transition-colors duration-200">
+    <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-secondary-100 via-secondary-50 to-brand-50 dark:from-secondary-950 dark:via-primary-950 dark:to-secondary-950 overflow-hidden px-4 transition-colors duration-200">
       {/* Floating Theme Toggle in Top Right */}
       <div class="absolute top-4 right-4 z-50">
         <button
@@ -65,7 +65,7 @@ export default function ForgotPassword() {
             const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
             auth.setTheme(nextTheme);
           }}
-          class="p-2.5 rounded-xl bg-brand-gray-100/80 dark:bg-white/10 backdrop-blur-md border border-brand-gray-250/50 dark:border-white/20 text-brand-gray-700 dark:text-white hover:bg-brand-gray-200/80 dark:hover:bg-white/20 transition-all focus:outline-none shadow-md dark:shadow-lg"
+          class="p-2.5 rounded-xl bg-secondary-100/80 dark:bg-white/10 backdrop-blur-md border border-secondary-200/50 dark:border-white/20 text-secondary-700 dark:text-white hover:bg-secondary-200/80 dark:hover:bg-white/20 transition-all focus:outline-none shadow-md dark:shadow-lg"
           title="Beralih Mode Gelap/Terang"
         >
           {auth.theme() === 'light' ? (
@@ -93,11 +93,11 @@ export default function ForgotPassword() {
       <div class="absolute -top-40 -left-40 w-96 h-96 bg-brand-500/10 dark:bg-brand-500/20 rounded-full blur-[128px] pointer-events-none" />
       <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-accent-500/10 dark:bg-accent-500/20 rounded-full blur-[128px] pointer-events-none" />
 
-      <div class="w-full max-w-md bg-white dark:bg-brand-gray-900/60 dark:backdrop-blur-xl border border-brand-gray-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-brand-gray-800 dark:text-white transition-all duration-200">
+      <div class="w-full max-w-md bg-white dark:bg-secondary-900/60 dark:backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-secondary-800 dark:text-white transition-all duration-200">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
-          <h2 class="text-2xl font-bold tracking-tight text-brand-gray-800 dark:text-white">Lupa Kata Sandi</h2>
-          <p class="text-sm text-brand-gray-500 dark:text-gray-400">
+          <h2 class="text-2xl font-bold tracking-tight text-secondary-800 dark:text-white">Lupa Kata Sandi</h2>
+          <p class="text-sm text-secondary-500 dark:text-secondary-200">
             Masukkan email Anda untuk menerima token reset password.
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function ForgotPassword() {
         <Show when={successMsg()}>
           <div class="p-4 rounded-xl text-sm text-center bg-accent-500/10 text-accent-600 dark:text-accent-400 border border-accent-500/20 flex flex-col gap-2">
             <span class="font-bold">Email Terkirim!</span>
-            <p class="text-xs text-brand-gray-500 dark:text-gray-300">
+            <p class="text-xs text-secondary-500 dark:text-secondary-200">
               Tautan dan token untuk mengatur ulang kata sandi telah berhasil dikirim ke email Anda. Silakan periksa
               kotak masuk atau spam email Anda.
             </p>
@@ -126,7 +126,7 @@ export default function ForgotPassword() {
             value={email()}
             onInput={(e) => setEmail(e.currentTarget.value)}
             disabled={loading() || successMsg().length > 0}
-            class="!bg-brand-gray-50 dark:!bg-brand-gray-950/40 !border-brand-gray-250 dark:!border-white/10 !text-brand-gray-800 dark:!text-white focus:!ring-blue-500/30"
+            class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-primary-500/30"
           />
 
           <Button type="submit" disabled={loading() || successMsg().length > 0} class="w-full mt-2 py-3">

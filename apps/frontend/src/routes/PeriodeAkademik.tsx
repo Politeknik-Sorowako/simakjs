@@ -109,8 +109,8 @@ export default function PeriodeAkademik() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-brand-gray-800">Periode Akademik</h1>
-            <p class="text-sm text-brand-gray-500">Kelola semester aktif dan periode akademik perkuliahan.</p>
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Periode Akademik</h1>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">Kelola semester aktif dan periode akademik perkuliahan.</p>
           </div>
           <Button onClick={openAddModal}>+ Tambah Periode</Button>
         </div>
@@ -130,27 +130,27 @@ export default function PeriodeAkademik() {
         <Show
           when={!periodes.loading}
           fallback={
-            <div class="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-brand-gray-100 shadow-sm gap-4">
+            <div class="flex flex-col items-center justify-center py-20 bg-white dark:bg-secondary-900 rounded-xl border border-secondary-100 dark:border-secondary-800 shadow-sm gap-4">
               <div
-                class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"
+                class="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"
                 aria-hidden="true"
               />
-              <p class="text-sm font-medium text-brand-gray-500 animate-pulse">Memuat data periode akademik...</p>
+              <p class="text-sm font-medium text-secondary-500 dark:text-secondary-200 animate-pulse">Memuat data periode akademik...</p>
             </div>
           }
         >
           <Table headers={['ID / Kode', 'Nama Semester', 'Status', 'Aksi']}>
             <For each={periodes()?.data}>
               {(item) => (
-                <tr class="hover:bg-brand-gray-50/50 transition-colors">
-                  <td class="px-6 py-4 font-mono text-brand-gray-600 font-semibold">{item.id}</td>
-                  <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
+                <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50 transition-colors">
+                  <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200 font-semibold">{item.id}</td>
+                  <td class="px-6 py-4 font-medium text-secondary-800 dark:text-secondary-200">{item.nama}</td>
                   <td class="px-6 py-4">
                     <span
                       class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
                         item.aktif
-                          ? 'bg-green-50 text-green-700 border border-green-100'
-                          : 'bg-brand-gray-50 text-brand-gray-600 border border-brand-gray-150'
+                          ? 'bg-green-50 text-green-700 border border-green-100 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+                          : 'bg-secondary-50 text-secondary-600 border border-secondary-100 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
                       }`}
                     >
                       {item.aktif ? 'Aktif' : 'Nonaktif'}
@@ -179,7 +179,7 @@ export default function PeriodeAkademik() {
             </For>
             <Show when={periodes()?.data.length === 0}>
               <tr>
-                <td colspan="4" class="px-6 py-10 text-center text-brand-gray-400">
+                <td colspan="4" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data periode akademik ditemukan.
                 </td>
               </tr>
@@ -189,7 +189,7 @@ export default function PeriodeAkademik() {
           {/* Pagination */}
           <Show when={periodes() && periodes()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-brand-gray-500">
+              <span class="text-xs text-secondary-500 dark:text-secondary-200">
                 Menampilkan halaman {page()} dari {periodes()?.meta.totalPages} ({periodes()?.meta.total} total data)
               </span>
               <div class="flex gap-2">
@@ -255,7 +255,7 @@ export default function PeriodeAkademik() {
               ]}
               aria-label="Status Periode Aktif"
             />
-            <div class="flex justify-end gap-2 border-t pt-4">
+            <div class="flex justify-end gap-2 border-t dark:border-secondary-800 pt-4">
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)} aria-label="Batal">
                 Batal
               </Button>

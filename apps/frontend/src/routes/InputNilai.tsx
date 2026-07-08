@@ -327,25 +327,25 @@ export default function InputNilai() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header */}
-        <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm">
-          <h1 class="text-2xl font-extrabold text-brand-gray-800 tracking-tight">Input Nilai Kelas</h1>
-          <p class="text-sm text-brand-gray-500">
+        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+          <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Input Nilai Kelas</h1>
+          <p class="text-sm text-secondary-500">
             Kelola komposisi komponen nilai dan input nilai mahasiswa per kelas kuliah
           </p>
         </div>
 
         {/* Class Selection Card */}
-        <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4">
-          <h3 class="font-bold text-brand-gray-700 text-sm">Pilih Kelas Kuliah</h3>
+        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <h3 class="font-bold text-secondary-700 text-sm">Pilih Kelas Kuliah</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-brand-gray-500">Kelas Kuliah</label>
+              <label class="text-xs font-semibold text-secondary-500">Kelas Kuliah</label>
               <select
                 onChange={(e) => {
                   const id = e.currentTarget.value ? parseInt(e.currentTarget.value) : null;
                   setSelectedKelasId(id);
                 }}
-                class="border border-brand-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-500 text-brand-gray-900"
+                class="border border-secondary-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               >
                 <option value="">-- Pilih Kelas Kuliah --</option>
                 <For each={classes()}>
@@ -361,7 +361,7 @@ export default function InputNilai() {
         </div>
 
         <Show when={isRulesMissing()}>
-          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 shadow-sm">
+          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 shadow-sm dark:bg-rose-900/30 dark:text-rose-400">
             <span class="font-bold flex items-center gap-1.5 text-rose-800 text-sm">
               ⚠️ Peringatan: Aturan Konversi Belum Ditetapkan
             </span>
@@ -376,18 +376,18 @@ export default function InputNilai() {
         <Show
           when={selectedKelasId()}
           fallback={
-            <div class="bg-white p-12 rounded-2xl border border-brand-gray-100 shadow-sm text-center text-brand-gray-400">
+            <div class="bg-white p-12 rounded-2xl border border-secondary-100 shadow-sm text-center text-secondary-400 dark:bg-secondary-900 dark:border-secondary-800">
               Silakan pilih kelas kuliah terlebih dahulu untuk mengelola komponen dan nilai.
             </div>
           }
         >
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left side: Component Weights Management */}
-            <div class="bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4 h-fit">
+            <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 h-fit dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-brand-gray-800">Komposisi Bobot Nilai (%)</h3>
+                <h3 class="font-bold text-secondary-800 dark:text-white">Komposisi Bobot Nilai (%)</h3>
                 <Show when={isClassLocked()}>
-                  <span class="px-2.5 py-1 bg-accent-50 text-accent-700 border border-accent-200 text-[10px] font-bold rounded-lg flex items-center gap-1">
+                  <span class="px-2.5 py-1 bg-accent-50 text-accent-700 border border-accent-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400">
                     🔒 Dikunci
                   </span>
                 </Show>
@@ -404,7 +404,7 @@ export default function InputNilai() {
                         value={comp().name}
                         disabled={isClassLocked()}
                         onInput={(e) => updateComponentField(idx, 'name', e.currentTarget.value)}
-                        class="border border-brand-gray-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none disabled:bg-brand-gray-50 disabled:text-brand-gray-400 text-brand-gray-900"
+                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
                       />
                       <input
                         type="number"
@@ -412,9 +412,9 @@ export default function InputNilai() {
                         value={comp().bobot}
                         disabled={isClassLocked()}
                         onInput={(e) => updateComponentField(idx, 'bobot', e.currentTarget.value)}
-                        class="border border-brand-gray-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none disabled:bg-brand-gray-50 disabled:text-brand-gray-400 text-brand-gray-900 text-center"
+                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 text-center dark:border-secondary-700 dark:text-white"
                       />
-                      <span class="text-xs text-brand-gray-400 font-bold">%</span>
+                      <span class="text-xs text-secondary-400 font-bold">%</span>
                       <Show when={!isClassLocked()}>
                         <button
                           onClick={() => removeComponent(idx)}
@@ -430,7 +430,7 @@ export default function InputNilai() {
                 <div class="flex justify-between items-center mt-2">
                   <Show
                     when={!isClassLocked()}
-                    fallback={<span class="text-xs text-brand-gray-400 font-medium">Pengaturan komponen dinonaktifkan.</span>}
+                    fallback={<span class="text-xs text-secondary-400 font-medium">Pengaturan komponen dinonaktifkan.</span>}
                   >
                     <div class="flex flex-col gap-2 align-start">
                       <button
@@ -449,7 +449,7 @@ export default function InputNilai() {
                       </Show>
                     </div>
                   </Show>
-                  <span class="text-xs font-bold text-brand-gray-600">
+                  <span class="text-xs font-bold text-secondary-600">
                     Total: {editableComponents().reduce((sum, item) => sum + item.bobot, 0)}%
                   </span>
                 </div>
@@ -457,7 +457,7 @@ export default function InputNilai() {
                 <Show when={!isClassLocked()}>
                   <button
                     onClick={handleSaveComponents}
-                    class="mt-4 px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-blue-100"
+                    class="mt-4 px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
                   >
                     Simpan Bobot Komponen
                   </button>
@@ -466,22 +466,22 @@ export default function InputNilai() {
             </div>
 
             {/* Right side: Student Grades Table */}
-            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-brand-gray-100 shadow-sm flex flex-col gap-4 overflow-x-auto">
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-brand-gray-800">Daftar Mahasiswa & Pengisian Nilai</h3>
+                <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
                 <div class="flex gap-2">
                   <Show when={components() && components().length > 0}>
                     <Show
                       when={!isClassLocked()}
                       fallback={
                         <div class="flex items-center gap-2">
-                          <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl">
+                          <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
                             🔒 Nilai Kelas Telah Dikunci (Selesai)
                           </span>
                           <Show when={role() === 'admin' || role() === 'prodi' || role() === 'dosen'}>
                             <button
                               onClick={handleUnlockKelas}
-                              class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm"
+                              class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
                             >
                               🔓 Buka Kunci
                             </button>
@@ -509,7 +509,7 @@ export default function InputNilai() {
               <Show
                 when={components() && components().length > 0}
                 fallback={
-                  <div class="text-center py-12 text-brand-gray-400 italic">
+                  <div class="text-center py-12 text-secondary-400 italic">
                     Harap tentukan dan simpan komponen bobot nilai (kiri) terlebih dahulu sebelum menginput nilai
                     mahasiswa.
                   </div>
@@ -517,7 +517,7 @@ export default function InputNilai() {
               >
                 <table class="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr class="border-b border-brand-gray-100 bg-brand-gray-50/50 text-brand-gray-400 uppercase tracking-wider font-bold">
+                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
                       <th class="p-3">Mahasiswa</th>
                       <For each={components()}>
                         {(c) => (
@@ -529,23 +529,23 @@ export default function InputNilai() {
                       <th class="p-3 text-center">Nilai Akhir</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-gray-50 text-brand-gray-600 font-medium">
+                  <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
                     <For
                       each={studentsGrades()}
                       fallback={
                         <tr>
-                          <td colspan={components().length + 2} class="p-4 text-center text-brand-gray-400 italic">
+                          <td colspan={components().length + 2} class="p-4 text-center text-secondary-400 italic">
                             Tidak ada mahasiswa terdaftar di kelas ini.
                           </td>
                         </tr>
                       }
                     >
                       {(stud) => (
-                        <tr class="hover:bg-brand-gray-50/20">
+                        <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                           <td class="p-3">
                             <div class="flex flex-col">
-                              <span class="font-bold text-brand-gray-800">{stud.nama}</span>
-                              <span class="text-[10px] text-brand-gray-400">NIM: {stud.nim}</span>
+                              <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
+                              <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
                             </div>
                           </td>
                           <For each={components()}>
@@ -561,12 +561,12 @@ export default function InputNilai() {
                                       : ''
                                   }
                                   onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
-                                  class="border border-brand-gray-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-brand-gray-50 disabled:text-brand-gray-400 text-brand-gray-900"
+                                  class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
                                 />
                               </td>
                             )}
                           </For>
-                          <td class="p-3 text-center font-extrabold text-brand-gray-800">
+                          <td class="p-3 text-center font-extrabold text-secondary-800 dark:text-white">
                             <Show
                               when={getDynamicFinalGrade(stud)}
                               fallback={

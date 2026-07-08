@@ -6,10 +6,10 @@ export function MainLayout(props: { children: JSX.Element }) {
   const [isOpen, setIsOpen] = createSignal(false);
 
   return (
-    <div class="min-h-screen flex bg-brand-gray-50/50 dark:bg-brand-gray-950 text-brand-gray-800 dark:text-gray-100 relative overflow-hidden transition-colors duration-200">
+    <div class="min-h-screen flex bg-secondary-50/50 dark:bg-secondary-950 text-secondary-800 dark:text-secondary-200 relative overflow-hidden transition-colors duration-200">
       {/* Mobile Sidebar Backdrop Overlay */}
       <Show when={isOpen()}>
-        <div onClick={() => setIsOpen(false)} class="fixed inset-0 bg-brand-gray-900/40 backdrop-blur-sm z-30 md:hidden" />
+        <div onClick={() => setIsOpen(false)} class="fixed inset-0 bg-secondary-900/40 backdrop-blur-sm z-30 md:hidden" />
       </Show>
 
       {/* Sidebar Navigation */}

@@ -75,16 +75,16 @@ export default function Profil() {
 
   return (
     <MainLayout>
-      <div class="flex flex-col gap-6 max-w-xl text-brand-gray-800 dark:text-white transition-colors duration-200">
+      <div class="flex flex-col gap-6 max-w-xl text-secondary-800 dark:text-white transition-colors duration-200">
         <div class="flex flex-col gap-1">
           <h1 class="text-2xl font-extrabold tracking-tight">Profil Saya</h1>
-          <p class="text-sm text-brand-gray-500 dark:text-gray-400">Perbarui informasi profil dan foto Anda.</p>
+          <p class="text-sm text-secondary-500 dark:text-secondary-200">Perbarui informasi profil dan foto Anda.</p>
         </div>
 
-        <div class="bg-white dark:bg-brand-gray-900 rounded-xl shadow-sm border border-brand-gray-100 dark:border-brand-gray-800 p-6 transition-colors duration-200">
+        <div class="bg-white dark:bg-secondary-900 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 p-6 transition-colors duration-200">
           <form onSubmit={handleUpdateProfile} class="flex flex-col gap-5">
             {/* Profile Picture Upload Section */}
-            <div class="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-brand-gray-50 dark:bg-brand-gray-950/40 border border-brand-gray-100 dark:border-brand-gray-800/40">
+            <div class="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-secondary-50 dark:bg-secondary-950/40 border border-secondary-100 dark:border-secondary-800/40">
               <div class="relative group">
                 <Show
                   when={avatar()}
@@ -102,7 +102,7 @@ export default function Profil() {
                 </Show>
               </div>
               <div class="flex-1 flex flex-col gap-1.5 items-center sm:items-start">
-                <span class="text-xs font-bold text-brand-gray-500 dark:text-gray-400">Foto Profil</span>
+                <span class="text-xs font-bold text-secondary-500 dark:text-secondary-200">Foto Profil</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -127,15 +127,15 @@ export default function Profil() {
                     </button>
                   </Show>
                 </div>
-                <span class="text-[10px] text-brand-gray-450 dark:text-gray-500">Format JPG, PNG. Maksimal 2MB.</span>
+                <span class="text-[10px] text-secondary-400 dark:text-secondary-200">Format JPG, PNG. Maksimal 2MB.</span>
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-semibold text-brand-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+              <label class="block text-xs font-semibold text-secondary-400 dark:text-secondary-200 uppercase tracking-wider mb-1">
                 Email
               </label>
-              <div class="w-full rounded-lg border border-brand-gray-200 dark:border-brand-gray-800 bg-brand-gray-50 dark:bg-brand-gray-950 px-4 py-2.5 text-sm text-brand-gray-500 dark:text-gray-400 select-none">
+              <div class="w-full rounded-lg border border-secondary-200 dark:border-secondary-800 bg-secondary-50 dark:bg-secondary-950 px-4 py-2.5 text-sm text-secondary-500 dark:text-secondary-200 select-none">
                 {user()?.email}
               </div>
             </div>
@@ -147,14 +147,14 @@ export default function Profil() {
               value={nama()}
               onInput={(e) => setNama(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-white dark:!bg-brand-gray-950 !border-brand-gray-200 dark:!border-brand-gray-855 dark:!text-white focus:!ring-blue-500/30"
+              class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-primary-500/30"
             />
 
-            <hr class="border-brand-gray-100 dark:border-brand-gray-800 my-2" />
+            <hr class="border-secondary-100 dark:border-secondary-800 my-2" />
 
             <div class="flex flex-col gap-1">
-              <h3 class="text-sm font-bold text-brand-gray-700 dark:text-gray-300">Ubah Kata Sandi (Opsional)</h3>
-              <p class="text-xs text-brand-gray-400 dark:text-gray-550">
+              <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200">Ubah Kata Sandi (Opsional)</h3>
+              <p class="text-xs text-secondary-400 dark:text-secondary-200">
                 Kosongkan kolom di bawah jika Anda tidak ingin mengubah kata sandi.
               </p>
             </div>
@@ -165,7 +165,7 @@ export default function Profil() {
               value={password()}
               onInput={(e) => setPassword(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-white dark:!bg-brand-gray-950 !border-brand-gray-200 dark:!border-brand-gray-855 dark:!text-white focus:!ring-blue-500/30"
+              class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-primary-500/30"
             />
 
             <Input
@@ -174,7 +174,7 @@ export default function Profil() {
               value={confirmPassword()}
               onInput={(e) => setConfirmPassword(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-white dark:!bg-brand-gray-950 !border-brand-gray-200 dark:!border-brand-gray-855 dark:!text-white focus:!ring-blue-500/30"
+              class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-primary-500/30"
             />
 
             <div class="flex justify-end mt-2">

@@ -22,9 +22,9 @@ export function Spinner(props: SpinnerProps) {
 				class={`flex flex-col items-center justify-center gap-3 ${props.class || ""}`}
 			>
 				<div
-					class={`${sizeClass()} border-brand-200 border-t-brand-900 dark:border-slate-600 dark:border-t-accent-400 rounded-full animate-spin`}
+					class={`${sizeClass()} border-brand-200 border-t-brand-900 dark:border-secondary-600 dark:border-t-accent-400 rounded-full animate-spin`}
 				/>
-				<span class="text-sm text-brand-gray-500 dark:text-slate-400">
+				<span class="text-sm text-secondary-500 dark:text-secondary-400">
 					{props.label}
 				</span>
 			</div>
@@ -33,7 +33,7 @@ export function Spinner(props: SpinnerProps) {
 
 	return (
 		<div
-			class={`${sizeClass()} border-brand-200 border-t-brand-900 dark:border-slate-600 dark:border-t-accent-400 rounded-full animate-spin ${props.class || ""}`}
+			class={`${sizeClass()} border-brand-200 border-t-brand-900 dark:border-secondary-600 dark:border-t-accent-400 rounded-full animate-spin ${props.class || ""}`}
 		/>
 	);
 }

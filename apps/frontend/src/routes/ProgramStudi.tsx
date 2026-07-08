@@ -78,7 +78,7 @@ export default function ProgramStudi() {
         <div class="flex justify-between items-center">
           <div class="flex flex-col gap-1">
             <h1 class="text-2xl font-extrabold tracking-tight">Program Studi</h1>
-            <p class="text-sm text-brand-gray-500 dark:text-brand-gray-400">Kelola daftar program studi vokasi yang tersedia.</p>
+            <p class="text-sm text-secondary-500 dark:text-secondary-400">Kelola daftar program studi vokasi yang tersedia.</p>
           </div>
           <div class="flex gap-2">
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
@@ -110,15 +110,15 @@ export default function ProgramStudi() {
         </div>
 
         {/* Data Table */}
-        <Show when={!prodis.loading} fallback={<div class="text-center py-10 text-brand-gray-400">Loading data...</div>}>
+        <Show when={!prodis.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
           <Table headers={['Kode', 'Nama Program Studi', 'Jenjang', 'Aksi']}>
             <For each={prodis()?.data}>
               {(item) => (
-                <tr class="hover:bg-brand-50/50 transition-colors">
-                  <td class="px-6 py-4 font-mono font-semibold text-brand-gray-700">{item.kode}</td>
-                  <td class="px-6 py-4 font-medium text-brand-gray-800">{item.nama}</td>
+                <tr class="hover:bg-brand-50/50 transition-colors dark:hover:bg-brand-900/50">
+                  <td class="px-6 py-4 font-mono font-semibold text-secondary-700 dark:text-secondary-200">{item.kode}</td>
+                  <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
                   <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-50 text-brand-700 border border-brand-100">
+                    <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-50 text-brand-700 border border-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-800">
                       {item.jenjang}
                     </span>
                   </td>
@@ -135,7 +135,7 @@ export default function ProgramStudi() {
             </For>
             <Show when={prodis()?.data.length === 0}>
               <tr>
-                <td colspan="4" class="px-6 py-10 text-center text-brand-gray-400">
+                <td colspan="4" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data program studi ditemukan.
                 </td>
               </tr>
@@ -145,7 +145,7 @@ export default function ProgramStudi() {
           {/* Pagination */}
           <Show when={prodis() && prodis()!.meta.totalPages > 1}>
             <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-brand-gray-500">
+              <span class="text-xs text-secondary-500 dark:text-secondary-200">
                 Menampilkan halaman {page()} dari {prodis()?.meta.totalPages} ({prodis()?.meta.total} total data)
               </span>
               <div class="flex gap-2">
@@ -178,7 +178,7 @@ export default function ProgramStudi() {
         >
           <form onSubmit={handleSave} class="flex flex-col gap-4">
             <Show when={errorMsg()}>
-              <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100">
+              <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100 dark:bg-red-900/30 dark:text-red-400">
                 {errorMsg()}
               </div>
             </Show>
