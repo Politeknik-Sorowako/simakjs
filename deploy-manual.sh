@@ -114,6 +114,12 @@ for cmd in docker docker-compose curl; do
   fi
 done
 
+# Check required database credentials (needed for backup)
+if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ]; then
+  warn "POSTGRES_USER and POSTGRES_PASSWORD not set in .env"
+  warn "Database backup will be skipped"
+fi
+
 # Step 3: Backup
 if [ "$SKIP_BACKUP" = "false" ]; then
   log "Step 3/7: Backing up database..."

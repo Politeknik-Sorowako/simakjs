@@ -85,6 +85,12 @@ check_prerequisites() {
     exit 1
   fi
   ok "Disk space: $DISK_USAGE%"
+
+  # Check required database credentials
+  if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ]; then
+    fail "POSTGRES_USER and POSTGRES_PASSWORD must be set in .env"
+    exit 1
+  fi
 }
 
 run_pre_tests() {
