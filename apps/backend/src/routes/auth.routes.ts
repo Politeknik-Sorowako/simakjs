@@ -1,12 +1,18 @@
 import { Elysia } from 'elysia';
 import { AuthController } from '../controllers/auth.controller';
 import { jwtPlugin } from '../plugins/jwt.plugin';
-import { loginSchema, registerSchema } from '../schemas/auth.schema';
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+  validateResetTokenSchema,
+} from '../schemas/auth.schema';
 
 export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(jwtPlugin)
   .post('/register', AuthController.register, registerSchema)
   .post('/login', AuthController.login, loginSchema)
-  .post('/forgot-password', AuthController.forgotPassword)
-  .post('/reset-password', AuthController.resetPassword)
-  .get('/reset-password/details/:token', AuthController.getResetTokenDetails);
+  .post('/forgot-password', AuthController.forgotPassword, forgotPasswordSchema)
+  .post('/reset-password', AuthController.resetPassword, resetPasswordSchema)
+  .post('/reset-password/validate', AuthController.validateResetToken, validateResetTokenSchema);

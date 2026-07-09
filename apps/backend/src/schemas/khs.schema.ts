@@ -141,3 +141,60 @@ export const saveSkalaPredikatSchema = {
     predikat: t.String({ minLength: 1, maxLength: 100 }),
   }),
 };
+
+export const getRekapNilaiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Rekap Nilai Mahasiswa',
+    description: 'Mengambil rekapitulasi nilai mahasiswa untuk semua mata kuliah yang telah ditempuh.',
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+  }),
+};
+
+export const getRekapPerProdiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Rekap Nilai per Program Studi',
+    description: 'Mengambil rekapitulasi nilai mahasiswa untuk seluruh mahasiswa dalam suatu program studi.',
+  },
+};
+
+export const getAllKonversiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Daftar Aturan Konversi Nilai',
+    description: 'Mengambil semua aturan konversi nilai angka ke huruf yang terdaftar.',
+  },
+};
+
+export const deleteKonversiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Hapus Aturan Konversi Nilai',
+    description: 'Menghapus aturan konversi nilai berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+};
+
+export const getAllPredikatSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Daftar Skala Predikat Kelulusan',
+    description: 'Mengambil semua aturan skala predikat kelulusan berdasarkan rentang IPK.',
+  },
+};
+
+export const deletePredikatSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Hapus Skala Predikat Kelulusan',
+    description: 'Menghapus aturan skala predikat kelulusan berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+};

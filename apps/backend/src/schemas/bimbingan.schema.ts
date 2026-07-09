@@ -119,6 +119,79 @@ export const updateBimbinganSchema = {
   },
 };
 
+export const getRekapBkdSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Rekap BKD Dosen PA',
+    description: 'Mengambil rekapitulasi beban kerja dosen (BKD) untuk bimbingan akademik.',
+  },
+};
+
+export const getAkademikSummarySchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Ringkasan Akademik Mahasiswa',
+    description: 'Mengambil ringkasan akademik mahasiswa untuk keperluan monitoring oleh Dosen PA.',
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+  }),
+};
+
+export const clearChatSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Hapus Riwayat Chat Bimbingan',
+    description: 'Menghapus seluruh riwayat thread chat bimbingan dengan mahasiswa.',
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+  }),
+};
+
+export const addSesiBody = t.Object({
+  pertemuanKe: t.Optional(t.Integer({ default: 1 })),
+  tanggalBimbingan: t.Optional(t.String({ default: '2026-07-09' })),
+  permasalahan: t.Optional(t.String()),
+  solusi: t.Optional(t.String()),
+  statusBkd: t.Optional(t.Boolean({ default: false })),
+});
+
+export const addSesiSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Tambah Sesi Bimbingan',
+    description: 'Menambahkan sesi bimbingan baru untuk mahasiswa.',
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+  }),
+  body: addSesiBody,
+};
+
+export const updateSesiSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Perbarui Sesi Bimbingan',
+    description: 'Memperbarui data sesi bimbingan berdasarkan ID sesi.',
+  },
+  params: t.Object({
+    sesiId: t.Numeric(),
+  }),
+  body: t.Partial(addSesiBody),
+};
+
+export const deleteSesiSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Hapus Sesi Bimbingan',
+    description: 'Menghapus sesi bimbingan berdasarkan ID sesi.',
+  },
+  params: t.Object({
+    sesiId: t.Numeric(),
+  }),
+};
+
 export const getBimbinganMonitoringSchema = {
   detail: {
     tags: ['Bimbingan'],

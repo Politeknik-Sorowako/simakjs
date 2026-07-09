@@ -16,8 +16,8 @@ ALTER TABLE "mahasiswa" DROP CONSTRAINT "mahasiswa_program_studi_id_program_stud
 --> statement-breakpoint
 ALTER TABLE "mata_kuliah" DROP CONSTRAINT "mata_kuliah_program_studi_id_program_studi_id_fk";
 --> statement-breakpoint
-ALTER TABLE "dosen" ALTER COLUMN "jenis_kelamin" SET DATA TYPE jenis_kelamin;--> statement-breakpoint
-ALTER TABLE "mahasiswa" ALTER COLUMN "jenis_kelamin" SET DATA TYPE jenis_kelamin;--> statement-breakpoint
+ALTER TABLE "dosen" ALTER COLUMN "jenis_kelamin" SET DATA TYPE jenis_kelamin USING jenis_kelamin::text::jenis_kelamin;--> statement-breakpoint
+ALTER TABLE "mahasiswa" ALTER COLUMN "jenis_kelamin" SET DATA TYPE jenis_kelamin USING jenis_kelamin::text::jenis_kelamin;--> statement-breakpoint
 ALTER TABLE "dosen" ADD COLUMN "is_synced" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "dosen" ADD COLUMN "last_sync_at" timestamp;--> statement-breakpoint
 ALTER TABLE "dosen" ADD COLUMN "created_at" timestamp DEFAULT now() NOT NULL;--> statement-breakpoint

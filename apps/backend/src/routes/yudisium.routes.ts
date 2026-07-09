@@ -6,6 +6,7 @@ import {
   getKomponenYudisiumSchema,
   getNilaiMahasiswaYudisiumSchema,
   getYudisiumSchema,
+  getYudisiumStatsSchema,
   lockKelasYudisiumSchema,
   saveKomponenYudisiumSchema,
   saveNilaiMahasiswaYudisiumSchema,
@@ -20,7 +21,7 @@ export const yudisiumRoutes = new Elysia({ prefix: '/yudisium' })
   .get('/mahasiswa/:mhsId', YudisiumController.getPengajuan, getYudisiumSchema)
   .post('/mahasiswa/:mhsId', YudisiumController.submitPengajuan, submitPengajuanYudisiumSchema)
   .put('/mahasiswa/:mhsId/status', YudisiumController.updateStatus, updateYudisiumStatusSchema)
-  .get('/stats', YudisiumController.getStats)
+  .get('/stats', YudisiumController.getStats, getYudisiumStatsSchema)
 
   // Grade Components
   .get('/kelas/:kelasKuliahId/komponen', YudisiumController.getKomponen, getKomponenYudisiumSchema)

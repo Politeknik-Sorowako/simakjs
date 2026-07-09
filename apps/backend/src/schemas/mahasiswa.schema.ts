@@ -33,7 +33,7 @@ export const getMahasiswaSchema = {
     tags: ['Mahasiswa'],
     summary: 'Daftar Mahasiswa',
     description:
-      'Mengambil semua data mahasiswa yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.',
+      'Mengambil semua data mahasiswa dengan pagination, filter pencarian, dan relasi program studi. Field alamat (jalan, rt, rw, kodePos), kewarganegaraan, tempat lahir, dan agama tidak dikembalikan di list endpoint.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
@@ -218,6 +218,38 @@ export const updateMahasiswaSchema = {
     404: t.Object({
       error: t.String({ default: 'Data tidak ditemukan' }),
     }),
+  },
+};
+
+export const getMahasiswaStatsSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Statistik Mahasiswa',
+    description: 'Mengambil statistik jumlah mahasiswa per prodi, per status, per angkatan.',
+  },
+};
+
+export const getMahasiswaBaruSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Daftar Mahasiswa Baru',
+    description: 'Mengambil daftar mahasiswa baru untuk periode akademik tertentu.',
+  },
+};
+
+export const importMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Impor Mahasiswa dari CSV',
+    description: 'Mengimpor data mahasiswa secara massal dari file CSV.',
+  },
+};
+
+export const importPaMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Impor Dosen PA dari CSV',
+    description: 'Mengimpor mapping dosen pembimbing akademik (PA) untuk mahasiswa dari file CSV.',
   },
 };
 

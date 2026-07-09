@@ -37,9 +37,9 @@ export default function LaporanMahasiswaBaru() {
           <ExportButtonGroup
             data={() => stats().perProdi || []}
             columns={columns}
-            filename={`PMB_${angkat()}`}
+            filename={`PMB_${angkatan()}`}
             title="Laporan Penerimaan Mahasiswa Baru"
-            subtitle={`Angkatan: ${angkat()}`}
+            subtitle={`Angkatan: ${angkatan()}`}
           />
         </div>
 
@@ -52,7 +52,7 @@ export default function LaporanMahasiswaBaru() {
               value={angkatan()}
               onChange={(e) => setAngkatan(e.currentTarget.value)}
             >
-              <For each={angkatList}>{(a) => <option value={a}>{a}</option>}</For>
+              <For each={angkatanList}>{(a) => <option value={a}>{a}</option>}</For>
             </select>
           </div>
         </div>

@@ -1,7 +1,5 @@
 {
-  "id": "87e9d2bc-129a-415b-884e-f1db0e493df2",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "6",
+  "version": "7",
   "dialect": "postgresql",
   "tables": {
     "public.dosen": {
@@ -74,41 +72,44 @@
         "dosen_program_studi_id_program_studi_id_fk": {
           "name": "dosen_program_studi_id_program_studi_id_fk",
           "tableFrom": "dosen",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "dosen_nip_unique": {
           "name": "dosen_nip_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nip"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_email_unique": {
           "name": "dosen_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_nidn_unique": {
           "name": "dosen_nidn_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nidn"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.mahasiswa": {
       "name": "mahasiswa",
@@ -187,41 +188,44 @@
         "mahasiswa_program_studi_id_program_studi_id_fk": {
           "name": "mahasiswa_program_studi_id_program_studi_id_fk",
           "tableFrom": "mahasiswa",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "mahasiswa_nim_unique": {
           "name": "mahasiswa_nim_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nim"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_email_unique": {
           "name": "mahasiswa_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_nik_unique": {
           "name": "mahasiswa_nik_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nik"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.program_studi": {
       "name": "program_studi",
@@ -264,12 +268,15 @@
       "uniqueConstraints": {
         "program_studi_kode_unique": {
           "name": "program_studi_kode_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "kode"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.users": {
       "name": "users",
@@ -315,12 +322,15 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {
@@ -336,8 +346,14 @@
   },
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "87e9d2bc-129a-415b-884e-f1db0e493df2",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

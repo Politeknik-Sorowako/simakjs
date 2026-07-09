@@ -6,6 +6,7 @@ import {
   copyFromKurikulumSchema,
   createKurikulumSchema,
   deleteKurikulumSchema,
+  downloadTemplateImportMkSchema,
   duplicateKurikulumSchema,
   getKurikulumByIdSchema,
   getKurikulumSchema,
@@ -21,7 +22,7 @@ export const kurikulumRoutes = new Elysia({ prefix: '/kurikulum' })
   .get('/:id', KurikulumController.getById, getKurikulumByIdSchema)
   .put('/:id', KurikulumController.update, updateKurikulumSchema)
   .delete('/:id', KurikulumController.delete, deleteKurikulumSchema)
-  .get('/template-import-mk', KurikulumController.downloadImportMkTemplate)
+  .get('/template-import-mk', KurikulumController.downloadImportMkTemplate, downloadTemplateImportMkSchema)
   .post('/:id/mata-kuliah', KurikulumController.addMataKuliah, addMataKuliahSchema)
   .post('/:id/copy-from', KurikulumController.copyFromKurikulum, copyFromKurikulumSchema)
   .post('/:id/import-mk', KurikulumController.importMkCsv, importMkCsvSchema)

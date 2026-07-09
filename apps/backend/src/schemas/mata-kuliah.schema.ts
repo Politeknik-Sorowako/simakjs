@@ -141,6 +141,14 @@ export const updateMataKuliahSchema = {
   },
 };
 
+export const importMataKuliahSchema = {
+  detail: {
+    tags: ['Mata Kuliah'],
+    summary: 'Impor Mata Kuliah dari CSV',
+    description: 'Mengimpor data mata kuliah secara massal dari file CSV.',
+  },
+};
+
 export const deleteMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],

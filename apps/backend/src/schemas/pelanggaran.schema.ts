@@ -79,6 +79,14 @@ export const getAllPelanggaranSchema = {
   },
 };
 
+export const getRekapPelanggaranSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Rekapitulasi Pelanggaran',
+    description: 'Mengambil rekapitulasi pelanggaran per program studi untuk laporan BAAK/Kaprodi.',
+  },
+};
+
 export const updatePelanggaranSchema = {
   detail: {
     tags: ['Kedisiplinan'],

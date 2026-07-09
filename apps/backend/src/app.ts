@@ -38,10 +38,51 @@ if (isDevelopment) {
     swagger({
       documentation: {
         info: {
-          title: 'SIMAK Vokasi API Documentation',
+          title: 'SIMAK Vokasi API',
           version: '1.0.0',
-          description: 'REST API untuk Sistem Informasi Akademik Vokasi',
+          description:
+            'REST API Sistem Informasi Akademik Vokasi. Semua endpoint (kecuali /auth/*) memerlukan token JWT via header Authorization: Bearer <token> atau cookie access_token.',
         },
+        tags: [
+          { name: 'Autentikasi', description: 'Registrasi, login, dan manajemen password' },
+          { name: 'Pengguna', description: 'Manajemen pengguna sistem' },
+          { name: 'Program Studi', description: 'Manajemen data program studi' },
+          { name: 'Dosen', description: 'Manajemen data dosen' },
+          { name: 'Mahasiswa', description: 'Manajemen data mahasiswa' },
+          { name: 'Mahasiswa Keluar', description: 'Pencatatan mahasiswa keluar/DO/pindah' },
+          { name: 'Periode Akademik', description: 'Manajemen periode akademik' },
+          { name: 'Mata Kuliah', description: 'Manajemen data mata kuliah' },
+          { name: 'Kelas Kuliah', description: 'Manajemen kelas kuliah per periode' },
+          { name: 'Dosen Pengajar Kelas', description: 'Plotting dosen ke kelas kuliah' },
+          { name: 'Kurikulum', description: 'Manajemen kurikulum dan mata kuliah kurikulum' },
+          { name: 'Angkatan Kurikulum', description: 'Binding angkatan ke kurikulum' },
+          { name: 'CPMK', description: 'Capaian Pembelajaran Mata Kuliah' },
+          { name: 'RPS', description: 'Rencana Pembelajaran Semester' },
+          { name: 'Rencana Evaluasi', description: 'Rencana evaluasi/penilaian mata kuliah' },
+          { name: 'BAP', description: 'Berita Acara Perkuliahan' },
+          { name: 'Presensi', description: 'Presensi kehadiran mahasiswa' },
+          { name: 'Kompensasi', description: 'Kompensasi keterlambatan/mangkir mahasiswa' },
+          { name: 'KRS', description: 'Kontrak Rencana Studi' },
+          { name: 'KHS & Transkrip', description: 'Kartu Hasil Studi dan transkrip nilai' },
+          { name: 'Bimbingan', description: 'Bimbingan akademik dosen PA dan mahasiswa' },
+          { name: 'Kedisiplinan', description: 'Pencatatan pelanggaran kedisiplinan' },
+          { name: 'Cuti', description: 'Pengajuan dan manajemen cuti akademik' },
+          { name: 'Tagihan', description: 'Tagihan SPP dan pembayaran' },
+          { name: 'Yudisium & Komponen Nilai', description: 'Pengajuan yudisium dan input nilai akhir' },
+          { name: 'PDDIKTI', description: 'Sinkronisasi data ke PDDIKTI' },
+          { name: 'E2E Testing', description: '⚠️ DANGER: Reset database & seed data. **Hanya untuk development/testing.** JANGAN panggil di production. Restricted ke role Admin.' },
+          { name: 'Health Check', description: 'Monitoring kesehatan server' },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
+          },
+        },
+        security: [{ bearerAuth: [] }],
       },
     }),
   );
