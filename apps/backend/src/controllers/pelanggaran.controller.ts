@@ -71,6 +71,16 @@ export class PelanggaranController {
     return await PelanggaranService.getAllPelanggaran();
   }
 
+  static async getRekap({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+    return await PelanggaranService.getRekap(query?.periodeId, prodiId);
+  }
+
   static async update({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {

@@ -150,6 +150,17 @@ export const presensiController = {
     return fetchApi<PresensiItem[]>(`/presensi/bap/${bapId}`);
   },
 
+  // Rekap Kehadiran
+  async getRekapKehadiran(kelasKuliahId: number): Promise<any> {
+    return fetchApi<any>(`/presensi/rekap-kehadiran?kelasKuliahId=${kelasKuliahId}`);
+  },
+
+  async getRekapKehadiranMahasiswa(mahasiswaId: number, periodeId?: string): Promise<any> {
+    const params = new URLSearchParams({ mahasiswaId: String(mahasiswaId) });
+    if (periodeId) params.append('periodeId', periodeId);
+    return fetchApi<any>(`/presensi/rekap-kehadiran-mahasiswa?${params.toString()}`);
+  },
+
   // Kompensasi
   async getKompensasiStats(): Promise<KompensasiStatsResponse> {
     return fetchApi<KompensasiStatsResponse>('/presensi/kompensasi/stats');

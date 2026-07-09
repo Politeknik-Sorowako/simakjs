@@ -162,6 +162,29 @@ export const khsController = {
     });
   },
 
+  // --- LAPORAN ---
+  async getRekapNilai(mahasiswaId: number, periodeId?: string): Promise<any> {
+    const url = periodeId
+      ? `/khs/rekap-nilai/${mahasiswaId}?periodeId=${periodeId}`
+      : `/khs/rekap-nilai/${mahasiswaId}`;
+    return fetchApi<any>(url);
+  },
+
+  async getRekapPerProdi(periodeId?: string): Promise<any> {
+    const url = periodeId ? `/khs/rekap-per-prodi?periodeId=${periodeId}` : '/khs/rekap-per-prodi';
+    return fetchApi<any>(url);
+  },
+
+  async getYudisiumStats(periodeId?: string): Promise<any> {
+    const qs = periodeId ? '?periodeId=' + periodeId : '';
+    return fetchApi<any>('/yudisium/stats' + qs);
+  },
+
+  async getMahasiswaKeluarStats(periodeId?: string): Promise<any> {
+    const qs = periodeId ? '?periodeId=' + periodeId : '';
+    return fetchApi<any>('/mahasiswa-keluar/stats' + qs);
+  },
+
   // --- KONVERSI NILAI ---
   async getAllKonversi(programStudiId?: number): Promise<any[]> {
     const url = programStudiId ? `/khs/konversi?programStudiId=${programStudiId}` : '/khs/konversi';

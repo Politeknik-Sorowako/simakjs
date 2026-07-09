@@ -107,4 +107,12 @@ export const tagihanController = {
       method: 'DELETE',
     });
   },
+
+  async getStats(periodeId?: string, programStudiId?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (periodeId) params.append('periodeId', periodeId);
+    if (programStudiId) params.append('programStudiId', String(programStudiId));
+    const qs = params.toString() ? '?' + params.toString() : '';
+    return fetchApi<any>('/tagihan/stats' + qs);
+  },
 };

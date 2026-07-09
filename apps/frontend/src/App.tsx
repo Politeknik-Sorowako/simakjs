@@ -17,6 +17,16 @@ import Khs from './routes/Khs';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
+import LaporanRekapNilai from './routes/reports/LaporanRekapNilai';
+import LaporanPeringatan from './routes/reports/LaporanPeringatan';
+import LaporanMahasiswaBaru from './routes/reports/LaporanMahasiswaBaru';
+import LaporanPresensiKelas from './routes/reports/LaporanPresensiKelas';
+import LaporanAkademik from './routes/reports/LaporanAkademik';
+import LaporanBKD from './routes/reports/LaporanBKD';
+import LaporanKRS from './routes/reports/LaporanKRS';
+import LaporanKeuangan from './routes/reports/LaporanKeuangan';
+import LaporanYudisium from './routes/reports/LaporanYudisium';
+import LaporanMahasiswaKeluar from './routes/reports/LaporanMahasiswaKeluar';
 // Routes imports
 import Login from './routes/Login';
 import Mahasiswa from './routes/Mahasiswa';
@@ -241,6 +251,88 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'prodi']}>
             <MahasiswaKeluar />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Report Pages */}
+      <Route
+        path="/laporan/rekap-nilai"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <LaporanRekapNilai />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/peringatan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <LaporanPeringatan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/mahasiswa-baru"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <LaporanMahasiswaBaru />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/presensi-kelas"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+            <LaporanPresensiKelas />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/akademik"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <LaporanAkademik />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/bkd"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <LaporanBKD />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/krs"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <LaporanKRS />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/keuangan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'keuangan']}>
+            <LaporanKeuangan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/yudisium"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <LaporanYudisium />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/mahasiswa-keluar"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <LaporanMahasiswaKeluar />
           </ProtectedRoute>
         }
       />

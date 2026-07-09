@@ -147,6 +147,26 @@ export class MahasiswaController {
     return result;
   }
 
+  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { angkatan?: string; programStudiId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const angkatan = query?.angkatan;
+    const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+    return await MahasiswaService.getStats(angkatan, prodiId);
+  }
+
+  static async getMahasiswaBaru({ query, set, getCurrentUser }: AuthContext<any, { angkatan?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    return await MahasiswaService.getMahasiswaBaru(query?.angkatan);
+  }
+
   static async importPaCsv({ request, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {

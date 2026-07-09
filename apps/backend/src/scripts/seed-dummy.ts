@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { dosen, mahasiswa, programStudi, users } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -58,7 +59,7 @@ async function seed() {
 
   const hashedPassword = await Bun.password.hash('password123', { algorithm: 'bcrypt', cost: 10 });
 
-  const existingAdmin = await db.query.users.findFirst({ where: (u, { eq }) => eq(u.email, 'admin@simak.id') });
+  const existingAdmin = await db.query.users.findFirst({ where: eq(users.email, 'admin@simak.id') });
   if (!existingAdmin) {
     await db.insert(users).values({
       email: 'admin@simak.id',
@@ -106,7 +107,7 @@ async function seed() {
       const [dosenUser] = await db
         .select()
         .from(users)
-        .where((u, { eq }) => eq(u.email, email));
+        .where(eq(users.email, email));
       if (!dosenUser) {
         await db
           .insert(users)

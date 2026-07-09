@@ -24,6 +24,17 @@ async function ensureEnums() {
   console.log('[ENSURE ENUMS] Checking PostgreSQL enum values...');
 
   for (const fix of ENUM_FIXES) {
+    // Check if the type exists first
+    const typeCheck = await pool.query(
+      `SELECT 1 FROM pg_type WHERE typname = $1`,
+      [fix.name]
+    );
+    
+    if (typeCheck.rows.length === 0) {
+      console.log(`[ENSURE ENUMS] Type ${fix.name} does not exist yet — skipping.`);
+      continue;
+    }
+
     const { rows } = await pool.query(
       `SELECT enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = $1`,
       [fix.name],

@@ -58,4 +58,16 @@ export const mahasiswaController = {
       method: 'DELETE',
     });
   },
+
+  async getStats(angkatan?: string, programStudiId?: number): Promise<any> {
+    const params = new URLSearchParams();
+    if (angkatan) params.append('angkatan', angkatan);
+    if (programStudiId) params.append('programStudiId', String(programStudiId));
+    return fetchApi<any>(`/mahasiswa/stats?${params.toString()}`);
+  },
+
+  async getMahasiswaBaru(angkatan?: string): Promise<any> {
+    const params = angkatan ? `?angkatan=${angkatan}` : '';
+    return fetchApi<any>(`/mahasiswa/baru${params}`);
+  },
 };

@@ -57,6 +57,28 @@ export class PresensiController {
     return detail;
   }
 
+  static async getRekapKehadiran({ query, set, getCurrentUser }: AuthContext<any, { kelasKuliahId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const kelasKuliahId = query?.kelasKuliahId ? parseInt(query.kelasKuliahId) : undefined;
+    if (!kelasKuliahId) {
+      set.status = 400;
+      return { error: 'Parameter kelasKuliahId diperlukan.' };
+    }
+    return await PresensiService.getRekapKehadiran(kelasKuliahId);
+  }
+
+  static async getRekapKehadiranMahasiswa({ query, set, getCurrentUser }: AuthContext<any, { mahasiswaId?: string; periodeId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+    const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
+    if (!mahasiswaId) { set.status = 400; return { error: 'Parameter mahasiswaId diperlukan.' }; }
+    return await PresensiService.getRekapKehadiranMahasiswa(mahasiswaId, query?.periodeId);
+  }
+
   static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {

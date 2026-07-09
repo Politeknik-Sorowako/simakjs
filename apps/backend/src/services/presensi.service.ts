@@ -1,5 +1,5 @@
-import { and, eq, ilike, inArray, or, sql } from 'drizzle-orm';
-import { bap, kompensasiBayar, mahasiswa, presensi, programStudi } from '../models/schema';
+import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { bap, dosen, dosenPengajarKelas, kelasKuliah, kompensasiBayar, mahasiswa, mataKuliah, presensi, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
 export class PresensiService {
@@ -312,5 +312,122 @@ export class PresensiService {
   ) {
     const [updated] = await db.update(kompensasiBayar).set(data).where(eq(kompensasiBayar.id, id)).returning();
     return updated || null;
+  }
+
+  static async getRekapKehadiran(kelasKuliahId: number) {
+    const kelasInfo = await db.query.kelasKuliah.findFirst({
+      where: eq(kelasKuliah.id, kelasKuliahId),
+      with: { mataKuliah: true, periodeAkademik: true },
+    });
+
+    const [totalPertemuan] = await db
+      .select({ count: count() })
+      .from(bap)
+      .where(eq(bap.kelasKuliahId, kelasKuliahId));
+
+    const pengajar = await db
+      .select({ dosen: { id: dosen.id, nama: dosen.nama, nip: dosen.nip } })
+      .from(dosenPengajarKelas)
+      .leftJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
+      .where(eq(dosenPengajarKelas.kelasKuliahId, kelasKuliahId));
+
+    const bapList = await db.select({ id: bap.id }).from(bap).where(eq(bap.kelasKuliahId, kelasKuliahId));
+    const bapIds = bapList.map((b) => b.id);
+
+    if (bapIds.length === 0) {
+      return { kelas: kelasInfo, totalPertemuan: 0, dosenPengajar: pengajar, mahasiswa: [] };
+    }
+
+    const presensiSummary = await db
+      .select({
+        mahasiswaId: presensi.mahasiswaId,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
+        sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
+        izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
+        alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'alpa' THEN 1 ELSE 0 END), 0)`,
+        telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'telat' THEN 1 ELSE 0 END), 0)`,
+      })
+      .from(presensi)
+      .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .where(sql`${presensi.bapId} IN (${sql.join(bapIds, sql`, `)})`)
+      .groupBy(presensi.mahasiswaId, mahasiswa.nim, mahasiswa.nama)
+      .orderBy(mahasiswa.nama);
+
+    const pt = totalPertemuan?.count || 0;
+
+    return {
+      kelas: kelasInfo,
+      totalPertemuan: pt,
+      dosenPengajar: pengajar,
+      mahasiswa: presensiSummary.map((m) => ({
+        mahasiswaId: m.mahasiswaId,
+        nim: m.nim,
+        nama: m.nama,
+        hadir: Number(m.hadir),
+        sakit: Number(m.sakit),
+        izin: Number(m.izin),
+        alpa: Number(m.alpa),
+        telat: Number(m.telat),
+        totalKehadiran: Number(m.hadir) + Number(m.sakit) + Number(m.izin),
+        persentaseHadir: pt > 0 ? Math.round(((Number(m.hadir) + Number(m.sakit) + Number(m.izin)) / pt) * 100) : 0,
+      })),
+    };
+  }
+
+  static async getRekapKehadiranMahasiswa(mahasiswaId: number, periodeId?: string) {
+    const mhsInfo = await db.query.mahasiswa.findFirst({
+      where: eq(mahasiswa.id, mahasiswaId),
+      with: { programStudi: true },
+    });
+
+    const kelasConditions: any[] = [];
+    if (periodeId) kelasConditions.push(eq(kelasKuliah.periodeId, periodeId));
+    const kelasWhere = kelasConditions.length > 0 ? and(...kelasConditions) : undefined;
+
+    const kelasList = await db.query.kelasKuliah.findMany({
+      where: kelasWhere,
+      with: { mataKuliah: true },
+    });
+
+    const hasil = [];
+    for (const k of kelasList) {
+      const bapList = await db.select({ id: bap.id }).from(bap).where(eq(bap.kelasKuliahId, k.id));
+      const bapIds = bapList.map((b) => b.id);
+
+      if (bapIds.length === 0) {
+        hasil.push({ kelasKuliahId: k.id, namaMataKuliah: k.mataKuliah?.nama || k.namaKelas, totalPertemuan: 0, hadir: 0, sakit: 0, izin: 0, alpa: 0, telat: 0, persentaseHadir: 0 });
+        continue;
+      }
+
+      const [p] = await db
+        .select({
+          hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
+          sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
+          izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
+          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'alpa' THEN 1 ELSE 0 END), 0)`,
+          telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'telat' THEN 1 ELSE 0 END), 0)`,
+        })
+        .from(presensi)
+        .where(and(eq(presensi.mahasiswaId, mahasiswaId), sql`${presensi.bapId} IN (${sql.join(bapIds, sql`, `)})`));
+
+      const pt = bapIds.length;
+      hasil.push({
+        kelasKuliahId: k.id,
+        namaMataKuliah: k.mataKuliah?.nama || k.namaKelas,
+        totalPertemuan: pt,
+        hadir: Number(p?.hadir || 0),
+        sakit: Number(p?.sakit || 0),
+        izin: Number(p?.izin || 0),
+        alpa: Number(p?.alpa || 0),
+        telat: Number(p?.telat || 0),
+        persentaseHadir: pt > 0 ? Math.round(((Number(p?.hadir || 0) + Number(p?.sakit || 0) + Number(p?.izin || 0)) / pt) * 100) : 0,
+      });
+    }
+
+    const rataHadir = hasil.reduce((s, h) => s + h.persentaseHadir, 0) / (hasil.length || 1);
+
+    return { mahasiswa: mhsInfo, detail: hasil, summary: { totalKelas: hasil.length, rataPersentaseHadir: Math.round(rataHadir) } };
   }
 }
