@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../../components/MainLayout';
 import { StatCard, BarChart } from '../../components/charts';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
@@ -7,24 +7,15 @@ import { ExportColumn } from '../../utils/export';
 
 export default function LaporanMahasiswaBaru() {
   const [angkatan, setAngkatan] = createSignal(new Date().getFullYear().toString());
-  const [loading, setLoading] = createSignal(true);
-  const [error, setError] = createSignal<any>(null);
-  const [stats, setStats] = createSignal<any>({ total: 0, perProdi: [], trend: [] });
 
-  createEffect(() => {
-    const thn = angkatan();
-    setLoading(true);
-    setError(null);
-    mahasiswaController.getMahasiswaBaru(thn)
-      .then((result) => {
-        setStats(result || { total: 0, perProdi: [], trend: [] });
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err);
-        setLoading(false);
-      });
-  });
+  const [stats, { refetch }] = createResource(
+    () => angkatan(),
+    async (thn) => {
+      const result = await mahasiswaController.getMahasiswaBaru(thn);
+      return result || { total: 0, perProdi: [], trend: [] };
+    },
+    { initialValue: { total: 0, perProdi: [], trend: [] } },
+  );
 
   const columns: ExportColumn[] = [
     { header: 'Program Studi', accessor: 'prodiNama' },
@@ -44,7 +35,7 @@ export default function LaporanMahasiswaBaru() {
             <p class="text-sm text-secondary-500 dark:text-secondary-200">Statistik penerimaan mahasiswa baru per program studi</p>
           </div>
           <ExportButtonGroup
-            data={() => stats()?.perProdi || []}
+            data={() => stats().perProdi || []}
             columns={columns}
             filename={`PMB_${angkat()}`}
             title="Laporan Penerimaan Mahasiswa Baru"
@@ -68,34 +59,40 @@ export default function LaporanMahasiswaBaru() {
 
         {/* Summary */}
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Total Mahasiswa Baru" value={stats()?.total ?? '...'} loading={loading()} color="brand"
+          <StatCard title="Total Mahasiswa Baru" value={stats.loading ? '...' : stats().total ?? 0} color="brand"
             icon={<svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
           />
-          <StatCard title="Perempuan" value={stats()?.perProdi?.reduce((s: number, p: any) => s + p.perempuan, 0) ?? '...'} loading={loading()} color="accent"
+          <StatCard title="Perempuan" value={stats.loading ? '...' : (stats().perProdi || []).reduce((s: number, p: any) => s + p.perempuan, 0)} color="accent"
             icon={<svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
           />
-          <StatCard title="Laki-laki" value={stats()?.perProdi?.reduce((s: number, p: any) => s + p.laki, 0) ?? '...'} loading={loading()} color="green"
+          <StatCard title="Laki-laki" value={stats.loading ? '...' : (stats().perProdi || []).reduce((s: number, p: any) => s + p.laki, 0)} color="green"
             icon={<svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
           />
         </div>
 
-        {/* Error */}
-        <Show when={error()}>
+        {/* Loading / Error / Empty states */}
+        <Show when={stats.error}>
           <div class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 p-4 rounded-xl text-sm text-rose-700 dark:text-rose-400">
-            Gagal memuat data: {error()?.message || 'Unknown error'}
+            Gagal memuat data. Silakan muat ulang halaman.
+          </div>
+        </Show>
+
+        <Show when={!stats.loading && !stats.error && stats().total === 0}>
+          <div class="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/50 p-4 rounded-xl text-sm text-yellow-700 dark:text-yellow-400">
+            Belum ada data mahasiswa baru untuk angkatan {angkatan()}.
           </div>
         </Show>
 
         {/* Chart + Table */}
-        <Show when={!loading()}>
+        <Show when={!stats.loading && !stats.error && stats().total > 0}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Mahasiswa Baru per Prodi</h3>
               <BarChart
-                labels={(stats()?.perProdi || []).map((p: any) => p.prodiNama)}
+                labels={(stats().perProdi || []).map((p: any) => p.prodiNama)}
                 datasets={[{
                   label: 'Mahasiswa Baru',
-                  data: (stats()?.perProdi || []).map((p: any) => p.total),
+                  data: (stats().perProdi || []).map((p: any) => p.total),
                   backgroundColor: '#6366f1',
                 }]}
                 height={280}
@@ -105,20 +102,18 @@ export default function LaporanMahasiswaBaru() {
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Tren Penerimaan per Angkatan</h3>
               <BarChart
-                labels={(stats()?.trend || []).map((t: any) => t.angkatan)}
+                labels={(stats().trend || []).map((t: any) => t.angkatan)}
                 datasets={[{
                   label: 'Total Mahasiswa',
-                  data: (stats()?.trend || []).map((t: any) => t.total),
+                  data: (stats().trend || []).map((t: any) => t.total),
                   backgroundColor: '#06b6d4',
                 }]}
                 height={280}
               />
             </div>
           </div>
-        </Show>
 
-        {/* Table */}
-        <Show when={!loading()}>
+          {/* Table */}
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Detail per Program Studi</h3>
@@ -134,7 +129,7 @@ export default function LaporanMahasiswaBaru() {
                   </tr>
                 </thead>
                 <tbody>
-                  <For each={stats()?.perProdi || []}>
+                  <For each={stats().perProdi || []}>
                     {(p: any) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
