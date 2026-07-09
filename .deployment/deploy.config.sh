@@ -8,6 +8,13 @@
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PROJECT_NAME="simakjs"
 
+# Load .env file if available
+if [ -f "$PROJECT_DIR/.env" ]; then
+  set -a
+  source "$PROJECT_DIR/.env"
+  set +a
+fi
+
 # Backup settings
 BACKUP_RETENTION=5
 BACKUP_COMPRESS=true
@@ -58,9 +65,9 @@ SCALE_DOWN_MEM_THRESHOLD=40
 SCALE_UP_COOLDOWN=300
 SCALE_DOWN_COOLDOWN=600
 
-# Database settings (from .env - required!)
-: "${POSTGRES_USER:?ERROR: POSTGRES_USER not set in .env}"
-: "${POSTGRES_PASSWORD:?ERROR: POSTGRES_PASSWORD not set in .env}"
+# Database settings (from .env)
+POSTGRES_USER="${POSTGRES_USER:-}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-}"
 POSTGRES_DB="${POSTGRES_DB:-simak_vokasi}"
 
 # Deployment settings

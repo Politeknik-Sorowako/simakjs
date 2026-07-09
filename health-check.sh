@@ -34,6 +34,10 @@ check_container() {
 }
 
 check_database() {
+  if [ -z "$DB_CONTAINER" ]; then
+    fail "Database container not configured"
+    return 1
+  fi
   local result
   result=$(docker exec "$DB_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1" 2>/dev/null)
 

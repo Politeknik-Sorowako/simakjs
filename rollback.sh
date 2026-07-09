@@ -39,6 +39,11 @@ list_backups() {
 
 restore_backup() {
   local backup_file="$1"
+
+  if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ]; then
+    fail "POSTGRES_USER and POSTGRES_PASSWORD must be set in .env"
+    exit 1
+  fi
   
   if [ ! -f "$backup_file" ]; then
     fail "Backup file not found: $backup_file"
