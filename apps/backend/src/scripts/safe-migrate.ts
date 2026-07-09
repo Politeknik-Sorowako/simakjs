@@ -176,6 +176,7 @@ async function main() {
   log('Step 3/4: Applying database schema...');
   let migrationOk = false;
   let migrationAttempt = '';
+  const disablePush = process.env.DISABLE_PUSH_FALLBACK === 'true';
 
   try {
     log('Attempt 1: drizzle-kit migrate...');
@@ -184,16 +185,26 @@ async function main() {
     log('[OK] Migration completed (migrate).');
     migrationOk = true;
   } catch (err: any) {
-    log('[WARN] drizzle-kit migrate failed: ' + (err.message || err).split('\n')[0]);
-    log('Attempt 2: drizzle-kit push (fallback)...');
-    migrationAttempt = 'push';
+    const errMsg = (err.message || err).split('\n')[0];
+    log('[WARN] drizzle-kit migrate failed: ' + errMsg);
 
-    try {
-      execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
-      log('[OK] Schema applied successfully (push).');
+    if (disablePush) {
+      log('[INFO] Push fallback is disabled (DISABLE_PUSH_FALLBACK=true).');
+      log('[INFO] Run manually: docker exec simak_backend bun run --cwd apps/backend db:safe-migrate');
+      log('');
+      log('[WARN] Starting app without schema migration. Database may be out of date.');
       migrationOk = true;
-    } catch (pushErr: any) {
-      log('[FAILED] drizzle-kit push also failed: ' + (pushErr.message || String(pushErr)).split('\n')[0]);
+    } else {
+      log('Attempt 2: drizzle-kit push (fallback)...');
+      migrationAttempt = 'push';
+
+      try {
+        execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
+        log('[OK] Schema applied successfully (push).');
+        migrationOk = true;
+      } catch (pushErr: any) {
+        log('[FAILED] drizzle-kit push also failed: ' + (pushErr.message || String(pushErr)).split('\n')[0]);
+      }
     }
   }
 
