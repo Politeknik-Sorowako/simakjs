@@ -30,9 +30,9 @@ FRONTEND_CONTAINER="simak_frontend"
 DB_CONTAINER="simak_db"
 
 # Service ports
-BACKEND_PORT=3000
-FRONTEND_PORT=80
-DB_PORT=5433
+BACKEND_PORT="${BACKEND_PORT:-3000}"
+FRONTEND_PORT="${FRONTEND_PORT:-80}"
+DB_PORT="${DB_PORT:-5433}"
 
 # Health check settings
 HEALTH_URL="http://localhost:$BACKEND_PORT/health"
