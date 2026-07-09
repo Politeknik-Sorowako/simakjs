@@ -25,7 +25,7 @@ services:
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgresql://simak_user:simak_password@db:5432/simak_vokasi
+      DATABASE_URL: ${DATABASE_URL}
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: "http://localhost:8080,http://localhost:3000"
