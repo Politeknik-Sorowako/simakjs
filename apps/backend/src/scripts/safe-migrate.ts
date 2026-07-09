@@ -138,6 +138,28 @@ async function checkIfDatabaseEmpty(): Promise<boolean> {
   }
 }
 
+async function checkIfTrackingTableExists(): Promise<boolean> {
+  try {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_name = '__drizzle_migrations'
+      )
+    `);
+    await pool.end();
+    const exists = result.rows[0].exists;
+    if (exists) {
+      log('  -> Migration tracking table exists.');
+    } else {
+      log('  -> Migration tracking table MISSING (database likely created with push).');
+    }
+    return exists;
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   console.log('');
   console.log('========================================');
@@ -217,26 +239,45 @@ async function main() {
       log('[FAILED] drizzle-kit push failed: ' + (pushErr.message || String(pushErr)).split('\n')[0]);
     }
   } else {
-    log('');
-    log('>>> Database existing terdeteksi. Menggunakan drizzle-kit migrate untuk update schema...');
-    migrationAttempt = 'migrate';
+    // Cek apakah ada tracking table migration
+    const hasTracking = await checkIfTrackingTableExists();
 
-    try {
-      execSync('bunx drizzle-kit migrate', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
-      log('[OK] Migration completed (migrate).');
-      migrationOk = true;
-    } catch (err: any) {
-      const errMsg = (err.message || err).split('\n')[0];
-      log('[FAILED] drizzle-kit migrate failed: ' + errMsg);
+    if (!hasTracking) {
+      // Database dibuat dengan push, tidak ada tracking table
       log('');
-      log('[CRITICAL] Database existing tapi migrate gagal.');
-      log('[CRITICAL] Tidak aman fallback ke push karena risiko kehilangan data.');
-      log('[CRITICAL] Periksa migration files dan schema secara manual.');
+      log('>>> Database dibuat dengan push (tanpa tracking table).');
+      log('>>> Menggunakan drizzle-kit push untuk sinkron dan membuat tracking table...');
+      migrationAttempt = 'push';
+
+      try {
+        execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
+        log('[OK] Schema synced and tracking table created (push).');
+        migrationOk = true;
+      } catch (pushErr: any) {
+        log('[FAILED] drizzle-kit push failed: ' + (pushErr.message || String(pushErr)).split('\n')[0]);
+      }
+    } else {
       log('');
-      log('Troubleshooting:');
-      log('  1. Cek migration files di apps/backend/drizzle/');
-      log('  2. Cek log database: docker compose logs db');
-      log('  3. Restore dari backup jika perlu: bun run db:restore');
+      log('>>> Database existing terdeteksi. Menggunakan drizzle-kit migrate untuk update schema...');
+      migrationAttempt = 'migrate';
+
+      try {
+        execSync('bunx drizzle-kit migrate', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
+        log('[OK] Migration completed (migrate).');
+        migrationOk = true;
+      } catch (err: any) {
+        const errMsg = (err.message || err).split('\n')[0];
+        log('[FAILED] drizzle-kit migrate failed: ' + errMsg);
+        log('');
+        log('[CRITICAL] Database existing tapi migrate gagal.');
+        log('[CRITICAL] Tidak aman fallback ke push karena risiko kehilangan data.');
+        log('[CRITICAL] Periksa migration files dan schema secara manual.');
+        log('');
+        log('Troubleshooting:');
+        log('  1. Cek migration files di apps/backend/drizzle/');
+        log('  2. Cek log database: docker compose logs db');
+        log('  3. Restore dari backup jika perlu: bun run db:restore');
+      }
     }
   }
 
