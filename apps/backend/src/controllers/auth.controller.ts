@@ -251,4 +251,31 @@ export class AuthController {
       return { error: 'Gagal memverifikasi token reset password' };
     }
   }
+
+  static async validateResetToken({ body, set }: AuthContext) {
+    try {
+      const token = (body as { token?: string })?.token;
+      if (!token) {
+        set.status = 400;
+        return { error: 'Token wajib diisi' };
+      }
+
+      const resetRecord = await AuthService.getPasswordReset(token);
+      if (!resetRecord) {
+        set.status = 400;
+        return { error: 'Token reset password tidak valid atau kedaluwarsa' };
+      }
+
+      if (resetRecord.expiresAt < new Date()) {
+        await AuthService.deletePasswordReset(resetRecord.id);
+        set.status = 400;
+        return { error: 'Token reset password telah kedaluwarsa' };
+      }
+
+      return { email: resetRecord.email };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal memverifikasi token reset password' };
+    }
+  }
 }

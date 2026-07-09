@@ -21,15 +21,15 @@ export const getAllUsersSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Daftar Semua Pengguna',
-    description: 'Mengambil semua data pengguna yang terdaftar di sistem.',
+    description: 'Mengambil semua data pengguna. **Hanya Admin** yang dapat mengakses.',
   },
   response: {
     200: t.Array(
       t.Object({
         id: t.Integer({ default: 1 }),
-        email: t.String({ default: 'admin@test.com' }),
-        nama: t.String({ default: 'Admin SIMAK' }),
-        role: t.String({ default: 'admin' }),
+        email: t.String({ default: 'user@example.com' }),
+        nama: t.String({ default: 'Nama Pengguna' }),
+        role: t.String({ default: 'mahasiswa' }),
         isActive: t.Boolean({ default: true }),
         theme: t.String({ default: 'light' }),
         avatar: t.Union([t.String(), t.Null()], { default: null }),
@@ -44,7 +44,7 @@ export const updateProfileSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Perbarui Profil Sendiri',
-    description: 'Memperbarui data profil pengguna yang sedang login (nama, email, password).',
+    description: 'Memperbarui data profil pengguna yang sedang login. Password tidak dikembalikan dalam response.',
   },
   body: t.Partial(
     t.Object({
@@ -56,13 +56,29 @@ export const updateProfileSchema = {
       avatar: t.String(),
     }),
   ),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Profil Anda berhasil diperbarui' }),
+      user: t.Object({
+        id: t.Integer(),
+        email: t.String(),
+        nama: t.String(),
+        role: t.String(),
+        theme: t.String(),
+        avatar: t.Union([t.String(), t.Null()]),
+      }),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'Nama minimal harus 3 karakter' }),
+    }),
+  },
 };
 
 export const toggleActiveSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Aktif/Nonaktifkan Pengguna',
-    description: 'Mengubah status aktif/nonaktif pengguna berdasarkan ID.',
+    description: 'Mengubah status aktif/nonaktif pengguna. **Hanya Admin** yang dapat mengakses. Admin tidak dapat menonaktifkan akun sendiri.',
   },
   params: t.Object({
     id: t.Numeric(),
@@ -84,7 +100,7 @@ export const updateRoleSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Ubah Role Pengguna',
-    description: 'Memperbarui role/hak akses pengguna berdasarkan ID.',
+    description: 'Memperbarui role/hak akses pengguna. **Hanya Admin** yang dapat mengakses. Admin tidak dapat mengubah role akun sendiri.',
   },
   params: t.Object({
     id: t.Numeric(),
@@ -119,7 +135,7 @@ export const importUsersCsvSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Impor Pengguna dari CSV',
-    description: 'Mengimpor data pengguna secara massal dari file CSV.',
+    description: 'Mengimpor data pengguna secara massal dari file CSV. **Hanya Admin** yang dapat mengakses.',
   },
 };
 
@@ -127,7 +143,7 @@ export const generateAccountsSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Generate Akun Massal',
-    description: 'Membuat akun pengguna secara massal (misalnya untuk seluruh mahasiswa baru).',
+    description: 'Membuat akun pengguna secara massal. **Hanya Admin** yang dapat mengakses.',
   },
   body: t.Optional(
     t.Object({

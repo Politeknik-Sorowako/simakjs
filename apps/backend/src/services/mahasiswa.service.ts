@@ -48,6 +48,15 @@ export class MahasiswaService {
 
     const data = await db.query.mahasiswa.findMany({
       where: whereClause,
+      columns: {
+        tempatLahir: false,
+        jalan: false,
+        rt: false,
+        rw: false,
+        kodePos: false,
+        kewarganegaraan: false,
+        idAgama: false,
+      },
       limit,
       offset,
       with: {

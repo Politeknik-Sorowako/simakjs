@@ -70,7 +70,7 @@ if (isDevelopment) {
           { name: 'Tagihan', description: 'Tagihan SPP dan pembayaran' },
           { name: 'Yudisium & Komponen Nilai', description: 'Pengajuan yudisium dan input nilai akhir' },
           { name: 'PDDIKTI', description: 'Sinkronisasi data ke PDDIKTI' },
-          { name: 'E2E Testing', description: 'Endpoint testing (reset & seed database)' },
+          { name: 'E2E Testing', description: '⚠️ DANGER: Reset database & seed data. **Hanya untuk development/testing.** JANGAN panggil di production. Restricted ke role Admin.' },
           { name: 'Health Check', description: 'Monitoring kesehatan server' },
         ],
         components: {

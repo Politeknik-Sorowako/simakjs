@@ -45,7 +45,7 @@ export default function ResetPassword() {
     const t = token();
     if (t) {
       authController
-        .getResetTokenDetails(t)
+        .validateResetToken(t)
         .then((data) => {
           if (data.email) {
             setUsername(data.email);

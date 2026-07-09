@@ -33,7 +33,7 @@ export const getMahasiswaSchema = {
     tags: ['Mahasiswa'],
     summary: 'Daftar Mahasiswa',
     description:
-      'Mengambil semua data mahasiswa yang terdaftar dengan pagination, filter pencarian, dan relasi program studi.',
+      'Mengambil semua data mahasiswa dengan pagination, filter pencarian, dan relasi program studi. Field alamat (jalan, rt, rw, kodePos), kewarganegaraan, tempat lahir, dan agama tidak dikembalikan di list endpoint.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
