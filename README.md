@@ -200,6 +200,257 @@ cd apps/frontend && bun run dev
 cd apps/backend && bun test
 ```
 
-## Deploy Production
+## Deployment
 
-Menggunakan Docker Compose yang sudah dikonfigurasi. Frontend sudah menggunakan arsitektur multistage (Vite build + Nginx serving dengan SPA fallback). `docker-compose.yml` dapat diadaptasi untuk VPS, AWS ECS, Google Cloud Run, dsb.
+### Arsitektur Deployment
+
+Proyek ini memiliki **2 metode deployment** yang saling melengkapi:
+
+| Metode | Trigger | Use Case |
+|--------|---------|----------|
+| **CI/CD (GitHub Actions)** | Push ke `main` / `develop` | Deployment rutin & otomatis |
+| **Manual (SSH)** | Eksekusi manual via SSH | Hotfix, debugging, emergency |
+
+### Infrastructure & Scripts
+
+```text
+simakjs/
+├── deploy.sh                          # CI/CD — deployment otomatis
+├── deploy-manual.sh                   # Manual — deployment via SSH
+├── rollback.sh                        # Rollback ke backup sebelumnya
+├── health-check.sh                    # Diagnostic & health check
+├── dashboard.sh                       # Monitoring dashboard real-time
+├── scripts/
+│   ├── pre-deploy-test.sh             # Pre-deployment testing
+│   ├── post-deploy-test.sh            # Post-deployment smoke test
+│   └── telegram-notify.sh             # Notifikasi via Telegram
+├── .deployment/
+│   ├── deploy.config.sh               # Konfigurasi deployment
+│   ├── auto-scaling.config.sh         # Template auto-scaling
+│   └── health-check.config.sh         # Konfigurasi health check
+└── apps/backend/backups/              # Backup database (5 backup terakhir)
+```
+
+### CI/CD — Deployment Otomatis (Recommended)
+
+**Trigger:** Push ke branch `main` atau `develop`
+
+**Workflow:** `.github/workflows/deploy.yml`
+
+```yaml
+on:
+  push:
+    branches: [main, develop]
+```
+
+**Alur deployment:**
+1. GitHub Actions checkout kode terbaru
+2. SSH ke VPS
+3. `deploy.sh` menjalankan:
+   - ✅ Git pull kode terbaru
+   - ✅ Pre-deployment checks (disk, memory, Docker)
+   - ✅ Pre-deployment tests (jika diaktifkan)
+   - ✅ Backup database (gzip, 5 backup retention)
+   - ✅ Force cleanup containers (multiple strategies)
+   - ✅ Docker build & up
+   - ✅ Health check (retry 5x)
+   - ✅ Post-deployment tests (smoke test)
+   - ✅ Telegram notification
+   - 🔄 Auto-rollback jika health check gagal
+
+**Setup GitHub Secrets:**
+```
+VPS_HOST=ip-vps-anda
+VPS_USERNAME=root
+VPS_SSH_KEY=-----BEGIN OPENSSH PRIVATE KEY-----
+GH_PAT=github_pat_xxx          # Personal Access Token
+TELEGRAM_BOT_TOKEN=xxx         # Opsional
+TELEGRAM_CHAT_ID=xxx           # Opsional
+TELEGRAM_ENABLED=true          # Opsional
+```
+
+### Manual Deployment via SSH
+
+Gunakan jika perlu deploy branch tertentu atau melakukan hotfix.
+
+```bash
+# SSH ke VPS
+ssh user@vps-host
+
+# Masuk ke project
+cd /var/www/simakjs
+
+# Deploy branch main
+./deploy-manual.sh
+
+# Deploy branch develop
+./deploy-manual.sh develop
+
+# Deploy cepat (tanpa test)
+./deploy-manual.sh --skip-tests
+
+# Deploy tanpa backup
+./deploy-manual.sh --skip-backup
+```
+
+**Opsi lengkap:**
+```bash
+./deploy-manual.sh [branch] [options]
+
+Options:
+  --skip-tests     Skip pre & post deployment tests
+  --skip-backup    Skip database backup
+  --skip-pull      Skip git pull
+  --no-force       Don't force remove containers
+  --rollback       Rollback to previous backup
+  --health         Run health check only
+  --dashboard      Show monitoring dashboard
+  --status         Show deployment status
+  --help           Show help
+```
+
+### Rollback
+
+```bash
+# Rollback ke backup terakhir
+./rollback.sh
+
+# Lihat daftar backup tersedia
+./rollback.sh list
+
+# Rollback ke backup spesifik
+./rollback.sh backup-20240709-120000
+```
+
+**Alur rollback:**
+1. Stop backend container
+2. Restore database dari backup `.sql.gz`
+3. Restart backend
+4. Health check verification
+5. Telegram notification
+
+### Monitoring & Health Check
+
+```bash
+# Dashboard interaktif (refresh setiap 5 detik)
+./dashboard.sh
+
+# Health check one-time
+./health-check.sh
+
+# Output JSON (untuk monitoring tools)
+./health-check.sh json
+
+# Cek status cepat
+./deploy-manual.sh --status
+```
+
+### Telegram Notifications
+
+**Setup:**
+1. Buat bot Telegram via [@BotFather](https://t.me/botfather)
+2. Dapatkan `BOT_TOKEN` dan `CHAT_ID`
+3. Set environment variables:
+
+```bash
+export TELEGRAM_BOT_TOKEN="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+export TELEGRAM_CHAT_ID="-1001234567890"
+export TELEGRAM_ENABLED="true"
+```
+
+**Notifikasi yang dikirim:**
+- ✅ Deployment berhasil (branch, commit, duration)
+- ❌ Deployment gagal (branch, error, next steps)
+- 🔄 Rollback diinisiasi (backup file, reason)
+- ⚠️ Health alert (service, status)
+
+### Backup Strategy
+
+- **Lokasi:** `apps/backend/backups/`
+- **Format:** `backup-YYYYMMDD-HHmmss.sql.gz`
+- **Retention:** 5 backup terakhir
+- **Trigger:** Sebelum setiap deployment
+- **Restore:** Via `rollback.sh`
+
+### Auto-Scaling (Experimental)
+
+Konfigurasi template tersedia di `.deployment/auto-scaling.config.sh`:
+
+```bash
+AUTO_SCALING_ENABLED=false
+MIN_REPLICAS=1
+MAX_REPLICAS=3
+CPU_THRESHOLD=70
+MEMORY_THRESHOLD=80
+```
+
+**Catatan:** Auto-scaling membutuhkan Docker Swarm atau Kubernetes untuk production use. Dengan standard `docker-compose`, scaling dilakukan secara manual.
+
+### Troubleshooting
+
+**Container conflict:**
+```bash
+# Force remove container
+docker rm -f simak_backend
+
+# Prune stopped containers
+docker container prune -f
+```
+
+**Database connection failed:**
+```bash
+# Check database health
+docker compose logs db
+
+# Check database connection
+docker exec simak_db pg_isready -U simak_user -d simak_vokasi
+```
+
+**Migration failed:**
+```bash
+# Check migration log
+docker compose logs backend | grep migration
+
+# Run migration manually
+docker exec simak_backend bun run db:migrate
+```
+
+**Rollback:**
+```bash
+# Rollback to latest backup
+./rollback.sh
+```
+
+### Docker (Production)
+```bash
+git clone https://github.com/Politeknik-Sorowako/simakjs.git
+cd simakjs
+docker compose up -d
+```
+- Frontend: `http://localhost:8080`
+- Backend: `http://localhost:3000/swagger`
+
+### Migrasi Database
+```bash
+cd apps/backend
+bun install
+bun run db:generate
+bun run db:push
+```
+
+### Development Mode
+```bash
+# Terminal 1: Database
+docker compose up -d db
+
+# Terminal 2: Backend
+cd apps/backend && bun run dev
+
+# Terminal 3: Frontend
+cd apps/frontend && bun run dev
+```
+
+### Testing
+```bash
+cd apps/backend && bun test
+```
