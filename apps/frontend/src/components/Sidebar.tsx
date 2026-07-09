@@ -541,15 +541,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         </Show>
         {/* Laporan */}
         <Show when={isAdmin() || isDosen() || isProdi()} >
-          <div class="px-4 mb-2">
+          <div class="pt-2">
             <button
               onClick={() => setIsLaporanOpen(!isLaporanOpen())}
-              class="flex items-center gap-2 w-full text-xs font-bold uppercase tracking-widest text-brand-400 hover:text-brand-300 transition-colors py-1"
+              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              Laporan
+              <span>Laporan</span>
               <svg
                 class={`w-3.5 h-3.5 transition-transform duration-200 ${isLaporanOpen() ? "transform rotate-90" : ""}`}
                 fill="none"
