@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../../components/MainLayout';
 import { StatCard, BarChart } from '../../components/charts';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
@@ -7,15 +7,24 @@ import { ExportColumn } from '../../utils/export';
 
 export default function LaporanMahasiswaBaru() {
   const [angkatan, setAngkatan] = createSignal(new Date().getFullYear().toString());
+  const [loading, setLoading] = createSignal(true);
+  const [error, setError] = createSignal<any>(null);
+  const [stats, setStats] = createSignal<any>({ total: 0, perProdi: [], trend: [] });
 
-  const [stats, { loading, error }] = createResource(
-    angkatan,
-    async (thn) => {
-      const data = await mahasiswaController.getMahasiswaBaru(thn);
-      return data;
-    },
-    { initialValue: { total: 0, perProdi: [], trend: [] } as any },
-  );
+  createEffect(() => {
+    const thn = angkatan();
+    setLoading(true);
+    setError(null);
+    mahasiswaController.getMahasiswaBaru(thn)
+      .then((result) => {
+        setStats(result || { total: 0, perProdi: [], trend: [] });
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err);
+        setLoading(false);
+      });
+  });
 
   const columns: ExportColumn[] = [
     { header: 'Program Studi', accessor: 'prodiNama' },
@@ -78,7 +87,7 @@ export default function LaporanMahasiswaBaru() {
         </Show>
 
         {/* Chart + Table */}
-        <Show when={!loading() && stats()}>
+        <Show when={!loading()}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Mahasiswa Baru per Prodi</h3>
