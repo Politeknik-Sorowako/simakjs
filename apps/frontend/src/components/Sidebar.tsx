@@ -537,6 +537,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                 </Show>
               </div>
             </Show>
+          </div>
+        </Show>
         {/* Laporan */}
         <Show when={isAdmin() || isDosen() || isProdi()} >
           <div class="px-4 mb-2">
@@ -628,6 +630,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Jam Kompensasi
+                  </A>
+                </Show>
                 <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/akademik"
@@ -712,8 +716,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Mahasiswa Keluar
                   </A>
                 </Show>
-                  </A>
-                </Show>
               </div>
             </Show>
           </div>
@@ -736,6 +738,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               </svg>
             </button>
 
+            <Show when={isLayananOpen()}>
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
                 <Show when={isAdmin() || isDosen() || isMahasiswa()}>
                   <A
                     href="/pelanggaran"
