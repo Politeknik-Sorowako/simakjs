@@ -242,8 +242,28 @@ async function main() {
     process.exit(1);
   }
 
-  // Step 4: Verify
-  log('Step 4/4: Verifying migration...');
+  // Step 4: Seed Admin & Dummy Data
+  log('Step 4/5: Seeding admin user...');
+  try {
+    execSync('bun run src/scripts/seed-admin.ts', { stdio: 'pipe', timeout: 30000, cwd: process.cwd() });
+    log('[OK] Admin user seeded.');
+  } catch {
+    log('[WARN] Admin seed skipped (already exists or error).');
+  }
+
+  const seedEnv = process.env.SEED_DUMMY || '';
+  if (seedEnv === 'true') {
+    log('Step 4b/5: Seeding dummy data...');
+    try {
+      execSync('bun run src/scripts/seed-dummy.ts', { stdio: 'pipe', timeout: 60000, cwd: process.cwd() });
+      log('[OK] Dummy data seeded.');
+    } catch {
+      log('[WARN] Dummy seed skipped.');
+    }
+  }
+
+  // Step 5: Verify
+  log('Step 5/5: Verifying migration...');
   try {
     execSync('bun --check src/models/schema.ts', { stdio: 'pipe', timeout: 30000, cwd: process.cwd() });
     log('[OK] Schema verification passed.');
