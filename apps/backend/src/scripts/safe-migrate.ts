@@ -114,6 +114,30 @@ async function diagnoseConnection(dbUrl: string): Promise<string[]> {
   return info;
 }
 
+async function checkIfDatabaseEmpty(): Promise<boolean> {
+  try {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_name = 'users'
+      )
+    `);
+    await pool.end();
+    const isEmpty = !result.rows[0].exists;
+    if (isEmpty) {
+      log('  -> Database is empty (no users table found).');
+    } else {
+      log('  -> Database has existing tables.');
+    }
+    return isEmpty;
+  } catch (err: any) {
+    log('[WARN] Could not check database state: ' + (err.message || String(err)));
+    log('[WARN] Assuming fresh database to be safe.');
+    return true;
+  }
+}
+
 async function main() {
   console.log('');
   console.log('========================================');
@@ -176,42 +200,71 @@ async function main() {
   log('Step 3/4: Applying database schema...');
   let migrationOk = false;
   let migrationAttempt = '';
-  const disablePush = process.env.DISABLE_PUSH_FALLBACK === 'true';
 
-  try {
-    log('Attempt 1: drizzle-kit migrate...');
-    migrationAttempt = 'migrate';
-    execSync('bunx drizzle-kit migrate', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
-    log('[OK] Migration completed (migrate).');
-    migrationOk = true;
-  } catch (err: any) {
-    const errMsg = (err.message || err).split('\n')[0];
-    log('[WARN] drizzle-kit migrate failed: ' + errMsg);
+  // Deteksi apakah database kosong atau sudah ada tabel
+  const isEmpty = await checkIfDatabaseEmpty();
 
-    if (disablePush) {
-      log('[INFO] Push fallback is disabled (DISABLE_PUSH_FALLBACK=true).');
-      log('[INFO] Run manually: docker exec simak_backend bun run --cwd apps/backend db:safe-migrate');
-      log('');
-      log('[WARN] Starting app without schema migration. Database may be out of date.');
+  if (isEmpty) {
+    log('');
+    log('>>> Database kosong terdeteksi. Menggunakan drizzle-kit push untuk membuat schema dari nol...');
+    migrationAttempt = 'push';
+
+    try {
+      execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
+      log('[OK] Schema created successfully (push).');
       migrationOk = true;
-    } else {
-      log('Attempt 2: drizzle-kit push (fallback)...');
-      migrationAttempt = 'push';
+    } catch (pushErr: any) {
+      log('[FAILED] drizzle-kit push failed: ' + (pushErr.message || String(pushErr)).split('\n')[0]);
+    }
+  } else {
+    log('');
+    log('>>> Database existing terdeteksi. Menggunakan drizzle-kit migrate untuk update schema...');
+    migrationAttempt = 'migrate';
 
-      try {
-        execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
-        log('[OK] Schema applied successfully (push).');
-        migrationOk = true;
-      } catch (pushErr: any) {
-        log('[FAILED] drizzle-kit push also failed: ' + (pushErr.message || String(pushErr)).split('\n')[0]);
-      }
+    try {
+      execSync('bunx drizzle-kit migrate', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
+      log('[OK] Migration completed (migrate).');
+      migrationOk = true;
+    } catch (err: any) {
+      const errMsg = (err.message || err).split('\n')[0];
+      log('[FAILED] drizzle-kit migrate failed: ' + errMsg);
+      log('');
+      log('[CRITICAL] Database existing tapi migrate gagal.');
+      log('[CRITICAL] Tidak aman fallback ke push karena risiko kehilangan data.');
+      log('[CRITICAL] Periksa migration files dan schema secara manual.');
+      log('');
+      log('Troubleshooting:');
+      log('  1. Cek migration files di apps/backend/drizzle/');
+      log('  2. Cek log database: docker compose logs db');
+      log('  3. Restore dari backup jika perlu: bun run db:restore');
     }
   }
 
   if (!migrationOk) {
     log('[CRITICAL] Schema could not be applied.');
+    log('[CRITICAL] Application cannot start without valid database schema.');
+
+    if (isEmpty) {
+      log('');
+      log('Database kosong tapi push gagal.');
+      log('Kemungkinan penyebab:');
+      log('  1. Schema files corrupt atau tidak valid');
+      log('  2. Database connection issue');
+      log('  3. Permission issue');
+    } else {
+      log('');
+      log('Database existing tapi migrate gagal.');
+      log('JANGAN gunakan push karena risiko kehilangan data.');
+      log('');
+      log('Langkah selanjutnya:');
+      log('  1. Backup database: bun run db:backup');
+      log('  2. Periksa migration files yang gagal');
+      log('  3. Fix schema atau migration files');
+      log('  4. Retry migration');
+    }
 
     if (backedUp) {
+      log('');
       log('Attempting auto-restore from backup...');
       const backupDir = process.env.BACKUP_DIR || join(process.cwd(), 'backups');
       try {

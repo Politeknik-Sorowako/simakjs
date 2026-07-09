@@ -2,12 +2,11 @@
 set -e
 
 # Run safe migration, then start the app
-# DISABLE_PUSH_FALLBACK=true prevents drizzle-kit push (destructive schema sync)
-# from running automatically — only incremental drizzle-kit migrate is used.
-# If migration fails, the app still starts with a warning so existing data is never lost.
-# To force a schema push, run manually:
-#   docker exec simak_backend bun run --cwd apps/backend db:safe-migrate
-DISABLE_PUSH_FALLBACK=true bun run --cwd apps/backend db:safe-migrate
+# The script auto-detects whether the database is empty or has existing tables:
+#   - Empty database → drizzle-kit push (create schema from scratch)
+#   - Existing database → drizzle-kit migrate (incremental update, no data loss risk)
+# If migration fails on an existing database, the container will NOT start.
+bun run --cwd apps/backend db:safe-migrate
 
 # Replace shell with app process (PID 1 for proper signal handling)
 # Use start:dev to honor NODE_ENV from docker-compose (swagger available in development)
