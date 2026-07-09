@@ -1,7 +1,5 @@
 {
-  "id": "9f49b4ff-b57f-4fc8-83d1-906dda60f4a4",
-  "prevId": "9fd48023-6d93-44d2-b526-807c43a81fd5",
-  "version": "6",
+  "version": "7",
   "dialect": "postgresql",
   "tables": {
     "public.bap": {
@@ -76,45 +74,48 @@
         "bap_kelas_kuliah_id_kelas_kuliah_id_fk": {
           "name": "bap_kelas_kuliah_id_kelas_kuliah_id_fk",
           "tableFrom": "bap",
-          "tableTo": "kelas_kuliah",
           "columnsFrom": [
             "kelas_kuliah_id"
           ],
+          "tableTo": "kelas_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "bap_cpmk_id_cpmk_id_fk": {
           "name": "bap_cpmk_id_cpmk_id_fk",
           "tableFrom": "bap",
-          "tableTo": "cpmk",
           "columnsFrom": [
             "cpmk_id"
           ],
+          "tableTo": "cpmk",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "bap_dosen_id_dosen_id_fk": {
           "name": "bap_dosen_id_dosen_id_fk",
           "tableFrom": "bap",
-          "tableTo": "dosen",
           "columnsFrom": [
             "dosen_id"
           ],
+          "tableTo": "dosen",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.bimbingan": {
       "name": "bimbingan",
@@ -202,45 +203,48 @@
         "bimbingan_mahasiswa_id_mahasiswa_id_fk": {
           "name": "bimbingan_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "bimbingan",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "bimbingan_dosen_id_dosen_id_fk": {
           "name": "bimbingan_dosen_id_dosen_id_fk",
           "tableFrom": "bimbingan",
-          "tableTo": "dosen",
           "columnsFrom": [
             "dosen_id"
           ],
+          "tableTo": "dosen",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         },
         "bimbingan_periode_id_periode_akademik_id_fk": {
           "name": "bimbingan_periode_id_periode_akademik_id_fk",
           "tableFrom": "bimbingan",
-          "tableTo": "periode_akademik",
           "columnsFrom": [
             "periode_id"
           ],
+          "tableTo": "periode_akademik",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.bimbingan_thread": {
       "name": "bimbingan_thread",
@@ -291,19 +295,22 @@
         "bimbingan_thread_bimbingan_id_bimbingan_id_fk": {
           "name": "bimbingan_thread_bimbingan_id_bimbingan_id_fk",
           "tableFrom": "bimbingan_thread",
-          "tableTo": "bimbingan",
           "columnsFrom": [
             "bimbingan_id"
           ],
+          "tableTo": "bimbingan",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.cpmk": {
       "name": "cpmk",
@@ -353,19 +360,22 @@
         "cpmk_mata_kuliah_id_mata_kuliah_id_fk": {
           "name": "cpmk_mata_kuliah_id_mata_kuliah_id_fk",
           "tableFrom": "cpmk",
-          "tableTo": "mata_kuliah",
           "columnsFrom": [
             "mata_kuliah_id"
           ],
+          "tableTo": "mata_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.dosen": {
       "name": "dosen",
@@ -477,48 +487,51 @@
         "dosen_program_studi_id_program_studi_id_fk": {
           "name": "dosen_program_studi_id_program_studi_id_fk",
           "tableFrom": "dosen",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "dosen_nip_unique": {
           "name": "dosen_nip_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nip"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_email_unique": {
           "name": "dosen_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_id_pddikti_unique": {
           "name": "dosen_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_nidn_unique": {
           "name": "dosen_nidn_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nidn"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.dosen_pengajar_kelas": {
       "name": "dosen_pengajar_kelas",
@@ -587,40 +600,43 @@
         "dosen_pengajar_kelas_dosen_id_dosen_id_fk": {
           "name": "dosen_pengajar_kelas_dosen_id_dosen_id_fk",
           "tableFrom": "dosen_pengajar_kelas",
-          "tableTo": "dosen",
           "columnsFrom": [
             "dosen_id"
           ],
+          "tableTo": "dosen",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "dosen_pengajar_kelas_kelas_kuliah_id_kelas_kuliah_id_fk": {
           "name": "dosen_pengajar_kelas_kelas_kuliah_id_kelas_kuliah_id_fk",
           "tableFrom": "dosen_pengajar_kelas",
-          "tableTo": "kelas_kuliah",
           "columnsFrom": [
             "kelas_kuliah_id"
           ],
+          "tableTo": "kelas_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "dosen_pengajar_kelas_id_pddikti_unique": {
           "name": "dosen_pengajar_kelas_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.kelas_kuliah": {
       "name": "kelas_kuliah",
@@ -708,40 +724,43 @@
         "kelas_kuliah_mata_kuliah_id_mata_kuliah_id_fk": {
           "name": "kelas_kuliah_mata_kuliah_id_mata_kuliah_id_fk",
           "tableFrom": "kelas_kuliah",
-          "tableTo": "mata_kuliah",
           "columnsFrom": [
             "mata_kuliah_id"
           ],
+          "tableTo": "mata_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "kelas_kuliah_periode_id_periode_akademik_id_fk": {
           "name": "kelas_kuliah_periode_id_periode_akademik_id_fk",
           "tableFrom": "kelas_kuliah",
-          "tableTo": "periode_akademik",
           "columnsFrom": [
             "periode_id"
           ],
+          "tableTo": "periode_akademik",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "kelas_kuliah_id_pddikti_unique": {
           "name": "kelas_kuliah_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.kompensasi_bayar": {
       "name": "kompensasi_bayar",
@@ -803,32 +822,35 @@
         "kompensasi_bayar_mahasiswa_id_mahasiswa_id_fk": {
           "name": "kompensasi_bayar_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "kompensasi_bayar",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "kompensasi_bayar_petugas_id_users_id_fk": {
           "name": "kompensasi_bayar_petugas_id_users_id_fk",
           "tableFrom": "kompensasi_bayar",
-          "tableTo": "users",
           "columnsFrom": [
             "petugas_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.komponen_nilai": {
       "name": "komponen_nilai",
@@ -878,19 +900,22 @@
         "komponen_nilai_kelas_kuliah_id_kelas_kuliah_id_fk": {
           "name": "komponen_nilai_kelas_kuliah_id_kelas_kuliah_id_fk",
           "tableFrom": "komponen_nilai",
-          "tableTo": "kelas_kuliah",
           "columnsFrom": [
             "kelas_kuliah_id"
           ],
+          "tableTo": "kelas_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.konversi_nilai": {
       "name": "konversi_nilai",
@@ -958,19 +983,22 @@
         "konversi_nilai_program_studi_id_program_studi_id_fk": {
           "name": "konversi_nilai_program_studi_id_program_studi_id_fk",
           "tableFrom": "konversi_nilai",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.krs": {
       "name": "krs",
@@ -1067,71 +1095,90 @@
       },
       "indexes": {
         "krs_mahasiswa_id_idx": {
-          "name": "krs_mahasiswa_id_idx",
           "columns": [
-            "mahasiswa_id"
+            {
+              "expression": "mahasiswa_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "krs_mahasiswa_id_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         },
         "krs_kelas_kuliah_id_idx": {
-          "name": "krs_kelas_kuliah_id_idx",
           "columns": [
-            "kelas_kuliah_id"
+            {
+              "expression": "kelas_kuliah_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "krs_kelas_kuliah_id_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "krs_mahasiswa_id_mahasiswa_id_fk": {
           "name": "krs_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "krs",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "krs_kelas_kuliah_id_kelas_kuliah_id_fk": {
           "name": "krs_kelas_kuliah_id_kelas_kuliah_id_fk",
           "tableFrom": "krs",
-          "tableTo": "kelas_kuliah",
           "columnsFrom": [
             "kelas_kuliah_id"
           ],
+          "tableTo": "kelas_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "krs_approved_by_id_dosen_id_fk": {
           "name": "krs_approved_by_id_dosen_id_fk",
           "tableFrom": "krs",
-          "tableTo": "dosen",
           "columnsFrom": [
             "approved_by_id"
           ],
+          "tableTo": "dosen",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "krs_id_pddikti_unique": {
           "name": "krs_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.kurikulum": {
       "name": "kurikulum",
@@ -1231,47 +1278,50 @@
         "kurikulum_program_studi_id_program_studi_id_fk": {
           "name": "kurikulum_program_studi_id_program_studi_id_fk",
           "tableFrom": "kurikulum",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "kurikulum_semester_mulai_periode_akademik_id_fk": {
           "name": "kurikulum_semester_mulai_periode_akademik_id_fk",
           "tableFrom": "kurikulum",
-          "tableTo": "periode_akademik",
           "columnsFrom": [
             "semester_mulai"
           ],
+          "tableTo": "periode_akademik",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "kurikulum_kode_unique": {
           "name": "kurikulum_kode_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "kode"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "kurikulum_id_pddikti_unique": {
           "name": "kurikulum_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.kurikulum_mata_kuliah": {
       "name": "kurikulum_mata_kuliah",
@@ -1353,32 +1403,35 @@
         "kurikulum_mata_kuliah_kurikulum_id_kurikulum_id_fk": {
           "name": "kurikulum_mata_kuliah_kurikulum_id_kurikulum_id_fk",
           "tableFrom": "kurikulum_mata_kuliah",
-          "tableTo": "kurikulum",
           "columnsFrom": [
             "kurikulum_id"
           ],
+          "tableTo": "kurikulum",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "kurikulum_mata_kuliah_mata_kuliah_id_mata_kuliah_id_fk": {
           "name": "kurikulum_mata_kuliah_mata_kuliah_id_mata_kuliah_id_fk",
           "tableFrom": "kurikulum_mata_kuliah",
-          "tableTo": "mata_kuliah",
           "columnsFrom": [
             "mata_kuliah_id"
           ],
+          "tableTo": "mata_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.mahasiswa": {
       "name": "mahasiswa",
@@ -1534,61 +1587,64 @@
         "mahasiswa_program_studi_id_program_studi_id_fk": {
           "name": "mahasiswa_program_studi_id_program_studi_id_fk",
           "tableFrom": "mahasiswa",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "mahasiswa_dosen_pa_id_dosen_id_fk": {
           "name": "mahasiswa_dosen_pa_id_dosen_id_fk",
           "tableFrom": "mahasiswa",
-          "tableTo": "dosen",
           "columnsFrom": [
             "dosen_pa_id"
           ],
+          "tableTo": "dosen",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "mahasiswa_nim_unique": {
           "name": "mahasiswa_nim_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nim"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_email_unique": {
           "name": "mahasiswa_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_id_pddikti_unique": {
           "name": "mahasiswa_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_nik_unique": {
           "name": "mahasiswa_nik_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nik"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.mata_kuliah": {
       "name": "mata_kuliah",
@@ -1689,34 +1745,37 @@
         "mata_kuliah_program_studi_id_program_studi_id_fk": {
           "name": "mata_kuliah_program_studi_id_program_studi_id_fk",
           "tableFrom": "mata_kuliah",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "mata_kuliah_kode_unique": {
           "name": "mata_kuliah_kode_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "kode"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mata_kuliah_id_pddikti_unique": {
           "name": "mata_kuliah_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.nilai_komponen_mahasiswa": {
       "name": "nilai_komponen_mahasiswa",
@@ -1766,32 +1825,35 @@
         "nilai_komponen_mahasiswa_krs_id_krs_id_fk": {
           "name": "nilai_komponen_mahasiswa_krs_id_krs_id_fk",
           "tableFrom": "nilai_komponen_mahasiswa",
-          "tableTo": "krs",
           "columnsFrom": [
             "krs_id"
           ],
+          "tableTo": "krs",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "nilai_komponen_mahasiswa_komponen_nilai_id_komponen_nilai_id_fk": {
           "name": "nilai_komponen_mahasiswa_komponen_nilai_id_komponen_nilai_id_fk",
           "tableFrom": "nilai_komponen_mahasiswa",
-          "tableTo": "komponen_nilai",
           "columnsFrom": [
             "komponen_nilai_id"
           ],
+          "tableTo": "komponen_nilai",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.password_resets": {
       "name": "password_resets",
@@ -1835,12 +1897,15 @@
       "uniqueConstraints": {
         "password_resets_token_unique": {
           "name": "password_resets_token_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "token"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.pelanggaran": {
       "name": "pelanggaran",
@@ -1908,32 +1973,35 @@
         "pelanggaran_mahasiswa_id_mahasiswa_id_fk": {
           "name": "pelanggaran_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "pelanggaran",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "pelanggaran_dibuat_oleh_users_id_fk": {
           "name": "pelanggaran_dibuat_oleh_users_id_fk",
           "tableFrom": "pelanggaran",
-          "tableTo": "users",
           "columnsFrom": [
             "dibuat_oleh"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.pengajuan_yudisium": {
       "name": "pengajuan_yudisium",
@@ -2018,27 +2086,30 @@
         "pengajuan_yudisium_mahasiswa_id_mahasiswa_id_fk": {
           "name": "pengajuan_yudisium_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "pengajuan_yudisium",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "pengajuan_yudisium_mahasiswa_id_unique": {
           "name": "pengajuan_yudisium_mahasiswa_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "mahasiswa_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.periode_akademik": {
       "name": "periode_akademik",
@@ -2103,12 +2174,15 @@
       "uniqueConstraints": {
         "periode_akademik_id_pddikti_unique": {
           "name": "periode_akademik_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.presensi": {
       "name": "presensi",
@@ -2166,32 +2240,35 @@
         "presensi_bap_id_bap_id_fk": {
           "name": "presensi_bap_id_bap_id_fk",
           "tableFrom": "presensi",
-          "tableTo": "bap",
           "columnsFrom": [
             "bap_id"
           ],
+          "tableTo": "bap",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "presensi_mahasiswa_id_mahasiswa_id_fk": {
           "name": "presensi_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "presensi",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.program_studi": {
       "name": "program_studi",
@@ -2261,19 +2338,22 @@
       "uniqueConstraints": {
         "program_studi_kode_unique": {
           "name": "program_studi_kode_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "kode"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "program_studi_id_pddikti_unique": {
           "name": "program_studi_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.rencana_evaluasi": {
       "name": "rencana_evaluasi",
@@ -2335,27 +2415,30 @@
         "rencana_evaluasi_mata_kuliah_id_mata_kuliah_id_fk": {
           "name": "rencana_evaluasi_mata_kuliah_id_mata_kuliah_id_fk",
           "tableFrom": "rencana_evaluasi",
-          "tableTo": "mata_kuliah",
           "columnsFrom": [
             "mata_kuliah_id"
           ],
+          "tableTo": "mata_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "rencana_evaluasi_id_pddikti_unique": {
           "name": "rencana_evaluasi_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.rps": {
       "name": "rps",
@@ -2411,32 +2494,35 @@
         "rps_mata_kuliah_id_mata_kuliah_id_fk": {
           "name": "rps_mata_kuliah_id_mata_kuliah_id_fk",
           "tableFrom": "rps",
-          "tableTo": "mata_kuliah",
           "columnsFrom": [
             "mata_kuliah_id"
           ],
+          "tableTo": "mata_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "rps_periode_id_periode_akademik_id_fk": {
           "name": "rps_periode_id_periode_akademik_id_fk",
           "tableFrom": "rps",
-          "tableTo": "periode_akademik",
           "columnsFrom": [
             "periode_id"
           ],
+          "tableTo": "periode_akademik",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.rps_topik": {
       "name": "rps_topik",
@@ -2503,40 +2589,43 @@
         "rps_topik_rps_id_rps_id_fk": {
           "name": "rps_topik_rps_id_rps_id_fk",
           "tableFrom": "rps_topik",
-          "tableTo": "rps",
           "columnsFrom": [
             "rps_id"
           ],
+          "tableTo": "rps",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "rps_topik_cpmk_id_cpmk_id_fk": {
           "name": "rps_topik_cpmk_id_cpmk_id_fk",
           "tableFrom": "rps_topik",
-          "tableTo": "cpmk",
           "columnsFrom": [
             "cpmk_id"
           ],
+          "tableTo": "cpmk",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "rps_topik_id_pddikti_unique": {
           "name": "rps_topik_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.skala_predikat_kelulusan": {
       "name": "skala_predikat_kelulusan",
@@ -2584,7 +2673,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.skema_tarif": {
       "name": "skema_tarif",
@@ -2634,19 +2726,22 @@
         "skema_tarif_program_studi_id_program_studi_id_fk": {
           "name": "skema_tarif_program_studi_id_program_studi_id_fk",
           "tableFrom": "skema_tarif",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.tagihan": {
       "name": "tagihan",
@@ -2717,32 +2812,35 @@
         "tagihan_mahasiswa_id_mahasiswa_id_fk": {
           "name": "tagihan_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "tagihan",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "tagihan_periode_id_periode_akademik_id_fk": {
           "name": "tagihan_periode_id_periode_akademik_id_fk",
           "tableFrom": "tagihan",
-          "tableTo": "periode_akademik",
           "columnsFrom": [
             "periode_id"
           ],
+          "tableTo": "periode_akademik",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.transaksi_pembayaran": {
       "name": "transaksi_pembayaran",
@@ -2812,32 +2910,35 @@
         "transaksi_pembayaran_tagihan_id_tagihan_id_fk": {
           "name": "transaksi_pembayaran_tagihan_id_tagihan_id_fk",
           "tableFrom": "transaksi_pembayaran",
-          "tableTo": "tagihan",
           "columnsFrom": [
             "tagihan_id"
           ],
+          "tableTo": "tagihan",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "transaksi_pembayaran_petugas_id_users_id_fk": {
           "name": "transaksi_pembayaran_petugas_id_users_id_fk",
           "tableFrom": "transaksi_pembayaran",
-          "tableTo": "users",
           "columnsFrom": [
             "petugas_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.users": {
       "name": "users",
@@ -2916,12 +3017,15 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {
@@ -2968,8 +3072,14 @@
   },
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "9f49b4ff-b57f-4fc8-83d1-906dda60f4a4",
+  "prevId": "9fd48023-6d93-44d2-b526-807c43a81fd5",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

@@ -1,7 +1,5 @@
 {
-  "id": "0dd4555a-04a3-4f71-bf29-dfdf3afba6b3",
-  "prevId": "7ef32ac8-7afe-41b0-a684-da2bbe46b1c7",
-  "version": "6",
+  "version": "7",
   "dialect": "postgresql",
   "tables": {
     "public.dosen": {
@@ -102,48 +100,51 @@
         "dosen_program_studi_id_program_studi_id_fk": {
           "name": "dosen_program_studi_id_program_studi_id_fk",
           "tableFrom": "dosen",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "dosen_nip_unique": {
           "name": "dosen_nip_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nip"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_email_unique": {
           "name": "dosen_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_id_pddikti_unique": {
           "name": "dosen_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "dosen_nidn_unique": {
           "name": "dosen_nidn_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nidn"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.dosen_pengajar_kelas": {
       "name": "dosen_pengajar_kelas",
@@ -212,40 +213,43 @@
         "dosen_pengajar_kelas_dosen_id_dosen_id_fk": {
           "name": "dosen_pengajar_kelas_dosen_id_dosen_id_fk",
           "tableFrom": "dosen_pengajar_kelas",
-          "tableTo": "dosen",
           "columnsFrom": [
             "dosen_id"
           ],
+          "tableTo": "dosen",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "dosen_pengajar_kelas_kelas_kuliah_id_kelas_kuliah_id_fk": {
           "name": "dosen_pengajar_kelas_kelas_kuliah_id_kelas_kuliah_id_fk",
           "tableFrom": "dosen_pengajar_kelas",
-          "tableTo": "kelas_kuliah",
           "columnsFrom": [
             "kelas_kuliah_id"
           ],
+          "tableTo": "kelas_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "dosen_pengajar_kelas_id_pddikti_unique": {
           "name": "dosen_pengajar_kelas_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.kelas_kuliah": {
       "name": "kelas_kuliah",
@@ -314,40 +318,43 @@
         "kelas_kuliah_mata_kuliah_id_mata_kuliah_id_fk": {
           "name": "kelas_kuliah_mata_kuliah_id_mata_kuliah_id_fk",
           "tableFrom": "kelas_kuliah",
-          "tableTo": "mata_kuliah",
           "columnsFrom": [
             "mata_kuliah_id"
           ],
+          "tableTo": "mata_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         },
         "kelas_kuliah_periode_id_periode_akademik_id_fk": {
           "name": "kelas_kuliah_periode_id_periode_akademik_id_fk",
           "tableFrom": "kelas_kuliah",
-          "tableTo": "periode_akademik",
           "columnsFrom": [
             "periode_id"
           ],
+          "tableTo": "periode_akademik",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "kelas_kuliah_id_pddikti_unique": {
           "name": "kelas_kuliah_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.krs": {
       "name": "krs",
@@ -425,58 +432,77 @@
       },
       "indexes": {
         "krs_mahasiswa_id_idx": {
-          "name": "krs_mahasiswa_id_idx",
           "columns": [
-            "mahasiswa_id"
+            {
+              "expression": "mahasiswa_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "krs_mahasiswa_id_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         },
         "krs_kelas_kuliah_id_idx": {
-          "name": "krs_kelas_kuliah_id_idx",
           "columns": [
-            "kelas_kuliah_id"
+            {
+              "expression": "kelas_kuliah_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "isUnique": false
+          "with": {},
+          "name": "krs_kelas_kuliah_id_idx",
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "krs_mahasiswa_id_mahasiswa_id_fk": {
           "name": "krs_mahasiswa_id_mahasiswa_id_fk",
           "tableFrom": "krs",
-          "tableTo": "mahasiswa",
           "columnsFrom": [
             "mahasiswa_id"
           ],
+          "tableTo": "mahasiswa",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "krs_kelas_kuliah_id_kelas_kuliah_id_fk": {
           "name": "krs_kelas_kuliah_id_kelas_kuliah_id_fk",
           "tableFrom": "krs",
-          "tableTo": "kelas_kuliah",
           "columnsFrom": [
             "kelas_kuliah_id"
           ],
+          "tableTo": "kelas_kuliah",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "krs_id_pddikti_unique": {
           "name": "krs_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.mahasiswa": {
       "name": "mahasiswa",
@@ -583,48 +609,51 @@
         "mahasiswa_program_studi_id_program_studi_id_fk": {
           "name": "mahasiswa_program_studi_id_program_studi_id_fk",
           "tableFrom": "mahasiswa",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "mahasiswa_nim_unique": {
           "name": "mahasiswa_nim_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nim"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_email_unique": {
           "name": "mahasiswa_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_id_pddikti_unique": {
           "name": "mahasiswa_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mahasiswa_nik_unique": {
           "name": "mahasiswa_nik_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "nik"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.mata_kuliah": {
       "name": "mata_kuliah",
@@ -711,34 +740,37 @@
         "mata_kuliah_program_studi_id_program_studi_id_fk": {
           "name": "mata_kuliah_program_studi_id_program_studi_id_fk",
           "tableFrom": "mata_kuliah",
-          "tableTo": "program_studi",
           "columnsFrom": [
             "program_studi_id"
           ],
+          "tableTo": "program_studi",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "mata_kuliah_kode_unique": {
           "name": "mata_kuliah_kode_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "kode"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "mata_kuliah_id_pddikti_unique": {
           "name": "mata_kuliah_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.periode_akademik": {
       "name": "periode_akademik",
@@ -803,12 +835,15 @@
       "uniqueConstraints": {
         "periode_akademik_id_pddikti_unique": {
           "name": "periode_akademik_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.program_studi": {
       "name": "program_studi",
@@ -878,19 +913,22 @@
       "uniqueConstraints": {
         "program_studi_kode_unique": {
           "name": "program_studi_kode_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "kode"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "program_studi_id_pddikti_unique": {
           "name": "program_studi_id_pddikti_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "id_pddikti"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.users": {
       "name": "users",
@@ -943,12 +981,15 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {
@@ -972,8 +1013,14 @@
   },
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "0dd4555a-04a3-4f71-bf29-dfdf3afba6b3",
+  "prevId": "7ef32ac8-7afe-41b0-a684-da2bbe46b1c7",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }
