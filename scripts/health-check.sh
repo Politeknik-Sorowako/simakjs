@@ -5,7 +5,7 @@
 # ===========================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/.deployment/deploy.config.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../.deployment/deploy.config.sh" 2>/dev/null || true
 
 # Colors
 RED='\033[0;31m'

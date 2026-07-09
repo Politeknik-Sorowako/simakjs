@@ -16,6 +16,7 @@ NC='\033[0m'
 
 log() { echo -e "${CYAN}[$(date +'%H:%M:%S')]${NC} $1"; }
 ok() { echo -e "  ${GREEN}✓${NC} $1"; }
+warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; }
 
 EXIT_CODE=0
