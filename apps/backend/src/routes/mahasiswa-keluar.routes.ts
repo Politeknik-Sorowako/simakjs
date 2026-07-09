@@ -5,11 +5,12 @@ import {
   createMahasiswaKeluarSchema,
   deleteMahasiswaKeluarSchema,
   getMahasiswaKeluarSchema,
+  getMahasiswaKeluarStatsSchema,
 } from '../schemas/mahasiswa-keluar.schema';
 
 export const mahasiswaKeluarRoutes = new Elysia({ prefix: '/mahasiswa-keluar' })
   .use(authMiddleware)
   .post('/', MahasiswaKeluarController.create, createMahasiswaKeluarSchema)
   .get('/', MahasiswaKeluarController.getAll, getMahasiswaKeluarSchema)
-  .get('/stats', MahasiswaKeluarController.getStats)
+  .get('/stats', MahasiswaKeluarController.getStats, getMahasiswaKeluarStatsSchema)
   .delete('/:id', MahasiswaKeluarController.delete, deleteMahasiswaKeluarSchema);

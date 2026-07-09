@@ -135,6 +135,14 @@ export const updateProdiSchema = {
   },
 };
 
+export const importProdiSchema = {
+  detail: {
+    tags: ['Program Studi'],
+    summary: 'Impor Program Studi dari CSV',
+    description: 'Mengimpor data program studi secara massal dari file CSV.',
+  },
+};
+
 export const deleteProdiSchema = {
   detail: {
     tags: ['Program Studi'],

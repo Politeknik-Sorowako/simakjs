@@ -333,6 +333,22 @@ export const validasiKrsSchema = {
   },
 };
 
+export const getKrsStatsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Statistik KRS',
+    description: 'Mengambil statistik KRS per periode, per prodi (total KRS, disetujui, pending).',
+  },
+};
+
+export const importKrsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Impor KRS dari CSV',
+    description: 'Mengimpor data KRS secara massal dari file CSV.',
+  },
+};
+
 export const approveBatchKrsSchema = {
   detail: {
     tags: ['KRS'],

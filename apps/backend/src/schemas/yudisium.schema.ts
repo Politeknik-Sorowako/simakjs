@@ -162,6 +162,14 @@ export const updateYudisiumStatusSchema = {
   },
 };
 
+export const getYudisiumStatsSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Statistik Yudisium',
+    description: 'Mengambil statistik jumlah pengajuan yudisium per status, per prodi.',
+  },
+};
+
 export const getKomponenYudisiumSchema = {
   detail: {
     tags: ['Yudisium & Komponen Nilai'],

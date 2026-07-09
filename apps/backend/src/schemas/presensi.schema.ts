@@ -164,6 +164,30 @@ export const getLaporanKompensasiSchema = {
   },
 };
 
+export const getKompensasiStatsSchema = {
+  detail: {
+    tags: ['Kompensasi'],
+    summary: 'Statistik Kompensasi',
+    description: 'Mengambil statistik kompensasi keterlambatan/mangkir mahasiswa.',
+  },
+};
+
+export const getRekapKehadiranSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Rekapitulasi Kehadiran',
+    description: 'Mengambil rekapitulasi kehadiran per kelas kuliah untuk periode tertentu.',
+  },
+};
+
+export const getRekapKehadiranMahasiswaSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Rekapitulasi Kehadiran Mahasiswa',
+    description: 'Mengambil rekapitulasi kehadiran per mahasiswa untuk seluruh kelas perkuliahan.',
+  },
+};
+
 export const updateKompensasiBayarSchema = {
   detail: {
     tags: ['Kompensasi'],

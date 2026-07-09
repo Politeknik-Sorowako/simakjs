@@ -221,6 +221,38 @@ export const updateMahasiswaSchema = {
   },
 };
 
+export const getMahasiswaStatsSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Statistik Mahasiswa',
+    description: 'Mengambil statistik jumlah mahasiswa per prodi, per status, per angkatan.',
+  },
+};
+
+export const getMahasiswaBaruSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Daftar Mahasiswa Baru',
+    description: 'Mengambil daftar mahasiswa baru untuk periode akademik tertentu.',
+  },
+};
+
+export const importMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Impor Mahasiswa dari CSV',
+    description: 'Mengimpor data mahasiswa secara massal dari file CSV.',
+  },
+};
+
+export const importPaMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Impor Dosen PA dari CSV',
+    description: 'Mengimpor mapping dosen pembimbing akademik (PA) untuk mahasiswa dari file CSV.',
+  },
+};
+
 export const deleteMahasiswaSchema = {
   detail: {
     tags: ['Mahasiswa'],

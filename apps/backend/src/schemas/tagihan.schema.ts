@@ -73,6 +73,83 @@ export const generateTagihanSchema = {
   },
 };
 
+export const getStatsTagihanSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Statistik Tagihan SPP',
+    description: 'Mengambil statistik tagihan SPP (total tagihan, total terbayar, status per periode).',
+  },
+};
+
+export const updateNominalSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Update Nominal Tagihan',
+    description: 'Memperbarui nominal tagihan SPP berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    nominal: t.Numeric(),
+  }),
+};
+
+export const getRiwayatTransaksiSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Riwayat Transaksi Tagihan',
+    description: 'Mengambil riwayat transaksi pembayaran untuk suatu tagihan.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+};
+
+export const voidTransaksiSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Void/Batalkan Transaksi',
+    description: 'Membatalkan transaksi pembayaran tagihan (void).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+};
+
+export const getAllTarifSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Daftar Skema Tarif SPP',
+    description: 'Mengambil semua skema tarif SPP yang terdaftar per angkatan/prodi.',
+  },
+};
+
+export const createTarifSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Buat Skema Tarif Baru',
+    description: 'Menambahkan skema tarif SPP baru untuk angkatan/prodi tertentu.',
+  },
+  body: t.Object({
+    programStudiId: t.Optional(t.Integer()),
+    angkatan: t.Optional(t.String()),
+    nominal: t.Numeric(),
+    periodeId: t.Optional(t.String()),
+  }),
+};
+
+export const deleteTarifSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Hapus Skema Tarif',
+    description: 'Menghapus skema tarif SPP berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+};
+
 export const bayarTagihanSchema = {
   detail: {
     tags: ['Tagihan'],

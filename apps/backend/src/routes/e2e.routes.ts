@@ -22,6 +22,7 @@ import {
 } from '../models/schema';
 import { db } from '../utils/db';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { resetE2eSchema } from '../schemas/e2e.schema';
 
 export const e2eRoutes = new Elysia({ prefix: '/e2e' })
   .use(authMiddleware)
@@ -193,4 +194,4 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' })
     set.status = 500;
     return { error: 'Gagal mereset database' };
   }
-});
+}, resetE2eSchema);
