@@ -10,4 +10,5 @@ set -e
 DISABLE_PUSH_FALLBACK=true bun run --cwd apps/backend db:safe-migrate
 
 # Replace shell with app process (PID 1 for proper signal handling)
-exec bun run --cwd apps/backend start
+# Use start:dev to honor NODE_ENV from docker-compose (swagger available in development)
+exec bun run --cwd apps/backend start:dev

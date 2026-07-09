@@ -22,10 +22,15 @@ import {
 } from '../models/schema';
 import { db } from '../utils/db';
 import { authMiddleware } from '../middlewares/auth.middleware';
+import { resetE2eSchema } from '../schemas/e2e.schema';
 
 export const e2eRoutes = new Elysia({ prefix: '/e2e' })
   .use(authMiddleware)
   .post('/reset', async ({ set, getCurrentUser }) => {
+    if (process.env.NODE_ENV === 'production') {
+      set.status = 403;
+      return { error: 'Endpoint ini tidak dapat dijalankan di mode production.' };
+    }
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -193,4 +198,4 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' })
     set.status = 500;
     return { error: 'Gagal mereset database' };
   }
-});
+}, resetE2eSchema);

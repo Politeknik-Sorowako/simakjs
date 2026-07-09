@@ -185,6 +185,14 @@ export const updateDosenSchema = {
   },
 };
 
+export const importDosenSchema = {
+  detail: {
+    tags: ['Dosen'],
+    summary: 'Impor Dosen dari CSV',
+    description: 'Mengimpor data dosen secara massal dari file CSV.',
+  },
+};
+
 export const deleteDosenSchema = {
   detail: {
     tags: ['Dosen'],

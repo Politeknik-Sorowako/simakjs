@@ -162,6 +162,14 @@ export const importMkCsvSchema = {
   },
 };
 
+export const downloadTemplateImportMkSchema = {
+  detail: {
+    tags: ['Kurikulum'],
+    summary: 'Download Template CSV Impor Mata Kuliah',
+    description: 'Mengunduh template CSV untuk impor mata kuliah ke kurikulum.',
+  },
+};
+
 export const removeMataKuliahSchema = {
   detail: {
     tags: ['Kurikulum'],

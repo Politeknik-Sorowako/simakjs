@@ -36,6 +36,14 @@ export const getMahasiswaKeluarSchema = {
   }),
 };
 
+export const getMahasiswaKeluarStatsSchema = {
+  detail: {
+    tags: ['Mahasiswa Keluar'],
+    summary: 'Statistik Mahasiswa Keluar',
+    description: 'Mengambil statistik jumlah mahasiswa yang keluar/DO per periode, per prodi, per status.',
+  },
+};
+
 export const deleteMahasiswaKeluarSchema = {
   detail: {
     tags: ['Mahasiswa Keluar'],

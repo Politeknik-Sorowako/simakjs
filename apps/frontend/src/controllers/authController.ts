@@ -39,10 +39,11 @@ export const authController = {
     });
   },
 
-  async getResetTokenDetails(token: string): Promise<{ email: string }> {
-    return fetchApi<{ email: string }>(`/auth/reset-password/details/${token}`, {
-      method: 'GET',
+  async validateResetToken(token: string): Promise<{ email: string }> {
+    return fetchApi<{ email: string }>('/auth/reset-password/validate', {
+      method: 'POST',
       requireAuth: false,
+      body: JSON.stringify({ token }),
     });
   },
 };
