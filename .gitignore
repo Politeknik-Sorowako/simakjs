@@ -16,3 +16,8 @@ task.md
 pr_description.md
 commit_diff.txt
 test-results
+
+# Database backups (folder created automatically by Docker/script)
+apps/backend/backups/
+# Frontend build output
+apps/frontend/dist/

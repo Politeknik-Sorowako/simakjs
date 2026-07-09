@@ -15,6 +15,10 @@ export const khsRoutes = new Elysia({ prefix: '/khs' })
   .get('/mahasiswa/:mhsId/transkrip', KhsController.getTranskrip, getTranskripSchema)
   .get('/mahasiswa/:mhsId/periode/:periodeId/eligibility', KhsController.getExamEligibility, getExamEligibilitySchema)
 
+  // Rekap Nilai
+  .get('/rekap-nilai/:mhsId', KhsController.getRekapNilai)
+  .get('/rekap-per-prodi', KhsController.getRekapPerProdi)
+
   // Konfigurasi Konversi Nilai
   .get('/konversi', KhsController.getAllKonversi)
   .post('/konversi', KhsController.saveKonversi, saveKonversiNilaiSchema)

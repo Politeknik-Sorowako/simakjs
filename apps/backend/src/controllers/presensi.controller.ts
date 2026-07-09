@@ -20,13 +20,26 @@ export class PresensiController {
     return await PresensiService.getPresensiByBap(parseInt(params.bapId));
   }
 
-  static async getLaporanKompensasi({ set, getCurrentUser }: AuthContext) {
+  static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    return await PresensiService.getLaporanKompensasi();
+    const page = query?.page ? parseInt(query.page) : 1;
+    const limit = query?.limit ? parseInt(query.limit) : 20;
+    const search = query?.search;
+    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+    return await PresensiService.getLaporanKompensasi(page, limit, search, prodiId);
+  }
+
+  static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    return await PresensiService.getLaporanKompensasiStats();
   }
 
   static async getKompensasiDetail({ params, set, getCurrentUser }: AuthContext) {
@@ -42,6 +55,28 @@ export class PresensiController {
       return { error: 'Akses ditolak. Anda hanya dapat melihat data Anda sendiri.' };
     }
     return detail;
+  }
+
+  static async getRekapKehadiran({ query, set, getCurrentUser }: AuthContext<any, { kelasKuliahId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const kelasKuliahId = query?.kelasKuliahId ? parseInt(query.kelasKuliahId) : undefined;
+    if (!kelasKuliahId) {
+      set.status = 400;
+      return { error: 'Parameter kelasKuliahId diperlukan.' };
+    }
+    return await PresensiService.getRekapKehadiran(kelasKuliahId);
+  }
+
+  static async getRekapKehadiranMahasiswa({ query, set, getCurrentUser }: AuthContext<any, { mahasiswaId?: string; periodeId?: string }>) {
+    const user = await getCurrentUser();
+    if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+    const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
+    if (!mahasiswaId) { set.status = 400; return { error: 'Parameter mahasiswaId diperlukan.' }; }
+    return await PresensiService.getRekapKehadiranMahasiswa(mahasiswaId, query?.periodeId);
   }
 
   static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext) {

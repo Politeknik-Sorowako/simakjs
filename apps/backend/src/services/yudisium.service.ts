@@ -143,6 +143,38 @@ export class YudisiumService {
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id));
   }
 
+  static async getStats(periodeId?: string) {
+    const { count: count2 } = await import('drizzle-orm');
+    const { pengajuanYudisium: py, programStudi: ps } = await import('../models/schema');
+
+    const [total] = await db.select({ count: count2() }).from(py);
+
+    const statusBreakdown = await db
+      .select({ status: py.status, count: count2() })
+      .from(py)
+      .groupBy(py.status);
+
+    const perProdi = await db
+      .select({
+        prodiId: mahasiswa.programStudiId,
+        prodiNama: ps.nama,
+        total: count2(),
+      })
+      .from(py)
+      .innerJoin(mahasiswa, eq(py.mahasiswaId, mahasiswa.id))
+      .leftJoin(ps, eq(mahasiswa.programStudiId, ps.id))
+      .groupBy(mahasiswa.programStudiId, ps.nama);
+
+    const statusMap: Record<string, number> = {};
+    for (const s of statusBreakdown) statusMap[s.status] = s.count;
+
+    return {
+      totalPengajuan: Number(total?.count || 0),
+      statusBreakdown: statusMap,
+      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', total: Number(p.total) })),
+    };
+  }
+
   // --- GRADE COMPONENTS & GRADING INTEGRITY ---
 
   static async getKomponen(kelasKuliahId: number) {

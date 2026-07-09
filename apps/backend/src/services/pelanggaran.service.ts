@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, sql, sum } from 'drizzle-orm';
 import { mahasiswa, pelanggaran, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -64,6 +64,68 @@ export class PelanggaranService {
       .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .orderBy(desc(pelanggaran.tanggal));
+  }
+
+  static async getRekap(periodeId?: string, programStudiId?: number) {
+    const { mahasiswa: mhs, programStudi: ps } = await import('../models/schema');
+
+    const conditions: any[] = [];
+    if (programStudiId) conditions.push(eq(mhs.programStudiId, programStudiId));
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totals] = await db
+      .select({ totalPelanggaran: count(), totalMahasiswa: count().distinct() })
+      .from(pelanggaran)
+      .innerJoin(mhs, eq(pelanggaran.mahasiswaId, mhs.id))
+      .where(whereClause);
+
+    const perJenis = await db
+      .select({
+        jenis: pelanggaran.jenisPelanggaran,
+        jumlah: count(),
+        totalPoin: sum(pelanggaran.bobotPoin),
+      })
+      .from(pelanggaran)
+      .innerJoin(mhs, eq(pelanggaran.mahasiswaId, mhs.id))
+      .where(whereClause)
+      .groupBy(pelanggaran.jenisPelanggaran)
+      .orderBy(sql`count(*) DESC`);
+
+    const perProdi = await db
+      .select({
+        prodiId: mhs.programStudiId,
+        prodiNama: ps.nama,
+        totalPelanggaran: count(),
+        totalPoin: sum(pelanggaran.bobotPoin),
+      })
+      .from(pelanggaran)
+      .innerJoin(mhs, eq(pelanggaran.mahasiswaId, mhs.id))
+      .leftJoin(ps, eq(mhs.programStudiId, ps.id))
+      .where(whereClause)
+      .groupBy(mhs.programStudiId, ps.nama);
+
+    const topPelanggar = await db
+      .select({
+        mahasiswaId: pelanggaran.mahasiswaId,
+        nim: mhs.nim,
+        nama: mhs.nama,
+        totalPoin: sum(pelanggaran.bobotPoin),
+        jumlahPelanggaran: count(),
+      })
+      .from(pelanggaran)
+      .innerJoin(mhs, eq(pelanggaran.mahasiswaId, mhs.id))
+      .where(whereClause)
+      .groupBy(pelanggaran.mahasiswaId, mhs.nim, mhs.nama)
+      .orderBy(sql`SUM(${pelanggaran.bobotPoin}) DESC`)
+      .limit(10);
+
+    return {
+      totalPelanggaran: Number(totals?.totalPelanggaran || 0),
+      totalMahasiswa: Number(totals?.totalMahasiswa || 0),
+      perJenis: perJenis.map((j) => ({ jenis: j.jenis, jumlah: Number(j.jumlah), totalPoin: Number(j.totalPoin || 0) })),
+      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', totalPelanggaran: Number(p.totalPelanggaran), totalPoin: Number(p.totalPoin || 0) })),
+      topPelanggar: topPelanggar.map((t) => ({ mahasiswaId: t.mahasiswaId, nim: t.nim, nama: t.nama, totalPoin: Number(t.totalPoin || 0), jumlahPelanggaran: Number(t.jumlahPelanggaran) })),
+    };
   }
 
   static async updatePelanggaran(

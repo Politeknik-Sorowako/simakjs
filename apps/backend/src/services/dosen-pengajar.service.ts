@@ -1,5 +1,5 @@
 import { and, count, eq } from 'drizzle-orm';
-import { dosen, dosenPengajarKelas, kelasKuliah } from '../models/schema';
+import { dosen, dosenPengajarKelas, kelasKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateDosenPengajarDto {
@@ -10,13 +10,17 @@ export interface CreateDosenPengajarDto {
 }
 
 export class DosenPengajarService {
-  static async getAll(page = 1, limit = 10, kelasKuliahId?: number) {
+  static async getAll(page = 1, limit = 10, kelasKuliahId?: number, dosenId?: number) {
     const offset = (page - 1) * limit;
 
-    let whereClause = undefined;
+    const conditions: any[] = [];
     if (kelasKuliahId) {
-      whereClause = eq(dosenPengajarKelas.kelasKuliahId, kelasKuliahId);
+      conditions.push(eq(dosenPengajarKelas.kelasKuliahId, kelasKuliahId));
     }
+    if (dosenId) {
+      conditions.push(eq(dosenPengajarKelas.dosenId, dosenId));
+    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [totalResult] = await db.select({ total: count() }).from(dosenPengajarKelas).where(whereClause);
 
@@ -41,11 +45,18 @@ export class DosenPengajarService {
           id: kelasKuliah.id,
           namaKelas: kelasKuliah.namaKelas,
           periodeId: kelasKuliah.periodeId,
+          mataKuliah: {
+            id: mataKuliah.id,
+            kode: mataKuliah.kode,
+            nama: mataKuliah.nama,
+            sksTotal: mataKuliah.sksTotal,
+          },
         },
       })
       .from(dosenPengajarKelas)
       .leftJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
       .leftJoin(kelasKuliah, eq(dosenPengajarKelas.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .where(whereClause)
       .limit(limit)
       .offset(offset);

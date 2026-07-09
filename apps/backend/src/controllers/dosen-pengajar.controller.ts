@@ -6,7 +6,8 @@ export class DosenPengajarController {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const kelasKuliahId = query?.kelasKuliahId ? parseInt(query.kelasKuliahId) : undefined;
-    return await DosenPengajarService.getAll(page, limit, kelasKuliahId);
+    const dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+    return await DosenPengajarService.getAll(page, limit, kelasKuliahId, dosenId);
   }
 
   static async create({ body, set, getCurrentUser }: AuthContext) {

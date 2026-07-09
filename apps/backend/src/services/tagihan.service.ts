@@ -1,5 +1,5 @@
-import { and, count, eq, ilike, or, sum } from 'drizzle-orm';
-import { mahasiswa, skemaTarif, tagihan, transaksiPembayaran, users } from '../models/schema';
+import { and, count, eq, ilike, or, sql, sum } from 'drizzle-orm';
+import { mahasiswa, programStudi as ps, skemaTarif, tagihan, transaksiPembayaran, users } from '../models/schema';
 import { db } from '../utils/db';
 
 export class TagihanService {
@@ -331,5 +331,61 @@ export class TagihanService {
       .limit(1);
 
     return row || null;
+  }
+
+  static async getStats(periodeId?: string, programStudiId?: number) {
+    const conditions: any[] = [];
+    if (periodeId) conditions.push(eq(tagihan.periodeId, periodeId));
+    if (programStudiId) conditions.push(eq(mahasiswa.programStudiId, programStudiId));
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totals] = await db
+      .select({
+        totalMahasiswa: count(),
+        totalTagihan: sum(tagihan.nominal),
+        totalTerbayar: sum(tagihan.nominalTerbayar),
+      })
+      .from(tagihan)
+      .innerJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))
+      .where(whereClause);
+
+    const statusBreakdown = await db
+      .select({ status: tagihan.status, count: count() })
+      .from(tagihan)
+      .innerJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))
+      .where(whereClause)
+      .groupBy(tagihan.status);
+
+    const rekapPerProdi = await db
+      .select({
+        prodiId: mahasiswa.programStudiId,
+        prodiNama: ps.nama,
+        total: count(),
+        terbayar: sum(tagihan.nominalTerbayar),
+        tunggakan: sql<number>`COALESCE(SUM(${tagihan.nominal} - ${tagihan.nominalTerbayar}), 0)`,
+      })
+      .from(tagihan)
+      .innerJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))
+      .leftJoin(ps, eq(mahasiswa.programStudiId, ps.id))
+      .where(whereClause)
+      .groupBy(mahasiswa.programStudiId, ps.nama);
+
+    const statusMap: Record<string, number> = {};
+    for (const s of statusBreakdown) statusMap[s.status] = s.count;
+
+    return {
+      totalMahasiswa: Number(totals?.totalMahasiswa || 0),
+      totalTagihan: Number(totals?.totalTagihan || 0),
+      totalTerbayar: Number(totals?.totalTerbayar || 0),
+      totalTunggakan: Number((totals?.totalTagihan || 0) - (totals?.totalTerbayar || 0)),
+      statusBreakdown: statusMap,
+      rekapPerProdi: rekapPerProdi.map((p) => ({
+        prodiId: p.prodiId,
+        prodiNama: p.prodiNama || '-',
+        total: Number(p.total),
+        terbayar: Number(p.terbayar || 0),
+        tunggakan: Number(p.tunggakan || 0),
+      })),
+    };
   }
 }

@@ -8,6 +8,7 @@ import {
   mahasiswa,
   mataKuliah,
   presensi,
+  programStudi,
   skalaPredikatKelulusan,
   tagihan,
 } from '../models/schema';
@@ -392,5 +393,110 @@ export class KhsService {
 
   static async deletePredikat(id: number) {
     await db.delete(skalaPredikatKelulusan).where(eq(skalaPredikatKelulusan.id, id));
+  }
+
+  // --- REKAP NILAI ---
+
+  static async getRekapNilai(mahasiswaId: number, periodeId?: string) {
+    const mhs = await db.query.mahasiswa.findFirst({
+      where: eq(mahasiswa.id, mahasiswaId),
+      with: { programStudi: true },
+    });
+    if (!mhs) throw new Error('Mahasiswa tidak ditemukan');
+
+    const whereClause = periodeId
+      ? and(eq(krs.mahasiswaId, mahasiswaId), eq(kelasKuliah.periodeId, periodeId))
+      : eq(krs.mahasiswaId, mahasiswaId);
+
+    const krsList = await db
+      .select({
+        krsId: krs.id,
+        mataKuliahId: kelasKuliah.mataKuliahId,
+        kodeMk: mataKuliah.kode,
+        namaMk: mataKuliah.nama,
+        sks: mataKuliah.sksTotal,
+        nilaiAngka: krs.nilaiAngka,
+        nilaiHuruf: krs.nilaiHuruf,
+        nilaiIndeks: krs.nilaiIndeks,
+        isApproved: krs.isApproved,
+      })
+      .from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .where(whereClause);
+
+    let totalSks = 0;
+    let totalBobot = 0;
+    for (const r of krsList) {
+      if (r.nilaiIndeks && r.sks) {
+        totalSks += r.sks;
+        totalBobot += parseFloat(r.nilaiIndeks) * r.sks;
+      }
+    }
+    const ip = totalSks > 0 ? totalBobot / totalSks : 0;
+
+    return {
+      mahasiswa: { id: mhs.id, nim: mhs.nim, nama: mhs.nama, prodi: mhs.programStudi?.nama || '' },
+      periode: periodeId ? { id: periodeId } : null,
+      mataKuliah: krsList,
+      summary: { totalSks, ip: Math.round(ip * 100) / 100, totalMk: krsList.length },
+    };
+  }
+
+  static async getRekapPerProdi(periodeId?: string) {
+    const prodis = await db.select({ id: programStudi.id, nama: programStudi.nama }).from(programStudi);
+
+    const result = [];
+    for (const p of prodis) {
+      const mhsList = await db
+        .select({ id: mahasiswa.id })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.programStudiId, p.id));
+
+      if (mhsList.length === 0) {
+        result.push({ prodiId: p.id, prodiNama: p.nama, totalMahasiswa: 0, rataIP: 0 });
+        continue;
+      }
+
+      const mhsIds = mhsList.map((m) => m.id);
+      let totalIpk = 0;
+      let mhsWithIpk = 0;
+
+      for (const mhsId of mhsIds) {
+        const rs = await db
+          .select({ nilaiIndeks: krs.nilaiIndeks, sks: mataKuliah.sksTotal })
+          .from(krs)
+          .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+          .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+          .where(
+            and(
+              eq(krs.mahasiswaId, mhsId),
+              ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : []),
+            ),
+          );
+
+        let bobot = 0;
+        let sks = 0;
+        for (const r of rs) {
+          if (r.nilaiIndeks && r.sks) {
+            bobot += parseFloat(r.nilaiIndeks) * r.sks;
+            sks += r.sks;
+          }
+        }
+        if (sks > 0) {
+          totalIpk += bobot / sks;
+          mhsWithIpk++;
+        }
+      }
+
+      result.push({
+        prodiId: p.id,
+        prodiNama: p.nama,
+        totalMahasiswa: mhsList.length,
+        rataIP: mhsWithIpk > 0 ? Math.round((totalIpk / mhsWithIpk) * 100) / 100 : 0,
+      });
+    }
+
+    return { periode: periodeId ? { id: periodeId } : null, prodi: result };
   }
 }

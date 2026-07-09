@@ -91,6 +91,41 @@ export class MahasiswaKeluarService {
     };
   }
 
+  static async getStats(periodeId?: string) {
+    const { count: count2 } = await import('drizzle-orm');
+    const { programStudi: ps } = await import('../models/schema');
+
+    const conditions: any[] = [];
+    if (periodeId) conditions.push(eq(mahasiswaKeluar.periodeId, periodeId));
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [total] = await db.select({ count: count2() }).from(mahasiswaKeluar).where(whereClause);
+
+    const perStatus = await db
+      .select({ status: mahasiswaKeluar.statusBaru, count: count2() })
+      .from(mahasiswaKeluar)
+      .where(whereClause)
+      .groupBy(mahasiswaKeluar.statusBaru);
+
+    const perProdi = await db
+      .select({
+        prodiId: mahasiswa.programStudiId,
+        prodiNama: ps.nama,
+        total: count2(),
+      })
+      .from(mahasiswaKeluar)
+      .innerJoin(mahasiswa, eq(mahasiswaKeluar.mahasiswaId, mahasiswa.id))
+      .leftJoin(ps, eq(mahasiswa.programStudiId, ps.id))
+      .where(whereClause)
+      .groupBy(mahasiswa.programStudiId, ps.nama);
+
+    return {
+      total: Number(total?.count || 0),
+      perStatus: perStatus.map((s) => ({ status: s.status, jumlah: Number(s.count) })),
+      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', total: Number(p.total) })),
+    };
+  }
+
   static async delete(id: number) {
     const record = await db.query.mahasiswaKeluar.findFirst({
       where: eq(mahasiswaKeluar.id, id),

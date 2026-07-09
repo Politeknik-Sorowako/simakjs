@@ -8,6 +8,9 @@ export interface KelasKuliah {
   mataKuliahId: number;
   periodeId: string;
   namaKelas: string;
+  isLocked?: boolean;
+  tanggalMulaiEfektif?: string | null;
+  tanggalAkhirEfektif?: string | null;
   mataKuliah?: MataKuliah | null;
   periodeAkademik?: PeriodeAkademik | null;
   idPddikti?: string | null;

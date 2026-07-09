@@ -5,6 +5,7 @@ import { bayarTagihanSchema, generateTagihanSchema, getTagihanSchema } from '../
 
 export const tagihanRoutes = new Elysia({ prefix: '/tagihan' })
   .use(authMiddleware)
+  .get('/stats', TagihanController.getStats)
   .get('/', TagihanController.getAll, getTagihanSchema)
   .post('/generate', TagihanController.generate, generateTagihanSchema)
   .post('/:id/bayar', TagihanController.bayar, bayarTagihanSchema)
