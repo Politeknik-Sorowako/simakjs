@@ -47,6 +47,16 @@ restore_backup() {
   
   local backup_name
   backup_name=$(basename "$backup_file")
+
+  # Verify backup integrity before restore
+  log "Verifying backup integrity..."
+  if [[ "$backup_file" == *.gz ]]; then
+    if ! gunzip -t "$backup_file" 2>/dev/null; then
+      fail "Backup file is corrupted: $backup_name"
+      exit 1
+    fi
+  fi
+  ok "Backup integrity verified"
   
   log "Restoring from backup: $backup_name"
   

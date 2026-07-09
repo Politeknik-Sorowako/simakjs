@@ -116,6 +116,14 @@ backup_database() {
   if [ "$BACKUP_COMPRESS" = "true" ]; then
     gzip "$BACKUP_PATH"
     BACKUP_PATH="${BACKUP_PATH}.gz"
+
+    # Verify backup integrity
+    if ! gunzip -t "$BACKUP_PATH" 2>/dev/null; then
+      fail "Backup integrity check failed: $(basename "$BACKUP_PATH")"
+      rm -f "$BACKUP_PATH"
+      exit 1
+    fi
+    ok "Backup integrity verified"
   fi
   
   BACKUP_SIZE=$(du -h "$BACKUP_PATH" | cut -f1)
@@ -128,7 +136,7 @@ backup_database() {
 }
 
 cleanup_containers() {
-  log "Step 4: Cleaning up containers..."
+  log "Step 4: Cleaning up containers and Docker images..."
   
   if [ "$FORCE_CLEANUP" != "true" ]; then
     log "Force cleanup disabled, using normal shutdown"
@@ -153,6 +161,12 @@ cleanup_containers() {
   
   # Strategy 4: Prune stopped containers
   docker container prune -f 2>/dev/null || true
+
+  # Strategy 5: Clean old Docker images (keep last 72h)
+  log "  Strategy 5: Clean old Docker images..."
+  docker image prune -f --filter "until=72h" 2>/dev/null || true
+  docker volume prune -f 2>/dev/null || true
+  ok "Docker images cleaned"
   
   sleep 3
   ok "Containers cleaned up"
@@ -176,17 +190,43 @@ build_and_deploy() {
 
 verify_deployment() {
   log "Step 6: Verifying deployment..."
-  
-  # Wait for services to start
-  log "  Waiting $STARTUP_WAIT_SECONDS seconds for services to start..."
-  sleep "$STARTUP_WAIT_SECONDS"
-  
-  # Health check
+
+  # Dynamic wait for database migration
+  log "  Waiting for database migration to complete..."
+  MAX_WAIT=60
+  WAITED=0
+  MIGRATION_OK=false
+  while [ $WAITED -lt $MAX_WAIT ]; do
+    if docker exec "$BACKEND_CONTAINER" curl -s http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null | grep -q '"status":"ok"'; then
+      ok "Database migration completed and API is healthy"
+      MIGRATION_OK=true
+      break
+    fi
+    sleep 3
+    WAITED=$((WAITED + 3))
+    if [ $((WAITED % 9)) -eq 0 ]; then
+      log "    Still waiting... ($WAITED/$MAX_WAIT seconds)"
+    fi
+  done
+
+  if [ "$MIGRATION_OK" != "true" ]; then
+    fail "Service did not become healthy within ${MAX_WAIT}s"
+
+    echo "=== Backend Log ==="
+    docker compose logs "$BACKEND_CONTAINER" --tail="$BACKEND_LOG_LINES"
+
+    if [ "$ROLLBACK_ON_FAILURE" = "true" ]; then
+      return 1
+    fi
+    exit 1
+  fi
+
+  # Health check with retry
   for i in $(seq 1 "$HEALTH_CHECK_RETRIES"); do
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
+    HTTP_CODE=$(docker exec "$BACKEND_CONTAINER" curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
     if [ "$HTTP_CODE" = "200" ]; then
       ok "Health check passed (HTTP $HTTP_CODE)"
-      curl -s "$HEALTH_URL" | head -c 200
+      docker exec "$BACKEND_CONTAINER" curl -s http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null | head -c 200
       echo ""
       break
     fi
@@ -195,17 +235,17 @@ verify_deployment() {
       sleep "$HEALTH_CHECK_INTERVAL"
     else
       fail "Health check failed after $HEALTH_CHECK_RETRIES attempts"
-      
+
       echo "=== Backend Log ==="
       docker compose logs "$BACKEND_CONTAINER" --tail="$BACKEND_LOG_LINES"
-      
+
       if [ "$ROLLBACK_ON_FAILURE" = "true" ]; then
         return 1
       fi
       exit 1
     fi
   done
-  
+
   # Run full health check
   bash "$SCRIPT_DIR/health-check.sh" || true
 }

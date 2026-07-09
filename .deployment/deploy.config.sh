@@ -58,9 +58,9 @@ SCALE_DOWN_MEM_THRESHOLD=40
 SCALE_UP_COOLDOWN=300
 SCALE_DOWN_COOLDOWN=600
 
-# Database settings (from .env or defaults)
-POSTGRES_USER="${POSTGRES_USER:-simak_user}"
-POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-simak_password}"
+# Database settings (from .env - required!)
+: "${POSTGRES_USER:?ERROR: POSTGRES_USER not set in .env}"
+: "${POSTGRES_PASSWORD:?ERROR: POSTGRES_PASSWORD not set in .env}"
 POSTGRES_DB="${POSTGRES_DB:-simak_vokasi}"
 
 # Deployment settings

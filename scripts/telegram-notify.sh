@@ -22,7 +22,8 @@ send_telegram() {
   fi
 
   local response
-  response=$(curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+  response=$(curl -s --max-time 5 --retry 2 --retry-delay 1 \
+    -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
     -d "chat_id=$TELEGRAM_CHAT_ID" \
     -d "text=$message" \
     -d "parse_mode=$parse_mode" \
@@ -32,7 +33,7 @@ send_telegram() {
   if echo "$response" | grep -q '"ok":true'; then
     echo "[OK] Telegram notification sent"
   else
-    echo "[WARNING] Failed to send Telegram notification: $response"
+    echo "[WARNING] Failed to send Telegram notification: $(echo "$response" | head -c 100)"
   fi
 }
 
