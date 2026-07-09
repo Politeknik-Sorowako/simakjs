@@ -48,8 +48,9 @@ cleanup() {
 trap cleanup EXIT
 
 pull_latest_code() {
-  log "Step 0: Pulling latest code..."
-  git pull origin main || {
+  local branch="${1:-main}"
+  log "Step 0: Pulling latest code from branch '$branch'..."
+  git pull origin "$branch" || {
     fail "Failed to pull latest code"
     return 1
   }
@@ -329,7 +330,7 @@ main() {
   log "Log file: $LOG_FILE"
   echo ""
   
-  pull_latest_code
+  pull_latest_code "$branch"
   check_prerequisites
   run_pre_tests
   backup_database

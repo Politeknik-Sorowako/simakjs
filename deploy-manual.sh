@@ -59,7 +59,7 @@ show_help() {
 source "$SCRIPT_DIR/telegram-notify.sh" 2>/dev/null || true
 
 # Parse arguments
-BRANCH="main"
+BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'main')"
 SKIP_TESTS=false
 SKIP_BACKUP=false
 SKIP_PULL=false
