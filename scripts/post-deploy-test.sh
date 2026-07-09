@@ -80,7 +80,7 @@ fi
 
 # 5. API smoke test
 log "Test 5: API smoke test..."
-HTTP_CODE=$(docker exec "$BACKEND_CONTAINER" curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$BACKEND_PORT/health" --connect-timeout 5 2>/dev/null)
 if [ "$HTTP_CODE" = "200" ]; then
   ok "Health endpoint accessible (HTTP 200)"
 else
@@ -90,7 +90,7 @@ fi
 
 # 6. Frontend test
 log "Test 6: Frontend accessibility..."
-HTTP_CODE=$(docker exec "$BACKEND_CONTAINER" curl -s -o /dev/null -w "%{http_code}" http://$FRONTEND_CONTAINER:80 --connect-timeout 5 2>/dev/null)
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$FRONTEND_PORT" --connect-timeout 5 2>/dev/null)
 if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ]; then
   ok "Frontend is accessible (HTTP $HTTP_CODE)"
 else
@@ -100,7 +100,7 @@ fi
 
 # 7. CORS test
 log "Test 7: CORS headers..."
-CORS_HEADER=$(docker exec "$BACKEND_CONTAINER" curl -s -I -X OPTIONS "http://localhost:$BACKEND_PORT/health" -H "Origin: http://$FRONTEND_CONTAINER:80" 2>/dev/null | grep -i "access-control-allow-origin" | head -1)
+CORS_HEADER=$(curl -s -I -X OPTIONS "http://localhost:$BACKEND_PORT/health" -H "Origin: http://localhost:$FRONTEND_PORT" 2>/dev/null | grep -i "access-control-allow-origin" | head -1)
 if [ -n "$CORS_HEADER" ]; then
   ok "CORS headers present"
 else
