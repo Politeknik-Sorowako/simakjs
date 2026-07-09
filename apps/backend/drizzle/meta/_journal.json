@@ -71,6 +71,13 @@
       "when": 1783205328942,
       "tag": "0009_yellow_apocalypse",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783616715335,
+      "tag": "0010_cultured_cobalt_man",
+      "breakpoints": true
     }
   ]
 }
