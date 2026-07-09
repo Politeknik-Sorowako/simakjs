@@ -56,7 +56,7 @@ show_help() {
   echo ""
 }
 
-source "$SCRIPT_DIR/scripts/telegram-notify.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/telegram-notify.sh" 2>/dev/null || true
 
 # Parse arguments
 BRANCH="main"
@@ -71,10 +71,10 @@ while [ $# -gt 0 ]; do
     --skip-backup) SKIP_BACKUP=true; shift ;;
     --skip-pull) SKIP_PULL=true; shift ;;
     --no-force) FORCE_CLEANUP=false; shift ;;
-    --rollback) bash "$SCRIPT_DIR/scripts/rollback.sh"; exit $? ;;
-    --health) bash "$SCRIPT_DIR/scripts/health-check.sh"; exit $? ;;
-    --dashboard) bash "$SCRIPT_DIR/scripts/dashboard.sh"; exit $? ;;
-    --status) bash "$SCRIPT_DIR/scripts/health-check.sh; docker compose ps; exit $?"; exit $? ;;
+    --rollback) bash "$SCRIPT_DIR/rollback.sh"; exit $? ;;
+    --health) bash "$SCRIPT_DIR/health-check.sh"; exit $? ;;
+    --dashboard) bash "$SCRIPT_DIR/dashboard.sh"; exit $? ;;
+    --status) bash "$SCRIPT_DIR/health-check.sh; docker compose ps; exit $?"; exit $? ;;
     --help) show_help; exit 0 ;;
     --*) echo "Unknown option: $1"; show_help; exit 1 ;;
     *) BRANCH="$1"; shift ;;
@@ -173,12 +173,12 @@ log "  Waiting $STARTUP_WAIT_SECONDS seconds..."
 sleep "$STARTUP_WAIT_SECONDS"
 
 echo ""
-bash "$SCRIPT_DIR/scripts/health-check.sh" || true
+bash "$SCRIPT_DIR/health-check.sh" || true
 
 # Step 7: Post-deployment tests
 if [ "$SKIP_TESTS" = "false" ] && [ "$RUN_POST_TESTS" = "true" ]; then
   log "Step 7/7: Running post-deployment tests..."
-  bash "$SCRIPT_DIR/scripts/post-deploy-test.sh" || true
+  bash "$SCRIPT_DIR/post-deploy-test.sh" || true
 else
   log "Step 7/7: Skipping post-deployment tests"
 fi
@@ -197,5 +197,5 @@ log "  Swagger:  http://localhost:$BACKEND_PORT/swagger"
 echo ""
 
 # Send notification
-source "$SCRIPT_DIR/scripts/telegram-notify.sh" 2>/dev/null
+source "$SCRIPT_DIR/telegram-notify.sh" 2>/dev/null
 send_deploy_success "$BRANCH" "$(git log --oneline -1)" "$DURATION" 2>/dev/null || true
