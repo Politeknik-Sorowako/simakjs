@@ -120,22 +120,6 @@ if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ]; then
   warn "Database backup will be skipped"
 fi
 
-# Check port availability
-log "Checking port availability..."
-for port in $BACKEND_PORT $FRONTEND_PORT; do
-  if ss -tlnp | grep -q ":$port "; then
-    PORT_PROCESS=$(ss -tlnp "sport = :$port" | grep -oP 'users:\(\(.*?\)\)' 2>/dev/null | head -1)
-    warn "Port $port is in use by: ${PORT_PROCESS:-unknown process}"
-    if [ "$port" = "$FRONTEND_PORT" ]; then
-      warn "Trying alternative port 8080 for frontend..."
-      export FRONTEND_PORT=8080
-      ok "Using port 8080 for frontend"
-    fi
-  else
-    ok "Port $port is available"
-  fi
-done
-
 # Step 3: Backup
 if [ "$SKIP_BACKUP" = "false" ]; then
   log "Step 3/7: Backing up database..."
