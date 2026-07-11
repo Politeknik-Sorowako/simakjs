@@ -1026,7 +1026,12 @@ export const admissionSessionProdis = pgTable(
     kuota: integer('kuota'),
     passingGrade: numeric('passing_grade', { precision: 5, scale: 2 }),
     biayaDaftar: integer('biaya_daftar'),
+    isActive: boolean('is_active').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
   },
   (t) => ({
     unq: unique('adm_session_prodi_unique').on(t.sessionId, t.prodiId),

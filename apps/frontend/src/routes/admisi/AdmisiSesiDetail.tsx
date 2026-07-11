@@ -52,6 +52,16 @@ export default function AdmisiSesiDetail() {
     }
   };
 
+  const handleToggleProdi = async (prodiId: number) => {
+    try {
+      const res = await admisiAdminController.toggleProdiActive(Number(params.id), prodiId);
+      toast.showToast(res.message, 'success');
+      refetch();
+    } catch (err: any) {
+      toast.showToast(err.message, 'error');
+    }
+  };
+
   return (
     <MainLayout>
       <div class="p-4 md:p-6 max-w-5xl mx-auto">
@@ -110,10 +120,26 @@ export default function AdmisiSesiDetail() {
               <div class="space-y-1">
                 <For each={session()?.prodis || []}>
                   {(sp: any) => (
-                    <div class="flex items-center justify-between py-1.5 border-b border-secondary-100 dark:border-secondary-700 text-sm">
-                      <span>Prodi #{sp.prodiId}</span>
+                    <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 text-sm">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium">{sp.namaProdi || `Prodi #${sp.prodiId}`}</span>
+                        <span class="text-xs text-secondary-400">({sp.jenjang || '-'})</span>
+                        <span class={`text-xs px-1.5 py-0.5 rounded-full ${sp.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {sp.isActive ? 'Dibuka' : 'Ditutup'}
+                        </span>
+                      </div>
                       <div class="flex items-center gap-2">
                         <span class="text-xs text-secondary-400">{sp.kuota ? `Kuota: ${sp.kuota}` : ''}</span>
+                        <button
+                          onClick={() => handleToggleProdi(sp.prodiId)}
+                          class={`text-xs px-2 py-1 rounded border ${
+                            sp.isActive
+                              ? 'border-amber-300 text-amber-600 hover:bg-amber-50'
+                              : 'border-green-300 text-green-600 hover:bg-green-50'
+                          }`}
+                        >
+                          {sp.isActive ? 'Tutup' : 'Buka'}
+                        </button>
                         <button onClick={() => handleRemoveProdi(sp.prodiId)} class="text-xs text-red-500 hover:text-red-700">Hapus</button>
                       </div>
                     </div>

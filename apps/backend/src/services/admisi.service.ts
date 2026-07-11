@@ -87,6 +87,7 @@ export class AdmisiService {
         kuota: admissionSessionProdis.kuota,
         passingGrade: admissionSessionProdis.passingGrade,
         biayaDaftar: admissionSessionProdis.biayaDaftar,
+        isActive: admissionSessionProdis.isActive,
       })
       .from(admissionSessionProdis)
       .leftJoin(programStudi, eq(admissionSessionProdis.prodiId, programStudi.id))

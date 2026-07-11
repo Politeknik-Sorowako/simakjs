@@ -61,6 +61,16 @@ export class AdmisiAdminController {
     }
   }
 
+  static async toggleProdiActive({ params, set }: AuthContext<any, { id: string; prodiId: string }>) {
+    try {
+      const result = await AdmisiAdminService.toggleProdiActive(Number(params.id), Number(params.prodiId));
+      return { message: result.isActive ? 'Prodi diaktifkan' : 'Prodi dinonaktifkan', isActive: result.isActive };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   // ─── DOCUMENT REQUIREMENTS ───────────────────────────────────────
 
   static async createDocumentRequirement({ body, set }: AuthContext<any>) {

@@ -30,6 +30,9 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .delete('/sessions/:id/prodis/:prodiId', AdmisiAdminController.removeProdiFromSession, {
     detail: { tags: ['Admisi - Admin'], summary: 'Hapus prodi dari sesi' },
   })
+  .put('/sessions/:id/prodis/:prodiId/toggle', AdmisiAdminController.toggleProdiActive, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Aktif/nonaktifkan prodi dalam sesi' },
+  })
 
   // ─── SYARAT DOKUMEN ──────────────────────────────────────────────
   .post('/document-requirements', AdmisiAdminController.createDocumentRequirement, createDocumentRequirementSchema)

@@ -38,6 +38,12 @@ export const admisiAdminController = {
     });
   },
 
+  toggleProdiActive(sessionId: number, prodiId: number) {
+    return fetchApi<{ message: string; isActive: boolean }>(`/admisi/admin/sessions/${sessionId}/prodis/${prodiId}/toggle`, {
+      method: 'PUT',
+    });
+  },
+
   // Dokumen Requirements
   createDocumentRequirement(data: any) {
     return fetchApi<{ message: string; requirementId: number }>('/admisi/admin/document-requirements', {

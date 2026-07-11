@@ -14,6 +14,7 @@ import {
   mahasiswa,
   programStudi,
 } from '../models/schema';
+import { db } from '../utils/db';
 import { eq, and, sql, inArray, like } from 'drizzle-orm';
 
 export class AdmisiAdminService {
@@ -65,8 +66,20 @@ export class AdmisiAdminService {
     if (!session) throw new Error('Sesi tidak ditemukan');
 
     const prodis = await db
-      .select()
+      .select({
+        id: admissionSessionProdis.id,
+        sessionId: admissionSessionProdis.sessionId,
+        prodiId: admissionSessionProdis.prodiId,
+        kuota: admissionSessionProdis.kuota,
+        passingGrade: admissionSessionProdis.passingGrade,
+        biayaDaftar: admissionSessionProdis.biayaDaftar,
+        isActive: admissionSessionProdis.isActive,
+        kodeProdi: programStudi.kode,
+        namaProdi: programStudi.nama,
+        jenjang: programStudi.jenjang,
+      })
       .from(admissionSessionProdis)
+      .leftJoin(programStudi, eq(admissionSessionProdis.prodiId, programStudi.id))
       .where(eq(admissionSessionProdis.sessionId, sessionId));
 
     const requirements = await db
@@ -99,6 +112,24 @@ export class AdmisiAdminService {
     await db
       .delete(admissionSessionProdis)
       .where(and(eq(admissionSessionProdis.sessionId, sessionId), eq(admissionSessionProdis.prodiId, prodiId)));
+  }
+
+  static async toggleProdiActive(sessionId: number, prodiId: number) {
+    const [sp] = await db
+      .select({ isActive: admissionSessionProdis.isActive })
+      .from(admissionSessionProdis)
+      .where(and(eq(admissionSessionProdis.sessionId, sessionId), eq(admissionSessionProdis.prodiId, prodiId)))
+      .limit(1);
+
+    if (!sp) throw new Error('Prodi tidak ditemukan di sesi ini');
+
+    const [updated] = await db
+      .update(admissionSessionProdis)
+      .set({ isActive: !sp.isActive })
+      .where(and(eq(admissionSessionProdis.sessionId, sessionId), eq(admissionSessionProdis.prodiId, prodiId)))
+      .returning({ id: admissionSessionProdis.id, isActive: admissionSessionProdis.isActive });
+
+    return updated;
   }
 
   // ─── DOCUMENT REQUIREMENTS ───────────────────────────────────────

@@ -85,6 +85,13 @@
       "when": 1783691045440,
       "tag": "0011_add_admisi_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783745965463,
+      "tag": "0012_add_is_active_prodi",
+      "breakpoints": true
     }
   ]
 }
