@@ -359,9 +359,39 @@ export class AdmisiAdminController {
     return { data };
   }
 
-  static async updateAnnouncement({ params, body, set }: any) {
+  static async updateAnnouncement({ params, request, set }: any) {
     try {
-      await AdmisiAdminService.updateAnnouncement(Number(params.id), body);
+      const ct = request.headers.get('content-type') || '';
+      let judul: string | undefined, isi: string | undefined, isPinned: boolean | undefined;
+      let filePath: string | undefined, fileName: string | undefined;
+
+      if (ct.includes('multipart')) {
+        const fd = await request.formData();
+        judul = fd.get('judul') as string;
+        isi = fd.get('isi') as string;
+        isPinned = fd.get('isPinned') === 'true' ? true : fd.get('isPinned') === 'false' ? false : undefined;
+        const file = fd.get('file') as File | null;
+        if (file) {
+          const dir = 'storage/announcements';
+          await Bun.$`mkdir -p ${dir}`.quiet();
+          fileName = `${Date.now()}_${file.name}`;
+          filePath = `${dir}/${fileName}`;
+          await Bun.write(filePath, file);
+        }
+      } else {
+        const body = typeof request.body === 'object' ? await request.json() : {};
+        judul = body.judul;
+        isi = body.isi;
+        isPinned = body.isPinned;
+      }
+
+      const data: Record<string, any> = {};
+      if (judul !== undefined) data.judul = judul;
+      if (isi !== undefined) data.isi = isi;
+      if (isPinned !== undefined) data.isPinned = isPinned;
+      if (filePath !== undefined) { data.filePath = filePath; data.fileName = fileName; }
+
+      await AdmisiAdminService.updateAnnouncement(Number(params.id), data);
       return { message: 'Pengumuman berhasil diperbarui' };
     } catch (e: any) {
       set.status = 400;

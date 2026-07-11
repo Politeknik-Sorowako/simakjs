@@ -31,9 +31,18 @@ export default function AdmisiPengumuman() {
     setSaving(true);
     try {
       if (editingId() !== null) {
-        await admisiAdminController.updateAnnouncement(editingId()!, {
-          judul: judul(), isi: isi(), isPinned: isPinned(),
-        });
+        if (file()) {
+          const fd = new FormData();
+          fd.append('judul', judul());
+          fd.append('isi', isi());
+          fd.append('isPinned', String(isPinned()));
+          fd.append('file', file()!);
+          await admisiAdminController.updateAnnouncementForm(editingId()!, fd);
+        } else {
+          await admisiAdminController.updateAnnouncement(editingId()!, {
+            judul: judul(), isi: isi(), isPinned: isPinned(),
+          });
+        }
         toast.showToast('Pengumuman diperbarui!', 'success');
       } else {
         const fd = new FormData();
@@ -103,14 +112,12 @@ export default function AdmisiPengumuman() {
               <textarea required value={isi()} onInput={(e) => setIsi(e.currentTarget.value)} rows={4}
                 class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm" />
             </div>
-            <Show when={editingId() === null}>
-              <div>
-                <label class="text-sm font-medium block mb-1">Lampiran (opsional)</label>
-                <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                  onChange={(e) => setFile(e.currentTarget.files?.[0] || null)}
-                  class="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300" />
-              </div>
-            </Show>
+            <div>
+              <label class="text-sm font-medium block mb-1">Lampiran {editingId() !== null ? '(pilih file untuk ganti lampiran lama)' : '(opsional)'}</label>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                onChange={(e) => setFile(e.currentTarget.files?.[0] || null)}
+                class="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300" />
+            </div>
             <label class="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={isPinned()} onChange={(e) => setIsPinned(e.currentTarget.checked)}
                 class="rounded border-secondary-300 text-brand-600" />
