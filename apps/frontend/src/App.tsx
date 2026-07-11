@@ -31,6 +31,7 @@ import LaporanMahasiswaKeluar from './routes/reports/LaporanMahasiswaKeluar';
 import Login from './routes/Login';
 import AdmisiDaftar from './routes/AdmisiDaftar';
 import AdmisiDashboard from './routes/AdmisiDashboard';
+import AdmisiSesi from './routes/AdmisiSesi';
 import AdmisiPendaftaranBaru from './routes/AdmisiPendaftaranBaru';
 import AdmisiDetail from './routes/AdmisiDetail';
 import AdmisiEditPendaftaran from './routes/AdmisiEditPendaftaran';
@@ -360,6 +361,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
             <AdmisiDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/sesi"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+            <AdmisiSesi />
           </ProtectedRoute>
         }
       />

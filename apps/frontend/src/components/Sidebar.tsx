@@ -45,7 +45,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (['/pddikti'].includes(currentPath)) {
       setIsIntegrasiOpen(true);
     }
-    if (['/admisi/dashboard', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) => currentPath.startsWith(p))) {
+    if (['/admisi/dashboard', '/admisi/sesi', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) => currentPath.startsWith(p))) {
       setIsAdmisiOpen(true);
     }
   });
@@ -125,7 +125,19 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Dashboard PMB
+               Dashboard PMB
+            </A>
+            <A
+              href="/admisi/sesi"
+              onClick={() => props.onClose()}
+              activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
+              inactiveClass="hover:bg-brand-800/60 hover:text-white"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Sesi Admisi
             </A>
             <A
               href="/admisi/pendaftaran/baru"
