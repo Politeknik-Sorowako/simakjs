@@ -16,9 +16,12 @@ export default function AdmisiSesiDetail() {
 
   const [showAddProdi, setShowAddProdi] = createSignal(false);
   const [prodiId, setProdiId] = createSignal('');
-  const [kuota, setKuota] = createSignal('');
-  const [passingGrade, setPassingGrade] = createSignal('');
   const [allProdis, setAllProdis] = createSignal<any[]>([]);
+
+  // Syarat Dokumen state
+  const [showAddReq, setShowAddReq] = createSignal(false);
+  const [reqForm, setReqForm] = createSignal<Record<string, string>>({});
+  const [savingReq, setSavingReq] = createSignal(false);
 
   createResource(async () => {
     const res = await admisiAdminController.getAllProdi();
@@ -30,8 +33,6 @@ export default function AdmisiSesiDetail() {
     try {
       await admisiAdminController.addProdiToSession(Number(params.id), {
         prodiId: Number(prodiId()),
-        kuota: kuota() ? Number(kuota()) : undefined,
-        passingGrade: passingGrade() ? Number(passingGrade()) : undefined,
       });
       toast.showToast('Prodi ditambahkan', 'success');
       setShowAddProdi(false);
@@ -62,9 +63,64 @@ export default function AdmisiSesiDetail() {
     }
   };
 
+  // ─── Syarat Dokumen ──────────────────────────────────────────────
+  const handleAddRequirement = async (e: Event) => {
+    e.preventDefault();
+    if (!reqForm().namaDokumen) return;
+    setSavingReq(true);
+    try {
+      await admisiAdminController.createDocumentRequirement({
+        sessionId: Number(params.id),
+        namaDokumen: reqForm().namaDokumen,
+        deskripsi: reqForm().deskripsi || null,
+        isWajib: reqForm().isWajib !== '0',
+        formatFile: reqForm().formatFile || null,
+        maxSizeKb: Number(reqForm().maxSizeKb) || 2048,
+        urutan: Number(reqForm().urutan) || 0,
+      });
+      toast.showToast('Syarat dokumen ditambahkan', 'success');
+      setShowAddReq(false);
+      setReqForm({});
+      refetch();
+    } catch (err: any) {
+      toast.showToast(err.message, 'error');
+    } finally {
+      setSavingReq(false);
+    }
+  };
+
+  const handleDeleteRequirement = async (reqId: number) => {
+    try {
+      await admisiAdminController.deleteDocumentRequirement(reqId);
+      toast.showToast('Syarat dokumen dihapus', 'success');
+      refetch();
+    } catch (err: any) {
+      toast.showToast(err.message, 'error');
+    }
+  };
+
+  const presetDocuments = [
+    { nama: 'KTP', format: 'jpg,png,pdf', size: 2048, wajib: true, desc: 'Scan KTP (max 2MB)' },
+    { nama: 'Ijazah / SKL', format: 'jpg,png,pdf', size: 2048, wajib: true, desc: 'Scan Ijazah atau Surat Keterangan Lulus' },
+    { nama: 'Pasfoto', format: 'jpg,png', size: 1024, wajib: true, desc: 'Pasfoto 3x4 atau 4x6 (max 1MB)' },
+    { nama: 'Persyaratan Tambahan', format: 'pdf', size: 5120, wajib: false, desc: 'Dokumen tambahan digabung dalam 1 file PDF (multipage, max 5MB)' },
+  ];
+
+  const applyPreset = (preset: typeof presetDocuments[0]) => {
+    setReqForm({
+      namaDokumen: preset.nama,
+      deskripsi: preset.desc,
+      formatFile: preset.format,
+      isWajib: preset.wajib ? '1' : '0',
+      maxSizeKb: String(preset.size),
+      urutan: '0',
+    });
+    setShowAddReq(true);
+  };
+
   return (
     <MainLayout>
-      <div class="p-4 md:p-6 max-w-5xl mx-auto">
+      <div class="p-4 md:p-6 max-w-6xl mx-auto">
         <button onClick={() => navigate('/admisi/manajemen/sesi')} class="text-sm text-brand-600 hover:text-brand-700 mb-4">
           ← Kembali ke Daftar Sesi
         </button>
@@ -129,7 +185,6 @@ export default function AdmisiSesiDetail() {
                         </span>
                       </div>
                       <div class="flex items-center gap-2">
-                        <span class="text-xs text-secondary-400">{sp.kuota ? `Kuota: ${sp.kuota}` : ''}</span>
                         <button
                           onClick={() => handleToggleProdi(sp.prodiId)}
                           class={`text-xs px-2 py-1 rounded border ${
@@ -149,20 +204,119 @@ export default function AdmisiSesiDetail() {
             </div>
           </div>
 
-          {/* Document Requirements */}
+          {/* ─── SYARAT DOKUMEN ───────────────────────────────────────── */}
           <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4 mb-6">
-            <h2 class="font-semibold text-sm mb-2">Syarat Dokumen</h2>
-            <For each={session()?.requirements || []}>
-              {(req: any) => (
-                <div class="text-sm py-1 border-b border-secondary-100 last:border-0">
-                  {req.namaDokumen}
-                  {req.isWajib ? <span class="text-red-500 ml-1">*</span> : ''}
-                  <span class="text-xs text-secondary-400 ml-2">({req.formatFile || 'all'}, max {req.maxSizeKb}KB)</span>
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="font-semibold text-sm">Syarat Dokumen</h2>
+              <div class="flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => { setShowAddReq(true); setReqForm({ formatFile: 'jpg,png,pdf', maxSizeKb: '2048', isWajib: '1' }); }}>
+                  + Buat Baru
+                </Button>
+                <Button size="sm" onClick={() => setShowAddReq(!showAddReq())}>
+                  {showAddReq() ? 'Tutup' : '+ Preset'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Preset quick-add */}
+            <Show when={showAddReq() && !reqForm().namaDokumen}>
+              <div class="flex flex-wrap gap-2 mb-3">
+                <For each={presetDocuments}>
+                  {(preset) => (
+                    <button
+                      onClick={() => applyPreset(preset)}
+                      class="text-xs px-3 py-1.5 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 rounded-lg border border-brand-200 dark:border-brand-800 hover:bg-brand-100"
+                    >
+                      {preset.nama}
+                    </button>
+                  )}
+                </For>
+              </div>
+            </Show>
+
+            {/* Add/Edit Form */}
+            <Show when={showAddReq() && reqForm().namaDokumen !== undefined}>
+              <form onSubmit={handleAddRequirement} class="grid md:grid-cols-3 gap-3 mb-4 p-3 bg-secondary-50 dark:bg-secondary-800/60 rounded-lg border border-secondary-200 dark:border-secondary-700">
+                <div>
+                  <label class="text-xs font-medium block mb-0.5">Nama Dokumen</label>
+                  <input
+                    required value={reqForm().namaDokumen || ''}
+                    onInput={(e) => setReqForm((p) => ({ ...p, namaDokumen: e.currentTarget.value }))}
+                    class="w-full px-2 py-1.5 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                    placeholder="Nama dokumen"
+                  />
                 </div>
-              )}
-            </For>
+                <div>
+                  <label class="text-xs font-medium block mb-0.5">Format (pisahkan dengan koma)</label>
+                  <input
+                    value={reqForm().formatFile || 'jpg,png,pdf'}
+                    onInput={(e) => setReqForm((p) => ({ ...p, formatFile: e.currentTarget.value }))}
+                    class="w-full px-2 py-1.5 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                    placeholder="jpg,png,pdf"
+                  />
+                </div>
+                <div>
+                  <label class="text-xs font-medium block mb-0.5">Max Size (KB)</label>
+                  <input
+                    type="number" value={reqForm().maxSizeKb || '2048'}
+                    onInput={(e) => setReqForm((p) => ({ ...p, maxSizeKb: e.currentTarget.value }))}
+                    class="w-full px-2 py-1.5 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                  />
+                </div>
+                <div>
+                  <label class="text-xs font-medium block mb-0.5">Deskripsi</label>
+                  <input
+                    value={reqForm().deskripsi || ''}
+                    onInput={(e) => setReqForm((p) => ({ ...p, deskripsi: e.currentTarget.value }))}
+                    class="w-full px-2 py-1.5 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                    placeholder="Keterangan tambahan"
+                  />
+                </div>
+                <div>
+                  <label class="text-xs font-medium block mb-0.5">Wajib?</label>
+                  <select
+                    value={reqForm().isWajib || '1'}
+                    onChange={(e) => setReqForm((p) => ({ ...p, isWajib: e.currentTarget.value }))}
+                    class="w-full px-2 py-1.5 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                  >
+                    <option value="1">Wajib</option>
+                    <option value="0">Opsional</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs font-medium block mb-0.5">Urutan</label>
+                  <input
+                    type="number" value={reqForm().urutan || '0'}
+                    onInput={(e) => setReqForm((p) => ({ ...p, urutan: e.currentTarget.value }))}
+                    class="w-full px-2 py-1.5 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                  />
+                </div>
+                <div class="md:col-span-3 flex gap-2">
+                  <Button type="submit" size="sm" disabled={savingReq()}>{savingReq() ? 'Menyimpan...' : 'Simpan'}</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => { setShowAddReq(false); setReqForm({}); }}>Batal</Button>
+                </div>
+              </form>
+            </Show>
+
+            {/* Daftar syarat dokumen */}
+            <div class="space-y-1">
+              <For each={session()?.requirements || []}>
+                {(req: any) => (
+                  <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 text-sm">
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium">{req.namaDokumen}</span>
+                      {req.isWajib ? <span class="text-xs text-red-500 font-semibold">*wajib</span> : <span class="text-xs text-secondary-400">opsional</span>}
+                      <span class="text-xs text-secondary-400">
+                        ({req.formatFile || 'semua format'}, max {req.maxSizeKb}KB)
+                      </span>
+                    </div>
+                    <button onClick={() => handleDeleteRequirement(req.id)} class="text-xs text-red-500 hover:text-red-700">Hapus</button>
+                  </div>
+                )}
+              </For>
+            </div>
             <Show when={session()?.requirements?.length === 0}>
-              <p class="text-xs text-secondary-400">Belum ada syarat dokumen</p>
+              <p class="text-xs text-secondary-400 py-2">Belum ada syarat dokumen. Gunakan tombol <strong>+ Preset</strong> untuk menambah dokumen standar (KTP, Ijazah, Pasfoto) atau <strong>+ Buat Baru</strong> untuk syarat tambahan.</p>
             </Show>
           </div>
         </Show>

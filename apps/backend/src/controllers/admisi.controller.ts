@@ -222,8 +222,16 @@ export class AdmisiController {
   }
 
   static async getDocumentRequirements({ query }: AuthContext<any, any, { sessionId: string; prodiId?: string }>) {
-    const { sessionId, prodiId } = query;
-    // Simple fetch - in real impl get from session
-    return { data: [] };
+    const { sessionId } = query;
+    if (!sessionId) return { data: [] };
+    const { db } = await import('../utils/db');
+    const { documentRequirements } = await import('../models/schema');
+    const { eq } = await import('drizzle-orm');
+    const reqs = await db
+      .select()
+      .from(documentRequirements)
+      .where(eq(documentRequirements.sessionId, Number(sessionId)))
+      .orderBy(documentRequirements.urutan);
+    return { data: reqs };
   }
 }
