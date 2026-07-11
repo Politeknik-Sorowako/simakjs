@@ -234,4 +234,37 @@ export class AdmisiController {
       .orderBy(documentRequirements.urutan);
     return { data: reqs };
   }
+
+  static async downloadFile({ params, set }: any) {
+    try {
+      const { db } = await import('../utils/db');
+      const { applicantDocuments } = await import('../models/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const [doc] = await db
+        .select()
+        .from(applicantDocuments)
+        .where(eq(applicantDocuments.id, Number(params.id)))
+        .limit(1);
+
+      if (!doc || !doc.filePath) {
+        set.status = 404;
+        return { error: 'File tidak ditemukan' };
+      }
+
+      const file = Bun.file(doc.filePath);
+      const exists = await file.exists();
+      if (!exists) {
+        set.status = 404;
+        return { error: 'File fisik tidak ditemukan di server' };
+      }
+
+      set.headers['Content-Type'] = doc.mimeType || 'application/octet-stream';
+      set.headers['Content-Disposition'] = `inline; filename="${doc.originalName || 'file'}"`;
+      return file;
+    } catch (e: any) {
+      set.status = 500;
+      return { error: 'Gagal mengunduh file' };
+    }
+  }
 }

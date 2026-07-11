@@ -127,9 +127,32 @@ export default function AdmisiDokumen() {
                         <div class="mt-2 space-y-1">
                           <For each={uploaded}>
                             {(doc: any) => (
-                              <div class="flex items-center justify-between text-xs pl-3 border-l-2 border-secondary-300 dark:border-secondary-600">
-                                <div class="flex items-center gap-2">
-                                  <span>{doc.originalName || 'Link Google Drive'}</span>
+                              <div class="flex items-center justify-between text-xs pl-3 border-l-2 border-secondary-300 dark:border-secondary-600 py-1">
+                                <div class="flex items-center gap-2 min-w-0">
+                                  {doc.uploadMethod === 'link' && doc.fileLink ? (
+                                    <a
+                                      href={doc.fileLink}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      class="text-brand-600 hover:text-brand-700 underline truncate"
+                                    >
+                                      🔗 Buka Link Google Drive
+                                    </a>
+                                  ) : doc.filePath ? (
+                                    <div class="flex items-center gap-2">
+                                      <a
+                                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/admisi/documents/${doc.id}/file`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="text-brand-600 hover:text-brand-700 underline truncate"
+                                      >
+                                        📄 {doc.originalName || 'Lihat File'}
+                                      </a>
+                                      <span class="text-secondary-400">({doc.fileSizeKb || '?'}KB)</span>
+                                    </div>
+                                  ) : (
+                                    <span>{doc.originalName || 'Dokumen'} ({doc.fileSizeKb || '?'}KB)</span>
+                                  )}
                                   <Show when={doc.rejectionNote}>
                                     <span class="text-red-500">— {doc.rejectionNote}</span>
                                   </Show>

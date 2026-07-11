@@ -51,4 +51,7 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
   // ─── DOKUMEN REQUIREMENTS ────────────────────────────────────────
   .get('/document-requirements', AdmisiController.getDocumentRequirements, {
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Lihat syarat dokumen' },
+  })
+  .get('/documents/:id/file', AdmisiController.downloadFile, {
+    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Download file dokumen' },
   });

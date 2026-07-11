@@ -132,14 +132,29 @@ export default function AdmisiDetail() {
             <For each={app()?.documents || []}>
               {(doc: any) => (
                 <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 last:border-0">
-                  <div class="flex items-center gap-3">
-                    <span class="text-sm">{doc.originalName || 'Link Dokumen'}</span>
+                  <div class="flex items-center gap-3 min-w-0">
+                    {doc.fileLink ? (
+                      <a href={doc.fileLink} target="_blank" rel="noopener noreferrer" class="text-sm text-brand-600 hover:underline truncate">
+                        🔗 {doc.originalName || 'Link Google Drive'}
+                      </a>
+                    ) : doc.filePath ? (
+                      <a
+                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/admisi/documents/${doc.id}/file`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-sm text-brand-600 hover:underline truncate"
+                      >
+                        📄 {doc.originalName || 'Lihat File'}
+                      </a>
+                    ) : (
+                      <span class="text-sm">{doc.originalName || 'Dokumen'}</span>
+                    )}
                     <span class={`text-xs px-2 py-0.5 rounded-full ${doc.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {doc.isVerified ? 'Terverifikasi' : 'Menunggu'}
                     </span>
                   </div>
                   <Show when={doc.rejectionNote}>
-                    <span class="text-xs text-red-500">{doc.rejectionNote}</span>
+                    <span class="text-xs text-red-500 ml-2">{doc.rejectionNote}</span>
                   </Show>
                 </div>
               )}
