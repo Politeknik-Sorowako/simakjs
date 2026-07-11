@@ -44,6 +44,7 @@ import AdmisiLaporan from './routes/admisi/AdmisiLaporan';
 import AdmisiPenilaian from './routes/admisi/AdmisiPenilaian';
 import AdmisiJadwal from './routes/admisi/AdmisiJadwal';
 import AdmisiSesiDetail from './routes/admisi/AdmisiSesiDetail';
+import AdmisiPengumuman from './routes/admisi/AdmisiPengumuman';
 import Mahasiswa from './routes/Mahasiswa';
 import MahasiswaKeluar from './routes/MahasiswaKeluar';
 import ManajemenCuti from './routes/ManajemenCuti';
@@ -465,6 +466,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdmisiLaporan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/pengumuman"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiPengumuman />
           </ProtectedRoute>
         }
       />
