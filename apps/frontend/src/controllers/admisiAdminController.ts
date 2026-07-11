@@ -103,6 +103,13 @@ export const admisiAdminController = {
     });
   },
 
+  adminUploadDocument(applicationId: number, formData: FormData) {
+    return fetchApi<any>(`/admisi/admin/applications/${applicationId}/upload-document`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
   reopenApplication(id: number) {
     return fetchApi<any>(`/admisi/admin/applications/${id}/reopen`, { method: 'POST' });
   },

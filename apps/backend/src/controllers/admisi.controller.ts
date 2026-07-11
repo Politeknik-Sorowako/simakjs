@@ -2,7 +2,7 @@ import { AdmisiService } from '../services/admisi.service';
 import { AuthContext } from '../utils/types';
 import { resolve } from 'path';
 
-const STORAGE_DIR = resolve(import.meta.dir!, '../../storage/applications');
+export const STORAGE_DIR = resolve(import.meta.dir!, '../../storage/applications');
 
 export class AdmisiController {
   static async register({ body, set }: AuthContext<{ email: string; password: string; nama: string }>) {

@@ -118,6 +118,53 @@ export class AdmisiAdminController {
     return result;
   }
 
+  static async adminUploadDocument({ params, request, set }: any) {
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File | null;
+      const requirementId = Number(formData.get('requirementId'));
+      if (!file || !requirementId) { set.status = 400; return { error: 'File dan requirementId wajib' }; }
+
+      const { db } = await import('../utils/db');
+      const { documentRequirements, applicantDocuments } = await import('../models/schema');
+      const { eq, and, sql } = await import('drizzle-orm');
+      const { AdmisiService } = await import('../services/admisi.service');
+
+      const [req] = await db
+        .select({ namaDokumen: documentRequirements.namaDokumen })
+        .from(documentRequirements)
+        .where(eq(documentRequirements.id, requirementId))
+        .limit(1);
+
+      const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const baseName = req ? slug(req.namaDokumen) : `req_${requirementId}`;
+      const now = new Date();
+      const ts = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+      const ext = file.name.split('.').pop() || 'file';
+      const newName = `admin_${params.id}_${baseName}-${ts}.${ext}`;
+
+      const { STORAGE_DIR } = await import('./admisi.controller');
+      const dir = `${STORAGE_DIR}/${params.id}`;
+      await Bun.$`mkdir -p ${dir}`.quiet();
+      const fullPath = `${dir}/${newName}`;
+      await Bun.write(fullPath, file);
+
+      const [verResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(applicantDocuments)
+        .where(and(eq(applicantDocuments.applicationId, Number(params.id)), eq(applicantDocuments.requirementId, requirementId)));
+
+      const version = (verResult?.count || 0) + 1;
+      const doc = await AdmisiService.uploadDocument(Number(params.id), requirementId, 1, { path: fullPath, name: newName, size: file.size, type: file.type });
+
+      set.status = 201;
+      return { message: `Dokumen berhasil diupload oleh admin`, documentId: doc.id };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async verifyDocument({ body, set }: AuthContext<{ documentId: number; isVerified: boolean; rejectionNote?: string }>) {
     try {
       await AdmisiAdminService.verifyDocument(body.documentId, 1, body.isVerified, body.rejectionNote);
