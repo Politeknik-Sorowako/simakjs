@@ -7,11 +7,13 @@ interface FetchOptions extends RequestInit {
 export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { requireAuth = true, headers, ...customConfig } = options;
 
+  const isFormData = customConfig.body instanceof FormData;
+
   const config: RequestInit = {
     ...customConfig,
-    credentials: 'include',
+    credentials: 'include' as const,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...headers,
     },
   };

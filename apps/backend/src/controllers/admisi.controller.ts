@@ -171,35 +171,21 @@ export class AdmisiController {
     }
   }
 
-  static async submitPayment({ params, request, getCurrentUser, set }: any) {
+  static async submitPayment({ params, body, getCurrentUser, set }: AuthContext<{ nominal: number; bankAsal?: string; namaPengirim?: string }>) {
     try {
       const user = await getCurrentUser();
       if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
 
-      const formData = await request.formData();
-      const file = formData.get('bukti_bayar') as File | null;
-      const nominal = Number(formData.get('nominal'));
-      const bankAsal = formData.get('bankAsal') as string | null;
-      const namaPengirim = formData.get('namaPengirim') as string | null;
-
-      if (!nominal || nominal <= 0) {
+      if (!body.nominal || body.nominal <= 0) {
         set.status = 400;
         return { error: 'Nominal wajib diisi' };
       }
 
-      let buktiBayarPath = '';
-      if (file) {
-        const uploadDir = `storage/applications/${params.id}/payment`;
-        await Bun.$`mkdir -p ${uploadDir}`.quiet();
-        await Bun.write(`${uploadDir}/${file.name}`, file);
-        buktiBayarPath = `${uploadDir}/${file.name}`;
-      }
-
       const payment = await AdmisiService.submitPaymentProof(Number(params.id), user.id, {
-        nominal,
-        bankAsal: bankAsal || undefined,
-        namaPengirim: namaPengirim || undefined,
-        buktiBayarPath,
+        nominal: body.nominal,
+        bankAsal: body.bankAsal || undefined,
+        namaPengirim: body.namaPengirim || undefined,
+        buktiBayarPath: '',
       });
 
       set.status = 201;

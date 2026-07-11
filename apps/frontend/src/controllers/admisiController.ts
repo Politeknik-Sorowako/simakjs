@@ -56,7 +56,6 @@ export const admisiController = {
   uploadDocument(applicationId: number, formData: FormData) {
     return fetchApi<any>(`/admisi/applications/${applicationId}/documents`, {
       method: 'POST',
-      headers: {},
       body: formData,
     });
   },

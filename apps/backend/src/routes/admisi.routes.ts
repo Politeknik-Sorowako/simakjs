@@ -44,10 +44,9 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Hapus dokumen' },
   })
 
-  // ─── DAFTAR ULANG (multipart — type:none) ─────────────────────────
+  // ─── DAFTAR ULANG (JSON) ──────────────────────────────────────────
   .post('/applications/:id/re-registration/payment', AdmisiController.submitPayment, {
-    type: 'none',
-    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Upload bukti bayar daftar ulang' },
+    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Kirim bukti bayar daftar ulang' },
   })
 
   // ─── DOKUMEN REQUIREMENTS ────────────────────────────────────────
