@@ -153,60 +153,82 @@ export default function AdmisiSesiList() {
           <div class="text-center py-8 text-secondary-400">Memuat...</div>
         </Show>
 
-        <div class="grid gap-4">
-          <For each={sessions()?.data || []}>
-            {(session: any) => {
-              const today = new Date();
-              const mulai = new Date(session.tanggalMulai);
-              const tutup = new Date(session.tanggalTutup);
-              const inDateRange = today >= mulai && today <= tutup;
-              const visibleToPublic = session.isActive && inDateRange;
-              return (
-                <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
-                  <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                      <div class="flex items-center gap-2">
-                        <span class="font-semibold">{session.nama}</span>
-                        <span class={`text-xs px-2 py-0.5 rounded-full ${session.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {session.isActive ? 'Aktif' : 'Nonaktif'}
-                        </span>
-                        <span class={`text-xs px-2 py-0.5 rounded-full ${visibleToPublic ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-400'}`}>
-                          {visibleToPublic ? 'Terlihat calon mhs' : 'Tersembunyi'}
-                        </span>
+        <Show when={sessions.loading}>
+          <div class="text-center py-8 text-secondary-400">Memuat...</div>
+        </Show>
+
+        <Show when={sessions()}>
+          {(() => {
+            const today = new Date();
+            const all = sessions()!.data || [];
+
+            const aktif = all.filter((s: any) => s.isActive && today >= new Date(s.tanggalMulai) && today <= new Date(s.tanggalTutup));
+            const akanDatang = all.filter((s: any) => s.isActive && today < new Date(s.tanggalMulai));
+            const ditutup = all.filter((s: any) => s.isActive && today > new Date(s.tanggalTutup));
+            const nonaktif = all.filter((s: any) => !s.isActive);
+
+            const sections: { label: string; icon: string; color: string; items: any[] }[] = [];
+            if (aktif.length) sections.push({ label: 'Sedang Berlangsung', icon: '🟢', color: 'border-l-green-500', items: aktif });
+            if (akanDatang.length) sections.push({ label: 'Akan Datang', icon: '🟡', color: 'border-l-amber-400', items: akanDatang });
+            if (nonaktif.length) sections.push({ label: 'Nonaktif', icon: '⚪', color: 'border-l-gray-400', items: nonaktif });
+            if (ditutup.length) sections.push({ label: 'Sudah Ditutup', icon: '🔴', color: 'border-l-red-400', items: ditutup });
+
+            return (
+              <div class="space-y-6">
+                <For each={sections}>
+                  {(sec) => (
+                    <div>
+                      <h3 class="text-sm font-semibold text-secondary-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        {sec.icon} {sec.label} ({sec.items.length})
+                      </h3>
+                      <div class="grid gap-3">
+                        <For each={sec.items}>
+                          {(session: any) => {
+                            const mulai = new Date(session.tanggalMulai);
+                            const tutup = new Date(session.tanggalTutup);
+                            const visibleToPublic = session.isActive && today >= mulai && today <= tutup;
+                            return (
+                              <div class={`bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4 border-l-4 ${sec.color}`}>
+                                <div class="flex items-center justify-between">
+                                  <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                      <span class="font-semibold">{session.nama}</span>
+                                      <span class={`text-xs px-2 py-0.5 rounded-full ${visibleToPublic ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-400'}`}>
+                                        {visibleToPublic ? 'Terlihat' : 'Tersembunyi'}
+                                      </span>
+                                    </div>
+                                    <div class="text-xs text-secondary-400 mt-0.5">
+                                      {mulai.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} — {tutup.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                    </div>
+                                    <Show when={session.kuota}>
+                                      <div class="text-xs text-secondary-400 mt-0.5">Kuota: {session.kuota} peserta</div>
+                                    </Show>
+                                  </div>
+                                  <div class="flex gap-2 flex-shrink-0 ml-4">
+                                    <Show when={sec.label !== 'Nonaktif'}>
+                                      <button onClick={() => handleToggleActive(session.id, true)}
+                                        class="text-xs px-2 py-1 rounded border border-amber-300 text-amber-600 hover:bg-amber-50">Nonaktifkan</button>
+                                    </Show>
+                                    <Show when={sec.label === 'Nonaktif'}>
+                                      <button onClick={() => handleToggleActive(session.id, false)}
+                                        class="text-xs px-2 py-1 rounded border border-green-300 text-green-600 hover:bg-green-50">Aktifkan</button>
+                                    </Show>
+                                    <A href={`/admisi/manajemen/sesi/${session.id}`}
+                                      class="text-xs px-2 py-1 rounded border border-brand-300 text-brand-600 hover:bg-brand-50">Detail</A>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }}
+                        </For>
                       </div>
-                      <div class="text-xs text-secondary-400 mt-0.5">
-                        {mulai.toLocaleDateString('id-ID')} - {tutup.toLocaleDateString('id-ID')}
-                        {!inDateRange && today < mulai ? ' (belum dimulai)' : ''}
-                        {!inDateRange && today > tutup ? ' (sudah ditutup)' : ''}
-                      </div>
-                    </div>
-                    <div class="flex gap-2 flex-shrink-0 ml-4">
-                      <button
-                        onClick={() => handleToggleActive(session.id, session.isActive)}
-                        class={`text-xs px-3 py-1 rounded-lg border ${session.isActive ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-green-300 text-green-600 hover:bg-green-50'}`}
-                      >
-                        {session.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                      </button>
-                      <A
-                        href={`/admisi/manajemen/sesi/${session.id}`}
-                        class="text-xs px-3 py-1 rounded-lg border border-brand-300 text-brand-600 hover:bg-brand-50"
-                      >
-                        Detail
-                      </A>
-                    </div>
-                  </div>
-                  {!visibleToPublic && (
-                    <div class="mt-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
-                      {!session.isActive ? 'Sesi dinonaktifkan. Calon mahasiswa tidak bisa melihat sesi ini.' : ''}
-                      {session.isActive && !inDateRange && today < mulai ? 'Sesi belum dimulai (tanggalMulai > hari ini).' : ''}
-                      {session.isActive && !inDateRange && today > tutup ? 'Sesi sudah ditutup (tanggalTutup < hari ini).' : ''}
                     </div>
                   )}
-                </div>
-              );
-            }}
-          </For>
-        </div>
+                </For>
+              </div>
+            );
+          })()}
+        </Show>
       </div>
     </MainLayout>
   );
