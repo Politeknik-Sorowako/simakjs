@@ -108,6 +108,15 @@ export class AdmisiService {
     if (session.tanggalMulai > new Date().toISOString().split('T')[0]) throw new Error('Sesi admisi belum dimulai');
     if (session.tanggalTutup < new Date().toISOString().split('T')[0]) throw new Error('Sesi admisi sudah ditutup');
 
+    // Prevent duplicate application in same session
+    const [existing] = await db
+      .select()
+      .from(applications)
+      .where(and(eq(applications.userId, userId), eq(applications.sessionId, data.sessionId)))
+      .limit(1);
+
+    if (existing) throw new Error('Anda sudah mendaftar di sesi ini. Tidak dapat mendaftar lagi.');
+
     // Check prodi is available for this session
     const [prodi] = await db
       .select()
