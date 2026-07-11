@@ -155,35 +155,56 @@ export default function AdmisiSesiList() {
 
         <div class="grid gap-4">
           <For each={sessions()?.data || []}>
-            {(session: any) => (
-              <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <div class="flex items-center gap-2">
-                    <span class="font-semibold">{session.nama}</span>
-                    <span class={`text-xs px-2 py-0.5 rounded-full ${session.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {session.isActive ? 'Aktif' : 'Nonaktif'}
-                    </span>
+            {(session: any) => {
+              const today = new Date();
+              const mulai = new Date(session.tanggalMulai);
+              const tutup = new Date(session.tanggalTutup);
+              const inDateRange = today >= mulai && today <= tutup;
+              const visibleToPublic = session.isActive && inDateRange;
+              return (
+                <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2">
+                        <span class="font-semibold">{session.nama}</span>
+                        <span class={`text-xs px-2 py-0.5 rounded-full ${session.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {session.isActive ? 'Aktif' : 'Nonaktif'}
+                        </span>
+                        <span class={`text-xs px-2 py-0.5 rounded-full ${visibleToPublic ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-400'}`}>
+                          {visibleToPublic ? 'Terlihat calon mhs' : 'Tersembunyi'}
+                        </span>
+                      </div>
+                      <div class="text-xs text-secondary-400 mt-0.5">
+                        {mulai.toLocaleDateString('id-ID')} - {tutup.toLocaleDateString('id-ID')}
+                        {!inDateRange && today < mulai ? ' (belum dimulai)' : ''}
+                        {!inDateRange && today > tutup ? ' (sudah ditutup)' : ''}
+                      </div>
+                    </div>
+                    <div class="flex gap-2 flex-shrink-0 ml-4">
+                      <button
+                        onClick={() => handleToggleActive(session.id, session.isActive)}
+                        class={`text-xs px-3 py-1 rounded-lg border ${session.isActive ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-green-300 text-green-600 hover:bg-green-50'}`}
+                      >
+                        {session.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                      </button>
+                      <A
+                        href={`/admisi/manajemen/sesi/${session.id}`}
+                        class="text-xs px-3 py-1 rounded-lg border border-brand-300 text-brand-600 hover:bg-brand-50"
+                      >
+                        Detail
+                      </A>
+                    </div>
                   </div>
-                  <div class="text-xs text-secondary-400 mt-0.5">
-                    {new Date(session.tanggalMulai).toLocaleDateString('id-ID')} - {new Date(session.tanggalTutup).toLocaleDateString('id-ID')}
-                  </div>
+                  {!visibleToPublic && (
+                    <div class="mt-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
+                      {!session.isActive ? 'Sesi dinonaktifkan. Calon mahasiswa tidak bisa melihat sesi ini.' : ''}
+                      {session.isActive && !inDateRange && today < mulai ? 'Sesi belum dimulai (tanggalMulai > hari ini).' : ''}
+                      {session.isActive && !inDateRange && today > tutup ? 'Sesi sudah ditutup (tanggalTutup < hari ini).' : ''}
+                    </div>
+                  )}
                 </div>
-                <div class="flex gap-2">
-                  <button
-                    onClick={() => handleToggleActive(session.id, session.isActive)}
-                    class={`text-xs px-3 py-1 rounded-lg border ${session.isActive ? 'border-amber-300 text-amber-600 hover:bg-amber-50' : 'border-green-300 text-green-600 hover:bg-green-50'}`}
-                  >
-                    {session.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                  </button>
-                  <A
-                    href={`/admisi/manajemen/sesi/${session.id}`}
-                    class="text-xs px-3 py-1 rounded-lg border border-brand-300 text-brand-600 hover:bg-brand-50"
-                  >
-                    Detail
-                  </A>
-                </div>
-              </div>
-            )}
+              );
+            }}
           </For>
         </div>
       </div>

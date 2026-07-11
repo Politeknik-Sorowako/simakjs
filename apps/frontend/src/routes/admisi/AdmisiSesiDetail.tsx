@@ -133,6 +133,14 @@ export default function AdmisiSesiDetail() {
           <h1 class="text-2xl font-bold mb-1">{session()?.nama}</h1>
           <p class="text-sm text-secondary-500 mb-6">Kode: {session()?.kode}</p>
 
+          {/* Warning: session not visible */}
+          <Show when={!session()?.isActive || !session()?.prodis?.length}>
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-4 text-xs text-amber-700 dark:text-amber-400">
+              {!session()?.isActive ? '⚠️ Sesi ini tidak aktif. Calon mahasiswa tidak bisa melihatnya. Aktifkan dari menu detail.' : ''}
+              {session()?.isActive && !session()?.prodis?.length ? '⚠️ Sesi aktif tetapi belum memiliki program studi. Tambahkan prodi agar calon mahasiswa bisa mendaftar.' : ''}
+            </div>
+          </Show>
+
           <div class="grid md:grid-cols-2 gap-4 mb-6">
             <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
               <h2 class="font-semibold text-sm mb-2">Informasi Sesi</h2>
