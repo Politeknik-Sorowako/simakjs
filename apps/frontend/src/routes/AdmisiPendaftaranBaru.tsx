@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show, createMemo } from 'solid-js';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -14,23 +14,22 @@ export default function AdmisiPendaftaranBaru() {
   const [sessionProdis, setSessionProdis] = createSignal<any[]>([]);
   const [prodi1, setProdi1] = createSignal<string>('');
   const [prodi2, setProdi2] = createSignal<string>('');
-  const [loadingProdis, setLoadingProdis] = createSignal(false);
+  const [loading, setLoading] = createSignal(false);
   const [submitting, setSubmitting] = createSignal(false);
-
-  const prodiOptions = createMemo(() => sessionProdis());
 
   const handleSessionSelect = async (sessionId: number) => {
     setSelectedSession(sessionId);
     setProdi1('');
     setProdi2('');
-    setLoadingProdis(true);
+    setSessionProdis([]);
+    setLoading(true);
     try {
       const res = await admisiController.getSessionProdis(sessionId);
       setSessionProdis(res.data);
     } catch {
       toast.showToast('Gagal memuat program studi', 'error');
     } finally {
-      setLoadingProdis(false);
+      setLoading(false);
     }
   };
 
@@ -93,21 +92,19 @@ export default function AdmisiPendaftaranBaru() {
           </div>
         </div>
 
-        {/* Step 2: Pilih Prodi */}
-        <Show when={selectedSession()}>
+        {/* Step 2: Pilih Prodi — hanya tampil jika sesi dipilih */}
+        {selectedSession() && (
           <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-4">
             <h2 class="font-semibold mb-3">2. Pilih Program Studi</h2>
 
-            <Show when={loadingProdis}>
-              <p class="text-sm text-secondary-400">Memuat program studi...</p>
-            </Show>
+            {loading() && <p class="text-sm text-secondary-400">Memuat program studi...</p>}
 
-            <Show when={!loadingProdis}>
-              <Show when={sessionProdis().length === 0}>
-                <p class="text-sm text-amber-600">Tidak ada program studi tersedia di sesi ini.</p>
-              </Show>
+            {!loading() && sessionProdis().length === 0 && selectedSession() && (
+              <p class="text-sm text-amber-600">Tidak ada program studi tersedia di sesi ini.</p>
+            )}
 
-              <Show when={sessionProdis().length > 0}>
+            {!loading() && sessionProdis().length > 0 && (
+              <>
                 <div class="mb-4">
                   <label class="text-sm font-medium text-secondary-700 dark:text-secondary-300 block mb-1">
                     Pilihan 1 <span class="text-red-500">*</span>
@@ -115,10 +112,11 @@ export default function AdmisiPendaftaranBaru() {
                   <select
                     value={prodi1()}
                     onChange={(e) => setProdi1(e.currentTarget.value)}
-                    class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm cursor-pointer"
+                    class="w-full px-3 py-2.5 border-2 border-secondary-300 dark:border-secondary-500 rounded-lg bg-white dark:bg-secondary-800 text-sm relative z-10"
+                    style={{ 'pointer-events': 'auto', opacity: '1' }}
                   >
                     <option value="">-- Pilih Prodi --</option>
-                    {prodiOptions().map((sp: any) => (
+                    {sessionProdis().map((sp: any) => (
                       <option value={String(sp.prodiId)}>
                         {sp.namaProdi} ({sp.jenjang})
                       </option>
@@ -133,20 +131,21 @@ export default function AdmisiPendaftaranBaru() {
                   <select
                     value={prodi2()}
                     onChange={(e) => setProdi2(e.currentTarget.value)}
-                    class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm cursor-pointer"
+                    class="w-full px-3 py-2.5 border-2 border-secondary-300 dark:border-secondary-500 rounded-lg bg-white dark:bg-secondary-800 text-sm relative z-10"
+                    style={{ 'pointer-events': 'auto', opacity: '1' }}
                   >
                     <option value="">-- Tidak Ada --</option>
-                    {prodiOptions().map((sp: any) => (
+                    {sessionProdis().map((sp: any) => (
                       <option value={String(sp.prodiId)} disabled={String(sp.prodiId) === prodi1()}>
                         {sp.namaProdi} ({sp.jenjang})
                       </option>
                     ))}
                   </select>
                 </div>
-              </Show>
-            </Show>
+              </>
+            )}
           </div>
-        </Show>
+        )}
 
         {/* Submit */}
         <div class="flex gap-3">
