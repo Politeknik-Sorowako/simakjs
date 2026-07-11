@@ -139,6 +139,16 @@ export class AdmisiAdminController {
     }
   }
 
+  static async reopenApplication({ params, set }: AuthContext<any, { id: string }>) {
+    try {
+      await AdmisiAdminService.updateApplicationStatus(Number(params.id), 'draft', 1, 'Admin membuka akses untuk melengkapi berkas');
+      return { message: 'Akses dibuka, peserta dapat melengkapi berkas dan memperbaiki biodata' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   // ─── SELECTION COMPONENTS ────────────────────────────────────────
 
   static async createSelectionComponent({ body, set }: AuthContext<any>) {

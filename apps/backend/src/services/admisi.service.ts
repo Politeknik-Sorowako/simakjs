@@ -153,7 +153,9 @@ export class AdmisiService {
       .limit(1);
 
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
-    if (app.status !== 'draft') throw new Error('Pendaftaran sudah disubmit, tidak bisa diubah');
+    if (app.status !== 'draft' && app.status !== 'documents_rejected') {
+      throw new Error('Pendaftaran sudah disubmit, tidak bisa diubah');
+    }
 
     const [updated] = await db
       .update(applications)
@@ -177,6 +179,25 @@ export class AdmisiService {
     // Validate required fields
     if (!app.namaLengkap || !app.nik || !app.tanggalLahir || !app.jenisKelamin || !app.namaIbuKandung) {
       throw new Error('Lengkapi biodata terlebih dahulu (nama, NIK, tanggal lahir, jenis kelamin, ibu kandung)');
+    }
+
+    // Validate required documents are uploaded
+    const requirements = await db
+      .select({ id: documentRequirements.id, namaDokumen: documentRequirements.namaDokumen })
+      .from(documentRequirements)
+      .where(and(eq(documentRequirements.sessionId, app.sessionId), eq(documentRequirements.isWajib, true)));
+
+    const uploadedDocs = await db
+      .select({ requirementId: applicantDocuments.requirementId })
+      .from(applicantDocuments)
+      .where(eq(applicantDocuments.applicationId, applicationId));
+
+    const uploadedReqIds = new Set(uploadedDocs.map((d) => d.requirementId));
+    const missing = requirements.filter((r) => !uploadedReqIds.has(r.id));
+
+    if (missing.length > 0) {
+      const names = missing.map((r) => r.namaDokumen).join(', ');
+      throw new Error(`Upload dokumen wajib terlebih dahulu: ${names}`);
     }
 
     const [updated] = await db

@@ -49,7 +49,7 @@ export default function AdmisiEditPendaftaran() {
           <div class="text-center py-8 text-secondary-400">Memuat...</div>
         </Show>
 
-        <Show when={app() && app()!.status === 'draft'}>
+        <Show when={app() && (app()!.status === 'draft' || app()!.status === 'documents_rejected')}>
           <form onSubmit={handleSubmit} class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 space-y-4">
             <div class="grid md:grid-cols-2 gap-4">
               <Input label="NIK (16 digit)" maxLength={16} value={form()['nik'] || app()?.nik || ''} onInput={(e) => handleChange('nik', e.currentTarget.value)} />
@@ -84,7 +84,7 @@ export default function AdmisiEditPendaftaran() {
           </form>
         </Show>
 
-        <Show when={app() && app()!.status !== 'draft'}>
+        <Show when={app() && app()!.status !== 'draft' && app()!.status !== 'documents_rejected'}>
           <div class="text-center py-8 text-amber-600">
             Pendaftaran sudah disubmit, tidak bisa diedit.
           </div>

@@ -178,14 +178,19 @@ export default function AdmisiDetail() {
           </div>
 
           {/* Actions */}
-          <Show when={app()?.status === 'draft'}>
+          <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected'}>
             <div class="flex gap-3">
               <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/edit`)} variant="secondary">
                 Edit Biodata
               </Button>
-              <Button onClick={handleSubmit} disabled={submitting()}>
-                {submitting() ? 'Mengirim...' : 'Submit Pendaftaran'}
+              <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/dokumen`)} variant="secondary">
+                Kelola Dokumen
               </Button>
+              <Show when={app()?.status === 'draft'}>
+                <Button onClick={handleSubmit} disabled={submitting()}>
+                  {submitting() ? 'Mengirim...' : 'Submit Pendaftaran'}
+                </Button>
+              </Show>
             </div>
           </Show>
 

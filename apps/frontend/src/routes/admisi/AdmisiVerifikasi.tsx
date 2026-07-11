@@ -109,6 +109,19 @@ export default function AdmisiVerifikasi() {
                   <Button size="sm" onClick={() => handleSelectApp(app)}>
                     {selectedApp()?.id === app.id ? 'Tutup' : 'Lihat Dokumen'}
                   </Button>
+                  {(app.status === 'documents_rejected' || app.status === 'submitted') && (
+                    <Button size="sm" variant="secondary" onClick={async () => {
+                      try {
+                        await admisiAdminController.reopenApplication(app.id);
+                        toast.showToast('Akses dibuka untuk melengkapi berkas', 'success');
+                        refetch();
+                      } catch (err: any) {
+                        toast.showToast(err.message, 'error');
+                      }
+                    }}>
+                      Buka Akses
+                    </Button>
+                  )}
                 </div>
 
                 <Show when={selectedApp()?.id === app.id}>

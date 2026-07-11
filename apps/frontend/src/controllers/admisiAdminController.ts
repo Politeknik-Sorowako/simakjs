@@ -91,6 +91,10 @@ export const admisiAdminController = {
     });
   },
 
+  reopenApplication(id: number) {
+    return fetchApi<any>(`/admisi/admin/applications/${id}/reopen`, { method: 'POST' });
+  },
+
   // Komponen Penilaian
   getSelectionComponents(sessionId: number) {
     return fetchApi<{ data: any[] }>(`/admisi/admin/sessions/${sessionId}/components`);
