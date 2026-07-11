@@ -114,7 +114,7 @@ export class AdmisiController {
       if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
 
       const { db } = await import('../utils/db');
-      const { documentRequirements, applicantDocuments } = await import('../models/schema');
+      const { documentRequirements, applicantDocuments, applications } = await import('../models/schema');
       const { eq, and, sql } = await import('drizzle-orm');
 
       const formData = await request.formData();
@@ -126,31 +126,32 @@ export class AdmisiController {
         return { error: 'File dan requirementId wajib diisi' };
       }
 
-      // Fetch requirement name for structured filename
-      const [req] = await db
-        .select({ namaDokumen: documentRequirements.namaDokumen })
-        .from(documentRequirements)
-        .where(eq(documentRequirements.id, requirementId))
-        .limit(1);
+      // Fetch application + requirement info for naming
+      const [[app], [req]] = await Promise.all([
+        db
+          .select({ noPendaftar: applications.noPendaftar, namaLengkap: applications.namaLengkap })
+          .from(applications)
+          .where(eq(applications.id, Number(params.id)))
+          .limit(1),
+        db
+          .select({ namaDokumen: documentRequirements.namaDokumen })
+          .from(documentRequirements)
+          .where(eq(documentRequirements.id, requirementId))
+          .limit(1),
+      ]);
+
+      const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+      const noPendaftar = app?.noPendaftar || `app_${params.id}`;
+      const namaSlug = slug(app?.namaLengkap || 'unknown');
+      const berkasSlug = req ? slug(req.namaDokumen) : `req_${requirementId}`;
+      const now = new Date();
+      const timestamp =
+        `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}` +
+        `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
 
       const ext = file.name.split('.').pop() || 'file';
-      const baseName = req
-        ? req.namaDokumen.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
-        : `req_${requirementId}`;
-
-      // Count existing versions
-      const [verResult] = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(applicantDocuments)
-        .where(
-          and(
-            eq(applicantDocuments.applicationId, Number(params.id)),
-            eq(applicantDocuments.requirementId, requirementId),
-          ),
-        );
-
-      const version = (verResult?.count || 0) + 1;
-      const newFileName = `${params.id}_${baseName}_v${version}.${ext}`;
+      const newFileName = `${noPendaftar}_${namaSlug}_${berkasSlug}-${timestamp}.${ext}`;
 
       const uploadDir = `${STORAGE_DIR}/${params.id}`;
       await Bun.$`mkdir -p ${uploadDir}`.quiet();

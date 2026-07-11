@@ -113,7 +113,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         {/* PMB - Calon Mahasiswa Only */}
         <Show when={isCalonMhs()}>
           <div class="pt-2">
-            <div class="px-3 mb-2 text-[10px] font-semibold text-secondary-300/70 uppercase tracking-widest">Penerimaan Mahasiswa Baru</div>
+            <div class="px-3 mb-2 text-[10px] font-semibold text-secondary-300/70 uppercase tracking-widest">Admisi</div>
             <A
               href="/admisi/dashboard"
               onClick={() => props.onClose()}
