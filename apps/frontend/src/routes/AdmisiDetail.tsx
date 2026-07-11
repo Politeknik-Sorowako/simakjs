@@ -10,6 +10,7 @@ const statusColors: Record<string, string> = {
   submitted: 'bg-blue-100 text-blue-700',
   documents_verified: 'bg-teal-100 text-teal-700',
   documents_rejected: 'bg-red-100 text-red-700',
+  returned: 'bg-amber-100 text-amber-700',
   exam_scheduled: 'bg-purple-100 text-purple-700',
   exam_completed: 'bg-indigo-100 text-indigo-700',
   passed: 'bg-green-100 text-green-700',
@@ -23,6 +24,7 @@ const statusLabels: Record<string, string> = {
   submitted: 'Terkirim',
   documents_verified: 'Dokumen Terverifikasi',
   documents_rejected: 'Dokumen Ditolak',
+  returned: 'Dikembalikan',
   exam_scheduled: 'Jadwal Ujian',
   exam_completed: 'Ujian Selesai',
   passed: 'Lulus',
@@ -120,7 +122,7 @@ export default function AdmisiDetail() {
           <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6">
             <div class="flex items-center justify-between mb-3">
               <h2 class="font-semibold">Dokumen</h2>
-              <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected'}>
+              <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected' || app()?.status === 'returned'}>
                 <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/dokumen`)} size="sm">
                   Kelola Dokumen
                 </Button>
@@ -178,7 +180,7 @@ export default function AdmisiDetail() {
           </div>
 
           {/* Actions */}
-          <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected'}>
+          <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected' || app()?.status === 'returned'}>
             <div class="flex gap-3">
               <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/edit`)} variant="secondary">
                 Edit Biodata
@@ -186,7 +188,7 @@ export default function AdmisiDetail() {
               <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/dokumen`)} variant="secondary">
                 Kelola Dokumen
               </Button>
-              <Show when={app()?.status === 'draft'}>
+              <Show when={app()?.status === 'draft' || app()?.status === 'returned'}>
                 <Button onClick={handleSubmit} disabled={submitting()}>
                   {submitting() ? 'Mengirim...' : 'Submit Pendaftaran'}
                 </Button>

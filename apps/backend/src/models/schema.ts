@@ -21,6 +21,7 @@ export const applicationStatusEnum = pgEnum('application_status', [
   'submitted',
   'documents_verified',
   'documents_rejected',
+  'returned',
   'exam_scheduled',
   'exam_completed',
   'passed',

@@ -79,6 +79,7 @@ export default function AdmisiVerifikasi() {
             <option value="documents_verified">Terverifikasi</option>
             <option value="documents_rejected">Ditolak</option>
             <option value="draft">Draft</option>
+            <option value="returned">Dikembalikan</option>
           </select>
         </div>
 
@@ -100,6 +101,7 @@ export default function AdmisiVerifikasi() {
                     app.status === 'documents_verified' ? 'bg-green-100 text-green-700' :
                     app.status === 'documents_rejected' ? 'bg-red-100 text-red-700' :
                     app.status === 'draft' ? 'bg-gray-100 text-gray-600' :
+                    app.status === 'returned' ? 'bg-amber-100 text-amber-700' :
                     'bg-gray-100 text-gray-600'
                   }`}>
                     {app.status}
@@ -109,7 +111,7 @@ export default function AdmisiVerifikasi() {
                   <Button size="sm" onClick={() => handleSelectApp(app)}>
                     {selectedApp()?.id === app.id ? 'Tutup' : 'Lihat Dokumen'}
                   </Button>
-                  {(app.status === 'documents_rejected' || app.status === 'submitted') && (
+                  {(app.status === 'documents_rejected' || app.status === 'submitted' || app.status === 'returned') && (
                     <Button size="sm" variant="secondary" onClick={async () => {
                       try {
                         await admisiAdminController.reopenApplication(app.id);
@@ -119,7 +121,7 @@ export default function AdmisiVerifikasi() {
                         toast.showToast(err.message, 'error');
                       }
                     }}>
-                      Buka Akses
+                      {app.status === 'returned' ? 'Buka Lagi' : 'Buka Akses'}
                     </Button>
                   )}
                 </div>

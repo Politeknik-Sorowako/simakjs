@@ -153,7 +153,7 @@ export class AdmisiService {
       .limit(1);
 
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
-    if (app.status !== 'draft' && app.status !== 'documents_rejected') {
+    if (app.status !== 'draft' && app.status !== 'documents_rejected' && app.status !== 'returned') {
       throw new Error('Pendaftaran sudah disubmit, tidak bisa diubah');
     }
 
@@ -174,7 +174,7 @@ export class AdmisiService {
       .limit(1);
 
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
-    if (app.status !== 'draft') throw new Error('Pendaftaran sudah disubmit sebelumnya');
+    if (app.status !== 'draft' && app.status !== 'returned') throw new Error('Pendaftaran sudah disubmit sebelumnya');
 
     // Validate required fields
     if (!app.namaLengkap || !app.nik || !app.tanggalLahir || !app.jenisKelamin || !app.namaIbuKandung) {
@@ -262,7 +262,7 @@ export class AdmisiService {
       .limit(1);
 
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
-    if (app.status !== 'draft' && app.status !== 'documents_rejected') {
+    if (app.status !== 'draft' && app.status !== 'documents_rejected' && app.status !== 'returned') {
       throw new Error('Tidak bisa upload dokumen pada status saat ini');
     }
 
