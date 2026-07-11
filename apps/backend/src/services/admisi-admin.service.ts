@@ -226,6 +226,47 @@ export class AdmisiAdminService {
     return doc;
   }
 
+  static async verifyAllDocuments(applicationId: number, adminId: number) {
+    const [app] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, applicationId))
+      .limit(1);
+    if (!app) throw new Error('Pendaftaran tidak ditemukan');
+
+    // Get all required documents for this session
+    const reqs = await db
+      .select({ id: documentRequirements.id })
+      .from(documentRequirements)
+      .where(and(eq(documentRequirements.sessionId, app.sessionId), eq(documentRequirements.isWajib, true)));
+
+    // Get all uploaded non-verified documents
+    const reqIds = reqs.map((r) => r.id);
+    let pendingDocs: { id: number }[] = [];
+    if (reqIds.length > 0) {
+      pendingDocs = await db
+        .select({ id: applicantDocuments.id })
+        .from(applicantDocuments)
+        .where(
+          and(
+            eq(applicantDocuments.applicationId, applicationId),
+            eq(applicantDocuments.isVerified, false),
+            inArray(applicantDocuments.requirementId, reqIds),
+          ),
+        );
+    }
+
+    // Verify all pending docs
+    for (const doc of pendingDocs) {
+      await this.verifyDocument(doc.id, adminId, true);
+    }
+
+    // Update application status
+    await this.updateApplicationStatus(applicationId, 'documents_verified', adminId, 'Semua dokumen terverifikasi');
+
+    return { verifiedCount: pendingDocs.length };
+  }
+
   static async updateApplicationStatus(applicationId: number, status: string, adminId: number, notes?: string) {
     const [app] = await db
       .select({ status: applications.status })

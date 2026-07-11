@@ -3,6 +3,7 @@ import { MainLayout } from '../../components/MainLayout';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../contexts/ToastContext';
 import { admisiAdminController } from '../../controllers/admisiAdminController';
+import { admisiController } from '../../controllers/admisiController';
 
 export default function AdmisiVerifikasi() {
   const toast = useToast();
@@ -10,6 +11,7 @@ export default function AdmisiVerifikasi() {
   const [statusFilter, setStatusFilter] = createSignal('');
   const [selectedApp, setSelectedApp] = createSignal<any>(null);
   const [appDocs, setAppDocs] = createSignal<any[]>([]);
+  const [requirements, setRequirements] = createSignal<any[]>([]);
 
   const [sessions] = createResource(() => admisiAdminController.getSessions());
 
@@ -21,13 +23,17 @@ export default function AdmisiVerifikasi() {
     (f) => admisiAdminController.getApplications(f),
   );
 
-  const loadDocs = async (applicationId: number) => {
+  const loadDocs = async (app: any) => {
     try {
-      const { admisiController } = await import('../../controllers/admisiController');
-      const res = await admisiController.getDocuments(applicationId);
-      setAppDocs(res.data);
+      const [docsRes, reqsRes] = await Promise.all([
+        admisiController.getDocuments(app.id),
+        admisiController.getDocumentRequirements(app.sessionId),
+      ]);
+      setAppDocs(docsRes.data);
+      setRequirements(reqsRes.data);
     } catch {
       setAppDocs([]);
+      setRequirements([]);
     }
   };
 
@@ -35,21 +41,33 @@ export default function AdmisiVerifikasi() {
     if (selectedApp()?.id === app.id) {
       setSelectedApp(null);
       setAppDocs([]);
+      setRequirements([]);
       return;
     }
     setSelectedApp(app);
-    await loadDocs(app.id);
+    await loadDocs(app);
   };
 
   const handleVerify = async (docId: number, verified: boolean, rejectionNote?: string) => {
     try {
       await admisiAdminController.verifyDocument(docId, verified, rejectionNote);
       toast.showToast(verified ? 'Dokumen diverifikasi' : 'Dokumen ditolak', 'success');
-      await loadDocs(selectedApp()?.id);
+      await loadDocs(selectedApp());
       refetch();
     } catch (err: any) {
       toast.showToast(err.message, 'error');
     }
+  };
+
+  // Build merged list: required docs + upload status
+  const mergedDocs = () => {
+    const reqs = requirements();
+    const docs = appDocs();
+    return reqs.map((req) => {
+      const uploaded = docs.filter((d: any) => d.requirementId === req.id);
+      const latest = uploaded[uploaded.length - 1] || null;
+      return { req, uploaded, latest };
+    });
   };
 
   return (
@@ -111,6 +129,19 @@ export default function AdmisiVerifikasi() {
                   <Button size="sm" onClick={() => handleSelectApp(app)}>
                     {selectedApp()?.id === app.id ? 'Tutup' : 'Lihat Dokumen'}
                   </Button>
+                  {(app.status === 'submitted' || app.status === 'documents_rejected' || app.status === 'returned') && (
+                    <Button size="sm" style="background:#059669;color:white" onClick={async () => {
+                      try {
+                        const res = await admisiAdminController.verifyAllDocuments(app.id);
+                        toast.showToast(res.message, 'success');
+                        refetch();
+                      } catch (err: any) {
+                        toast.showToast(err.message, 'error');
+                      }
+                    }}>
+                      ✓ Verifikasi Semua
+                    </Button>
+                  )}
                   {(app.status === 'documents_rejected' || app.status === 'submitted' || app.status === 'returned') && (
                     <Button size="sm" variant="secondary" onClick={async () => {
                       try {
@@ -128,40 +159,78 @@ export default function AdmisiVerifikasi() {
 
                 <Show when={selectedApp()?.id === app.id}>
                   <div class="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700 space-y-2">
-                    <Show when={appDocs().length === 0}>
-                      <p class="text-xs text-secondary-400">Belum ada dokumen yang diupload.</p>
+                    <Show when={mergedDocs().length === 0}>
+                      <p class="text-xs text-secondary-400">Memuat data dokumen...</p>
                     </Show>
-                    <For each={appDocs()}>
-                      {(doc: any) => {
+                    <For each={mergedDocs()}>
+                      {({ req, uploaded, latest }: any) => {
                         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+                        const isMissing = !latest;
+                        const isRejected = latest && !latest.isVerified && latest.rejectionNote;
                         return (
-                          <div class="flex items-center justify-between py-2 px-3 bg-secondary-50 dark:bg-secondary-800/60 rounded-lg text-sm">
-                            <div class="flex items-center gap-2 min-w-0">
-                              {doc.fileLink ? (
-                                <a href={doc.fileLink} target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:underline truncate">
-                                  🔗 {doc.originalName || 'Link'}
-                                </a>
-                              ) : (
-                                <a href={`${apiUrl}/admisi/documents/${doc.id}/file`} target="_blank" rel="noopener noreferrer" class="text-brand-600 hover:underline truncate">
-                                  📄 {doc.originalName || 'File'}
-                                </a>
-                              )}
-                              <span class={`text-xs px-1.5 py-0.5 rounded-full ${doc.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                {doc.isVerified ? 'Terverifikasi' : 'Menunggu'}
+                          <div class={`flex items-center justify-between py-2 px-3 rounded-lg text-sm ${
+                            isMissing
+                              ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800'
+                              : latest.isVerified
+                                ? 'bg-green-50 dark:bg-green-900/10'
+                                : 'bg-secondary-50 dark:bg-secondary-800/60'
+                          }`}>
+                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                              <span class={`font-medium ${isMissing ? 'text-red-600' : ''}`}>
+                                {req.namaDokumen}
+                                {req.isWajib ? <span class="text-red-500 ml-0.5">*</span> : ''}
                               </span>
+
+                              {isMissing && (
+                                <span class="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full font-semibold">
+                                  BELUM DIUPLOAD
+                                </span>
+                              )}
+
+                              {latest && !latest.isVerified && !latest.rejectionNote && (
+                                <span class="text-xs px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded-full">
+                                  Menunggu
+                                </span>
+                              )}
+                              {latest && latest.isVerified && (
+                                <span class="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full">
+                                  Terverifikasi
+                                </span>
+                              )}
+                              {latest && isRejected && (
+                                <span class="text-xs px-1.5 py-0.5 bg-red-100 text-red-700 rounded-full">
+                                  Ditolak
+                                </span>
+                              )}
                             </div>
-                            <Show when={!doc.isVerified}>
-                              <div class="flex gap-1 ml-2">
-                                <button onClick={() => handleVerify(doc.id, true)} class="text-xs px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200">Setujui</button>
-                                <button onClick={() => {
-                                  const note = prompt('Alasan penolakan:');
-                                  if (note) handleVerify(doc.id, false, note);
-                                }} class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">Tolak</button>
-                              </div>
-                            </Show>
-                            <Show when={doc.rejectionNote}>
-                              <span class="text-xs text-red-500 ml-2">Ditolak: {doc.rejectionNote}</span>
-                            </Show>
+
+                            <div class="flex items-center gap-2 ml-2 flex-shrink-0">
+                              {latest && (
+                                <div class="flex items-center gap-1">
+                                  {latest.fileLink ? (
+                                    <a href={latest.fileLink} target="_blank" rel="noopener noreferrer" class="text-xs text-brand-600 hover:underline">
+                                      🔗
+                                    </a>
+                                  ) : (
+                                    <a href={`${apiUrl}/admisi/documents/${latest.id}/file`} target="_blank" rel="noopener noreferrer" class="text-xs text-brand-600 hover:underline">
+                                      📄
+                                    </a>
+                                  )}
+                                  {!latest.isVerified && (
+                                    <>
+                                      <button onClick={() => handleVerify(latest.id, true)} class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded hover:bg-green-200">✓</button>
+                                      <button onClick={() => {
+                                        const note = prompt('Alasan penolakan:');
+                                        if (note) handleVerify(latest.id, false, note);
+                                      }} class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200">✗</button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              {isRejected && (
+                                <span class="text-xs text-red-500">{latest.rejectionNote}</span>
+                              )}
+                            </div>
                           </div>
                         );
                       }}

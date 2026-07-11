@@ -120,9 +120,18 @@ export class AdmisiAdminController {
 
   static async verifyDocument({ body, set }: AuthContext<{ documentId: number; isVerified: boolean; rejectionNote?: string }>) {
     try {
-      // In real impl, adminId from context
       await AdmisiAdminService.verifyDocument(body.documentId, 1, body.isVerified, body.rejectionNote);
       return { message: body.isVerified ? 'Dokumen berhasil diverifikasi' : 'Dokumen ditolak' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async verifyAllDocuments({ params, set }: AuthContext<any, { id: string }>) {
+    try {
+      const result = await AdmisiAdminService.verifyAllDocuments(Number(params.id), 1);
+      return { message: `${result.verifiedCount} dokumen diverifikasi. Status: Terverifikasi`, verifiedCount: result.verifiedCount };
     } catch (e: any) {
       set.status = 400;
       return { error: e.message };
