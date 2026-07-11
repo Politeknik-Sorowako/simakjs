@@ -4,6 +4,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../contexts/ToastContext';
 import { admisiController } from '../controllers/admisiController';
+import TimelineStatus from '../components/admisi/TimelineStatus';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -163,21 +164,14 @@ export default function AdmisiDetail() {
             </For>
           </div>
 
-          {/* Timeline Log */}
-          <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6">
-            <h2 class="font-semibold mb-3">Riwayat Status</h2>
-            <For each={app()?.logs || []}>
-              {(log: any) => (
-                <div class="flex items-start gap-3 py-2 border-b border-secondary-100 dark:border-secondary-700 last:border-0">
-                  <div class="w-2 h-2 mt-1.5 rounded-full bg-brand-500 flex-shrink-0" />
-                  <div>
-                    <div class="text-sm">{log.message}</div>
-                    <div class="text-xs text-secondary-400">{new Date(log.createdAt).toLocaleString('id-ID')}</div>
-                  </div>
-                </div>
-              )}
-            </For>
-          </div>
+          {/* Timeline Visual */}
+          <TimelineStatus status={app()?.status || 'draft'} session={{
+            tanggalMulai: app()?.session?.tanggalMulai,
+            tanggalTutup: app()?.session?.tanggalTutup,
+            tanggalVerif: app()?.session?.tanggalVerif,
+            tanggalUjian: app()?.session?.tanggalUjian,
+            tanggalPengumuman: app()?.session?.tanggalPengumuman,
+          }} />
 
           {/* Actions */}
           <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected' || app()?.status === 'returned'}>

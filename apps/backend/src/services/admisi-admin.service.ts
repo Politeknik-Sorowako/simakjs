@@ -665,10 +665,18 @@ export class AdmisiAdminService {
 
   // ─── ANNOUNCEMENTS ──────────────────────────────────────────────
 
-  static async createAnnouncement(data: { judul: string; isi: string; createdBy: number; sessionId?: number; isPinned?: boolean }) {
+  static async createAnnouncement(data: { judul: string; isi: string; createdBy: number; sessionId?: number; isPinned?: boolean; filePath?: string; fileName?: string }) {
     const [a] = await db
       .insert(announcements)
-      .values({ judul: data.judul, isi: data.isi, createdBy: data.createdBy, sessionId: data.sessionId || null, isPinned: data.isPinned || false })
+      .values({
+        judul: data.judul,
+        isi: data.isi,
+        createdBy: data.createdBy,
+        sessionId: data.sessionId || null,
+        isPinned: data.isPinned || false,
+        filePath: data.filePath || null,
+        fileName: data.fileName || null,
+      })
       .returning();
     return a;
   }

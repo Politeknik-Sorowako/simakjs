@@ -290,4 +290,39 @@ export class AdmisiController {
       return { error: 'Gagal mengunduh file' };
     }
   }
+
+  static async downloadAnnouncementFile({ params, set }: any) {
+    try {
+      const { db } = await import('../utils/db');
+      const { announcements } = await import('../models/schema');
+      const { eq } = await import('drizzle-orm');
+
+      const [ann] = await db
+        .select()
+        .from(announcements)
+        .where(eq(announcements.id, Number(params.id)))
+        .limit(1);
+
+      if (!ann || !ann.filePath) {
+        set.status = 404;
+        return { error: 'File tidak ditemukan' };
+      }
+
+      const file = Bun.file(ann.filePath);
+      const exists = await file.exists();
+      if (!exists) {
+        set.status = 404;
+        return { error: 'File fisik tidak ditemukan di server' };
+      }
+
+      const ext = ann.fileName?.split('.').pop()?.toLowerCase() || '';
+      const mimeMap: Record<string, string> = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+      set.headers['Content-Type'] = mimeMap[ext] || 'application/octet-stream';
+      set.headers['Content-Disposition'] = `attachment; filename="${ann.fileName || 'file'}"`;
+      return file;
+    } catch (e: any) {
+      set.status = 500;
+      return { error: 'Gagal mengunduh file' };
+    }
+  }
 }

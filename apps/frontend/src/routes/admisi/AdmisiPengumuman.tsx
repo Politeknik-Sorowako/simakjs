@@ -10,6 +10,7 @@ export default function AdmisiPengumuman() {
   const [judul, setJudul] = createSignal('');
   const [isi, setIsi] = createSignal('');
   const [isPinned, setIsPinned] = createSignal(false);
+  const [file, setFile] = createSignal<File | null>(null);
   const [saving, setSaving] = createSignal(false);
 
   const [list, { refetch }] = createResource(() => admisiAdminController.getAnnouncements());
@@ -19,16 +20,19 @@ export default function AdmisiPengumuman() {
     if (!judul() || !isi()) return;
     setSaving(true);
     try {
-      await admisiAdminController.createAnnouncement({
-        judul: judul(),
-        isi: isi(),
-        isPinned: isPinned(),
-      });
+      const fd = new FormData();
+      fd.append('judul', judul());
+      fd.append('isi', isi());
+      fd.append('isPinned', String(isPinned()));
+      if (file()) fd.append('file', file()!);
+
+      await admisiAdminController.createAnnouncementForm(fd);
       toast.showToast('Pengumuman berhasil dipublikasikan!', 'success');
       setShowForm(false);
       setJudul('');
       setIsi('');
       setIsPinned(false);
+      setFile(null);
       refetch();
     } catch (err: any) {
       toast.showToast(err.message, 'error');
@@ -48,6 +52,8 @@ export default function AdmisiPengumuman() {
     }
   };
 
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   return (
     <MainLayout>
       <div class="p-4 md:p-6 max-w-4xl mx-auto">
@@ -65,20 +71,22 @@ export default function AdmisiPengumuman() {
           <form onSubmit={handleSubmit} class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6 space-y-4">
             <div>
               <label class="text-sm font-medium block mb-1">Judul</label>
-              <input
-                required value={judul()} onInput={(e) => setJudul(e.currentTarget.value)}
+              <input required value={judul()} onInput={(e) => setJudul(e.currentTarget.value)}
                 class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm"
-                placeholder="Contoh: Jadwal Ujian Gelombang 1"
-              />
+                placeholder="Contoh: Jadwal Ujian Gelombang 1" />
             </div>
             <div>
               <label class="text-sm font-medium block mb-1">Isi Pengumuman</label>
-              <textarea
-                required value={isi()} onInput={(e) => setIsi(e.currentTarget.value)}
-                rows={4}
+              <textarea required value={isi()} onInput={(e) => setIsi(e.currentTarget.value)} rows={4}
                 class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm"
-                placeholder="Tulis pengumuman di sini..."
-              />
+                placeholder="Tulis pengumuman di sini..." />
+            </div>
+            <div>
+              <label class="text-sm font-medium block mb-1">Lampiran (opsional)</label>
+              <input type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                onChange={(e) => setFile(e.currentTarget.files?.[0] || null)}
+                class="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300" />
+              <p class="text-xs text-secondary-400 mt-1">PDF, JPG, PNG, DOC, DOCX. Maks 5MB.</p>
             </div>
             <label class="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={isPinned()} onChange={(e) => setIsPinned(e.currentTarget.checked)}
@@ -102,6 +110,12 @@ export default function AdmisiPengumuman() {
                       <span class="font-semibold">{a.judul}</span>
                     </div>
                     <p class="text-sm text-secondary-600 dark:text-secondary-300 mt-1 whitespace-pre-wrap">{a.isi}</p>
+                    <Show when={a.fileName}>
+                      <a href={`${apiUrl}/admisi/announcements/${a.id}/file`} target="_blank" rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 underline mt-1">
+                        📎 {a.fileName}
+                      </a>
+                    </Show>
                     <p class="text-xs text-secondary-400 mt-1">{new Date(a.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                   <button onClick={() => handleDelete(a.id)} class="text-xs text-red-500 hover:text-red-700 ml-4 flex-shrink-0">Hapus</button>

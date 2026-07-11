@@ -106,6 +106,13 @@
       "when": 1783764451495,
       "tag": "0014_add_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1783767604504,
+      "tag": "0015_add_announcement_file",
+      "breakpoints": true
     }
   ]
 }

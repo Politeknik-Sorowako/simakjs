@@ -112,7 +112,8 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
 
   // ─── ANNOUNCEMENTS ──────────────────────────────────────────────
   .post('/announcements', AdmisiAdminController.createAnnouncement, {
-    detail: { tags: ['Admisi - Admin'], summary: 'Buat pengumuman' },
+    type: 'none',
+    detail: { tags: ['Admisi - Admin'], summary: 'Buat pengumuman (support file upload)' },
   })
   .get('/announcements', AdmisiAdminController.getAnnouncements, {
     detail: { tags: ['Admisi - Admin'], summary: 'Lihat pengumuman' },

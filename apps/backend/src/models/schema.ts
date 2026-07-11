@@ -1376,6 +1376,8 @@ export const announcements = pgTable('announcements', {
     .references(() => users.id, { onDelete: 'restrict' }),
   isPinned: boolean('is_pinned').default(false).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
+  filePath: text('file_path'),
+  fileName: varchar('file_name', { length: 255 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()

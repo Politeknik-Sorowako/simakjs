@@ -209,6 +209,13 @@ export const admisiAdminController = {
     });
   },
 
+  createAnnouncementForm(formData: FormData) {
+    return fetchApi<{ message: string; announcementId: number }>('/admisi/admin/announcements', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
   deleteAnnouncement(id: number) {
     return fetchApi<any>(`/admisi/admin/announcements/${id}`, { method: 'DELETE' });
   },

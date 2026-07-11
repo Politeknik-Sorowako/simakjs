@@ -1,4 +1,5 @@
 import { createResource, For, Show } from 'solid-js';
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 import { A } from '@solidjs/router';
 import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,7 +68,13 @@ export default function AdmisiDashboard() {
                     {a.isPinned ? <span class="text-xs px-1.5 py-0.5 bg-brand-200 dark:bg-brand-800 text-brand-700 dark:text-brand-300 rounded font-semibold">PINNED</span> : null}
                     <h3 class="font-semibold text-sm">{a.judul}</h3>
                   </div>
-                  <p class="text-sm text-secondary-600 dark:text-secondary-300 whitespace-pre-wrap">{a.isi}</p>
+                    <p class="text-sm text-secondary-600 dark:text-secondary-300 whitespace-pre-wrap">{a.isi}</p>
+                    <Show when={a.fileName}>
+                      <a href={`${apiUrl}/admisi/announcements/${a.id}/file`} target="_blank" rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 underline mt-1">
+                        📎 {a.fileName}
+                      </a>
+                    </Show>
                   <p class="text-xs text-secondary-400 mt-1">{new Date(a.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                 </div>
               )}

@@ -312,11 +312,40 @@ export class AdmisiAdminController {
 
   // ─── ANNOUNCEMENTS ───────────────────────────────────────────────
 
-  static async createAnnouncement({ body, getCurrentUser, set }: any) {
+  static async createAnnouncement({ request, getCurrentUser, set }: any) {
     try {
       const user = await getCurrentUser();
       if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
-      const a = await AdmisiAdminService.createAnnouncement({ ...body, createdBy: user.id });
+
+      const ct = request.headers.get('content-type') || '';
+      let judul: string, isi: string, isPinned: boolean, filePath: string | undefined, fileName: string | undefined;
+
+      if (ct.includes('multipart')) {
+        const fd = await request.formData();
+        judul = fd.get('judul') as string;
+        isi = fd.get('isi') as string;
+        isPinned = fd.get('isPinned') === 'true';
+        const file = fd.get('file') as File | null;
+        if (file) {
+          const dir = 'storage/announcements';
+          await Bun.$`mkdir -p ${dir}`.quiet();
+          fileName = `${Date.now()}_${file.name}`;
+          filePath = `${dir}/${fileName}`;
+          await Bun.write(filePath, file);
+        }
+      } else {
+        const body = await request.json();
+        judul = body.judul;
+        isi = body.isi;
+        isPinned = body.isPinned || false;
+      }
+
+      if (!judul || !isi) { set.status = 400; return { error: 'Judul dan isi wajib diisi' }; }
+
+      const a = await AdmisiAdminService.createAnnouncement({
+        judul, isi, isPinned, createdBy: user.id,
+        filePath, fileName,
+      });
       set.status = 201;
       return { message: 'Pengumuman berhasil dibuat', announcementId: a.id };
     } catch (e: any) {

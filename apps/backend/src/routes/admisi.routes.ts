@@ -59,4 +59,7 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
   })
   .get('/announcements', AdmisiAdminController.getAnnouncements, {
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Lihat pengumuman' },
+  })
+  .get('/announcements/:id/file', AdmisiController.downloadAnnouncementFile, {
+    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Download file pengumuman' },
   });
