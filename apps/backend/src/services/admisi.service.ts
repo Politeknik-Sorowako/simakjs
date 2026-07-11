@@ -235,10 +235,17 @@ export class AdmisiService {
         createdAt: applications.createdAt,
         updatedAt: applications.updatedAt,
         sessionId: applications.sessionId,
+        sessionNama: admissionSessions.nama,
+        sessionKode: admissionSessions.kode,
+        tanggalMulai: admissionSessions.tanggalMulai,
+        tanggalTutup: admissionSessions.tanggalTutup,
+        tanggalUjian: admissionSessions.tanggalUjian,
+        tanggalPengumuman: admissionSessions.tanggalPengumuman,
         prodiPilihan1: applications.prodiPilihan1,
         prodiPilihan2: applications.prodiPilihan2,
       })
       .from(applications)
+      .leftJoin(admissionSessions, eq(applications.sessionId, admissionSessions.id))
       .where(eq(applications.userId, userId))
       .orderBy(sql`${applications.createdAt} DESC`);
   }
@@ -251,7 +258,23 @@ export class AdmisiService {
       .limit(1);
 
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
-    return app;
+
+    // Attach session info
+    const [session] = await db
+      .select({
+        nama: admissionSessions.nama,
+        kode: admissionSessions.kode,
+        tanggalMulai: admissionSessions.tanggalMulai,
+        tanggalTutup: admissionSessions.tanggalTutup,
+        tanggalVerif: admissionSessions.tanggalVerif,
+        tanggalUjian: admissionSessions.tanggalUjian,
+        tanggalPengumuman: admissionSessions.tanggalPengumuman,
+      })
+      .from(admissionSessions)
+      .where(eq(admissionSessions.id, app.sessionId))
+      .limit(1);
+
+    return { ...app, session: session || null };
   }
 
   static async getDocuments(applicationId: number) {
