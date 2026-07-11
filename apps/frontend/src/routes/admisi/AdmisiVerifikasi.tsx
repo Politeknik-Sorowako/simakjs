@@ -130,31 +130,42 @@ export default function AdmisiVerifikasi() {
                     {selectedApp()?.id === app.id ? 'Tutup' : 'Lihat Dokumen'}
                   </Button>
                   {(app.status === 'submitted' || app.status === 'documents_rejected' || app.status === 'returned') && (
-                    <Button size="sm" style="background:#059669;color:white" onClick={async () => {
-                      try {
-                        const res = await admisiAdminController.verifyAllDocuments(app.id);
-                        toast.showToast(res.message, 'success');
-                        refetch();
-                      } catch (err: any) {
-                        toast.showToast(err.message, 'error');
-                      }
-                    }}>
-                      ✓ Verifikasi Semua
-                    </Button>
+                    <>
+                      <Button size="sm" style="background:#059669;color:white" onClick={async () => {
+                        try {
+                          const res = await admisiAdminController.verifyAllDocuments(app.id);
+                          toast.showToast(res.message, 'success');
+                          refetch();
+                        } catch (err: any) {
+                          toast.showToast(err.message, 'error');
+                        }
+                      }}>
+                        ✓ Setujui Semua
+                      </Button>
+                      <Button size="sm" style="background:#0d9488;color:white" onClick={async () => {
+                        try {
+                          const res = await admisiAdminController.markDocsVerified(app.id);
+                          toast.showToast(res.message, 'success');
+                          refetch();
+                        } catch (err: any) {
+                          toast.showToast(err.message, 'error');
+                        }
+                      }}>
+                        Ubah Status ke Terverifikasi
+                      </Button>
+                    </>
                   )}
-                  {(app.status === 'documents_rejected' || app.status === 'submitted' || app.status === 'returned') && (
-                    <Button size="sm" variant="secondary" onClick={async () => {
-                      try {
-                        await admisiAdminController.reopenApplication(app.id);
-                        toast.showToast('Akses dibuka untuk melengkapi berkas', 'success');
-                        refetch();
-                      } catch (err: any) {
-                        toast.showToast(err.message, 'error');
-                      }
-                    }}>
-                      {app.status === 'returned' ? 'Buka Lagi' : 'Buka Akses'}
-                    </Button>
-                  )}
+                  <Button size="sm" variant="secondary" onClick={async () => {
+                    try {
+                      await admisiAdminController.reopenApplication(app.id);
+                      toast.showToast('Akses dibuka untuk melengkapi berkas', 'success');
+                      refetch();
+                    } catch (err: any) {
+                      toast.showToast(err.message, 'error');
+                    }
+                  }}>
+                    {app.status === 'returned' ? 'Buka Lagi' : 'Buka Akses'}
+                  </Button>
                 </div>
 
                 <Show when={selectedApp()?.id === app.id}>

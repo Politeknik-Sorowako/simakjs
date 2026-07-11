@@ -234,13 +234,11 @@ export class AdmisiAdminService {
       .limit(1);
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
 
-    // Get all required documents for this session
     const reqs = await db
       .select({ id: documentRequirements.id })
       .from(documentRequirements)
       .where(and(eq(documentRequirements.sessionId, app.sessionId), eq(documentRequirements.isWajib, true)));
 
-    // Get all uploaded non-verified documents
     const reqIds = reqs.map((r) => r.id);
     let pendingDocs: { id: number }[] = [];
     if (reqIds.length > 0) {
@@ -256,15 +254,48 @@ export class AdmisiAdminService {
         );
     }
 
-    // Verify all pending docs
     for (const doc of pendingDocs) {
       await this.verifyDocument(doc.id, adminId, true);
     }
 
-    // Update application status
     await this.updateApplicationStatus(applicationId, 'documents_verified', adminId, 'Semua dokumen terverifikasi');
 
     return { verifiedCount: pendingDocs.length };
+  }
+
+  static async markDocsVerified(applicationId: number, adminId: number) {
+    const [app] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, applicationId))
+      .limit(1);
+    if (!app) throw new Error('Pendaftaran tidak ditemukan');
+
+    const reqs = await db
+      .select({ id: documentRequirements.id, namaDokumen: documentRequirements.namaDokumen })
+      .from(documentRequirements)
+      .where(and(eq(documentRequirements.sessionId, app.sessionId), eq(documentRequirements.isWajib, true)));
+
+    if (reqs.length === 0) throw new Error('Tidak ada persyaratan dokumen untuk sesi ini');
+
+    for (const req of reqs) {
+      const [verified] = await db
+        .select({ id: applicantDocuments.id })
+        .from(applicantDocuments)
+        .where(
+          and(
+            eq(applicantDocuments.applicationId, applicationId),
+            eq(applicantDocuments.requirementId, req.id),
+            eq(applicantDocuments.isVerified, true),
+          ),
+        )
+        .limit(1);
+      if (!verified) throw new Error(`Dokumen "${req.namaDokumen}" belum terverifikasi`);
+    }
+
+    await this.updateApplicationStatus(applicationId, 'documents_verified', adminId, 'Semua dokumen telah terverifikasi');
+
+    return { message: 'Status diubah ke Terverifikasi' };
   }
 
   static async updateApplicationStatus(applicationId: number, status: string, adminId: number, notes?: string) {

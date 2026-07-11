@@ -51,6 +51,9 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .post('/applications/:id/verify-all-docs', AdmisiAdminController.verifyAllDocuments, {
     detail: { tags: ['Admisi - Admin'], summary: 'Verifikasi semua dokumen & ubah status' },
   })
+  .post('/applications/:id/mark-verified', AdmisiAdminController.markDocsVerified, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Ubah status ke Terverifikasi (jika semua dokumen sdh verified)' },
+  })
   .put('/applications/:id/status', AdmisiAdminController.updateApplicationStatus, updateApplicationStatusSchema)
   .post('/applications/:id/reopen', AdmisiAdminController.reopenApplication, {
     detail: { tags: ['Admisi - Admin'], summary: 'Buka akses peserta untuk lengkapi berkas' },

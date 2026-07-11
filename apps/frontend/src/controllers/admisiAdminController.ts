@@ -97,6 +97,12 @@ export const admisiAdminController = {
     });
   },
 
+  markDocsVerified(applicationId: number) {
+    return fetchApi<{ message: string }>(`/admisi/admin/applications/${applicationId}/mark-verified`, {
+      method: 'POST',
+    });
+  },
+
   reopenApplication(id: number) {
     return fetchApi<any>(`/admisi/admin/applications/${id}/reopen`, { method: 'POST' });
   },

@@ -138,6 +138,16 @@ export class AdmisiAdminController {
     }
   }
 
+  static async markDocsVerified({ params, set }: AuthContext<any, { id: string }>) {
+    try {
+      const result = await AdmisiAdminService.markDocsVerified(Number(params.id), 1);
+      return result;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async updateApplicationStatus({ params, body, set }: AuthContext<{ status: string; notes?: string }, { id: string }>) {
     try {
       await AdmisiAdminService.updateApplicationStatus(Number(params.id), body.status, 1, body.notes);
