@@ -108,4 +108,15 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   // ─── PRODI ───────────────────────────────────────────────────────
   .get('/prodis', AdmisiAdminController.getAllProdi, {
     detail: { tags: ['Admisi - Admin'], summary: 'Daftar semua program studi' },
+  })
+
+  // ─── ANNOUNCEMENTS ──────────────────────────────────────────────
+  .post('/announcements', AdmisiAdminController.createAnnouncement, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Buat pengumuman' },
+  })
+  .get('/announcements', AdmisiAdminController.getAnnouncements, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Lihat pengumuman' },
+  })
+  .delete('/announcements/:id', AdmisiAdminController.deleteAnnouncement, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Hapus pengumuman' },
   });

@@ -195,4 +195,21 @@ export const admisiAdminController = {
   getAllProdi() {
     return fetchApi<{ data: any[] }>('/admisi/admin/prodis');
   },
+
+  // Announcements
+  getAnnouncements(sessionId?: number) {
+    const qs = sessionId ? `?sessionId=${sessionId}` : '';
+    return fetchApi<{ data: any[] }>(`/admisi/admin/announcements${qs}`);
+  },
+
+  createAnnouncement(data: { judul: string; isi: string; sessionId?: number }) {
+    return fetchApi<{ message: string; announcementId: number }>('/admisi/admin/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteAnnouncement(id: number) {
+    return fetchApi<any>(`/admisi/admin/announcements/${id}`, { method: 'DELETE' });
+  },
 };

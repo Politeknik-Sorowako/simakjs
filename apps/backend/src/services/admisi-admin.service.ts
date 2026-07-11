@@ -13,6 +13,7 @@ import {
   reRegistrationPayments,
   mahasiswa,
   programStudi,
+  announcements,
 } from '../models/schema';
 import { db } from '../utils/db';
 import { eq, and, sql, inArray, like } from 'drizzle-orm';
@@ -660,5 +661,30 @@ export class AdmisiAdminService {
       .from(applications)
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(applications.createdAt);
+  }
+
+  // ─── ANNOUNCEMENTS ──────────────────────────────────────────────
+
+  static async createAnnouncement(data: { judul: string; isi: string; createdBy: number; sessionId?: number; isPinned?: boolean }) {
+    const [a] = await db
+      .insert(announcements)
+      .values({ judul: data.judul, isi: data.isi, createdBy: data.createdBy, sessionId: data.sessionId || null, isPinned: data.isPinned || false })
+      .returning();
+    return a;
+  }
+
+  static async getAnnouncements(sessionId?: number) {
+    const conditions = [eq(announcements.isActive, true)];
+    if (sessionId) conditions.push(eq(announcements.sessionId, sessionId));
+
+    return db
+      .select()
+      .from(announcements)
+      .where(and(...conditions))
+      .orderBy(sql`${announcements.isPinned} DESC, ${announcements.createdAt} DESC`);
+  }
+
+  static async deleteAnnouncement(id: number) {
+    await db.delete(announcements).where(eq(announcements.id, id));
   }
 }

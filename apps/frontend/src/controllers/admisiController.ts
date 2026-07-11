@@ -83,4 +83,9 @@ export const admisiController = {
       body: JSON.stringify(data),
     });
   },
+
+  getAnnouncements(sessionId?: number) {
+    const qs = sessionId ? `?sessionId=${sessionId}` : '';
+    return fetchApi<{ data: any[] }>(`/admisi/announcements${qs}`);
+  },
 };

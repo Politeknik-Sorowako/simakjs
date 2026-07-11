@@ -57,6 +57,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const isKeuangan = () => role() === 'keuangan';
   const isCalonMhs = () => role() === 'calon_mahasiswa';
   const notGuest = () => role() !== 'guest';
+  const isMahasiswaOrMore = () => !isCalonMhs() && notGuest();
 
   return (
     <aside
@@ -369,7 +370,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         </Show>
 
         {/* Registrasi Akademik */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsRegistrasiOpen(!isRegistrasiOpen())}
@@ -432,7 +433,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         </Show>
 
         {/* Pelaksanaan Akademik */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsPelaksanaanOpen(!isPelaksanaanOpen())}
@@ -514,7 +515,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         </Show>
 
         {/* Evaluasi & Kelulusan */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsEvaluasiOpen(!isEvaluasiOpen())}
@@ -754,7 +755,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </div>
         </Show>
         {/* Layanan Mahasiswa */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsLayananOpen(!isLayananOpen())}

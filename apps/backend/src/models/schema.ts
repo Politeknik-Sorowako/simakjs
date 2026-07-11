@@ -1361,3 +1361,35 @@ export const reRegistrationPaymentsRelations = relations(reRegistrationPayments,
     references: [users.id],
   }),
 }));
+
+// ────────────────────────────────────────────────────────────────────────────
+// ANNOUNCEMENTS (Pengumuman untuk dashboard calon mahasiswa)
+// ────────────────────────────────────────────────────────────────────────────
+
+export const announcements = pgTable('announcements', {
+  id: serial('id').primaryKey(),
+  judul: varchar('judul', { length: 255 }).notNull(),
+  isi: text('isi').notNull(),
+  sessionId: integer('session_id').references(() => admissionSessions.id, { onDelete: 'set null' }),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
+  isPinned: boolean('is_pinned').default(false).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const announcementsRelations = relations(announcements, ({ one }) => ({
+  session: one(admissionSessions, {
+    fields: [announcements.sessionId],
+    references: [admissionSessions.id],
+  }),
+  author: one(users, {
+    fields: [announcements.createdBy],
+    references: [users.id],
+  }),
+}));

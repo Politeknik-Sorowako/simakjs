@@ -210,10 +210,9 @@ export class AdmisiAdminController {
 
   // ─── RE-REGISTRATION ─────────────────────────────────────────────
 
-  static async getPayments({ params }: AuthContext<any, { applicationId?: string }>) {
-    const payments = await AdmisiAdminService.getReRegistrationPayments(
-      params.applicationId ? Number(params.applicationId) : undefined,
-    );
+  static async getPayments({ params }: any) {
+    const appId = params?.applicationId ? Number(params.applicationId) : undefined;
+    const payments = await AdmisiAdminService.getReRegistrationPayments(appId);
     return { data: payments };
   }
 
@@ -309,5 +308,35 @@ export class AdmisiAdminController {
   static async getAllProdi() {
     const prodis = await db.select().from(programStudi).orderBy(programStudi.nama);
     return { data: prodis };
+  }
+
+  // ─── ANNOUNCEMENTS ───────────────────────────────────────────────
+
+  static async createAnnouncement({ body, getCurrentUser, set }: any) {
+    try {
+      const user = await getCurrentUser();
+      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      const a = await AdmisiAdminService.createAnnouncement({ ...body, createdBy: user.id });
+      set.status = 201;
+      return { message: 'Pengumuman berhasil dibuat', announcementId: a.id };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getAnnouncements({ query }: any) {
+    const data = await AdmisiAdminService.getAnnouncements(query.sessionId ? Number(query.sessionId) : undefined);
+    return { data };
+  }
+
+  static async deleteAnnouncement({ params, set }: any) {
+    try {
+      await AdmisiAdminService.deleteAnnouncement(Number(params.id));
+      return { message: 'Pengumuman berhasil dihapus' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
   }
 }

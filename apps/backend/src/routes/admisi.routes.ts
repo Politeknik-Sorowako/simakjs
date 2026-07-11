@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { AdmisiController } from '../controllers/admisi.controller';
+import { AdmisiAdminController } from '../controllers/admisi-admin.controller';
 import {
   registerCalonSchema,
   verifyEmailSchema,
@@ -55,4 +56,7 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
   })
   .get('/documents/:id/file', AdmisiController.downloadFile, {
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Download file dokumen' },
+  })
+  .get('/announcements', AdmisiAdminController.getAnnouncements, {
+    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Lihat pengumuman' },
   });

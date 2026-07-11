@@ -36,6 +36,7 @@ export default function AdmisiDashboard() {
   const auth = useAuth();
 
   const [apps] = createResource(() => admisiController.getMyApplications());
+  const [announcements] = createResource(() => admisiController.getAnnouncements());
 
   return (
     <MainLayout>
@@ -54,6 +55,25 @@ export default function AdmisiDashboard() {
             + Daftar Baru
           </A>
         </div>
+
+        {/* Pengumuman */}
+        <Show when={announcements() && announcements()!.data.length > 0}>
+          <div class="mb-6 space-y-3">
+            <h2 class="text-sm font-semibold text-secondary-500 uppercase tracking-wider">Pengumuman</h2>
+            <For each={announcements()?.data || []}>
+              {(a: any) => (
+                <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-4">
+                  <div class="flex items-center gap-2 mb-1">
+                    {a.isPinned ? <span class="text-xs px-1.5 py-0.5 bg-brand-200 dark:bg-brand-800 text-brand-700 dark:text-brand-300 rounded font-semibold">PINNED</span> : null}
+                    <h3 class="font-semibold text-sm">{a.judul}</h3>
+                  </div>
+                  <p class="text-sm text-secondary-600 dark:text-secondary-300 whitespace-pre-wrap">{a.isi}</p>
+                  <p class="text-xs text-secondary-400 mt-1">{new Date(a.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
 
         <Show when={apps.loading}>
           <div class="text-center py-8 text-secondary-400">Memuat data...</div>
