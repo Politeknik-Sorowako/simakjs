@@ -118,6 +118,9 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .get('/announcements', AdmisiAdminController.getAnnouncements, {
     detail: { tags: ['Admisi - Admin'], summary: 'Lihat pengumuman' },
   })
+  .put('/announcements/:id', AdmisiAdminController.updateAnnouncement, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Edit pengumuman' },
+  })
   .delete('/announcements/:id', AdmisiAdminController.deleteAnnouncement, {
     detail: { tags: ['Admisi - Admin'], summary: 'Hapus pengumuman' },
   });

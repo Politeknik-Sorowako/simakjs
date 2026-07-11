@@ -216,6 +216,13 @@ export const admisiAdminController = {
     });
   },
 
+  updateAnnouncement(id: number, data: { judul?: string; isi?: string; isPinned?: boolean }) {
+    return fetchApi<any>(`/admisi/admin/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   deleteAnnouncement(id: number) {
     return fetchApi<any>(`/admisi/admin/announcements/${id}`, { method: 'DELETE' });
   },

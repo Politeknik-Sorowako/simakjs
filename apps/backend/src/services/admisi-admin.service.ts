@@ -692,6 +692,15 @@ export class AdmisiAdminService {
       .orderBy(sql`${announcements.isPinned} DESC, ${announcements.createdAt} DESC`);
   }
 
+  static async updateAnnouncement(id: number, data: { judul?: string; isi?: string; isPinned?: boolean; filePath?: string; fileName?: string }) {
+    const [updated] = await db
+      .update(announcements)
+      .set(data)
+      .where(eq(announcements.id, id))
+      .returning();
+    return updated;
+  }
+
   static async deleteAnnouncement(id: number) {
     await db.delete(announcements).where(eq(announcements.id, id));
   }

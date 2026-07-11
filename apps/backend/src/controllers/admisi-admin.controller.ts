@@ -359,6 +359,16 @@ export class AdmisiAdminController {
     return { data };
   }
 
+  static async updateAnnouncement({ params, body, set }: any) {
+    try {
+      await AdmisiAdminService.updateAnnouncement(Number(params.id), body);
+      return { message: 'Pengumuman berhasil diperbarui' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async deleteAnnouncement({ params, set }: any) {
     try {
       await AdmisiAdminService.deleteAnnouncement(Number(params.id));

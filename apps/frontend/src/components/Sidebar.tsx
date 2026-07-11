@@ -946,7 +946,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Penilaian
                   </A>
                 </Show>
-                <Show when={isAdmin()}>
+                  <Show when={isAdmin()}>
                   <A
                     href="/admisi/manajemen/jadwal"
                     onClick={() => props.onClose()}
@@ -958,6 +958,34 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                     </svg>
                     Jadwal Ujian
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/import-ujian"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Import Peserta Ujian
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/seleksi-massal"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Seleksi Massal
                   </A>
                 </Show>
                 <Show when={isAdmin()}>
