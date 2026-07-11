@@ -1,5 +1,8 @@
 import { AdmisiService } from '../services/admisi.service';
 import { AuthContext } from '../utils/types';
+import { resolve } from 'path';
+
+const STORAGE_DIR = resolve(import.meta.dir!, '../../storage/applications');
 
 export class AdmisiController {
   static async register({ body, set }: AuthContext<{ email: string; password: string; nama: string }>) {
@@ -110,6 +113,10 @@ export class AdmisiController {
       const user = await getCurrentUser();
       if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
 
+      const { db } = await import('../utils/db');
+      const { documentRequirements, applicantDocuments } = await import('../models/schema');
+      const { eq, and, sql } = await import('drizzle-orm');
+
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
       const requirementId = Number(formData.get('requirementId'));
@@ -119,15 +126,42 @@ export class AdmisiController {
         return { error: 'File dan requirementId wajib diisi' };
       }
 
-      const uploadDir = `storage/applications/${params.id}`;
+      // Fetch requirement name for structured filename
+      const [req] = await db
+        .select({ namaDokumen: documentRequirements.namaDokumen })
+        .from(documentRequirements)
+        .where(eq(documentRequirements.id, requirementId))
+        .limit(1);
+
+      const ext = file.name.split('.').pop() || 'file';
+      const baseName = req
+        ? req.namaDokumen.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+        : `req_${requirementId}`;
+
+      // Count existing versions
+      const [verResult] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(applicantDocuments)
+        .where(
+          and(
+            eq(applicantDocuments.applicationId, Number(params.id)),
+            eq(applicantDocuments.requirementId, requirementId),
+          ),
+        );
+
+      const version = (verResult?.count || 0) + 1;
+      const newFileName = `${params.id}_${baseName}_v${version}.${ext}`;
+
+      const uploadDir = `${STORAGE_DIR}/${params.id}`;
       await Bun.$`mkdir -p ${uploadDir}`.quiet();
-      await Bun.write(`${uploadDir}/${file.name}`, file);
+      const fullPath = `${uploadDir}/${newFileName}`;
+      await Bun.write(fullPath, file);
 
       const doc = await AdmisiService.uploadDocument(
         Number(params.id),
         requirementId,
         user.id,
-        { path: `${uploadDir}/${file.name}`, name: file.name, size: file.size, type: file.type },
+        { path: fullPath, name: newFileName, size: file.size, type: file.type },
       );
 
       set.status = 201;
