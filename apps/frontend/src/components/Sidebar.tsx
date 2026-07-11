@@ -45,7 +45,10 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (['/pddikti'].includes(currentPath)) {
       setIsIntegrasiOpen(true);
     }
-    if (['/admisi/dashboard', '/admisi/sesi', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) => currentPath.startsWith(p))) {
+    if (
+      ['/admisi/dashboard', '/admisi/sesi', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) => currentPath.startsWith(p)) ||
+      currentPath.startsWith('/admisi/manajemen')
+    ) {
       setIsAdmisiOpen(true);
     }
   });
@@ -127,30 +130,48 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               </svg>
                Dashboard PMB
             </A>
-            <A
-              href="/admisi/sesi"
-              onClick={() => props.onClose()}
-              activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
-              inactiveClass="hover:bg-brand-800/60 hover:text-white"
-              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
+
+            <button
+              onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
+              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <span>Pendaftaran</span>
+              <svg
+                class={`w-3.5 h-3.5 transition-transform duration-200 ${isAdmisiOpen() ? 'transform rotate-90' : ''}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
               </svg>
-              Sesi Admisi
-            </A>
-            <A
-              href="/admisi/pendaftaran/baru"
-              onClick={() => props.onClose()}
-              activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
-              inactiveClass="hover:bg-brand-800/60 hover:text-white"
-              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
-            >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Pendaftaran Baru
-            </A>
+            </button>
+
+            <Show when={isAdmisiOpen()}>
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+                <A
+                  href="/admisi/sesi"
+                  onClick={() => props.onClose()}
+                  activeClass="text-accent-400 font-semibold"
+                  inactiveClass="hover:text-white text-secondary-200"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Sesi Admisi
+                </A>
+                <A
+                  href="/admisi/pendaftaran/baru"
+                  onClick={() => props.onClose()}
+                  activeClass="text-accent-400 font-semibold"
+                  inactiveClass="hover:text-white text-secondary-200"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Pendaftaran Baru
+                </A>
+              </div>
+            </Show>
           </div>
         </Show>
 
