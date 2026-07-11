@@ -120,6 +120,7 @@ export class AdmisiController {
       }
 
       const uploadDir = `storage/applications/${params.id}`;
+      await Bun.$`mkdir -p ${uploadDir}`.quiet();
       await Bun.write(`${uploadDir}/${file.name}`, file);
 
       const doc = await AdmisiService.uploadDocument(
@@ -189,6 +190,7 @@ export class AdmisiController {
       let buktiBayarPath = '';
       if (file) {
         const uploadDir = `storage/applications/${params.id}/payment`;
+        await Bun.$`mkdir -p ${uploadDir}`.quiet();
         await Bun.write(`${uploadDir}/${file.name}`, file);
         buktiBayarPath = `${uploadDir}/${file.name}`;
       }

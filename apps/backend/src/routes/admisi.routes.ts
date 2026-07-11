@@ -31,8 +31,9 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
   .put('/applications/:id', AdmisiController.updateApplication, updateApplicationSchema)
   .post('/applications/:id/submit', AdmisiController.submitApplication, submitApplicationSchema)
 
-  // ─── DOKUMEN (multipart — no body schema) ─────────────────────────
+  // ─── DOKUMEN (multipart — type:none agar Elysia tidak parse body) ──
   .post('/applications/:id/documents', AdmisiController.uploadDocument, {
+    type: 'none',
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Upload file dokumen' },
   })
   .post('/applications/:id/documents/link', AdmisiController.submitDocumentLink, submitDocumentLinkSchema)
@@ -43,8 +44,9 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Hapus dokumen' },
   })
 
-  // ─── DAFTAR ULANG (multipart — no body schema) ────────────────────
+  // ─── DAFTAR ULANG (multipart — type:none) ─────────────────────────
   .post('/applications/:id/re-registration/payment', AdmisiController.submitPayment, {
+    type: 'none',
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Upload bukti bayar daftar ulang' },
   })
 
