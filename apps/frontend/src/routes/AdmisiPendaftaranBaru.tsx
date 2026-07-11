@@ -1,8 +1,7 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, Show, createMemo } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { useToast } from '../contexts/ToastContext';
 import { admisiController } from '../controllers/admisiController';
 
@@ -13,15 +12,17 @@ export default function AdmisiPendaftaranBaru() {
   const [sessions] = createResource(() => admisiController.getActiveSessions());
   const [selectedSession, setSelectedSession] = createSignal<number | null>(null);
   const [sessionProdis, setSessionProdis] = createSignal<any[]>([]);
-  const [prodi1, setProdi1] = createSignal<number | null>(null);
-  const [prodi2, setProdi2] = createSignal<number | null>(null);
+  const [prodi1, setProdi1] = createSignal<string>('');
+  const [prodi2, setProdi2] = createSignal<string>('');
   const [loadingProdis, setLoadingProdis] = createSignal(false);
   const [submitting, setSubmitting] = createSignal(false);
 
+  const prodiOptions = createMemo(() => sessionProdis());
+
   const handleSessionSelect = async (sessionId: number) => {
     setSelectedSession(sessionId);
-    setProdi1(null);
-    setProdi2(null);
+    setProdi1('');
+    setProdi2('');
     setLoadingProdis(true);
     try {
       const res = await admisiController.getSessionProdis(sessionId);
@@ -42,8 +43,8 @@ export default function AdmisiPendaftaranBaru() {
     try {
       const result = await admisiController.createApplication({
         sessionId: selectedSession()!,
-        prodiPilihan1: prodi1()!,
-        prodiPilihan2: prodi2() || undefined,
+        prodiPilihan1: Number(prodi1()),
+        prodiPilihan2: prodi2() ? Number(prodi2()) : undefined,
       });
       toast.showToast('Pendaftaran berhasil dibuat!', 'success');
       navigate(`/admisi/pendaftaran/${result.applicationId}`);
@@ -102,45 +103,47 @@ export default function AdmisiPendaftaranBaru() {
             </Show>
 
             <Show when={!loadingProdis}>
-              <div class="mb-4">
-                <label class="text-sm font-medium text-secondary-700 dark:text-secondary-300 block mb-1">
-                  Pilihan 1 <span class="text-red-500">*</span>
-                </label>
-                <select
-                  value={prodi1() || ''}
-                  onChange={(e) => setProdi1(Number(e.currentTarget.value) || null)}
-                  class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm"
-                >
-                  <option value="">-- Pilih Prodi --</option>
-                  <For each={sessionProdis()}>
-                    {(sp: any) => (
-                      <option value={sp.prodiId}>
-                        {sp.namaProdi || `Prodi #${sp.prodiId}`} ({sp.jenjang || '-'})
-                      </option>
-                    )}
-                  </For>
-                </select>
-              </div>
+              <Show when={sessionProdis().length === 0}>
+                <p class="text-sm text-amber-600">Tidak ada program studi tersedia di sesi ini.</p>
+              </Show>
 
-              <div class="mb-4">
-                <label class="text-sm font-medium text-secondary-700 dark:text-secondary-300 block mb-1">
-                  Pilihan 2 (opsional)
-                </label>
-                <select
-                  value={prodi2() || ''}
-                  onChange={(e) => setProdi2(Number(e.currentTarget.value) || null)}
-                  class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm"
-                >
-                  <option value="">-- Tidak Ada --</option>
-                  <For each={sessionProdis()}>
-                    {(sp: any) => (
-                      <option value={sp.prodiId} disabled={sp.prodiId === prodi1()}>
-                        {sp.namaProdi || `Prodi #${sp.prodiId}`} ({sp.jenjang || '-'})
+              <Show when={sessionProdis().length > 0}>
+                <div class="mb-4">
+                  <label class="text-sm font-medium text-secondary-700 dark:text-secondary-300 block mb-1">
+                    Pilihan 1 <span class="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={prodi1()}
+                    onChange={(e) => setProdi1(e.currentTarget.value)}
+                    class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm cursor-pointer"
+                  >
+                    <option value="">-- Pilih Prodi --</option>
+                    {prodiOptions().map((sp: any) => (
+                      <option value={String(sp.prodiId)}>
+                        {sp.namaProdi} ({sp.jenjang})
                       </option>
-                    )}
-                  </For>
-                </select>
-              </div>
+                    ))}
+                  </select>
+                </div>
+
+                <div class="mb-4">
+                  <label class="text-sm font-medium text-secondary-700 dark:text-secondary-300 block mb-1">
+                    Pilihan 2 (opsional)
+                  </label>
+                  <select
+                    value={prodi2()}
+                    onChange={(e) => setProdi2(e.currentTarget.value)}
+                    class="w-full px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg bg-white dark:bg-secondary-800 text-sm cursor-pointer"
+                  >
+                    <option value="">-- Tidak Ada --</option>
+                    {prodiOptions().map((sp: any) => (
+                      <option value={String(sp.prodiId)} disabled={String(sp.prodiId) === prodi1()}>
+                        {sp.namaProdi} ({sp.jenjang})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </Show>
             </Show>
           </div>
         </Show>
