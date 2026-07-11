@@ -3,6 +3,8 @@ import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
 import { authMiddleware } from './middlewares/auth.middleware';
 import { jwtPlugin } from './plugins/jwt.plugin';
+import { admisiAdminRoutes } from './routes/admisi-admin.routes';
+import { admisiRoutes } from './routes/admisi.routes';
 import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
 import { authRoutes } from './routes/auth.routes';
 import { bapRoutes } from './routes/bap.routes';
@@ -70,6 +72,8 @@ if (isDevelopment) {
           { name: 'Tagihan', description: 'Tagihan SPP dan pembayaran' },
           { name: 'Yudisium & Komponen Nilai', description: 'Pengajuan yudisium dan input nilai akhir' },
           { name: 'PDDIKTI', description: 'Sinkronisasi data ke PDDIKTI' },
+          { name: 'Admisi - Calon Mahasiswa', description: 'Endpoint untuk calon mahasiswa: registrasi, pendaftaran, upload dokumen, daftar ulang' },
+          { name: 'Admisi - Admin', description: 'Endpoint admin: manajemen sesi, verifikasi, penilaian, jadwal, NIM' },
           { name: 'E2E Testing', description: '⚠️ DANGER: Reset database & seed data. **Hanya untuk development/testing.** JANGAN panggil di production. Restricted ke role Admin.' },
           { name: 'Health Check', description: 'Monitoring kesehatan server' },
         ],
@@ -203,6 +207,8 @@ app
   })
   .use(authMiddleware)
   .use(authRoutes)
+  .use(admisiRoutes)
+  .use(admisiAdminRoutes)
   .use(angkatanKurikulumRoutes)
   .use(prodiRoutes)
   .use(mahasiswaRoutes)

@@ -70,7 +70,11 @@ export default function Login() {
         const response = await authController.login(email(), password());
         auth.login(response.token, response.user);
         toast.showToast('Login berhasil! Selamat datang.', 'success');
-        navigate('/dashboard', { replace: true });
+        if (response.user.role === 'calon_mahasiswa') {
+          navigate('/admisi/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
       }
     } catch (e: any) {
       const errText = e.message || 'Gagal terhubung ke server';

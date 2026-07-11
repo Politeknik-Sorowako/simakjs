@@ -14,7 +14,20 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core';
 
-export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest']);
+export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest', 'calon_mahasiswa']);
+
+export const applicationStatusEnum = pgEnum('application_status', [
+  'draft',
+  'submitted',
+  'documents_verified',
+  'documents_rejected',
+  'exam_scheduled',
+  'exam_completed',
+  'passed',
+  'failed',
+  're_registration',
+  'nim_issued',
+]);
 export const jenisKelaminEnum = pgEnum('jenis_kelamin', ['L', 'P']);
 export const tagihanStatusEnum = pgEnum('tagihan_status', ['belum_bayar', 'cicilan', 'lunas']);
 
@@ -974,5 +987,371 @@ export const mahasiswaKeluarRelations = relations(mahasiswaKeluar, ({ one }) => 
   periodeAkademik: one(periodeAkademik, {
     fields: [mahasiswaKeluar.periodeId],
     references: [periodeAkademik.id],
+  }),
+}));
+
+// ────────────────────────────────────────────────────────────────────────────
+// ADMISI (PENERIMAAN MAHASISWA BARU) MODULE
+// ────────────────────────────────────────────────────────────────────────────
+
+export const admissionSessions = pgTable('admission_sessions', {
+  id: serial('id').primaryKey(),
+  kode: varchar('kode', { length: 20 }).notNull().unique(),
+  nama: varchar('nama', { length: 255 }).notNull(),
+  deskripsi: text('deskripsi'),
+  tanggalMulai: date('tanggal_mulai').notNull(),
+  tanggalTutup: date('tanggal_tutup').notNull(),
+  tanggalVerif: date('tanggal_verif'),
+  tanggalUjian: date('tanggal_ujian'),
+  tanggalPengumuman: date('tanggal_pengumuman'),
+  kuota: integer('kuota'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const admissionSessionProdis = pgTable(
+  'admission_session_prodis',
+  {
+    id: serial('id').primaryKey(),
+    sessionId: integer('session_id')
+      .notNull()
+      .references(() => admissionSessions.id, { onDelete: 'cascade' }),
+    prodiId: integer('prodi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'restrict' }),
+    kuota: integer('kuota'),
+    passingGrade: numeric('passing_grade', { precision: 5, scale: 2 }),
+    biayaDaftar: integer('biaya_daftar'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    unq: unique('adm_session_prodi_unique').on(t.sessionId, t.prodiId),
+  }),
+);
+
+export const documentRequirements = pgTable('document_requirements', {
+  id: serial('id').primaryKey(),
+  sessionId: integer('session_id')
+    .notNull()
+    .references(() => admissionSessions.id, { onDelete: 'cascade' }),
+  prodiId: integer('prodi_id').references(() => programStudi.id, { onDelete: 'set null' }),
+  namaDokumen: varchar('nama_dokumen', { length: 255 }).notNull(),
+  deskripsi: text('deskripsi'),
+  isWajib: boolean('is_wajib').default(true).notNull(),
+  formatFile: varchar('format_file', { length: 50 }),
+  maxSizeKb: integer('max_size_kb').default(2048).notNull(),
+  urutan: integer('urutan').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const applications = pgTable('applications', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  sessionId: integer('session_id')
+    .notNull()
+    .references(() => admissionSessions.id, { onDelete: 'restrict' }),
+  noPendaftar: varchar('no_pendaftar', { length: 30 }).unique(),
+  prodiPilihan1: integer('prodi_pilihan1')
+    .notNull()
+    .references(() => programStudi.id, { onDelete: 'restrict' }),
+  prodiPilihan2: integer('prodi_pilihan2').references(() => programStudi.id, { onDelete: 'restrict' }),
+  status: applicationStatusEnum('status').notNull().default('draft'),
+  nik: varchar('nik', { length: 16 }),
+  namaLengkap: varchar('nama_lengkap', { length: 255 }),
+  tempatLahir: varchar('tempat_lahir', { length: 100 }),
+  tanggalLahir: date('tanggal_lahir'),
+  jenisKelamin: jenisKelaminEnum('jenis_kelamin'),
+  idAgama: integer('id_agama'),
+  kewarganegaraan: varchar('kewarganegaraan', { length: 5 }).default('ID'),
+  jalan: text('jalan'),
+  rt: varchar('rt', { length: 5 }),
+  rw: varchar('rw', { length: 5 }),
+  kodePos: varchar('kode_pos', { length: 10 }),
+  telepon: varchar('telepon', { length: 20 }),
+  namaIbuKandung: varchar('nama_ibu_kandung', { length: 255 }),
+  asalSekolah: varchar('asal_sekolah', { length: 255 }),
+  jurusanSekolah: varchar('jurusan_sekolah', { length: 255 }),
+  tahunLulus: varchar('tahun_lulus', { length: 4 }),
+  isReRegistered: boolean('is_re_registered').default(false).notNull(),
+  reRegisteredAt: timestamp('re_registered_at'),
+  buktiBayarPath: text('bukti_bayar_path'),
+  nimDiterbitkan: varchar('nim_diterbitkan', { length: 50 }),
+  ukuranJas: varchar('ukuran_jas', { length: 10 }),
+  finalScore: numeric('final_score', { precision: 5, scale: 2 }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const applicantDocuments = pgTable('applicant_documents', {
+  id: serial('id').primaryKey(),
+  applicationId: integer('application_id')
+    .notNull()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  requirementId: integer('requirement_id')
+    .notNull()
+    .references(() => documentRequirements.id, { onDelete: 'restrict' }),
+  filePath: text('file_path'),
+  fileLink: text('file_link'),
+  uploadMethod: varchar('upload_method', { length: 20 }).notNull().default('upload'),
+  originalName: varchar('original_name', { length: 255 }),
+  fileSizeKb: integer('file_size_kb'),
+  mimeType: varchar('mime_type', { length: 100 }),
+  isVerified: boolean('is_verified').default(false).notNull(),
+  verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
+  verifiedAt: timestamp('verified_at'),
+  rejectionNote: text('rejection_note'),
+  version: integer('version').default(1).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const selectionComponents = pgTable('selection_components', {
+  id: serial('id').primaryKey(),
+  sessionId: integer('session_id')
+    .notNull()
+    .references(() => admissionSessions.id, { onDelete: 'cascade' }),
+  prodiId: integer('prodi_id').references(() => programStudi.id, { onDelete: 'set null' }),
+  namaKomponen: varchar('nama_komponen', { length: 255 }).notNull(),
+  bobot: numeric('bobot', { precision: 5, scale: 2 }).notNull(),
+  tipePenilai: varchar('tipe_penilai', { length: 20 }).notNull().default('admin'),
+  urutan: integer('urutan').default(0).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const selectionScores = pgTable(
+  'selection_scores',
+  {
+    id: serial('id').primaryKey(),
+    applicationId: integer('application_id')
+      .notNull()
+      .references(() => applications.id, { onDelete: 'cascade' }),
+    componentId: integer('component_id')
+      .notNull()
+      .references(() => selectionComponents.id, { onDelete: 'restrict' }),
+    score: numeric('score', { precision: 5, scale: 2 }).notNull(),
+    scoredBy: integer('scored_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    notes: text('notes'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    unq: unique('selection_scores_app_component_unique').on(t.applicationId, t.componentId),
+  }),
+);
+
+export const examSchedules = pgTable('exam_schedules', {
+  id: serial('id').primaryKey(),
+  applicationId: integer('application_id')
+    .notNull()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  sessionId: integer('session_id')
+    .notNull()
+    .references(() => admissionSessions.id, { onDelete: 'cascade' }),
+  reviewerId: integer('reviewer_id').references(() => users.id, { onDelete: 'set null' }),
+  tipeUjian: varchar('tipe_ujian', { length: 50 }).notNull(),
+  tanggal: date('tanggal').notNull(),
+  waktuMulai: varchar('waktu_mulai', { length: 10 }).notNull(),
+  waktuSelesai: varchar('waktu_selesai', { length: 10 }),
+  lokasiType: varchar('lokasi_type', { length: 20 }).notNull().default('kampus'),
+  lokasiDetail: text('lokasi_detail'),
+  catatan: text('catatan'),
+  isCompleted: boolean('is_completed').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const applicationLogs = pgTable('application_logs', {
+  id: serial('id').primaryKey(),
+  applicationId: integer('application_id')
+    .notNull()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  statusFrom: applicationStatusEnum('status_from'),
+  statusTo: applicationStatusEnum('status_to').notNull(),
+  message: text('message'),
+  createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const reRegistrationPayments = pgTable('re_registration_payments', {
+  id: serial('id').primaryKey(),
+  applicationId: integer('application_id')
+    .notNull()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  nominal: integer('nominal').notNull(),
+  buktiBayar: text('bukti_bayar').notNull(),
+  bankAsal: varchar('bank_asal', { length: 100 }),
+  namaPengirim: varchar('nama_pengirim', { length: 255 }),
+  isVerified: boolean('is_verified').default(false).notNull(),
+  verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
+  verifiedAt: timestamp('verified_at'),
+  rejectionNote: text('rejection_note'),
+  paidAt: timestamp('paid_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// ADMISI RELATIONS
+// ────────────────────────────────────────────────────────────────────────────
+
+export const admissionSessionsRelations = relations(admissionSessions, ({ many }) => ({
+  sessionProdis: many(admissionSessionProdis),
+  documentRequirements: many(documentRequirements),
+  applications: many(applications),
+  examSchedules: many(examSchedules),
+  selectionComponents: many(selectionComponents),
+}));
+
+export const admissionSessionProdisRelations = relations(admissionSessionProdis, ({ one }) => ({
+  session: one(admissionSessions, {
+    fields: [admissionSessionProdis.sessionId],
+    references: [admissionSessions.id],
+  }),
+  prodi: one(programStudi, {
+    fields: [admissionSessionProdis.prodiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const documentRequirementsRelations = relations(documentRequirements, ({ one, many }) => ({
+  session: one(admissionSessions, {
+    fields: [documentRequirements.sessionId],
+    references: [admissionSessions.id],
+  }),
+  prodi: one(programStudi, {
+    fields: [documentRequirements.prodiId],
+    references: [programStudi.id],
+  }),
+  applicantDocuments: many(applicantDocuments),
+}));
+
+export const applicationsRelations = relations(applications, ({ one, many }) => ({
+  user: one(users, {
+    fields: [applications.userId],
+    references: [users.id],
+  }),
+  session: one(admissionSessions, {
+    fields: [applications.sessionId],
+    references: [admissionSessions.id],
+  }),
+  prodi1: one(programStudi, {
+    fields: [applications.prodiPilihan1],
+    references: [programStudi.id],
+  }),
+  prodi2: one(programStudi, {
+    fields: [applications.prodiPilihan2],
+    references: [programStudi.id],
+  }),
+  documents: many(applicantDocuments),
+  scores: many(selectionScores),
+  examSchedules: many(examSchedules),
+  logs: many(applicationLogs),
+  payments: many(reRegistrationPayments),
+}));
+
+export const applicantDocumentsRelations = relations(applicantDocuments, ({ one }) => ({
+  application: one(applications, {
+    fields: [applicantDocuments.applicationId],
+    references: [applications.id],
+  }),
+  requirement: one(documentRequirements, {
+    fields: [applicantDocuments.requirementId],
+    references: [documentRequirements.id],
+  }),
+  verifiedByUser: one(users, {
+    fields: [applicantDocuments.verifiedBy],
+    references: [users.id],
+  }),
+}));
+
+export const selectionComponentsRelations = relations(selectionComponents, ({ one, many }) => ({
+  session: one(admissionSessions, {
+    fields: [selectionComponents.sessionId],
+    references: [admissionSessions.id],
+  }),
+  prodi: one(programStudi, {
+    fields: [selectionComponents.prodiId],
+    references: [programStudi.id],
+  }),
+  scores: many(selectionScores),
+}));
+
+export const selectionScoresRelations = relations(selectionScores, ({ one }) => ({
+  application: one(applications, {
+    fields: [selectionScores.applicationId],
+    references: [applications.id],
+  }),
+  component: one(selectionComponents, {
+    fields: [selectionScores.componentId],
+    references: [selectionComponents.id],
+  }),
+  scoredByUser: one(users, {
+    fields: [selectionScores.scoredBy],
+    references: [users.id],
+  }),
+}));
+
+export const examSchedulesRelations = relations(examSchedules, ({ one }) => ({
+  application: one(applications, {
+    fields: [examSchedules.applicationId],
+    references: [applications.id],
+  }),
+  session: one(admissionSessions, {
+    fields: [examSchedules.sessionId],
+    references: [admissionSessions.id],
+  }),
+  reviewer: one(users, {
+    fields: [examSchedules.reviewerId],
+    references: [users.id],
+  }),
+}));
+
+export const applicationLogsRelations = relations(applicationLogs, ({ one }) => ({
+  application: one(applications, {
+    fields: [applicationLogs.applicationId],
+    references: [applications.id],
+  }),
+  createdByUser: one(users, {
+    fields: [applicationLogs.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const reRegistrationPaymentsRelations = relations(reRegistrationPayments, ({ one }) => ({
+  application: one(applications, {
+    fields: [reRegistrationPayments.applicationId],
+    references: [applications.id],
+  }),
+  verifiedByUser: one(users, {
+    fields: [reRegistrationPayments.verifiedBy],
+    references: [users.id],
   }),
 }));

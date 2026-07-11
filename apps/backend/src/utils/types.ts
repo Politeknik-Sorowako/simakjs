@@ -4,7 +4,7 @@ export interface UserPayload {
   id: number;
   email: string;
   nama: string;
-  role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest';
+  role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
 }
 
 export type AuthContext<TBody = any, TQuery = any> = Context & {

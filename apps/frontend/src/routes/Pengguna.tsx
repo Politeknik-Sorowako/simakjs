@@ -121,6 +121,7 @@ export default function Pengguna() {
                         <option value="admin">Admin</option>
                         <option value="prodi">Prodi</option>
                         <option value="keuangan">Keuangan</option>
+                        <option value="calon_mahasiswa">Calon Mahasiswa</option>
                         <option value="guest">Guest</option>
                       </select>
                     </td>

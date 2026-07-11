@@ -29,6 +29,21 @@ import LaporanYudisium from './routes/reports/LaporanYudisium';
 import LaporanMahasiswaKeluar from './routes/reports/LaporanMahasiswaKeluar';
 // Routes imports
 import Login from './routes/Login';
+import AdmisiDaftar from './routes/AdmisiDaftar';
+import AdmisiDashboard from './routes/AdmisiDashboard';
+import AdmisiPendaftaranBaru from './routes/AdmisiPendaftaranBaru';
+import AdmisiDetail from './routes/AdmisiDetail';
+import AdmisiEditPendaftaran from './routes/AdmisiEditPendaftaran';
+import AdmisiDokumen from './routes/AdmisiDokumen';
+import AdmisiDaftarUlang from './routes/AdmisiDaftarUlang';
+import AdmisiManajemenDashboard from './routes/admisi/AdmisiManajemenDashboard';
+import AdmisiSesiList from './routes/admisi/AdmisiSesiList';
+import AdmisiVerifikasi from './routes/admisi/AdmisiVerifikasi';
+import AdmisiDaftarUlangNIM from './routes/admisi/AdmisiDaftarUlangNIM';
+import AdmisiLaporan from './routes/admisi/AdmisiLaporan';
+import AdmisiPenilaian from './routes/admisi/AdmisiPenilaian';
+import AdmisiJadwal from './routes/admisi/AdmisiJadwal';
+import AdmisiSesiDetail from './routes/admisi/AdmisiSesiDetail';
 import Mahasiswa from './routes/Mahasiswa';
 import MahasiswaKeluar from './routes/MahasiswaKeluar';
 import ManajemenCuti from './routes/ManajemenCuti';
@@ -333,6 +348,123 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'prodi']}>
             <LaporanMahasiswaKeluar />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admisi Routes */}
+      <Route path="/daftar" component={AdmisiDaftar} />
+      <Route
+        path="/admisi/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+            <AdmisiDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/pendaftaran/baru"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+            <AdmisiPendaftaranBaru />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/pendaftaran/:id"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa', 'admin']}>
+            <AdmisiDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/pendaftaran/:id/edit"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+            <AdmisiEditPendaftaran />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/pendaftaran/:id/dokumen"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+            <AdmisiDokumen />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/pendaftaran/:id/daftar-ulang"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa', 'admin']}>
+            <AdmisiDaftarUlang />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Admin PMB Routes */}
+      <Route
+        path="/admisi/manajemen"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiManajemenDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/sesi"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiSesiList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/sesi/:id"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiSesiDetail />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/verifikasi"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiVerifikasi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/penilaian"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiPenilaian />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/jadwal"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiJadwal />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/daftar-ulang"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiDaftarUlangNIM />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/laporan"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiLaporan />
           </ProtectedRoute>
         }
       />

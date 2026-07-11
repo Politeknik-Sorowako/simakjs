@@ -11,6 +11,7 @@ export const userBody = t.Object({
       t.Literal('prodi'),
       t.Literal('keuangan'),
       t.Literal('guest'),
+      t.Literal('calon_mahasiswa'),
     ],
     { default: 'mahasiswa' },
   ),
@@ -24,19 +25,27 @@ export const getAllUsersSchema = {
     description: 'Mengambil semua data pengguna. **Hanya Admin** yang dapat mengakses.',
   },
   response: {
-    200: t.Array(
-      t.Object({
-        id: t.Integer({ default: 1 }),
-        email: t.String({ default: 'user@example.com' }),
-        nama: t.String({ default: 'Nama Pengguna' }),
-        role: t.String({ default: 'mahasiswa' }),
-        isActive: t.Boolean({ default: true }),
-        theme: t.String({ default: 'light' }),
-        avatar: t.Union([t.String(), t.Null()], { default: null }),
-        createdAt: t.Any(),
-        updatedAt: t.Any(),
+    200: t.Object({
+      data: t.Array(
+        t.Object({
+          id: t.Integer({ default: 1 }),
+          email: t.String({ default: 'user@example.com' }),
+          nama: t.String({ default: 'Nama Pengguna' }),
+          role: t.String({ default: 'mahasiswa' }),
+          isActive: t.Boolean({ default: true }),
+          theme: t.String({ default: 'light' }),
+          avatar: t.Union([t.String(), t.Null()], { default: null }),
+          createdAt: t.Any(),
+          updatedAt: t.Any(),
+        }),
+      ),
+      meta: t.Object({
+        total: t.Number({ default: 0 }),
+        page: t.Number({ default: 1 }),
+        limit: t.Number({ default: 10 }),
+        totalPages: t.Number({ default: 1 }),
       }),
-    ),
+    }),
   },
 };
 
@@ -114,6 +123,7 @@ export const updateRoleSchema = {
         t.Literal('prodi'),
         t.Literal('keuangan'),
         t.Literal('guest'),
+        t.Literal('calon_mahasiswa'),
       ],
       { default: 'mahasiswa' },
     ),
@@ -153,6 +163,7 @@ export const generateAccountsSchema = {
             t.Literal('dosen'),
             t.Literal('mahasiswa'),
             t.Literal('guest'),
+            t.Literal('calon_mahasiswa'),
           ],
           { default: 'mahasiswa' },
         ),

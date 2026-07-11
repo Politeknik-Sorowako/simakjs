@@ -78,6 +78,13 @@
       "when": 1783616715335,
       "tag": "0010_cultured_cobalt_man",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783691045440,
+      "tag": "0011_add_admisi_tables",
+      "breakpoints": true
     }
   ]
 }

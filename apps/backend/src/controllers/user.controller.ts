@@ -122,7 +122,7 @@ export class UserController {
       }
 
       const newRole = (body as any)?.role;
-      const validRoles = ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest'];
+      const validRoles = ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest', 'calon_mahasiswa'];
       if (!newRole || !validRoles.includes(newRole)) {
         set.status = 400;
         return { error: 'Peran tidak valid' };
