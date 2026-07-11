@@ -72,8 +72,9 @@ export const admisiController = {
     return fetchApi<any>(`/admisi/documents/${documentId}`, { method: 'DELETE' });
   },
 
-  getDocumentRequirements() {
-    return fetchApi<{ data: any[] }>('/admisi/document-requirements');
+  getDocumentRequirements(sessionId?: number) {
+    const qs = sessionId ? `?sessionId=${sessionId}` : '';
+    return fetchApi<{ data: any[] }>(`/admisi/document-requirements${qs}`);
   },
 
   // Daftar Ulang

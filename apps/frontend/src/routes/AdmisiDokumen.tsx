@@ -17,13 +17,20 @@ export default function AdmisiDokumen() {
     admisiController.getApplicationDetail(id).then((r) => r.data),
   );
 
-  const [docs, { refetch }] = createResource(() => Number(params.id), (id) =>
+  const [docs, { refetch: refetchDocs }] = createResource(() => Number(params.id), (id) =>
     admisiController.getDocuments(id).then((r) => r.data),
+  );
+
+  const [requirements] = createResource(
+    () => app()?.sessionId,
+    (sessionId) =>
+      admisiController.getDocumentRequirements(sessionId).then((r) => r.data),
   );
 
   const handleUpload = async (requirementId: number) => {
     const input = document.createElement('input');
     input.type = 'file';
+    input.accept = '.jpg,.jpeg,.png,.pdf';
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
@@ -33,7 +40,7 @@ export default function AdmisiDokumen() {
       try {
         await admisiController.uploadDocument(Number(params.id), fd);
         toast.showToast('Dokumen berhasil diupload!', 'success');
-        refetch();
+        refetchDocs();
       } catch (err: any) {
         toast.showToast(err.message || 'Gagal upload', 'error');
       }
@@ -51,7 +58,7 @@ export default function AdmisiDokumen() {
       toast.showToast('Link berhasil dikirim!', 'success');
       setShowLinkInput(null);
       setLinkValue('');
-      refetch();
+      refetchDocs();
     } catch (err: any) {
       toast.showToast(err.message || 'Gagal', 'error');
     }
@@ -61,11 +68,14 @@ export default function AdmisiDokumen() {
     try {
       await admisiController.deleteDocument(documentId);
       toast.showToast('Dokumen dihapus', 'success');
-      refetch();
+      refetchDocs();
     } catch (err: any) {
       toast.showToast(err.message || 'Gagal hapus', 'error');
     }
   };
+
+  const uploadedDocsFor = (requirementId: number) =>
+    docs()?.filter((d: any) => d.requirementId === requirementId) || [];
 
   return (
     <MainLayout>
@@ -77,25 +87,72 @@ export default function AdmisiDokumen() {
         <h1 class="text-2xl font-bold mb-2">Kelola Dokumen</h1>
         <p class="text-sm text-secondary-500 mb-6">Upload dokumen persyaratan sesuai sesi admisi.</p>
 
-        <Show when={app.loading}>
+        <Show when={!requirements() && !app()}>
           <div class="text-center py-8 text-secondary-400">Memuat...</div>
         </Show>
 
-        <Show when={app()}>
-          <div class="space-y-3">
-            <For each={[] as any[]}>
-              {(req: any) => (
+        <Show when={requirements() && requirements()!.length === 0}>
+          <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5 text-center text-sm text-amber-700 dark:text-amber-400">
+            Belum ada syarat dokumen yang ditetapkan untuk sesi ini. Silakan hubungi admin.
+          </div>
+        </Show>
+
+        <div class="space-y-4">
+          <For each={requirements() || []}>
+            {(req: any) => {
+              const uploaded = uploadedDocsFor(req.id);
+              const latest = uploaded[uploaded.length - 1];
+              return (
                 <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
-                  <div class="flex items-center justify-between">
-                    <div>
-                      <div class="font-medium text-sm">{req.namaDokumen}</div>
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-sm">{req.namaDokumen}</span>
+                        {req.isWajib ? <span class="text-xs text-red-500 font-semibold">*wajib</span> : <span class="text-xs text-secondary-400">opsional</span>}
+                        {latest && (
+                          <span class={`text-xs px-1.5 py-0.5 rounded-full ${latest.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {latest.isVerified ? 'Terverifikasi' : 'Menunggu'}
+                          </span>
+                        )}
+                      </div>
                       <Show when={req.deskripsi}>
-                        <div class="text-xs text-secondary-400">{req.deskripsi}</div>
+                        <div class="text-xs text-secondary-400 mt-0.5">{req.deskripsi}</div>
+                      </Show>
+                      <div class="text-xs text-secondary-400 mt-0.5">
+                        Format: <span class="font-mono">{req.formatFile || 'semua format'}</span> — Maks: {req.maxSizeKb}KB
+                      </div>
+
+                      {/* Uploaded files */}
+                      <Show when={uploaded.length > 0}>
+                        <div class="mt-2 space-y-1">
+                          <For each={uploaded}>
+                            {(doc: any) => (
+                              <div class="flex items-center justify-between text-xs pl-3 border-l-2 border-secondary-300 dark:border-secondary-600">
+                                <div class="flex items-center gap-2">
+                                  <span>{doc.originalName || 'Link Google Drive'}</span>
+                                  <Show when={doc.rejectionNote}>
+                                    <span class="text-red-500">— {doc.rejectionNote}</span>
+                                  </Show>
+                                </div>
+                                <button onClick={() => handleDelete(doc.id)} class="text-red-500 hover:text-red-700 flex-shrink-0 ml-2">
+                                  Hapus
+                                </button>
+                              </div>
+                            )}
+                          </For>
+                        </div>
                       </Show>
                     </div>
-                    <div class="flex gap-2">
-                      <Button size="sm" onClick={() => handleUpload(req.id)}>Upload File</Button>
-                      <Button size="sm" variant="secondary" onClick={() => setShowLinkInput(showLinkInput() === req.id ? null : req.id)}>
+
+                    <div class="flex gap-2 ml-4 flex-shrink-0">
+                      <Button size="sm" onClick={() => handleUpload(req.id)}>
+                        {latest ? 'Upload Ulang' : 'Upload File'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setShowLinkInput(showLinkInput() === req.id ? null : req.id)}
+                      >
                         Link
                       </Button>
                     </div>
@@ -108,39 +165,24 @@ export default function AdmisiDokumen() {
                         placeholder="Tempel link Google Drive..."
                         value={linkValue()}
                         onInput={(e) => setLinkValue(e.currentTarget.value)}
-                        class="flex-1 px-3 py-2 border border-secondary-300 rounded-lg text-sm"
+                        class="flex-1 px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800"
                       />
-                      <Button size="sm" onClick={() => handleLinkSubmit(req.id)}>Kirim</Button>
+                      <Button size="sm" onClick={() => handleLinkSubmit(req.id)} disabled={!linkValue()}>
+                        Kirim
+                      </Button>
                     </div>
                   </Show>
-
-                  {/* Uploaded docs for this requirement */}
-                  <For each={docs()?.filter((d: any) => d.requirementId === req.id) || []}>
-                    {(doc: any) => (
-                      <div class="mt-2 pl-4 border-l-2 border-secondary-200 dark:border-secondary-600">
-                        <div class="flex items-center justify-between text-xs">
-                          <div class="flex items-center gap-2">
-                            <span>{doc.originalName || 'Link'}</span>
-                            <span class={`px-1.5 py-0.5 rounded-full ${doc.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                              {doc.isVerified ? 'OK' : 'Verifikasi'}
-                            </span>
-                          </div>
-                          <button onClick={() => handleDelete(doc.id)} class="text-red-500 hover:text-red-700">Hapus</button>
-                        </div>
-                        <Show when={doc.rejectionNote}>
-                          <div class="text-xs text-red-500 mt-0.5">Alasan: {doc.rejectionNote}</div>
-                        </Show>
-                      </div>
-                    )}
-                  </For>
                 </div>
-              )}
-            </For>
-          </div>
-        </Show>
+              );
+            }}
+          </For>
+        </div>
 
-        <div class="mt-6">
+        <div class="mt-6 flex gap-3">
           <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}>Selesai</Button>
+          <Button variant="secondary" onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}>
+            Kembali
+          </Button>
         </div>
       </div>
     </MainLayout>
