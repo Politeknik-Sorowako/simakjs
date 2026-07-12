@@ -116,7 +116,7 @@ export class AdmisiAdminController {
     }
   }
 
-  static async getApplications({ query }: AuthContext<any, any, { sessionId?: string; prodiId?: string; status?: string; search?: string; page?: string; limit?: string }) {
+  static async getApplications({ query }: any) {
     const result = await AdmisiAdminService.getApplications({
       sessionId: query.sessionId ? Number(query.sessionId) : undefined,
       prodiId: query.prodiId ? Number(query.prodiId) : undefined,
