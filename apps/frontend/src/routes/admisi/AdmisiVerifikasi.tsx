@@ -373,6 +373,11 @@ export default function AdmisiVerifikasi() {
                                         }} class="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded hover:bg-red-200">✗</button>
                                       </>
                                     )}
+                                    {latest.isVerified && (
+                                      <button onClick={() => {
+                                        if (confirm('Batalkan verifikasi dokumen ini?')) handleVerify(latest.id, false, 'Verifikasi dibatalkan admin');
+                                      }} class="text-xs px-2 py-0.5 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Batalkan</button>
+                                    )}
                                   </div>
                                 )}
                                 {isRejected && <span class="text-xs text-red-500">{latest.rejectionNote}</span>}
