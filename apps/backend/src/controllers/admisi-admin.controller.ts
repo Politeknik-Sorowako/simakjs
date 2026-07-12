@@ -153,7 +153,7 @@ export class AdmisiAdminController {
       const { db } = await import('../utils/db');
       const { documentRequirements, applicantDocuments } = await import('../models/schema');
       const { eq, and, sql } = await import('drizzle-orm');
-      const { AdmisiService } = await import('../services/admisi.service');
+      const { AdmisiAdminService } = await import('../services/admisi-admin.service');
 
       const [req] = await db
         .select({ namaDokumen: documentRequirements.namaDokumen })
@@ -180,7 +180,7 @@ export class AdmisiAdminController {
         .where(and(eq(applicantDocuments.applicationId, Number(params.id)), eq(applicantDocuments.requirementId, requirementId)));
 
       const version = (verResult?.count || 0) + 1;
-      const doc = await AdmisiService.uploadDocument(Number(params.id), requirementId, 1, { path: fullPath, name: newName, size: file.size, type: file.type });
+      const doc = await AdmisiAdminService.adminUploadDocument(Number(params.id), requirementId, { path: fullPath, name: newName, size: file.size, type: file.type });
 
       set.status = 201;
       return { message: `Dokumen berhasil diupload oleh admin`, documentId: doc.id };

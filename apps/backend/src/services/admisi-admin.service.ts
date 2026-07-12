@@ -171,6 +171,24 @@ export class AdmisiAdminService {
 
   // ─── APPLICATION / VERIFICATION ──────────────────────────────────
 
+  static async adminUploadDocument(applicationId: number, requirementId: number, fileData: { path: string; name: string; size: number; type: string }) {
+    const [doc] = await db
+      .insert(applicantDocuments)
+      .values({
+        applicationId,
+        requirementId,
+        filePath: fileData.path,
+        originalName: fileData.name,
+        fileSizeKb: Math.round(fileData.size / 1024),
+        mimeType: fileData.type,
+        uploadMethod: 'upload',
+        isVerified: false,
+        version: 1,
+      })
+      .returning({ id: applicantDocuments.id });
+    return doc;
+  }
+
   static async updateAppBiodata(applicationId: number, data: Record<string, any>) {
     const [updated] = await db
       .update(applications)
