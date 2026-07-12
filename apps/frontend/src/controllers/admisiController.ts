@@ -88,4 +88,19 @@ export const admisiController = {
     const qs = sessionId ? `?sessionId=${sessionId}` : '';
     return fetchApi<{ data: any[] }>(`/admisi/announcements${qs}`);
   },
+
+  getActiveBanks() {
+    return fetchApi<{ data: any[] }>('/admisi/payment/banks');
+  },
+
+  generateVA(applicationId: number, vaBankId: number) {
+    return fetchApi<{ message: string; data: any }>(`/admisi/applications/${applicationId}/payment/generate-va`, {
+      method: 'POST',
+      body: JSON.stringify({ vaBankId }),
+    });
+  },
+
+  getPaymentStatus(applicationId: number) {
+    return fetchApi<{ data: any[] }>(`/admisi/applications/${applicationId}/payment/status`);
+  },
 };

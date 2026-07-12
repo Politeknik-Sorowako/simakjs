@@ -37,12 +37,14 @@ import AdmisiDetail from './routes/AdmisiDetail';
 import AdmisiEditPendaftaran from './routes/AdmisiEditPendaftaran';
 import AdmisiDokumen from './routes/AdmisiDokumen';
 import AdmisiDaftarUlang from './routes/AdmisiDaftarUlang';
+import AdmisiPembayaran from './routes/AdmisiPembayaran';
 import AdmisiManajemenDashboard from './routes/admisi/AdmisiManajemenDashboard';
 import AdmisiSesiList from './routes/admisi/AdmisiSesiList';
 import AdmisiVerifikasi from './routes/admisi/AdmisiVerifikasi';
 import AdmisiDaftarUlangNIM from './routes/admisi/AdmisiDaftarUlangNIM';
 import AdmisiLaporan from './routes/admisi/AdmisiLaporan';
 import AdmisiPenilaian from './routes/admisi/AdmisiPenilaian';
+import AdmisiVABanks from './routes/admisi/AdmisiVABanks';
 import AdmisiJadwal from './routes/admisi/AdmisiJadwal';
 import AdmisiSesiDetail from './routes/admisi/AdmisiSesiDetail';
 import AdmisiImportUjian from './routes/admisi/AdmisiImportUjian';
@@ -414,6 +416,14 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/admisi/pembayaran/:id"
+        element={
+          <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+            <AdmisiPembayaran />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Admin PMB Routes */}
       <Route
@@ -501,6 +511,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AdmisiPengumuman />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admisi/manajemen/va-banks"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdmisiVABanks />
           </ProtectedRoute>
         }
       />

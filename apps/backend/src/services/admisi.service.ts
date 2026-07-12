@@ -1,5 +1,5 @@
 import { db } from '../utils/db';
-import { users, admissionSessions, admissionSessionProdis, applications, applicationLogs, documentRequirements, applicantDocuments, reRegistrationPayments, programStudi } from '../models/schema';
+import { users, admissionSessions, admissionSessionProdis, applications, applicationLogs, documentRequirements, applicantDocuments, reRegistrationPayments, programStudi, vaBanks, paymentVirtualAccounts } from '../models/schema';
 import { eq, and, lt, gt, sql } from 'drizzle-orm';
 import { createHash } from 'crypto';
 
@@ -422,5 +422,81 @@ export class AdmisiService {
       .from(applicationLogs)
       .where(eq(applicationLogs.applicationId, applicationId))
       .orderBy(applicationLogs.createdAt);
+  }
+
+  // ─── VA PAYMENT ────────────────────────────────────────────────
+
+  static async getActiveBanks() {
+    return db
+      .select()
+      .from(vaBanks)
+      .where(eq(vaBanks.isActive, true))
+      .orderBy(vaBanks.nama);
+  }
+
+  static async generateVA(applicationId: number, userId: number, vaBankId: number) {
+    const [app] = await db
+      .select()
+      .from(applications)
+      .where(and(eq(applications.id, applicationId), eq(applications.userId, userId)))
+      .limit(1);
+    if (!app) throw new Error('Pendaftaran tidak ditemukan');
+    if (app.status !== 'draft') throw new Error('Status pendaftaran tidak memungkinkan pembayaran');
+
+    // Get fee from session_prodi
+    const [sp] = await db
+      .select({ biayaDaftar: admissionSessionProdis.biayaDaftar })
+      .from(admissionSessionProdis)
+      .where(
+        and(
+          eq(admissionSessionProdis.sessionId, app.sessionId),
+          eq(admissionSessionProdis.prodiId, app.prodiPilihan1),
+        ),
+      )
+      .limit(1);
+    const nominal = sp?.biayaDaftar || 150000;
+
+    // Get bank info
+    const [bank] = await db
+      .select({ kode: vaBanks.kode })
+      .from(vaBanks)
+      .where(eq(vaBanks.id, vaBankId))
+      .limit(1);
+    if (!bank) throw new Error('Bank tidak ditemukan');
+
+    // Generate VA number: bank_code + uniq_id + app_id
+    const uniq = String(Date.now()).slice(-6);
+    const vaNumber = `988${uniq}${String(applicationId).padStart(4, '0')}`;
+
+    // Expire in 7 days
+    const expiredAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const [va] = await db
+      .insert(paymentVirtualAccounts)
+      .values({ applicationId, vaBankId, vaNumber, nominal, expiredAt })
+      .returning();
+
+    // Update app status
+    await db
+      .update(applications)
+      .set({ status: 'awaiting_payment' })
+      .where(eq(applications.id, applicationId));
+
+    await db.insert(applicationLogs).values({
+      applicationId,
+      statusTo: 'awaiting_payment',
+      message: `VA dibuat: ${vaNumber} (${bank.kode})`,
+      createdBy: userId,
+    });
+
+    return { ...va, bankKode: bank.kode };
+  }
+
+  static async getPaymentStatus(applicationId: number) {
+    return db
+      .select()
+      .from(paymentVirtualAccounts)
+      .where(eq(paymentVirtualAccounts.applicationId, applicationId))
+      .orderBy(paymentVirtualAccounts.createdAt);
   }
 }

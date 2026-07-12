@@ -120,6 +120,26 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
     detail: { tags: ['Admisi - Admin'], summary: 'Daftar semua program studi' },
   })
 
+  // ─── VA BANKS ─────────────────────────────────────────────────
+  .get('/va-banks', AdmisiAdminController.getAllVABanks, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar bank VA' },
+  })
+  .post('/va-banks', AdmisiAdminController.createVABank, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Tambah bank VA' },
+  })
+  .put('/va-banks/:id', AdmisiAdminController.updateVABank, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Edit bank VA' },
+  })
+  .delete('/va-banks/:id', AdmisiAdminController.deleteVABank, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Hapus bank VA' },
+  })
+  .get('/pending-payments', AdmisiAdminController.getPendingPayments, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar pembayaran menunggu verifikasi' },
+  })
+  .post('/payments/:id/verify', AdmisiAdminController.verifyPaymentVA, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Verifikasi pembayaran VA' },
+  })
+
   // ─── ANNOUNCEMENTS ──────────────────────────────────────────────
   .post('/announcements', AdmisiAdminController.createAnnouncement, {
     type: 'none',

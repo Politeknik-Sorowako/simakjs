@@ -18,6 +18,7 @@ export const roleEnum = pgEnum('user_role', ['admin', 'dosen', 'mahasiswa', 'pro
 
 export const applicationStatusEnum = pgEnum('application_status', [
   'draft',
+  'awaiting_payment',
   'submitted',
   'documents_verified',
   'documents_rejected',
@@ -1384,6 +1385,64 @@ export const announcements = pgTable('announcements', {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// VA BANKS & PAYMENT VIRTUAL ACCOUNTS
+// ────────────────────────────────────────────────────────────────────────────
+
+export const vaBanks = pgTable('va_banks', {
+  id: serial('id').primaryKey(),
+  kode: varchar('kode', { length: 20 }).notNull().unique(),
+  nama: varchar('nama', { length: 100 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  isMidtrans: boolean('is_midtrans').default(false).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const paymentVirtualAccounts = pgTable('payment_virtual_accounts', {
+  id: serial('id').primaryKey(),
+  applicationId: integer('application_id')
+    .notNull()
+    .references(() => applications.id, { onDelete: 'cascade' }),
+  vaBankId: integer('va_bank_id')
+    .notNull()
+    .references(() => vaBanks.id, { onDelete: 'restrict' }),
+  vaNumber: varchar('va_number', { length: 50 }).notNull(),
+  nominal: integer('nominal').notNull(),
+  isPaid: boolean('is_paid').default(false).notNull(),
+  paidAt: timestamp('paid_at'),
+  verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
+  expiredAt: timestamp('expired_at'),
+  midtransTransactionId: varchar('midtrans_transaction_id', { length: 100 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const vaBanksRelations = relations(vaBanks, ({ many }) => ({
+  payments: many(paymentVirtualAccounts),
+}));
+
+export const paymentVirtualAccountsRelations = relations(paymentVirtualAccounts, ({ one }) => ({
+  application: one(applications, {
+    fields: [paymentVirtualAccounts.applicationId],
+    references: [applications.id],
+  }),
+  bank: one(vaBanks, {
+    fields: [paymentVirtualAccounts.vaBankId],
+    references: [vaBanks.id],
+  }),
+  verifier: one(users, {
+    fields: [paymentVirtualAccounts.verifiedBy],
+    references: [users.id],
+  }),
+}));
 
 export const announcementsRelations = relations(announcements, ({ one }) => ({
   session: one(admissionSessions, {

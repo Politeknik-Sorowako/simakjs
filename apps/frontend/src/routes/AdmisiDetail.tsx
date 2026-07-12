@@ -8,6 +8,7 @@ import TimelineStatus from '../components/admisi/TimelineStatus';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
+  awaiting_payment: 'bg-yellow-100 text-yellow-700',
   submitted: 'bg-blue-100 text-blue-700',
   documents_verified: 'bg-teal-100 text-teal-700',
   documents_rejected: 'bg-red-100 text-red-700',
@@ -22,6 +23,7 @@ const statusColors: Record<string, string> = {
 
 const statusLabels: Record<string, string> = {
   draft: 'Draft',
+  awaiting_payment: 'Menunggu Pembayaran',
   submitted: 'Terkirim',
   documents_verified: 'Dokumen Terverifikasi',
   documents_rejected: 'Dokumen Ditolak',
@@ -174,7 +176,28 @@ export default function AdmisiDetail() {
           }} />
 
           {/* Actions */}
-          <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected' || app()?.status === 'returned'}>
+          <Show when={app()?.status === 'draft'}>
+            <div class="flex gap-3">
+              <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/edit`)} variant="secondary">
+                Edit Biodata
+              </Button>
+              <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)}>
+                Bayar Sekarang →
+              </Button>
+            </div>
+          </Show>
+
+          <Show when={app()?.status === 'awaiting_payment'}>
+            <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+              <p class="text-sm font-semibold text-amber-700 dark:text-amber-400">⏳ Menunggu Pembayaran</p>
+              <p class="text-xs text-amber-600 dark:text-amber-300 mt-1">Lakukan pembayaran melalui VA yang telah digenerate.</p>
+              <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)} variant="secondary" class="mt-2">
+                Cek Status Pembayaran
+              </Button>
+            </div>
+          </Show>
+
+          <Show when={app()?.status === 'submitted' || app()?.status === 'documents_rejected' || app()?.status === 'returned'}>
             <div class="flex gap-3">
               <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/edit`)} variant="secondary">
                 Edit Biodata
@@ -182,7 +205,7 @@ export default function AdmisiDetail() {
               <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/dokumen`)} variant="secondary">
                 Kelola Dokumen
               </Button>
-              <Show when={app()?.status === 'draft' || app()?.status === 'returned'}>
+              <Show when={app()?.status === 'submitted' || app()?.status === 'returned'}>
                 <Button onClick={handleSubmit} disabled={submitting()}>
                   {submitting() ? 'Mengirim...' : 'Submit Pendaftaran'}
                 </Button>

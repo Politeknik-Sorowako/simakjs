@@ -14,6 +14,8 @@ import {
   mahasiswa,
   programStudi,
   announcements,
+  vaBanks,
+  paymentVirtualAccounts,
 } from '../models/schema';
 import { db } from '../utils/db';
 import { eq, and, sql, inArray, like } from 'drizzle-orm';
@@ -775,5 +777,50 @@ export class AdmisiAdminService {
 
   static async deleteAnnouncement(id: number) {
     await db.delete(announcements).where(eq(announcements.id, id));
+  }
+
+  // ─── VA BANKS ──────────────────────────────────────────────────
+
+  static async getAllVABanks() {
+    return db.select().from(vaBanks).orderBy(vaBanks.nama);
+  }
+
+  static async createVABank(data: { kode: string; nama: string; isMidtrans?: boolean }) {
+    const [bank] = await db.insert(vaBanks).values({ kode: data.kode, nama: data.nama, isMidtrans: data.isMidtrans || false }).returning();
+    return bank;
+  }
+
+  static async updateVABank(id: number, data: any) {
+    const [bank] = await db.update(vaBanks).set(data).where(eq(vaBanks.id, id)).returning();
+    return bank;
+  }
+
+  static async deleteVABank(id: number) {
+    await db.delete(vaBanks).where(eq(vaBanks.id, id));
+  }
+
+  // ─── PAYMENT VERIFICATION ──────────────────────────────────────
+
+  static async getPendingPayments() {
+    return db
+      .select()
+      .from(paymentVirtualAccounts)
+      .where(and(eq(paymentVirtualAccounts.isPaid, false), sql`${paymentVirtualAccounts.expiredAt} > NOW()`))
+      .orderBy(paymentVirtualAccounts.createdAt);
+  }
+
+  static async verifyPayment(vaId: number, adminId: number) {
+    const [va] = await db
+      .update(paymentVirtualAccounts)
+      .set({ isPaid: true, paidAt: new Date(), verifiedBy: adminId })
+      .where(eq(paymentVirtualAccounts.id, vaId))
+      .returning();
+
+    if (!va) throw new Error('VA tidak ditemukan');
+
+    // Update app status to submitted
+    await this.updateApplicationStatus(va.applicationId, 'submitted', adminId, 'Pembayaran diverifikasi');
+
+    return va;
   }
 }

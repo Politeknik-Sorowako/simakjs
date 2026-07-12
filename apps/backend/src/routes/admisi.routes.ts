@@ -62,4 +62,13 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
   })
   .get('/announcements/:id/file', AdmisiController.downloadAnnouncementFile, {
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Download file pengumuman' },
+  })
+  .get('/payment/banks', AdmisiController.getActiveBanks, {
+    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Daftar bank VA aktif' },
+  })
+  .post('/applications/:id/payment/generate-va', AdmisiController.generateVA, {
+    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Generate VA untuk pembayaran' },
+  })
+  .get('/applications/:id/payment/status', AdmisiController.getPaymentStatus, {
+    detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Status pembayaran' },
   });

@@ -20,6 +20,7 @@ interface Props {
 
 const stageOrder = [
   'draft',
+  'awaiting_payment',
   'submitted',
   'documents_verified',
   'documents_rejected',
@@ -33,6 +34,7 @@ const stageOrder = [
 
 const stageMap: Record<string, { label: string; icon: string }> = {
   draft: { label: 'Pendaftaran', icon: '📝' },
+  awaiting_payment: { label: 'Pembayaran', icon: '💳' },
   submitted: { label: 'Pendaftaran', icon: '📝' },
   documents_verified: { label: 'Verifikasi Dokumen', icon: '📄' },
   documents_rejected: { label: 'Verifikasi Dokumen', icon: '📄' },
@@ -57,6 +59,7 @@ export default function TimelineStatus(props: Props) {
   const currentIdx = () => {
     const s = props.status;
     if (s === 'returned') return 0;
+    if (s === 'awaiting_payment') return 0;
     if (s === 'documents_rejected') return 1;
     if (s === 'failed') return 3;
     if (s === 're_registration') return 4;
@@ -173,7 +176,10 @@ export default function TimelineStatus(props: Props) {
       {/* Status description */}
       <div class="mt-4 pt-3 border-t border-secondary-100 dark:border-secondary-700">
         <Show when={props.status === 'draft'}>
-          <p class="text-xs text-secondary-500">Lengkapi biodata dan upload dokumen, lalu submit pendaftaran.</p>
+          <p class="text-xs text-secondary-500">Lakukan pembayaran untuk melanjutkan ke tahap upload dokumen.</p>
+        </Show>
+        <Show when={props.status === 'awaiting_payment'}>
+          <p class="text-xs text-amber-600">Pembayaran sedang diproses. Setelah diverifikasi, Anda bisa upload dokumen.</p>
         </Show>
         <Show when={props.status === 'submitted'}>
           <p class="text-xs text-secondary-500">Dokumen sedang diperiksa oleh admin. Pantau terus dashboard untuk hasil verifikasi.</p>

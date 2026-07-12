@@ -325,4 +325,36 @@ export class AdmisiController {
       return { error: 'Gagal mengunduh file' };
     }
   }
+
+  // ─── VA PAYMENT ────────────────────────────────────────────────
+
+  static async getActiveBanks() {
+    const banks = await AdmisiService.getActiveBanks();
+    return { data: banks };
+  }
+
+  static async generateVA({ params, body, getCurrentUser, set }: any) {
+    try {
+      const user = await getCurrentUser();
+      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      const va = await AdmisiService.generateVA(Number(params.id), user.id, body.vaBankId);
+      set.status = 201;
+      return { message: 'VA berhasil digenerate', data: va };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getPaymentStatus({ params, getCurrentUser, set }: any) {
+    try {
+      const user = await getCurrentUser();
+      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      const data = await AdmisiService.getPaymentStatus(Number(params.id));
+      return { data };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
 }

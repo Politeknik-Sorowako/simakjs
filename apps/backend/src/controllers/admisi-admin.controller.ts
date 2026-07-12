@@ -336,6 +336,61 @@ export class AdmisiAdminController {
     }
   }
 
+  // ─── VA BANKS ──────────────────────────────────────────────────
+
+  static async getAllVABanks() {
+    const banks = await AdmisiAdminService.getAllVABanks();
+    return { data: banks };
+  }
+
+  static async createVABank({ body, set }: any) {
+    try {
+      const bank = await AdmisiAdminService.createVABank(body);
+      set.status = 201;
+      return { message: 'Bank VA ditambahkan', bankId: bank.id };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async updateVABank({ params, body, set }: any) {
+    try {
+      await AdmisiAdminService.updateVABank(Number(params.id), body);
+      return { message: 'Bank VA diperbarui' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async deleteVABank({ params, set }: any) {
+    try {
+      await AdmisiAdminService.deleteVABank(Number(params.id));
+      return { message: 'Bank VA dihapus' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  // ─── PAYMENT VERIFICATION ──────────────────────────────────────
+
+  static async getPendingPayments() {
+    const data = await AdmisiAdminService.getPendingPayments();
+    return { data };
+  }
+
+  static async verifyPaymentVA({ params, set }: any) {
+    try {
+      await AdmisiAdminService.verifyPayment(Number(params.id), 1);
+      return { message: 'Pembayaran diverifikasi' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   // ─── ANNOUNCEMENT ────────────────────────────────────────────────
 
   static async announceResults({ params, set }: AuthContext<any, { id: string }>) {

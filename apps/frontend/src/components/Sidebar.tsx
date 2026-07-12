@@ -47,7 +47,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     }
     if (
       ['/admisi/dashboard', '/admisi/sesi', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) => currentPath.startsWith(p)) ||
-      currentPath.startsWith('/admisi/manajemen')
+      currentPath.startsWith('/admisi/manajemen') ||
+      currentPath.startsWith('/admisi/pembayaran')
     ) {
       setIsAdmisiOpen(true);
     }
@@ -1024,6 +1025,20 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   </A>
                 </Show>
                   <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/va-banks"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    Bank VA
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
                   <A
                     href="/admisi/manajemen/pengumuman"
                     onClick={() => props.onClose()}

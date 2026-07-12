@@ -215,6 +215,37 @@ export const admisiAdminController = {
     return fetchApi<{ data: any[] }>('/admisi/admin/prodis');
   },
 
+  // VA Banks
+  getAllVABanks() {
+    return fetchApi<{ data: any[] }>('/admisi/admin/va-banks');
+  },
+
+  createVABank(data: { kode: string; nama: string; isMidtrans?: boolean }) {
+    return fetchApi<any>('/admisi/admin/va-banks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateVABank(id: number, data: any) {
+    return fetchApi<any>(`/admisi/admin/va-banks/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteVABank(id: number) {
+    return fetchApi<any>(`/admisi/admin/va-banks/${id}`, { method: 'DELETE' });
+  },
+
+  getPendingPayments() {
+    return fetchApi<{ data: any[] }>('/admisi/admin/pending-payments');
+  },
+
+  verifyPaymentVA(vaId: number) {
+    return fetchApi<any>(`/admisi/admin/payments/${vaId}/verify`, { method: 'POST' });
+  },
+
   // Announcements
   getAnnouncements(sessionId?: number) {
     const qs = sessionId ? `?sessionId=${sessionId}` : '';
