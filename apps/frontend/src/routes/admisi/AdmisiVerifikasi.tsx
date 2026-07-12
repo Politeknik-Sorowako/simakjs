@@ -194,9 +194,11 @@ export default function AdmisiVerifikasi() {
                       <div class="flex items-center justify-between">
                         <div>
                           <span class="font-semibold">Pilihan Prodi</span>
-                          {editProdi() !== app.id ? (
-                            <p>P1: Prodi #{app.prodiPilihan1}{app.prodiPilihan2 ? ` | P2: Prodi #${app.prodiPilihan2}` : ''}</p>
-                          ) : (
+                          <Show when={editProdi() !== app.id}>
+                            <p>P1: {(() => { const p = allProdis().find((x: any) => x.id === app.prodiPilihan1); return p ? `${p.nama} (${p.jenjang || '-'})` : `#${app.prodiPilihan1}`; })()}
+                              {app.prodiPilihan2 ? ` | P2: ${(() => { const p = allProdis().find((x: any) => x.id === app.prodiPilihan2); return p ? `${p.nama} (${p.jenjang || '-'})` : `#${app.prodiPilihan2}`; })()}` : ''}</p>
+                          </Show>
+                          <Show when={editProdi() === app.id}>
                             <div class="flex gap-2 mt-1 items-center">
                               <select value={newP1() ?? app.prodiPilihan1} onChange={(e) => setNewP1(Number(e.currentTarget.value))}
                                 class="px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800">
@@ -218,7 +220,7 @@ export default function AdmisiVerifikasi() {
                               }} class="text-xs px-2 py-1 bg-brand-600 text-white rounded hover:bg-brand-700">Simpan</button>
                               <button onClick={() => setEditProdi(null)} class="text-xs px-2 py-1 border border-secondary-300 rounded">Batal</button>
                             </div>
-                          )}
+                          </Show>
                         </div>
                         {editProdi() !== app.id && (
                           <button onClick={() => { setEditProdi(app.id); setNewP1(null); setNewP2(null); }}
