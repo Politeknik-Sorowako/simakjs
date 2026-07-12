@@ -27,6 +27,9 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
 
   // ─── SESI PRODI ──────────────────────────────────────────────────
   .post('/sessions/:id/prodis', AdmisiAdminController.addProdiToSession, addSessionProdiSchema)
+  .put('/sessions/:id/prodis/:prodiId', AdmisiAdminController.updateSesiProdi, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Update prodi dalam sesi (kuota, biaya, grade)' },
+  })
   .delete('/sessions/:id/prodis/:prodiId', AdmisiAdminController.removeProdiFromSession, {
     detail: { tags: ['Admisi - Admin'], summary: 'Hapus prodi dari sesi' },
   })

@@ -16,7 +16,9 @@ export default function AdmisiSesiDetail() {
 
   const [showAddProdi, setShowAddProdi] = createSignal(false);
   const [prodiId, setProdiId] = createSignal('');
+  const [biayaDaftar, setBiayaDaftar] = createSignal('');
   const [allProdis, setAllProdis] = createSignal<any[]>([]);
+  const [editBiaya, setEditBiaya] = createSignal<string>(''); // 'prodiId:value' or ''
 
   // Syarat Dokumen state
   const [showAddReq, setShowAddReq] = createSignal(false);
@@ -40,10 +42,12 @@ export default function AdmisiSesiDetail() {
     try {
       await admisiAdminController.addProdiToSession(Number(params.id), {
         prodiId: Number(prodiId()),
+        biayaDaftar: biayaDaftar() ? Number(biayaDaftar()) : undefined,
       });
       toast.showToast('Prodi ditambahkan', 'success');
       setShowAddProdi(false);
       setProdiId('');
+      setBiayaDaftar('');
       refetch();
     } catch (err: any) {
       toast.showToast(err.message, 'error');
@@ -209,17 +213,23 @@ export default function AdmisiSesiDetail() {
               </div>
 
               <Show when={showAddProdi()}>
-                <div class="flex gap-2 mb-3">
+                <div class="flex gap-2 mb-3 flex-wrap">
                   <select
                     value={prodiId()}
                     onChange={(e) => setProdiId(e.currentTarget.value)}
-                    class="flex-1 px-2 py-1 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                    class="flex-1 min-w-[150px] px-2 py-1 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
                   >
                     <option value="">-- Pilih Prodi --</option>
                     <For each={allProdis()}>
                       {(p: any) => <option value={p.id}>{p.nama} ({p.jenjang})</option>}
                     </For>
                   </select>
+                  <input
+                    type="number" placeholder="Biaya daftar (Rp)"
+                    value={biayaDaftar()}
+                    onInput={(e) => setBiayaDaftar(e.currentTarget.value)}
+                    class="w-40 px-2 py-1 border border-secondary-300 rounded text-sm bg-white dark:bg-secondary-800"
+                  />
                   <Button size="sm" onClick={handleAddProdi}>Tambah</Button>
                 </div>
               </Show>
@@ -234,6 +244,33 @@ export default function AdmisiSesiDetail() {
                         <span class={`text-xs px-1.5 py-0.5 rounded-full ${sp.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                           {sp.isActive ? 'Dibuka' : 'Ditutup'}
                         </span>
+                        <Show when={editBiaya() !== `${sp.prodiId}`}>
+                          <Show when={sp.biayaDaftar}>
+                            <span onClick={() => setEditBiaya(String(sp.prodiId))} class="text-xs text-secondary-400 cursor-pointer hover:text-brand-600">
+                              Rp {Number(sp.biayaDaftar).toLocaleString('id-ID')} ✏️
+                            </span>
+                          </Show>
+                          <Show when={!sp.biayaDaftar}>
+                            <span onClick={() => setEditBiaya(String(sp.prodiId))} class="text-xs text-green-600 font-semibold cursor-pointer hover:text-brand-600">
+                              GRATIS ✏️
+                            </span>
+                          </Show>
+                        </Show>
+                        <Show when={editBiaya() === `${sp.prodiId}`}>
+                          <input type="number" defaultValue={sp.biayaDaftar || ''}
+                            ref={(el: any) => setTimeout(() => el?.focus(), 100)}
+                            onBlur={async (e: any) => {
+                              const val = e.currentTarget.value;
+                              try {
+                                await admisiAdminController.updateSesiProdi(Number(params.id), sp.prodiId, { biayaDaftar: val ? Number(val) : null });
+                                setEditBiaya('');
+                                refetch();
+                              } catch { setEditBiaya(''); }
+                            }}
+                            class="w-24 px-1 py-0.5 border border-secondary-300 rounded text-xs bg-white"
+                            placeholder="0 = gratis"
+                          />
+                        </Show>
                       </div>
                       <div class="flex items-center gap-2">
                         <button

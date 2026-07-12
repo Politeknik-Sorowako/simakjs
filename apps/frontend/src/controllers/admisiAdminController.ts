@@ -32,6 +32,13 @@ export const admisiAdminController = {
     });
   },
 
+  updateSesiProdi(sessionId: number, prodiId: number, data: any) {
+    return fetchApi<any>(`/admisi/admin/sessions/${sessionId}/prodis/${prodiId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   removeProdiFromSession(sessionId: number, prodiId: number) {
     return fetchApi<any>(`/admisi/admin/sessions/${sessionId}/prodis/${prodiId}`, {
       method: 'DELETE',

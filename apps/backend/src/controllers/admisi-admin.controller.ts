@@ -51,6 +51,22 @@ export class AdmisiAdminController {
     }
   }
 
+  static async updateSesiProdi({ params, body, set }: any) {
+    try {
+      const { db } = await import('../utils/db');
+      const { admissionSessionProdis } = await import('../models/schema');
+      const { eq, and } = await import('drizzle-orm');
+      await db
+        .update(admissionSessionProdis)
+        .set(body)
+        .where(and(eq(admissionSessionProdis.sessionId, Number(params.id)), eq(admissionSessionProdis.prodiId, Number(params.prodiId))));
+      return { message: 'Prodi diperbarui' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async removeProdiFromSession({ params, set }: AuthContext<any, { id: string; prodiId: string }>) {
     try {
       await AdmisiAdminService.removeProdiFromSession(Number(params.id), Number(params.prodiId));
