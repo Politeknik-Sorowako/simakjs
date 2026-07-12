@@ -106,7 +106,17 @@ export class AdmisiAdminController {
 
   // ─── APPLICATIONS ────────────────────────────────────────────────
 
-  static async getApplications({ query }: AuthContext<any, any, { sessionId?: string; prodiId?: string; status?: string; search?: string; page?: string; limit?: string }>) {
+  static async updateAppProdi({ params, body, set }: any) {
+    try {
+      const updated = await AdmisiAdminService.updateAppProdi(Number(params.id), body.prodiPilihan1, body.prodiPilihan2);
+      return { message: 'Pilihan prodi berhasil diubah', data: updated };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getApplications({ query }: AuthContext<any, any, { sessionId?: string; prodiId?: string; status?: string; search?: string; page?: string; limit?: string }) {
     const result = await AdmisiAdminService.getApplications({
       sessionId: query.sessionId ? Number(query.sessionId) : undefined,
       prodiId: query.prodiId ? Number(query.prodiId) : undefined,

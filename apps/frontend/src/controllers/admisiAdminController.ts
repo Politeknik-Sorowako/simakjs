@@ -84,6 +84,13 @@ export const admisiAdminController = {
     });
   },
 
+  updateAppProdi(id: number, prodiPilihan1: number, prodiPilihan2?: number | null) {
+    return fetchApi<any>(`/admisi/admin/applications/${id}/update-prodi`, {
+      method: 'PUT',
+      body: JSON.stringify({ prodiPilihan1, prodiPilihan2 }),
+    });
+  },
+
   updateApplicationStatus(id: number, status: string, notes?: string) {
     return fetchApi<any>(`/admisi/admin/applications/${id}/status`, {
       method: 'PUT',

@@ -274,6 +274,14 @@ export class AdmisiService {
       .where(eq(admissionSessions.id, app.sessionId))
       .limit(1);
 
+    // Check if registration fee is 0 (free)
+    const [sp] = await db
+      .select({ biayaDaftar: admissionSessionProdis.biayaDaftar })
+      .from(admissionSessionProdis)
+      .where(and(eq(admissionSessionProdis.sessionId, app.sessionId), eq(admissionSessionProdis.prodiId, app.prodiPilihan1)))
+      .limit(1);
+    const isFree = !sp?.biayaDaftar || sp.biayaDaftar === 0;
+
     // Attach prodi names
     const [prodi1] = await db
       .select({ nama: programStudi.nama, jenjang: programStudi.jenjang })
@@ -296,6 +304,7 @@ export class AdmisiService {
       session: session || null,
       prodiPilihan1Data: prodi1 || null,
       prodiPilihan2Data: prodi2,
+      isFree,
     };
   }
 

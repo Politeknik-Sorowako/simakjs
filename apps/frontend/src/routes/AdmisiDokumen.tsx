@@ -93,9 +93,19 @@ export default function AdmisiDokumen() {
         <h1 class="text-2xl font-bold mb-2">Kelola Dokumen</h1>
         <p class="text-sm text-secondary-500 mb-6">Upload dokumen persyaratan sesuai sesi admisi.</p>
 
-        <Show when={!requirements() && !app()}>
-          <div class="text-center py-8 text-secondary-400">Memuat...</div>
+        <Show when={app()?.status === 'draft' && !app()?.isFree}>
+          <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5 text-center text-sm text-amber-700 dark:text-amber-400 mb-6">
+            ⏳ Pembayaran belum diverifikasi. Silakan lakukan pembayaran terlebih dahulu untuk dapat mengupload dokumen.
+            <div class="mt-3">
+              <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)}>Bayar Sekarang</Button>
+            </div>
+          </div>
         </Show>
+
+        <Show when={app()?.status !== 'draft' || app()?.isFree}>
+          <Show when={!requirements() && !app()}>
+            <div class="text-center py-8 text-secondary-400">Memuat...</div>
+          </Show>
 
         <Show when={requirements() && requirements()!.length === 0}>
           <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5 text-center text-sm text-amber-700 dark:text-amber-400">
@@ -178,6 +188,8 @@ export default function AdmisiDokumen() {
           </For>
         </div>
 
+        </Show>
+
         <div class="mt-6">
           <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}>Selesai</Button>
         </div>
@@ -185,3 +197,4 @@ export default function AdmisiDokumen() {
     </MainLayout>
   );
 }
+

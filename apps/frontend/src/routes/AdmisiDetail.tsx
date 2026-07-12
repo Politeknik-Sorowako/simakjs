@@ -187,9 +187,19 @@ export default function AdmisiDetail() {
               <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/edit`)} variant="secondary">
                 Edit Biodata
               </Button>
-              <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)}>
-                Bayar Sekarang →
-              </Button>
+              <Show when={app()?.isFree}>
+                <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/dokumen`)} variant="secondary">
+                  Kelola Dokumen
+                </Button>
+                <Button onClick={handleSubmit} disabled={submitting()}>
+                  {submitting() ? 'Mengirim...' : 'Submit Pendaftaran'}
+                </Button>
+              </Show>
+              <Show when={!app()?.isFree}>
+                <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)}>
+                  Bayar Sekarang →
+                </Button>
+              </Show>
             </div>
           </Show>
 

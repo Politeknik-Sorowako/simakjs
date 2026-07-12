@@ -13,6 +13,12 @@ export default function AdmisiVerifikasi() {
   const [appDocs, setAppDocs] = createSignal<any[]>([]);
   const [requirements, setRequirements] = createSignal<any[]>([]);
   const [uploadingReq, setUploadingReq] = createSignal<number | null>(null);
+  const [allProdis, setAllProdis] = createSignal<any[]>([]);
+  const [editProdi, setEditProdi] = createSignal<number | null>(null);
+  const [newP1, setNewP1] = createSignal<number | null>(null);
+  const [newP2, setNewP2] = createSignal<number | null>(null);
+
+  createResource(() => admisiAdminController.getAllProdi().then((r) => setAllProdis(r.data)));
 
   const [sessions] = createResource(() => admisiAdminController.getSessions());
 
@@ -181,6 +187,44 @@ export default function AdmisiVerifikasi() {
                       <div><span class="font-semibold">Asal Sekolah</span><p>{app.asalSekolah || '-'}</p></div>
                       <div><span class="font-semibold">Telepon</span><p>{app.telepon || '-'}</p></div>
                       <div><span class="font-semibold">Alamat</span><p>{app.jalan || '-'}</p></div>
+                    </div>
+
+                    {/* Pilihan Prodi */}
+                    <div class="mb-3 p-3 bg-secondary-50 dark:bg-secondary-800/60 rounded-lg text-xs">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <span class="font-semibold">Pilihan Prodi</span>
+                          {editProdi() !== app.id ? (
+                            <p>P1: Prodi #{app.prodiPilihan1}{app.prodiPilihan2 ? ` | P2: Prodi #${app.prodiPilihan2}` : ''}</p>
+                          ) : (
+                            <div class="flex gap-2 mt-1 items-center">
+                              <select value={newP1() ?? app.prodiPilihan1} onChange={(e) => setNewP1(Number(e.currentTarget.value))}
+                                class="px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800">
+                                <For each={allProdis()}>{(p: any) => <option value={p.id}>{p.nama}</option>}</For>
+                              </select>
+                              <span class="text-secondary-400">P2:</span>
+                              <select value={newP2() ?? app.prodiPilihan2 ?? ''} onChange={(e) => setNewP2(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
+                                class="px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800">
+                                <option value="">--</option>
+                                <For each={allProdis()}>{(p: any) => <option value={p.id}>{p.nama}</option>}</For>
+                              </select>
+                              <button onClick={async () => {
+                                try {
+                                  await admisiAdminController.updateAppProdi(app.id, newP1() ?? app.prodiPilihan1, newP2());
+                                  toast.showToast('Prodi diubah', 'success');
+                                  setEditProdi(null);
+                                  refetch();
+                                } catch (err: any) { toast.showToast(err.message, 'error'); }
+                              }} class="text-xs px-2 py-1 bg-brand-600 text-white rounded hover:bg-brand-700">Simpan</button>
+                              <button onClick={() => setEditProdi(null)} class="text-xs px-2 py-1 border border-secondary-300 rounded">Batal</button>
+                            </div>
+                          )}
+                        </div>
+                        {editProdi() !== app.id && (
+                          <button onClick={() => { setEditProdi(app.id); setNewP1(null); setNewP2(null); }}
+                            class="text-xs px-2 py-1 bg-brand-100 text-brand-700 rounded hover:bg-brand-200">Ubah</button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Dokumen */}

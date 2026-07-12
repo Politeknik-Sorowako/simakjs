@@ -171,6 +171,23 @@ export class AdmisiAdminService {
 
   // ─── APPLICATION / VERIFICATION ──────────────────────────────────
 
+  static async updateAppProdi(applicationId: number, prodiPilihan1: number, prodiPilihan2?: number | null) {
+    const [app] = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, applicationId))
+      .limit(1);
+    if (!app) throw new Error('Pendaftaran tidak ditemukan');
+
+    const [updated] = await db
+      .update(applications)
+      .set({ prodiPilihan1, prodiPilihan2: prodiPilihan2 ?? null })
+      .where(eq(applications.id, applicationId))
+      .returning();
+
+    return updated;
+  }
+
   static async getApplications(filters: { sessionId?: number; prodiId?: number; status?: string; search?: string; page?: number; limit?: number }) {
     const conditions = [];
 
