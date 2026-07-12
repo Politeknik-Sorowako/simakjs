@@ -59,6 +59,13 @@ export const userController = {
     });
   },
 
+  async resetPassword(id: number, password: string): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/users/${id}/reset-password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
+    });
+  },
+
   async generateAccounts(
     targetType: 'mahasiswa' | 'dosen',
     ids: number[],

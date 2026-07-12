@@ -147,6 +147,22 @@ export default function Pengguna() {
                       >
                         {actionLoading() === user.id ? 'Memproses...' : user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                       </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={user.id === currentUser()?.id}
+                        onClick={async () => {
+                          const newPw = prompt('Masukkan password baru (min 6 karakter):');
+                          if (!newPw || newPw.length < 6) return;
+                          try {
+                            const res = await userController.resetPassword(user.id, newPw);
+                            toast.showToast(res.message, 'success');
+                          } catch (err: any) {
+                            toast.showToast(err.message, 'error');
+                          }
+                        }}
+                      >
+                        Reset Password
+                      </Button>
                     </td>
                   </tr>
                 )}

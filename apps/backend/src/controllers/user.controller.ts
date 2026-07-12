@@ -248,6 +248,37 @@ export class UserController {
     return result;
   }
 
+  static async resetPassword({ params, body, set, getCurrentUser }: AuthContext) {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || currentUser.role !== 'admin') {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin.' };
+      }
+
+      const userId = parseInt(params.id);
+      if (isNaN(userId)) {
+        set.status = 400;
+        return { error: 'ID pengguna tidak valid' };
+      }
+
+      const newPassword = (body as any)?.password;
+      if (!newPassword || newPassword.length < 6) {
+        set.status = 400;
+        return { error: 'Password minimal 6 karakter' };
+      }
+
+      const hashed = await Bun.password.hash(newPassword, { algorithm: 'bcrypt', cost: 10 });
+
+      await db.update(users).set({ password: hashed }).where(eq(users.id, userId));
+
+      return { message: 'Password berhasil direset' };
+    } catch (error: any) {
+      set.status = 500;
+      return { error: 'Gagal mereset password' };
+    }
+  }
+
   static async generateAccounts({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
