@@ -17,6 +17,9 @@ export default function AdmisiVerifikasi() {
   const [editProdi, setEditProdi] = createSignal<number | null>(null);
   const [newP1, setNewP1] = createSignal<number | null>(null);
   const [newP2, setNewP2] = createSignal<number | null>(null);
+  const [searchTerm, setSearchTerm] = createSignal('');
+  const [editBiodata, setEditBiodata] = createSignal<number | null>(null);
+  const [bioForm, setBioForm] = createSignal<Record<string, string>>({});
 
   createResource(() => admisiAdminController.getAllProdi().then((r) => setAllProdis(r.data)));
 
@@ -26,6 +29,7 @@ export default function AdmisiVerifikasi() {
     () => ({
       sessionId: sessionFilter() ? Number(sessionFilter()) : undefined,
       status: statusFilter() || undefined,
+      search: searchTerm() || undefined,
     }),
     (f) => admisiAdminController.getApplications(f),
   );
@@ -83,7 +87,7 @@ export default function AdmisiVerifikasi() {
         <h1 class="text-2xl font-bold mb-2">Verifikasi Dokumen</h1>
         <p class="text-sm text-secondary-500 mb-6">Periksa dan verifikasi dokumen pendaftar</p>
 
-        <div class="flex gap-3 mb-4">
+        <div class="flex gap-3 mb-4 flex-wrap">
           <select
             value={sessionFilter()}
             onChange={(e) => { setSessionFilter(e.currentTarget.value); setSelectedApp(null); }}
@@ -106,6 +110,13 @@ export default function AdmisiVerifikasi() {
             <option value="draft">Draft</option>
             <option value="returned">Dikembalikan</option>
           </select>
+          <input
+            type="text"
+            placeholder="Cari nama atau no pendaftar..."
+            value={searchTerm()}
+            onInput={(e) => { setSearchTerm(e.currentTarget.value); setSelectedApp(null); }}
+            class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800 min-w-[200px] flex-1"
+          />
         </div>
 
         <Show when={apps.loading}>
@@ -178,15 +189,68 @@ export default function AdmisiVerifikasi() {
                 <Show when={selectedApp()?.id === app.id}>
                   <div class="mt-3 pt-3 border-t border-secondary-200 dark:border-secondary-700">
                     {/* Biodata */}
-                    <div class="mb-3 p-3 bg-secondary-50 dark:bg-secondary-800/60 rounded-lg text-xs grid grid-cols-2 md:grid-cols-4 gap-2">
-                      <div><span class="font-semibold">NIK</span><p>{app.nik || '-'}</p></div>
-                      <div><span class="font-semibold">Nama</span><p>{app.namaLengkap || '-'}</p></div>
-                      <div><span class="font-semibold">Tempat/Tgl Lahir</span><p>{app.tempatLahir || '-'} / {app.tanggalLahir || '-'}</p></div>
-                      <div><span class="font-semibold">JK</span><p>{app.jenisKelamin === 'L' ? 'Laki-laki' : app.jenisKelamin === 'P' ? 'Perempuan' : '-'}</p></div>
-                      <div><span class="font-semibold">Ibu Kandung</span><p>{app.namaIbuKandung || '-'}</p></div>
-                      <div><span class="font-semibold">Asal Sekolah</span><p>{app.asalSekolah || '-'}</p></div>
-                      <div><span class="font-semibold">Telepon</span><p>{app.telepon || '-'}</p></div>
-                      <div><span class="font-semibold">Alamat</span><p>{app.jalan || '-'}</p></div>
+                    <div class="mb-3 p-3 bg-secondary-50 dark:bg-secondary-800/60 rounded-lg text-xs">
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold">Biodata</span>
+                        <button onClick={() => {
+                          if (editBiodata() === app.id) { setEditBiodata(null); return; }
+                          setEditBiodata(app.id);
+                          setBioForm({
+                            namaLengkap: app.namaLengkap || '',
+                            nik: app.nik || '',
+                            tempatLahir: app.tempatLahir || '',
+                            tanggalLahir: app.tanggalLahir || '',
+                            jenisKelamin: app.jenisKelamin || '',
+                            namaIbuKandung: app.namaIbuKandung || '',
+                            asalSekolah: app.asalSekolah || '',
+                            telepon: app.telepon || '',
+                            jalan: app.jalan || '',
+                          });
+                        }} class="text-xs px-2 py-1 bg-brand-100 text-brand-700 rounded hover:bg-brand-200">
+                          {editBiodata() === app.id ? 'Batal' : 'Edit Biodata'}
+                        </button>
+                      </div>
+
+                      <Show when={editBiodata() !== app.id}>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div><span class="font-semibold">NIK</span><p>{app.nik || '-'}</p></div>
+                          <div><span class="font-semibold">Nama</span><p>{app.namaLengkap || '-'}</p></div>
+                          <div><span class="font-semibold">Tempat/Tgl Lahir</span><p>{app.tempatLahir || '-'} / {app.tanggalLahir || '-'}</p></div>
+                          <div><span class="font-semibold">JK</span><p>{app.jenisKelamin === 'L' ? 'Laki-laki' : app.jenisKelamin === 'P' ? 'Perempuan' : '-'}</p></div>
+                          <div><span class="font-semibold">Ibu Kandung</span><p>{app.namaIbuKandung || '-'}</p></div>
+                          <div><span class="font-semibold">Asal Sekolah</span><p>{app.asalSekolah || '-'}</p></div>
+                          <div><span class="font-semibold">Telepon</span><p>{app.telepon || '-'}</p></div>
+                          <div><span class="font-semibold">Alamat</span><p>{app.jalan || '-'}</p></div>
+                        </div>
+                      </Show>
+
+                      <Show when={editBiodata() === app.id}>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <div><span class="font-semibold">NIK</span><input value={bioForm().nik || ''} onInput={(e) => setBioForm((p) => ({ ...p, nik: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div><span class="font-semibold">Nama</span><input value={bioForm().namaLengkap || ''} onInput={(e) => setBioForm((p) => ({ ...p, namaLengkap: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div><span class="font-semibold">Tempat Lahir</span><input value={bioForm().tempatLahir || ''} onInput={(e) => setBioForm((p) => ({ ...p, tempatLahir: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div><span class="font-semibold">Tgl Lahir</span><input value={bioForm().tanggalLahir || ''} onInput={(e) => setBioForm((p) => ({ ...p, tanggalLahir: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div><span class="font-semibold">JK</span>
+                            <select value={bioForm().jenisKelamin || ''} onChange={(e) => setBioForm((p) => ({ ...p, jenisKelamin: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800">
+                              <option value="">--</option><option value="L">Laki-laki</option><option value="P">Perempuan</option>
+                            </select>
+                          </div>
+                          <div><span class="font-semibold">Ibu Kandung</span><input value={bioForm().namaIbuKandung || ''} onInput={(e) => setBioForm((p) => ({ ...p, namaIbuKandung: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div><span class="font-semibold">Asal Sekolah</span><input value={bioForm().asalSekolah || ''} onInput={(e) => setBioForm((p) => ({ ...p, asalSekolah: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div><span class="font-semibold">Telepon</span><input value={bioForm().telepon || ''} onInput={(e) => setBioForm((p) => ({ ...p, telepon: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div class="md:col-span-4"><span class="font-semibold">Alamat</span><input value={bioForm().jalan || ''} onInput={(e) => setBioForm((p) => ({ ...p, jalan: e.currentTarget.value }))} class="w-full px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800" /></div>
+                          <div class="md:col-span-4 flex gap-2 mt-1">
+                            <button onClick={async () => {
+                              try {
+                                await admisiAdminController.updateAppBiodata(app.id, bioForm());
+                                toast.showToast('Biodata diperbarui', 'success');
+                                setEditBiodata(null);
+                                refetch();
+                              } catch (err: any) { toast.showToast(err.message, 'error'); }
+                            }} class="text-xs px-3 py-1 bg-brand-600 text-white rounded hover:bg-brand-700">Simpan Biodata</button>
+                          </div>
+                        </div>
+                      </Show>
                     </div>
 
                     {/* Pilihan Prodi */}

@@ -84,6 +84,13 @@ export const admisiAdminController = {
     });
   },
 
+  updateAppBiodata(id: number, data: Record<string, any>) {
+    return fetchApi<any>(`/admisi/admin/applications/${id}/biodata`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   updateAppProdi(id: number, prodiPilihan1: number, prodiPilihan2?: number | null) {
     return fetchApi<any>(`/admisi/admin/applications/${id}/update-prodi`, {
       method: 'PUT',

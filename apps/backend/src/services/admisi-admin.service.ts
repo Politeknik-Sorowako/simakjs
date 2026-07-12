@@ -171,6 +171,15 @@ export class AdmisiAdminService {
 
   // ─── APPLICATION / VERIFICATION ──────────────────────────────────
 
+  static async updateAppBiodata(applicationId: number, data: Record<string, any>) {
+    const [updated] = await db
+      .update(applications)
+      .set(data)
+      .where(eq(applications.id, applicationId))
+      .returning();
+    return updated;
+  }
+
   static async updateAppProdi(applicationId: number, prodiPilihan1: number, prodiPilihan2?: number | null) {
     const [app] = await db
       .select()

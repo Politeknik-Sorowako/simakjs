@@ -59,6 +59,9 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
     detail: { tags: ['Admisi - Admin'], summary: 'Ubah status ke Terverifikasi (jika semua dokumen sdh verified)' },
   })
   .put('/applications/:id/status', AdmisiAdminController.updateApplicationStatus, updateApplicationStatusSchema)
+  .put('/applications/:id/biodata', AdmisiAdminController.updateAppBiodata, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Edit biodata peserta' },
+  })
   .put('/applications/:id/update-prodi', AdmisiAdminController.updateAppProdi, {
     detail: { tags: ['Admisi - Admin'], summary: 'Ubah pilihan prodi peserta' },
   })

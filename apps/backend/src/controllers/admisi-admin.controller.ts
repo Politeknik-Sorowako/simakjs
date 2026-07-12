@@ -106,6 +106,21 @@ export class AdmisiAdminController {
 
   // ─── APPLICATIONS ────────────────────────────────────────────────
 
+  static async updateAppBiodata({ params, body, set }: any) {
+    try {
+      const allowed = ['nik','namaLengkap','tempatLahir','tanggalLahir','jenisKelamin','namaIbuKandung','asalSekolah','telepon','jalan'];
+      const data: Record<string, any> = {};
+      for (const key of allowed) {
+        if (body[key] !== undefined) data[key] = body[key];
+      }
+      await AdmisiAdminService.updateAppBiodata(Number(params.id), data);
+      return { message: 'Biodata berhasil diperbarui' };
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
   static async updateAppProdi({ params, body, set }: any) {
     try {
       const updated = await AdmisiAdminService.updateAppProdi(Number(params.id), body.prodiPilihan1, body.prodiPilihan2);
