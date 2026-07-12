@@ -274,7 +274,29 @@ export class AdmisiService {
       .where(eq(admissionSessions.id, app.sessionId))
       .limit(1);
 
-    return { ...app, session: session || null };
+    // Attach prodi names
+    const [prodi1] = await db
+      .select({ nama: programStudi.nama, jenjang: programStudi.jenjang })
+      .from(programStudi)
+      .where(eq(programStudi.id, app.prodiPilihan1))
+      .limit(1);
+
+    let prodi2 = null;
+    if (app.prodiPilihan2) {
+      const [p2] = await db
+        .select({ nama: programStudi.nama, jenjang: programStudi.jenjang })
+        .from(programStudi)
+        .where(eq(programStudi.id, app.prodiPilihan2))
+        .limit(1);
+      prodi2 = p2;
+    }
+
+    return {
+      ...app,
+      session: session || null,
+      prodiPilihan1Data: prodi1 || null,
+      prodiPilihan2Data: prodi2,
+    };
   }
 
   static async getDocuments(applicationId: number) {

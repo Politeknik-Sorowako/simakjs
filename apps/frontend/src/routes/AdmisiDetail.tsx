@@ -106,11 +106,17 @@ export default function AdmisiDetail() {
             <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5">
               <h2 class="font-semibold mb-3">Pilihan Prodi</h2>
               <div class="text-sm mb-1">
-                <span class="text-secondary-400">Pilihan 1:</span> Prodi #{app()?.prodiPilihan1}
+                <span class="text-secondary-400">Pilihan 1:</span>
+                {app()?.prodiPilihan1Data?.nama
+                  ? `${app().prodiPilihan1Data.nama} (${app().prodiPilihan1Data.jenjang || '-'})`
+                  : `Prodi #${app()?.prodiPilihan1}`}
               </div>
               <Show when={app()?.prodiPilihan2}>
                 <div class="text-sm mb-1">
-                  <span class="text-secondary-400">Pilihan 2:</span> Prodi #{app()?.prodiPilihan2}
+                  <span class="text-secondary-400">Pilihan 2:</span>
+                  {app()?.prodiPilihan2Data?.nama
+                    ? `${app().prodiPilihan2Data.nama} (${app().prodiPilihan2Data.jenjang || '-'})`
+                    : `Prodi #${app()?.prodiPilihan2}`}
                 </div>
               </Show>
               <Show when={app()?.finalScore}>
