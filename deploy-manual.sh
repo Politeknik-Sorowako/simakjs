@@ -71,10 +71,12 @@ while [ $# -gt 0 ]; do
     --skip-backup) SKIP_BACKUP=true; shift ;;
     --skip-pull) SKIP_PULL=true; shift ;;
     --no-force) FORCE_CLEANUP=false; shift ;;
-    --rollback) bash "$SCRIPT_DIR/rollback.sh"; exit $? ;;
+    --rollback)
+      if [ -f "$SCRIPT_DIR/rollback.sh" ]; then bash "$SCRIPT_DIR/rollback.sh"; else echo "rollback.sh not found"; exit 1; fi; exit $? ;;
     --health) bash "$SCRIPT_DIR/scripts/health-check.sh"; exit $? ;;
-    --dashboard) bash "$SCRIPT_DIR/dashboard.sh"; exit $? ;;
-    --status) bash "$SCRIPT_DIR/scripts/health-check.sh; docker compose ps; exit $?"; exit $? ;;
+    --dashboard)
+      if [ -f "$SCRIPT_DIR/dashboard.sh" ]; then bash "$SCRIPT_DIR/dashboard.sh"; else echo "dashboard.sh not found"; exit 1; fi; exit $? ;;
+    --status) bash "$SCRIPT_DIR/scripts/health-check.sh"; docker compose ps; exit $? ;;
     --help) show_help; exit 0 ;;
     --*) echo "Unknown option: $1"; show_help; exit 1 ;;
     *) BRANCH="$1"; shift ;;
@@ -105,7 +107,7 @@ fi
 
 # Step 2: Prerequisites check
 log "Step 2/7: Checking prerequisites..."
-for cmd in docker docker-compose curl; do
+for cmd in docker curl; do
   if command -v "$cmd" &> /dev/null; then
     ok "$cmd available"
   else
@@ -113,6 +115,13 @@ for cmd in docker docker-compose curl; do
     exit 1
   fi
 done
+
+if docker compose version &> /dev/null; then
+  ok "docker compose available"
+else
+  fail "docker compose not found"
+  exit 1
+fi
 
 # Check required database credentials (needed for backup)
 if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ]; then
@@ -197,5 +206,5 @@ log "  Swagger:  http://localhost:$BACKEND_PORT/swagger"
 echo ""
 
 # Send notification
-source "$SCRIPT_DIR/telegram-notify.sh" 2>/dev/null
+source "$SCRIPT_DIR/telegram-notify.sh" 2>/dev/null || true
 send_deploy_success "$BRANCH" "$(git log --oneline -1)" "$DURATION" 2>/dev/null || true

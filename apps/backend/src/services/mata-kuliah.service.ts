@@ -45,9 +45,14 @@ export class MataKuliahService {
     if (!kurikulumId && semester === undefined) {
       let orderField;
       switch (sortBy) {
-        case 'kode': orderField = mataKuliah.kode; break;
-        case 'sks': orderField = mataKuliah.sksTotal; break;
-        default: orderField = mataKuliah.nama;
+        case 'kode':
+          orderField = mataKuliah.kode;
+          break;
+        case 'sks':
+          orderField = mataKuliah.sksTotal;
+          break;
+        default:
+          orderField = mataKuliah.nama;
       }
       const orderDir = sortOrder === 'desc' ? 'desc' : 'asc';
 

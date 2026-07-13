@@ -149,10 +149,7 @@ export class YudisiumService {
 
     const [total] = await db.select({ count: count2() }).from(py);
 
-    const statusBreakdown = await db
-      .select({ status: py.status, count: count2() })
-      .from(py)
-      .groupBy(py.status);
+    const statusBreakdown = await db.select({ status: py.status, count: count2() }).from(py).groupBy(py.status);
 
     const perProdi = await db
       .select({

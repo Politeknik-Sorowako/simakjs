@@ -1,7 +1,19 @@
-import { db } from '../utils/db';
-import { users, admissionSessions, admissionSessionProdis, applications, applicationLogs, documentRequirements, applicantDocuments, reRegistrationPayments, programStudi, vaBanks, paymentVirtualAccounts } from '../models/schema';
-import { eq, and, lt, gt, sql } from 'drizzle-orm';
 import { createHash } from 'crypto';
+import { and, eq, gt, lt, sql } from 'drizzle-orm';
+import {
+  admissionSessionProdis,
+  admissionSessions,
+  applicantDocuments,
+  applicationLogs,
+  applications,
+  documentRequirements,
+  paymentVirtualAccounts,
+  programStudi,
+  reRegistrationPayments,
+  users,
+  vaBanks,
+} from '../models/schema';
+import { db } from '../utils/db';
 
 export class AdmisiService {
   static async register(email: string, password: string, nama: string) {
@@ -15,9 +27,7 @@ export class AdmisiService {
 
   static async verifyEmailToken(token: string) {
     const hashedToken = createHash('sha256').update(token).digest('hex');
-    const [reset] = await db
-      .select()
-      .from(users)
+    const [reset] = await db.select().from(users);
 
     return null;
   }
@@ -94,7 +104,10 @@ export class AdmisiService {
       .where(eq(admissionSessionProdis.sessionId, sessionId));
   }
 
-  static async createApplication(userId: number, data: { sessionId: number; prodiPilihan1: number; prodiPilihan2?: number }) {
+  static async createApplication(
+    userId: number,
+    data: { sessionId: number; prodiPilihan1: number; prodiPilihan2?: number },
+  ) {
     const noPendaftar = await this.generateNoPendaftar(data.sessionId);
 
     // Check session is active
@@ -166,11 +179,7 @@ export class AdmisiService {
       throw new Error('Pendaftaran sudah disubmit, tidak bisa diubah');
     }
 
-    const [updated] = await db
-      .update(applications)
-      .set(data)
-      .where(eq(applications.id, applicationId))
-      .returning();
+    const [updated] = await db.update(applications).set(data).where(eq(applications.id, applicationId)).returning();
 
     return updated;
   }
@@ -278,7 +287,9 @@ export class AdmisiService {
     const [sp] = await db
       .select({ biayaDaftar: admissionSessionProdis.biayaDaftar })
       .from(admissionSessionProdis)
-      .where(and(eq(admissionSessionProdis.sessionId, app.sessionId), eq(admissionSessionProdis.prodiId, app.prodiPilihan1)))
+      .where(
+        and(eq(admissionSessionProdis.sessionId, app.sessionId), eq(admissionSessionProdis.prodiId, app.prodiPilihan1)),
+      )
       .limit(1);
     const isFree = !sp?.biayaDaftar || sp.biayaDaftar === 0;
 
@@ -316,7 +327,12 @@ export class AdmisiService {
       .orderBy(applicantDocuments.createdAt);
   }
 
-  static async uploadDocument(applicationId: number, requirementId: number, userId: number, file: { path: string; name: string; size: number; type: string }) {
+  static async uploadDocument(
+    applicationId: number,
+    requirementId: number,
+    userId: number,
+    file: { path: string; name: string; size: number; type: string },
+  ) {
     // Verify ownership
     const [app] = await db
       .select()
@@ -333,7 +349,9 @@ export class AdmisiService {
     const [existing] = await db
       .select({ version: applicantDocuments.version })
       .from(applicantDocuments)
-      .where(and(eq(applicantDocuments.applicationId, applicationId), eq(applicantDocuments.requirementId, requirementId)))
+      .where(
+        and(eq(applicantDocuments.applicationId, applicationId), eq(applicantDocuments.requirementId, requirementId)),
+      )
       .orderBy(sql`${applicantDocuments.version} DESC`)
       .limit(1);
 
@@ -369,7 +387,9 @@ export class AdmisiService {
     const [existing] = await db
       .select({ version: applicantDocuments.version })
       .from(applicantDocuments)
-      .where(and(eq(applicantDocuments.applicationId, applicationId), eq(applicantDocuments.requirementId, requirementId)))
+      .where(
+        and(eq(applicantDocuments.applicationId, applicationId), eq(applicantDocuments.requirementId, requirementId)),
+      )
       .orderBy(sql`${applicantDocuments.version} DESC`)
       .limit(1);
 
@@ -410,7 +430,11 @@ export class AdmisiService {
     await db.delete(applicantDocuments).where(eq(applicantDocuments.id, documentId));
   }
 
-  static async submitPaymentProof(applicationId: number, userId: number, data: { nominal: number; bankAsal?: string; namaPengirim?: string; buktiBayarPath: string }) {
+  static async submitPaymentProof(
+    applicationId: number,
+    userId: number,
+    data: { nominal: number; bankAsal?: string; namaPengirim?: string; buktiBayarPath: string },
+  ) {
     const [app] = await db
       .select()
       .from(applications)
@@ -458,11 +482,7 @@ export class AdmisiService {
   // ─── VA PAYMENT ────────────────────────────────────────────────
 
   static async getActiveBanks() {
-    return db
-      .select()
-      .from(vaBanks)
-      .where(eq(vaBanks.isActive, true))
-      .orderBy(vaBanks.nama);
+    return db.select().from(vaBanks).where(eq(vaBanks.isActive, true)).orderBy(vaBanks.nama);
   }
 
   static async generateVA(applicationId: number, userId: number, vaBankId: number) {
@@ -479,20 +499,13 @@ export class AdmisiService {
       .select({ biayaDaftar: admissionSessionProdis.biayaDaftar })
       .from(admissionSessionProdis)
       .where(
-        and(
-          eq(admissionSessionProdis.sessionId, app.sessionId),
-          eq(admissionSessionProdis.prodiId, app.prodiPilihan1),
-        ),
+        and(eq(admissionSessionProdis.sessionId, app.sessionId), eq(admissionSessionProdis.prodiId, app.prodiPilihan1)),
       )
       .limit(1);
     const nominal = sp?.biayaDaftar || 150000;
 
     // Get bank info
-    const [bank] = await db
-      .select({ kode: vaBanks.kode })
-      .from(vaBanks)
-      .where(eq(vaBanks.id, vaBankId))
-      .limit(1);
+    const [bank] = await db.select({ kode: vaBanks.kode }).from(vaBanks).where(eq(vaBanks.id, vaBankId)).limit(1);
     if (!bank) throw new Error('Bank tidak ditemukan');
 
     // Generate VA number: bank_code + uniq_id + app_id
@@ -508,10 +521,7 @@ export class AdmisiService {
       .returning();
 
     // Update app status
-    await db
-      .update(applications)
-      .set({ status: 'awaiting_payment' })
-      .where(eq(applications.id, applicationId));
+    await db.update(applications).set({ status: 'awaiting_payment' }).where(eq(applications.id, applicationId));
 
     await db.insert(applicationLogs).values({
       applicationId,

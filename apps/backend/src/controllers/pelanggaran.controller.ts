@@ -71,7 +71,11 @@ export class PelanggaranController {
     return await PelanggaranService.getAllPelanggaran();
   }
 
-  static async getRekap({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
+  static async getRekap({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;

@@ -3,12 +3,15 @@ import { RpsController } from '../controllers/rps.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   addTopikSchema,
+  attachEvaluasiSubCpmkSchema,
   bulkGenerateRpsSchema,
   copyRpsSchema,
   createRencanaEvaluasiSchema,
   createRpsSchema,
   deleteRencanaEvaluasiSchema,
   deleteTopikSchema,
+  detachEvaluasiSubCpmkSchema,
+  getEvaluasiSubCpmkSchema,
   getRencanaEvaluasiSchema,
   getRpsSchema,
   updateRencanaEvaluasiSchema,
@@ -29,4 +32,11 @@ export const rpsRoutes = new Elysia()
   .get('/rencana-evaluasi', RpsController.getRencanaEvaluasi, getRencanaEvaluasiSchema)
   .post('/rencana-evaluasi', RpsController.createRencanaEvaluasi, createRencanaEvaluasiSchema)
   .put('/rencana-evaluasi/:id', RpsController.updateRencanaEvaluasi, updateRencanaEvaluasiSchema)
-  .delete('/rencana-evaluasi/:id', RpsController.deleteRencanaEvaluasi, deleteRencanaEvaluasiSchema);
+  .delete('/rencana-evaluasi/:id', RpsController.deleteRencanaEvaluasi, deleteRencanaEvaluasiSchema)
+  .get('/rencana-evaluasi/:id/sub-cpmk', RpsController.getEvaluasiSubCpmk, getEvaluasiSubCpmkSchema)
+  .post('/rencana-evaluasi/:id/sub-cpmk', RpsController.attachEvaluasiSubCpmk, attachEvaluasiSubCpmkSchema)
+  .delete(
+    '/rencana-evaluasi/:id/sub-cpmk/:subCpmkId',
+    RpsController.detachEvaluasiSubCpmk,
+    detachEvaluasiSubCpmkSchema,
+  );

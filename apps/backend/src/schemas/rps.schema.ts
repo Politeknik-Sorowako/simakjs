@@ -13,6 +13,7 @@ export const rpsTopikBody = t.Object({
   subTopik: t.Optional(t.String()),
   metode: t.Optional(t.String({ default: 'Ceramah & Diskusi' })),
   cpmkId: t.Optional(t.Integer()),
+  subCpmkId: t.Optional(t.Integer()),
 });
 
 export const rencanaEvaluasiBody = t.Object({
@@ -193,5 +194,45 @@ export const deleteRencanaEvaluasiSchema = {
   },
   params: t.Object({
     id: t.Numeric(),
+  }),
+};
+
+export const evaluasiSubCpmkBody = t.Object({
+  subCpmkId: t.Integer({ default: 1 }),
+  bobot: t.Optional(t.Numeric()),
+});
+
+export const getEvaluasiSubCpmkSchema = {
+  detail: {
+    tags: ['Rencana Evaluasi'],
+    summary: 'Daftar SubCPMK untuk Evaluasi',
+    description: 'Mengambil daftar SubCPMK yang diukur oleh rencana evaluasi tertentu.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+};
+
+export const attachEvaluasiSubCpmkSchema = {
+  detail: {
+    tags: ['Rencana Evaluasi'],
+    summary: 'Link SubCPMK ke Evaluasi',
+    description: 'Menambahkan link SubCPMK ke rencana evaluasi (Hanya Admin/Dosen).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: evaluasiSubCpmkBody,
+};
+
+export const detachEvaluasiSubCpmkSchema = {
+  detail: {
+    tags: ['Rencana Evaluasi'],
+    summary: 'Unlink SubCPMK dari Evaluasi',
+    description: 'Menghapus link SubCPMK dari rencana evaluasi (Hanya Admin/Dosen).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+    subCpmkId: t.Numeric(),
   }),
 };

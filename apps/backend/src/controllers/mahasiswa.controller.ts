@@ -147,7 +147,11 @@ export class MahasiswaController {
     return result;
   }
 
-  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { angkatan?: string; programStudiId?: string }>) {
+  static async getStats({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { angkatan?: string; programStudiId?: string }>) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;

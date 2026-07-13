@@ -1,10 +1,12 @@
 import { Context } from 'elysia';
 
+export type UserRole = 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
+
 export interface UserPayload {
   id: number;
   email: string;
   nama: string;
-  role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
+  role: UserRole;
 }
 
 export type AuthContext<TBody = any, TQuery = any> = Context & {

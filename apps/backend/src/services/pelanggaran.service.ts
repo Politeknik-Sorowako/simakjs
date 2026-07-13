@@ -122,9 +122,24 @@ export class PelanggaranService {
     return {
       totalPelanggaran: Number(totals?.totalPelanggaran || 0),
       totalMahasiswa: Number(totals?.totalMahasiswa || 0),
-      perJenis: perJenis.map((j) => ({ jenis: j.jenis, jumlah: Number(j.jumlah), totalPoin: Number(j.totalPoin || 0) })),
-      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', totalPelanggaran: Number(p.totalPelanggaran), totalPoin: Number(p.totalPoin || 0) })),
-      topPelanggar: topPelanggar.map((t) => ({ mahasiswaId: t.mahasiswaId, nim: t.nim, nama: t.nama, totalPoin: Number(t.totalPoin || 0), jumlahPelanggaran: Number(t.jumlahPelanggaran) })),
+      perJenis: perJenis.map((j) => ({
+        jenis: j.jenis,
+        jumlah: Number(j.jumlah),
+        totalPoin: Number(j.totalPoin || 0),
+      })),
+      perProdi: perProdi.map((p) => ({
+        prodiId: p.prodiId,
+        prodiNama: p.prodiNama || '-',
+        totalPelanggaran: Number(p.totalPelanggaran),
+        totalPoin: Number(p.totalPoin || 0),
+      })),
+      topPelanggar: topPelanggar.map((t) => ({
+        mahasiswaId: t.mahasiswaId,
+        nim: t.nim,
+        nama: t.nama,
+        totalPoin: Number(t.totalPoin || 0),
+        jumlahPelanggaran: Number(t.jumlahPelanggaran),
+      })),
     };
   }
 
