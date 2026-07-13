@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
+import { bahanKajianController } from '../controllers/bahanKajianController';
 import { cplController } from '../controllers/cplController';
 import { cpmkCplMappingController } from '../controllers/cpmkCplMappingController';
 import { kurikulumController } from '../controllers/kurikulumController';
@@ -12,7 +13,7 @@ import { prodiController } from '../controllers/prodiController';
 export default function PetaObe() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
   const [kurikulumFilter, setKurikulumFilter] = createSignal<number | undefined>(undefined);
-  const [activeTab, setActiveTab] = createSignal<'pl-cpl' | 'cpmk-cpl'>('pl-cpl');
+  const [activeTab, setActiveTab] = createSignal<'pl-cpl' | 'bk-cpl' | 'cpmk-cpl'>('pl-cpl');
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
@@ -37,6 +38,14 @@ export default function PetaObe() {
     async ({ kurikulumId }) => {
       if (!kurikulumId) return null;
       return cpmkCplMappingController.getMatriks(kurikulumId);
+    },
+  );
+
+  const [matriksBkCpl] = createResource(
+    () => ({ prodiId: prodiFilter(), active: activeTab() === 'bk-cpl' }),
+    async ({ prodiId }) => {
+      if (!prodiId) return null;
+      return bahanKajianController.getMatriks(prodiId);
     },
   );
 
@@ -83,6 +92,12 @@ export default function PetaObe() {
                 onClick={() => setActiveTab('pl-cpl')}
               >
                 PL ⟷ CPL
+              </button>
+              <button
+                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'bk-cpl' ? 'bg-accent-500 text-white' : 'text-secondary-300 hover:text-white'}`}
+                onClick={() => setActiveTab('bk-cpl')}
+              >
+                BK ⟷ CPL
               </button>
               <button
                 class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'cpmk-cpl' ? 'bg-accent-500 text-white' : 'text-secondary-300 hover:text-white'}`}
@@ -161,6 +176,62 @@ export default function PetaObe() {
               </Show>
 
               <Show when={!matriksPlCpl()}>
+                <div class="text-secondary-400 text-center py-8">Pilih program studi untuk melihat matriks</div>
+              </Show>
+            </Card>
+          </Show>
+        </Show>
+
+        {/* Tab: BK ⟷ CPL Matriks */}
+        <Show when={activeTab() === 'bk-cpl'}>
+          <Show
+            when={matriksBkCpl() && !matriksBkCpl.loading}
+            fallback={<div class="text-secondary-400 text-center py-12">Pilih program studi untuk melihat matriks</div>}
+          >
+            <Card variant="bordered" padding="lg">
+              <h2 class="text-lg font-semibold text-white mb-4">Matriks Kontribusi Bahan Kajian ke CPL</h2>
+              <p class="text-sm text-secondary-400 mb-4">
+                Bobot dinormalisasi otomatis (total = 1.0 per BK). Bobot kosong dianggap merata.
+              </p>
+
+              <Show when={matriksBkCpl()!}>
+                {(data) => (
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                      <thead>
+                        <tr class="text-secondary-400 border-b border-slate-700">
+                          <th class="text-left py-3 px-2 font-medium">BK \ CPL</th>
+                          <For each={data().cpl}>
+                            {(cpl) => <th class="text-center py-3 px-2 font-medium min-w-[100px]">{cpl.kode}</th>}
+                          </For>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <For each={data().matriks}>
+                          {(row) => (
+                            <tr class="border-b border-slate-700/50">
+                              <td class="py-3 px-2 text-white font-medium">{row.bk.kode}</td>
+                              <For each={row.bobotPerCpl}>
+                                {(bobot) => (
+                                  <td class="py-3 px-2 text-center">
+                                    <span
+                                      class={`inline-block px-3 py-1 rounded-lg text-xs font-medium ${getBobotColor(bobot.bobot)}`}
+                                    >
+                                      {formatPersen(bobot.bobot)}
+                                    </span>
+                                  </td>
+                                )}
+                              </For>
+                            </tr>
+                          )}
+                        </For>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Show>
+
+              <Show when={!matriksBkCpl()}>
                 <div class="text-secondary-400 text-center py-8">Pilih program studi untuk melihat matriks</div>
               </Show>
             </Card>
