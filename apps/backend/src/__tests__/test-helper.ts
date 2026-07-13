@@ -54,6 +54,8 @@ import { db } from '../utils/db';
 
 const ELEVATED_ROLES = ['admin', 'prodi', 'keuangan'];
 
+const tokenCache = new Map<string, string>();
+
 export interface UserResponse {
   id: number;
   email: string;
@@ -94,6 +96,7 @@ export interface MahasiswaSuccessResponse {
 
 // Helper function to clear all database tables to ensure test independence
 export async function clearDatabase() {
+  tokenCache.clear();
   await db.delete(announcements);
   await db.delete(applications);
   await db.delete(documentRequirements);
@@ -146,6 +149,11 @@ export async function clearDatabase() {
 
 // Helper function to register and login a user, returning their JWT authorization token
 export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan') {
+  const cacheKey = `${email}:${role}`;
+  if (tokenCache.has(cacheKey)) {
+    return tokenCache.get(cacheKey)!;
+  }
+
   // Elevated roles (admin, prodi, keuangan) must be created directly in DB
   if (ELEVATED_ROLES.includes(role)) {
     const hashedPassword = await Bun.password.hash('password123', { algorithm: 'bcrypt', cost: 10 });
@@ -184,6 +192,7 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
     }
 
     const data = (await response.json()) as LoginSuccessResponse;
+    tokenCache.set(cacheKey, data.token);
     return data.token;
   }
 
@@ -217,5 +226,6 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
   }
 
   const data = (await response.json()) as LoginSuccessResponse;
+  tokenCache.set(cacheKey, data.token);
   return data.token;
 }
