@@ -7,6 +7,8 @@ import { admisiRoutes } from './routes/admisi.routes';
 import { admisiAdminRoutes } from './routes/admisi-admin.routes';
 import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
 import { authRoutes } from './routes/auth.routes';
+import { bahanKajianRoutes } from './routes/bahan-kajian.routes';
+import { bahanKajianCplMappingRoutes } from './routes/bahan-kajian-cpl-mapping.routes';
 import { bapRoutes } from './routes/bap.routes';
 import { bimbinganRoutes } from './routes/bimbingan.routes';
 import { cplRoutes } from './routes/cpl.routes';
@@ -24,6 +26,7 @@ import { kurikulumRoutes } from './routes/kurikulum.routes';
 import { mahasiswaRoutes } from './routes/mahasiswa.routes';
 import { mahasiswaKeluarRoutes } from './routes/mahasiswa-keluar.routes';
 import { mataKuliahRoutes } from './routes/mata-kuliah.routes';
+import { mataKuliahBahanKajianRoutes } from './routes/mata-kuliah-bahan-kajian.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
@@ -34,6 +37,7 @@ import { rpsRoutes } from './routes/rps.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
+import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -68,6 +72,9 @@ if (isDevelopment) {
           { name: 'CPL Mapping', description: 'Pemetaan CPL ke Profil Lulusan' },
           { name: 'SubCPMK', description: 'Sub-Capaian Pembelajaran Mata Kuliah' },
           { name: 'CPMK-CPL Mapping', description: 'Pemetaan CPMK ke CPL' },
+          { name: 'Visi Misi Prodi', description: 'Visi Misi Program Studi' },
+          { name: 'Bahan Kajian', description: 'Bahan Kajian Program Studi' },
+          { name: 'BK-CPL Mapping', description: 'Pemetaan Bahan Kajian ke CPL' },
           { name: 'CPMK', description: 'Capaian Pembelajaran Mata Kuliah' },
           { name: 'RPS', description: 'Rencana Pembelajaran Semester' },
           { name: 'Rencana Evaluasi', description: 'Rencana evaluasi/penilaian mata kuliah' },
@@ -241,6 +248,10 @@ app
   .use(cplMappingRoutes)
   .use(subCpmkRoutes)
   .use(cpmkCplMappingRoutes)
+  .use(visiMisiRoutes)
+  .use(bahanKajianRoutes)
+  .use(bahanKajianCplMappingRoutes)
+  .use(mataKuliahBahanKajianRoutes)
   .use(cpmkRoutes)
   .use(bapRoutes)
   .use(presensiRoutes)

@@ -25,6 +25,7 @@ import AdmisiSesiDetail from './routes/admisi/AdmisiSesiDetail';
 import AdmisiSesiList from './routes/admisi/AdmisiSesiList';
 import AdmisiVABanks from './routes/admisi/AdmisiVABanks';
 import AdmisiVerifikasi from './routes/admisi/AdmisiVerifikasi';
+import BahanKajian from './routes/BahanKajian';
 import BapPresensi from './routes/BapPresensi';
 import Bimbingan from './routes/Bimbingan';
 import Cpl from './routes/Cpl';
@@ -65,6 +66,7 @@ import LaporanPeringatan from './routes/reports/LaporanPeringatan';
 import LaporanPresensiKelas from './routes/reports/LaporanPresensiKelas';
 import LaporanRekapNilai from './routes/reports/LaporanRekapNilai';
 import LaporanYudisium from './routes/reports/LaporanYudisium';
+import VisiMisiProdi from './routes/VisiMisiProdi';
 import Yudisium from './routes/Yudisium';
 
 function AppContent() {
@@ -251,6 +253,22 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'prodi']}>
             <ProfilLulusan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/visi-misi-prodi"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <VisiMisiProdi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bahan-kajian"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <BahanKajian />
           </ProtectedRoute>
         }
       />
