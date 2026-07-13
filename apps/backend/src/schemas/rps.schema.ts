@@ -196,3 +196,43 @@ export const deleteRencanaEvaluasiSchema = {
     id: t.Numeric(),
   }),
 };
+
+export const evaluasiSubCpmkBody = t.Object({
+  subCpmkId: t.Integer({ default: 1 }),
+  bobot: t.Optional(t.Numeric()),
+});
+
+export const getEvaluasiSubCpmkSchema = {
+  detail: {
+    tags: ['Rencana Evaluasi'],
+    summary: 'Daftar SubCPMK untuk Evaluasi',
+    description: 'Mengambil daftar SubCPMK yang diukur oleh rencana evaluasi tertentu.',
+  },
+  params: t.Object({
+    evaluasiId: t.Numeric(),
+  }),
+};
+
+export const attachEvaluasiSubCpmkSchema = {
+  detail: {
+    tags: ['Rencana Evaluasi'],
+    summary: 'Link SubCPMK ke Evaluasi',
+    description: 'Menambahkan link SubCPMK ke rencana evaluasi (Hanya Admin/Dosen).',
+  },
+  params: t.Object({
+    evaluasiId: t.Numeric(),
+  }),
+  body: evaluasiSubCpmkBody,
+};
+
+export const detachEvaluasiSubCpmkSchema = {
+  detail: {
+    tags: ['Rencana Evaluasi'],
+    summary: 'Unlink SubCPMK dari Evaluasi',
+    description: 'Menghapus link SubCPMK dari rencana evaluasi (Hanya Admin/Dosen).',
+  },
+  params: t.Object({
+    evaluasiId: t.Numeric(),
+    subCpmkId: t.Numeric(),
+  }),
+};

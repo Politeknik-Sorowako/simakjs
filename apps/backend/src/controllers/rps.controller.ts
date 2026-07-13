@@ -16,7 +16,6 @@ export class RpsController {
     };
   }
 
-
   static async getRps({ query, set }: AuthContext) {
     const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
     const periodeId = query?.periodeId;
@@ -163,5 +162,39 @@ export class RpsController {
       return { error: 'Data tidak ditemukan' };
     }
     return { message: 'Rencana Evaluasi berhasil dihapus' };
+  }
+
+  static async getEvaluasiSubCpmk({ params, getCurrentUser }: AuthContext) {
+    await getCurrentUser();
+    const evaluasiId = parseInt(params.evaluasiId);
+    return await RpsService.getEvaluasiSubCpmk(evaluasiId);
+  }
+
+  static async attachEvaluasiSubCpmk({ params, body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const evaluasiId = parseInt(params.evaluasiId);
+    const newData = await RpsService.attachEvaluasiSubCpmk(evaluasiId, body);
+    set.status = 201;
+    return newData;
+  }
+
+  static async detachEvaluasiSubCpmk({ params, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const evaluasiId = parseInt(params.evaluasiId);
+    const subCpmkId = parseInt(params.subCpmkId);
+    const deleted = await RpsService.detachEvaluasiSubCpmk(evaluasiId, subCpmkId);
+    if (!deleted) {
+      set.status = 404;
+      return { error: 'Data tidak ditemukan' };
+    }
+    return { message: 'SubCPMK berhasil diunlink dari Evaluasi' };
   }
 }

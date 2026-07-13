@@ -1,5 +1,13 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { kurikulumMataKuliah, mataKuliah, rencanaEvaluasi, rps, rpsTopik } from '../models/schema';
+import {
+  kurikulumMataKuliah,
+  mataKuliah,
+  mataKuliahBahanKajian,
+  rencanaEvaluasi,
+  rencanaEvaluasiSubCpmk,
+  rps,
+  rpsTopik,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateRpsDto {
@@ -40,7 +48,18 @@ export class RpsService {
         mataKuliah: true,
       },
     });
-    return data || null;
+
+    if (!data) return null;
+
+    // Fetch BK mappings for this mata kuliah
+    const bkMappings = await db.query.mataKuliahBahanKajian.findMany({
+      where: eq(mataKuliahBahanKajian.mataKuliahId, mataKuliahId),
+      with: {
+        bahanKajian: true,
+      },
+    });
+
+    return { ...data, bahanKajian: bkMappings };
   }
 
   static async createRps(data: CreateRpsDto) {
@@ -239,5 +258,42 @@ export class RpsService {
 
       return newRps;
     });
+  }
+
+  static async getEvaluasiSubCpmk(evaluasiId: number) {
+    return db.query.rencanaEvaluasiSubCpmk.findMany({
+      where: eq(rencanaEvaluasiSubCpmk.rencanaEvaluasiId, evaluasiId),
+      with: {
+        subCpmk: {
+          with: {
+            cpmk: {
+              with: { mataKuliah: true },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  static async attachEvaluasiSubCpmk(evaluasiId: number, data: { subCpmkId: number; bobot?: number | null }) {
+    const [newData] = await db
+      .insert(rencanaEvaluasiSubCpmk)
+      .values({
+        rencanaEvaluasiId: evaluasiId,
+        ...data,
+        bobot: data.bobot ? data.bobot.toString() : null,
+      })
+      .returning();
+    return newData;
+  }
+
+  static async detachEvaluasiSubCpmk(evaluasiId: number, subCpmkId: number) {
+    const [deleted] = await db
+      .delete(rencanaEvaluasiSubCpmk)
+      .where(
+        and(eq(rencanaEvaluasiSubCpmk.rencanaEvaluasiId, evaluasiId), eq(rencanaEvaluasiSubCpmk.subCpmkId, subCpmkId)),
+      )
+      .returning();
+    return deleted || null;
   }
 }
