@@ -209,7 +209,7 @@ export const getEvaluasiSubCpmkSchema = {
     description: 'Mengambil daftar SubCPMK yang diukur oleh rencana evaluasi tertentu.',
   },
   params: t.Object({
-    evaluasiId: t.Numeric(),
+    id: t.Numeric(),
   }),
 };
 
@@ -220,7 +220,7 @@ export const attachEvaluasiSubCpmkSchema = {
     description: 'Menambahkan link SubCPMK ke rencana evaluasi (Hanya Admin/Dosen).',
   },
   params: t.Object({
-    evaluasiId: t.Numeric(),
+    id: t.Numeric(),
   }),
   body: evaluasiSubCpmkBody,
 };
@@ -232,7 +232,7 @@ export const detachEvaluasiSubCpmkSchema = {
     description: 'Menghapus link SubCPMK dari rencana evaluasi (Hanya Admin/Dosen).',
   },
   params: t.Object({
-    evaluasiId: t.Numeric(),
+    id: t.Numeric(),
     subCpmkId: t.Numeric(),
   }),
 };

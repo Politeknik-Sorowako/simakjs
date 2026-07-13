@@ -26,7 +26,7 @@ export const createCpmkSchema = {
     201: t.Object({
       id: t.Integer({ default: 1 }),
       mataKuliahId: t.Integer({ default: 1 }),
-      kurikulumMataKuliahId: t.Optional(t.Integer()),
+      kurikulumMataKuliahId: t.Nullable(t.Integer()),
       kode: t.String({ default: 'CPMK-1' }),
       deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
     }),
@@ -47,7 +47,7 @@ export const getCpmkByMataKuliahSchema = {
       t.Object({
         id: t.Integer({ default: 1 }),
         mataKuliahId: t.Integer({ default: 1 }),
-        kurikulumMataKuliahId: t.Optional(t.Integer()),
+        kurikulumMataKuliahId: t.Nullable(t.Integer()),
         kode: t.String({ default: 'CPMK-1' }),
         deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
       }),

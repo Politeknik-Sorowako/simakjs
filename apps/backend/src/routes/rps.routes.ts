@@ -33,10 +33,10 @@ export const rpsRoutes = new Elysia()
   .post('/rencana-evaluasi', RpsController.createRencanaEvaluasi, createRencanaEvaluasiSchema)
   .put('/rencana-evaluasi/:id', RpsController.updateRencanaEvaluasi, updateRencanaEvaluasiSchema)
   .delete('/rencana-evaluasi/:id', RpsController.deleteRencanaEvaluasi, deleteRencanaEvaluasiSchema)
-  .get('/rencana-evaluasi/:evaluasiId/sub-cpmk', RpsController.getEvaluasiSubCpmk, getEvaluasiSubCpmkSchema)
-  .post('/rencana-evaluasi/:evaluasiId/sub-cpmk', RpsController.attachEvaluasiSubCpmk, attachEvaluasiSubCpmkSchema)
+  .get('/rencana-evaluasi/:id/sub-cpmk', RpsController.getEvaluasiSubCpmk, getEvaluasiSubCpmkSchema)
+  .post('/rencana-evaluasi/:id/sub-cpmk', RpsController.attachEvaluasiSubCpmk, attachEvaluasiSubCpmkSchema)
   .delete(
-    '/rencana-evaluasi/:evaluasiId/sub-cpmk/:subCpmkId',
+    '/rencana-evaluasi/:id/sub-cpmk/:subCpmkId',
     RpsController.detachEvaluasiSubCpmk,
     detachEvaluasiSubCpmkSchema,
   );

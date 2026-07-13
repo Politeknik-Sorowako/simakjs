@@ -202,13 +202,14 @@ describe('OBE Services', () => {
       const mk = (await mkResponse.json()) as { id: number };
 
       const cpmk1 = await app.handle(
-        new Request(`http://localhost/mata-kuliah/${mk.id}/cpmk`, {
+        new Request('http://localhost/cpmk', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${await getAuthToken('admin-coverage@test.com', 'admin')}`,
           },
           body: JSON.stringify({
+            mataKuliahId: mk.id,
             kode: 'CPMK-001',
             deskripsi: 'CPMK 1',
           }),
@@ -217,19 +218,34 @@ describe('OBE Services', () => {
       const cpmk1Data = (await cpmk1.json()) as { id: number };
 
       const cpmk2 = await app.handle(
-        new Request(`http://localhost/mata-kuliah/${mk.id}/cpmk`, {
+        new Request('http://localhost/cpmk', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${await getAuthToken('admin-coverage@test.com', 'admin')}`,
           },
           body: JSON.stringify({
+            mataKuliahId: mk.id,
             kode: 'CPMK-002',
             deskripsi: 'CPMK 2',
           }),
         }),
       );
       const cpmk2Data = (await cpmk2.json()) as { id: number };
+
+      await app.handle(
+        new Request('http://localhost/periode-akademik', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${await getAuthToken('admin-coverage@test.com', 'admin')}`,
+          },
+          body: JSON.stringify({
+            id: '20241',
+            nama: 'Ganjil 2024/2025',
+          }),
+        }),
+      );
 
       const kurikulumResponse = await app.handle(
         new Request('http://localhost/kurikulum', {

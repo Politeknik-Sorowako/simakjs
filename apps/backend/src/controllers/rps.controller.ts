@@ -166,7 +166,7 @@ export class RpsController {
 
   static async getEvaluasiSubCpmk({ params, getCurrentUser }: AuthContext) {
     await getCurrentUser();
-    const evaluasiId = parseInt(params.evaluasiId);
+    const evaluasiId = parseInt(params.id);
     return await RpsService.getEvaluasiSubCpmk(evaluasiId);
   }
 
@@ -176,7 +176,7 @@ export class RpsController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const evaluasiId = parseInt(params.evaluasiId);
+    const evaluasiId = parseInt(params.id);
     const newData = await RpsService.attachEvaluasiSubCpmk(evaluasiId, body);
     set.status = 201;
     return newData;
@@ -188,7 +188,7 @@ export class RpsController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const evaluasiId = parseInt(params.evaluasiId);
+    const evaluasiId = parseInt(params.id);
     const subCpmkId = parseInt(params.subCpmkId);
     const deleted = await RpsService.detachEvaluasiSubCpmk(evaluasiId, subCpmkId);
     if (!deleted) {
