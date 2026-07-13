@@ -15,6 +15,7 @@ export interface CreateRpsTopikDto {
   subTopik?: string;
   metode?: string;
   cpmkId?: number;
+  subCpmkId?: number;
 }
 
 export interface CreateRencanaEvaluasiDto {
@@ -33,8 +34,10 @@ export class RpsService {
         topik: {
           with: {
             cpmk: true,
+            subCpmk: true,
           },
         },
+        mataKuliah: true,
       },
     });
     return data || null;
@@ -193,7 +196,12 @@ export class RpsService {
 
       const [newRps] = await tx
         .insert(rps)
-        .values({ mataKuliahId: targetMataKuliahId, periodeId: targetPeriodeId, deskripsi: source.deskripsi, cplProdi: source.cplProdi })
+        .values({
+          mataKuliahId: targetMataKuliahId,
+          periodeId: targetPeriodeId,
+          deskripsi: source.deskripsi,
+          cplProdi: source.cplProdi,
+        })
         .returning();
 
       if (source.topik.length > 0) {
@@ -205,6 +213,7 @@ export class RpsService {
             subTopik: t.subTopik,
             metode: t.metode,
             cpmkId: t.cpmkId,
+            subCpmkId: t.subCpmkId,
           })),
         );
       }

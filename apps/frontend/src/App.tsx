@@ -3,9 +3,31 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
+import AdmisiDaftar from './routes/AdmisiDaftar';
+import AdmisiDaftarUlang from './routes/AdmisiDaftarUlang';
+import AdmisiDashboard from './routes/AdmisiDashboard';
+import AdmisiDetail from './routes/AdmisiDetail';
+import AdmisiDokumen from './routes/AdmisiDokumen';
+import AdmisiEditPendaftaran from './routes/AdmisiEditPendaftaran';
+import AdmisiPembayaran from './routes/AdmisiPembayaran';
+import AdmisiPendaftaranBaru from './routes/AdmisiPendaftaranBaru';
+import AdmisiSesi from './routes/AdmisiSesi';
 import AngkatanKurikulum from './routes/AngkatanKurikulum';
+import AdmisiDaftarUlangNIM from './routes/admisi/AdmisiDaftarUlangNIM';
+import AdmisiImportUjian from './routes/admisi/AdmisiImportUjian';
+import AdmisiJadwal from './routes/admisi/AdmisiJadwal';
+import AdmisiLaporan from './routes/admisi/AdmisiLaporan';
+import AdmisiManajemenDashboard from './routes/admisi/AdmisiManajemenDashboard';
+import AdmisiPengumuman from './routes/admisi/AdmisiPengumuman';
+import AdmisiPenilaian from './routes/admisi/AdmisiPenilaian';
+import AdmisiSeleksiMassal from './routes/admisi/AdmisiSeleksiMassal';
+import AdmisiSesiDetail from './routes/admisi/AdmisiSesiDetail';
+import AdmisiSesiList from './routes/admisi/AdmisiSesiList';
+import AdmisiVABanks from './routes/admisi/AdmisiVABanks';
+import AdmisiVerifikasi from './routes/admisi/AdmisiVerifikasi';
 import BapPresensi from './routes/BapPresensi';
 import Bimbingan from './routes/Bimbingan';
+import Cpl from './routes/Cpl';
 import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
@@ -17,39 +39,8 @@ import Khs from './routes/Khs';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
-import LaporanRekapNilai from './routes/reports/LaporanRekapNilai';
-import LaporanPeringatan from './routes/reports/LaporanPeringatan';
-import LaporanMahasiswaBaru from './routes/reports/LaporanMahasiswaBaru';
-import LaporanPresensiKelas from './routes/reports/LaporanPresensiKelas';
-import LaporanAkademik from './routes/reports/LaporanAkademik';
-import LaporanBKD from './routes/reports/LaporanBKD';
-import LaporanKRS from './routes/reports/LaporanKRS';
-import LaporanKeuangan from './routes/reports/LaporanKeuangan';
-import LaporanYudisium from './routes/reports/LaporanYudisium';
-import LaporanMahasiswaKeluar from './routes/reports/LaporanMahasiswaKeluar';
 // Routes imports
 import Login from './routes/Login';
-import AdmisiDaftar from './routes/AdmisiDaftar';
-import AdmisiDashboard from './routes/AdmisiDashboard';
-import AdmisiSesi from './routes/AdmisiSesi';
-import AdmisiPendaftaranBaru from './routes/AdmisiPendaftaranBaru';
-import AdmisiDetail from './routes/AdmisiDetail';
-import AdmisiEditPendaftaran from './routes/AdmisiEditPendaftaran';
-import AdmisiDokumen from './routes/AdmisiDokumen';
-import AdmisiDaftarUlang from './routes/AdmisiDaftarUlang';
-import AdmisiPembayaran from './routes/AdmisiPembayaran';
-import AdmisiManajemenDashboard from './routes/admisi/AdmisiManajemenDashboard';
-import AdmisiSesiList from './routes/admisi/AdmisiSesiList';
-import AdmisiVerifikasi from './routes/admisi/AdmisiVerifikasi';
-import AdmisiDaftarUlangNIM from './routes/admisi/AdmisiDaftarUlangNIM';
-import AdmisiLaporan from './routes/admisi/AdmisiLaporan';
-import AdmisiPenilaian from './routes/admisi/AdmisiPenilaian';
-import AdmisiVABanks from './routes/admisi/AdmisiVABanks';
-import AdmisiJadwal from './routes/admisi/AdmisiJadwal';
-import AdmisiSesiDetail from './routes/admisi/AdmisiSesiDetail';
-import AdmisiImportUjian from './routes/admisi/AdmisiImportUjian';
-import AdmisiSeleksiMassal from './routes/admisi/AdmisiSeleksiMassal';
-import AdmisiPengumuman from './routes/admisi/AdmisiPengumuman';
 import Mahasiswa from './routes/Mahasiswa';
 import MahasiswaKeluar from './routes/MahasiswaKeluar';
 import ManajemenCuti from './routes/ManajemenCuti';
@@ -58,10 +49,22 @@ import { PddiktiSync } from './routes/PddiktiSync';
 import Pelanggaran from './routes/Pelanggaran';
 import Pengguna from './routes/Pengguna';
 import PeriodeAkademik from './routes/PeriodeAkademik';
+import PetaObe from './routes/PetaObe';
 import Profil from './routes/Profil';
+import ProfilLulusan from './routes/ProfilLulusan';
 import ProgramStudi from './routes/ProgramStudi';
 import ResetPassword from './routes/ResetPassword';
 import Rps from './routes/Rps';
+import LaporanAkademik from './routes/reports/LaporanAkademik';
+import LaporanBKD from './routes/reports/LaporanBKD';
+import LaporanKeuangan from './routes/reports/LaporanKeuangan';
+import LaporanKRS from './routes/reports/LaporanKRS';
+import LaporanMahasiswaBaru from './routes/reports/LaporanMahasiswaBaru';
+import LaporanMahasiswaKeluar from './routes/reports/LaporanMahasiswaKeluar';
+import LaporanPeringatan from './routes/reports/LaporanPeringatan';
+import LaporanPresensiKelas from './routes/reports/LaporanPresensiKelas';
+import LaporanRekapNilai from './routes/reports/LaporanRekapNilai';
+import LaporanYudisium from './routes/reports/LaporanYudisium';
 import Yudisium from './routes/Yudisium';
 
 function AppContent() {
@@ -240,6 +243,30 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <AngkatanKurikulum />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profil-lulusan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <ProfilLulusan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cpl"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <Cpl />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/peta-obe"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <PetaObe />
           </ProtectedRoute>
         }
       />

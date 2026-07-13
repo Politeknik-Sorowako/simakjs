@@ -13,6 +13,7 @@ export const rpsTopikBody = t.Object({
   subTopik: t.Optional(t.String()),
   metode: t.Optional(t.String({ default: 'Ceramah & Diskusi' })),
   cpmkId: t.Optional(t.Integer()),
+  subCpmkId: t.Optional(t.Integer()),
 });
 
 export const rencanaEvaluasiBody = t.Object({

@@ -2,6 +2,7 @@ import { t } from 'elysia';
 
 export const cpmkBody = t.Object({
   mataKuliahId: t.Integer({ default: 1 }),
+  kurikulumMataKuliahId: t.Optional(t.Integer()),
   kode: t.String({ default: 'CPMK-1' }),
   deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
 });
@@ -10,6 +11,7 @@ export const updateCpmkBody = t.Partial(
   t.Object({
     kode: t.String(),
     deskripsi: t.String(),
+    kurikulumMataKuliahId: t.Integer(),
   }),
 );
 
@@ -24,6 +26,7 @@ export const createCpmkSchema = {
     201: t.Object({
       id: t.Integer({ default: 1 }),
       mataKuliahId: t.Integer({ default: 1 }),
+      kurikulumMataKuliahId: t.Optional(t.Integer()),
       kode: t.String({ default: 'CPMK-1' }),
       deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
     }),
@@ -44,11 +47,35 @@ export const getCpmkByMataKuliahSchema = {
       t.Object({
         id: t.Integer({ default: 1 }),
         mataKuliahId: t.Integer({ default: 1 }),
+        kurikulumMataKuliahId: t.Optional(t.Integer()),
         kode: t.String({ default: 'CPMK-1' }),
         deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
       }),
     ),
   },
+};
+
+export const getCpmkByIdSchema = {
+  detail: {
+    tags: ['CPMK'],
+    summary: 'Detail CPMK',
+    description: 'Mengambil satu data CPMK berdasarkan ID dengan SubCPMK dan mapping CPL.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+};
+
+export const updateCpmkSchema = {
+  detail: {
+    tags: ['CPMK'],
+    summary: 'Perbarui CPMK',
+    description: 'Memperbarui data CPMK berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: updateCpmkBody,
 };
 
 export const deleteCpmkSchema = {

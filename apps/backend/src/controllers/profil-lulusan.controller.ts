@@ -1,15 +1,17 @@
-import { CpmkService } from '../services/cpmk.service';
+import { ProfilLulusanService } from '../services/profil-lulusan.service';
 import { AuthContext } from '../utils/types';
 
-export class CpmkController {
-  static async getByMataKuliah({ params }: AuthContext) {
-    return await CpmkService.getByMataKuliah(parseInt(params.mataKuliahId));
+export class ProfilLulusanController {
+  static async getAll({ query, getCurrentUser }: AuthContext) {
+    await getCurrentUser();
+    const prodiId = query.prodiId ? parseInt(query.prodiId) : undefined;
+    return await ProfilLulusanService.getAll(prodiId);
   }
 
-  static async getById({ params, set }: AuthContext) {
-    const data = await CpmkService.getById(parseInt(params.id));
+  static async getById({ params, getCurrentUser }: AuthContext) {
+    await getCurrentUser();
+    const data = await ProfilLulusanService.getById(parseInt(params.id));
     if (!data) {
-      set.status = 404;
       return { error: 'Data tidak ditemukan' };
     }
     return data;
@@ -17,22 +19,22 @@ export class CpmkController {
 
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const newCpmk = await CpmkService.create(body);
+    const newData = await ProfilLulusanService.create(body);
     set.status = 201;
-    return newCpmk;
+    return newData;
   }
 
   static async update({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const updated = await CpmkService.update(parseInt(params.id), body);
+    const updated = await ProfilLulusanService.update(parseInt(params.id), body);
     if (!updated) {
       set.status = 404;
       return { error: 'Data tidak ditemukan' };
@@ -46,11 +48,11 @@ export class CpmkController {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
-    const deleted = await CpmkService.delete(parseInt(params.id));
+    const deleted = await ProfilLulusanService.delete(parseInt(params.id));
     if (!deleted) {
       set.status = 404;
       return { error: 'Data tidak ditemukan' };
     }
-    return { message: 'CPMK berhasil dihapus' };
+    return { message: 'Profil Lulusan berhasil dihapus' };
   }
 }
