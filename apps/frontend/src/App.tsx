@@ -40,6 +40,7 @@ import Khs from './routes/Khs';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
+import LaporanObe from './routes/LaporanObe';
 // Routes imports
 import Login from './routes/Login';
 import Mahasiswa from './routes/Mahasiswa';
@@ -335,6 +336,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
             <LaporanPeringatan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/laporan/obe"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <LaporanObe />
           </ProtectedRoute>
         }
       />

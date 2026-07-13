@@ -27,6 +27,7 @@ import { mahasiswaRoutes } from './routes/mahasiswa.routes';
 import { mahasiswaKeluarRoutes } from './routes/mahasiswa-keluar.routes';
 import { mataKuliahRoutes } from './routes/mata-kuliah.routes';
 import { mataKuliahBahanKajianRoutes } from './routes/mata-kuliah-bahan-kajian.routes';
+import { obeReportRoutes } from './routes/obe-report.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
@@ -77,6 +78,7 @@ if (isDevelopment) {
           { name: 'BK-CPL Mapping', description: 'Pemetaan Bahan Kajian ke CPL' },
           { name: 'CPMK', description: 'Capaian Pembelajaran Mata Kuliah' },
           { name: 'RPS', description: 'Rencana Pembelajaran Semester' },
+          { name: 'Laporan OBE', description: 'Laporan dan analisis Outcome-Based Education' },
           { name: 'Rencana Evaluasi', description: 'Rencana evaluasi/penilaian mata kuliah' },
           { name: 'BAP', description: 'Berita Acara Perkuliahan' },
           { name: 'Presensi', description: 'Presensi kehadiran mahasiswa' },
@@ -254,6 +256,7 @@ app
   .use(mataKuliahBahanKajianRoutes)
   .use(cpmkRoutes)
   .use(bapRoutes)
+  .use(obeReportRoutes)
   .use(presensiRoutes)
   .use(bimbinganRoutes)
   .use(pelanggaranRoutes)
