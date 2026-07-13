@@ -79,6 +79,11 @@ export const resetPasswordSchema = {
     400: t.Object({
       error: t.String({ default: 'Token reset password tidak valid atau kedaluwarsa' }),
     }),
+    422: t.Object({
+      success: t.Boolean(),
+      error: t.String(),
+      message: t.String(),
+    }),
   },
 };
 
@@ -92,9 +97,15 @@ export const forgotPasswordSchema = {
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
   }),
   response: {
-    200: t.Object({
-      message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
-    }),
+    200: t.Union([
+      t.Object({
+        message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
+      }),
+      t.Object({
+        message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
+        token: t.String(),
+      }),
+    ]),
     429: t.Object({
       error: t.String({ default: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.' }),
     }),
