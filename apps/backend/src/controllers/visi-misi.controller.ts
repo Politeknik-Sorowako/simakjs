@@ -1,4 +1,5 @@
 import { VisiMisiService } from '../services/visi-misi.service';
+import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class VisiMisiController {
@@ -29,7 +30,7 @@ export class VisiMisiController {
 
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -40,7 +41,7 @@ export class VisiMisiController {
 
   static async update({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -68,7 +69,7 @@ export class VisiMisiController {
 
   static async setAktif({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

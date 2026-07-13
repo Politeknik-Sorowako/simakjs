@@ -1,4 +1,5 @@
 import { BahanKajianCplMappingService } from '../services/bahan-kajian-cpl-mapping.service';
+import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class BahanKajianCplMappingController {
@@ -12,7 +13,7 @@ export class BahanKajianCplMappingController {
 
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -23,7 +24,7 @@ export class BahanKajianCplMappingController {
 
   static async delete({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

@@ -1,5 +1,15 @@
 import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
-import { bap, dosen, dosenPengajarKelas, kelasKuliah, kompensasiBayar, mahasiswa, mataKuliah, presensi, programStudi } from '../models/schema';
+import {
+  bap,
+  dosen,
+  dosenPengajarKelas,
+  kelasKuliah,
+  kompensasiBayar,
+  mahasiswa,
+  mataKuliah,
+  presensi,
+  programStudi,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export class PresensiService {
@@ -183,10 +193,7 @@ export class PresensiService {
       mapPayments.set(pay.mahasiswaId, (mapPayments.get(pay.mahasiswaId) || 0) + pay.jumlahMenit);
     }
 
-    const [totalResult] = await db
-      .select({ total: sql<number>`count(*)` })
-      .from(mahasiswa)
-      .where(whereClause);
+    const [totalResult] = await db.select({ total: sql<number>`count(*)` }).from(mahasiswa).where(whereClause);
 
     const total = Number(totalResult?.total || 0);
     const totalPages = Math.ceil(total / limit);
@@ -237,8 +244,18 @@ export class PresensiService {
       mapPayments.set(pay.mahasiswaId, (mapPayments.get(pay.mahasiswaId) || 0) + pay.jumlahMenit);
     }
 
-    let totalKomp = 0, totalDby = 0;
-    const prodiMap = new Map<string, { prodiNama: string; jumlahMahasiswa: number; totalKompensasi: number; totalDibayar: number; sisaKompensasi: number }>();
+    let totalKomp = 0,
+      totalDby = 0;
+    const prodiMap = new Map<
+      string,
+      {
+        prodiNama: string;
+        jumlahMahasiswa: number;
+        totalKompensasi: number;
+        totalDibayar: number;
+        sisaKompensasi: number;
+      }
+    >();
     const mhsList: any[] = [];
 
     for (const mhs of allMahasiswa) {
@@ -250,7 +267,13 @@ export class PresensiService {
       totalDby += totalDibayar;
 
       const prodi = mhs.prodiNama || 'Tanpa Prodi';
-      const existing = prodiMap.get(prodi) || { prodiNama: prodi, jumlahMahasiswa: 0, totalKompensasi: 0, totalDibayar: 0, sisaKompensasi: 0 };
+      const existing = prodiMap.get(prodi) || {
+        prodiNama: prodi,
+        jumlahMahasiswa: 0,
+        totalKompensasi: 0,
+        totalDibayar: 0,
+        sisaKompensasi: 0,
+      };
       existing.jumlahMahasiswa++;
       existing.totalKompensasi += totalKompensasi;
       existing.totalDibayar += totalDibayar;
@@ -258,16 +281,22 @@ export class PresensiService {
       prodiMap.set(prodi, existing);
 
       if (totalKompensasi > 0 || totalDibayar > 0) {
-        mhsList.push({ id: mhs.id, nama: '', nim: '', prodiNama: prodi, totalKompensasi, totalDibayar, sisaKompensasi });
+        mhsList.push({
+          id: mhs.id,
+          nama: '',
+          nim: '',
+          prodiNama: prodi,
+          totalKompensasi,
+          totalDibayar,
+          sisaKompensasi,
+        });
       }
     }
 
     const rekapProdi = [...prodiMap.values()].sort((a, b) => b.sisaKompensasi - a.sisaKompensasi);
 
     // Top 10 by sisaKompensasi (we need names: fetch from full list)
-    const mhsFull = await db
-      .select({ id: mahasiswa.id, nama: mahasiswa.nama, nim: mahasiswa.nim })
-      .from(mahasiswa);
+    const mhsFull = await db.select({ id: mahasiswa.id, nama: mahasiswa.nama, nim: mahasiswa.nim }).from(mahasiswa);
 
     const mhsNameMap = new Map(mhsFull.map((m) => [m.id, m]));
 
@@ -277,10 +306,21 @@ export class PresensiService {
       const totalKompensasi = mapPresensi.get(mhs.id) || 0;
       const totalDibayar = mapPayments.get(mhs.id) || 0;
       const sisaKompensasi = Math.max(0, totalKompensasi - totalDibayar);
-      return { id: mhs.id, nama, nim, prodiNama: mhs.prodiNama || 'Tanpa Prodi', totalKompensasi, totalDibayar, sisaKompensasi };
+      return {
+        id: mhs.id,
+        nama,
+        nim,
+        prodiNama: mhs.prodiNama || 'Tanpa Prodi',
+        totalKompensasi,
+        totalDibayar,
+        sisaKompensasi,
+      };
     });
 
-    const top10 = mhsAgg.filter((m) => m.sisaKompensasi > 0).sort((a, b) => b.sisaKompensasi - a.sisaKompensasi).slice(0, 10);
+    const top10 = mhsAgg
+      .filter((m) => m.sisaKompensasi > 0)
+      .sort((a, b) => b.sisaKompensasi - a.sisaKompensasi)
+      .slice(0, 10);
 
     const totalSisa = Math.max(0, totalKomp - totalDby);
 
@@ -320,10 +360,7 @@ export class PresensiService {
       with: { mataKuliah: true, periodeAkademik: true },
     });
 
-    const [totalPertemuan] = await db
-      .select({ count: count() })
-      .from(bap)
-      .where(eq(bap.kelasKuliahId, kelasKuliahId));
+    const [totalPertemuan] = await db.select({ count: count() }).from(bap).where(eq(bap.kelasKuliahId, kelasKuliahId));
 
     const pengajar = await db
       .select({ dosen: { id: dosen.id, nama: dosen.nama, nip: dosen.nip } })
@@ -397,7 +434,17 @@ export class PresensiService {
       const bapIds = bapList.map((b) => b.id);
 
       if (bapIds.length === 0) {
-        hasil.push({ kelasKuliahId: k.id, namaMataKuliah: k.mataKuliah?.nama || k.namaKelas, totalPertemuan: 0, hadir: 0, sakit: 0, izin: 0, alpa: 0, telat: 0, persentaseHadir: 0 });
+        hasil.push({
+          kelasKuliahId: k.id,
+          namaMataKuliah: k.mataKuliah?.nama || k.namaKelas,
+          totalPertemuan: 0,
+          hadir: 0,
+          sakit: 0,
+          izin: 0,
+          alpa: 0,
+          telat: 0,
+          persentaseHadir: 0,
+        });
         continue;
       }
 
@@ -422,12 +469,17 @@ export class PresensiService {
         izin: Number(p?.izin || 0),
         alpa: Number(p?.alpa || 0),
         telat: Number(p?.telat || 0),
-        persentaseHadir: pt > 0 ? Math.round(((Number(p?.hadir || 0) + Number(p?.sakit || 0) + Number(p?.izin || 0)) / pt) * 100) : 0,
+        persentaseHadir:
+          pt > 0 ? Math.round(((Number(p?.hadir || 0) + Number(p?.sakit || 0) + Number(p?.izin || 0)) / pt) * 100) : 0,
       });
     }
 
     const rataHadir = hasil.reduce((s, h) => s + h.persentaseHadir, 0) / (hasil.length || 1);
 
-    return { mahasiswa: mhsInfo, detail: hasil, summary: { totalKelas: hasil.length, rataPersentaseHadir: Math.round(rataHadir) } };
+    return {
+      mahasiswa: mhsInfo,
+      detail: hasil,
+      summary: { totalKelas: hasil.length, rataPersentaseHadir: Math.round(rataHadir) },
+    };
   }
 }

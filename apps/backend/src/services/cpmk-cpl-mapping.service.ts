@@ -1,5 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { cpl, cpmk, cpmkCpl, kurikulumMataKuliah, mataKuliah } from '../models/schema';
+import { cpl, cpmk, cpmkCpl, kurikulum, kurikulumMataKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateCpmkCplMappingDto {
@@ -51,7 +51,13 @@ export class CpmkCplMappingService {
   }
 
   static async getMatriks(kurikulumId: number) {
+    const kur = await db.query.kurikulum.findFirst({
+      where: eq(kurikulum.id, kurikulumId),
+    });
+    if (!kur) throw new Error('Kurikulum tidak ditemukan');
+
     const cplList = await db.query.cpl.findMany({
+      where: eq(cpl.programStudiId, kur.programStudiId),
       with: {
         cpmkMappings: {
           with: {

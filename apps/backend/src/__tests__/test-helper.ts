@@ -1,11 +1,21 @@
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
 import {
+  admissionSessionProdis,
+  admissionSessions,
   angkatanKurikulum,
+  announcements,
+  applications,
+  bahanKajian,
+  bahanKajianCpl,
   bap,
   bimbingan,
   bimbinganThread,
+  cpl,
+  cplProfilLulusan,
   cpmk,
+  cpmkCpl,
+  documentRequirements,
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
@@ -18,22 +28,27 @@ import {
   mahasiswa,
   mahasiswaKeluar,
   mataKuliah,
+  mataKuliahBahanKajian,
   nilaiKomponenMahasiswa,
   pelanggaran,
   pengajuanCuti,
   pengajuanYudisium,
   periodeAkademik,
   presensi,
+  profilLulusan,
   programStudi,
   rencanaEvaluasi,
+  rencanaEvaluasiSubCpmk,
   rps,
   rpsTopik,
   sesiBimbingan,
   skalaPredikatKelulusan,
   skemaTarif,
+  subCpmk,
   tagihan,
   transaksiPembayaran,
   users,
+  visiMisiProdi,
 } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -79,6 +94,11 @@ export interface MahasiswaSuccessResponse {
 
 // Helper function to clear all database tables to ensure test independence
 export async function clearDatabase() {
+  await db.delete(announcements);
+  await db.delete(applications);
+  await db.delete(documentRequirements);
+  await db.delete(admissionSessionProdis);
+  await db.delete(admissionSessions);
   await db.delete(pengajuanCuti);
   await db.delete(mahasiswaKeluar);
   await db.delete(tagihan);
@@ -89,6 +109,7 @@ export async function clearDatabase() {
   await db.delete(pengajuanYudisium);
   await db.delete(nilaiKomponenMahasiswa);
   await db.delete(komponenNilai);
+  await db.delete(rencanaEvaluasiSubCpmk);
   await db.delete(rencanaEvaluasi);
   await db.delete(rpsTopik);
   await db.delete(rps);
@@ -99,7 +120,16 @@ export async function clearDatabase() {
   await db.delete(kompensasiBayar);
   await db.delete(presensi);
   await db.delete(bap);
+  await db.delete(subCpmk);
+  await db.delete(cpmkCpl);
   await db.delete(cpmk);
+  await db.delete(mataKuliahBahanKajian);
+  await db.delete(bahanKajianCpl);
+  await db.delete(bahanKajian);
+  await db.delete(cplProfilLulusan);
+  await db.delete(cpl);
+  await db.delete(profilLulusan);
+  await db.delete(visiMisiProdi);
   await db.delete(krs);
   await db.delete(angkatanKurikulum);
   await db.delete(kurikulumMataKuliah);

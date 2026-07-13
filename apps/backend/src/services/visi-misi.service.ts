@@ -62,13 +62,19 @@ export class VisiMisiService {
     });
     if (!record) return null;
 
-    await db
-      .update(visiMisiProdi)
-      .set({ isAktif: false })
-      .where(and(eq(visiMisiProdi.programStudiId, record.programStudiId), eq(visiMisiProdi.isAktif, true)));
+    return await db.transaction(async (tx) => {
+      await tx
+        .update(visiMisiProdi)
+        .set({ isAktif: false })
+        .where(and(eq(visiMisiProdi.programStudiId, record.programStudiId), eq(visiMisiProdi.isAktif, true)));
 
-    const [updated] = await db.update(visiMisiProdi).set({ isAktif: true }).where(eq(visiMisiProdi.id, id)).returning();
+      const [updated] = await tx
+        .update(visiMisiProdi)
+        .set({ isAktif: true })
+        .where(eq(visiMisiProdi.id, id))
+        .returning();
 
-    return updated;
+      return updated;
+    });
   }
 }

@@ -1,4 +1,5 @@
 import { CpmkCplMappingService } from '../services/cpmk-cpl-mapping.service';
+import { isAdminOrProdi, isAdminOrProdiOrDosen } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CpmkCplMappingController {
@@ -11,7 +12,7 @@ export class CpmkCplMappingController {
 
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!isAdminOrProdiOrDosen(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -22,7 +23,7 @@ export class CpmkCplMappingController {
 
   static async delete({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

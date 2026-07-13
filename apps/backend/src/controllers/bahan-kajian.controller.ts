@@ -1,4 +1,5 @@
 import { BahanKajianService } from '../services/bahan-kajian.service';
+import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class BahanKajianController {
@@ -19,7 +20,7 @@ export class BahanKajianController {
 
   static async create({ body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -30,7 +31,7 @@ export class BahanKajianController {
 
   static async update({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

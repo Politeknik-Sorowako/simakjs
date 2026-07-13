@@ -1,6 +1,6 @@
+import { resolve } from 'path';
 import { AdmisiService } from '../services/admisi.service';
 import { AuthContext } from '../utils/types';
-import { resolve } from 'path';
 
 export const STORAGE_DIR = resolve(import.meta.dir!, '../../storage/applications');
 
@@ -40,10 +40,17 @@ export class AdmisiController {
     return { data: prodis };
   }
 
-  static async createApplication({ body, getCurrentUser, set }: AuthContext<{ sessionId: number; prodiPilihan1: number; prodiPilihan2?: number }>) {
+  static async createApplication({
+    body,
+    getCurrentUser,
+    set,
+  }: AuthContext<{ sessionId: number; prodiPilihan1: number; prodiPilihan2?: number }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       const app = await AdmisiService.createApplication(user.id, {
         sessionId: body.sessionId,
@@ -62,7 +69,10 @@ export class AdmisiController {
   static async updateApplication({ params, body, getCurrentUser, set }: AuthContext<any, { id: string }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       await AdmisiService.updateApplication(Number(params.id), user.id, body);
       return { message: 'Data pendaftaran berhasil diperbarui' };
@@ -75,7 +85,10 @@ export class AdmisiController {
   static async submitApplication({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       const result = await AdmisiService.submitApplication(Number(params.id), user.id);
       return { message: 'Pendaftaran berhasil disubmit', status: result.status };
@@ -87,7 +100,10 @@ export class AdmisiController {
 
   static async getMyApplications({ getCurrentUser, set }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+    if (!user) {
+      set.status = 401;
+      return { error: 'Unauthorized' };
+    }
 
     const apps = await AdmisiService.getUserApplications(user.id);
     return { data: apps };
@@ -96,7 +112,10 @@ export class AdmisiController {
   static async getApplicationDetail({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       const app = await AdmisiService.getApplicationDetail(Number(params.id), user.id);
       const docs = await AdmisiService.getDocuments(Number(params.id));
@@ -111,7 +130,10 @@ export class AdmisiController {
   static async uploadDocument({ params, request, getCurrentUser, set }: any) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       const { db } = await import('../utils/db');
       const { documentRequirements, applicantDocuments, applications } = await import('../models/schema');
@@ -140,7 +162,11 @@ export class AdmisiController {
           .limit(1),
       ]);
 
-      const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      const slug = (s: string) =>
+        s
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '_')
+          .replace(/^_|_$/g, '');
 
       const noPendaftar = app?.noPendaftar || `app_${params.id}`;
       const namaSlug = slug(app?.namaLengkap || 'unknown');
@@ -158,12 +184,12 @@ export class AdmisiController {
       const fullPath = `${uploadDir}/${newFileName}`;
       await Bun.write(fullPath, file);
 
-      const doc = await AdmisiService.uploadDocument(
-        Number(params.id),
-        requirementId,
-        user.id,
-        { path: fullPath, name: newFileName, size: file.size, type: file.type },
-      );
+      const doc = await AdmisiService.uploadDocument(Number(params.id), requirementId, user.id, {
+        path: fullPath,
+        name: newFileName,
+        size: file.size,
+        type: file.type,
+      });
 
       set.status = 201;
       return { message: 'Dokumen berhasil diupload', documentId: doc.id };
@@ -173,17 +199,20 @@ export class AdmisiController {
     }
   }
 
-  static async submitDocumentLink({ params, body, getCurrentUser, set }: AuthContext<{ requirementId: number; fileLink: string }, { id: string }>) {
+  static async submitDocumentLink({
+    params,
+    body,
+    getCurrentUser,
+    set,
+  }: AuthContext<{ requirementId: number; fileLink: string }, { id: string }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
-      const doc = await AdmisiService.submitDocumentLink(
-        Number(params.id),
-        body.requirementId,
-        user.id,
-        body.fileLink,
-      );
+      const doc = await AdmisiService.submitDocumentLink(Number(params.id), body.requirementId, user.id, body.fileLink);
 
       set.status = 201;
       return { message: 'Link dokumen berhasil dikirim', documentId: doc.id };
@@ -196,7 +225,10 @@ export class AdmisiController {
   static async deleteDocument({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       await AdmisiService.deleteDocument(Number(params.id), user.id);
       return { message: 'Dokumen berhasil dihapus' };
@@ -206,10 +238,18 @@ export class AdmisiController {
     }
   }
 
-  static async submitPayment({ params, body, getCurrentUser, set }: AuthContext<{ nominal: number; bankAsal?: string; namaPengirim?: string }>) {
+  static async submitPayment({
+    params,
+    body,
+    getCurrentUser,
+    set,
+  }: AuthContext<{ nominal: number; bankAsal?: string; namaPengirim?: string }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       if (!body.nominal || body.nominal <= 0) {
         set.status = 400;
@@ -234,7 +274,10 @@ export class AdmisiController {
   static async getDocuments({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       const docs = await AdmisiService.getDocuments(Number(params.id));
       return { data: docs };
@@ -316,7 +359,14 @@ export class AdmisiController {
       }
 
       const ext = ann.fileName?.split('.').pop()?.toLowerCase() || '';
-      const mimeMap: Record<string, string> = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+      const mimeMap: Record<string, string> = {
+        pdf: 'application/pdf',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        doc: 'application/msword',
+        docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      };
       set.headers['Content-Type'] = mimeMap[ext] || 'application/octet-stream';
       set.headers['Content-Disposition'] = `attachment; filename="${ann.fileName || 'file'}"`;
       return file;
@@ -336,7 +386,10 @@ export class AdmisiController {
   static async generateVA({ params, body, getCurrentUser, set }: any) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
       const va = await AdmisiService.generateVA(Number(params.id), user.id, body.vaBankId);
       set.status = 201;
       return { message: 'VA berhasil digenerate', data: va };
@@ -349,7 +402,10 @@ export class AdmisiController {
   static async getPaymentStatus({ params, getCurrentUser, set }: any) {
     try {
       const user = await getCurrentUser();
-      if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
       const data = await AdmisiService.getPaymentStatus(Number(params.id));
       return { data };
     } catch (e: any) {

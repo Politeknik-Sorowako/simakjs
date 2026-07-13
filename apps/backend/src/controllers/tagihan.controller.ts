@@ -205,7 +205,11 @@ export class TagihanController {
     }
   }
 
-  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
+  static async getStats({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;

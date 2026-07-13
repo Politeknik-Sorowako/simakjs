@@ -71,11 +71,21 @@ export class PresensiController {
     return await PresensiService.getRekapKehadiran(kelasKuliahId);
   }
 
-  static async getRekapKehadiranMahasiswa({ query, set, getCurrentUser }: AuthContext<any, { mahasiswaId?: string; periodeId?: string }>) {
+  static async getRekapKehadiranMahasiswa({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { mahasiswaId?: string; periodeId?: string }>) {
     const user = await getCurrentUser();
-    if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+    if (!user) {
+      set.status = 401;
+      return { error: 'Unauthorized' };
+    }
     const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
-    if (!mahasiswaId) { set.status = 400; return { error: 'Parameter mahasiswaId diperlukan.' }; }
+    if (!mahasiswaId) {
+      set.status = 400;
+      return { error: 'Parameter mahasiswaId diperlukan.' };
+    }
     return await PresensiService.getRekapKehadiranMahasiswa(mahasiswaId, query?.periodeId);
   }
 

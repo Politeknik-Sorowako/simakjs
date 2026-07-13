@@ -1,4 +1,5 @@
 import { MataKuliahBahanKajianService } from '../services/mata-kuliah-bahan-kajian.service';
+import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class MataKuliahBahanKajianController {
@@ -10,7 +11,7 @@ export class MataKuliahBahanKajianController {
 
   static async attach({ params, body, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -22,7 +23,7 @@ export class MataKuliahBahanKajianController {
 
   static async detach({ params, set, getCurrentUser }: AuthContext) {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

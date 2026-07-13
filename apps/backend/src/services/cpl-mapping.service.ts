@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { cpl, cplProfilLulusan, profilLulusan } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -15,14 +15,15 @@ export class CplMappingService {
     if (filterProfilLulusanId) conditions.push(eq(cplProfilLulusan.profilLulusanId, filterProfilLulusanId));
 
     if (prodiId) {
-      return db.query.cplProfilLulusan.findMany({
-        where: conditions.length > 0 ? and(...conditions) : undefined,
-        with: {
-          cpl: true,
-          profilLulusan: true,
-        },
+      const cplIds = await db.query.cpl.findMany({
+        where: eq(cpl.programStudiId, prodiId),
+        columns: { id: true },
       });
+      const cplIdList = cplIds.map((c) => c.id);
+      if (cplIdList.length === 0) return [];
+      conditions.push(inArray(cplProfilLulusan.cplId, cplIdList));
     }
+
     return db.query.cplProfilLulusan.findMany({
       where: conditions.length > 0 ? and(...conditions) : undefined,
       with: {
@@ -56,8 +57,15 @@ export class CplMappingService {
       orderBy: profilLulusan.urutan,
     });
 
+    const cplIds = allCpl.map((c) => c.id);
+    const plIds = allPl.map((pl) => pl.id);
+
+    if (cplIds.length === 0 || plIds.length === 0) {
+      return { cpl: allCpl, profilLulusan: allPl, matriks: [] };
+    }
+
     const mappings = await db.query.cplProfilLulusan.findMany({
-      where: and(eq(cplProfilLulusan.cplId, cpl.id), eq(cplProfilLulusan.profilLulusanId, profilLulusan.id)),
+      where: and(inArray(cplProfilLulusan.cplId, cplIds), inArray(cplProfilLulusan.profilLulusanId, plIds)),
       with: {
         cpl: true,
         profilLulusan: true,

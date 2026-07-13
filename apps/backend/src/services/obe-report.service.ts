@@ -35,18 +35,24 @@ export class ObeReportService {
     const cpmkInKurikulum = await db.query.cpmk.findMany({
       where: inArray(cpmk.mataKuliahId, mkIds),
     });
+    const cpmkIdsInKurikulum = new Set(cpmkInKurikulum.map((c) => c.id));
+
+    const allCpmkCplMappings = await db.query.cpmkCpl.findMany();
 
     const cplWithCpmk = new Set<number>();
-    for (const mapping of await db.query.cpmkCpl.findMany()) {
-      if (cpmkInKurikulum.some((c) => c.id === mapping.cpmkId)) {
+    const cpmkCountPerCpl = new Map<number, number>();
+
+    for (const mapping of allCpmkCplMappings) {
+      if (cpmkIdsInKurikulum.has(mapping.cpmkId)) {
         cplWithCpmk.add(mapping.cplId);
+        cpmkCountPerCpl.set(mapping.cplId, (cpmkCountPerCpl.get(mapping.cplId) || 0) + 1);
       }
     }
 
     const coverage = allCpl.map((c) => ({
       cpl: { id: c.id, kode: c.kode, deskripsi: c.deskripsi },
       hasCpmk: cplWithCpmk.has(c.id),
-      cpmkCount: cpmkInKurikulum.filter((cpmkItem) => Array.from(cplWithCpmk).some((cplId) => cplId === c.id)).length,
+      cpmkCount: cpmkCountPerCpl.get(c.id) || 0,
     }));
 
     const coveredCount = coverage.filter((c) => c.hasCpmk).length;
@@ -77,9 +83,12 @@ export class ObeReportService {
     });
     const mkIds = mkInKurikulum.map((kmk) => kmk.mataKuliahId);
 
+    const mkIdsSet = new Set(mkIds);
+    const allMkBkMappings = await db.query.mataKuliahBahanKajian.findMany();
+
     const bkWithMk = new Set<number>();
-    for (const mapping of await db.query.mataKuliahBahanKajian.findMany()) {
-      if (mkIds.includes(mapping.mataKuliahId)) {
+    for (const mapping of allMkBkMappings) {
+      if (mkIdsSet.has(mapping.mataKuliahId)) {
         bkWithMk.add(mapping.bahanKajianId);
       }
     }
@@ -120,16 +129,33 @@ export class ObeReportService {
       where: eq(bahanKajian.programStudiId, prodiId),
     });
 
-    const plCplMappings = await db.query.cplProfilLulusan.findMany();
-    const bkCplMappings = await db.query.bahanKajianCpl.findMany();
+    const cplIds = totalCpl.map((c) => c.id);
+    const bkIds = totalBk.map((bk) => bk.id);
+
+    let plCplMappingsCount = 0;
+    let bkCplMappingsCount = 0;
+
+    if (cplIds.length > 0) {
+      const plCplMappings = await db.query.cplProfilLulusan.findMany({
+        where: inArray(cplProfilLulusan.cplId, cplIds),
+      });
+      plCplMappingsCount = plCplMappings.length;
+    }
+
+    if (bkIds.length > 0) {
+      const bkCplMappings = await db.query.bahanKajianCpl.findMany({
+        where: inArray(bahanKajianCpl.bahanKajianId, bkIds),
+      });
+      bkCplMappingsCount = bkCplMappings.length;
+    }
 
     return {
       programStudi: { id: prodi.id, kode: prodi.kode, nama: prodi.nama },
       profilLulusan: totalPl.length,
       cpl: totalCpl.length,
       bahanKajian: totalBk.length,
-      plCplMappings: plCplMappings.length,
-      bkCplMappings: bkCplMappings.length,
+      plCplMappings: plCplMappingsCount,
+      bkCplMappings: bkCplMappingsCount,
     };
   }
 }

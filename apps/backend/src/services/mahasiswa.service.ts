@@ -185,7 +185,13 @@ export class MahasiswaService {
 
     return {
       total: totalCount,
-      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', total: p.total, laki: Number(p.laki), perempuan: Number(p.perempuan) })),
+      perProdi: perProdi.map((p) => ({
+        prodiId: p.prodiId,
+        prodiNama: p.prodiNama || '-',
+        total: p.total,
+        laki: Number(p.laki),
+        perempuan: Number(p.perempuan),
+      })),
       trend: trend.map((t) => ({ angkatan: t.angkatan || '-', total: t.total })),
     };
   }

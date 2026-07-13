@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { bahanKajian, bahanKajianCpl, cpl } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -21,7 +21,7 @@ export class BahanKajianCplMappingService {
       });
       const bkIdList = bkIds.map((bk) => bk.id);
       if (bkIdList.length === 0) return [];
-      conditions.push(eq(bahanKajianCpl.bahanKajianId, bkIdList[0]));
+      conditions.push(inArray(bahanKajianCpl.bahanKajianId, bkIdList));
     }
 
     return db.query.bahanKajianCpl.findMany({
@@ -57,7 +57,15 @@ export class BahanKajianCplMappingService {
       orderBy: cpl.urutan,
     });
 
+    const bkIds = allBk.map((bk) => bk.id);
+    const cplIds = allCpl.map((c) => c.id);
+
+    if (bkIds.length === 0 || cplIds.length === 0) {
+      return { bk: allBk, cpl: allCpl, matriks: [] };
+    }
+
     const mappings = await db.query.bahanKajianCpl.findMany({
+      where: and(inArray(bahanKajianCpl.bahanKajianId, bkIds), inArray(bahanKajianCpl.cplId, cplIds)),
       with: {
         bahanKajian: true,
         cpl: true,

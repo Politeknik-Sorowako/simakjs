@@ -1,24 +1,23 @@
-import { db } from '../utils/db';
+import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import {
-  users,
-  admissionSessions,
   admissionSessionProdis,
-  documentRequirements,
-  applications,
+  admissionSessions,
+  announcements,
   applicantDocuments,
+  applicationLogs,
+  applications,
+  documentRequirements,
+  examSchedules,
+  mahasiswa,
+  paymentVirtualAccounts,
+  programStudi,
+  reRegistrationPayments,
   selectionComponents,
   selectionScores,
-  examSchedules,
-  applicationLogs,
-  reRegistrationPayments,
-  mahasiswa,
-  programStudi,
-  announcements,
+  users,
   vaBanks,
-  paymentVirtualAccounts,
 } from '../models/schema';
-import { db } from '../utils/db';
-import { eq, and, sql, inArray, like } from 'drizzle-orm';
+import { db, db } from '../utils/db';
 
 export class AdmisiAdminService {
   // ─── SESSION MANAGEMENT ──────────────────────────────────────────
@@ -53,18 +52,11 @@ export class AdmisiAdminService {
   }
 
   static async getAllSessions() {
-    return db
-      .select()
-      .from(admissionSessions)
-      .orderBy(sql`${admissionSessions.tanggalMulai} DESC`);
+    return db.select().from(admissionSessions).orderBy(sql`${admissionSessions.tanggalMulai} DESC`);
   }
 
   static async getSessionDetail(sessionId: number) {
-    const [session] = await db
-      .select()
-      .from(admissionSessions)
-      .where(eq(admissionSessions.id, sessionId))
-      .limit(1);
+    const [session] = await db.select().from(admissionSessions).where(eq(admissionSessions.id, sessionId)).limit(1);
 
     if (!session) throw new Error('Sesi tidak ditemukan');
 
@@ -171,7 +163,11 @@ export class AdmisiAdminService {
 
   // ─── APPLICATION / VERIFICATION ──────────────────────────────────
 
-  static async adminUploadDocument(applicationId: number, requirementId: number, fileData: { path: string; name: string; size: number; type: string }) {
+  static async adminUploadDocument(
+    applicationId: number,
+    requirementId: number,
+    fileData: { path: string; name: string; size: number; type: string },
+  ) {
     const [doc] = await db
       .insert(applicantDocuments)
       .values({
@@ -190,20 +186,12 @@ export class AdmisiAdminService {
   }
 
   static async updateAppBiodata(applicationId: number, data: Record<string, any>) {
-    const [updated] = await db
-      .update(applications)
-      .set(data)
-      .where(eq(applications.id, applicationId))
-      .returning();
+    const [updated] = await db.update(applications).set(data).where(eq(applications.id, applicationId)).returning();
     return updated;
   }
 
   static async updateAppProdi(applicationId: number, prodiPilihan1: number, prodiPilihan2?: number | null) {
-    const [app] = await db
-      .select()
-      .from(applications)
-      .where(eq(applications.id, applicationId))
-      .limit(1);
+    const [app] = await db.select().from(applications).where(eq(applications.id, applicationId)).limit(1);
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
 
     const [updated] = await db
@@ -215,7 +203,14 @@ export class AdmisiAdminService {
     return updated;
   }
 
-  static async getApplications(filters: { sessionId?: number; prodiId?: number; status?: string; search?: string; page?: number; limit?: number }) {
+  static async getApplications(filters: {
+    sessionId?: number;
+    prodiId?: number;
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const conditions = [];
 
     if (filters.sessionId) conditions.push(eq(applications.sessionId, filters.sessionId));
@@ -273,11 +268,7 @@ export class AdmisiAdminService {
   }
 
   static async verifyAllDocuments(applicationId: number, adminId: number) {
-    const [app] = await db
-      .select()
-      .from(applications)
-      .where(eq(applications.id, applicationId))
-      .limit(1);
+    const [app] = await db.select().from(applications).where(eq(applications.id, applicationId)).limit(1);
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
 
     const reqs = await db
@@ -310,11 +301,7 @@ export class AdmisiAdminService {
   }
 
   static async markDocsVerified(applicationId: number, adminId: number) {
-    const [app] = await db
-      .select()
-      .from(applications)
-      .where(eq(applications.id, applicationId))
-      .limit(1);
+    const [app] = await db.select().from(applications).where(eq(applications.id, applicationId)).limit(1);
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
 
     const reqs = await db
@@ -339,7 +326,12 @@ export class AdmisiAdminService {
       if (!verified) throw new Error(`Dokumen "${req.namaDokumen}" belum terverifikasi`);
     }
 
-    await this.updateApplicationStatus(applicationId, 'documents_verified', adminId, 'Semua dokumen telah terverifikasi');
+    await this.updateApplicationStatus(
+      applicationId,
+      'documents_verified',
+      adminId,
+      'Semua dokumen telah terverifikasi',
+    );
 
     return { message: 'Status diubah ke Terverifikasi' };
   }
@@ -477,11 +469,7 @@ export class AdmisiAdminService {
   }
 
   static async getExamSchedules(sessionId: number) {
-    return db
-      .select()
-      .from(examSchedules)
-      .where(eq(examSchedules.sessionId, sessionId))
-      .orderBy(examSchedules.tanggal);
+    return db.select().from(examSchedules).where(eq(examSchedules.sessionId, sessionId)).orderBy(examSchedules.tanggal);
   }
 
   // ─── RE-REGISTRATION ─────────────────────────────────────────────
@@ -543,12 +531,7 @@ export class AdmisiAdminService {
     const [existing] = await db
       .select({ nim: applications.nimDiterbitkan })
       .from(applications)
-      .where(
-        and(
-          like(applications.nimDiterbitkan, `${prefix}%`),
-          eq(applications.sessionId, sessionId),
-        ),
-      )
+      .where(and(like(applications.nimDiterbitkan, `${prefix}%`), eq(applications.sessionId, sessionId)))
       .orderBy(sql`${applications.nimDiterbitkan} DESC NULLS LAST`)
       .limit(1);
 
@@ -568,11 +551,7 @@ export class AdmisiAdminService {
   }
 
   static async validateNIM(nim: string): Promise<boolean> {
-    const [existing] = await db
-      .select()
-      .from(mahasiswa)
-      .where(eq(mahasiswa.nim, nim))
-      .limit(1);
+    const [existing] = await db.select().from(mahasiswa).where(eq(mahasiswa.nim, nim)).limit(1);
 
     return !existing;
   }
@@ -583,11 +562,7 @@ export class AdmisiAdminService {
       throw new Error(`NIM ${nim} sudah terdaftar`);
     }
 
-    const [app] = await db
-      .select()
-      .from(applications)
-      .where(eq(applications.id, applicationId))
-      .limit(1);
+    const [app] = await db.select().from(applications).where(eq(applications.id, applicationId)).limit(1);
 
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
     if (app.status !== 're_registration') throw new Error('Status harus daftar ulang untuk menerbitkan NIM');
@@ -629,23 +604,13 @@ export class AdmisiAdminService {
         .returning({ id: mahasiswa.id });
 
       // Update user role to mahasiswa and link email
-      await tx
-        .update(users)
-        .set({ role: 'mahasiswa', isActive: true })
-        .where(eq(users.id, app.userId));
+      await tx.update(users).set({ role: 'mahasiswa', isActive: true }).where(eq(users.id, app.userId));
 
       // Update user email on mahasiswa record
-      const [user] = await tx
-        .select({ email: users.email })
-        .from(users)
-        .where(eq(users.id, app.userId))
-        .limit(1);
+      const [user] = await tx.select({ email: users.email }).from(users).where(eq(users.id, app.userId)).limit(1);
 
       if (user) {
-        await tx
-          .update(mahasiswa)
-          .set({ email: user.email })
-          .where(eq(mahasiswa.id, mhs.id));
+        await tx.update(mahasiswa).set({ email: user.email }).where(eq(mahasiswa.id, mhs.id));
       }
 
       // Log
@@ -678,10 +643,7 @@ export class AdmisiAdminService {
   // ─── ANNOUNCEMENT ────────────────────────────────────────────────
 
   static async getPassedCandidates(sessionId: number, prodiId?: number) {
-    const conditions = [
-      eq(applications.sessionId, sessionId),
-      eq(applications.status, 'exam_completed'),
-    ];
+    const conditions = [eq(applications.sessionId, sessionId), eq(applications.status, 'exam_completed')];
     if (prodiId) conditions.push(eq(applications.prodiPilihan1, prodiId));
 
     const candidates = await db
@@ -735,9 +697,7 @@ export class AdmisiAdminService {
   // ─── STATISTICS ──────────────────────────────────────────────────
 
   static async getDashboardStats() {
-    const [totalPendaftar] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(applications);
+    const [totalPendaftar] = await db.select({ count: sql<number>`count(*)` }).from(applications);
 
     const [todayPendaftar] = await db
       .select({ count: sql<number>`count(*)` })
@@ -783,7 +743,15 @@ export class AdmisiAdminService {
 
   // ─── ANNOUNCEMENTS ──────────────────────────────────────────────
 
-  static async createAnnouncement(data: { judul: string; isi: string; createdBy: number; sessionId?: number; isPinned?: boolean; filePath?: string; fileName?: string }) {
+  static async createAnnouncement(data: {
+    judul: string;
+    isi: string;
+    createdBy: number;
+    sessionId?: number;
+    isPinned?: boolean;
+    filePath?: string;
+    fileName?: string;
+  }) {
     const [a] = await db
       .insert(announcements)
       .values({
@@ -810,12 +778,11 @@ export class AdmisiAdminService {
       .orderBy(sql`${announcements.isPinned} DESC, ${announcements.createdAt} DESC`);
   }
 
-  static async updateAnnouncement(id: number, data: { judul?: string; isi?: string; isPinned?: boolean; filePath?: string; fileName?: string }) {
-    const [updated] = await db
-      .update(announcements)
-      .set(data)
-      .where(eq(announcements.id, id))
-      .returning();
+  static async updateAnnouncement(
+    id: number,
+    data: { judul?: string; isi?: string; isPinned?: boolean; filePath?: string; fileName?: string },
+  ) {
+    const [updated] = await db.update(announcements).set(data).where(eq(announcements.id, id)).returning();
     return updated;
   }
 
@@ -830,7 +797,10 @@ export class AdmisiAdminService {
   }
 
   static async createVABank(data: { kode: string; nama: string; isMidtrans?: boolean }) {
-    const [bank] = await db.insert(vaBanks).values({ kode: data.kode, nama: data.nama, isMidtrans: data.isMidtrans || false }).returning();
+    const [bank] = await db
+      .insert(vaBanks)
+      .values({ kode: data.kode, nama: data.nama, isMidtrans: data.isMidtrans || false })
+      .returning();
     return bank;
   }
 

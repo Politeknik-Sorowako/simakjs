@@ -60,4 +60,17 @@ ALTER TABLE "cpmk_cpl" ADD CONSTRAINT "cpmk_cpl_cpl_id_cpl_id_fk" FOREIGN KEY ("
 ALTER TABLE "profil_lulusan" ADD CONSTRAINT "profil_lulusan_program_studi_id_program_studi_id_fk" FOREIGN KEY ("program_studi_id") REFERENCES "public"."program_studi"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sub_cpmk" ADD CONSTRAINT "sub_cpmk_cpmk_id_cpmk_id_fk" FOREIGN KEY ("cpmk_id") REFERENCES "public"."cpmk"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cpmk" ADD CONSTRAINT "cpmk_kurikulum_mata_kuliah_id_kurikulum_mata_kuliah_id_fk" FOREIGN KEY ("kurikulum_mata_kuliah_id") REFERENCES "public"."kurikulum_mata_kuliah"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "rps_topik" ADD CONSTRAINT "rps_topik_sub_cpmk_id_sub_cpmk_id_fk" FOREIGN KEY ("sub_cpmk_id") REFERENCES "public"."sub_cpmk"("id") ON DELETE set null ON UPDATE no action;
+ALTER TABLE "rps_topik" ADD CONSTRAINT "rps_topik_sub_cpmk_id_sub_cpmk_id_fk" FOREIGN KEY ("sub_cpmk_id") REFERENCES "public"."sub_cpmk"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "cpl_program_studi_id_idx" ON "cpl" ("program_studi_id");--> statement-breakpoint
+CREATE INDEX "profil_lulusan_program_studi_id_idx" ON "profil_lulusan" ("program_studi_id");--> statement-breakpoint
+CREATE INDEX "bahan_kajian_program_studi_id_idx" ON "bahan_kajian" ("program_studi_id");--> statement-breakpoint
+CREATE INDEX "visi_misi_prodi_program_studi_id_idx" ON "visi_misi_prodi" ("program_studi_id");--> statement-breakpoint
+CREATE INDEX "cpl_profil_lulusan_cpl_id_idx" ON "cpl_profil_lulusan" ("cpl_id");--> statement-breakpoint
+CREATE INDEX "cpl_profil_lulusan_profil_lulusan_id_idx" ON "cpl_profil_lulusan" ("profil_lulusan_id");--> statement-breakpoint
+CREATE INDEX "cpmk_cpl_cpmk_id_idx" ON "cpmk_cpl" ("cpmk_id");--> statement-breakpoint
+CREATE INDEX "cpmk_cpl_cpl_id_idx" ON "cpmk_cpl" ("cpl_id");--> statement-breakpoint
+CREATE INDEX "bahan_kajian_cpl_bahan_kajian_id_idx" ON "bahan_kajian_cpl" ("bahan_kajian_id");--> statement-breakpoint
+CREATE INDEX "bahan_kajian_cpl_cpl_id_idx" ON "bahan_kajian_cpl" ("cpl_id");--> statement-breakpoint
+CREATE INDEX "mata_kuliah_bahan_kajian_mata_kuliah_id_idx" ON "mata_kuliah_bahan_kajian" ("mata_kuliah_id");--> statement-breakpoint
+CREATE INDEX "mata_kuliah_bahan_kajian_bahan_kajian_id_idx" ON "mata_kuliah_bahan_kajian" ("bahan_kajian_id");--> statement-breakpoint
+CREATE INDEX "cpmk_kurikulum_mata_kuliah_id_idx" ON "cpmk" ("kurikulum_mata_kuliah_id");

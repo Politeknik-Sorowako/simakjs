@@ -350,22 +350,28 @@ export const tagihanRelations = relations(tagihan, ({ one }) => ({
 
 export const presensiStatusEnum = pgEnum('presensi_status', ['hadir', 'sakit', 'izin', 'telat', 'alpa']);
 
-export const cpmk = pgTable('cpmk', {
-  id: serial('id').primaryKey(),
-  mataKuliahId: integer('mata_kuliah_id')
-    .notNull()
-    .references(() => mataKuliah.id, { onDelete: 'cascade' }),
-  kurikulumMataKuliahId: integer('kurikulum_mata_kuliah_id').references(() => kurikulumMataKuliah.id, {
-    onDelete: 'set null',
+export const cpmk = pgTable(
+  'cpmk',
+  {
+    id: serial('id').primaryKey(),
+    mataKuliahId: integer('mata_kuliah_id')
+      .notNull()
+      .references(() => mataKuliah.id, { onDelete: 'cascade' }),
+    kurikulumMataKuliahId: integer('kurikulum_mata_kuliah_id').references(() => kurikulumMataKuliah.id, {
+      onDelete: 'set null',
+    }),
+    kode: varchar('kode', { length: 50 }).notNull(),
+    deskripsi: text('deskripsi').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    kurikulumMkIdx: index('cpmk_kurikulum_mata_kuliah_id_idx').on(t.kurikulumMataKuliahId),
   }),
-  kode: varchar('kode', { length: 50 }).notNull(),
-  deskripsi: text('deskripsi').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+);
 
 export const bap = pgTable('bap', {
   id: serial('id').primaryKey(),
@@ -874,6 +880,7 @@ export const profilLulusan = pgTable(
   },
   (t) => ({
     unq: unique('profil_lulusan_prodi_kode_unique').on(t.programStudiId, t.kode),
+    prodiIdx: index('profil_lulusan_program_studi_id_idx').on(t.programStudiId),
   }),
 );
 
@@ -895,6 +902,7 @@ export const cpl = pgTable(
   },
   (t) => ({
     unq: unique('cpl_prodi_kode_unique').on(t.programStudiId, t.kode),
+    prodiIdx: index('cpl_program_studi_id_idx').on(t.programStudiId),
   }),
 );
 
@@ -917,6 +925,8 @@ export const cplProfilLulusan = pgTable(
   },
   (t) => ({
     unq: unique('cpl_profil_lulusan_unique').on(t.cplId, t.profilLulusanId),
+    cplIdx: index('cpl_profil_lulusan_cpl_id_idx').on(t.cplId),
+    plIdx: index('cpl_profil_lulusan_profil_lulusan_id_idx').on(t.profilLulusanId),
   }),
 );
 
@@ -954,6 +964,8 @@ export const cpmkCpl = pgTable(
   },
   (t) => ({
     unq: unique('cpmk_cpl_unique').on(t.cpmkId, t.cplId),
+    cpmkIdx: index('cpmk_cpl_cpmk_id_idx').on(t.cpmkId),
+    cplIdx: index('cpmk_cpl_cpl_id_idx').on(t.cplId),
   }),
 );
 
@@ -1011,87 +1023,114 @@ export const cpmkCplRelations = relations(cpmkCpl, ({ one }) => ({
 // OBE PHASE 2: VISI MISI, BAHAN KAJIAN, BK↔CPL, MK↔BK, EVALUASI↔SUBCPMK
 // ────────────────────────────────────────────────────────────────────────────
 
-export const visiMisiProdi = pgTable('visi_misi_prodi', {
-  id: serial('id').primaryKey(),
-  programStudiId: integer('program_studi_id')
-    .notNull()
-    .references(() => programStudi.id, { onDelete: 'restrict' }),
-  visi: text('visi').notNull(),
-  misi: text('misi').notNull(),
-  tujuan: text('tujuan'),
-  sasaran: text('sasaran'),
-  tahunBerlaku: varchar('tahun_berlaku', { length: 10 }),
-  isAktif: boolean('is_aktif').default(false).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const visiMisiProdi = pgTable(
+  'visi_misi_prodi',
+  {
+    id: serial('id').primaryKey(),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'restrict' }),
+    visi: text('visi').notNull(),
+    misi: text('misi').notNull(),
+    tujuan: text('tujuan'),
+    sasaran: text('sasaran'),
+    tahunBerlaku: varchar('tahun_berlaku', { length: 10 }),
+    isAktif: boolean('is_aktif').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    prodiIdx: index('visi_misi_prodi_program_studi_id_idx').on(t.programStudiId),
+  }),
+);
 
-export const bahanKajian = pgTable('bahan_kajian', {
-  id: serial('id').primaryKey(),
-  programStudiId: integer('program_studi_id')
-    .notNull()
-    .references(() => programStudi.id, { onDelete: 'restrict' }),
-  kode: varchar('kode', { length: 20 }).notNull(),
-  nama: varchar('nama', { length: 255 }).notNull(),
-  deskripsi: text('deskripsi'),
-  urutan: integer('urutan').default(0).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-}, (t) => ({
-  unq: unique('bahan_kajian_prodi_kode_unique').on(t.programStudiId, t.kode),
-}));
+export const bahanKajian = pgTable(
+  'bahan_kajian',
+  {
+    id: serial('id').primaryKey(),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'restrict' }),
+    kode: varchar('kode', { length: 20 }).notNull(),
+    nama: varchar('nama', { length: 255 }).notNull(),
+    deskripsi: text('deskripsi'),
+    urutan: integer('urutan').default(0).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique('bahan_kajian_prodi_kode_unique').on(t.programStudiId, t.kode),
+    prodiIdx: index('bahan_kajian_program_studi_id_idx').on(t.programStudiId),
+  }),
+);
 
-export const bahanKajianCpl = pgTable('bahan_kajian_cpl', {
-  id: serial('id').primaryKey(),
-  bahanKajianId: integer('bahan_kajian_id')
-    .notNull()
-    .references(() => bahanKajian.id, { onDelete: 'cascade' }),
-  cplId: integer('cpl_id')
-    .notNull()
-    .references(() => cpl.id, { onDelete: 'cascade' }),
-  bobot: numeric('bobot', { precision: 5, scale: 2 }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-}, (t) => ({
-  unq: unique('bahan_kajian_cpl_unique').on(t.bahanKajianId, t.cplId),
-}));
+export const bahanKajianCpl = pgTable(
+  'bahan_kajian_cpl',
+  {
+    id: serial('id').primaryKey(),
+    bahanKajianId: integer('bahan_kajian_id')
+      .notNull()
+      .references(() => bahanKajian.id, { onDelete: 'cascade' }),
+    cplId: integer('cpl_id')
+      .notNull()
+      .references(() => cpl.id, { onDelete: 'cascade' }),
+    bobot: numeric('bobot', { precision: 5, scale: 2 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique('bahan_kajian_cpl_unique').on(t.bahanKajianId, t.cplId),
+    bkIdx: index('bahan_kajian_cpl_bahan_kajian_id_idx').on(t.bahanKajianId),
+    cplIdx: index('bahan_kajian_cpl_cpl_id_idx').on(t.cplId),
+  }),
+);
 
-export const mataKuliahBahanKajian = pgTable('mata_kuliah_bahan_kajian', {
-  id: serial('id').primaryKey(),
-  mataKuliahId: integer('mata_kuliah_id')
-    .notNull()
-    .references(() => mataKuliah.id, { onDelete: 'cascade' }),
-  bahanKajianId: integer('bahan_kajian_id')
-    .notNull()
-    .references(() => bahanKajian.id, { onDelete: 'cascade' }),
-  bobotKontribusi: numeric('bobot_kontribusi', { precision: 5, scale: 2 }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => ({
-  unq: unique('mata_kuliah_bahan_kajian_unique').on(t.mataKuliahId, t.bahanKajianId),
-}));
+export const mataKuliahBahanKajian = pgTable(
+  'mata_kuliah_bahan_kajian',
+  {
+    id: serial('id').primaryKey(),
+    mataKuliahId: integer('mata_kuliah_id')
+      .notNull()
+      .references(() => mataKuliah.id, { onDelete: 'cascade' }),
+    bahanKajianId: integer('bahan_kajian_id')
+      .notNull()
+      .references(() => bahanKajian.id, { onDelete: 'cascade' }),
+    bobotKontribusi: numeric('bobot_kontribusi', { precision: 5, scale: 2 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    unq: unique('mata_kuliah_bahan_kajian_unique').on(t.mataKuliahId, t.bahanKajianId),
+    mkIdx: index('mata_kuliah_bahan_kajian_mata_kuliah_id_idx').on(t.mataKuliahId),
+    bkIdx: index('mata_kuliah_bahan_kajian_bahan_kajian_id_idx').on(t.bahanKajianId),
+  }),
+);
 
-export const rencanaEvaluasiSubCpmk = pgTable('rencana_evaluasi_sub_cpmk', {
-  id: serial('id').primaryKey(),
-  rencanaEvaluasiId: integer('rencana_evaluasi_id')
-    .notNull()
-    .references(() => rencanaEvaluasi.id, { onDelete: 'cascade' }),
-  subCpmkId: integer('sub_cpmk_id')
-    .notNull()
-    .references(() => subCpmk.id, { onDelete: 'cascade' }),
-  bobot: numeric('bobot', { precision: 5, scale: 2 }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (t) => ({
-  unq: unique('rencana_evaluasi_sub_cpmk_unique').on(t.rencanaEvaluasiId, t.subCpmkId),
-}));
+export const rencanaEvaluasiSubCpmk = pgTable(
+  'rencana_evaluasi_sub_cpmk',
+  {
+    id: serial('id').primaryKey(),
+    rencanaEvaluasiId: integer('rencana_evaluasi_id')
+      .notNull()
+      .references(() => rencanaEvaluasi.id, { onDelete: 'cascade' }),
+    subCpmkId: integer('sub_cpmk_id')
+      .notNull()
+      .references(() => subCpmk.id, { onDelete: 'cascade' }),
+    bobot: numeric('bobot', { precision: 5, scale: 2 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    unq: unique('rencana_evaluasi_sub_cpmk_unique').on(t.rencanaEvaluasiId, t.subCpmkId),
+  }),
+);
 
 // ────────────────────────────────────────────────────────────────────────────
 // OBE PHASE 2 RELATIONS
