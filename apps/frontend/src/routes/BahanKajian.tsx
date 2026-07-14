@@ -31,6 +31,7 @@ export default function BahanKajian() {
 
   const [showMappingModal, setShowMappingModal] = createSignal(false);
   const [mappingBkId, setMappingBkId] = createSignal<number | null>(null);
+  const [mappingProdiId, setMappingProdiId] = createSignal<number>(0);
   const [selectedCplId, setSelectedCplId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
   const [mappings, setMappings] = createSignal<any[]>([]);
@@ -110,12 +111,13 @@ export default function BahanKajian() {
     }
   }
 
-  async function openMappingModal(bkId: number) {
-    setMappingBkId(bkId);
+  async function openMappingModal(item: { id: number; programStudiId: number }) {
+    setMappingBkId(item.id);
+    setMappingProdiId(item.programStudiId);
     setSelectedCplId(0);
     setMappingBobot('');
     setErrorMsg('');
-    const existMappings = await bahanKajianController.getMappings(bkId);
+    const existMappings = await bahanKajianController.getMappings(item.id);
     setMappings(existMappings);
     setShowMappingModal(true);
   }
@@ -239,7 +241,7 @@ export default function BahanKajian() {
   }
 
   const [cplOptions] = createResource(
-    () => prodiFilter(),
+    () => mappingProdiId(),
     async (prodiId) => {
       if (!prodiId) return [];
       return cplController.getAll(prodiId);
@@ -318,7 +320,7 @@ export default function BahanKajian() {
                     <td class="px-4 py-3 text-black dark:text-white">{item.programStudi?.nama || '-'}</td>
                     <td class="px-4 py-3">
                       <div class="flex flex-wrap gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openMappingModal(item.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => openMappingModal(item)}>
                           Atur Mapping
                         </Button>
                         <Show when={item.cplMappings && item.cplMappings.length > 0}>
