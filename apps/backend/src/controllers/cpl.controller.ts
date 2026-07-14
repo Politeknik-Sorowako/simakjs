@@ -72,4 +72,10 @@ export class CplController {
     set.status = 200;
     return result;
   }
+
+  static async getTemplate({ set }: AuthContext) {
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename=template-cpl.csv';
+    return CplService.getTemplateCsv();
+  }
 }

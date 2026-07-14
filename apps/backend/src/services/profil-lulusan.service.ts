@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { profilLulusan } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -7,6 +7,17 @@ export interface CreateProfilLulusanDto {
   kode: string;
   deskripsi: string;
   urutan?: number;
+}
+
+export interface ImportProfilLulusanItem {
+  kode: string;
+  deskripsi: string;
+}
+
+export interface ImportResult {
+  success: number;
+  failed: number;
+  errors: { row: number; kode: string; error: string }[];
 }
 
 export class ProfilLulusanService {
@@ -47,5 +58,43 @@ export class ProfilLulusanService {
   static async delete(id: number) {
     const [deleted] = await db.delete(profilLulusan).where(eq(profilLulusan.id, id)).returning();
     return deleted || null;
+  }
+
+  static async import(programStudiId: number, items: ImportProfilLulusanItem[]): Promise<ImportResult> {
+    const result: ImportResult = { success: 0, failed: 0, errors: [] };
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const urutan = i + 1;
+
+      try {
+        const existing = await db.query.profilLulusan.findFirst({
+          where: and(eq(profilLulusan.programStudiId, programStudiId), eq(profilLulusan.kode, item.kode)),
+        });
+
+        if (existing) {
+          result.failed++;
+          result.errors.push({ row: urutan, kode: item.kode, error: 'Kode sudah ada' });
+          continue;
+        }
+
+        await db.insert(profilLulusan).values({
+          programStudiId,
+          kode: item.kode,
+          deskripsi: item.deskripsi,
+          urutan,
+        });
+        result.success++;
+      } catch (err: any) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode: item.kode, error: err.message || 'Error tidak diketahui' });
+      }
+    }
+
+    return result;
+  }
+
+  static getTemplateCsv(): string {
+    return 'kode,deskripsi\nPL-01,Mampu mengaplikasikan pengetahuan bidang teknologi informasi\nPL-02,Mampu merancang solusi berbasis teknologi informasi\nPL-03,Mampu mengelola proyek teknologi informasi secara profesional';
   }
 }

@@ -40,6 +40,12 @@ export interface BahanKajianMatriksResponse {
   }[];
 }
 
+export interface ImportResult {
+  success: number;
+  failed: number;
+  errors: { row: number; kode: string; error: string }[];
+}
+
 export const bahanKajianController = {
   async getAll(prodiId?: number): Promise<BahanKajian[]> {
     const params = new URLSearchParams();
@@ -70,6 +76,21 @@ export const bahanKajianController = {
     return fetchApi<{ message: string }>(`/bahan-kajian/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  async import(
+    programStudiId: number,
+    items: { kode: string; nama: string; deskripsi?: string }[],
+  ): Promise<ImportResult> {
+    return fetchApi<ImportResult>('/bahan-kajian/import', {
+      method: 'POST',
+      body: JSON.stringify({ programStudiId, items }),
+    });
+  },
+
+  async downloadTemplate(): Promise<string> {
+    const res = await fetch('/bahan-kajian/template');
+    return res.text();
   },
 
   // Mapping

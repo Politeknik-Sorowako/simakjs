@@ -84,6 +84,11 @@ export const cplController = {
     });
   },
 
+  async downloadTemplate(): Promise<string> {
+    const res = await fetch('/cpl/template');
+    return res.text();
+  },
+
   // Mapping
   async getMappings(prodiId?: number, cplId?: number, profilLulusanId?: number): Promise<CplMapping[]> {
     const params = new URLSearchParams();

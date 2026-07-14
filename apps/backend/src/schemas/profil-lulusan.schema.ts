@@ -47,7 +47,11 @@ export const updateProfilLulusanSchema = {
   params: t.Object({
     id: t.Numeric(),
   }),
-  body: t.Partial(profilLulusanBody),
+  body: t.Object({
+    kode: t.Optional(t.String()),
+    deskripsi: t.Optional(t.String()),
+    urutan: t.Optional(t.Integer()),
+  }),
 };
 
 export const deleteProfilLulusanSchema = {
@@ -58,5 +62,22 @@ export const deleteProfilLulusanSchema = {
   },
   params: t.Object({
     id: t.Numeric(),
+  }),
+};
+
+export const importProfilLulusanSchema = {
+  detail: {
+    tags: ['Profil Lulusan'],
+    summary: 'Impor Profil Lulusan dari CSV',
+    description: 'Impor data Profil Lulusan dari file CSV. Format: kode,deskripsi (Hanya Admin/Prodi).',
+  },
+  body: t.Object({
+    programStudiId: t.Integer(),
+    items: t.Array(
+      t.Object({
+        kode: t.String(),
+        deskripsi: t.String(),
+      }),
+    ),
   }),
 };

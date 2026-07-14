@@ -13,6 +13,12 @@ export interface VisiMisi {
   programStudi?: Prodi | null;
 }
 
+export interface ImportResult {
+  success: number;
+  failed: number;
+  errors: { row: number; tahunBerlaku: string; error: string }[];
+}
+
 export const visiMisiController = {
   async getAll(prodiId?: number): Promise<VisiMisi[]> {
     const params = new URLSearchParams();
@@ -53,5 +59,20 @@ export const visiMisiController = {
     return fetchApi<VisiMisi>(`/visi-misi/${id}/set-aktif`, {
       method: 'PUT',
     });
+  },
+
+  async import(
+    programStudiId: number,
+    items: { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[],
+  ): Promise<ImportResult> {
+    return fetchApi<ImportResult>('/visi-misi/import', {
+      method: 'POST',
+      body: JSON.stringify({ programStudiId, items }),
+    });
+  },
+
+  async downloadTemplate(): Promise<string> {
+    const res = await fetch('/visi-misi/template');
+    return res.text();
   },
 };

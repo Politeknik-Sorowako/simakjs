@@ -217,6 +217,17 @@ export default function Cpl() {
     }
   }
 
+  async function handleDownloadTemplate() {
+    const csv = await cplController.downloadTemplate();
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'template-cpl.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   const [plOptions] = createResource(
     () => prodiFilter(),
     async (prodiId) => {
@@ -233,6 +244,9 @@ export default function Cpl() {
         <div class="flex justify-between items-center">
           <h1 class="text-2xl font-bold text-white">Capaian Pembelajaran Lulusan (CPL)</h1>
           <div class="flex gap-2">
+            <Button variant="secondary" onClick={handleDownloadTemplate}>
+              Download Template
+            </Button>
             <Button variant="secondary" onClick={openImportModal}>
               Impor CSV
             </Button>

@@ -100,4 +100,8 @@ export class CplService {
 
     return result;
   }
+
+  static getTemplateCsv(): string {
+    return 'kode,deskripsi\nCPL-01,Mampu menerapkan konsep dasar pemrograman\nCPL-02,Mampu menganalisis kebutuhan sistem\nCPL-03,Mampu merancang solusi teknologi informasi';
+  }
 }
