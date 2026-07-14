@@ -117,6 +117,17 @@ export class KurikulumService {
   }
 
   static async addMataKuliah(kurikulumId: number, data: AddMataKuliahDto) {
+    const existing = await db.query.kurikulumMataKuliah.findFirst({
+      where: and(
+        eq(kurikulumMataKuliah.kurikulumId, kurikulumId),
+        eq(kurikulumMataKuliah.mataKuliahId, data.mataKuliahId),
+      ),
+    });
+
+    if (existing) {
+      throw new Error('Mata kuliah sudah ada dalam kurikulum ini');
+    }
+
     const [newKmk] = await db
       .insert(kurikulumMataKuliah)
       .values({
