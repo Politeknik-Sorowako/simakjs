@@ -40,8 +40,7 @@ export const getMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Daftar Mata Kuliah',
-    description:
-      'Mengambil semua data mata kuliah dengan filter kurikulum, semester, dan sorting.',
+    description: 'Mengambil semua data mata kuliah dengan filter kurikulum, semester, dan sorting.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),

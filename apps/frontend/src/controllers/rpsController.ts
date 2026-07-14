@@ -105,7 +105,11 @@ export const rpsController = {
     });
   },
 
-  async bulkGenerate(kurikulumId: number, semester: number, periodeId: string): Promise<{
+  async bulkGenerate(
+    kurikulumId: number,
+    semester: number,
+    periodeId: string,
+  ): Promise<{
     message: string;
     created: { id: number; mataKuliahId: number; nama: string }[];
     skipped: { mataKuliahId: number; nama: string; reason: string }[];

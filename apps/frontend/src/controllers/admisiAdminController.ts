@@ -25,7 +25,10 @@ export const admisiAdminController = {
   },
 
   // Sesi Prodi
-  addProdiToSession(sessionId: number, data: { prodiId: number; kuota?: number; passingGrade?: number; biayaDaftar?: number }) {
+  addProdiToSession(
+    sessionId: number,
+    data: { prodiId: number; kuota?: number; passingGrade?: number; biayaDaftar?: number },
+  ) {
     return fetchApi<any>(`/admisi/admin/sessions/${sessionId}/prodis`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -46,9 +49,12 @@ export const admisiAdminController = {
   },
 
   toggleProdiActive(sessionId: number, prodiId: number) {
-    return fetchApi<{ message: string; isActive: boolean }>(`/admisi/admin/sessions/${sessionId}/prodis/${prodiId}/toggle`, {
-      method: 'PUT',
-    });
+    return fetchApi<{ message: string; isActive: boolean }>(
+      `/admisi/admin/sessions/${sessionId}/prodis/${prodiId}/toggle`,
+      {
+        method: 'PUT',
+      },
+    );
   },
 
   // Dokumen Requirements
@@ -71,7 +77,14 @@ export const admisiAdminController = {
   },
 
   // Aplikasi
-  getApplications(params?: { sessionId?: number; prodiId?: number; status?: string; search?: string; page?: number; limit?: number }) {
+  getApplications(params?: {
+    sessionId?: number;
+    prodiId?: number;
+    status?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const query = new URLSearchParams();
     if (params?.sessionId) query.set('sessionId', String(params.sessionId));
     if (params?.prodiId) query.set('prodiId', String(params.prodiId));
@@ -113,9 +126,12 @@ export const admisiAdminController = {
   },
 
   verifyAllDocuments(applicationId: number) {
-    return fetchApi<{ message: string; verifiedCount: number }>(`/admisi/admin/applications/${applicationId}/verify-all-docs`, {
-      method: 'POST',
-    });
+    return fetchApi<{ message: string; verifiedCount: number }>(
+      `/admisi/admin/applications/${applicationId}/verify-all-docs`,
+      {
+        method: 'POST',
+      },
+    );
   },
 
   markDocsVerified(applicationId: number) {

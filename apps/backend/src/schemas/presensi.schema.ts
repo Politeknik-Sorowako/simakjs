@@ -132,8 +132,7 @@ export const getLaporanKompensasiSchema = {
   detail: {
     tags: ['Kompensasi'],
     summary: 'Laporan Rekapitulasi Kompensasi',
-    description:
-      'Mengambil laporan/rekapitulasi data kompensasi mahasiswa dengan pagination dan filter.',
+    description: 'Mengambil laporan/rekapitulasi data kompensasi mahasiswa dengan pagination dan filter.',
   },
   query: t.Object({
     page: t.Optional(t.String({ default: '1' })),
