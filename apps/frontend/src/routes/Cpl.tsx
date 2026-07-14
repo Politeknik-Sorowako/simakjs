@@ -288,9 +288,9 @@ export default function Cpl() {
               >
                 {(item) => (
                   <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                    <td class="px-4 py-3 font-medium text-black">{item.kode}</td>
-                    <td class="px-4 py-3 text-black max-w-md truncate">{item.deskripsi}</td>
-                    <td class="px-4 py-3 text-black">{item.programStudi?.nama || '-'}</td>
+                    <td class="px-4 py-3 font-medium text-white">{item.kode}</td>
+                    <td class="px-4 py-3 text-white max-w-md truncate">{item.deskripsi}</td>
+                    <td class="px-4 py-3 text-white">{item.programStudi?.nama || '-'}</td>
                     <td class="px-4 py-3">
                       <div class="flex flex-wrap gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openMappingModal(item.id)}>
@@ -301,7 +301,7 @@ export default function Cpl() {
                         </Show>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-black">{item.urutan}</td>
+                    <td class="px-4 py-3 text-white">{item.urutan}</td>
                     <td class="px-4 py-3">
                       <div class="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}>
