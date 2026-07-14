@@ -149,10 +149,10 @@ export default function ProfilLulusan() {
               >
                 {(item) => (
                   <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                    <td class="px-4 py-3 font-medium text-white">{item.kode}</td>
-                    <td class="px-4 py-3 text-secondary-200 max-w-md truncate">{item.deskripsi}</td>
-                    <td class="px-4 py-3 text-secondary-200">{item.programStudi?.nama || '-'}</td>
-                    <td class="px-4 py-3 text-secondary-200">{item.urutan}</td>
+                    <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">{item.kode}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-md truncate">{item.deskripsi}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{item.programStudi?.nama || '-'}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{item.urutan}</td>
                     <td class="px-4 py-3">
                       <div class="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}>

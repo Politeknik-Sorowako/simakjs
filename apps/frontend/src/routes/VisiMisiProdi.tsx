@@ -171,9 +171,9 @@ export default function VisiMisiProdi() {
               >
                 {(item) => (
                   <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                    <td class="px-4 py-3 text-white">{item.tahunBerlaku || '-'}</td>
-                    <td class="px-4 py-3 text-secondary-200 max-w-md truncate">{item.visi}</td>
-                    <td class="px-4 py-3 text-secondary-200 max-w-md truncate">{item.misi}</td>
+                    <td class="px-4 py-3 text-slate-900 dark:text-white">{item.tahunBerlaku || '-'}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-md truncate">{item.visi}</td>
+                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-md truncate">{item.misi}</td>
                     <td class="px-4 py-3">
                       <Show when={item.isAktif} fallback={<Badge variant="default">Tidak Aktif</Badge>}>
                         <Badge variant="success">Aktif</Badge>
