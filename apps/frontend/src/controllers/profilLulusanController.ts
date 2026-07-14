@@ -57,7 +57,6 @@ export const profilLulusanController = {
   },
 
   async downloadTemplate(): Promise<string> {
-    const res = await fetch('/profil-lulusan/template');
-    return res.text();
+    return fetchApi<string>('/profil-lulusan/template');
   },
 };

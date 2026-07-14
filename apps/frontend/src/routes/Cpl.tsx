@@ -8,6 +8,7 @@ import { Table } from '../components/ui/Table';
 import { cplController, Cpl as ICpl, ImportCplResult } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
 import { profilLulusanController } from '../controllers/profilLulusanController';
+import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpl() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -147,23 +148,20 @@ export default function Cpl() {
     setShowImportModal(true);
   }
 
-  function parseCsv(text: string): { kode: string; deskripsi: string }[] {
-    const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  function parseCplCsv(text: string): { kode: string; deskripsi: string }[] {
+    const rows = parseCsv(text);
     const items: { kode: string; deskripsi: string }[] = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length < 2) continue;
 
-      if (i === 0 && (line.toLowerCase().includes('kode') || line.toLowerCase().includes('code'))) {
+      if (i === 0 && isHeaderRow(row[0], ['kode', 'code'])) {
         continue;
       }
 
-      const parts = line.split(',');
-      if (parts.length < 2) continue;
-
-      const kode = parts[0]?.trim().replace(/^"|"$/g, '') || '';
-      const deskripsi = parts.slice(1).join(',').trim().replace(/^"|"$/g, '') || '';
+      const kode = row[0] || '';
+      const deskripsi = row.slice(1).join(',') || '';
 
       if (kode && deskripsi) {
         items.push({ kode, deskripsi });
@@ -181,7 +179,7 @@ export default function Cpl() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const items = parseCsv(text);
+      const items = parseCplCsv(text);
       setImportItems(items);
       if (items.length === 0) {
         setErrorMsg('File CSV tidak valid. Format: kode,deskripsi');
@@ -190,6 +188,7 @@ export default function Cpl() {
       }
     };
     reader.readAsText(file);
+    input.value = '';
   }
 
   async function handleImport() {

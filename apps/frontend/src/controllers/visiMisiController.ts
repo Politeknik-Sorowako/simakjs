@@ -72,7 +72,6 @@ export const visiMisiController = {
   },
 
   async downloadTemplate(): Promise<string> {
-    const res = await fetch('/visi-misi/template');
-    return res.text();
+    return fetchApi<string>('/visi-misi/template');
   },
 };

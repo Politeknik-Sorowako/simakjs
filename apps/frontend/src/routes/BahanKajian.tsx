@@ -8,6 +8,7 @@ import { Table } from '../components/ui/Table';
 import { bahanKajianController, BahanKajian as IBahanKajian, ImportResult } from '../controllers/bahanKajianController';
 import { cplController } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
+import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function BahanKajian() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -157,24 +158,21 @@ export default function BahanKajian() {
     setShowImportModal(true);
   }
 
-  function parseCsv(text: string): { kode: string; nama: string; deskripsi?: string }[] {
-    const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  function parseBkCsv(text: string): { kode: string; nama: string; deskripsi?: string }[] {
+    const rows = parseCsv(text);
     const items: { kode: string; nama: string; deskripsi?: string }[] = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length < 2) continue;
 
-      if (i === 0 && (line.toLowerCase().includes('kode') || line.toLowerCase().includes('code'))) {
+      if (i === 0 && isHeaderRow(row[0], ['kode', 'code'])) {
         continue;
       }
 
-      const parts = line.split(',');
-      if (parts.length < 2) continue;
-
-      const kode = parts[0]?.trim().replace(/^"|"$/g, '') || '';
-      const nama = parts[1]?.trim().replace(/^"|"$/g, '') || '';
-      const deskripsi = parts.slice(2).join(',').trim().replace(/^"|"$/g, '') || undefined;
+      const kode = row[0] || '';
+      const nama = row[1] || '';
+      const deskripsi = row.slice(2).join(',') || undefined;
 
       if (kode && nama) {
         items.push({ kode, nama, deskripsi: deskripsi || undefined });
@@ -192,7 +190,7 @@ export default function BahanKajian() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const items = parseCsv(text);
+      const items = parseBkCsv(text);
       setImportItems(items);
       if (items.length === 0) {
         setErrorMsg('File CSV tidak valid. Format: kode,nama,deskripsi');
@@ -201,6 +199,7 @@ export default function BahanKajian() {
       }
     };
     reader.readAsText(file);
+    input.value = '';
   }
 
   async function handleImport() {

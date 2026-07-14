@@ -94,34 +94,63 @@ export class VisiMisiService {
 
   static async import(programStudiId: number, items: ImportVisiMisiItem[]): Promise<ImportResult> {
     const result: ImportResult = { success: 0, failed: 0, errors: [] };
+    const validItems: ImportVisiMisiItem[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
+      const visi = item.visi?.trim();
+      const misi = item.misi?.trim();
+      const tahunBerlaku = item.tahunBerlaku?.trim();
 
-      try {
-        if (!item.visi || !item.misi) {
+      if (!visi || !misi) {
+        result.failed++;
+        result.errors.push({ row: i + 1, tahunBerlaku: tahunBerlaku || '', error: 'Visi dan Misi wajib diisi' });
+        continue;
+      }
+
+      if (tahunBerlaku) {
+        const existing = await db.query.visiMisiProdi.findFirst({
+          where: and(eq(visiMisiProdi.programStudiId, programStudiId), eq(visiMisiProdi.tahunBerlaku, tahunBerlaku)),
+        });
+
+        if (existing) {
           result.failed++;
-          result.errors.push({ row: i + 1, tahunBerlaku: item.tahunBerlaku || '', error: 'Visi dan Misi wajib diisi' });
+          result.errors.push({
+            row: i + 1,
+            tahunBerlaku,
+            error: 'Tahun berlaku sudah ada untuk program studi ini',
+          });
           continue;
         }
+      }
 
-        await db.insert(visiMisiProdi).values({
-          programStudiId,
-          visi: item.visi,
-          misi: item.misi,
-          tujuan: item.tujuan || undefined,
-          sasaran: item.sasaran || undefined,
-          tahunBerlaku: item.tahunBerlaku || undefined,
-          isAktif: false,
+      validItems.push({ ...item, visi, misi, tahunBerlaku });
+    }
+
+    if (validItems.length > 0) {
+      try {
+        await db.transaction(async (tx) => {
+          await tx.insert(visiMisiProdi).values(
+            validItems.map((item) => ({
+              programStudiId,
+              visi: item.visi,
+              misi: item.misi,
+              tujuan: item.tujuan?.trim() || undefined,
+              sasaran: item.sasaran?.trim() || undefined,
+              tahunBerlaku: item.tahunBerlaku || undefined,
+              isAktif: false,
+            })),
+          );
         });
-        result.success++;
+        result.success = validItems.length;
       } catch (err: any) {
-        result.failed++;
+        result.failed += validItems.length;
         result.errors.push({
-          row: i + 1,
-          tahunBerlaku: item.tahunBerlaku || '',
-          error: err.message || 'Error tidak diketahui',
+          row: 0,
+          tahunBerlaku: '',
+          error: 'Gagal menyimpan data ke database',
         });
+        console.error('Visi Misi import error:', err);
       }
     }
 

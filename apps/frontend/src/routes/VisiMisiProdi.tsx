@@ -7,6 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { prodiController } from '../controllers/prodiController';
 import { ImportResult, visiMisiController } from '../controllers/visiMisiController';
+import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function VisiMisiProdi() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -129,28 +130,25 @@ export default function VisiMisiProdi() {
     setShowImportModal(true);
   }
 
-  function parseCsv(
+  function parseVmCsv(
     text: string,
   ): { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[] {
-    const lines = text.split(/\r?\n/).filter((line) => line.trim());
+    const rows = parseCsv(text);
     const items: { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[] = [];
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length < 3) continue;
 
-      if (i === 0 && line.toLowerCase().includes('tahunberlaku')) {
+      if (i === 0 && isHeaderRow(row[0], ['tahunberlaku'])) {
         continue;
       }
 
-      const parts = line.split(',');
-      if (parts.length < 3) continue;
-
-      const tahunBerlaku = parts[0]?.trim().replace(/^"|"$/g, '') || '';
-      const visi = parts[1]?.trim().replace(/^"|"$/g, '') || '';
-      const misi = parts[2]?.trim().replace(/^"|"$/g, '') || '';
-      const tujuan = parts[3]?.trim().replace(/^"|"$/g, '') || undefined;
-      const sasaran = parts[4]?.trim().replace(/^"|"$/g, '') || undefined;
+      const tahunBerlaku = row[0] || '';
+      const visi = row[1] || '';
+      const misi = row[2] || '';
+      const tujuan = row[3] || undefined;
+      const sasaran = row[4] || undefined;
 
       if (visi && misi) {
         items.push({ tahunBerlaku, visi, misi, tujuan: tujuan || undefined, sasaran: sasaran || undefined });
@@ -168,7 +166,7 @@ export default function VisiMisiProdi() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const items = parseCsv(text);
+      const items = parseVmCsv(text);
       setImportItems(items);
       if (items.length === 0) {
         setErrorMsg('File CSV tidak valid. Format: tahunBerlaku,visi,misi,tujuan,sasaran');
@@ -177,6 +175,7 @@ export default function VisiMisiProdi() {
       }
     };
     reader.readAsText(file);
+    input.value = '';
   }
 
   async function handleImport() {

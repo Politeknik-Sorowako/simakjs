@@ -26,10 +26,12 @@ export class ProfilLulusanService {
       return db.query.profilLulusan.findMany({
         where: eq(profilLulusan.programStudiId, prodiId),
         with: { programStudi: true },
+        orderBy: (pl, { asc }) => [asc(pl.urutan)],
       });
     }
     return db.query.profilLulusan.findMany({
       with: { programStudi: true },
+      orderBy: (pl, { asc }) => [asc(pl.urutan)],
     });
   }
 
@@ -62,32 +64,60 @@ export class ProfilLulusanService {
 
   static async import(programStudiId: number, items: ImportProfilLulusanItem[]): Promise<ImportResult> {
     const result: ImportResult = { success: 0, failed: 0, errors: [] };
+    const validItems: { kode: string; deskripsi: string; urutan: number }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const urutan = i + 1;
+      const kode = item.kode?.trim();
+      const deskripsi = item.deskripsi?.trim();
 
-      try {
-        const existing = await db.query.profilLulusan.findFirst({
-          where: and(eq(profilLulusan.programStudiId, programStudiId), eq(profilLulusan.kode, item.kode)),
-        });
-
-        if (existing) {
-          result.failed++;
-          result.errors.push({ row: urutan, kode: item.kode, error: 'Kode sudah ada' });
-          continue;
-        }
-
-        await db.insert(profilLulusan).values({
-          programStudiId,
-          kode: item.kode,
-          deskripsi: item.deskripsi,
-          urutan,
-        });
-        result.success++;
-      } catch (err: any) {
+      if (!kode || !deskripsi) {
         result.failed++;
-        result.errors.push({ row: urutan, kode: item.kode, error: err.message || 'Error tidak diketahui' });
+        result.errors.push({ row: urutan, kode: kode || '', error: 'Kode dan deskripsi wajib diisi' });
+        continue;
+      }
+
+      if (kode.length > 20) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode, error: 'Kode maksimal 20 karakter' });
+        continue;
+      }
+
+      const existing = await db.query.profilLulusan.findFirst({
+        where: and(eq(profilLulusan.programStudiId, programStudiId), eq(profilLulusan.kode, kode)),
+      });
+
+      if (existing) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode, error: 'Kode sudah ada' });
+        continue;
+      }
+
+      validItems.push({ kode, deskripsi, urutan });
+    }
+
+    if (validItems.length > 0) {
+      try {
+        await db.transaction(async (tx) => {
+          await tx.insert(profilLulusan).values(
+            validItems.map((item) => ({
+              programStudiId,
+              kode: item.kode,
+              deskripsi: item.deskripsi,
+              urutan: item.urutan,
+            })),
+          );
+        });
+        result.success = validItems.length;
+      } catch (err: any) {
+        result.failed += validItems.length;
+        result.errors.push({
+          row: 0,
+          kode: '',
+          error: 'Gagal menyimpan data ke database',
+        });
+        console.error('Profil Lulusan import error:', err);
       }
     }
 

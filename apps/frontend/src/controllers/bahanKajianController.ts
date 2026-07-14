@@ -89,8 +89,7 @@ export const bahanKajianController = {
   },
 
   async downloadTemplate(): Promise<string> {
-    const res = await fetch('/bahan-kajian/template');
-    return res.text();
+    return fetchApi<string>('/bahan-kajian/template');
   },
 
   // Mapping

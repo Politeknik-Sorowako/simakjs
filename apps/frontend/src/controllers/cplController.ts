@@ -85,8 +85,7 @@ export const cplController = {
   },
 
   async downloadTemplate(): Promise<string> {
-    const res = await fetch('/cpl/template');
-    return res.text();
+    return fetchApi<string>('/cpl/template');
   },
 
   // Mapping
