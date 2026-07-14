@@ -60,3 +60,20 @@ export const deleteCplSchema = {
     id: t.Numeric(),
   }),
 };
+
+export const importCplSchema = {
+  detail: {
+    tags: ['CPL'],
+    summary: 'Impor CPL dari CSV',
+    description: 'Impor data CPL dari file CSV. Format: kode,deskripsi (Hanya Admin/Prodi).',
+  },
+  body: t.Object({
+    programStudiId: t.Integer(),
+    items: t.Array(
+      t.Object({
+        kode: t.String(),
+        deskripsi: t.String(),
+      }),
+    ),
+  }),
+};

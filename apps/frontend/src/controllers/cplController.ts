@@ -39,6 +39,12 @@ export interface CplMatriksResponse {
   }[];
 }
 
+export interface ImportCplResult {
+  success: number;
+  failed: number;
+  errors: { row: number; kode: string; error: string }[];
+}
+
 export const cplController = {
   async getAll(prodiId?: number): Promise<Cpl[]> {
     const params = new URLSearchParams();
@@ -68,6 +74,13 @@ export const cplController = {
   async delete(id: number): Promise<{ message: string }> {
     return fetchApi<{ message: string }>(`/cpl/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  async import(programStudiId: number, items: { kode: string; deskripsi: string }[]): Promise<ImportCplResult> {
+    return fetchApi<ImportCplResult>('/cpl/import', {
+      method: 'POST',
+      body: JSON.stringify({ programStudiId, items }),
     });
   },
 
