@@ -214,7 +214,7 @@ export default function VisiMisiProdi() {
     URL.revokeObjectURL(url);
   }
 
-  const headers = ['Tahun Berlaku', 'Visi', 'Misi', 'Status', 'Aksi'];
+  const headers = ['Tahun Berlaku', 'Visi', 'Misi', 'Program Studi', 'Status', 'Aksi'];
 
   return (
     <MainLayout>
@@ -283,6 +283,7 @@ export default function VisiMisiProdi() {
                     <td class="px-4 py-3 text-black dark:text-white">{item.tahunBerlaku || '-'}</td>
                     <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.visi}</td>
                     <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.misi}</td>
+                    <td class="px-4 py-3 text-black dark:text-white">{item.programStudi?.nama || '-'}</td>
                     <td class="px-4 py-3">
                       <Show when={item.isAktif} fallback={<Badge variant="default">Tidak Aktif</Badge>}>
                         <Badge variant="success">Aktif</Badge>
