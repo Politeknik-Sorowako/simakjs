@@ -312,10 +312,10 @@ export default function BahanKajian() {
               >
                 {(item) => (
                   <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                    <td class="px-4 py-3 font-medium text-white">{item.kode}</td>
-                    <td class="px-4 py-3 text-white">{item.nama}</td>
-                    <td class="px-4 py-3 text-secondary-200 max-w-md truncate">{item.deskripsi || '-'}</td>
-                    <td class="px-4 py-3 text-secondary-200">{item.programStudi?.nama || '-'}</td>
+                    <td class="px-4 py-3 font-medium text-black dark:text-white">{item.kode}</td>
+                    <td class="px-4 py-3 text-black dark:text-white">{item.nama}</td>
+                    <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.deskripsi || '-'}</td>
+                    <td class="px-4 py-3 text-black dark:text-white">{item.programStudi?.nama || '-'}</td>
                     <td class="px-4 py-3">
                       <div class="flex flex-wrap gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openMappingModal(item.id)}>
@@ -326,7 +326,7 @@ export default function BahanKajian() {
                         </Show>
                       </div>
                     </td>
-                    <td class="px-4 py-3 text-secondary-200">{item.urutan}</td>
+                    <td class="px-4 py-3 text-black dark:text-white">{item.urutan}</td>
                     <td class="px-4 py-3">
                       <div class="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}>
@@ -462,8 +462,8 @@ export default function BahanKajian() {
                   <For each={mappings()}>
                     {(m: any) => (
                       <tr class="border-b border-slate-700/50">
-                        <td class="py-2 text-white">{m.cpl?.kode || '-'}</td>
-                        <td class="py-2 text-secondary-200">{m.bobot ?? '(merata)'}</td>
+                        <td class="py-2 text-black dark:text-white">{m.cpl?.kode || '-'}</td>
+                        <td class="py-2 text-black dark:text-white">{m.bobot ?? '(merata)'}</td>
                         <td class="py-2 text-right">
                           <Button variant="danger" size="sm" onClick={() => handleDeleteMapping(m.id)}>
                             Hapus
@@ -548,9 +548,9 @@ export default function BahanKajian() {
                           {(item, index) => (
                             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
                               <td class="py-2 px-3 text-secondary-400">{index() + 1}</td>
-                              <td class="py-2 px-3 text-white font-medium">{item.kode}</td>
-                              <td class="py-2 px-3 text-white">{item.nama}</td>
-                              <td class="py-2 px-3 text-slate-200">{item.deskripsi || '-'}</td>
+                              <td class="py-2 px-3 text-black dark:text-white font-medium">{item.kode}</td>
+                              <td class="py-2 px-3 text-black dark:text-white">{item.nama}</td>
+                              <td class="py-2 px-3 text-black dark:text-white">{item.deskripsi || '-'}</td>
                             </tr>
                           )}
                         </For>
@@ -608,7 +608,7 @@ export default function BahanKajian() {
                           {(err) => (
                             <tr class="border-b border-slate-700/50">
                               <td class="py-2 px-3 text-secondary-400">{err.row}</td>
-                              <td class="py-2 px-3 text-white">{err.kode}</td>
+                              <td class="py-2 px-3 text-black dark:text-white">{err.kode}</td>
                               <td class="py-2 px-3 text-red-400">{err.error}</td>
                             </tr>
                           )}

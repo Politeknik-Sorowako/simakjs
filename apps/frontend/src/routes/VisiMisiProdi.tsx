@@ -280,9 +280,9 @@ export default function VisiMisiProdi() {
               >
                 {(item) => (
                   <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                    <td class="px-4 py-3 text-slate-900 dark:text-white">{item.tahunBerlaku || '-'}</td>
-                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-md truncate">{item.visi}</td>
-                    <td class="px-4 py-3 text-slate-700 dark:text-slate-300 max-w-md truncate">{item.misi}</td>
+                    <td class="px-4 py-3 text-black dark:text-white">{item.tahunBerlaku || '-'}</td>
+                    <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.visi}</td>
+                    <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.misi}</td>
                     <td class="px-4 py-3">
                       <Show when={item.isAktif} fallback={<Badge variant="default">Tidak Aktif</Badge>}>
                         <Badge variant="success">Aktif</Badge>
@@ -465,7 +465,7 @@ export default function VisiMisiProdi() {
                           {(item, index) => (
                             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
                               <td class="py-2 px-3 text-secondary-400">{index() + 1}</td>
-                              <td class="py-2 px-3 text-white font-medium">{item.tahunBerlaku}</td>
+                              <td class="py-2 px-3 text-black dark:text-white font-medium">{item.tahunBerlaku}</td>
                               <td class="py-2 px-3 text-slate-200 truncate max-w-xs">{item.visi}</td>
                             </tr>
                           )}
@@ -524,7 +524,7 @@ export default function VisiMisiProdi() {
                           {(err) => (
                             <tr class="border-b border-slate-700/50">
                               <td class="py-2 px-3 text-secondary-400">{err.row}</td>
-                              <td class="py-2 px-3 text-white">{err.tahunBerlaku}</td>
+                              <td class="py-2 px-3 text-black dark:text-white">{err.tahunBerlaku}</td>
                               <td class="py-2 px-3 text-red-400">{err.error}</td>
                             </tr>
                           )}
