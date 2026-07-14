@@ -47,7 +47,11 @@ export const updateCplSchema = {
   params: t.Object({
     id: t.Numeric(),
   }),
-  body: t.Partial(cplBody),
+  body: t.Object({
+    kode: t.Optional(t.String()),
+    deskripsi: t.Optional(t.String()),
+    urutan: t.Optional(t.Integer()),
+  }),
 };
 
 export const deleteCplSchema = {
