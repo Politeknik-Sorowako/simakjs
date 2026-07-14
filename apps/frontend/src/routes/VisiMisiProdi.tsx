@@ -225,9 +225,10 @@ export default function VisiMisiProdi() {
               value={prodiId()}
               onInput={(e: any) => setProdiId(Number(e.currentTarget.value))}
               isSelect
-              selectOptions={
-                prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []
-              }
+              selectOptions={[
+                { value: '0', label: 'Pilih Program Studi' },
+                ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
+              ]}
             />
           </Show>
           <Input
