@@ -30,6 +30,7 @@ export default function Cpl() {
 
   const [showMappingModal, setShowMappingModal] = createSignal(false);
   const [mappingCplId, setMappingCplId] = createSignal<number | null>(null);
+  const [mappingProdiId, setMappingProdiId] = createSignal<number>(0);
   const [selectedPlId, setSelectedPlId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
   const [mappings, setMappings] = createSignal<any[]>([]);
@@ -100,12 +101,13 @@ export default function Cpl() {
     }
   }
 
-  async function openMappingModal(cplId: number) {
-    setMappingCplId(cplId);
+  async function openMappingModal(item: { id: number; programStudiId: number }) {
+    setMappingCplId(item.id);
+    setMappingProdiId(item.programStudiId);
     setSelectedPlId(0);
     setMappingBobot('');
     setErrorMsg('');
-    const existMappings = await cplController.getMappings(undefined, cplId);
+    const existMappings = await cplController.getMappings(undefined, item.id);
     setMappings(existMappings);
     setShowMappingModal(true);
   }
@@ -228,7 +230,7 @@ export default function Cpl() {
   }
 
   const [plOptions] = createResource(
-    () => prodiFilter(),
+    () => mappingProdiId(),
     async (prodiId) => {
       if (!prodiId) return [];
       return profilLulusanController.getAll(prodiId);
@@ -306,7 +308,7 @@ export default function Cpl() {
                     <td class="px-4 py-3 text-slate-700 dark:text-slate-300">{item.programStudi?.nama || '-'}</td>
                     <td class="px-4 py-3">
                       <div class="flex flex-wrap gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openMappingModal(item.id)}>
+                        <Button variant="ghost" size="sm" onClick={() => openMappingModal(item)}>
                           Atur Mapping
                         </Button>
                         <Show when={item.profilLulusanMappings && item.profilLulusanMappings.length > 0}>
