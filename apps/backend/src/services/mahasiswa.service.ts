@@ -10,8 +10,8 @@ export interface CreateMahasiswaDto {
   dosenPaId?: number | null;
   status?: string;
   idPddikti?: string;
-  namaIbuKandung: string;
-  nik: string;
+  namaIbuKandung?: string | null;
+  nik?: string | null;
   jenisKelamin: 'L' | 'P';
   tanggalLahir: string;
 }
