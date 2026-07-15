@@ -33,6 +33,9 @@ export default function Cpmk() {
     (kurikulumId) => (kurikulumId ? mataKuliahController.getAll('', 1, 500, kurikulumId) : null),
   );
 
+  // Fetch all mata kuliah for form dropdown (independent of filter)
+  const [allMataKuliahs] = createResource(() => mataKuliahController.getAll('', 1, 500));
+
   const [cpmkList, { refetch }] = createResource(
     () => ({
       search: search(),
@@ -401,35 +404,17 @@ export default function Cpmk() {
             <Input
               type="select"
               label="Mata Kuliah"
-              value={mataKuliahId()}
+              value={String(mataKuliahId())}
               onInput={(e: any) => {
-                setMataKuliahId(Number(e.currentTarget.value));
+                const val = Number(e.currentTarget.value);
+                setMataKuliahId(val);
                 setKurikulumMataKuliahId(null);
               }}
               isSelect
               selectOptions={[
                 { value: '0', label: 'Pilih Mata Kuliah' },
-                ...(mataKuliahs()?.data?.map((mk) => ({ value: String(mk.id), label: `${mk.kode} - ${mk.nama}` })) ||
+                ...(allMataKuliahs()?.data?.map((mk) => ({ value: String(mk.id), label: `${mk.kode} - ${mk.nama}` })) ||
                   []),
-              ]}
-            />
-
-            <Input
-              type="select"
-              label="Kurikulum Mata Kuliah (Opsional)"
-              value={kurikulumMataKuliahId() || ''}
-              onInput={(e: any) =>
-                setKurikulumMataKuliahId(e.currentTarget.value ? Number(e.currentTarget.value) : null)
-              }
-              isSelect
-              selectOptions={[
-                { value: '', label: 'Tidak Ada' },
-                ...(mataKuliahs()
-                  ?.data?.filter((mk) => mk.id === mataKuliahId())
-                  .map((mk) => ({
-                    value: String(mk.kurikulumMataKuliahId || ''),
-                    label: `Semester ${mk.semester}`,
-                  })) || []),
               ]}
             />
 
