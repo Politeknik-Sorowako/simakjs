@@ -160,6 +160,8 @@ describe('KHS Display Test', () => {
         },
       }),
     );
+    const lockJson = await lockRes.json();
+    console.log('LOCK RESP:', JSON.stringify(lockJson, null, 2));
     expect(lockRes.status).toBe(200);
 
     // Call GET KHS

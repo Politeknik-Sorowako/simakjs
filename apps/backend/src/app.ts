@@ -11,14 +11,18 @@ import { bahanKajianRoutes } from './routes/bahan-kajian.routes';
 import { bahanKajianCplMappingRoutes } from './routes/bahan-kajian-cpl-mapping.routes';
 import { bapRoutes } from './routes/bap.routes';
 import { bimbinganRoutes } from './routes/bimbingan.routes';
+import { capaianCplRoutes } from './routes/capaian-cpl.routes';
+import { capaianCpmkRoutes } from './routes/capaian-cpmk.routes';
 import { cplRoutes } from './routes/cpl.routes';
 import { cplMappingRoutes } from './routes/cpl-mapping.routes';
+import { cplMataKuliahRoutes } from './routes/cpl-mata-kuliah.routes';
 import { cpmkRoutes } from './routes/cpmk.routes';
 import { cpmkCplMappingRoutes } from './routes/cpmk-cpl-mapping.routes';
 import { cutiRoutes } from './routes/cuti.routes';
 import { dosenRoutes } from './routes/dosen.routes';
 import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
 import { e2eRoutes } from './routes/e2e.routes';
+import { evaluasiKurikulumRoutes } from './routes/evaluasi-kurikulum.routes';
 import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { khsRoutes } from './routes/khs.routes';
 import { krsRoutes } from './routes/krs.routes';
@@ -79,6 +83,10 @@ if (isDevelopment) {
           { name: 'CPMK', description: 'Capaian Pembelajaran Mata Kuliah' },
           { name: 'RPS', description: 'Rencana Pembelajaran Semester' },
           { name: 'Laporan OBE', description: 'Laporan dan analisis Outcome-Based Education' },
+          { name: 'CPL Mata Kuliah', description: 'Pemetaan CPL ke Mata Kuliah (Top-Down)' },
+          { name: 'Capaian CPMK', description: 'Capaian CPMK per mahasiswa per kelas' },
+          { name: 'Capaian CPL', description: 'Capaian CPL per mahasiswa' },
+          { name: 'Evaluasi Kurikulum', description: 'Evaluasi dan rekomendasi perbaikan kurikulum (PPEPP)' },
           { name: 'Rencana Evaluasi', description: 'Rencana evaluasi/penilaian mata kuliah' },
           { name: 'BAP', description: 'Berita Acara Perkuliahan' },
           { name: 'Presensi', description: 'Presensi kehadiran mahasiswa' },
@@ -257,6 +265,10 @@ app
   .use(cpmkRoutes)
   .use(bapRoutes)
   .use(obeReportRoutes)
+  .use(cplMataKuliahRoutes)
+  .use(capaianCpmkRoutes)
+  .use(capaianCplRoutes)
+  .use(evaluasiKurikulumRoutes)
   .use(presensiRoutes)
   .use(bimbinganRoutes)
   .use(pelanggaranRoutes)

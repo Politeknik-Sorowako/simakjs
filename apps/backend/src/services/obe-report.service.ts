@@ -2,10 +2,14 @@ import { and, eq, inArray } from 'drizzle-orm';
 import {
   bahanKajian,
   bahanKajianCpl,
+  capaianCpl,
+  capaianCpmk,
   cpl,
+  cplMataKuliah,
   cplProfilLulusan,
   cpmk,
   cpmkCpl,
+  evaluasiKurikulum,
   kurikulum,
   kurikulumMataKuliah,
   mataKuliah,
@@ -156,6 +160,109 @@ export class ObeReportService {
       bahanKajian: totalBk.length,
       plCplMappings: plCplMappingsCount,
       bkCplMappings: bkCplMappingsCount,
+    };
+  }
+
+  static async getCpmkAchievement(kelasKuliahId: number) {
+    const capaian = await db.query.capaianCpmk.findMany({
+      where: eq(capaianCpmk.kelasKuliahId, kelasKuliahId),
+      with: {
+        cpmk: {
+          columns: { id: true, kode: true, deskripsi: true },
+          with: { mataKuliah: { columns: { id: true, kode: true, nama: true } } },
+        },
+        mahasiswa: { columns: { id: true, nim: true, nama: true } },
+      },
+    });
+
+    const cpmkMap = new Map<number, { cpmk: any; mataKuliah: any; scores: number[] }>();
+    for (const c of capaian) {
+      const key = c.cpmkId;
+      if (!cpmkMap.has(key)) {
+        cpmkMap.set(key, { cpmk: c.cpmk, mataKuliah: c.cpmk.mataKuliah, scores: [] });
+      }
+      cpmkMap.get(key)!.scores.push(parseFloat(c.nilai));
+    }
+
+    const rekap = [];
+    for (const [cpmkId, data] of cpmkMap) {
+      const avg = data.scores.reduce((s, v) => s + v, 0) / data.scores.length;
+      rekap.push({
+        cpmkId,
+        kode: data.cpmk.kode,
+        deskripsi: data.cpmk.deskripsi,
+        mataKuliah: data.mataKuliah,
+        rataRata: parseFloat(avg.toFixed(2)),
+        min: Math.min(...data.scores),
+        max: Math.max(...data.scores),
+        jumlahMahasiswa: data.scores.length,
+      });
+    }
+
+    return rekap;
+  }
+
+  static async getCplAchievement(kurikulumId?: number, periodeId?: string) {
+    const conditions = [];
+    if (kurikulumId) conditions.push(eq(capaianCpl.kurikulumId, kurikulumId));
+    if (periodeId) conditions.push(eq(capaianCpl.periodeId, periodeId));
+
+    const capaian = await db.query.capaianCpl.findMany({
+      where: conditions.length > 0 ? and(...conditions) : undefined,
+      with: {
+        cpl: { columns: { id: true, kode: true, deskripsi: true } },
+      },
+    });
+
+    const cplMap = new Map<number, { cpl: any; scores: number[] }>();
+    for (const c of capaian) {
+      const key = c.cplId;
+      if (!cplMap.has(key)) {
+        cplMap.set(key, { cpl: c.cpl, scores: [] });
+      }
+      cplMap.get(key)!.scores.push(parseFloat(c.nilai));
+    }
+
+    const rekap = [];
+    for (const [cplId, data] of cplMap) {
+      const avg = data.scores.reduce((s, v) => s + v, 0) / data.scores.length;
+      const predikat =
+        avg >= 85 ? 'SB' : avg >= 70 ? 'B' : avg >= 55 ? 'C' : avg >= 40 ? 'K' : 'SK';
+      rekap.push({
+        cplId,
+        kode: data.cpl.kode,
+        deskripsi: data.cpl.deskripsi,
+        rataRata: parseFloat(avg.toFixed(2)),
+        predikat,
+        min: Math.min(...data.scores),
+        max: Math.max(...data.scores),
+        jumlahMahasiswa: data.scores.length,
+      });
+    }
+
+    return rekap;
+  }
+
+  static async getEvaluasiRekap(kurikulumId: number) {
+    const evaluasi = await db.query.evaluasiKurikulum.findMany({
+      where: eq(evaluasiKurikulum.kurikulumId, kurikulumId),
+      orderBy: (e, { desc }) => [desc(e.createdAt)],
+      with: {
+        periode: { columns: { id: true, nama: true } },
+      },
+    });
+
+    const statusCount = { open: 0, in_progress: 0, closed: 0 };
+    for (const e of evaluasi) {
+      if (e.status in statusCount) {
+        statusCount[e.status as keyof typeof statusCount]++;
+      }
+    }
+
+    return {
+      total: evaluasi.length,
+      statusCount,
+      evaluasi,
     };
   }
 }

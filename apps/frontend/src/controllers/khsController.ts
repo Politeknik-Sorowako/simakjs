@@ -47,6 +47,8 @@ export interface KomponenNilai {
   kelasKuliahId: number;
   nama: string;
   bobot: number;
+  subCpmkId?: number | null;
+  rencanaEvaluasiId?: number | null;
 }
 
 export interface NilaiMahasiswa {

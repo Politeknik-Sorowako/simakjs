@@ -15,6 +15,7 @@ export interface CreateRpsDto {
   periodeId: string;
   deskripsi?: string;
   cplProdi?: string;
+  evaluasiDosen?: string;
 }
 
 export interface CreateRpsTopikDto {

@@ -32,3 +32,37 @@ export const getBkMkCoverageSchema = {
     kurikulumId: t.Numeric(),
   }),
 };
+
+export const getCpmkAchievementSchema = {
+  detail: {
+    tags: ['Laporan OBE'],
+    summary: 'Capaian CPMK per Kelas',
+    description: 'Mengambil rekap capaian CPMK untuk semua mahasiswa di satu kelas.',
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric(),
+  }),
+};
+
+export const getCplAchievementSchema = {
+  detail: {
+    tags: ['Laporan OBE'],
+    summary: 'Capaian CPL',
+    description: 'Mengambil rekap capaian CPL per kurikulum/periode.',
+  },
+  query: t.Object({
+    kurikulumId: t.Optional(t.Numeric()),
+    periodeId: t.Optional(t.String()),
+  }),
+};
+
+export const getEvaluasiRekapSchema = {
+  detail: {
+    tags: ['Laporan OBE'],
+    summary: 'Rekap Evaluasi Kurikulum',
+    description: 'Mengambil rekap evaluasi kurikulum (PPEPP).',
+  },
+  params: t.Object({
+    kurikulumId: t.Numeric(),
+  }),
+};
