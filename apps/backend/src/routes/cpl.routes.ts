@@ -6,13 +6,16 @@ import {
   deleteCplSchema,
   getCplByIdSchema,
   getCplSchema,
+  importCplSchema,
   updateCplSchema,
 } from '../schemas/cpl.schema';
 
 export const cplRoutes = new Elysia({ prefix: '/cpl' })
   .use(authMiddleware)
   .get('/', CplController.getAll, getCplSchema)
+  .get('/template', CplController.getTemplate)
   .get('/:id', CplController.getById, getCplByIdSchema)
   .post('/', CplController.create, createCplSchema)
+  .post('/import', CplController.import, importCplSchema)
   .put('/:id', CplController.update, updateCplSchema)
   .delete('/:id', CplController.delete, deleteCplSchema);

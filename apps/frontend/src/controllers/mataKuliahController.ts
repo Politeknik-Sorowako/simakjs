@@ -50,7 +50,10 @@ export const mataKuliahController = {
     });
   },
 
-  async update(id: number, data: Partial<Omit<MataKuliah, 'id' | 'semester' | 'kurikulum' | 'programStudi'>>): Promise<MataKuliah> {
+  async update(
+    id: number,
+    data: Partial<Omit<MataKuliah, 'id' | 'semester' | 'kurikulum' | 'programStudi'>>,
+  ): Promise<MataKuliah> {
     return fetchApi<MataKuliah>(`/mata-kuliah/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

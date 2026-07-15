@@ -259,7 +259,8 @@ export const getRencanaStudiSchema = {
   detail: {
     tags: ['KRS'],
     summary: 'Rencana Studi dari Kurikulum',
-    description: 'Mengambil rencana studi mahasiswa berdasarkan kurikulum aktif angkatannya, lengkap dengan progress per semester.',
+    description:
+      'Mengambil rencana studi mahasiswa berdasarkan kurikulum aktif angkatannya, lengkap dengan progress per semester.',
   },
   query: t.Object({
     mahasiswaId: t.Numeric(),

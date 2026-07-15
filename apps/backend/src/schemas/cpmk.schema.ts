@@ -7,13 +7,45 @@ export const cpmkBody = t.Object({
   deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
 });
 
-export const updateCpmkBody = t.Partial(
-  t.Object({
-    kode: t.String(),
-    deskripsi: t.String(),
-    kurikulumMataKuliahId: t.Integer(),
+export const updateCpmkBody = t.Object({
+  kode: t.Optional(t.String()),
+  deskripsi: t.Optional(t.String()),
+  kurikulumMataKuliahId: t.Optional(t.Integer()),
+});
+
+export const getAllCpmkSchema = {
+  detail: {
+    tags: ['CPMK'],
+    summary: 'Daftar CPMK',
+    description: 'Mengambil daftar CPMK dengan filter kurikulum, mata kuliah, dan pencarian.',
+  },
+  query: t.Object({
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
+    search: t.Optional(t.String({ default: '' })),
+    kurikulumId: t.Optional(t.Numeric()),
+    mataKuliahId: t.Optional(t.Numeric()),
   }),
-);
+  response: {
+    200: t.Object({
+      data: t.Array(
+        t.Object({
+          id: t.Integer({ default: 1 }),
+          mataKuliahId: t.Integer({ default: 1 }),
+          kurikulumMataKuliahId: t.Nullable(t.Integer()),
+          kode: t.String({ default: 'CPMK-1' }),
+          deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
+        }),
+      ),
+      meta: t.Object({
+        total: t.Integer({ default: 1 }),
+        page: t.Integer({ default: 1 }),
+        limit: t.Integer({ default: 10 }),
+        totalPages: t.Integer({ default: 1 }),
+      }),
+    }),
+  },
+};
 
 export const createCpmkSchema = {
   detail: {
@@ -29,6 +61,9 @@ export const createCpmkSchema = {
       kurikulumMataKuliahId: t.Nullable(t.Integer()),
       kode: t.String({ default: 'CPMK-1' }),
       deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'Kode CPMK sudah ada untuk mata kuliah ini' }),
     }),
   },
 };
@@ -76,6 +111,18 @@ export const updateCpmkSchema = {
     id: t.Numeric(),
   }),
   body: updateCpmkBody,
+  response: {
+    200: t.Object({
+      id: t.Integer({ default: 1 }),
+      mataKuliahId: t.Integer({ default: 1 }),
+      kurikulumMataKuliahId: t.Nullable(t.Integer()),
+      kode: t.String({ default: 'CPMK-1' }),
+      deskripsi: t.String({ default: 'Mampu menerapkan konsep dasar pemrograman' }),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'Kode CPMK sudah ada untuk mata kuliah ini' }),
+    }),
+  },
 };
 
 export const deleteCpmkSchema = {

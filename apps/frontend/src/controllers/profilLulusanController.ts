@@ -11,6 +11,12 @@ export interface ProfilLulusan {
   cplMappings?: { id: number; cpl: { id: number; kode: string } }[];
 }
 
+export interface ImportResult {
+  success: number;
+  failed: number;
+  errors: { row: number; kode: string; error: string }[];
+}
+
 export const profilLulusanController = {
   async getAll(prodiId?: number): Promise<ProfilLulusan[]> {
     const params = new URLSearchParams();
@@ -41,5 +47,16 @@ export const profilLulusanController = {
     return fetchApi<{ message: string }>(`/profil-lulusan/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  async import(programStudiId: number, items: { kode: string; deskripsi: string }[]): Promise<ImportResult> {
+    return fetchApi<ImportResult>('/profil-lulusan/import', {
+      method: 'POST',
+      body: JSON.stringify({ programStudiId, items }),
+    });
+  },
+
+  async downloadTemplate(): Promise<string> {
+    return fetchApi<string>('/profil-lulusan/template');
   },
 };

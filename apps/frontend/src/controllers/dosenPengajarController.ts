@@ -15,7 +15,12 @@ export interface DosenPengajar {
 }
 
 export const dosenPengajarController = {
-  async getAll(kelasKuliahId?: number, dosenId?: number, page?: number, limit?: number): Promise<PaginatedResponse<DosenPengajar>> {
+  async getAll(
+    kelasKuliahId?: number,
+    dosenId?: number,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResponse<DosenPengajar>> {
     const params = new URLSearchParams();
     if (kelasKuliahId) params.append('kelasKuliahId', String(kelasKuliahId));
     if (dosenId) params.append('dosenId', String(dosenId));

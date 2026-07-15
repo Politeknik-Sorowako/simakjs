@@ -226,6 +226,10 @@ export default function Kurikulum() {
   const handleSave = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
+    if (!semesterMulai()) {
+      setErrorMsg('Semester mulai berlaku harus dipilih');
+      return;
+    }
     try {
       const payload = {
         kode: kode(),
@@ -439,13 +443,23 @@ export default function Kurikulum() {
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
                 Semester Mulai Berlaku
               </label>
-              <select
-                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                value={semesterMulai()}
-                onChange={(e) => setSemesterMulai(e.currentTarget.value)}
+              <Show
+                when={periodes.loading}
+                fallback={
+                  <select
+                    class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    value={semesterMulai()}
+                    onChange={(e) => setSemesterMulai(e.currentTarget.value)}
+                  >
+                    <option value="">Pilih Semester</option>
+                    <For each={periodes()?.data}>{(periode) => <option value={periode.id}>{periode.nama}</option>}</For>
+                  </select>
+                }
               >
-                <For each={periodes()?.data}>{(periode) => <option value={periode.id}>{periode.nama}</option>}</For>
-              </select>
+                <div class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-secondary-50 dark:bg-secondary-800 flex items-center text-sm text-secondary-500">
+                  Memuat data periode...
+                </div>
+              </Show>
             </div>
             <div class="grid grid-cols-3 gap-4">
               <div class="flex flex-col gap-1">
@@ -491,7 +505,9 @@ export default function Kurikulum() {
               <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>
                 Batal
               </Button>
-              <Button type="submit">Simpan</Button>
+              <Button type="submit" disabled={periodes.loading || !semesterMulai()}>
+                Simpan
+              </Button>
             </div>
           </form>
         </Modal>

@@ -370,6 +370,7 @@ export const cpmk = pgTable(
   },
   (t) => ({
     kurikulumMkIdx: index('cpmk_kurikulum_mata_kuliah_id_idx').on(t.kurikulumMataKuliahId),
+    mkKodeUnique: unique('cpmk_mata_kuliah_kode_unique').on(t.mataKuliahId, t.kode),
   }),
 );
 

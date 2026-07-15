@@ -87,7 +87,8 @@ export const toggleActiveSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Aktif/Nonaktifkan Pengguna',
-    description: 'Mengubah status aktif/nonaktif pengguna. **Hanya Admin** yang dapat mengakses. Admin tidak dapat menonaktifkan akun sendiri.',
+    description:
+      'Mengubah status aktif/nonaktif pengguna. **Hanya Admin** yang dapat mengakses. Admin tidak dapat menonaktifkan akun sendiri.',
   },
   params: t.Object({
     id: t.Numeric(),
@@ -109,7 +110,8 @@ export const updateRoleSchema = {
   detail: {
     tags: ['Pengguna'],
     summary: 'Ubah Role Pengguna',
-    description: 'Memperbarui role/hak akses pengguna. **Hanya Admin** yang dapat mengakses. Admin tidak dapat mengubah role akun sendiri.',
+    description:
+      'Memperbarui role/hak akses pengguna. **Hanya Admin** yang dapat mengakses. Admin tidak dapat mengubah role akun sendiri.',
   },
   params: t.Object({
     id: t.Numeric(),
@@ -158,15 +160,9 @@ export const generateAccountsSchema = {
   body: t.Optional(
     t.Object({
       role: t.Optional(
-        t.Union(
-          [
-            t.Literal('dosen'),
-            t.Literal('mahasiswa'),
-            t.Literal('guest'),
-            t.Literal('calon_mahasiswa'),
-          ],
-          { default: 'mahasiswa' },
-        ),
+        t.Union([t.Literal('dosen'), t.Literal('mahasiswa'), t.Literal('guest'), t.Literal('calon_mahasiswa')], {
+          default: 'mahasiswa',
+        }),
       ),
       jumlah: t.Optional(t.Integer({ default: 1 })),
     }),

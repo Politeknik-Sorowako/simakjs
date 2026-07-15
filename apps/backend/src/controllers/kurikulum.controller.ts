@@ -68,9 +68,14 @@ export class KurikulumController {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
-    const newKmk = await KurikulumService.addMataKuliah(parseInt(params.id), body);
-    set.status = 201;
-    return newKmk;
+    try {
+      const newKmk = await KurikulumService.addMataKuliah(parseInt(params.id), body);
+      set.status = 201;
+      return newKmk;
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
   }
 
   static async copyFromKurikulum({ params, body, set, getCurrentUser }: AuthContext) {

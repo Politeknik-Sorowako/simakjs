@@ -1,17 +1,17 @@
 import { Elysia } from 'elysia';
 import { AdmisiAdminController } from '../controllers/admisi-admin.controller';
 import {
-  createSessionSchema,
-  updateSessionSchema,
   addSessionProdiSchema,
   createDocumentRequirementSchema,
-  verifyDocumentSchema,
-  createSelectionComponentSchema,
-  inputScoreSchema,
   createExamScheduleSchema,
-  verifyPaymentSchema,
+  createSelectionComponentSchema,
+  createSessionSchema,
+  inputScoreSchema,
   issueNimSchema,
   updateApplicationStatusSchema,
+  updateSessionSchema,
+  verifyDocumentSchema,
+  verifyPaymentSchema,
 } from '../schemas/admisi-admin.schema';
 
 export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })

@@ -48,7 +48,12 @@ export const updateBahanKajianSchema = {
   params: t.Object({
     id: t.Numeric(),
   }),
-  body: t.Partial(bahanKajianBody),
+  body: t.Object({
+    kode: t.Optional(t.String()),
+    nama: t.Optional(t.String()),
+    deskripsi: t.Optional(t.String()),
+    urutan: t.Optional(t.Integer()),
+  }),
 };
 
 export const deleteBahanKajianSchema = {
@@ -59,5 +64,23 @@ export const deleteBahanKajianSchema = {
   },
   params: t.Object({
     id: t.Numeric(),
+  }),
+};
+
+export const importBahanKajianSchema = {
+  detail: {
+    tags: ['Bahan Kajian'],
+    summary: 'Impor Bahan Kajian dari CSV',
+    description: 'Impor data Bahan Kajian dari file CSV. Format: kode,nama,deskripsi (Hanya Admin/Prodi).',
+  },
+  body: t.Object({
+    programStudiId: t.Integer(),
+    items: t.Array(
+      t.Object({
+        kode: t.String(),
+        nama: t.String(),
+        deskripsi: t.Optional(t.String()),
+      }),
+    ),
   }),
 };

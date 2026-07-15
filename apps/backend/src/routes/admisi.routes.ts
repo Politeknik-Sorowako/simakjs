@@ -2,12 +2,12 @@ import { Elysia } from 'elysia';
 import { AdmisiController } from '../controllers/admisi.controller';
 import { AdmisiAdminController } from '../controllers/admisi-admin.controller';
 import {
-  registerCalonSchema,
-  verifyEmailSchema,
   createApplicationSchema,
-  updateApplicationSchema,
+  registerCalonSchema,
   submitApplicationSchema,
   submitDocumentLinkSchema,
+  updateApplicationSchema,
+  verifyEmailSchema,
 } from '../schemas/admisi.schema';
 
 export const admisiRoutes = new Elysia({ prefix: '/admisi' })

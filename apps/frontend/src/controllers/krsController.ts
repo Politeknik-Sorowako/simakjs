@@ -74,7 +74,16 @@ export const krsController = {
     totalSksLulus: number;
     rencanaPerSemester: {
       semester: number;
-      mataKuliah: { id: number; mataKuliahId: number; kode: string; nama: string; sks: number; isWajib: boolean; status: string; nilaiHuruf: string | null }[];
+      mataKuliah: {
+        id: number;
+        mataKuliahId: number;
+        kode: string;
+        nama: string;
+        sks: number;
+        isWajib: boolean;
+        status: string;
+        nilaiHuruf: string | null;
+      }[];
       totalSks: number;
       sksLulus: number;
     }[];
@@ -82,7 +91,10 @@ export const krsController = {
     return fetchApi(`/krs/rencana-studi?mahasiswaId=${mahasiswaId}`);
   },
 
-  async validasiKrs(mahasiswaId: number, periodeId: string): Promise<{
+  async validasiKrs(
+    mahasiswaId: number,
+    periodeId: string,
+  ): Promise<{
     isValid: boolean;
     warnings: { type: string; mk: string; semester?: number }[];
     summary: { totalSksDiRencana: string; totalSksDiKrs: string; mkWajibTerpenuhi: number; mkWajibTotal: number };

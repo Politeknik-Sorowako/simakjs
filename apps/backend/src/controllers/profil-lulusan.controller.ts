@@ -56,4 +56,27 @@ export class ProfilLulusanController {
     }
     return { message: 'Profil Lulusan berhasil dihapus' };
   }
+
+  static async import({ body, set, getCurrentUser }: AuthContext) {
+    const user = await getCurrentUser();
+    if (!isAdminOrProdi(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const { programStudiId, items } = body as { programStudiId: number; items: { kode: string; deskripsi: string }[] };
+    if (!programStudiId || !items || !Array.isArray(items) || items.length === 0) {
+      set.status = 400;
+      return { error: 'Program studi dan data harus diisi' };
+    }
+    const result = await ProfilLulusanService.import(programStudiId, items);
+    set.status = 200;
+    return result;
+  }
+
+  static async getTemplate({ set, getCurrentUser }: AuthContext) {
+    await getCurrentUser();
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename=template-profil-lulusan.csv';
+    return ProfilLulusanService.getTemplateCsv();
+  }
 }

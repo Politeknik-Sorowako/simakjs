@@ -61,7 +61,13 @@ export const updateVisiMisiSchema = {
   params: t.Object({
     id: t.Numeric(),
   }),
-  body: t.Partial(visiMisiBody),
+  body: t.Object({
+    visi: t.Optional(t.String()),
+    misi: t.Optional(t.String()),
+    tujuan: t.Optional(t.String()),
+    sasaran: t.Optional(t.String()),
+    tahunBerlaku: t.Optional(t.String()),
+  }),
 };
 
 export const deleteVisiMisiSchema = {
@@ -83,5 +89,26 @@ export const setVisiMisiAktifSchema = {
   },
   params: t.Object({
     id: t.Numeric(),
+  }),
+};
+
+export const importVisiMisiSchema = {
+  detail: {
+    tags: ['Visi Misi Prodi'],
+    summary: 'Impor Visi Misi dari CSV',
+    description:
+      'Impor data Visi Misi dari file CSV. Format: tahunBerlaku,visi,misi,tujuan,sasaran (Hanya Admin/Prodi).',
+  },
+  body: t.Object({
+    programStudiId: t.Integer(),
+    items: t.Array(
+      t.Object({
+        tahunBerlaku: t.String(),
+        visi: t.String(),
+        misi: t.String(),
+        tujuan: t.Optional(t.String()),
+        sasaran: t.Optional(t.String()),
+      }),
+    ),
   }),
 };

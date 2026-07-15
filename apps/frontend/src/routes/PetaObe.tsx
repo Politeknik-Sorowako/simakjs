@@ -154,7 +154,7 @@ export default function PetaObe() {
                         <For each={data().matriks}>
                           {(row) => (
                             <tr class="border-b border-slate-700/50">
-                              <td class="py-3 px-2 text-white font-medium">{row.cpl.kode}</td>
+                              <td class="py-3 px-2 text-black dark:text-white font-medium">{row.cpl.kode}</td>
                               <For each={row.bobotPerPl}>
                                 {(bobot) => (
                                   <td class="py-3 px-2 text-center">
@@ -210,7 +210,7 @@ export default function PetaObe() {
                         <For each={data().matriks}>
                           {(row) => (
                             <tr class="border-b border-slate-700/50">
-                              <td class="py-3 px-2 text-white font-medium">{row.bk.kode}</td>
+                              <td class="py-3 px-2 text-black dark:text-white font-medium">{row.bk.kode}</td>
                               <For each={row.bobotPerCpl}>
                                 {(bobot) => (
                                   <td class="py-3 px-2 text-center">
@@ -282,10 +282,12 @@ export default function PetaObe() {
                               >
                                 {(m) => (
                                   <tr class="border-b border-slate-700/50">
-                                    <td class="py-2 px-2 text-white font-medium">{m.kode}</td>
-                                    <td class="py-2 px-2 text-secondary-200 max-w-xs truncate">{m.deskripsi}</td>
-                                    <td class="py-2 px-2 text-secondary-200">{m.mataKuliah?.nama || '-'}</td>
-                                    <td class="py-2 px-2 text-center text-secondary-200">
+                                    <td class="py-2 px-2 text-black dark:text-white font-medium">{m.kode}</td>
+                                    <td class="py-2 px-2 text-black dark:text-white max-w-xs truncate">
+                                      {m.deskripsi}
+                                    </td>
+                                    <td class="py-2 px-2 text-black dark:text-white">{m.mataKuliah?.nama || '-'}</td>
+                                    <td class="py-2 px-2 text-center text-black dark:text-white">
                                       {m.bobot !== null ? m.bobot : '(merata)'}
                                     </td>
                                     <td class="py-2 px-2 text-center">
