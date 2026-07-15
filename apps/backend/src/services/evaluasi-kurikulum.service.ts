@@ -60,6 +60,13 @@ export class EvaluasiKurikulumService {
   }
 
   static async create(data: CreateEvaluasiKurikulumDto) {
+    const kur = await db.query.kurikulum.findFirst({
+      where: eq(kurikulum.id, data.kurikulumId),
+    });
+    if (!kur) {
+      throw new Error('Kurikulum tidak ditemukan');
+    }
+
     const [newData] = await db
       .insert(evaluasiKurikulum)
       .values({

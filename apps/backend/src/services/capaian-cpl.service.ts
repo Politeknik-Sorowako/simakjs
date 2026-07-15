@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import {
   angkatanKurikulum,
   capaianCpl,
@@ -169,13 +169,19 @@ export class CapaianCplService {
           const predikat = CapaianCplService.getPredikat(naCpl);
 
           // Upsert capaian_cpl
+          const conditions = [
+            eq(capaianCpl.mahasiswaId, mhs.id),
+            eq(capaianCpl.cplId, cplItem.id),
+            eq(capaianCpl.kurikulumId, kurikulumId),
+          ];
+          if (periodeId) {
+            conditions.push(eq(capaianCpl.periodeId, periodeId));
+          } else {
+            conditions.push(isNull(capaianCpl.periodeId));
+          }
+
           const existing = await tx.query.capaianCpl.findFirst({
-            where: and(
-              eq(capaianCpl.mahasiswaId, mhs.id),
-              eq(capaianCpl.cplId, cplItem.id),
-              eq(capaianCpl.kurikulumId, kurikulumId),
-              periodeId ? eq(capaianCpl.periodeId, periodeId) : undefined,
-            ),
+            where: and(...conditions),
           });
 
           if (existing) {

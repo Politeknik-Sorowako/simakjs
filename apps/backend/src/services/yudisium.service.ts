@@ -1,5 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import {
+  angkatanKurikulum,
   capaianCpmk,
   cpmk,
   kelasKuliah,
@@ -485,7 +486,33 @@ export class YudisiumService {
         // Clear existing capaian_cpmk for this kelas
         await tx.delete(capaianCpmk).where(eq(capaianCpmk.kelasKuliahId, kelasKuliahId));
 
+        // Get mahasiswa details for kurikulum lookup
+        const mahasiswaIds = [...new Set(krsRecords.map((k) => k.mahasiswaId))];
+        const mahasiswaList = await tx.query.mahasiswa.findMany({
+          where: inArray(mahasiswa.id, mahasiswaIds),
+        });
+        const mahasiswaMap = new Map(mahasiswaList.map((m) => [m.id, m]));
+
+        // Build kurikulumId map per mahasiswa
+        const kurikulumPerMahasiswa = new Map<number, number | null>();
+        for (const mhs of mahasiswaList) {
+          if (!mhs.angkatan || !mhs.programStudiId) {
+            kurikulumPerMahasiswa.set(mhs.id, null);
+            continue;
+          }
+          const angkatanKur = await tx.query.angkatanKurikulum.findFirst({
+            where: and(
+              eq(angkatanKurikulum.angkatan, mhs.angkatan),
+              eq(angkatanKurikulum.programStudiId, mhs.programStudiId),
+            ),
+          });
+          kurikulumPerMahasiswa.set(mhs.id, angkatanKur?.kurikulumId ?? null);
+        }
+
         for (const krsItem of krsRecords) {
+          const mahasiswaId = krsItem.mahasiswaId;
+          const kurikulumId = kurikulumPerMahasiswa.get(mahasiswaId) ?? null;
+
           const compIds = komponenWithSubCpmk.map((c) => c.id);
           let studentGrades: typeof nilaiKomponenMahasiswa.$inferSelect[] = [];
           if (compIds.length > 0) {
@@ -530,7 +557,7 @@ export class YudisiumService {
               mahasiswaId: krsItem.mahasiswaId,
               cpmkId: cpmkItem.id,
               kelasKuliahId,
-              kurikulumId: null,
+              kurikulumId,
               nilai: nilaiCpmk.toString(),
             });
           }

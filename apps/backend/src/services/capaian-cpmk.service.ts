@@ -57,8 +57,18 @@ export class CapaianCpmkService {
 
     const komponenList = await db.query.komponenNilai.findMany({
       where: eq(komponenNilai.kelasKuliahId, kelasKuliahId),
-      with: { subCpmk: { with: { cpmk: true } } },
     });
+
+    const subCpmkIds = komponenList.map((k) => k.subCpmkId).filter((id): id is number => id !== null);
+    const subCpmkMap = new Map<number, number>();
+    if (subCpmkIds.length > 0) {
+      const subCpmkList = await db.query.subCpmk.findMany({
+        where: inArray(subCpmk.id, subCpmkIds),
+      });
+      for (const sc of subCpmkList) {
+        subCpmkMap.set(sc.id, sc.cpmkId);
+      }
+    }
 
     const cpmkInMk = await db.query.cpmk.findMany({
       where: eq(cpmk.mataKuliahId, kelas.mataKuliahId),
@@ -91,7 +101,7 @@ export class CapaianCpmkService {
         for (const cpmkItem of cpmkInMk) {
           // Find all komponen that map to sub-cpmk under this CPMK
           const relevantKomponen = komponenList.filter(
-            (k) => k.subCpmk && k.subCpmk.cpmkId === cpmkItem.id,
+            (k) => k.subCpmkId && subCpmkMap.get(k.subCpmkId) === cpmkItem.id,
           );
 
           if (relevantKomponen.length === 0) continue;

@@ -307,7 +307,6 @@ export const kelasKuliahRelations = relations(kelasKuliah, ({ one, many }) => ({
   }),
   dosenPengajarKelas: many(dosenPengajarKelas),
   krs: many(krs),
-  bap: many(bap),
   komponenNilai: many(komponenNilai),
 }));
 
