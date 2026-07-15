@@ -6,8 +6,8 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { cplController, Cpl as ICpl } from '../controllers/cplController';
-import { profilLulusanController } from '../controllers/profilLulusanController';
 import { prodiController } from '../controllers/prodiController';
+import { profilLulusanController } from '../controllers/profilLulusanController';
 
 export default function Cpl() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -253,9 +253,10 @@ export default function Cpl() {
               value={prodiId()}
               onInput={(e: any) => setProdiId(Number(e.currentTarget.value))}
               isSelect
-              selectOptions={
-                prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []
-              }
+              selectOptions={[
+                { value: '0', label: 'Pilih Program Studi' },
+                ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
+              ]}
             />
           </Show>
           <Input label="Kode" placeholder="CPL-1" value={kode()} onInput={(e: any) => setKode(e.currentTarget.value)} />

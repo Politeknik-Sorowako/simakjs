@@ -193,9 +193,10 @@ export default function ProfilLulusan() {
               value={prodiId()}
               onInput={(e: any) => setProdiId(Number(e.currentTarget.value))}
               isSelect
-              selectOptions={
-                prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []
-              }
+              selectOptions={[
+                { value: '0', label: 'Pilih Program Studi' },
+                ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
+              ]}
             />
           </Show>
           <Input label="Kode" placeholder="PL-1" value={kode()} onInput={(e: any) => setKode(e.currentTarget.value)} />
