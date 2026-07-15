@@ -7,18 +7,20 @@ export const mataKuliahBody = t.Object({
   sksTatapMuka: t.Optional(t.Integer({ default: 2 })),
   sksPraktek: t.Optional(t.Integer({ default: 1 })),
   idPddikti: t.Optional(t.String()),
+  kurikulumId: t.Optional(t.Integer()),
+  semester: t.Optional(t.Integer()),
 });
 
-export const updateMataKuliahBody = t.Partial(
-  t.Object({
-    kode: t.String(),
-    nama: t.String(),
-    sksTotal: t.Integer(),
-    sksTatapMuka: t.Integer(),
-    sksPraktek: t.Integer(),
-    idPddikti: t.String(),
-  }),
-);
+export const updateMataKuliahBody = t.Object({
+  kode: t.Optional(t.String()),
+  nama: t.Optional(t.String()),
+  sksTotal: t.Optional(t.Integer()),
+  sksTatapMuka: t.Optional(t.Integer()),
+  sksPraktek: t.Optional(t.Integer()),
+  idPddikti: t.Optional(t.String()),
+  kurikulumId: t.Optional(t.Integer()),
+  semester: t.Optional(t.Integer()),
+});
 
 const mataKuliahResponseFields = {
   id: t.Integer({ default: 1 }),

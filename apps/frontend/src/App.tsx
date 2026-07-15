@@ -29,6 +29,7 @@ import BahanKajian from './routes/BahanKajian';
 import BapPresensi from './routes/BapPresensi';
 import Bimbingan from './routes/Bimbingan';
 import Cpl from './routes/Cpl';
+import Cpmk from './routes/Cpmk';
 import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
@@ -278,6 +279,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'prodi']}>
             <Cpl />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cpmk"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+            <Cpmk />
           </ProtectedRoute>
         }
       />
