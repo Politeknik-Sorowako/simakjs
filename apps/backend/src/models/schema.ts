@@ -307,6 +307,7 @@ export const kelasKuliahRelations = relations(kelasKuliah, ({ one, many }) => ({
   }),
   dosenPengajarKelas: many(dosenPengajarKelas),
   krs: many(krs),
+  bap: many(bap),
   komponenNilai: many(komponenNilai),
 }));
 
@@ -362,6 +363,7 @@ export const cpmk = pgTable(
     }),
     kode: varchar('kode', { length: 50 }).notNull(),
     deskripsi: text('deskripsi').notNull(),
+    bobotMk: numeric('bobot_mk', { precision: 5, scale: 2 }),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -597,6 +599,8 @@ export const komponenNilai = pgTable('komponen_nilai', {
     .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
   nama: varchar('nama', { length: 100 }).notNull(),
   bobot: integer('bobot').notNull(), // 0 - 100
+  subCpmkId: integer('sub_cpmk_id').references(() => subCpmk.id, { onDelete: 'set null' }),
+  rencanaEvaluasiId: integer('rencana_evaluasi_id').references(() => rencanaEvaluasi.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -750,6 +754,7 @@ export const rps = pgTable('rps', {
     .references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   deskripsi: text('deskripsi'),
   cplProdi: text('cpl_prodi'),
+  evaluasiDosen: text('evaluasi_dosen'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -1811,3 +1816,176 @@ export const announcementsRelations = relations(announcements, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// ────────────────────────────────────────────────────────────────────────────
+// OBE PHASE 3: ASESMEN KURIKULUM (CPL-MK, CPMK ACHIEVEMENT, CPL ACHIEVEMENT, PPEPP)
+// ────────────────────────────────────────────────────────────────────────────
+
+export const cplMataKuliah = pgTable(
+  'cpl_mata_kuliah',
+  {
+    id: serial('id').primaryKey(),
+    cplId: integer('cpl_id')
+      .notNull()
+      .references(() => cpl.id, { onDelete: 'cascade' }),
+    mataKuliahId: integer('mata_kuliah_id')
+      .notNull()
+      .references(() => mataKuliah.id, { onDelete: 'cascade' }),
+    bobot: numeric('bobot', { precision: 5, scale: 2 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique('cpl_mata_kuliah_unique').on(t.cplId, t.mataKuliahId),
+    cplIdx: index('cpl_mata_kuliah_cpl_id_idx').on(t.cplId),
+    mkIdx: index('cpl_mata_kuliah_mata_kuliah_id_idx').on(t.mataKuliahId),
+  }),
+);
+
+export const capaianCpmk = pgTable(
+  'capaian_cpmk',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    cpmkId: integer('cpmk_id')
+      .notNull()
+      .references(() => cpmk.id, { onDelete: 'cascade' }),
+    kelasKuliahId: integer('kelas_kuliah_id')
+      .notNull()
+      .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
+    kurikulumId: integer('kurikulum_id').references(() => kurikulum.id, { onDelete: 'set null' }),
+    nilai: numeric('nilai', { precision: 5, scale: 2 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique('capaian_cpmk_unique').on(t.mahasiswaId, t.cpmkId, t.kelasKuliahId),
+    mhsIdx: index('capaian_cpmk_mahasiswa_id_idx').on(t.mahasiswaId),
+    cpmkIdx: index('capaian_cpmk_cpmk_id_idx').on(t.cpmkId),
+    kelasIdx: index('capaian_cpmk_kelas_kuliah_id_idx').on(t.kelasKuliahId),
+  }),
+);
+
+export const capaianCpl = pgTable(
+  'capaian_cpl',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    cplId: integer('cpl_id')
+      .notNull()
+      .references(() => cpl.id, { onDelete: 'cascade' }),
+    kurikulumId: integer('kurikulum_id').references(() => kurikulum.id, { onDelete: 'set null' }),
+    periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
+    nilai: numeric('nilai', { precision: 5, scale: 2 }).notNull(),
+    predikat: varchar('predikat', { length: 20 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    mhsIdx: index('capaian_cpl_mahasiswa_id_idx').on(t.mahasiswaId),
+    cplIdx: index('capaian_cpl_cpl_id_idx').on(t.cplId),
+    kurIdx: index('capaian_cpl_kurikulum_id_idx').on(t.kurikulumId),
+  }),
+);
+
+export const evaluasiKurikulum = pgTable('evaluasi_kurikulum', {
+  id: serial('id').primaryKey(),
+  kurikulumId: integer('kurikulum_id')
+    .notNull()
+    .references(() => kurikulum.id, { onDelete: 'cascade' }),
+  periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
+  sumber: varchar('sumber', { length: 50 }).notNull().default('kaprodi'),
+  aspek: varchar('aspek', { length: 100 }).notNull(),
+  temuan: text('temuan').notNull(),
+  rekomendasi: text('rekomendasi'),
+  tindakLanjut: text('tindak_lanjut'),
+  status: varchar('status', { length: 20 }).default('open'),
+  createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// OBE PHASE 3 RELATIONS
+// ────────────────────────────────────────────────────────────────────────────
+
+export const cplMataKuliahRelations = relations(cplMataKuliah, ({ one }) => ({
+  cpl: one(cpl, {
+    fields: [cplMataKuliah.cplId],
+    references: [cpl.id],
+  }),
+  mataKuliah: one(mataKuliah, {
+    fields: [cplMataKuliah.mataKuliahId],
+    references: [mataKuliah.id],
+  }),
+}));
+
+export const capaianCpmkRelations = relations(capaianCpmk, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [capaianCpmk.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  cpmk: one(cpmk, {
+    fields: [capaianCpmk.cpmkId],
+    references: [cpmk.id],
+  }),
+  kelasKuliah: one(kelasKuliah, {
+    fields: [capaianCpmk.kelasKuliahId],
+    references: [kelasKuliah.id],
+  }),
+  kurikulum: one(kurikulum, {
+    fields: [capaianCpmk.kurikulumId],
+    references: [kurikulum.id],
+  }),
+}));
+
+export const capaianCplRelations = relations(capaianCpl, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [capaianCpl.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  cpl: one(cpl, {
+    fields: [capaianCpl.cplId],
+    references: [cpl.id],
+  }),
+  kurikulum: one(kurikulum, {
+    fields: [capaianCpl.kurikulumId],
+    references: [kurikulum.id],
+  }),
+  periode: one(periodeAkademik, {
+    fields: [capaianCpl.periodeId],
+    references: [periodeAkademik.id],
+  }),
+}));
+
+export const evaluasiKurikulumRelations = relations(evaluasiKurikulum, ({ one }) => ({
+  kurikulum: one(kurikulum, {
+    fields: [evaluasiKurikulum.kurikulumId],
+    references: [kurikulum.id],
+  }),
+  periode: one(periodeAkademik, {
+    fields: [evaluasiKurikulum.periodeId],
+    references: [periodeAkademik.id],
+  }),
+  createdByUser: one(users, {
+    fields: [evaluasiKurikulum.createdBy],
+    references: [users.id],
+  }),
+}));
+

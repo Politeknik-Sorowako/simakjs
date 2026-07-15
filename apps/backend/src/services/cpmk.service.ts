@@ -45,7 +45,10 @@ export class CpmkService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data,
+      data: data.map((d) => ({
+        ...d,
+        bobotMk: d.bobotMk ? parseFloat(d.bobotMk) : null,
+      })),
       meta: {
         total,
         page,
@@ -56,7 +59,7 @@ export class CpmkService {
   }
 
   static async getByMataKuliah(mataKuliahId: number) {
-    return await db.query.cpmk.findMany({
+    const data = await db.query.cpmk.findMany({
       where: eq(cpmk.mataKuliahId, mataKuliahId),
       with: {
         subCpmk: { orderBy: (sc, { asc }) => [asc(sc.urutan)] },
@@ -65,10 +68,14 @@ export class CpmkService {
         },
       },
     });
+    return data.map((d) => ({
+      ...d,
+      bobotMk: d.bobotMk ? parseFloat(d.bobotMk) : null,
+    }));
   }
 
   static async getById(id: number) {
-    return await db.query.cpmk.findFirst({
+    const data = await db.query.cpmk.findFirst({
       where: eq(cpmk.id, id),
       with: {
         mataKuliah: true,
@@ -78,6 +85,11 @@ export class CpmkService {
         },
       },
     });
+    if (!data) return null;
+    return {
+      ...data,
+      bobotMk: data.bobotMk ? parseFloat(data.bobotMk) : null,
+    };
   }
 
   static async create(data: {
@@ -85,6 +97,7 @@ export class CpmkService {
     kurikulumMataKuliahId?: number | null;
     kode: string;
     deskripsi: string;
+    bobotMk?: number | null;
   }) {
     if (data.kurikulumMataKuliahId) {
       const kmk = await db.query.kurikulumMataKuliah.findFirst({
@@ -95,11 +108,23 @@ export class CpmkService {
       }
     }
 
-    const [newCpmk] = await db.insert(cpmk).values(data).returning();
-    return newCpmk;
+    const [newCpmk] = await db
+      .insert(cpmk)
+      .values({
+        ...data,
+        bobotMk: data.bobotMk ? data.bobotMk.toString() : null,
+      })
+      .returning();
+    return {
+      ...newCpmk,
+      bobotMk: newCpmk.bobotMk ? parseFloat(newCpmk.bobotMk) : null,
+    };
   }
 
-  static async update(id: number, data: { kode?: string; deskripsi?: string; kurikulumMataKuliahId?: number | null }) {
+  static async update(
+    id: number,
+    data: { kode?: string; deskripsi?: string; kurikulumMataKuliahId?: number | null; bobotMk?: number | null },
+  ) {
     if (data.kurikulumMataKuliahId !== undefined) {
       const existing = await db.query.cpmk.findFirst({ where: eq(cpmk.id, id) });
       if (existing && data.kurikulumMataKuliahId) {
@@ -112,12 +137,30 @@ export class CpmkService {
       }
     }
 
-    const [updated] = await db.update(cpmk).set(data).where(eq(cpmk.id, id)).returning();
-    return updated || null;
+    const updateData: Record<string, any> = {};
+    if (data.kode !== undefined) updateData.kode = data.kode;
+    if (data.deskripsi !== undefined) updateData.deskripsi = data.deskripsi;
+    if (data.kurikulumMataKuliahId !== undefined) updateData.kurikulumMataKuliahId = data.kurikulumMataKuliahId;
+    if (data.bobotMk !== undefined) updateData.bobotMk = data.bobotMk ? data.bobotMk.toString() : null;
+
+    const [updated] = await db.update(cpmk).set(updateData).where(eq(cpmk.id, id)).returning();
+    if (!updated) return null;
+    return {
+      ...updated,
+      bobotMk: updated.bobotMk ? parseFloat(updated.bobotMk) : null,
+    };
   }
 
   static async delete(id: number) {
     const [deleted] = await db.delete(cpmk).where(eq(cpmk.id, id)).returning();
     return deleted || null;
+  }
+
+  static async validateTotalBobotMk(mataKuliahId: number) {
+    const cpmkList = await db.query.cpmk.findMany({
+      where: eq(cpmk.mataKuliahId, mataKuliahId),
+    });
+    const total = cpmkList.reduce((s, c) => s + parseFloat(c.bobotMk || '0'), 0);
+    return { total, isValid: Math.abs(total - 100) < 0.01, jumlahCpmk: cpmkList.length };
   }
 }

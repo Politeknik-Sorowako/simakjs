@@ -28,11 +28,13 @@ import AdmisiVerifikasi from './routes/admisi/AdmisiVerifikasi';
 import BahanKajian from './routes/BahanKajian';
 import BapPresensi from './routes/BapPresensi';
 import Bimbingan from './routes/Bimbingan';
+import BobotPenilaianObe from './routes/BobotPenilaianObe';
 import Cpl from './routes/Cpl';
 import Cpmk from './routes/Cpmk';
 import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
+import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
 import ForgotPassword from './routes/ForgotPassword';
 import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
@@ -353,6 +355,22 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'prodi']}>
             <LaporanObe />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/obe/bobot-penilaian"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <BobotPenilaianObe />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/obe/evaluasi-kurikulum"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <EvaluasiKurikulum />
           </ProtectedRoute>
         }
       />

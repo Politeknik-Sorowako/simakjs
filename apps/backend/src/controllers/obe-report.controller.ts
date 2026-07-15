@@ -40,4 +40,35 @@ export class ObeReportController {
       return { error: e.message };
     }
   }
+
+  static async getCpmkAchievement({ params, getCurrentUser }: AuthContext) {
+    await getCurrentUser();
+    const kelasKuliahId = parseInt(params.kelasKuliahId);
+    try {
+      return await ObeReportService.getCpmkAchievement(kelasKuliahId);
+    } catch (e: any) {
+      return { error: e.message };
+    }
+  }
+
+  static async getCplAchievement({ query, getCurrentUser }: AuthContext) {
+    await getCurrentUser();
+    const kurikulumId = query.kurikulumId ? parseInt(query.kurikulumId) : undefined;
+    const periodeId = query.periodeId || undefined;
+    try {
+      return await ObeReportService.getCplAchievement(kurikulumId, periodeId);
+    } catch (e: any) {
+      return { error: e.message };
+    }
+  }
+
+  static async getEvaluasiRekap({ params, getCurrentUser }: AuthContext) {
+    await getCurrentUser();
+    const kurikulumId = parseInt(params.kurikulumId);
+    try {
+      return await ObeReportService.getEvaluasiRekap(kurikulumId);
+    } catch (e: any) {
+      return { error: e.message };
+    }
+  }
 }
