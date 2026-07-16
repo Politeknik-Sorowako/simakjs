@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { AdmisiAdminController } from '../controllers/admisi-admin.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   addSessionProdiSchema,
   createDocumentRequirementSchema,
@@ -14,7 +15,19 @@ import {
   verifyPaymentSchema,
 } from '../schemas/admisi-admin.schema';
 
+const adminGuard = new Elysia({ name: 'admin-guard' })
+  .use(authMiddleware)
+  .derive(async ({ getCurrentUser, set }) => {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      throw new Error('Akses ditolak. Hanya admin yang dapat mengakses endpoint ini.');
+    }
+    return { adminUser: user };
+  });
+
 export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
+  .use(adminGuard)
   // ─── SESI ────────────────────────────────────────────────────────
   .get('/sessions', AdmisiAdminController.getAllSessions, {
     detail: { tags: ['Admisi - Admin'], summary: 'Daftar semua sesi admisi' },

@@ -22,8 +22,13 @@ export class AdmisiController {
 
   static async verifyEmail({ body, set }: AuthContext<{ token: string }>) {
     try {
+      const user = await AdmisiService.verifyEmailToken(body.token);
+      if (!user) {
+        set.status = 400;
+        return { error: 'Token tidak valid atau sudah kedaluwarsa' };
+      }
       set.status = 200;
-      return { message: 'Email berhasil diverifikasi' };
+      return { message: 'Email berhasil diverifikasi', userId: user.id };
     } catch (e: any) {
       set.status = 400;
       return { error: e.message || 'Token tidak valid' };
@@ -301,11 +306,17 @@ export class AdmisiController {
     return { data: reqs };
   }
 
-  static async downloadFile({ params, set }: any) {
+  static async downloadFile({ params, set, getCurrentUser }: any) {
     try {
       const { db } = await import('../utils/db');
-      const { applicantDocuments } = await import('../models/schema');
-      const { eq } = await import('drizzle-orm');
+      const { applicantDocuments, applications } = await import('../models/schema');
+      const { eq, and } = await import('drizzle-orm');
+
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
 
       const [doc] = await db
         .select()
@@ -316,6 +327,18 @@ export class AdmisiController {
       if (!doc || !doc.filePath) {
         set.status = 404;
         return { error: 'File tidak ditemukan' };
+      }
+
+      // Ownership check: verify user owns the application
+      const [app] = await db
+        .select()
+        .from(applications)
+        .where(and(eq(applications.id, doc.applicationId), eq(applications.userId, user.id)))
+        .limit(1);
+
+      if (!app && user.role !== 'admin') {
+        set.status = 403;
+        return { error: 'Akses ditolak' };
       }
 
       const file = Bun.file(doc.filePath);
@@ -334,8 +357,14 @@ export class AdmisiController {
     }
   }
 
-  static async downloadAnnouncementFile({ params, set }: any) {
+  static async downloadAnnouncementFile({ params, set, getCurrentUser }: any) {
     try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+
       const { db } = await import('../utils/db');
       const { announcements } = await import('../models/schema');
       const { eq } = await import('drizzle-orm');

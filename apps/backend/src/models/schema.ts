@@ -1772,7 +1772,7 @@ export const paymentVirtualAccounts = pgTable('payment_virtual_accounts', {
   vaBankId: integer('va_bank_id')
     .notNull()
     .references(() => vaBanks.id, { onDelete: 'restrict' }),
-  vaNumber: varchar('va_number', { length: 50 }).notNull(),
+  vaNumber: varchar('va_number', { length: 50 }).notNull().unique(),
   nominal: integer('nominal').notNull(),
   isPaid: boolean('is_paid').default(false).notNull(),
   paidAt: timestamp('paid_at'),

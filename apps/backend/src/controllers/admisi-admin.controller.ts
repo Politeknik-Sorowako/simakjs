@@ -245,9 +245,11 @@ export class AdmisiAdminController {
   static async verifyDocument({
     body,
     set,
+    getCurrentUser,
   }: AuthContext<{ documentId: number; isVerified: boolean; rejectionNote?: string }>) {
     try {
-      await AdmisiAdminService.verifyDocument(body.documentId, 1, body.isVerified, body.rejectionNote);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.verifyDocument(body.documentId, user!.id, body.isVerified, body.rejectionNote);
       return { message: body.isVerified ? 'Dokumen berhasil diverifikasi' : 'Dokumen ditolak' };
     } catch (e: any) {
       set.status = 400;
@@ -255,9 +257,10 @@ export class AdmisiAdminController {
     }
   }
 
-  static async verifyAllDocuments({ params, set }: AuthContext<any, { id: string }>) {
+  static async verifyAllDocuments({ params, set, getCurrentUser }: AuthContext<any, { id: string }>) {
     try {
-      const result = await AdmisiAdminService.verifyAllDocuments(Number(params.id), 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.verifyAllDocuments(Number(params.id), user!.id);
       return {
         message: `${result.verifiedCount} dokumen diverifikasi. Status: Terverifikasi`,
         verifiedCount: result.verifiedCount,
@@ -268,9 +271,10 @@ export class AdmisiAdminController {
     }
   }
 
-  static async markDocsVerified({ params, set }: AuthContext<any, { id: string }>) {
+  static async markDocsVerified({ params, set, getCurrentUser }: AuthContext<any, { id: string }>) {
     try {
-      const result = await AdmisiAdminService.markDocsVerified(Number(params.id), 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.markDocsVerified(Number(params.id), user!.id);
       return result;
     } catch (e: any) {
       set.status = 400;
@@ -282,9 +286,11 @@ export class AdmisiAdminController {
     params,
     body,
     set,
+    getCurrentUser,
   }: AuthContext<{ status: string; notes?: string }, { id: string }>) {
     try {
-      await AdmisiAdminService.updateApplicationStatus(Number(params.id), body.status, 1, body.notes);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.updateApplicationStatus(Number(params.id), body.status, user!.id, body.notes);
       return { message: `Status diubah ke ${body.status}` };
     } catch (e: any) {
       set.status = 400;
@@ -292,12 +298,13 @@ export class AdmisiAdminController {
     }
   }
 
-  static async reopenApplication({ params, set }: AuthContext<any, { id: string }>) {
+  static async reopenApplication({ params, set, getCurrentUser }: AuthContext<any, { id: string }>) {
     try {
+      const user = await getCurrentUser();
       await AdmisiAdminService.updateApplicationStatus(
         Number(params.id),
         'returned',
-        1,
+        user!.id,
         'Admin membuka akses untuk melengkapi berkas',
       );
       return { message: 'Akses dibuka, peserta dapat melengkapi berkas dan memperbaiki biodata' };
@@ -340,9 +347,11 @@ export class AdmisiAdminController {
   static async inputScore({
     body,
     set,
+    getCurrentUser,
   }: AuthContext<{ applicationId: number; componentId: number; score: number; notes?: string }>) {
     try {
-      await AdmisiAdminService.inputScore(body.applicationId, body.componentId, body.score, 1, body.notes);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.inputScore(body.applicationId, body.componentId, body.score, user!.id, body.notes);
       set.status = 201;
       return { message: 'Nilai berhasil disimpan' };
     } catch (e: any) {
@@ -380,9 +389,11 @@ export class AdmisiAdminController {
   static async verifyPayment({
     body,
     set,
+    getCurrentUser,
   }: AuthContext<{ paymentId: number; isVerified: boolean; rejectionNote?: string }>) {
     try {
-      await AdmisiAdminService.verifyPayment(body.paymentId, 1, body.isVerified, body.rejectionNote);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.verifyPayment(body.paymentId, user!.id, body.isVerified, body.rejectionNote);
 
       if (body.isVerified) {
         const [payment] = await db
@@ -394,7 +405,7 @@ export class AdmisiAdminController {
           await AdmisiAdminService.updateApplicationStatus(
             payment.applicationId,
             're_registration',
-            1,
+            user!.id,
             'Pembayaran diverifikasi',
           );
         }
@@ -419,9 +430,10 @@ export class AdmisiAdminController {
     return { available };
   }
 
-  static async issueNIM({ params, body, set }: AuthContext<{ nim: string }, { id: string }>) {
+  static async issueNIM({ params, body, set, getCurrentUser }: AuthContext<{ nim: string }, { id: string }>) {
     try {
-      const result = await AdmisiAdminService.issueNIM(Number(params.id), body.nim, 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.issueNIM(Number(params.id), body.nim, user!.id);
       return { message: 'NIM berhasil diterbitkan', nim: result.nim };
     } catch (e: any) {
       set.status = 400;
@@ -484,9 +496,10 @@ export class AdmisiAdminController {
     return { data };
   }
 
-  static async verifyPaymentVA({ params, set }: any) {
+  static async verifyPaymentVA({ params, set, getCurrentUser }: any) {
     try {
-      await AdmisiAdminService.verifyPayment(Number(params.id), 1);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.verifyPayment(Number(params.id), user!.id);
       return { message: 'Pembayaran diverifikasi' };
     } catch (e: any) {
       set.status = 400;
@@ -496,9 +509,10 @@ export class AdmisiAdminController {
 
   // ─── ANNOUNCEMENT ────────────────────────────────────────────────
 
-  static async announceResults({ params, set }: AuthContext<any, { id: string }>) {
+  static async announceResults({ params, set, getCurrentUser }: AuthContext<any, { id: string }>) {
     try {
-      const result = await AdmisiAdminService.announceResults(Number(params.id), 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.announceResults(Number(params.id), user!.id);
       return { message: `Pengumuman diterbitkan: ${result.passed} lulus, ${result.failed} tidak lulus` };
     } catch (e: any) {
       set.status = 400;

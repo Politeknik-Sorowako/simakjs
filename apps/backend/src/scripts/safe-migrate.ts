@@ -359,7 +359,7 @@ async function main() {
   // Step 5: Verify
   log('Step 5/5: Verifying migration...');
   try {
-    execSync('bun --check src/models/schema.ts', { stdio: 'pipe', timeout: 30000, cwd: process.cwd() });
+    execSync('bunx tsc --noEmit', { stdio: 'pipe', timeout: 60000, cwd: process.cwd() });
     log('[OK] Schema verification passed.');
   } catch {
     log('[WARN] Schema verification could not be completed. Check manually.');

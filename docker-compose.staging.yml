@@ -1,0 +1,61 @@
+services:
+  db_staging:
+    image: postgres:15-alpine
+    container_name: simak_db_staging
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-simak_user_staging}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simak_password_staging}
+      POSTGRES_DB: ${POSTGRES_DB:-simak_vokasi_staging}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - pgdata_staging:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "simak_user_staging", "-d", "simak_vokasi_staging"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
+  backend_staging:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    init: true
+    container_name: simak_backend_staging
+    ports:
+      - "${BACKEND_PORT:-3001}:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      PORT: "3000"
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: "http://localhost:8081,http://localhost:3001"
+      NODE_ENV: development
+      DOMAIN_NAME: staging-simak.politekniksorowako.ac.id
+      PGHOST: db_staging
+      PGPORT: "5432"
+      BACKUP_DIR: ./backups
+      BACKUP_RETENTION: "10"
+    volumes:
+      - backup_data_staging:/app/apps/backend/backups
+    depends_on:
+      db_staging:
+        condition: service_healthy
+
+  frontend_staging:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-/api}
+        - VITE_APP_MODE=${VITE_APP_MODE:-development}
+    init: true
+    container_name: simak_frontend_staging
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
+    depends_on:
+      - backend_staging
+
+volumes:
+  pgdata_staging:
+  backup_data_staging:
