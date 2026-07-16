@@ -1,6 +1,15 @@
-import { dosen, mahasiswa, programStudi, users, kurikulum, kurikulumMataKuliah, mataKuliah, periodeAkademik } from '../models/schema';
-import { db } from '../utils/db';
 import { eq } from 'drizzle-orm';
+import {
+  dosen,
+  kurikulum,
+  kurikulumMataKuliah,
+  mahasiswa,
+  mataKuliah,
+  periodeAkademik,
+  programStudi,
+  users,
+} from '../models/schema';
+import { db } from '../utils/db';
 
 function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -11,24 +20,159 @@ function pickRandom<T>(arr: T[]): T {
 }
 
 const INDO_FIRST_NAMES = [
-  'Ahmad', 'Aditya', 'Arif', 'Bagus', 'Budi', 'Chandra', 'Dedi', 'Dimas', 'Eko', 'Fajar',
-  'Galih', 'Hadi', 'Hendra', 'Indra', 'Joko', 'Kevin', 'Lutfi', 'Muhammad', 'Nugroho', 'Prasetyo',
-  'Rian', 'Rudi', 'Satria', 'Taufik', 'Wahyu', 'Yudi', 'Yusuf', 'Zainal', 'Andi', 'Rendra',
-  'Anisa', 'Citra', 'Dewi', 'Diana', 'Eka', 'Fitri', 'Gita', 'Indah', 'Kartika', 'Laras',
-  'Mega', 'Novi', 'Putri', 'Rina', 'Sari', 'Tias', 'Wulan', 'Yuni', 'Amalia', 'Siti',
-  'Bambang', 'Cahyo', 'Dharma', 'Farhan', 'Gilang', 'Hafizh', 'Irfan', 'Junaedi', 'Kurnia', 'Lukman',
-  'Maulana', 'Naufal', 'Oki', 'Pandu', 'Rahmat', 'Soleh', 'Teguh', 'Utomo', 'Viktor', 'Wawan',
-  'Zaky', 'Ayu', 'Bella', 'Clarissa', 'Della', 'Elisa', 'Febri', 'Grace', 'Hana', 'Intan'
+  'Ahmad',
+  'Aditya',
+  'Arif',
+  'Bagus',
+  'Budi',
+  'Chandra',
+  'Dedi',
+  'Dimas',
+  'Eko',
+  'Fajar',
+  'Galih',
+  'Hadi',
+  'Hendra',
+  'Indra',
+  'Joko',
+  'Kevin',
+  'Lutfi',
+  'Muhammad',
+  'Nugroho',
+  'Prasetyo',
+  'Rian',
+  'Rudi',
+  'Satria',
+  'Taufik',
+  'Wahyu',
+  'Yudi',
+  'Yusuf',
+  'Zainal',
+  'Andi',
+  'Rendra',
+  'Anisa',
+  'Citra',
+  'Dewi',
+  'Diana',
+  'Eka',
+  'Fitri',
+  'Gita',
+  'Indah',
+  'Kartika',
+  'Laras',
+  'Mega',
+  'Novi',
+  'Putri',
+  'Rina',
+  'Sari',
+  'Tias',
+  'Wulan',
+  'Yuni',
+  'Amalia',
+  'Siti',
+  'Bambang',
+  'Cahyo',
+  'Dharma',
+  'Farhan',
+  'Gilang',
+  'Hafizh',
+  'Irfan',
+  'Junaedi',
+  'Kurnia',
+  'Lukman',
+  'Maulana',
+  'Naufal',
+  'Oki',
+  'Pandu',
+  'Rahmat',
+  'Soleh',
+  'Teguh',
+  'Utomo',
+  'Viktor',
+  'Wawan',
+  'Zaky',
+  'Ayu',
+  'Bella',
+  'Clarissa',
+  'Della',
+  'Elisa',
+  'Febri',
+  'Grace',
+  'Hana',
+  'Intan',
 ];
 
 const INDO_LAST_NAMES = [
-  'Pratama', 'Wibowo', 'Saputra', 'Hidayat', 'Kurniawan', 'Santoso', 'Gunawan', 'Setiawan', 'Wijaya', 'Siregar',
-  'Nasution', 'Lubis', 'Harahap', 'Ginting', 'Tarigan', 'Sembiring', 'Pohan', 'Simanjuntak', 'Sitompul', 'Manurung',
-  'Rahman', 'Sholeh', 'Fauzi', 'Hakim', 'Ramadhan', 'Akbar', 'Sidiq', 'Hadi', 'Rizki', 'Utomo',
-  'Putri', 'Sari', 'Lestari', 'Wulandari', 'Rahmawati', 'Fitriani', 'Astuti', 'Wahyuni', 'Kartikasari', 'Anggraini',
-  'Puspitasari', 'Indah', 'Utami', 'Dewi', 'Hapsari', 'Wardani', 'Kusuma', 'Kusumawardani', 'Pratiwi', 'Safitri',
-  'Baskoro', 'Danuar', 'Firmansyah', 'Gozali', 'Halim', 'Irawan', 'Jaelani', 'Kusnan', 'Laksana', 'Mulyono',
-  'Nugraha', 'Oktavian', 'Pambudi', 'Qodir', 'Riyadi', 'Supriadi', 'Tanjung', 'Utama', 'Wicaksono', 'Zulkarnain'
+  'Pratama',
+  'Wibowo',
+  'Saputra',
+  'Hidayat',
+  'Kurniawan',
+  'Santoso',
+  'Gunawan',
+  'Setiawan',
+  'Wijaya',
+  'Siregar',
+  'Nasution',
+  'Lubis',
+  'Harahap',
+  'Ginting',
+  'Tarigan',
+  'Sembiring',
+  'Pohan',
+  'Simanjuntak',
+  'Sitompul',
+  'Manurung',
+  'Rahman',
+  'Sholeh',
+  'Fauzi',
+  'Hakim',
+  'Ramadhan',
+  'Akbar',
+  'Sidiq',
+  'Hadi',
+  'Rizki',
+  'Utomo',
+  'Putri',
+  'Sari',
+  'Lestari',
+  'Wulandari',
+  'Rahmawati',
+  'Fitriani',
+  'Astuti',
+  'Wahyuni',
+  'Kartikasari',
+  'Anggraini',
+  'Puspitasari',
+  'Indah',
+  'Utami',
+  'Dewi',
+  'Hapsari',
+  'Wardani',
+  'Kusuma',
+  'Kusumawardani',
+  'Pratiwi',
+  'Safitri',
+  'Baskoro',
+  'Danuar',
+  'Firmansyah',
+  'Gozali',
+  'Halim',
+  'Irawan',
+  'Jaelani',
+  'Kusnan',
+  'Laksana',
+  'Mulyono',
+  'Nugraha',
+  'Oktavian',
+  'Pambudi',
+  'Qodir',
+  'Riyadi',
+  'Supriadi',
+  'Tanjung',
+  'Utama',
+  'Wicaksono',
+  'Zulkarnain',
 ];
 
 const DOSEN_TITLES_BEFORE = ['Dr.', 'Ir.', 'Drs.', 'Dra.', 'Prof. Dr.'];
@@ -52,54 +196,114 @@ function generateStudentName(isMale: boolean, index: number): string {
 // Template Mata Kuliah berdasarkan rumpun keilmuan prodi
 const COURSE_DOMAINS: Record<string, string[]> = {
   TI: [
-    'Dasar Pemrograman', 'Algoritma dan Struktur Data', 'Pemrograman Berorientasi Objek',
-    'Matematika Diskrit', 'Arsitektur dan Organisasi Komputer', 'Sistem Operasi',
-    'Basis Data Relasional', 'Jaringan Komputer', 'Pemrograman Web Client-Side',
-    'Pemrograman Web Server-Side', 'Rekayasa Perangkat Lunak', 'Interaksi Manusia dan Komputer',
-    'Keamanan Perangkat Keras dan Lunak', 'Sistem Terdistribusi', 'Kecerdasan Buatan Dasar',
-    'Machine Learning Praktis', 'Pemrograman Aplikasi Mobile', 'Cloud Computing Architecture',
-    'Analisis dan Desain Algoritma', 'Grafika Komputer dan Visualisasi', 'Pengujian Perangkat Lunak',
-    'Manajemen Proyek Perangkat Lunak', 'Internet of Things (IoT)', 'Tata Kelola Teknologi Informasi',
-    'Pendidikan Pancasila', 'Kewarganegaraan', 'Bahasa Inggris Teknis', 'Statistika dan Probabilitas',
-    'Pendidikan Agama', 'Kewirausahaan Teknologi (Technopreneurship)'
+    'Dasar Pemrograman',
+    'Algoritma dan Struktur Data',
+    'Pemrograman Berorientasi Objek',
+    'Matematika Diskrit',
+    'Arsitektur dan Organisasi Komputer',
+    'Sistem Operasi',
+    'Basis Data Relasional',
+    'Jaringan Komputer',
+    'Pemrograman Web Client-Side',
+    'Pemrograman Web Server-Side',
+    'Rekayasa Perangkat Lunak',
+    'Interaksi Manusia dan Komputer',
+    'Keamanan Perangkat Keras dan Lunak',
+    'Sistem Terdistribusi',
+    'Kecerdasan Buatan Dasar',
+    'Machine Learning Praktis',
+    'Pemrograman Aplikasi Mobile',
+    'Cloud Computing Architecture',
+    'Analisis dan Desain Algoritma',
+    'Grafika Komputer dan Visualisasi',
+    'Pengujian Perangkat Lunak',
+    'Manajemen Proyek Perangkat Lunak',
+    'Internet of Things (IoT)',
+    'Tata Kelola Teknologi Informasi',
+    'Pendidikan Pancasila',
+    'Kewarganegaraan',
+    'Bahasa Inggris Teknis',
+    'Statistika dan Probabilitas',
+    'Pendidikan Agama',
+    'Kewirausahaan Teknologi (Technopreneurship)',
   ],
   SI: [
-    'Pengantar Sistem Informasi', 'Proses Bisnis Organisasi', 'Analisis dan Perancangan Sistem',
-    'Basis Data Perusahaan', 'Algoritma Pemrograman untuk Bisnis', 'Manajemen Infrastruktur TI',
-    'Arsitektur Enterprise', 'Sistem Informasi Manajemen', 'Customer Relationship Management (CRM)',
-    'Enterprise Resource Planning (ERP)', 'Supply Chain Management (SCM)', 'Analisis Data Bisnis',
-    'Business Intelligence', 'Audit dan Kontrol Sistem Informasi', 'Keamanan Informasi Enterprise',
-    'E-Business dan E-Commerce', 'Manajemen Proyek Sistem Informasi', 'Desain Pengalaman Pengguna (UX)',
-    'Tata Kelola dan Audit Sistem Informasi', 'Manajemen Risiko TI', 'Pengembangan Sistem Informasi Cepat',
-    'Sistem Pendukung Keputusan', 'Etika dan Aspek Hukum TI', 'Manajemen Pengetahuan (Knowledge Management)',
-    'Pendidikan Pancasila', 'Kewarganegaraan', 'Bahasa Inggris Bisnis', 'Statistika Bisnis',
-    'Pendidikan Agama', 'Kewirausahaan Sosial'
+    'Pengantar Sistem Informasi',
+    'Proses Bisnis Organisasi',
+    'Analisis dan Perancangan Sistem',
+    'Basis Data Perusahaan',
+    'Algoritma Pemrograman untuk Bisnis',
+    'Manajemen Infrastruktur TI',
+    'Arsitektur Enterprise',
+    'Sistem Informasi Manajemen',
+    'Customer Relationship Management (CRM)',
+    'Enterprise Resource Planning (ERP)',
+    'Supply Chain Management (SCM)',
+    'Analisis Data Bisnis',
+    'Business Intelligence',
+    'Audit dan Kontrol Sistem Informasi',
+    'Keamanan Informasi Enterprise',
+    'E-Business dan E-Commerce',
+    'Manajemen Proyek Sistem Informasi',
+    'Desain Pengalaman Pengguna (UX)',
+    'Tata Kelola dan Audit Sistem Informasi',
+    'Manajemen Risiko TI',
+    'Pengembangan Sistem Informasi Cepat',
+    'Sistem Pendukung Keputusan',
+    'Etika dan Aspek Hukum TI',
+    'Manajemen Pengetahuan (Knowledge Management)',
+    'Pendidikan Pancasila',
+    'Kewarganegaraan',
+    'Bahasa Inggris Bisnis',
+    'Statistika Bisnis',
+    'Pendidikan Agama',
+    'Kewirausahaan Sosial',
   ],
   MI: [
-    'Aplikasi Perkantoran Lanjut', 'Dasar Pemrograman Komputer', 'Dasar-Dasar Basis Data',
-    'Sistem Operasi Komputer', 'Jaringan Komputer Praktis', 'Desain Grafis dan Multimedia',
-    'Pemrograman Web Dinamis', 'Administrasi Basis Data', 'Analisis Sistem Informasi Terapan',
-    'Pemrograman Aplikasi Perkantoran', 'Teknologi Informasi dan Komunikasi', 'Komunikasi Data',
-    'Praktikum Web Development', 'Pemrograman Database Desktop', 'E-Office and Collaboration Tools',
-    'Keamanan Informasi Personal', 'Troubleshooting Komputer dan Jaringan', 'Sistem Informasi Akuntansi',
-    'Manajemen Dokumen Digital', 'Desain Web Responsif', 'Pemrograman Visual Dasar',
-    'Pengantar Multimedia Interaktif', 'Etika Profesi IT', 'Teknik Penulisan Laporan Teknis',
-    'Pendidikan Pancasila', 'Kewarganegaraan', 'Bahasa Inggris Terapan', 'Dasar Matematika Komputasi',
-    'Pendidikan Agama', 'Dasar Kewirausahaan'
-  ]
+    'Aplikasi Perkantoran Lanjut',
+    'Dasar Pemrograman Komputer',
+    'Dasar-Dasar Basis Data',
+    'Sistem Operasi Komputer',
+    'Jaringan Komputer Praktis',
+    'Desain Grafis dan Multimedia',
+    'Pemrograman Web Dinamis',
+    'Administrasi Basis Data',
+    'Analisis Sistem Informasi Terapan',
+    'Pemrograman Aplikasi Perkantoran',
+    'Teknologi Informasi dan Komunikasi',
+    'Komunikasi Data',
+    'Praktikum Web Development',
+    'Pemrograman Database Desktop',
+    'E-Office and Collaboration Tools',
+    'Keamanan Informasi Personal',
+    'Troubleshooting Komputer dan Jaringan',
+    'Sistem Informasi Akuntansi',
+    'Manajemen Dokumen Digital',
+    'Desain Web Responsif',
+    'Pemrograman Visual Dasar',
+    'Pengantar Multimedia Interaktif',
+    'Etika Profesi IT',
+    'Teknik Penulisan Laporan Teknis',
+    'Pendidikan Pancasila',
+    'Kewarganegaraan',
+    'Bahasa Inggris Terapan',
+    'Dasar Matematika Komputasi',
+    'Pendidikan Agama',
+    'Dasar Kewirausahaan',
+  ],
 };
 
 function generate100Courses(prodiPrefix: string): { nama: string; kode: string }[] {
   const domains = COURSE_DOMAINS[prodiPrefix] || COURSE_DOMAINS['TI'];
   const list: { nama: string; kode: string }[] = [];
-  
+
   // Buat 100 kombinasi unik
   let idx = 1;
   while (list.length < 100) {
     const domain = domains[(idx - 1) % domains.length];
     const suffixIdx = Math.ceil(idx / domains.length);
     let suffix = '';
-    
+
     if (suffixIdx === 1) suffix = 'Dasar';
     else if (suffixIdx === 2) suffix = 'Lanjut';
     else if (suffixIdx === 3) suffix = 'Terapan';
@@ -196,14 +400,17 @@ async function seed() {
       });
 
       if (!dosenRecord) {
-        const [inserted] = await db.insert(dosen).values({
-          nip,
-          nama,
-          email,
-          programStudiId: prodiId,
-          jenisKelamin: isMale ? 'L' : 'P',
-          tanggalLahir: `19${randomInt(65, 85)}-${String(randomInt(1, 12)).padStart(2, '0')}-${String(randomInt(1, 28)).padStart(2, '0')}`,
-        }).returning();
+        const [inserted] = await db
+          .insert(dosen)
+          .values({
+            nip,
+            nama,
+            email,
+            programStudiId: prodiId,
+            jenisKelamin: isMale ? 'L' : 'P',
+            tanggalLahir: `19${randomInt(65, 85)}-${String(randomInt(1, 12)).padStart(2, '0')}-${String(randomInt(1, 28)).padStart(2, '0')}`,
+          })
+          .returning();
         dosenRecord = inserted;
 
         // Buat user untuk dosen agar bisa login
@@ -292,16 +499,19 @@ async function seed() {
     });
 
     if (!kurikulumRecord) {
-      const [inserted] = await db.insert(kurikulum).values({
-        kode: kurikulumKode,
-        nama: `Kurikulum ${PRODI_DATA[i].nama} 2024`,
-        programStudiId: prodiId,
-        semesterMulai: periodId,
-        jumlahSksLulus: 144,
-        jumlahSksWajib: 120,
-        jumlahSksPilihan: 24,
-        isAktif: true,
-      }).returning();
+      const [inserted] = await db
+        .insert(kurikulum)
+        .values({
+          kode: kurikulumKode,
+          nama: `Kurikulum ${PRODI_DATA[i].nama} 2024`,
+          programStudiId: prodiId,
+          semesterMulai: periodId,
+          jumlahSksLulus: 144,
+          jumlahSksWajib: 120,
+          jumlahSksPilihan: 24,
+          isAktif: true,
+        })
+        .returning();
       kurikulumRecord = inserted;
     }
 
@@ -317,22 +527,23 @@ async function seed() {
       });
 
       if (!mkRecord) {
-        const [inserted] = await db.insert(mataKuliah).values({
-          kode: course.kode,
-          nama: course.nama,
-          sksTotal: sks,
-          sksTatapMuka: sks,
-          sksPraktek: 0,
-          programStudiId: prodiId,
-        }).returning();
+        const [inserted] = await db
+          .insert(mataKuliah)
+          .values({
+            kode: course.kode,
+            nama: course.nama,
+            sksTotal: sks,
+            sksTatapMuka: sks,
+            sksPraktek: 0,
+          })
+          .returning();
         mkRecord = inserted;
+
+        if (!mkRecord) continue;
 
         // Hubungkan mata kuliah ke kurikulum
         const existingRel = await db.query.kurikulumMataKuliah.findFirst({
-          where: (km, { and, eq }) => and(
-            eq(km.kurikulumId, kurikulumRecord.id),
-            eq(km.mataKuliahId, mkRecord.id)
-          ),
+          where: (km, { and, eq }) => and(eq(km.kurikulumId, kurikulumRecord.id), eq(km.mataKuliahId, mkRecord!.id)),
         });
 
         if (!existingRel) {

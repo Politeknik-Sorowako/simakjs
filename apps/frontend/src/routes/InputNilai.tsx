@@ -430,7 +430,9 @@ export default function InputNilai() {
                 <div class="flex justify-between items-center mt-2">
                   <Show
                     when={!isClassLocked()}
-                    fallback={<span class="text-xs text-secondary-400 font-medium">Pengaturan komponen dinonaktifkan.</span>}
+                    fallback={
+                      <span class="text-xs text-secondary-400 font-medium">Pengaturan komponen dinonaktifkan.</span>
+                    }
                   >
                     <div class="flex flex-col gap-2 align-start">
                       <button

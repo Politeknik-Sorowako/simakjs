@@ -1,6 +1,6 @@
-import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 export interface ExportColumn {
   header: string;
@@ -30,13 +30,7 @@ export function exportToExcel(data: any[], columns: ExportColumn[], filename: st
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-export function exportToPDF(
-  data: any[],
-  columns: ExportColumn[],
-  filename: string,
-  title: string,
-  subtitle?: string,
-) {
+export function exportToPDF(data: any[], columns: ExportColumn[], filename: string, title: string, subtitle?: string) {
   const doc = new jsPDF('l', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -95,10 +89,12 @@ export function exportToPDF(
 export function exportToCSV(data: any[], columns: ExportColumn[], filename: string) {
   const header = columns.map((c) => `"${c.header}"`).join(',');
   const rows = data.map((row) =>
-    columns.map((col) => {
-      const val = getValue(row, col.accessor);
-      return `"${String(val).replace(/"/g, '""')}"`;
-    }).join(','),
+    columns
+      .map((col) => {
+        const val = getValue(row, col.accessor);
+        return `"${String(val).replace(/"/g, '""')}"`;
+      })
+      .join(','),
   );
 
   const csv = [header, ...rows].join('\n');

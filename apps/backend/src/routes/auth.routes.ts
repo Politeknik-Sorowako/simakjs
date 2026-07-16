@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { AuthController } from '../controllers/auth.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import { jwtPlugin } from '../plugins/jwt.plugin';
 import {
   forgotPasswordSchema,
@@ -11,6 +12,7 @@ import {
 
 export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(jwtPlugin)
+  .use(authMiddleware)
   .post('/register', AuthController.register, registerSchema)
   .post('/login', AuthController.login, loginSchema)
   .post('/forgot-password', AuthController.forgotPassword, forgotPasswordSchema)

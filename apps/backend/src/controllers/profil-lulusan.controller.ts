@@ -3,13 +3,13 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class ProfilLulusanController {
-  static async getAll({ query, getCurrentUser }: AuthContext) {
+  static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = query.prodiId ? parseInt(query.prodiId) : undefined;
     return await ProfilLulusanService.getAll(prodiId);
   }
 
-  static async getById({ params, getCurrentUser }: AuthContext) {
+  static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const data = await ProfilLulusanService.getById(parseInt(params.id));
     if (!data) {
@@ -18,7 +18,7 @@ export class ProfilLulusanController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -29,7 +29,7 @@ export class ProfilLulusanController {
     return newData;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -43,7 +43,7 @@ export class ProfilLulusanController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -57,7 +57,7 @@ export class ProfilLulusanController {
     return { message: 'Profil Lulusan berhasil dihapus' };
   }
 
-  static async import({ body, set, getCurrentUser }: AuthContext) {
+  static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -73,7 +73,7 @@ export class ProfilLulusanController {
     return result;
   }
 
-  static async getTemplate({ set, getCurrentUser }: AuthContext) {
+  static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     set.headers['content-type'] = 'text/csv; charset=utf-8';
     set.headers['content-disposition'] = 'attachment; filename=template-profil-lulusan.csv';

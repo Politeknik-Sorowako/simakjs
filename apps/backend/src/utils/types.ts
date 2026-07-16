@@ -9,15 +9,21 @@ export interface UserPayload {
   role: UserRole;
 }
 
-export type AuthContext<TBody = any, TQuery = any> = Context & {
+export type AuthContext<TBody = any, TQuery = any, TParams = any> = Omit<
+  Context,
+  'body' | 'query' | 'params' | 'set' | 'status'
+> & {
   body: TBody;
   query: TQuery;
+  params: TParams;
+  set: any;
+  status: any;
   getCurrentUser: () => Promise<UserPayload | null>;
 };
 
 export interface PaginationQuery {
-  page?: string | number;
-  limit?: string | number;
+  page?: number;
+  limit?: number;
   search?: string;
 }
 

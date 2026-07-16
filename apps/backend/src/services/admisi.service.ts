@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { and, eq, gt, lt, sql } from 'drizzle-orm';
 import {
   admissionSessionProdis,
@@ -7,6 +7,7 @@ import {
   applicationLogs,
   applications,
   documentRequirements,
+  passwordResets,
   paymentVirtualAccounts,
   programStudi,
   reRegistrationPayments,
@@ -22,14 +23,48 @@ export class AdmisiService {
       .insert(users)
       .values({ email, password: hashed, nama, role: 'calon_mahasiswa', isActive: false })
       .returning({ id: users.id, email: users.email, nama: users.nama, role: users.role });
-    return user;
+
+    // Generate email verification token
+    const token = randomBytes(32).toString('hex');
+    const hashedToken = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await db.insert(passwordResets).values({
+      email,
+      token: hashedToken,
+      expiresAt,
+    });
+
+    // TODO: Send email with verification token
+    // For now, return the token for testing purposes
+    return { ...user, verificationToken: token };
   }
 
   static async verifyEmailToken(token: string) {
     const hashedToken = createHash('sha256').update(token).digest('hex');
-    const [reset] = await db.select().from(users);
 
-    return null;
+    // Find the token in passwordResets table
+    const [reset] = await db
+      .select()
+      .from(passwordResets)
+      .where(and(eq(passwordResets.token, hashedToken), gt(passwordResets.expiresAt, new Date())))
+      .limit(1);
+
+    if (!reset) {
+      return null;
+    }
+
+    // Activate the user
+    const [user] = await db
+      .update(users)
+      .set({ isActive: true })
+      .where(eq(users.email, reset.email))
+      .returning({ id: users.id, email: users.email, role: users.role });
+
+    // Delete the token
+    await db.delete(passwordResets).where(eq(passwordResets.id, reset.id));
+
+    return user;
   }
 
   static async activateUser(userId: number) {
@@ -508,16 +543,36 @@ export class AdmisiService {
     const [bank] = await db.select({ kode: vaBanks.kode }).from(vaBanks).where(eq(vaBanks.id, vaBankId)).limit(1);
     if (!bank) throw new Error('Bank tidak ditemukan');
 
-    // Generate VA number: bank_code + uniq_id + app_id
-    const uniq = String(Date.now()).slice(-6);
-    const vaNumber = `988${uniq}${String(applicationId).padStart(4, '0')}`;
+    // Generate VA number with retry to handle unique constraint
+    let vaNumber: string;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    do {
+      const uniq = String(Date.now()).slice(-6) + String(Math.floor(Math.random() * 100)).padStart(2, '0');
+      vaNumber = `988${uniq}${String(applicationId).padStart(4, '0')}`;
+      attempts++;
+
+      // Check if VA number already exists
+      const [existing] = await db
+        .select()
+        .from(paymentVirtualAccounts)
+        .where(eq(paymentVirtualAccounts.vaNumber, vaNumber))
+        .limit(1);
+
+      if (!existing) break;
+    } while (attempts < maxAttempts);
+
+    if (attempts >= maxAttempts) {
+      throw new Error('Gagal generate nomor VA, silakan coba lagi');
+    }
 
     // Expire in 7 days
     const expiredAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     const [va] = await db
       .insert(paymentVirtualAccounts)
-      .values({ applicationId, vaBankId, vaNumber, nominal, expiredAt })
+      .values({ applicationId, vaBankId, vaNumber: vaNumber!, nominal, expiredAt })
       .returning();
 
     // Update app status

@@ -11,7 +11,7 @@ export default function AdmisiLaporan() {
 
   const [stats] = createResource(() => admisiAdminController.getStats());
   const [exportData] = createResource(
-    () => sessionFilter() ? Number(sessionFilter()) : undefined,
+    () => (sessionFilter() ? Number(sessionFilter()) : undefined),
     (sid) => admisiAdminController.exportApplications(sid ? { sessionId: sid } : undefined),
   );
 
@@ -24,7 +24,13 @@ export default function AdmisiLaporan() {
         return;
       }
       const headers = Object.keys(res.data[0]).join(',');
-      const rows = res.data.map((r: any) => Object.values(r).map((v) => `"${v || ''}"`).join(',')).join('\n');
+      const rows = res.data
+        .map((r: any) =>
+          Object.values(r)
+            .map((v) => `"${v || ''}"`)
+            .join(','),
+        )
+        .join('\n');
       const blob = new Blob([headers + '\n' + rows], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -68,7 +74,7 @@ export default function AdmisiLaporan() {
                   <div class="flex-1 bg-secondary-200 dark:bg-secondary-700 rounded-full h-2.5">
                     <div
                       class="bg-brand-500 h-2.5 rounded-full"
-                      style={{ width: `${stats()?.totalPendaftar ? (s.count / stats()?.totalPendaftar * 100) : 0}%` }}
+                      style={{ width: `${stats()?.totalPendaftar ? (s.count / stats()?.totalPendaftar) * 100 : 0}%` }}
                     />
                   </div>
                   <span class="text-sm font-mono w-16 text-right">{s.count}</span>
@@ -85,7 +91,8 @@ export default function AdmisiLaporan() {
             <div>
               <label class="text-xs text-secondary-500 block mb-1">Filter Sesi (opsional)</label>
               <input
-                type="number" placeholder="Sesi ID"
+                type="number"
+                placeholder="Sesi ID"
                 value={sessionFilter()}
                 onInput={(e) => setSessionFilter(e.currentTarget.value)}
                 class="px-3 py-2 border border-secondary-300 rounded-lg text-sm w-40"

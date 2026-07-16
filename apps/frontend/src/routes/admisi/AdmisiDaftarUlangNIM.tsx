@@ -24,7 +24,9 @@ export default function AdmisiDaftarUlangNIM() {
       const res = await admisiAdminController.generateNIMBulk(Number(sessionId()), Number(prodiId()));
       setNimResults(res.data);
       const edits: Record<number, string> = {};
-      res.data.forEach((r: any) => { edits[r.applicationId] = r.nim; });
+      res.data.forEach((r: any) => {
+        edits[r.applicationId] = r.nim;
+      });
       setEditingNIM(edits);
       toast.showToast('NIM berhasil digenerate', 'success');
     } catch (err: any) {
@@ -86,7 +88,9 @@ export default function AdmisiDaftarUlangNIM() {
               <div class="flex items-center justify-between py-2 border-b border-secondary-100 last:border-0">
                 <div class="text-sm">
                   Payment #{p.id} — Rp {p.nominal?.toLocaleString('id-ID')}
-                  <span class={`ml-2 text-xs px-2 py-0.5 rounded-full ${p.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                  <span
+                    class={`ml-2 text-xs px-2 py-0.5 rounded-full ${p.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+                  >
                     {p.isVerified ? 'Terverifikasi' : 'Menunggu'}
                   </span>
                 </div>
@@ -100,12 +104,16 @@ export default function AdmisiDaftarUlangNIM() {
           <h2 class="font-semibold mb-3">Generate NIM</h2>
           <div class="flex gap-3 mb-4">
             <input
-              type="number" placeholder="Sesi ID" value={sessionId()}
+              type="number"
+              placeholder="Sesi ID"
+              value={sessionId()}
               onInput={(e) => setSessionId(e.currentTarget.value)}
               class="px-3 py-2 border border-secondary-300 rounded-lg text-sm w-40"
             />
             <input
-              type="number" placeholder="Prodi ID" value={prodiId()}
+              type="number"
+              placeholder="Prodi ID"
+              value={prodiId()}
               onInput={(e) => setProdiId(e.currentTarget.value)}
               class="px-3 py-2 border border-secondary-300 rounded-lg text-sm w-40"
             />
@@ -134,13 +142,19 @@ export default function AdmisiDaftarUlangNIM() {
                         <td class="py-2 px-2">
                           <input
                             value={editingNIM()[r.applicationId] || r.nim}
-                            onInput={(e) => setEditingNIM((prev) => ({ ...prev, [r.applicationId]: e.currentTarget.value }))}
+                            onInput={(e) =>
+                              setEditingNIM((prev) => ({ ...prev, [r.applicationId]: e.currentTarget.value }))
+                            }
                             class="px-2 py-1 border border-secondary-300 rounded text-sm font-mono w-32"
                           />
                         </td>
                         <td class="py-2 px-2 flex gap-2">
-                          <Button size="sm" onClick={() => handleIssueNIM(r.applicationId)}>Terbitkan</Button>
-                          <Button size="sm" variant="secondary" onClick={() => handleEditNIM(r.applicationId)}>Edit</Button>
+                          <Button size="sm" onClick={() => handleIssueNIM(r.applicationId)}>
+                            Terbitkan
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => handleEditNIM(r.applicationId)}>
+                            Edit
+                          </Button>
                         </td>
                       </tr>
                     )}

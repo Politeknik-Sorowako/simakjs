@@ -226,8 +226,7 @@ export class ObeReportService {
     const rekap = [];
     for (const [cplId, data] of cplMap) {
       const avg = data.scores.reduce((s, v) => s + v, 0) / data.scores.length;
-      const predikat =
-        avg >= 85 ? 'SB' : avg >= 70 ? 'B' : avg >= 55 ? 'C' : avg >= 40 ? 'K' : 'SK';
+      const predikat = avg >= 85 ? 'SB' : avg >= 70 ? 'B' : avg >= 55 ? 'C' : avg >= 40 ? 'K' : 'SK';
       rekap.push({
         cplId,
         kode: data.cpl.kode,
@@ -254,7 +253,7 @@ export class ObeReportService {
 
     const statusCount = { open: 0, in_progress: 0, closed: 0 };
     for (const e of evaluasi) {
-      if (e.status in statusCount) {
+      if (e.status && e.status in statusCount) {
         statusCount[e.status as keyof typeof statusCount]++;
       }
     }

@@ -2,19 +2,19 @@ import { KurikulumService } from '../services/kurikulum.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export interface KurikulumQuery extends PaginationQuery {
-  prodiId?: string;
+  prodiId?: number;
 }
 
 export class KurikulumController {
-  static async getAll({ query }: AuthContext<any, KurikulumQuery>) {
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 10;
+  static async getAll({ query }: AuthContext<any, KurikulumQuery>): Promise<any> {
+    const page = query?.page ? parseInt(String(query.page)) : 1;
+    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
-    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+    const prodiId = query?.prodiId ? Number(query.prodiId) : undefined;
     return await KurikulumService.getAll(page, limit, search, prodiId);
   }
 
-  static async getById({ params, set }: AuthContext) {
+  static async getById({ params, set }: AuthContext): Promise<any> {
     const data = await KurikulumService.getById(parseInt(params.id));
     if (!data) {
       set.status = 404;
@@ -23,7 +23,7 @@ export class KurikulumController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -34,7 +34,7 @@ export class KurikulumController {
     return newKur;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -48,7 +48,7 @@ export class KurikulumController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -62,7 +62,7 @@ export class KurikulumController {
     return { message: 'Kurikulum berhasil dihapus' };
   }
 
-  static async addMataKuliah({ params, body, set, getCurrentUser }: AuthContext) {
+  static async addMataKuliah({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -78,7 +78,7 @@ export class KurikulumController {
     }
   }
 
-  static async copyFromKurikulum({ params, body, set, getCurrentUser }: AuthContext) {
+  static async copyFromKurikulum({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -93,7 +93,7 @@ export class KurikulumController {
     }
   }
 
-  static async downloadImportMkTemplate({ set }: AuthContext) {
+  static async downloadImportMkTemplate({ set }: AuthContext): Promise<any> {
     const csv = `kode_mata_kuliah,semester,sks,is_wajib
 TI-001,1,3,true
 TI-002,1,2,true
@@ -104,7 +104,7 @@ MK-001,3,2,true`;
     return csv;
   }
 
-  static async importMkCsv({ params, request, set, getCurrentUser }: AuthContext) {
+  static async importMkCsv({ params, request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -126,7 +126,7 @@ MK-001,3,2,true`;
     }
   }
 
-  static async duplicate({ params, body, set, getCurrentUser }: AuthContext) {
+  static async duplicate({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -142,7 +142,7 @@ MK-001,3,2,true`;
     }
   }
 
-  static async removeMataKuliah({ params, set, getCurrentUser }: AuthContext) {
+  static async removeMataKuliah({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

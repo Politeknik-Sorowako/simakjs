@@ -194,7 +194,7 @@ app
         ws.close();
         return;
       }
-      const payload = await ws.data.jwt.verify(token);
+      const payload = (await ws.data.jwt.verify(token)) as { role: string; email: string } | null;
       if (!payload) {
         ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
         ws.close();
@@ -215,7 +215,7 @@ app
 
       const bimbingan = await db.query.bimbingan.findFirst({
         where: eq(bimbinganTable.id, bimbinganId),
-        with: { mahasiswa: true, dosenPa: true },
+        with: { mahasiswa: true, dosen: true },
       });
 
       if (!bimbingan) {
@@ -227,7 +227,7 @@ app
       const userRole = payload.role as string;
       const userEmail = payload.email as string;
       const isAdmin = userRole === 'admin';
-      const isDosenPa = userRole === 'dosen' && bimbingan.dosenPa?.email === userEmail;
+      const isDosenPa = userRole === 'dosen' && bimbingan.dosen?.email === userEmail;
       const isMahasiswa = userRole === 'mahasiswa' && bimbingan.mahasiswa?.email === userEmail;
 
       if (!isAdmin && !isDosenPa && !isMahasiswa) {

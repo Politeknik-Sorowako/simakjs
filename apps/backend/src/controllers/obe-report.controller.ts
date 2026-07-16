@@ -2,7 +2,7 @@ import { ObeReportService } from '../services/obe-report.service';
 import { AuthContext } from '../utils/types';
 
 export class ObeReportController {
-  static async getCplCpmkCoverage({ query, getCurrentUser }: AuthContext) {
+  static async getCplCpmkCoverage({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kurikulumId = parseInt(query.kurikulumId);
     if (!kurikulumId) {
@@ -15,7 +15,7 @@ export class ObeReportController {
     }
   }
 
-  static async getBkMkCoverage({ query, getCurrentUser }: AuthContext) {
+  static async getBkMkCoverage({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kurikulumId = parseInt(query.kurikulumId);
     if (!kurikulumId) {
@@ -28,7 +28,7 @@ export class ObeReportController {
     }
   }
 
-  static async getObeSummary({ query, getCurrentUser }: AuthContext) {
+  static async getObeSummary({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = parseInt(query.prodiId);
     if (!prodiId) {
@@ -41,7 +41,7 @@ export class ObeReportController {
     }
   }
 
-  static async getCpmkAchievement({ params, getCurrentUser }: AuthContext) {
+  static async getCpmkAchievement({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kelasKuliahId = parseInt(params.kelasKuliahId);
     try {
@@ -51,7 +51,7 @@ export class ObeReportController {
     }
   }
 
-  static async getCplAchievement({ query, getCurrentUser }: AuthContext) {
+  static async getCplAchievement({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kurikulumId = query.kurikulumId ? parseInt(query.kurikulumId) : undefined;
     const periodeId = query.periodeId || undefined;
@@ -62,7 +62,7 @@ export class ObeReportController {
     }
   }
 
-  static async getEvaluasiRekap({ params, getCurrentUser }: AuthContext) {
+  static async getEvaluasiRekap({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kurikulumId = parseInt(params.kurikulumId);
     try {

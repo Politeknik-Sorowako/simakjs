@@ -1,8 +1,8 @@
 import { spawnSync } from 'child_process';
-import { existsSync, readdirSync, statSync, appendFileSync, writeFileSync, unlinkSync, readFileSync } from 'fs';
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
-import { gunzipSync } from 'zlib';
 import * as readline from 'readline';
+import { gunzipSync } from 'zlib';
 
 function getDbConfig() {
   const url = new URL(process.env.DATABASE_URL || '');
@@ -173,17 +173,16 @@ async function main() {
     const compressed = readFileSync(filepath);
     const decompressed = gunzipSync(compressed);
 
-    const restoreProcess = spawnSync('psql', [
-      '-h', config.host,
-      '-p', config.port,
-      '-U', config.user,
-      '-d', config.db,
-    ], {
-      env: { ...process.env, PGPASSWORD: config.password },
-      input: decompressed,
-      stdio: ['pipe', 'inherit', 'inherit'],
-      timeout: 600000,
-    });
+    const restoreProcess = spawnSync(
+      'psql',
+      ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db],
+      {
+        env: { ...process.env, PGPASSWORD: config.password },
+        input: decompressed,
+        stdio: ['pipe', 'inherit', 'inherit'],
+        timeout: 600000,
+      },
+    );
 
     if (restoreProcess.error) {
       throw new Error('psql spawn failed: ' + restoreProcess.error.message);

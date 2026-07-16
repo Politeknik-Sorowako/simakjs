@@ -2,7 +2,7 @@ import { PddiktiService } from '../services/pddikti.service';
 import { AuthContext } from '../utils/types';
 
 export class PddiktiController {
-  static async getStats({ getCurrentUser, set }: AuthContext) {
+  static async getStats({ getCurrentUser, set }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -11,7 +11,7 @@ export class PddiktiController {
     return await PddiktiService.getStats();
   }
 
-  static async syncAll({ getCurrentUser, set }: AuthContext) {
+  static async syncAll({ getCurrentUser, set }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;

@@ -1,5 +1,5 @@
-import { createResource, createMemo, For, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
+import { createMemo, createResource, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { admisiController } from '../controllers/admisiController';
@@ -71,7 +71,9 @@ export default function AdmisiSesi() {
                     <div class="flex-1">
                       <div class="flex items-center gap-2">
                         <h3 class="font-semibold text-lg">{app.sessionNama || `Sesi #${app.sessionId}`}</h3>
-                        <span class={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusColors[app.status] || 'bg-gray-100 text-gray-700'}`}>
+                        <span
+                          class={`text-xs px-2 py-0.5 rounded-full font-semibold ${statusColors[app.status] || 'bg-gray-100 text-gray-700'}`}
+                        >
                           {statusLabels[app.status] || app.status}
                         </span>
                       </div>
@@ -79,22 +81,50 @@ export default function AdmisiSesi() {
                       <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-secondary-500 dark:text-secondary-400">
                         <div>
                           <span class="font-semibold text-secondary-700 dark:text-secondary-200">Mulai</span>
-                          <p>{app.tanggalMulai ? new Date(app.tanggalMulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</p>
+                          <p>
+                            {app.tanggalMulai
+                              ? new Date(app.tanggalMulai).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                })
+                              : '-'}
+                          </p>
                         </div>
                         <div>
                           <span class="font-semibold text-secondary-700 dark:text-secondary-200">Tutup</span>
-                          <p>{app.tanggalTutup ? new Date(app.tanggalTutup).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</p>
+                          <p>
+                            {app.tanggalTutup
+                              ? new Date(app.tanggalTutup).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric',
+                                })
+                              : '-'}
+                          </p>
                         </div>
                         <Show when={app.tanggalUjian}>
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Ujian</span>
-                            <p>{new Date(app.tanggalUjian).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            <p>
+                              {new Date(app.tanggalUjian).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
+                            </p>
                           </div>
                         </Show>
                         <Show when={app.tanggalPengumuman}>
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Pengumuman</span>
-                            <p>{new Date(app.tanggalPengumuman).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            <p>
+                              {new Date(app.tanggalPengumuman).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
+                            </p>
                           </div>
                         </Show>
                       </div>
@@ -127,22 +157,46 @@ export default function AdmisiSesi() {
                       <div class="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-secondary-500 dark:text-secondary-400">
                         <div>
                           <span class="font-semibold text-secondary-700 dark:text-secondary-200">Mulai</span>
-                          <p>{new Date(session.tanggalMulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                          <p>
+                            {new Date(session.tanggalMulai).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </p>
                         </div>
                         <div>
                           <span class="font-semibold text-secondary-700 dark:text-secondary-200">Tutup</span>
-                          <p>{new Date(session.tanggalTutup).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                          <p>
+                            {new Date(session.tanggalTutup).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </p>
                         </div>
                         <Show when={session.tanggalUjian}>
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Ujian</span>
-                            <p>{new Date(session.tanggalUjian).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            <p>
+                              {new Date(session.tanggalUjian).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
+                            </p>
                           </div>
                         </Show>
                         <Show when={session.tanggalPengumuman}>
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Pengumuman</span>
-                            <p>{new Date(session.tanggalPengumuman).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                            <p>
+                              {new Date(session.tanggalPengumuman).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                              })}
+                            </p>
                           </div>
                         </Show>
                       </div>
@@ -161,7 +215,9 @@ export default function AdmisiSesi() {
           <div class="text-center py-12 bg-white dark:bg-secondary-800/40 border border-dashed border-secondary-300 dark:border-secondary-600 rounded-xl">
             <div class="text-4xl mb-3">📅</div>
             <h3 class="text-lg font-semibold mb-1">Belum ada aktivitas</h3>
-            <p class="text-sm text-secondary-500">Anda belum mendaftar di sesi manapun, dan tidak ada sesi aktif saat ini.</p>
+            <p class="text-sm text-secondary-500">
+              Anda belum mendaftar di sesi manapun, dan tidak ada sesi aktif saat ini.
+            </p>
           </div>
         </Show>
       </div>

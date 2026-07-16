@@ -345,7 +345,9 @@ export default function Krs() {
                 📚 Rencana Studi — {rencanaStudi()?.kurikulum.nama}
               </h3>
               <div class="flex items-center gap-2">
-                <span class="text-xs text-secondary-500 dark:text-secondary-200">Semester {rencanaStudi()?.currentSemester}</span>
+                <span class="text-xs text-secondary-500 dark:text-secondary-200">
+                  Semester {rencanaStudi()?.currentSemester}
+                </span>
                 <span class="text-xs font-semibold text-brand-600">SKS Lulus: {rencanaStudi()?.totalSksLulus}</span>
               </div>
             </div>
@@ -375,7 +377,9 @@ export default function Krs() {
                               <Show when={mk.status === 'tersedia'}>
                                 <span class="text-secondary-400 dark:text-secondary-200">○</span>
                               </Show>
-                              <span class={`${mk.status === 'lulus' ? 'text-green-700 dark:text-green-400' : mk.status === 'diambil' ? 'text-yellow-700 dark:text-yellow-400' : 'text-secondary-600 dark:text-secondary-200'}`}>
+                              <span
+                                class={`${mk.status === 'lulus' ? 'text-green-700 dark:text-green-400' : mk.status === 'diambil' ? 'text-yellow-700 dark:text-yellow-400' : 'text-secondary-600 dark:text-secondary-200'}`}
+                              >
                                 {mk.nama} ({mk.sks} SKS)
                               </span>
                             </div>
@@ -402,12 +406,20 @@ export default function Krs() {
                     <p class="text-green-600 font-semibold">✅ KRS sesuai dengan rencana kurikulum</p>
                   </Show>
                   <Show when={!validasiResult()?.isValid}>
-                    <p class="text-red-600 font-semibold dark:text-red-400">⚠️ Terdapat {validasiResult()?.warnings.length} peringatan</p>
+                    <p class="text-red-600 font-semibold dark:text-red-400">
+                      ⚠️ Terdapat {validasiResult()?.warnings.length} peringatan
+                    </p>
                   </Show>
                   <For each={validasiResult()?.warnings}>
                     {(w) => (
                       <p class={w.type === 'missing_required' ? 'text-orange-600' : 'text-yellow-600'}>
-                        • {w.type === 'missing_required' ? 'MK wajib belum diambil' : w.type === 'outside_plan' ? 'MK di luar rencana semester' : 'MK tidak ada di kurikulum'}: {w.mk}
+                        •{' '}
+                        {w.type === 'missing_required'
+                          ? 'MK wajib belum diambil'
+                          : w.type === 'outside_plan'
+                            ? 'MK di luar rencana semester'
+                            : 'MK tidak ada di kurikulum'}
+                        : {w.mk}
                       </p>
                     )}
                   </For>
@@ -458,7 +470,10 @@ export default function Krs() {
             </div>
           </Show>
 
-          <Show when={!krsData.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
+          <Show
+            when={!krsData.loading}
+            fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
+          >
             <Table
               headers={[
                 'Mahasiswa',
@@ -476,10 +491,14 @@ export default function Krs() {
                   <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                     <td class="px-6 py-4">
                       <div class="font-medium text-secondary-800 dark:text-white">{item.mahasiswa?.nama}</div>
-                      <div class="text-xs text-secondary-400 font-mono dark:text-secondary-200">{item.mahasiswa?.nim}</div>
+                      <div class="text-xs text-secondary-400 font-mono dark:text-secondary-200">
+                        {item.mahasiswa?.nim}
+                      </div>
                     </td>
                     <td class="px-6 py-4 text-secondary-700 dark:text-secondary-200">{item.kelasKuliah?.namaKelas}</td>
-                    <td class="px-6 py-4 text-secondary-500 font-mono text-xs dark:text-secondary-200">{item.kelasKuliah?.periodeId}</td>
+                    <td class="px-6 py-4 text-secondary-500 font-mono text-xs dark:text-secondary-200">
+                      {item.kelasKuliah?.periodeId}
+                    </td>
                     <td class="px-6 py-4 font-mono font-semibold">{item.nilaiAngka || '-'}</td>
                     <td class="px-6 py-4 font-bold text-brand-600">{item.nilaiHuruf || '-'}</td>
                     <td class="px-6 py-4 font-mono">{item.nilaiIndeks || '-'}</td>
@@ -588,7 +607,10 @@ export default function Krs() {
                     }
                   };
                   return (
-                    <tr class="hover:bg-secondary-50/50 transition-colors cursor-pointer dark:hover:bg-secondary-800/50" onClick={toggleCheck}>
+                    <tr
+                      class="hover:bg-secondary-50/50 transition-colors cursor-pointer dark:hover:bg-secondary-800/50"
+                      onClick={toggleCheck}
+                    >
                       <td class="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -637,7 +659,9 @@ export default function Krs() {
               }
             >
               <div class="flex flex-col gap-1.5 w-full">
-                <label class="text-xs font-semibold uppercase tracking-wider text-secondary-500 dark:text-secondary-200">Mahasiswa</label>
+                <label class="text-xs font-semibold uppercase tracking-wider text-secondary-500 dark:text-secondary-200">
+                  Mahasiswa
+                </label>
                 <div class="px-4 py-2.5 rounded-lg bg-secondary-50 border border-secondary-200 text-sm font-semibold text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white">
                   {mahasiswaProfile()?.nim} - {mahasiswaProfile()?.nama}
                 </div>

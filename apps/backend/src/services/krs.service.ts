@@ -4,6 +4,7 @@ import {
   dosen,
   kelasKuliah,
   krs,
+  kurikulum,
   kurikulumMataKuliah,
   mahasiswa,
   mataKuliah,
@@ -281,7 +282,7 @@ export class KrsService {
 
     const binding = await db.query.angkatanKurikulum.findFirst({
       where: and(
-        eq(angkatanKurikulum.programStudiId, mhs.programStudiId),
+        eq(angkatanKurikulum.programStudiId, mhs.programStudiId as number),
         eq(angkatanKurikulum.angkatan, mhs.angkatan || ''),
         eq(angkatanKurikulum.isActive, true),
       ),

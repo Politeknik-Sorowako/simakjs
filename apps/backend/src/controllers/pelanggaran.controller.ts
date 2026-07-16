@@ -10,7 +10,7 @@ export class PelanggaranController {
     return mhs ? mhs.id : null;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -31,7 +31,7 @@ export class PelanggaranController {
     }
   }
 
-  static async getByMhsId({ params, set, getCurrentUser }: AuthContext) {
+  static async getByMhsId({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -61,7 +61,7 @@ export class PelanggaranController {
     }
   }
 
-  static async getAll({ set, getCurrentUser }: AuthContext) {
+  static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -75,7 +75,7 @@ export class PelanggaranController {
     query,
     set,
     getCurrentUser,
-  }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
+  }: AuthContext<any, { periodeId?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -85,7 +85,7 @@ export class PelanggaranController {
     return await PelanggaranService.getRekap(query?.periodeId, prodiId);
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

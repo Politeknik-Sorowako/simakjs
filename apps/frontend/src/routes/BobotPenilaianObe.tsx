@@ -103,16 +103,10 @@ export default function BobotPenilaianObe() {
         </div>
 
         <div class="flex gap-2">
-          <Button
-            variant={activeTab() === 'cpl-mk' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('cpl-mk')}
-          >
+          <Button variant={activeTab() === 'cpl-mk' ? 'primary' : 'secondary'} onClick={() => setActiveTab('cpl-mk')}>
             CPL → MK (Top-Down)
           </Button>
-          <Button
-            variant={activeTab() === 'cpmk-mk' ? 'primary' : 'secondary'}
-            onClick={() => setActiveTab('cpmk-mk')}
-          >
+          <Button variant={activeTab() === 'cpmk-mk' ? 'primary' : 'secondary'} onClick={() => setActiveTab('cpmk-mk')}>
             CPMK → MK (Bottom-Up)
           </Button>
         </div>
@@ -129,9 +123,7 @@ export default function BobotPenilaianObe() {
                         <tr class="border-b border-slate-700">
                           <th class="text-left p-2 text-white">CPL</th>
                           <For each={data().mataKuliah}>
-                            {(mk) => (
-                              <th class="text-center p-2 text-white min-w-[120px]">{mk.kode}</th>
-                            )}
+                            {(mk) => <th class="text-center p-2 text-white min-w-[120px]">{mk.kode}</th>}
                           </For>
                         </tr>
                       </thead>
@@ -162,11 +154,16 @@ export default function BobotPenilaianObe() {
                           type="select"
                           placeholder="Pilih CPL"
                           value={selectedCpl() ?? ''}
-                          onInput={(e: any) => setSelectedCpl(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
+                          onInput={(e: any) =>
+                            setSelectedCpl(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)
+                          }
                           isSelect
                           selectOptions={[
                             { value: '', label: 'Pilih CPL' },
-                            ...data().cpl.map((c) => ({ value: String(c.id), label: `${c.kode} - ${c.deskripsi.substring(0, 50)}...` })),
+                            ...data().cpl.map((c) => ({
+                              value: String(c.id),
+                              label: `${c.kode} - ${c.deskripsi.substring(0, 50)}...`,
+                            })),
                           ]}
                         />
                       </div>
@@ -175,11 +172,16 @@ export default function BobotPenilaianObe() {
                           type="select"
                           placeholder="Pilih MK"
                           value={selectedMk() ?? ''}
-                          onInput={(e: any) => setSelectedMk(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
+                          onInput={(e: any) =>
+                            setSelectedMk(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)
+                          }
                           isSelect
                           selectOptions={[
                             { value: '', label: 'Pilih MK' },
-                            ...data().mataKuliah.map((mk) => ({ value: String(mk.id), label: `${mk.kode} - ${mk.nama}` })),
+                            ...data().mataKuliah.map((mk) => ({
+                              value: String(mk.id),
+                              label: `${mk.kode} - ${mk.nama}`,
+                            })),
                           ]}
                         />
                       </div>
@@ -255,9 +257,9 @@ function CpmkMkSection(props: { kurikulumId: number }) {
           selectOptions={[
             { value: '', label: 'Semua MK' },
             ...(cpmkList()
-              ? [...new Map(cpmkList()!.map((c) => [c.mataKuliah?.id, c.mataKuliah])).values()].map((mk: any) =>
-                  mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null,
-                ).filter(Boolean)
+              ? [...new Map(cpmkList()!.map((c) => [c.mataKuliah?.id, c.mataKuliah])).values()]
+                  .map((mk: any) => (mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null))
+                  .filter(Boolean)
               : []),
           ]}
         />
@@ -280,14 +282,18 @@ function CpmkMkSection(props: { kurikulumId: number }) {
                 {(cpmk) => (
                   <tr class="border-b border-slate-700/50">
                     <td class="p-2 text-white font-mono">{cpmk.kode}</td>
-                    <td class="p-2 text-secondary-200">{cpmk.mataKuliah?.kode} - {cpmk.mataKuliah?.nama}</td>
+                    <td class="p-2 text-secondary-200">
+                      {cpmk.mataKuliah?.kode} - {cpmk.mataKuliah?.nama}
+                    </td>
                     <td class="p-2 text-secondary-200 max-w-[300px] truncate">{cpmk.deskripsi}</td>
                     <td class="p-2 text-center text-white">
                       <input
                         type="number"
                         class="bg-slate-800 border border-slate-600 rounded px-2 py-1 text-white w-20 text-center"
                         value={cpmk.bobotMk ?? ''}
-                        onChange={(e) => handleUpdateBobot(cpmk.id, e.currentTarget.value ? parseFloat(e.currentTarget.value) : null)}
+                        onChange={(e) =>
+                          handleUpdateBobot(cpmk.id, e.currentTarget.value ? parseFloat(e.currentTarget.value) : null)
+                        }
                       />
                     </td>
                     <td class="p-2 text-center">

@@ -1,10 +1,22 @@
 import { Elysia } from 'elysia';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  admissionSessionProdis,
+  admissionSessions,
+  announcements,
+  applicantDocuments,
+  applicationLogs,
+  applications,
+  bahanKajian,
+  bahanKajianCpl,
   bap,
   bimbingan,
   bimbinganThread,
+  cpl,
+  cplProfilLulusan,
   cpmk,
+  cpmkCpl,
+  documentRequirements,
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
@@ -13,13 +25,21 @@ import {
   krs,
   mahasiswa,
   mataKuliah,
+  mataKuliahBahanKajian,
   nilaiKomponenMahasiswa,
+  paymentVirtualAccounts,
   pelanggaran,
   pengajuanYudisium,
   periodeAkademik,
   presensi,
+  profilLulusan,
   programStudi,
+  reRegistrationPayments,
+  selectionComponents,
+  selectionScores,
+  subCpmk,
   users,
+  visiMisiProdi,
 } from '../models/schema';
 import { resetE2eSchema } from '../schemas/e2e.schema';
 import { db } from '../utils/db';
@@ -37,7 +57,32 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
       return { error: 'Akses ditolak. Hanya admin yang dapat mereset database.' };
     }
     try {
-      // 1. Clean Database
+      // 1. Clean Database - Admisi tables first
+      await db.delete(paymentVirtualAccounts);
+      await db.delete(selectionScores);
+      await db.delete(selectionComponents);
+      await db.delete(applicationLogs);
+      await db.delete(applicantDocuments);
+      await db.delete(reRegistrationPayments);
+      await db.delete(documentRequirements);
+      await db.delete(admissionSessionProdis);
+      await db.delete(admissionSessions);
+      await db.delete(announcements);
+      await db.delete(applications);
+
+      // OBE tables
+      await db.delete(cpmkCpl);
+      await db.delete(subCpmk);
+      await db.delete(cpmk);
+      await db.delete(mataKuliahBahanKajian);
+      await db.delete(bahanKajianCpl);
+      await db.delete(bahanKajian);
+      await db.delete(cplProfilLulusan);
+      await db.delete(cpl);
+      await db.delete(profilLulusan);
+      await db.delete(visiMisiProdi);
+
+      // Core academic tables
       await db.delete(pengajuanYudisium);
       await db.delete(nilaiKomponenMahasiswa);
       await db.delete(komponenNilai);
@@ -47,7 +92,6 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
       await db.delete(kompensasiBayar);
       await db.delete(presensi);
       await db.delete(bap);
-      await db.delete(cpmk);
       await db.delete(krs);
       await db.delete(dosenPengajarKelas);
       await db.delete(kelasKuliah);
@@ -151,7 +195,6 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
           sksTotal: 4,
           sksTatapMuka: 2,
           sksPraktek: 2,
-          programStudiId: prodi.id,
         })
         .returning();
 

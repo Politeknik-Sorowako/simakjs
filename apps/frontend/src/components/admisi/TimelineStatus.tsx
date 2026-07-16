@@ -105,34 +105,38 @@ export default function TimelineStatus(props: Props) {
               return (
                 <div class="flex items-start gap-4 relative">
                   {/* Bullet */}
-                  <div class={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 border-2 ${
-                    done
-                      ? 'bg-green-100 border-green-500 text-green-600'
-                      : current
-                        ? isRejected
-                          ? 'bg-red-100 border-red-500 text-red-600'
-                          : isFailed
+                  <div
+                    class={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 border-2 ${
+                      done
+                        ? 'bg-green-100 border-green-500 text-green-600'
+                        : current
+                          ? isRejected
                             ? 'bg-red-100 border-red-500 text-red-600'
-                            : 'bg-brand-100 border-brand-500 text-brand-600'
-                        : 'bg-secondary-100 border-secondary-300 text-secondary-400 dark:bg-secondary-800 dark:border-secondary-600'
-                  }`}>
+                            : isFailed
+                              ? 'bg-red-100 border-red-500 text-red-600'
+                              : 'bg-brand-100 border-brand-500 text-brand-600'
+                          : 'bg-secondary-100 border-secondary-300 text-secondary-400 dark:bg-secondary-800 dark:border-secondary-600'
+                    }`}
+                  >
                     {done ? '✓' : current ? (isRejected || isFailed ? '✗' : '●') : '○'}
                   </div>
 
                   {/* Content */}
                   <div class="flex-1 pt-1.5">
                     <div class="flex items-center gap-2">
-                      <span class={`text-sm font-medium ${
-                        done
-                          ? 'text-green-700 dark:text-green-400'
-                          : current
-                            ? isRejected
-                              ? 'text-red-700 dark:text-red-400'
-                              : isFailed
+                      <span
+                        class={`text-sm font-medium ${
+                          done
+                            ? 'text-green-700 dark:text-green-400'
+                            : current
+                              ? isRejected
                                 ? 'text-red-700 dark:text-red-400'
-                                : 'text-brand-700 dark:text-brand-400'
-                            : 'text-secondary-400 dark:text-secondary-500'
-                      }`}>
+                                : isFailed
+                                  ? 'text-red-700 dark:text-red-400'
+                                  : 'text-brand-700 dark:text-brand-400'
+                              : 'text-secondary-400 dark:text-secondary-500'
+                        }`}
+                      >
                         {stage.icon} {stage.label}
                       </span>
 
@@ -147,22 +151,42 @@ export default function TimelineStatus(props: Props) {
                     {/* Tanggal */}
                     <Show when={stage.key === 'submitted' && props.session.tanggalTutup}>
                       <div class="text-xs text-secondary-400 dark:text-secondary-500 mt-0.5">
-                        Tutup pendaftaran: {new Date(props.session.tanggalTutup!).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        Tutup pendaftaran:{' '}
+                        {new Date(props.session.tanggalTutup!).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
                       </div>
                     </Show>
                     <Show when={stage.key === 'documents_verified' && props.session.tanggalVerif}>
                       <div class="text-xs text-secondary-400 dark:text-secondary-500 mt-0.5">
-                        Batas verifikasi: {new Date(props.session.tanggalVerif!).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        Batas verifikasi:{' '}
+                        {new Date(props.session.tanggalVerif!).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
                       </div>
                     </Show>
                     <Show when={stage.key === 'exam_scheduled' && props.session.tanggalUjian}>
                       <div class="text-xs text-secondary-400 dark:text-secondary-500 mt-0.5">
-                        Jadwal ujian: {new Date(props.session.tanggalUjian!).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        Jadwal ujian:{' '}
+                        {new Date(props.session.tanggalUjian!).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
                       </div>
                     </Show>
                     <Show when={stage.key === 'passed' && props.session.tanggalPengumuman}>
                       <div class="text-xs text-secondary-400 dark:text-secondary-500 mt-0.5">
-                        Pengumuman: {new Date(props.session.tanggalPengumuman!).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        Pengumuman:{' '}
+                        {new Date(props.session.tanggalPengumuman!).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}
                       </div>
                     </Show>
                   </div>
@@ -179,16 +203,22 @@ export default function TimelineStatus(props: Props) {
           <p class="text-xs text-secondary-500">Lakukan pembayaran untuk melanjutkan ke tahap upload dokumen.</p>
         </Show>
         <Show when={props.status === 'awaiting_payment'}>
-          <p class="text-xs text-amber-600">Pembayaran sedang diproses. Setelah diverifikasi, Anda bisa upload dokumen.</p>
+          <p class="text-xs text-amber-600">
+            Pembayaran sedang diproses. Setelah diverifikasi, Anda bisa upload dokumen.
+          </p>
         </Show>
         <Show when={props.status === 'submitted'}>
-          <p class="text-xs text-secondary-500">Dokumen sedang diperiksa oleh admin. Pantau terus dashboard untuk hasil verifikasi.</p>
+          <p class="text-xs text-secondary-500">
+            Dokumen sedang diperiksa oleh admin. Pantau terus dashboard untuk hasil verifikasi.
+          </p>
         </Show>
         <Show when={props.status === 'documents_rejected'}>
           <p class="text-xs text-red-600">Ada dokumen yang ditolak. Upload ulang sesuai catatan admin.</p>
         </Show>
         <Show when={props.status === 'returned'}>
-          <p class="text-xs text-amber-600">Admin membuka akses untuk melengkapi berkas. Silakan upload ulang dan submit.</p>
+          <p class="text-xs text-amber-600">
+            Admin membuka akses untuk melengkapi berkas. Silakan upload ulang dan submit.
+          </p>
         </Show>
         <Show when={props.status === 'documents_verified'}>
           <p class="text-xs text-teal-600">Dokumen telah diverifikasi. Tunggu jadwal ujian.</p>
@@ -206,7 +236,9 @@ export default function TimelineStatus(props: Props) {
           <p class="text-xs text-red-600">Mohon maaf, Anda belum lulus. Silakan coba di gelombang lain.</p>
         </Show>
         <Show when={props.status === 're_registration'}>
-          <p class="text-xs text-secondary-500">Bukti bayar sedang diverifikasi. Setelah disetujui, NIM akan diterbitkan.</p>
+          <p class="text-xs text-secondary-500">
+            Bukti bayar sedang diverifikasi. Setelah disetujui, NIM akan diterbitkan.
+          </p>
         </Show>
         <Show when={props.status === 'nim_issued'}>
           <p class="text-xs text-green-600">Selamat! Anda resmi menjadi mahasiswa Politeknik Sorowako.</p>

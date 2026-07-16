@@ -2,14 +2,14 @@ import { PeriodeAkademikService } from '../services/periode-akademik.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class PeriodeAkademikController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 10;
+  static async getAll({ query }: AuthContext<any, PaginationQuery>): Promise<any> {
+    const page = query?.page ? parseInt(String(query.page)) : 1;
+    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
     return await PeriodeAkademikService.getAll(page, limit, search);
   }
 
-  static async getById({ params, set }: AuthContext) {
+  static async getById({ params, set }: AuthContext): Promise<any> {
     const data = await PeriodeAkademikService.getById(params.id);
     if (!data) {
       set.status = 404;
@@ -18,7 +18,7 @@ export class PeriodeAkademikController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -29,7 +29,7 @@ export class PeriodeAkademikController {
     return newPeriode;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -43,7 +43,7 @@ export class PeriodeAkademikController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

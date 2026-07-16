@@ -7,7 +7,7 @@ import { AuthContext } from '../utils/types';
 export class AdmisiAdminController {
   // ─── SESSIONS ────────────────────────────────────────────────────
 
-  static async createSession({ body, set }: AuthContext<any>) {
+  static async createSession({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const session = await AdmisiAdminService.createSession(body);
       set.status = 201;
@@ -18,7 +18,7 @@ export class AdmisiAdminController {
     }
   }
 
-  static async updateSession({ params, body, set }: AuthContext<any, { id: string }>) {
+  static async updateSession({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.updateSession(Number(params.id), body);
       return { message: 'Sesi admisi berhasil diperbarui' };
@@ -33,14 +33,14 @@ export class AdmisiAdminController {
     return { data: sessions };
   }
 
-  static async getSessionDetail({ params }: AuthContext<any, { id: string }>) {
+  static async getSessionDetail({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const detail = await AdmisiAdminService.getSessionDetail(Number(params.id));
     return { data: detail };
   }
 
   // ─── SESSION PRODIS ──────────────────────────────────────────────
 
-  static async addProdiToSession({ params, body, set }: AuthContext<any, { id: string }>) {
+  static async addProdiToSession({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.addProdiToSession(Number(params.id), body);
       set.status = 201;
@@ -72,7 +72,10 @@ export class AdmisiAdminController {
     }
   }
 
-  static async removeProdiFromSession({ params, set }: AuthContext<any, { id: string; prodiId: string }>) {
+  static async removeProdiFromSession({
+    params,
+    set,
+  }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     try {
       await AdmisiAdminService.removeProdiFromSession(Number(params.id), Number(params.prodiId));
       return { message: 'Program studi berhasil dihapus dari sesi' };
@@ -82,7 +85,10 @@ export class AdmisiAdminController {
     }
   }
 
-  static async toggleProdiActive({ params, set }: AuthContext<any, { id: string; prodiId: string }>) {
+  static async toggleProdiActive({
+    params,
+    set,
+  }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     try {
       const result = await AdmisiAdminService.toggleProdiActive(Number(params.id), Number(params.prodiId));
       return { message: result.isActive ? 'Prodi diaktifkan' : 'Prodi dinonaktifkan', isActive: result.isActive };
@@ -94,7 +100,7 @@ export class AdmisiAdminController {
 
   // ─── DOCUMENT REQUIREMENTS ───────────────────────────────────────
 
-  static async createDocumentRequirement({ body, set }: AuthContext<any>) {
+  static async createDocumentRequirement({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const req = await AdmisiAdminService.createDocumentRequirement(body);
       set.status = 201;
@@ -105,7 +111,7 @@ export class AdmisiAdminController {
     }
   }
 
-  static async updateDocumentRequirement({ params, body, set }: AuthContext<any, { id: string }>) {
+  static async updateDocumentRequirement({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.updateDocumentRequirement(Number(params.id), body);
       return { message: 'Syarat dokumen berhasil diperbarui' };
@@ -115,7 +121,7 @@ export class AdmisiAdminController {
     }
   }
 
-  static async deleteDocumentRequirement({ params, set }: AuthContext<any, { id: string }>) {
+  static async deleteDocumentRequirement({ params, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.deleteDocumentRequirement(Number(params.id));
       return { message: 'Syarat dokumen berhasil dihapus' };
@@ -245,9 +251,11 @@ export class AdmisiAdminController {
   static async verifyDocument({
     body,
     set,
-  }: AuthContext<{ documentId: number; isVerified: boolean; rejectionNote?: string }>) {
+    getCurrentUser,
+  }: AuthContext<{ documentId: number; isVerified: boolean; rejectionNote?: string }>): Promise<any> {
     try {
-      await AdmisiAdminService.verifyDocument(body.documentId, 1, body.isVerified, body.rejectionNote);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.verifyDocument(body.documentId, user!.id, body.isVerified, body.rejectionNote);
       return { message: body.isVerified ? 'Dokumen berhasil diverifikasi' : 'Dokumen ditolak' };
     } catch (e: any) {
       set.status = 400;
@@ -255,9 +263,14 @@ export class AdmisiAdminController {
     }
   }
 
-  static async verifyAllDocuments({ params, set }: AuthContext<any, { id: string }>) {
+  static async verifyAllDocuments({
+    params,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
-      const result = await AdmisiAdminService.verifyAllDocuments(Number(params.id), 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.verifyAllDocuments(Number(params.id), user!.id);
       return {
         message: `${result.verifiedCount} dokumen diverifikasi. Status: Terverifikasi`,
         verifiedCount: result.verifiedCount,
@@ -268,9 +281,10 @@ export class AdmisiAdminController {
     }
   }
 
-  static async markDocsVerified({ params, set }: AuthContext<any, { id: string }>) {
+  static async markDocsVerified({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
-      const result = await AdmisiAdminService.markDocsVerified(Number(params.id), 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.markDocsVerified(Number(params.id), user!.id);
       return result;
     } catch (e: any) {
       set.status = 400;
@@ -282,9 +296,11 @@ export class AdmisiAdminController {
     params,
     body,
     set,
-  }: AuthContext<{ status: string; notes?: string }, { id: string }>) {
+    getCurrentUser,
+  }: AuthContext<{ status: string; notes?: string }, any, { id: string }>): Promise<any> {
     try {
-      await AdmisiAdminService.updateApplicationStatus(Number(params.id), body.status, 1, body.notes);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.updateApplicationStatus(Number(params.id), body.status, user!.id, body.notes);
       return { message: `Status diubah ke ${body.status}` };
     } catch (e: any) {
       set.status = 400;
@@ -292,12 +308,13 @@ export class AdmisiAdminController {
     }
   }
 
-  static async reopenApplication({ params, set }: AuthContext<any, { id: string }>) {
+  static async reopenApplication({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
+      const user = await getCurrentUser();
       await AdmisiAdminService.updateApplicationStatus(
         Number(params.id),
         'returned',
-        1,
+        user!.id,
         'Admin membuka akses untuk melengkapi berkas',
       );
       return { message: 'Akses dibuka, peserta dapat melengkapi berkas dan memperbaiki biodata' };
@@ -309,7 +326,7 @@ export class AdmisiAdminController {
 
   // ─── SELECTION COMPONENTS ────────────────────────────────────────
 
-  static async createSelectionComponent({ body, set }: AuthContext<any>) {
+  static async createSelectionComponent({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const comp = await AdmisiAdminService.createSelectionComponent(body);
       set.status = 201;
@@ -320,12 +337,12 @@ export class AdmisiAdminController {
     }
   }
 
-  static async getSelectionComponents({ params }: AuthContext<any, { id: string }>) {
+  static async getSelectionComponents({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const comps = await AdmisiAdminService.getSelectionComponents(Number(params.id));
     return { data: comps };
   }
 
-  static async deleteSelectionComponent({ params, set }: AuthContext<any, { id: string }>) {
+  static async deleteSelectionComponent({ params, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.deleteSelectionComponent(Number(params.id));
       return { message: 'Komponen penilaian berhasil dihapus' };
@@ -340,9 +357,11 @@ export class AdmisiAdminController {
   static async inputScore({
     body,
     set,
-  }: AuthContext<{ applicationId: number; componentId: number; score: number; notes?: string }>) {
+    getCurrentUser,
+  }: AuthContext<{ applicationId: number; componentId: number; score: number; notes?: string }>): Promise<any> {
     try {
-      await AdmisiAdminService.inputScore(body.applicationId, body.componentId, body.score, 1, body.notes);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.inputScore(body.applicationId, body.componentId, body.score, user!.id, body.notes);
       set.status = 201;
       return { message: 'Nilai berhasil disimpan' };
     } catch (e: any) {
@@ -353,7 +372,7 @@ export class AdmisiAdminController {
 
   // ─── EXAM SCHEDULES ──────────────────────────────────────────────
 
-  static async createExamSchedule({ body, set }: AuthContext<any>) {
+  static async createExamSchedule({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const schedule = await AdmisiAdminService.createExamSchedule(body);
       set.status = 201;
@@ -364,7 +383,7 @@ export class AdmisiAdminController {
     }
   }
 
-  static async getExamSchedules({ params }: AuthContext<any, { id: string }>) {
+  static async getExamSchedules({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const schedules = await AdmisiAdminService.getExamSchedules(Number(params.id));
     return { data: schedules };
   }
@@ -380,9 +399,11 @@ export class AdmisiAdminController {
   static async verifyPayment({
     body,
     set,
-  }: AuthContext<{ paymentId: number; isVerified: boolean; rejectionNote?: string }>) {
+    getCurrentUser,
+  }: AuthContext<{ paymentId: number; isVerified: boolean; rejectionNote?: string }>): Promise<any> {
     try {
-      await AdmisiAdminService.verifyPayment(body.paymentId, 1, body.isVerified, body.rejectionNote);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.verifyPayment(body.paymentId, user!.id, body.isVerified, body.rejectionNote);
 
       if (body.isVerified) {
         const [payment] = await db
@@ -394,7 +415,7 @@ export class AdmisiAdminController {
           await AdmisiAdminService.updateApplicationStatus(
             payment.applicationId,
             're_registration',
-            1,
+            user!.id,
             'Pembayaran diverifikasi',
           );
         }
@@ -409,19 +430,25 @@ export class AdmisiAdminController {
 
   // ─── NIM ─────────────────────────────────────────────────────────
 
-  static async generateNIMBulk({ params }: AuthContext<any, { id: string; prodiId: string }>) {
+  static async generateNIMBulk({ params }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     const results = await AdmisiAdminService.generateNIMBulk(Number(params.id), Number(params.prodiId));
     return { data: results };
   }
 
-  static async validateNIM({ query }: AuthContext<any, any, { nim: string }>) {
-    const available = await AdmisiAdminService.validateNIM(query.nim);
+  static async validateNIM({ query }: AuthContext<any, any>): Promise<any> {
+    const available = await AdmisiAdminService.validateNIM(query.nim as string);
     return { available };
   }
 
-  static async issueNIM({ params, body, set }: AuthContext<{ nim: string }, { id: string }>) {
+  static async issueNIM({
+    params,
+    body,
+    set,
+    getCurrentUser,
+  }: AuthContext<{ nim: string }, any, { id: string }>): Promise<any> {
     try {
-      const result = await AdmisiAdminService.issueNIM(Number(params.id), body.nim, 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.issueNIM(Number(params.id), body.nim, user!.id);
       return { message: 'NIM berhasil diterbitkan', nim: result.nim };
     } catch (e: any) {
       set.status = 400;
@@ -429,9 +456,9 @@ export class AdmisiAdminController {
     }
   }
 
-  static async editNIM({ params, body, set }: AuthContext<{ nim: string }, { id: string }>) {
+  static async editNIM({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
-      const result = await AdmisiAdminService.editNIM(Number(params.id), body.nim);
+      const result = await AdmisiAdminService.editNIM(Number(params.id), (body as { nim: string }).nim);
       return { message: 'NIM berhasil diedit', nim: result.nimDiterbitkan };
     } catch (e: any) {
       set.status = 400;
@@ -484,9 +511,10 @@ export class AdmisiAdminController {
     return { data };
   }
 
-  static async verifyPaymentVA({ params, set }: any) {
+  static async verifyPaymentVA({ params, set, getCurrentUser }: any) {
     try {
-      await AdmisiAdminService.verifyPayment(Number(params.id), 1);
+      const user = await getCurrentUser();
+      await AdmisiAdminService.verifyVAPayment(Number(params.id), user!.id);
       return { message: 'Pembayaran diverifikasi' };
     } catch (e: any) {
       set.status = 400;
@@ -496,9 +524,10 @@ export class AdmisiAdminController {
 
   // ─── ANNOUNCEMENT ────────────────────────────────────────────────
 
-  static async announceResults({ params, set }: AuthContext<any, { id: string }>) {
+  static async announceResults({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
-      const result = await AdmisiAdminService.announceResults(Number(params.id), 1);
+      const user = await getCurrentUser();
+      const result = await AdmisiAdminService.announceResults(Number(params.id), user!.id);
       return { message: `Pengumuman diterbitkan: ${result.passed} lulus, ${result.failed} tidak lulus` };
     } catch (e: any) {
       set.status = 400;
@@ -506,7 +535,7 @@ export class AdmisiAdminController {
     }
   }
 
-  static async getPassedCandidates({ params }: AuthContext<any, { id: string }>) {
+  static async getPassedCandidates({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const result = await AdmisiAdminService.getPassedCandidates(Number(params.id));
     return result;
   }
@@ -520,7 +549,7 @@ export class AdmisiAdminController {
 
   static async exportApplications({
     query,
-  }: AuthContext<any, any, { sessionId?: string; prodiId?: string; status?: string }>) {
+  }: AuthContext<any, { sessionId?: string; prodiId?: string; status?: string }>): Promise<any> {
     const data = await AdmisiAdminService.exportApplications({
       sessionId: query.sessionId ? Number(query.sessionId) : undefined,
       prodiId: query.prodiId ? Number(query.prodiId) : undefined,

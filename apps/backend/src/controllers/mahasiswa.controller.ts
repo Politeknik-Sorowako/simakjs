@@ -3,7 +3,11 @@ import { MahasiswaService } from '../services/mahasiswa.service';
 import { AuthContext, PaginationQuery, parsePagination } from '../utils/types';
 
 export class MahasiswaController {
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery & { programStudiId?: string }>) {
+  static async getAll({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -11,7 +15,7 @@ export class MahasiswaController {
     }
     const { page, limit } = parsePagination(query);
     const search = query?.search || '';
-    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+    const programStudiId = query?.programStudiId ? Number(query.programStudiId) : undefined;
 
     if (user.role === 'mahasiswa') {
       const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
@@ -42,7 +46,7 @@ export class MahasiswaController {
     return await MahasiswaService.getAll(page, limit, search, undefined, programStudiId);
   }
 
-  static async getById({ params, set, getCurrentUser }: AuthContext) {
+  static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -73,7 +77,7 @@ export class MahasiswaController {
     return mhs;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -84,7 +88,7 @@ export class MahasiswaController {
     return newMhs;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi' && user.role !== 'dosen')) {
       set.status = 403;
@@ -113,7 +117,7 @@ export class MahasiswaController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -127,7 +131,7 @@ export class MahasiswaController {
     return { message: 'Mahasiswa berhasil dihapus' };
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -151,7 +155,7 @@ export class MahasiswaController {
     query,
     set,
     getCurrentUser,
-  }: AuthContext<any, { angkatan?: string; programStudiId?: string }>) {
+  }: AuthContext<any, { angkatan?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -162,7 +166,7 @@ export class MahasiswaController {
     return await MahasiswaService.getStats(angkatan, prodiId);
   }
 
-  static async getMahasiswaBaru({ query, set, getCurrentUser }: AuthContext<any, { angkatan?: string }>) {
+  static async getMahasiswaBaru({ query, set, getCurrentUser }: AuthContext<any, { angkatan?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -171,7 +175,7 @@ export class MahasiswaController {
     return await MahasiswaService.getMahasiswaBaru(query?.angkatan);
   }
 
-  static async importPaCsv({ request, set, getCurrentUser }: AuthContext) {
+  static async importPaCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;

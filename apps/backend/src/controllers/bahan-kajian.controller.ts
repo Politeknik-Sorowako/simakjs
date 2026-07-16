@@ -3,13 +3,13 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class BahanKajianController {
-  static async getAll({ query, getCurrentUser }: AuthContext) {
+  static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = query.prodiId ? parseInt(query.prodiId) : undefined;
     return await BahanKajianService.getAll(prodiId);
   }
 
-  static async getById({ params, getCurrentUser }: AuthContext) {
+  static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const data = await BahanKajianService.getById(parseInt(params.id));
     if (!data) {
@@ -18,7 +18,7 @@ export class BahanKajianController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -29,7 +29,7 @@ export class BahanKajianController {
     return newData;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -43,7 +43,7 @@ export class BahanKajianController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -57,7 +57,7 @@ export class BahanKajianController {
     return { message: 'Bahan Kajian berhasil dihapus' };
   }
 
-  static async import({ body, set, getCurrentUser }: AuthContext) {
+  static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -76,7 +76,7 @@ export class BahanKajianController {
     return result;
   }
 
-  static async getTemplate({ set, getCurrentUser }: AuthContext) {
+  static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     set.headers['content-type'] = 'text/csv; charset=utf-8';
     set.headers['content-disposition'] = 'attachment; filename=template-bahan-kajian.csv';

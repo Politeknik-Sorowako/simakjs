@@ -81,7 +81,9 @@ export default function CutiMahasiswa() {
     switch (status) {
       case 'pending':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Menunggu PA</span>
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            Menunggu PA
+          </span>
         );
       case 'disetujui_pa':
         return (
@@ -102,9 +104,17 @@ export default function CutiMahasiswa() {
           </span>
         );
       case 'ditolak':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Ditolak</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            Ditolak
+          </span>
+        );
       default:
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">{status}</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -121,7 +131,10 @@ export default function CutiMahasiswa() {
           <Button onClick={handleOpenModal}>+ Ajukan Cuti</Button>
         </div>
 
-        <Show when={!cutis.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
+        <Show
+          when={!cutis.loading}
+          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
+        >
           <Table
             headers={[
               'Periode Akademik',
@@ -145,13 +158,21 @@ export default function CutiMahasiswa() {
             >
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
-                  <td class="px-6 py-4 font-semibold text-secondary-700 dark:text-secondary-200">{item.periodeAkademik?.nama || item.periodeId}</td>
-                  <td class="px-6 py-4 text-secondary-600 max-w-xs truncate dark:text-secondary-200" title={item.alasan}>
+                  <td class="px-6 py-4 font-semibold text-secondary-700 dark:text-secondary-200">
+                    {item.periodeAkademik?.nama || item.periodeId}
+                  </td>
+                  <td
+                    class="px-6 py-4 text-secondary-600 max-w-xs truncate dark:text-secondary-200"
+                    title={item.alasan}
+                  >
                     {item.alasan}
                   </td>
                   <td class="px-6 py-4">{getStatusBadge(item.status)}</td>
                   <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">
-                    <Show when={item.noSuratIzin} fallback={<span class="text-secondary-300 dark:border-secondary-700">-</span>}>
+                    <Show
+                      when={item.noSuratIzin}
+                      fallback={<span class="text-secondary-300 dark:border-secondary-700">-</span>}
+                    >
                       <div>No: {item.noSuratIzin}</div>
                       <div class="text-xs text-secondary-400 dark:text-secondary-200">Tgl: {item.tanggalSuratIzin}</div>
                     </Show>

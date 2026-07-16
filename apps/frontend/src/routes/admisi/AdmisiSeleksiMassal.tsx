@@ -40,22 +40,34 @@ export default function AdmisiSeleksiMassal() {
     <MainLayout>
       <div class="p-4 md:p-6 max-w-6xl mx-auto">
         <h1 class="text-2xl font-bold mb-2">Seleksi Massal</h1>
-        <p class="text-sm text-secondary-500 mb-6">Proses kelulusan peserta berdasarkan nilai akhir dan passing grade</p>
+        <p class="text-sm text-secondary-500 mb-6">
+          Proses kelulusan peserta berdasarkan nilai akhir dan passing grade
+        </p>
 
         <div class="flex gap-3 mb-6">
-          <select value={sessionId()} onChange={(e) => { setSessionId(e.currentTarget.value); setResults(null); }}
-            class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800">
+          <select
+            value={sessionId()}
+            onChange={(e) => {
+              setSessionId(e.currentTarget.value);
+              setResults(null);
+            }}
+            class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800"
+          >
             <option value="">-- Pilih Sesi --</option>
             <For each={sessions()?.data || []}>{(s: any) => <option value={s.id}>{s.nama}</option>}</For>
           </select>
-          <Button onClick={handlePreview} disabled={!sessionId()}>Preview Hasil</Button>
+          <Button onClick={handlePreview} disabled={!sessionId()}>
+            Preview Hasil
+          </Button>
         </div>
 
         <Show when={results}>
           <div class="grid md:grid-cols-2 gap-6 mb-6">
             {/* Lulus */}
             <div class="bg-white dark:bg-secondary-800/40 border border-green-200 dark:border-green-800 rounded-xl p-4">
-              <h2 class="font-semibold text-sm text-green-700 dark:text-green-400 mb-2">✅ Lulus ({results()!.passed.length})</h2>
+              <h2 class="font-semibold text-sm text-green-700 dark:text-green-400 mb-2">
+                ✅ Lulus ({results()!.passed.length})
+              </h2>
               <div class="space-y-1 max-h-80 overflow-y-auto">
                 <For each={results()!.passed}>
                   {(p: any) => (
@@ -74,7 +86,9 @@ export default function AdmisiSeleksiMassal() {
 
             {/* Tidak Lulus */}
             <div class="bg-white dark:bg-secondary-800/40 border border-red-200 dark:border-red-800 rounded-xl p-4">
-              <h2 class="font-semibold text-sm text-red-700 dark:text-red-400 mb-2">❌ Tidak Lulus ({results()!.failed.length})</h2>
+              <h2 class="font-semibold text-sm text-red-700 dark:text-red-400 mb-2">
+                ❌ Tidak Lulus ({results()!.failed.length})
+              </h2>
               <div class="space-y-1 max-h-80 overflow-y-auto">
                 <For each={results()!.failed}>
                   {(f: any) => (
@@ -96,13 +110,16 @@ export default function AdmisiSeleksiMassal() {
             <Button onClick={handleAnnounce} disabled={processing()} class="bg-green-600 hover:bg-green-700">
               {processing() ? 'Memproses...' : `Terbitkan Pengumuman (${results()!.passed.length} Lulus)`}
             </Button>
-            <Button variant="secondary" onClick={() => setResults(null)}>Batal</Button>
+            <Button variant="secondary" onClick={() => setResults(null)}>
+              Batal
+            </Button>
           </div>
         </Show>
 
         <Show when={!results && sessionId()}>
           <div class="text-center py-8 text-secondary-400">
-            Klik <strong>Preview Hasil</strong> untuk melihat kandidat lulus/tidak lulus berdasarkan nilai akhir dan passing grade.
+            Klik <strong>Preview Hasil</strong> untuk melihat kandidat lulus/tidak lulus berdasarkan nilai akhir dan
+            passing grade.
           </div>
         </Show>
       </div>

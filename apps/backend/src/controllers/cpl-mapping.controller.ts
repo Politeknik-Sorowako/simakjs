@@ -3,7 +3,7 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CplMappingController {
-  static async getAll({ query, getCurrentUser }: AuthContext) {
+  static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = query.prodiId ? parseInt(query.prodiId) : undefined;
     const cplId = query.cplId ? parseInt(query.cplId) : undefined;
@@ -11,7 +11,7 @@ export class CplMappingController {
     return await CplMappingService.getAll(prodiId, cplId, profilLulusanId);
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -22,7 +22,7 @@ export class CplMappingController {
     return newData;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -36,7 +36,7 @@ export class CplMappingController {
     return { message: 'Mapping berhasil dihapus' };
   }
 
-  static async getMatriks({ query, getCurrentUser }: AuthContext) {
+  static async getMatriks({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = parseInt(query.prodiId);
     if (!prodiId) {

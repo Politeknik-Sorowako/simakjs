@@ -275,7 +275,9 @@ export default function ManajemenCuti() {
       <div class="flex flex-col gap-6">
         <div>
           <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Manajemen Cuti Mahasiswa</h1>
-          <p class="text-sm text-secondary-500">Input cuti, persetujuan, dan aktivasi kembali mahasiswa secara terpadu.</p>
+          <p class="text-sm text-secondary-500">
+            Input cuti, persetujuan, dan aktivasi kembali mahasiswa secara terpadu.
+          </p>
         </div>
 
         <div class="flex gap-1 border-b border-secondary-200 dark:border-secondary-700">
@@ -436,7 +438,10 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show when={!approvals.loading} fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}>
+          <Show
+            when={!approvals.loading}
+            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
+          >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode', 'Alasan Cuti', 'Status', 'SK Cuti', 'Aksi']}>
               <For
                 each={approvals()?.data}
@@ -516,7 +521,10 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show when={!aktifList.loading} fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}>
+          <Show
+            when={!aktifList.loading}
+            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
+          >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode Cuti', 'Rentang Cuti', 'Aksi']}>
               <For
                 each={aktifList()?.data}

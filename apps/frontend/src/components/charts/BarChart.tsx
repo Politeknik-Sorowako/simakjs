@@ -1,14 +1,5 @@
+import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, Title, Tooltip } from 'chart.js';
 import { createEffect, createSignal, onCleanup } from 'solid-js';
-import {
-  Chart,
-  BarController,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 
@@ -49,7 +40,11 @@ export function BarChart(props: BarChartProps) {
         datasets: props.datasets.map((ds) => ({
           label: ds.label,
           data: ds.data,
-          backgroundColor: ds.backgroundColor || (isDark ? ['#4f46e5', '#06b6d4', '#22c55e', '#f43f5e', '#eab308'] : ['#6366f1', '#06b6d4', '#22c55e', '#f43f5e', '#eab308']),
+          backgroundColor:
+            ds.backgroundColor ||
+            (isDark
+              ? ['#4f46e5', '#06b6d4', '#22c55e', '#f43f5e', '#eab308']
+              : ['#6366f1', '#06b6d4', '#22c55e', '#f43f5e', '#eab308']),
           borderColor: ds.borderColor || 'transparent',
           borderRadius: 6,
         })),
@@ -60,7 +55,9 @@ export function BarChart(props: BarChartProps) {
         indexAxis: props.horizontal ? 'y' : 'x',
         plugins: {
           legend: { display: props.datasets.length > 1, labels: { color: textColor, font: { size: 11 } } },
-          title: props.title ? { display: true, text: props.title, color: textColor, font: { size: 13, weight: 'bold' } } : undefined,
+          title: props.title
+            ? { display: true, text: props.title, color: textColor, font: { size: 13, weight: 'bold' } }
+            : undefined,
         },
         scales: {
           x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: isDark ? '#334155' : '#e2e8f0' } },

@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { AdmisiAdminController } from '../controllers/admisi-admin.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   addSessionProdiSchema,
   createDocumentRequirementSchema,
@@ -14,7 +15,17 @@ import {
   verifyPaymentSchema,
 } from '../schemas/admisi-admin.schema';
 
+const adminGuard = new Elysia({ name: 'admin-guard' }).use(authMiddleware).derive(async ({ getCurrentUser, set }) => {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'admin') {
+    set.status = 403;
+    throw new Error('Akses ditolak. Hanya admin yang dapat mengakses endpoint ini.');
+  }
+  return { adminUser: user };
+});
+
 export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
+  .use(adminGuard)
   // ─── SESI ────────────────────────────────────────────────────────
   .get('/sessions', AdmisiAdminController.getAllSessions, {
     detail: { tags: ['Admisi - Admin'], summary: 'Daftar semua sesi admisi' },
@@ -53,7 +64,7 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .post('/applications/:id/upload-document', AdmisiAdminController.adminUploadDocument, {
     type: 'none',
     detail: { tags: ['Admisi - Admin'], summary: 'Admin upload dokumen untuk peserta' },
-  })
+  } as any)
   .put('/documents/verify', AdmisiAdminController.verifyDocument, verifyDocumentSchema)
   .post('/applications/:id/verify-all-docs', AdmisiAdminController.verifyAllDocuments, {
     detail: { tags: ['Admisi - Admin'], summary: 'Verifikasi semua dokumen & ubah status' },
@@ -153,14 +164,14 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .post('/announcements', AdmisiAdminController.createAnnouncement, {
     type: 'none',
     detail: { tags: ['Admisi - Admin'], summary: 'Buat pengumuman (support file upload)' },
-  })
+  } as any)
   .get('/announcements', AdmisiAdminController.getAnnouncements, {
     detail: { tags: ['Admisi - Admin'], summary: 'Lihat pengumuman' },
   })
   .put('/announcements/:id', AdmisiAdminController.updateAnnouncement, {
     type: 'none',
     detail: { tags: ['Admisi - Admin'], summary: 'Edit pengumuman (support file upload)' },
-  })
+  } as any)
   .delete('/announcements/:id', AdmisiAdminController.deleteAnnouncement, {
     detail: { tags: ['Admisi - Admin'], summary: 'Hapus pengumuman' },
   });

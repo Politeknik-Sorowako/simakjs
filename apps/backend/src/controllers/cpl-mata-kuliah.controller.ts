@@ -3,7 +3,7 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CplMataKuliahController {
-  static async getAll({ query, getCurrentUser }: AuthContext) {
+  static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const cplId = query.cplId ? parseInt(query.cplId) : undefined;
     const mataKuliahId = query.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
@@ -11,7 +11,7 @@ export class CplMataKuliahController {
     return await CplMataKuliahService.getAll(cplId, mataKuliahId, kurikulumId);
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
       set.status = 403;
@@ -22,7 +22,7 @@ export class CplMataKuliahController {
     return newData;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
       set.status = 403;
@@ -36,7 +36,7 @@ export class CplMataKuliahController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
       set.status = 403;
@@ -50,7 +50,7 @@ export class CplMataKuliahController {
     return { message: 'Mapping berhasil dihapus' };
   }
 
-  static async getMatriks({ query, getCurrentUser }: AuthContext) {
+  static async getMatriks({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kurikulumId = parseInt(query.kurikulumId);
     if (!kurikulumId) {
@@ -59,7 +59,7 @@ export class CplMataKuliahController {
     return await CplMataKuliahService.getMatriks(kurikulumId);
   }
 
-  static async validateBobot({ query, getCurrentUser }: AuthContext) {
+  static async validateBobot({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const cplId = parseInt(query.cplId);
     if (!cplId) {

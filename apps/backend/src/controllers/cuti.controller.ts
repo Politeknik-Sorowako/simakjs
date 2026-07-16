@@ -15,7 +15,7 @@ export class CutiController {
     return dsn ? dsn.id : null;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'mahasiswa') {
       set.status = 403;
@@ -42,7 +42,7 @@ export class CutiController {
     }
   }
 
-  static async inputByAdmin({ body, set, getCurrentUser }: AuthContext) {
+  static async inputByAdmin({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !['admin', 'prodi'].includes(user.role)) {
       set.status = 403;
@@ -67,7 +67,7 @@ export class CutiController {
     }
   }
 
-  static async getAll({ query, set, getCurrentUser }: AuthContext) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -106,7 +106,7 @@ export class CutiController {
     });
   }
 
-  static async getMahasiswaCuti({ query, set, getCurrentUser }: AuthContext) {
+  static async getMahasiswaCuti({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -121,7 +121,7 @@ export class CutiController {
     return await CutiService.getMahasiswaCuti({ page, limit, search, periodeId });
   }
 
-  static async getById({ params, set, getCurrentUser }: AuthContext) {
+  static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -151,7 +151,7 @@ export class CutiController {
     return data;
   }
 
-  static async approve({ params, body, set, getCurrentUser }: AuthContext) {
+  static async approve({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || ['mahasiswa', 'guest'].includes(user.role)) {
       set.status = 403;
@@ -181,7 +181,7 @@ export class CutiController {
     }
   }
 
-  static async aktifKembali({ params, set, getCurrentUser }: AuthContext) {
+  static async aktifKembali({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || ['mahasiswa', 'guest'].includes(user.role)) {
       set.status = 403;
@@ -197,7 +197,7 @@ export class CutiController {
     }
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 403;

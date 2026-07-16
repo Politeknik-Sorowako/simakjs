@@ -17,7 +17,7 @@ import {
   users,
   vaBanks,
 } from '../models/schema';
-import { db, db } from '../utils/db';
+import { db } from '../utils/db';
 
 export class AdmisiAdminService {
   // ─── SESSION MANAGEMENT ──────────────────────────────────────────
@@ -407,7 +407,7 @@ export class AdmisiAdminService {
     if (existing) {
       const [updated] = await db
         .update(selectionScores)
-        .set({ score, notes: notes || null, scoredBy })
+        .set({ score: String(score), notes: notes || null, scoredBy })
         .where(eq(selectionScores.id, existing.id))
         .returning();
       return updated;
@@ -415,7 +415,7 @@ export class AdmisiAdminService {
 
     const [newScore] = await db
       .insert(selectionScores)
-      .values({ applicationId, componentId, score, scoredBy, notes: notes || null })
+      .values({ applicationId, componentId, score: String(score), scoredBy, notes: notes || null })
       .returning();
 
     return newScore;
@@ -567,6 +567,10 @@ export class AdmisiAdminService {
     if (!app) throw new Error('Pendaftaran tidak ditemukan');
     if (app.status !== 're_registration') throw new Error('Status harus daftar ulang untuk menerbitkan NIM');
 
+    // Fetch user email before transaction
+    const [user] = await db.select({ email: users.email }).from(users).where(eq(users.id, app.userId)).limit(1);
+    if (!user) throw new Error('User tidak ditemukan');
+
     return db.transaction(async (tx) => {
       // Update application
       await tx
@@ -579,13 +583,13 @@ export class AdmisiAdminService {
         })
         .where(eq(applications.id, applicationId));
 
-      // Insert into mahasiswa
+      // Insert into mahasiswa with user email directly
       const [mhs] = await tx
         .insert(mahasiswa)
         .values({
           nim,
           nama: app.namaLengkap || '',
-          email: '', // Will be set from user
+          email: user.email,
           angkatan: String(new Date().getFullYear()),
           programStudiId: app.prodiPilihan1,
           status: 'aktif',
@@ -603,15 +607,8 @@ export class AdmisiAdminService {
         })
         .returning({ id: mahasiswa.id });
 
-      // Update user role to mahasiswa and link email
+      // Update user role to mahasiswa
       await tx.update(users).set({ role: 'mahasiswa', isActive: true }).where(eq(users.id, app.userId));
-
-      // Update user email on mahasiswa record
-      const [user] = await tx.select({ email: users.email }).from(users).where(eq(users.id, app.userId)).limit(1);
-
-      if (user) {
-        await tx.update(mahasiswa).set({ email: user.email }).where(eq(mahasiswa.id, mhs.id));
-      }
 
       // Log
       await tx.insert(applicationLogs).values({
@@ -823,7 +820,7 @@ export class AdmisiAdminService {
       .orderBy(paymentVirtualAccounts.createdAt);
   }
 
-  static async verifyPayment(vaId: number, adminId: number) {
+  static async verifyVAPayment(vaId: number, adminId: number) {
     const [va] = await db
       .update(paymentVirtualAccounts)
       .set({ isPaid: true, paidAt: new Date(), verifiedBy: adminId })

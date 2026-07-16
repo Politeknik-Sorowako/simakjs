@@ -1,12 +1,5 @@
+import { ArcElement, Chart, Legend, PieController, Title, Tooltip } from 'chart.js';
 import { createEffect, createSignal, onCleanup } from 'solid-js';
-import {
-  Chart,
-  PieController,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
 
 Chart.register(PieController, ArcElement, Title, Tooltip, Legend);
 
@@ -42,12 +35,14 @@ export function PieChart(props: PieChartProps) {
       type: 'doughnut',
       data: {
         labels: props.labels,
-        datasets: [{
-          data: props.data,
-          backgroundColor: props.backgroundColors || defaultColors,
-          borderWidth: 2,
-          borderColor: isDark ? '#1e293b' : '#ffffff',
-        }],
+        datasets: [
+          {
+            data: props.data,
+            backgroundColor: props.backgroundColors || defaultColors,
+            borderWidth: 2,
+            borderColor: isDark ? '#1e293b' : '#ffffff',
+          },
+        ],
       },
       options: {
         responsive: true,
@@ -58,7 +53,9 @@ export function PieChart(props: PieChartProps) {
             position: 'bottom',
             labels: { color: textColor, font: { size: 11 }, padding: 12 },
           },
-          title: props.title ? { display: true, text: props.title, color: textColor, font: { size: 13, weight: 'bold' } } : undefined,
+          title: props.title
+            ? { display: true, text: props.title, color: textColor, font: { size: 13, weight: 'bold' } }
+            : undefined,
         },
       },
     });

@@ -1,12 +1,12 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
+import { BarChart, StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
-import { StatCard, BarChart } from '../../components/charts';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { useAuth } from '../../contexts/AuthContext';
-import { mahasiswaController } from '../../controllers/mahasiswaController';
-import { khsController } from '../../controllers/khsController';
-import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import { useToast } from '../../contexts/ToastContext';
+import { khsController } from '../../controllers/khsController';
+import { mahasiswaController } from '../../controllers/mahasiswaController';
+import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import { ExportColumn } from '../../utils/export';
 
 export default function LaporanRekapNilai() {
@@ -27,7 +27,9 @@ export default function LaporanRekapNilai() {
       if (!periodeId) return null;
       try {
         return await khsController.getRekapPerProdi(periodeId);
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
   );
 
@@ -37,7 +39,9 @@ export default function LaporanRekapNilai() {
       if (!mhsId) return null;
       try {
         return await khsController.getRekapNilai(mhsId, periode || undefined);
-      } catch { return null; }
+      } catch {
+        return null;
+      }
     },
   );
 
@@ -70,7 +74,9 @@ export default function LaporanRekapNilai() {
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Rekap Nilai</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">Rekapitulasi nilai per semester untuk evaluasi akademik dan penentuan kelulusan</p>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+              Rekapitulasi nilai per semester untuk evaluasi akademik dan penentuan kelulusan
+            </p>
           </div>
           <Show when={rekapProdi()}>
             <ExportButtonGroup
@@ -86,7 +92,9 @@ export default function LaporanRekapNilai() {
         {/* Filter */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4">
           <div class="flex-1">
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">Periode Akademik</label>
+            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+              Periode Akademik
+            </label>
             <select
               class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={selectedPeriode()}
@@ -97,7 +105,9 @@ export default function LaporanRekapNilai() {
             </select>
           </div>
           <div class="flex-1">
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">Cari Mahasiswa</label>
+            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+              Cari Mahasiswa
+            </label>
             <input
               type="text"
               placeholder="NIM atau Nama..."
@@ -129,7 +139,9 @@ export default function LaporanRekapNilai() {
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                         <td class="py-3 px-5 text-center text-secondary-600">{p.totalMahasiswa}</td>
-                        <td class="py-3 px-5 text-center font-bold text-brand-600">{p.rataIP > 0 ? p.rataIP.toFixed(2) : '-'}</td>
+                        <td class="py-3 px-5 text-center font-bold text-brand-600">
+                          {p.rataIP > 0 ? p.rataIP.toFixed(2) : '-'}
+                        </td>
                       </tr>
                     )}
                   </For>
@@ -161,7 +173,11 @@ export default function LaporanRekapNilai() {
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-mono text-secondary-600">{m.nim}</td>
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
-                        <td class="py-3 px-5"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700">{m.status}</span></td>
+                        <td class="py-3 px-5">
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700">
+                            {m.status}
+                          </span>
+                        </td>
                         <td class="py-3 px-5 text-center">
                           <button
                             onClick={() => setSelectedMhsId(selectedMhsId() === m.id ? null : m.id)}
@@ -190,7 +206,9 @@ export default function LaporanRekapNilai() {
                     <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
                       Detail Nilai: {data.mahasiswa.nama}
                     </h3>
-                    <p class="text-[10px] text-secondary-400">{data.mahasiswa.nim} - {data.mahasiswa.prodi}</p>
+                    <p class="text-[10px] text-secondary-400">
+                      {data.mahasiswa.nim} - {data.mahasiswa.prodi}
+                    </p>
                   </div>
                   <div class="flex items-center gap-4">
                     <div class="text-right">

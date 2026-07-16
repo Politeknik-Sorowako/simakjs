@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { AdmisiController } from '../controllers/admisi.controller';
 import { AdmisiAdminController } from '../controllers/admisi-admin.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   createApplicationSchema,
   registerCalonSchema,
@@ -11,6 +12,7 @@ import {
 } from '../schemas/admisi.schema';
 
 export const admisiRoutes = new Elysia({ prefix: '/admisi' })
+  .use(authMiddleware)
   // ─── PUBLIC ROUTES ───────────────────────────────────────────────
   .post('/register', AdmisiController.register, registerCalonSchema)
   .post('/verify-email', AdmisiController.verifyEmail, verifyEmailSchema)
@@ -36,7 +38,7 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
   .post('/applications/:id/documents', AdmisiController.uploadDocument, {
     type: 'none',
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Upload file dokumen' },
-  })
+  } as any)
   .post('/applications/:id/documents/link', AdmisiController.submitDocumentLink, submitDocumentLinkSchema)
   .get('/applications/:id/documents', AdmisiController.getDocuments, {
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Lihat dokumen pendaftaran' },

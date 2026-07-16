@@ -514,7 +514,7 @@ export class YudisiumService {
           const kurikulumId = kurikulumPerMahasiswa.get(mahasiswaId) ?? null;
 
           const compIds = komponenWithSubCpmk.map((c) => c.id);
-          let studentGrades: typeof nilaiKomponenMahasiswa.$inferSelect[] = [];
+          let studentGrades: (typeof nilaiKomponenMahasiswa.$inferSelect)[] = [];
           if (compIds.length > 0) {
             studentGrades = await tx
               .select()

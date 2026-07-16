@@ -1,6 +1,6 @@
+import { sql } from 'drizzle-orm';
 import { users } from '../models/schema';
 import { db } from '../utils/db';
-import { sql } from 'drizzle-orm';
 
 async function reset() {
   console.log('=== MEMULAI RESET DATABASE ===');
@@ -38,7 +38,7 @@ async function reset() {
     'konversi_nilai',
     'skala_predikat_kelulusan',
     'pengajuan_cuti',
-    'mahasiswa_keluar'
+    'mahasiswa_keluar',
   ];
 
   try {

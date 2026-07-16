@@ -1,13 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import {
-  capaianCpmk,
-  cpmk,
-  kelasKuliah,
-  komponenNilai,
-  krs,
-  nilaiKomponenMahasiswa,
-  subCpmk,
-} from '../models/schema';
+import { capaianCpmk, cpmk, kelasKuliah, komponenNilai, krs, nilaiKomponenMahasiswa, subCpmk } from '../models/schema';
 import { db } from '../utils/db';
 
 export class CapaianCpmkService {
@@ -85,12 +77,17 @@ export class CapaianCpmkService {
 
         // Get all component grades for this student
         const compIds = komponenList.map((c) => c.id);
-        let studentGrades: typeof nilaiKomponenMahasiswa.$inferSelect[] = [];
+        let studentGrades: (typeof nilaiKomponenMahasiswa.$inferSelect)[] = [];
         if (compIds.length > 0) {
           studentGrades = await tx
             .select()
             .from(nilaiKomponenMahasiswa)
-            .where(and(eq(nilaiKomponenMahasiswa.krsId, krsItem.id), inArray(nilaiKomponenMahasiswa.komponenNilaiId, compIds)));
+            .where(
+              and(
+                eq(nilaiKomponenMahasiswa.krsId, krsItem.id),
+                inArray(nilaiKomponenMahasiswa.komponenNilaiId, compIds),
+              ),
+            );
         }
 
         const gradeMap = new Map<number, number>();

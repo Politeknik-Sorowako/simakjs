@@ -74,7 +74,7 @@ export class PelanggaranService {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [totals] = await db
-      .select({ totalPelanggaran: count(), totalMahasiswa: count().distinct() })
+      .select({ totalPelanggaran: count(), totalMahasiswa: sql<number>`count(distinct ${pelanggaran.mahasiswaId})` })
       .from(pelanggaran)
       .innerJoin(mhs, eq(pelanggaran.mahasiswaId, mhs.id))
       .where(whereClause);

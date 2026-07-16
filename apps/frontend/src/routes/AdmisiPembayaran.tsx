@@ -1,5 +1,5 @@
+import { useNavigate, useParams } from '@solidjs/router';
 import { createResource, createSignal, For, Show } from 'solid-js';
-import { useParams, useNavigate } from '@solidjs/router';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../contexts/ToastContext';
@@ -14,12 +14,13 @@ export default function AdmisiPembayaran() {
   const [generating, setGenerating] = createSignal(false);
   const [vaResult, setVaResult] = createSignal<any>(null);
 
-  const [app] = createResource(() => Number(params.id), (id) =>
-    admisiController.getApplicationDetail(id).then((r) => r.data),
+  const [app] = createResource(
+    () => Number(params.id),
+    (id) => admisiController.getApplicationDetail(id).then((r) => r.data),
   );
   const [banks] = createResource(() => admisiController.getActiveBanks());
   const [paymentStatus] = createResource(
-    () => vaResult() ? null : Number(params.id),
+    () => (vaResult() ? null : Number(params.id)),
     (id) => admisiController.getPaymentStatus(id).then((r) => r.data),
   );
 
@@ -46,7 +47,10 @@ export default function AdmisiPembayaran() {
   return (
     <MainLayout>
       <div class="p-4 md:p-6 max-w-3xl mx-auto">
-        <button onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)} class="text-sm text-brand-600 hover:text-brand-700 mb-4">
+        <button
+          onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}
+          class="text-sm text-brand-600 hover:text-brand-700 mb-4"
+        >
           ← Kembali ke Detail
         </button>
 
@@ -66,7 +70,9 @@ export default function AdmisiPembayaran() {
                 Bank: {va.nama || `ID ${va.vaBankId}`} | Rp {va.nominal?.toLocaleString('id-ID')}
               </div>
               {!va.isPaid && (
-                <p class="text-xs text-secondary-400 mt-2">Transfer ke nomor VA di atas. Pembayaran akan diverifikasi oleh admin.</p>
+                <p class="text-xs text-secondary-400 mt-2">
+                  Transfer ke nomor VA di atas. Pembayaran akan diverifikasi oleh admin.
+                </p>
               )}
             </div>
           )}
@@ -87,14 +93,20 @@ export default function AdmisiPembayaran() {
                     }`}
                   >
                     <div class="flex items-center gap-3">
-                      <div class={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        selectedBank() === bank.id ? 'border-brand-500' : 'border-secondary-300'
-                      }`}>
+                      <div
+                        class={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          selectedBank() === bank.id ? 'border-brand-500' : 'border-secondary-300'
+                        }`}
+                      >
                         {selectedBank() === bank.id && <div class="w-2.5 h-2.5 rounded-full bg-brand-500" />}
                       </div>
                       <div>
                         <span class="font-medium">{bank.nama}</span>
-                        {bank.isMidtrans && <span class="text-xs ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">Otomatis</span>}
+                        {bank.isMidtrans && (
+                          <span class="text-xs ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                            Otomatis
+                          </span>
+                        )}
                       </div>
                     </div>
                     <span class="text-xs text-secondary-400">Kode: {bank.kode}</span>
@@ -105,7 +117,9 @@ export default function AdmisiPembayaran() {
           </div>
 
           <div class="flex gap-3">
-            <Button variant="secondary" onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}>Batal</Button>
+            <Button variant="secondary" onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}>
+              Batal
+            </Button>
             <Button onClick={handleGenerate} disabled={!selectedBank() || generating()}>
               {generating() ? 'Memproses...' : 'Generate Virtual Account'}
             </Button>

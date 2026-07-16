@@ -3,7 +3,7 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class EvaluasiKurikulumController {
-  static async getAll({ query, getCurrentUser }: AuthContext) {
+  static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const page = query.page ? parseInt(query.page) : 1;
     const limit = query.limit ? parseInt(query.limit) : 10;
@@ -13,7 +13,7 @@ export class EvaluasiKurikulumController {
     return await EvaluasiKurikulumService.getAll(page, limit, kurikulumId, periodeId, status);
   }
 
-  static async getById({ params, getCurrentUser }: AuthContext) {
+  static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const id = parseInt(params.id);
     const data = await EvaluasiKurikulumService.getById(id);
@@ -23,7 +23,7 @@ export class EvaluasiKurikulumController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
       set.status = 403;
@@ -37,7 +37,7 @@ export class EvaluasiKurikulumController {
     return newData;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
       set.status = 403;
@@ -51,7 +51,7 @@ export class EvaluasiKurikulumController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
       set.status = 403;

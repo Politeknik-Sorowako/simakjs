@@ -57,7 +57,9 @@ export default function Pengguna() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex flex-col gap-1">
-            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Manajemen Pengguna</h1>
+            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
+              Manajemen Pengguna
+            </h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Aktivasi akun, pencarian, dan manajemen otorisasi peran (role) pengguna SIMAK.
             </p>
@@ -88,7 +90,9 @@ export default function Pengguna() {
         />
 
         <Show when={usersRes.loading}>
-          <div class="flex justify-center py-12 text-secondary-400 dark:text-secondary-200">Memuat data pengguna...</div>
+          <div class="flex justify-center py-12 text-secondary-400 dark:text-secondary-200">
+            Memuat data pengguna...
+          </div>
         </Show>
 
         <Show when={!usersRes.loading && usersRes()}>
@@ -97,7 +101,9 @@ export default function Pengguna() {
               <For each={usersRes()?.data}>
                 {(user) => (
                   <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
-                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-secondary-800 dark:text-white">{user.nama}</td>
+                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-secondary-800 dark:text-white">
+                      {user.nama}
+                    </td>
                     <td class="whitespace-nowrap px-6 py-4 text-secondary-500 dark:text-secondary-200">{user.email}</td>
                     <td class="whitespace-nowrap px-6 py-4 text-secondary-600 dark:text-secondary-200">
                       <select
@@ -186,9 +192,16 @@ export default function Pengguna() {
               <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                 <div>
                   <p class="text-sm text-secondary-500 dark:text-secondary-200">
-                    Menampilkan Halaman <span class="font-semibold text-secondary-700 dark:text-secondary-200">{page()}</span> dari{' '}
-                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">{usersRes()?.meta?.totalPages || 1}</span> ({' '}
-                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">{usersRes()?.meta?.total || 0}</span> total pengguna)
+                    Menampilkan Halaman{' '}
+                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">{page()}</span> dari{' '}
+                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">
+                      {usersRes()?.meta?.totalPages || 1}
+                    </span>{' '}
+                    ({' '}
+                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">
+                      {usersRes()?.meta?.total || 0}
+                    </span>{' '}
+                    total pengguna)
                   </p>
                 </div>
                 <div class="flex gap-2">

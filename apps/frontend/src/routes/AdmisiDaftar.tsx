@@ -37,7 +37,8 @@ export default function AdmisiDaftar() {
           <div class="text-5xl mb-4">📧</div>
           <h2 class="text-xl font-bold mb-2">Cek Email Anda</h2>
           <p class="text-sm text-secondary-500 dark:text-secondary-300 mb-6">
-            Kami telah mengirim email verifikasi ke <strong>{email()}</strong>. Silakan klik link di email untuk mengaktifkan akun.
+            Kami telah mengirim email verifikasi ke <strong>{email()}</strong>. Silakan klik link di email untuk
+            mengaktifkan akun.
           </p>
           <Button onClick={() => navigate('/login')}>Ke Halaman Login</Button>
         </div>
@@ -51,13 +52,35 @@ export default function AdmisiDaftar() {
         <div class="text-center mb-6">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mx-auto mb-2" />
           <h2 class="text-2xl font-bold">Daftar Akun PMB</h2>
-          <p class="text-sm text-secondary-500 dark:text-secondary-300">Penerimaan Mahasiswa Baru Politeknik Sorowako</p>
+          <p class="text-sm text-secondary-500 dark:text-secondary-300">
+            Penerimaan Mahasiswa Baru Politeknik Sorowako
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-          <Input label="Nama Lengkap" required value={nama()} onInput={(e) => setNama(e.currentTarget.value)} disabled={loading()} />
-          <Input label="Email" type="email" required value={email()} onInput={(e) => setEmail(e.currentTarget.value)} disabled={loading()} />
-          <Input label="Password" type="password" required value={password()} onInput={(e) => setPassword(e.currentTarget.value)} disabled={loading()} />
+          <Input
+            label="Nama Lengkap"
+            required
+            value={nama()}
+            onInput={(e) => setNama(e.currentTarget.value)}
+            disabled={loading()}
+          />
+          <Input
+            label="Email"
+            type="email"
+            required
+            value={email()}
+            onInput={(e) => setEmail(e.currentTarget.value)}
+            disabled={loading()}
+          />
+          <Input
+            label="Password"
+            type="password"
+            required
+            value={password()}
+            onInput={(e) => setPassword(e.currentTarget.value)}
+            disabled={loading()}
+          />
 
           <Button type="submit" disabled={loading()} class="w-full mt-2">
             {loading() ? 'Memproses...' : 'Daftar Sekarang'}
@@ -66,7 +89,9 @@ export default function AdmisiDaftar() {
 
         <p class="text-center text-xs text-secondary-500 mt-4">
           Sudah punya akun?{' '}
-          <A href="/login" class="text-brand-600 hover:text-brand-700 font-semibold">Masuk</A>
+          <A href="/login" class="text-brand-600 hover:text-brand-700 font-semibold">
+            Masuk
+          </A>
         </p>
       </div>
     </div>

@@ -11,7 +11,7 @@ export default function AdmisiJadwal() {
   const [saving, setSaving] = createSignal(false);
 
   const [schedules, { refetch }] = createResource(
-    () => sessionFilter() ? Number(sessionFilter()) : undefined,
+    () => (sessionFilter() ? Number(sessionFilter()) : undefined),
     (sid) => admisiAdminController.getExamSchedules(sid),
   );
 
@@ -56,23 +56,26 @@ export default function AdmisiJadwal() {
           </div>
           <div class="flex gap-3">
             <input
-              type="number" placeholder="Sesi ID"
+              type="number"
+              placeholder="Sesi ID"
               value={sessionFilter()}
               onInput={(e) => setSessionFilter(e.currentTarget.value)}
               class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm w-32 bg-white dark:bg-secondary-800"
             />
-            <Button onClick={() => setShowForm(!showForm())}>
-              {showForm() ? 'Batal' : '+ Jadwal Baru'}
-            </Button>
+            <Button onClick={() => setShowForm(!showForm())}>{showForm() ? 'Batal' : '+ Jadwal Baru'}</Button>
           </div>
         </div>
 
         <Show when={showForm()}>
-          <form onSubmit={handleCreate} class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6 grid md:grid-cols-3 gap-4">
+          <form
+            onSubmit={handleCreate}
+            class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6 grid md:grid-cols-3 gap-4"
+          >
             <div>
               <label class="text-sm font-medium block mb-1">ID Peserta</label>
               <input
-                required value={form().applicationId || ''}
+                required
+                value={form().applicationId || ''}
                 onInput={(e) => setForm((p) => ({ ...p, applicationId: e.currentTarget.value }))}
                 class="w-full px-3 py-2 border border-secondary-300 rounded-lg text-sm bg-white dark:bg-secondary-800"
               />
@@ -80,7 +83,8 @@ export default function AdmisiJadwal() {
             <div>
               <label class="text-sm font-medium block mb-1">Tipe Ujian</label>
               <select
-                required value={form().tipeUjian || ''}
+                required
+                value={form().tipeUjian || ''}
                 onChange={(e) => setForm((p) => ({ ...p, tipeUjian: e.currentTarget.value }))}
                 class="w-full px-3 py-2 border border-secondary-300 rounded-lg text-sm bg-white dark:bg-secondary-800"
               >
@@ -94,7 +98,9 @@ export default function AdmisiJadwal() {
             <div>
               <label class="text-sm font-medium block mb-1">Tanggal</label>
               <input
-                required type="date" value={form().tanggal || ''}
+                required
+                type="date"
+                value={form().tanggal || ''}
                 onInput={(e) => setForm((p) => ({ ...p, tanggal: e.currentTarget.value }))}
                 class="w-full px-3 py-2 border border-secondary-300 rounded-lg text-sm bg-white dark:bg-secondary-800"
               />
@@ -102,7 +108,9 @@ export default function AdmisiJadwal() {
             <div>
               <label class="text-sm font-medium block mb-1">Jam Mulai</label>
               <input
-                required type="time" value={form().waktuMulai || ''}
+                required
+                type="time"
+                value={form().waktuMulai || ''}
                 onInput={(e) => setForm((p) => ({ ...p, waktuMulai: e.currentTarget.value }))}
                 class="w-full px-3 py-2 border border-secondary-300 rounded-lg text-sm bg-white dark:bg-secondary-800"
               />
@@ -110,7 +118,8 @@ export default function AdmisiJadwal() {
             <div>
               <label class="text-sm font-medium block mb-1">Jam Selesai</label>
               <input
-                type="time" value={form().waktuSelesai || ''}
+                type="time"
+                value={form().waktuSelesai || ''}
                 onInput={(e) => setForm((p) => ({ ...p, waktuSelesai: e.currentTarget.value }))}
                 class="w-full px-3 py-2 border border-secondary-300 rounded-lg text-sm bg-white dark:bg-secondary-800"
               />
@@ -139,13 +148,16 @@ export default function AdmisiJadwal() {
             <div>
               <label class="text-sm font-medium block mb-1">Reviewer ID (opsional)</label>
               <input
-                type="number" value={form().reviewerId || ''}
+                type="number"
+                value={form().reviewerId || ''}
                 onInput={(e) => setForm((p) => ({ ...p, reviewerId: e.currentTarget.value }))}
                 class="w-full px-3 py-2 border border-secondary-300 rounded-lg text-sm bg-white dark:bg-secondary-800"
               />
             </div>
             <div class="md:col-span-3">
-              <Button type="submit" disabled={saving()}>{saving() ? 'Menyimpan...' : 'Buat Jadwal'}</Button>
+              <Button type="submit" disabled={saving()}>
+                {saving() ? 'Menyimpan...' : 'Buat Jadwal'}
+              </Button>
             </div>
           </form>
         </Show>
@@ -167,9 +179,14 @@ export default function AdmisiJadwal() {
                 {(s: any) => (
                   <tr class="border-b border-secondary-100 dark:border-secondary-800">
                     <td class="py-3 px-4">{s.applicationId}</td>
-                    <td class="py-3 px-4"><span class="capitalize">{s.tipeUjian}</span></td>
+                    <td class="py-3 px-4">
+                      <span class="capitalize">{s.tipeUjian}</span>
+                    </td>
                     <td class="py-3 px-4">{s.tanggal}</td>
-                    <td class="py-3 px-4">{s.waktuMulai}{s.waktuSelesai ? ` - ${s.waktuSelesai}` : ''}</td>
+                    <td class="py-3 px-4">
+                      {s.waktuMulai}
+                      {s.waktuSelesai ? ` - ${s.waktuSelesai}` : ''}
+                    </td>
                     <td class="py-3 px-4">
                       <span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{s.lokasiType}</span>
                       <Show when={s.lokasiDetail}>
@@ -177,7 +194,9 @@ export default function AdmisiJadwal() {
                       </Show>
                     </td>
                     <td class="py-3 px-4">
-                      <span class={`text-xs px-2 py-0.5 rounded-full ${s.isCompleted ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      <span
+                        class={`text-xs px-2 py-0.5 rounded-full ${s.isCompleted ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+                      >
                         {s.isCompleted ? 'Selesai' : 'Terjadwal'}
                       </span>
                     </td>
