@@ -57,7 +57,11 @@ export class PresensiController {
     return detail;
   }
 
-  static async getRekapKehadiran({ query, set, getCurrentUser }: AuthContext<any, { kelasKuliahId?: string }>): Promise<any> {
+  static async getRekapKehadiran({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { kelasKuliahId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;

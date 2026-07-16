@@ -3,7 +3,11 @@ import { MahasiswaService } from '../services/mahasiswa.service';
 import { AuthContext, PaginationQuery, parsePagination } from '../utils/types';
 
 export class MahasiswaController {
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
+  static async getAll({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;

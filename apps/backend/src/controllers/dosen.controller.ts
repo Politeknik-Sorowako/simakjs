@@ -3,7 +3,11 @@ import { DosenService } from '../services/dosen.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class DosenController {
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
+  static async getAll({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;

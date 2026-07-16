@@ -71,7 +71,12 @@ export class AdmisiController {
     }
   }
 
-  static async updateApplication({ params, body, getCurrentUser, set }: AuthContext<any, any, { id: string }>): Promise<any> {
+  static async updateApplication({
+    params,
+    body,
+    getCurrentUser,
+    set,
+  }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -114,7 +119,11 @@ export class AdmisiController {
     return { data: apps };
   }
 
-  static async getApplicationDetail({ params, getCurrentUser, set }: AuthContext<any, any, { id: string }>): Promise<any> {
+  static async getApplicationDetail({
+    params,
+    getCurrentUser,
+    set,
+  }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {

@@ -72,7 +72,10 @@ export class AdmisiAdminController {
     }
   }
 
-  static async removeProdiFromSession({ params, set }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
+  static async removeProdiFromSession({
+    params,
+    set,
+  }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     try {
       await AdmisiAdminService.removeProdiFromSession(Number(params.id), Number(params.prodiId));
       return { message: 'Program studi berhasil dihapus dari sesi' };
@@ -82,7 +85,10 @@ export class AdmisiAdminController {
     }
   }
 
-  static async toggleProdiActive({ params, set }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
+  static async toggleProdiActive({
+    params,
+    set,
+  }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     try {
       const result = await AdmisiAdminService.toggleProdiActive(Number(params.id), Number(params.prodiId));
       return { message: result.isActive ? 'Prodi diaktifkan' : 'Prodi dinonaktifkan', isActive: result.isActive };
@@ -257,7 +263,11 @@ export class AdmisiAdminController {
     }
   }
 
-  static async verifyAllDocuments({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>): Promise<any> {
+  static async verifyAllDocuments({
+    params,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       const result = await AdmisiAdminService.verifyAllDocuments(Number(params.id), user!.id);
@@ -430,7 +440,12 @@ export class AdmisiAdminController {
     return { available };
   }
 
-  static async issueNIM({ params, body, set, getCurrentUser }: AuthContext<{ nim: string }, any, { id: string }>): Promise<any> {
+  static async issueNIM({
+    params,
+    body,
+    set,
+    getCurrentUser,
+  }: AuthContext<{ nim: string }, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       const result = await AdmisiAdminService.issueNIM(Number(params.id), body.nim, user!.id);

@@ -11,7 +11,10 @@ export class AngkatanKurikulumController {
     return await AngkatanKurikulumService.getAll(prodiId);
   }
 
-  static async getAktif({ query, set }: AuthContext<any, { programStudiId?: number; angkatan?: string }>): Promise<any> {
+  static async getAktif({
+    query,
+    set,
+  }: AuthContext<any, { programStudiId?: number; angkatan?: string }>): Promise<any> {
     if (!query?.programStudiId || !query?.angkatan) {
       set.status = 400;
       return { error: 'Parameter programStudiId dan angkatan diperlukan' };

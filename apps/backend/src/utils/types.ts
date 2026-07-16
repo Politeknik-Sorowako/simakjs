@@ -9,7 +9,10 @@ export interface UserPayload {
   role: UserRole;
 }
 
-export type AuthContext<TBody = any, TQuery = any, TParams = any> = Omit<Context, 'body' | 'query' | 'params' | 'set' | 'status'> & {
+export type AuthContext<TBody = any, TQuery = any, TParams = any> = Omit<
+  Context,
+  'body' | 'query' | 'params' | 'set' | 'status'
+> & {
   body: TBody;
   query: TQuery;
   params: TParams;

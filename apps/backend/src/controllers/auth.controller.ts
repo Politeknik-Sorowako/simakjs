@@ -24,12 +24,7 @@ export class AuthController {
     }
   }
 
-  static async login({
-    body,
-    jwt,
-    set,
-    cookie,
-  }: AuthContext & { jwt: any }): Promise<any> {
+  static async login({ body, jwt, set, cookie }: AuthContext & { jwt: any }): Promise<any> {
     if (process.env.NODE_ENV !== 'test') {
       const now = Date.now();
       const limitKey = `login:${body.email.toLowerCase().trim()}`;
