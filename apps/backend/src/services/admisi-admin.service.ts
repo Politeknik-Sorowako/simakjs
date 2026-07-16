@@ -407,7 +407,7 @@ export class AdmisiAdminService {
     if (existing) {
       const [updated] = await db
         .update(selectionScores)
-        .set({ score, notes: notes || null, scoredBy })
+        .set({ score: String(score), notes: notes || null, scoredBy })
         .where(eq(selectionScores.id, existing.id))
         .returning();
       return updated;
@@ -415,7 +415,7 @@ export class AdmisiAdminService {
 
     const [newScore] = await db
       .insert(selectionScores)
-      .values({ applicationId, componentId, score, scoredBy, notes: notes || null })
+      .values({ applicationId, componentId, score: String(score), scoredBy, notes: notes || null })
       .returning();
 
     return newScore;
@@ -820,7 +820,7 @@ export class AdmisiAdminService {
       .orderBy(paymentVirtualAccounts.createdAt);
   }
 
-  static async verifyPayment(vaId: number, adminId: number) {
+  static async verifyVAPayment(vaId: number, adminId: number) {
     const [va] = await db
       .update(paymentVirtualAccounts)
       .set({ isPaid: true, paidAt: new Date(), verifiedBy: adminId })

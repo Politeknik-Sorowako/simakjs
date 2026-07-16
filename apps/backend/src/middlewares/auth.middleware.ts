@@ -8,10 +8,10 @@ export const authMiddleware = new Elysia({ name: 'auth-middleware' }).use(jwtPlu
       const cookieToken = ctx.cookie?.access_token?.value;
       const authHeader = ctx.headers['authorization'];
       const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookieToken;
-      if (!token) return null;
+      if (typeof token !== 'string') return null;
       const payload = await ctx.jwt.verify(token);
       if (!payload) return null;
-      return payload as UserPayload;
+      return payload as unknown as UserPayload;
     },
   };
 });

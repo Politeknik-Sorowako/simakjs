@@ -5,9 +5,9 @@ import {
   cpl,
   cplMataKuliah,
   kelasKuliah,
+  krs,
   kurikulum,
   kurikulumMataKuliah,
-  krs,
   mahasiswa,
   periodeAkademik,
 } from '../models/schema';
@@ -102,10 +102,7 @@ export class CapaianCplService {
     }
 
     const mhsList = await db.query.mahasiswa.findMany({
-      where: and(
-        eq(mahasiswa.programStudiId, kur.programStudiId),
-        inArray(mahasiswa.angkatan, angkatanList),
-      ),
+      where: and(eq(mahasiswa.programStudiId, kur.programStudiId), inArray(mahasiswa.angkatan, angkatanList)),
     });
 
     return await db.transaction(async (tx) => {

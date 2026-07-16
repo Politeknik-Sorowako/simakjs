@@ -5,7 +5,7 @@ import { db } from '../utils/db';
 import { AuthContext } from '../utils/types';
 
 export class UserController {
-  static async getAll({ query, set, getCurrentUser }: AuthContext) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user || user.role !== 'admin') {
@@ -59,7 +59,7 @@ export class UserController {
     }
   }
 
-  static async toggleActive({ params, set, getCurrentUser }: AuthContext) {
+  static async toggleActive({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
@@ -107,7 +107,7 @@ export class UserController {
     }
   }
 
-  static async updateRole({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateRole({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
@@ -158,7 +158,7 @@ export class UserController {
     }
   }
 
-  static async updateProfile({ body, set, getCurrentUser }: AuthContext) {
+  static async updateProfile({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
       if (!currentUser) {
@@ -229,7 +229,7 @@ export class UserController {
     }
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -248,7 +248,7 @@ export class UserController {
     return result;
   }
 
-  static async resetPassword({ params, body, set, getCurrentUser }: AuthContext) {
+  static async resetPassword({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
@@ -279,7 +279,7 @@ export class UserController {
     }
   }
 
-  static async generateAccounts({ body, set, getCurrentUser }: AuthContext) {
+  static async generateAccounts({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

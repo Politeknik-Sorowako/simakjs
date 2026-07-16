@@ -125,22 +125,38 @@ export default function MahasiswaKeluarPage() {
     switch (status) {
       case 'keluar':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">Keluar (Resign)</span>
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+            Keluar (Resign)
+          </span>
         );
       case 'drop_out':
         return (
           <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">Drop Out</span>
         );
       case 'pindah':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400">Pindah</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400">
+            Pindah
+          </span>
+        );
       case 'wafat':
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">Wafat</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">
+            Wafat
+          </span>
+        );
       case 'non_aktif':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">Non-Aktif</span>
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+            Non-Aktif
+          </span>
         );
       default:
-        return <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">{status}</span>;
+        return (
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-secondary-100 text-secondary-800 dark:text-white">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -183,7 +199,10 @@ export default function MahasiswaKeluarPage() {
           </div>
         </div>
 
-        <Show when={!records.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
+        <Show
+          when={!records.loading}
+          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
+        >
           <Table
             headers={[
               'NIM',
@@ -208,13 +227,20 @@ export default function MahasiswaKeluarPage() {
             >
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
-                  <td class="px-6 py-4 font-mono text-sm font-semibold text-secondary-600 dark:text-secondary-200">{item.mahasiswa?.nim}</td>
+                  <td class="px-6 py-4 font-mono text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+                    {item.mahasiswa?.nim}
+                  </td>
                   <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.mahasiswa?.nama}</td>
                   <td class="px-6 py-4">{getStatusBadge(item.statusBaru)}</td>
-                  <td class="px-6 py-4 text-secondary-700 dark:text-secondary-200">{item.periodeAkademik?.nama || item.periodeId}</td>
+                  <td class="px-6 py-4 text-secondary-700 dark:text-secondary-200">
+                    {item.periodeAkademik?.nama || item.periodeId}
+                  </td>
                   <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">{item.tanggalKeluar}</td>
                   <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">
-                    <Show when={item.noSk} fallback={<span class="text-secondary-300 dark:border-secondary-700">-</span>}>
+                    <Show
+                      when={item.noSk}
+                      fallback={<span class="text-secondary-300 dark:border-secondary-700">-</span>}
+                    >
                       <div>No SK: {item.noSk}</div>
                       <div class="text-xs text-secondary-400 dark:text-secondary-200">Tgl SK: {item.tanggalSk}</div>
                     </Show>
@@ -322,7 +348,9 @@ export default function MahasiswaKeluarPage() {
 
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nomor SK Yudisium/Keluar</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Nomor SK Yudisium/Keluar
+              </label>
               <Input placeholder="Nomor SK" value={noSk()} onInput={(e) => setNoSk(e.currentTarget.value)} />
             </div>
             <div class="flex flex-col gap-1.5">
@@ -332,7 +360,9 @@ export default function MahasiswaKeluarPage() {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nomor Ijazah (jika lulus/lulus gelar)</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+              Nomor Ijazah (jika lulus/lulus gelar)
+            </label>
             <Input
               placeholder="Nomor Ijazah"
               value={nomorIjazah()}
@@ -341,7 +371,9 @@ export default function MahasiswaKeluarPage() {
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Alasan Keluar/Catatan</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+              Alasan Keluar/Catatan
+            </label>
             <textarea
               rows={2}
               class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"

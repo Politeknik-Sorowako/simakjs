@@ -1,5 +1,5 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../contexts/ToastContext';
@@ -81,7 +81,8 @@ export default function AdmisiPendaftaranBaru() {
                 >
                   <div class="font-semibold">{session.nama}</div>
                   <div class="text-xs text-secondary-500 mt-1">
-                    {new Date(session.tanggalMulai).toLocaleDateString('id-ID')} - {new Date(session.tanggalTutup).toLocaleDateString('id-ID')}
+                    {new Date(session.tanggalMulai).toLocaleDateString('id-ID')} -{' '}
+                    {new Date(session.tanggalTutup).toLocaleDateString('id-ID')}
                   </div>
                   <Show when={session.deskripsi}>
                     <div class="text-xs text-secondary-400 mt-1">{session.deskripsi}</div>

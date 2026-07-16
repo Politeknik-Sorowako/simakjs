@@ -9,7 +9,10 @@ export function MainLayout(props: { children: JSX.Element }) {
     <div class="min-h-screen flex bg-secondary-50/50 dark:bg-secondary-950 text-secondary-800 dark:text-secondary-200 relative overflow-hidden transition-colors duration-200">
       {/* Mobile Sidebar Backdrop Overlay */}
       <Show when={isOpen()}>
-        <div onClick={() => setIsOpen(false)} class="fixed inset-0 bg-secondary-900/40 backdrop-blur-sm z-30 md:hidden" />
+        <div
+          onClick={() => setIsOpen(false)}
+          class="fixed inset-0 bg-secondary-900/40 backdrop-blur-sm z-30 md:hidden"
+        />
       </Show>
 
       {/* Sidebar Navigation */}

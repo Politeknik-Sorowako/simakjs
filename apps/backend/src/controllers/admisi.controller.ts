@@ -5,7 +5,7 @@ import { AuthContext } from '../utils/types';
 export const STORAGE_DIR = resolve(import.meta.dir!, '../../storage/applications');
 
 export class AdmisiController {
-  static async register({ body, set }: AuthContext<{ email: string; password: string; nama: string }>) {
+  static async register({ body, set }: AuthContext<{ email: string; password: string; nama: string }>): Promise<any> {
     try {
       const user = await AdmisiService.register(body.email, body.password, body.nama);
       set.status = 201;
@@ -20,7 +20,7 @@ export class AdmisiController {
     }
   }
 
-  static async verifyEmail({ body, set }: AuthContext<{ token: string }>) {
+  static async verifyEmail({ body, set }: AuthContext<{ token: string }>): Promise<any> {
     try {
       const user = await AdmisiService.verifyEmailToken(body.token);
       if (!user) {
@@ -40,7 +40,7 @@ export class AdmisiController {
     return { data: sessions };
   }
 
-  static async getSessionProdis({ params }: AuthContext<any, { id: string }>) {
+  static async getSessionProdis({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const prodis = await AdmisiService.getSessionProdis(Number(params.id));
     return { data: prodis };
   }
@@ -49,7 +49,7 @@ export class AdmisiController {
     body,
     getCurrentUser,
     set,
-  }: AuthContext<{ sessionId: number; prodiPilihan1: number; prodiPilihan2?: number }>) {
+  }: AuthContext<{ sessionId: number; prodiPilihan1: number; prodiPilihan2?: number }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -71,7 +71,7 @@ export class AdmisiController {
     }
   }
 
-  static async updateApplication({ params, body, getCurrentUser, set }: AuthContext<any, { id: string }>) {
+  static async updateApplication({ params, body, getCurrentUser, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -87,7 +87,7 @@ export class AdmisiController {
     }
   }
 
-  static async submitApplication({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
+  static async submitApplication({ params, getCurrentUser, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -103,7 +103,7 @@ export class AdmisiController {
     }
   }
 
-  static async getMyApplications({ getCurrentUser, set }: AuthContext) {
+  static async getMyApplications({ getCurrentUser, set }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -114,7 +114,7 @@ export class AdmisiController {
     return { data: apps };
   }
 
-  static async getApplicationDetail({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
+  static async getApplicationDetail({ params, getCurrentUser, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -209,7 +209,7 @@ export class AdmisiController {
     body,
     getCurrentUser,
     set,
-  }: AuthContext<{ requirementId: number; fileLink: string }, { id: string }>) {
+  }: AuthContext<{ requirementId: number; fileLink: string }, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -227,7 +227,7 @@ export class AdmisiController {
     }
   }
 
-  static async deleteDocument({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
+  static async deleteDocument({ params, getCurrentUser, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -248,7 +248,7 @@ export class AdmisiController {
     body,
     getCurrentUser,
     set,
-  }: AuthContext<{ nominal: number; bankAsal?: string; namaPengirim?: string }>) {
+  }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -256,15 +256,16 @@ export class AdmisiController {
         return { error: 'Unauthorized' };
       }
 
-      if (!body.nominal || body.nominal <= 0) {
+      const paymentBody = body as { nominal: number; bankAsal?: string; namaPengirim?: string };
+      if (!paymentBody.nominal || paymentBody.nominal <= 0) {
         set.status = 400;
         return { error: 'Nominal wajib diisi' };
       }
 
       const payment = await AdmisiService.submitPaymentProof(Number(params.id), user.id, {
-        nominal: body.nominal,
-        bankAsal: body.bankAsal || undefined,
-        namaPengirim: body.namaPengirim || undefined,
+        nominal: paymentBody.nominal,
+        bankAsal: paymentBody.bankAsal || undefined,
+        namaPengirim: paymentBody.namaPengirim || undefined,
         buktiBayarPath: '',
       });
 
@@ -276,7 +277,7 @@ export class AdmisiController {
     }
   }
 
-  static async getDocuments({ params, getCurrentUser, set }: AuthContext<any, { id: string }>) {
+  static async getDocuments({ params, getCurrentUser, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -292,8 +293,8 @@ export class AdmisiController {
     }
   }
 
-  static async getDocumentRequirements({ query }: AuthContext<any, any, { sessionId: string; prodiId?: string }>) {
-    const { sessionId } = query;
+  static async getDocumentRequirements({ query }: AuthContext<any, any>): Promise<any> {
+    const sessionId = query.sessionId as string | undefined;
     if (!sessionId) return { data: [] };
     const { db } = await import('../utils/db');
     const { documentRequirements } = await import('../models/schema');

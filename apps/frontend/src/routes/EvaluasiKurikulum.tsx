@@ -216,7 +216,8 @@ export default function EvaluasiKurikulum() {
                           <div>
                             <h3 class="text-white font-medium">{item.aspek}</h3>
                             <p class="text-xs text-secondary-400">
-                              {item.periode?.nama || 'Semua Periode'} • {new Date(item.createdAt).toLocaleDateString('id-ID')}
+                              {item.periode?.nama || 'Semua Periode'} •{' '}
+                              {new Date(item.createdAt).toLocaleDateString('id-ID')}
                             </p>
                           </div>
                           <div class="flex items-center gap-2">
@@ -262,11 +263,7 @@ export default function EvaluasiKurikulum() {
 
               <Show when={data().meta.totalPages > 1}>
                 <div class="flex justify-center gap-2 mt-4">
-                  <Button
-                    variant="secondary"
-                    disabled={page() <= 1}
-                    onClick={() => setPage(page() - 1)}
-                  >
+                  <Button variant="secondary" disabled={page() <= 1} onClick={() => setPage(page() - 1)}>
                     Prev
                   </Button>
                   <span class="text-white px-4 py-2">

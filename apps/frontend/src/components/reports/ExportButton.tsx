@@ -1,5 +1,5 @@
 import { Show } from 'solid-js';
-import { exportToExcel, exportToPDF, exportToCSV, ExportColumn } from '../../utils/export';
+import { ExportColumn, exportToCSV, exportToExcel, exportToPDF } from '../../utils/export';
 
 interface ExportButtonProps {
   data: () => any[];

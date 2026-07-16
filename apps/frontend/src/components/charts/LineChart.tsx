@@ -1,16 +1,16 @@
-import { createEffect, createSignal, onCleanup } from 'solid-js';
 import {
+  CategoryScale,
   Chart,
+  Filler,
+  Legend,
+  LinearScale,
   LineController,
   LineElement,
   PointElement,
-  CategoryScale,
-  LinearScale,
   Title,
   Tooltip,
-  Legend,
-  Filler,
 } from 'chart.js';
+import { createEffect, createSignal, onCleanup } from 'solid-js';
 
 Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend, Filler);
 
@@ -66,7 +66,9 @@ export function LineChart(props: LineChartProps) {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: props.datasets.length > 1, labels: { color: textColor, font: { size: 11 } } },
-          title: props.title ? { display: true, text: props.title, color: textColor, font: { size: 13, weight: 'bold' } } : undefined,
+          title: props.title
+            ? { display: true, text: props.title, color: textColor, font: { size: 13, weight: 'bold' } }
+            : undefined,
         },
         scales: {
           x: { ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } },

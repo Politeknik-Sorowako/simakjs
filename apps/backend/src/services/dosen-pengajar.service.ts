@@ -26,7 +26,7 @@ export class DosenPengajarService {
 
     const total = totalResult?.total || 0;
 
-    const rows = await db
+    const rows = await (db as any)
       .select({
         id: dosenPengajarKelas.id,
         dosenId: dosenPengajarKelas.dosenId,

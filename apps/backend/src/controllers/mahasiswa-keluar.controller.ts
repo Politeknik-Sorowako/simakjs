@@ -2,7 +2,7 @@ import { MahasiswaKeluarService } from '../services/mahasiswa-keluar.service';
 import { AuthContext } from '../utils/types';
 
 export class MahasiswaKeluarController {
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !['admin', 'prodi'].includes(user.role)) {
       set.status = 403;
@@ -29,7 +29,7 @@ export class MahasiswaKeluarController {
     }
   }
 
-  static async getAll({ query, set, getCurrentUser }: AuthContext) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -49,7 +49,7 @@ export class MahasiswaKeluarController {
     });
   }
 
-  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>) {
+  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -58,7 +58,7 @@ export class MahasiswaKeluarController {
     return await MahasiswaKeluarService.getStats(query?.periodeId);
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !['admin', 'prodi'].includes(user.role)) {
       set.status = 403;

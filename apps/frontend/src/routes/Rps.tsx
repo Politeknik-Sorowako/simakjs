@@ -1,5 +1,5 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { useSearchParams } from '@solidjs/router';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -21,7 +21,9 @@ export default function Rps() {
     try {
       const res = await periodeAkademikController.getAll(undefined, 1, 100);
       return res.data;
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   });
 
   // Cascading selections
@@ -111,11 +113,16 @@ export default function Rps() {
   const [copyError, setCopyError] = createSignal('');
 
   const loadSourceRps = async (periodeId: string) => {
-    if (!periodeId || !selectedMk()) { setSourceRps(null); return; }
+    if (!periodeId || !selectedMk()) {
+      setSourceRps(null);
+      return;
+    }
     try {
       const data = await rpsController.getRps(selectedMk(), periodeId);
       setSourceRps(data);
-    } catch { setSourceRps(null); }
+    } catch {
+      setSourceRps(null);
+    }
   };
 
   const handleCopyRps = async () => {
@@ -172,7 +179,10 @@ export default function Rps() {
   const openAddTopik = () => {
     setEditTopikId(null);
     setPertemuanKe((rps()?.topik?.length || 0) + 1);
-    setTopikText(''); setSubTopik(''); setMetode('Ceramah & Diskusi'); setErrorMsg('');
+    setTopikText('');
+    setSubTopik('');
+    setMetode('Ceramah & Diskusi');
+    setErrorMsg('');
     setShowTopikModal(true);
   };
 
@@ -190,7 +200,12 @@ export default function Rps() {
     e.preventDefault();
     setErrorMsg('');
     try {
-      const payload = { pertemuanKe: Number(pertemuanKe()), topik: topikText(), subTopik: subTopik(), metode: metode() };
+      const payload = {
+        pertemuanKe: Number(pertemuanKe()),
+        topik: topikText(),
+        subTopik: subTopik(),
+        metode: metode(),
+      };
       if (editTopikId()) {
         await rpsController.updateTopik(editTopikId()!, payload);
       } else {
@@ -198,12 +213,19 @@ export default function Rps() {
       }
       setShowTopikModal(false);
       refetchRps();
-    } catch (e: any) { setErrorMsg(e.message || 'Gagal menyimpan topik'); }
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Gagal menyimpan topik');
+    }
   };
 
   const handleDeleteTopik = async (id: number) => {
     if (!confirm('Hapus topik pertemuan ini?')) return;
-    try { await rpsController.deleteTopik(id); refetchRps(); } catch (e: any) { alert(e.message || 'Gagal menghapus topik'); }
+    try {
+      await rpsController.deleteTopik(id);
+      refetchRps();
+    } catch (e: any) {
+      alert(e.message || 'Gagal menghapus topik');
+    }
   };
 
   // Evaluasi handlers
@@ -214,12 +236,19 @@ export default function Rps() {
   const [evalDeskripsi, setEvalDeskripsi] = createSignal('');
 
   const openAddEval = () => {
-    setEditEvalId(null); setNamaEvaluasi(''); setBobotEvaluasi(10); setEvalDeskripsi(''); setErrorMsg('');
+    setEditEvalId(null);
+    setNamaEvaluasi('');
+    setBobotEvaluasi(10);
+    setEvalDeskripsi('');
+    setErrorMsg('');
     setShowEvalModal(true);
   };
   const openEditEval = (item: RencanaEvaluasi) => {
-    setEditEvalId(item.id); setNamaEvaluasi(item.namaEvaluasi);
-    setBobotEvaluasi(Number(item.bobotEvaluasi)); setEvalDeskripsi(item.deskripsi || ''); setErrorMsg('');
+    setEditEvalId(item.id);
+    setNamaEvaluasi(item.namaEvaluasi);
+    setBobotEvaluasi(Number(item.bobotEvaluasi));
+    setEvalDeskripsi(item.deskripsi || '');
+    setErrorMsg('');
     setShowEvalModal(true);
   };
 
@@ -228,30 +257,49 @@ export default function Rps() {
     setErrorMsg('');
     const newBobot = Number(bobotEvaluasi());
     const currentTotal = (rencanaEvals() || []).reduce(
-      (sum, item) => sum + (item.id === editEvalId() ? 0 : Number(item.bobotEvaluasi)), 0,
+      (sum, item) => sum + (item.id === editEvalId() ? 0 : Number(item.bobotEvaluasi)),
+      0,
     );
     if (currentTotal + newBobot > 100) {
       setErrorMsg(`Total bobot evaluasi (${currentTotal + newBobot}%) tidak boleh melebihi 100%`);
       return;
     }
     try {
-      const payload = { mataKuliahId: selectedMk(), namaEvaluasi: namaEvaluasi(), bobotEvaluasi: newBobot, deskripsi: evalDeskripsi() };
-      if (editEvalId()) { await rpsController.updateRencanaEvaluasi(editEvalId()!, payload); }
-      else { await rpsController.createRencanaEvaluasi(payload); }
-      setShowEvalModal(false); refetchEvals();
-    } catch (e: any) { setErrorMsg(e.message || 'Gagal menyimpan rencana evaluasi'); }
+      const payload = {
+        mataKuliahId: selectedMk(),
+        namaEvaluasi: namaEvaluasi(),
+        bobotEvaluasi: newBobot,
+        deskripsi: evalDeskripsi(),
+      };
+      if (editEvalId()) {
+        await rpsController.updateRencanaEvaluasi(editEvalId()!, payload);
+      } else {
+        await rpsController.createRencanaEvaluasi(payload);
+      }
+      setShowEvalModal(false);
+      refetchEvals();
+    } catch (e: any) {
+      setErrorMsg(e.message || 'Gagal menyimpan rencana evaluasi');
+    }
   };
 
   const handleDeleteEval = async (id: number) => {
     if (!confirm('Hapus rencana evaluasi ini?')) return;
-    try { await rpsController.deleteRencanaEvaluasi(id); refetchEvals(); } catch (e: any) { alert(e.message || 'Gagal menghapus rencana evaluasi'); }
+    try {
+      await rpsController.deleteRencanaEvaluasi(id);
+      refetchEvals();
+    } catch (e: any) {
+      alert(e.message || 'Gagal menghapus rencana evaluasi');
+    }
   };
 
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
         <div>
-          <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Rencana Pembelajaran Semester (RPS)</h1>
+          <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">
+            Rencana Pembelajaran Semester (RPS)
+          </h1>
           <p class="text-sm text-secondary-500 dark:text-secondary-200">
             Susun rencana ajar mingguan, topik pertemuan, dan metode evaluasi penilaian
           </p>
@@ -264,10 +312,22 @@ export default function Rps() {
             <select
               class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               value={selectedPeriode()}
-              onChange={(e) => { setSelectedPeriode(e.currentTarget.value); setSelectedProdi(undefined); setSelectedKurikulum(undefined); setSelectedMk(0); }}
+              onChange={(e) => {
+                setSelectedPeriode(e.currentTarget.value);
+                setSelectedProdi(undefined);
+                setSelectedKurikulum(undefined);
+                setSelectedMk(0);
+              }}
             >
               <option value="">-- Pilih Periode --</option>
-              <For each={allPeriodes()}>{(p) => <option value={p.id}>{p.nama}{p.aktif ? ' (Aktif)' : ''}</option>}</For>
+              <For each={allPeriodes()}>
+                {(p) => (
+                  <option value={p.id}>
+                    {p.nama}
+                    {p.aktif ? ' (Aktif)' : ''}
+                  </option>
+                )}
+              </For>
             </select>
           </div>
           <div class="flex flex-col gap-1">
@@ -275,10 +335,20 @@ export default function Rps() {
             <select
               class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               value={selectedProdi() || ''}
-              onChange={(e) => { setSelectedProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined); setSelectedKurikulum(undefined); setSelectedMk(0); }}
+              onChange={(e) => {
+                setSelectedProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
+                setSelectedKurikulum(undefined);
+                setSelectedMk(0);
+              }}
             >
               <option value="">-- Pilih Prodi --</option>
-              <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.jenjang} - {p.nama}</option>}</For>
+              <For each={prodis()?.data}>
+                {(p) => (
+                  <option value={p.id}>
+                    {p.jenjang} - {p.nama}
+                  </option>
+                )}
+              </For>
             </select>
           </div>
           <div class="flex flex-col gap-1">
@@ -286,10 +356,19 @@ export default function Rps() {
             <select
               class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               value={selectedKurikulum() || ''}
-              onChange={(e) => { setSelectedKurikulum(e.currentTarget.value ? Number(e.currentTarget.value) : undefined); setSelectedMk(0); }}
+              onChange={(e) => {
+                setSelectedKurikulum(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
+                setSelectedMk(0);
+              }}
             >
               <option value="">-- Pilih Kurikulum --</option>
-              <For each={kurikulums()?.data}>{(k) => <option value={k.id}>{k.nama} ({k.kode})</option>}</For>
+              <For each={kurikulums()?.data}>
+                {(k) => (
+                  <option value={k.id}>
+                    {k.nama} ({k.kode})
+                  </option>
+                )}
+              </For>
             </select>
           </div>
           <div class="flex flex-col gap-1">
@@ -297,14 +376,19 @@ export default function Rps() {
             <select
               class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               value={selectedMk()}
-              onChange={(e) => { setSelectedMk(Number(e.currentTarget.value)); setSearchParams({}, { replace: true }); }}
+              onChange={(e) => {
+                setSelectedMk(Number(e.currentTarget.value));
+                setSearchParams({}, { replace: true });
+              }}
             >
               <option value={0}>-- Pilih MK --</option>
-              <For each={mkOptions()}>{(kmk) => (
-                <option value={kmk.mataKuliahId}>
-                  {kmk.mataKuliah?.kode} - {kmk.mataKuliah?.nama} (Sem {kmk.semester})
-                </option>
-              )}</For>
+              <For each={mkOptions()}>
+                {(kmk) => (
+                  <option value={kmk.mataKuliahId}>
+                    {kmk.mataKuliah?.kode} - {kmk.mataKuliah?.nama} (Sem {kmk.semester})
+                  </option>
+                )}
+              </For>
             </select>
           </div>
         </div>
@@ -315,20 +399,23 @@ export default function Rps() {
             <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200 mb-2">
               Kelas yang mengambil MK ini ({classes()?.length || 0})
             </h3>
-            <Show when={classes()?.length > 0} fallback={
-              <p class="text-xs text-secondary-500">Belum ada kelas untuk MK ini di periode tersebut.</p>
-            }>
+            <Show
+              when={classes()?.length > 0}
+              fallback={<p class="text-xs text-secondary-500">Belum ada kelas untuk MK ini di periode tersebut.</p>}
+            >
               <div class="flex flex-wrap gap-2">
-                <For each={classes()}>{(kelas) => (
-                  <span class="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/30 rounded-lg text-xs font-semibold text-brand-700 dark:text-brand-400 border border-brand-100 dark:border-brand-800">
-                    {kelas.namaKelas}
-                    <Show when={kelas.dosenPengajarKelas?.length}>
-                      <span class="text-secondary-500 font-normal ml-1">
-                        ({kelas.dosenPengajarKelas.map((dp: any) => dp.dosen?.nama).join(', ')})
-                      </span>
-                    </Show>
-                  </span>
-                )}</For>
+                <For each={classes()}>
+                  {(kelas) => (
+                    <span class="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/30 rounded-lg text-xs font-semibold text-brand-700 dark:text-brand-400 border border-brand-100 dark:border-brand-800">
+                      {kelas.namaKelas}
+                      <Show when={kelas.dosenPengajarKelas?.length}>
+                        <span class="text-secondary-500 font-normal ml-1">
+                          ({kelas.dosenPengajarKelas.map((dp: any) => dp.dosen?.nama).join(', ')})
+                        </span>
+                      </Show>
+                    </span>
+                  )}
+                </For>
               </div>
             </Show>
           </div>
@@ -339,7 +426,14 @@ export default function Rps() {
           <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
             <details class="group">
               <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-secondary-700 dark:text-secondary-200">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
                 Copy RPS dari Periode Sebelumnya
               </summary>
               <div class="mt-3 flex flex-wrap items-end gap-3">
@@ -348,7 +442,10 @@ export default function Rps() {
                   <select
                     class="w-full h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm"
                     value={sourcePeriodeId()}
-                    onChange={(e) => { setSourcePeriodeId(e.currentTarget.value); loadSourceRps(e.currentTarget.value); }}
+                    onChange={(e) => {
+                      setSourcePeriodeId(e.currentTarget.value);
+                      loadSourceRps(e.currentTarget.value);
+                    }}
                   >
                     <option value="">-- Pilih Periode --</option>
                     <For each={allPeriodes()?.filter((p) => p.id !== selectedPeriode())}>
@@ -386,96 +483,124 @@ export default function Rps() {
             </div>
           </Show>
           <Show when={!(rps.loading || classes.loading)}>
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* RPS Header and Topics */}
-            <div class="lg:col-span-2 flex flex-col gap-6">
-              <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
-                <div class="flex justify-between items-start border-b border-secondary-100 dark:border-secondary-800 pb-4">
-                  <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Deskripsi & CPL</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* RPS Header and Topics */}
+              <div class="lg:col-span-2 flex flex-col gap-6">
+                <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
+                  <div class="flex justify-between items-start border-b border-secondary-100 dark:border-secondary-800 pb-4">
+                    <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Deskripsi & CPL</h2>
+                    <Show when={rps()}>
+                      <Button variant="secondary" onClick={openEditRpsHeader}>
+                        Edit Deskripsi
+                      </Button>
+                    </Show>
+                  </div>
+                  <Show when={!rps()}>
+                    <div class="p-6 text-center border-2 border-dashed border-secondary-200 dark:border-secondary-800 rounded-lg">
+                      <p class="text-sm text-secondary-500 dark:text-secondary-200 mb-4">
+                        RPS belum disusun untuk mata kuliah & periode ini.
+                      </p>
+                      <Button onClick={handleCreateRps}>Buat RPS Baru</Button>
+                    </div>
+                  </Show>
                   <Show when={rps()}>
-                    <Button variant="secondary" onClick={openEditRpsHeader}>Edit Deskripsi</Button>
+                    <div>
+                      <h3 class="text-sm font-semibold text-secondary-500">Deskripsi Mata Kuliah</h3>
+                      <p class="text-sm text-secondary-700 dark:text-secondary-200 mt-1 whitespace-pre-line">
+                        {rps()?.deskripsi || 'Belum diisi.'}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 class="text-sm font-semibold text-secondary-500">Capaian Pembelajaran Lulusan (CPL)</h3>
+                      <p class="text-sm text-secondary-700 dark:text-secondary-200 mt-1 whitespace-pre-line">
+                        {rps()?.cplProdi || 'Belum diisi.'}
+                      </p>
+                    </div>
                   </Show>
                 </div>
-                <Show when={!rps()}>
-                  <div class="p-6 text-center border-2 border-dashed border-secondary-200 dark:border-secondary-800 rounded-lg">
-                    <p class="text-sm text-secondary-500 dark:text-secondary-200 mb-4">
-                      RPS belum disusun untuk mata kuliah & periode ini.
-                    </p>
-                    <Button onClick={handleCreateRps}>Buat RPS Baru</Button>
-                  </div>
-                </Show>
-                <Show when={rps()}>
-                  <div>
-                    <h3 class="text-sm font-semibold text-secondary-500">Deskripsi Mata Kuliah</h3>
-                    <p class="text-sm text-secondary-700 dark:text-secondary-200 mt-1 whitespace-pre-line">{rps()?.deskripsi || 'Belum diisi.'}</p>
-                  </div>
-                  <div>
-                    <h3 class="text-sm font-semibold text-secondary-500">Capaian Pembelajaran Lulusan (CPL)</h3>
-                    <p class="text-sm text-secondary-700 dark:text-secondary-200 mt-1 whitespace-pre-line">{rps()?.cplProdi || 'Belum diisi.'}</p>
-                  </div>
-                </Show>
-              </div>
 
-              <Show when={rps()}>
-                <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
-                  <div class="flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Rencana Pertemuan Mingguan</h2>
-                    <Button onClick={openAddTopik}>+ Tambah Pertemuan</Button>
-                  </div>
-                  <Table headers={['Mng', 'Topik Pembahasan', 'Metode', 'Aksi']}>
-                    <Show when={!rps()?.topik || rps()?.topik?.length === 0}>
-                      <tr><td colspan="4" class="p-6 text-center text-secondary-500">Belum ada topik pertemuan.</td></tr>
-                    </Show>
-                    <For each={[...(rps()?.topik || [])].sort((a, b) => a.pertemuanKe - b.pertemuanKe)}>
-                      {(t) => (
-                        <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
-                          <td class="px-6 py-4 text-sm font-bold text-secondary-900 dark:text-white">#{t.pertemuanKe}</td>
-                          <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
-                            <div class="font-medium">{t.topik}</div>
-                            <Show when={t.subTopik}><div class="text-xs text-secondary-500 mt-0.5">{t.subTopik}</div></Show>
-                          </td>
-                          <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{t.metode || '-'}</td>
-                          <td class="px-6 py-4 text-sm space-x-1">
-                            <Button variant="secondary" onClick={() => openEditTopik(t)}>Edit</Button>
-                            <Button variant="danger" onClick={() => handleDeleteTopik(t.id)}>Hapus</Button>
+                <Show when={rps()}>
+                  <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
+                    <div class="flex justify-between items-center">
+                      <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Rencana Pertemuan Mingguan</h2>
+                      <Button onClick={openAddTopik}>+ Tambah Pertemuan</Button>
+                    </div>
+                    <Table headers={['Mng', 'Topik Pembahasan', 'Metode', 'Aksi']}>
+                      <Show when={!rps()?.topik || rps()?.topik?.length === 0}>
+                        <tr>
+                          <td colspan="4" class="p-6 text-center text-secondary-500">
+                            Belum ada topik pertemuan.
                           </td>
                         </tr>
+                      </Show>
+                      <For each={[...(rps()?.topik || [])].sort((a, b) => a.pertemuanKe - b.pertemuanKe)}>
+                        {(t) => (
+                          <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
+                            <td class="px-6 py-4 text-sm font-bold text-secondary-900 dark:text-white">
+                              #{t.pertemuanKe}
+                            </td>
+                            <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
+                              <div class="font-medium">{t.topik}</div>
+                              <Show when={t.subTopik}>
+                                <div class="text-xs text-secondary-500 mt-0.5">{t.subTopik}</div>
+                              </Show>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
+                              {t.metode || '-'}
+                            </td>
+                            <td class="px-6 py-4 text-sm space-x-1">
+                              <Button variant="secondary" onClick={() => openEditTopik(t)}>
+                                Edit
+                              </Button>
+                              <Button variant="danger" onClick={() => handleDeleteTopik(t.id)}>
+                                Hapus
+                              </Button>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </Table>
+                  </div>
+                </Show>
+              </div>
+
+              {/* Rencana Evaluasi */}
+              <div class="flex flex-col gap-6">
+                <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
+                  <div class="flex justify-between items-center border-b border-secondary-100 dark:border-secondary-800 pb-4">
+                    <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Rencana Evaluasi</h2>
+                    <Button onClick={openAddEval}>+ Tambah</Button>
+                  </div>
+                  <div class="flex flex-col gap-3">
+                    <Show when={rencanaEvals()?.length === 0}>
+                      <p class="text-sm text-secondary-500 text-center py-6">Belum ada komponen penilaian.</p>
+                    </Show>
+                    <For each={rencanaEvals()}>
+                      {(item) => (
+                        <div class="p-3 border border-secondary-100 dark:border-secondary-800 rounded-lg flex justify-between items-start bg-secondary-50/50 dark:bg-secondary-800/30">
+                          <div>
+                            <div class="font-semibold text-sm text-secondary-800 dark:text-white">
+                              {item.namaEvaluasi} ({item.bobotEvaluasi}%)
+                            </div>
+                            <Show when={item.deskripsi}>
+                              <div class="text-xs text-secondary-500 mt-1">{item.deskripsi}</div>
+                            </Show>
+                          </div>
+                          <div class="flex gap-1 ml-2">
+                            <Button variant="secondary" onClick={() => openEditEval(item)}>
+                              Edit
+                            </Button>
+                            <Button variant="danger" onClick={() => handleDeleteEval(item.id)}>
+                              Hapus
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </For>
-                  </Table>
-                </div>
-              </Show>
-            </div>
-
-            {/* Rencana Evaluasi */}
-            <div class="flex flex-col gap-6">
-              <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
-                <div class="flex justify-between items-center border-b border-secondary-100 dark:border-secondary-800 pb-4">
-                  <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Rencana Evaluasi</h2>
-                  <Button onClick={openAddEval}>+ Tambah</Button>
-                </div>
-                <div class="flex flex-col gap-3">
-                  <Show when={rencanaEvals()?.length === 0}>
-                    <p class="text-sm text-secondary-500 text-center py-6">Belum ada komponen penilaian.</p>
-                  </Show>
-                  <For each={rencanaEvals()}>
-                    {(item) => (
-                      <div class="p-3 border border-secondary-100 dark:border-secondary-800 rounded-lg flex justify-between items-start bg-secondary-50/50 dark:bg-secondary-800/30">
-                        <div>
-                          <div class="font-semibold text-sm text-secondary-800 dark:text-white">{item.namaEvaluasi} ({item.bobotEvaluasi}%)</div>
-                          <Show when={item.deskripsi}><div class="text-xs text-secondary-500 mt-1">{item.deskripsi}</div></Show>
-                        </div>
-                        <div class="flex gap-1 ml-2">
-                          <Button variant="secondary" onClick={() => openEditEval(item)}>Edit</Button>
-                          <Button variant="danger" onClick={() => handleDeleteEval(item.id)}>Hapus</Button>
-                        </div>
-                      </div>
-                    )}
-                  </For>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           </Show>
         </Show>
 
@@ -483,65 +608,130 @@ export default function Rps() {
         <Modal show={showRpsModal()} onClose={() => setShowRpsModal(false)} title="Edit Deskripsi RPS">
           <form onSubmit={handleSaveRpsHeader} class="flex flex-col gap-4">
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Deskripsi Mata Kuliah</label>
-              <textarea rows="4" class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" value={deskripsi()} onInput={(e) => setDeskripsi(e.currentTarget.value)} />
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Deskripsi Mata Kuliah
+              </label>
+              <textarea
+                rows="4"
+                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                value={deskripsi()}
+                onInput={(e) => setDeskripsi(e.currentTarget.value)}
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Capaian Pembelajaran Lulusan (CPL)</label>
-              <textarea rows="4" class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" value={cplProdi()} onInput={(e) => setCplProdi(e.currentTarget.value)} />
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Capaian Pembelajaran Lulusan (CPL)
+              </label>
+              <textarea
+                rows="4"
+                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                value={cplProdi()}
+                onInput={(e) => setCplProdi(e.currentTarget.value)}
+              />
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" type="button" onClick={() => setShowRpsModal(false)}>Batal</Button>
+              <Button variant="secondary" type="button" onClick={() => setShowRpsModal(false)}>
+                Batal
+              </Button>
               <Button type="submit">Simpan</Button>
             </div>
           </form>
         </Modal>
 
         {/* Modal Topik */}
-        <Modal show={showTopikModal()} onClose={() => setShowTopikModal(false)} title={editTopikId() ? 'Edit Topik Pertemuan' : 'Tambah Topik Pertemuan'}>
+        <Modal
+          show={showTopikModal()}
+          onClose={() => setShowTopikModal(false)}
+          title={editTopikId() ? 'Edit Topik Pertemuan' : 'Tambah Topik Pertemuan'}
+        >
           <form onSubmit={handleSaveTopik} class="flex flex-col gap-4">
-            <Show when={errorMsg()}><div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg()}</div></Show>
+            <Show when={errorMsg()}>
+              <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg()}</div>
+            </Show>
             <div class="flex flex-col gap-1">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Pertemuan Ke</label>
-              <Input type="number" min="1" max="16" value={pertemuanKe()} onInput={(e) => setPertemuanKe(Number(e.currentTarget.value))} required />
+              <Input
+                type="number"
+                min="1"
+                max="16"
+                value={pertemuanKe()}
+                onInput={(e) => setPertemuanKe(Number(e.currentTarget.value))}
+                required
+              />
             </div>
             <div class="flex flex-col gap-1">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Topik Utama</label>
               <Input type="text" value={topikText()} onInput={(e) => setTopikText(e.currentTarget.value)} required />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Sub-Topik / Materi (Opsional)</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Sub-Topik / Materi (Opsional)
+              </label>
               <Input type="text" value={subTopik()} onInput={(e) => setSubTopik(e.currentTarget.value)} />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Metode Pembelajaran</label>
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Metode Pembelajaran
+              </label>
               <Input type="text" value={metode()} onInput={(e) => setMetode(e.currentTarget.value)} />
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" type="button" onClick={() => setShowTopikModal(false)}>Batal</Button>
+              <Button variant="secondary" type="button" onClick={() => setShowTopikModal(false)}>
+                Batal
+              </Button>
               <Button type="submit">Simpan</Button>
             </div>
           </form>
         </Modal>
 
         {/* Modal Rencana Evaluasi */}
-        <Modal show={showEvalModal()} onClose={() => setShowEvalModal(false)} title={editEvalId() ? 'Edit Rencana Evaluasi' : 'Tambah Rencana Evaluasi'}>
+        <Modal
+          show={showEvalModal()}
+          onClose={() => setShowEvalModal(false)}
+          title={editEvalId() ? 'Edit Rencana Evaluasi' : 'Tambah Rencana Evaluasi'}
+        >
           <form onSubmit={handleSaveEval} class="flex flex-col gap-4">
-            <Show when={errorMsg()}><div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg()}</div></Show>
+            <Show when={errorMsg()}>
+              <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg()}</div>
+            </Show>
             <div class="flex flex-col gap-1">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nama Evaluasi</label>
-              <Input type="text" placeholder="Contoh: UTS, UAS, Tugas Besar" value={namaEvaluasi()} onInput={(e) => setNamaEvaluasi(e.currentTarget.value)} required />
+              <Input
+                type="text"
+                placeholder="Contoh: UTS, UAS, Tugas Besar"
+                value={namaEvaluasi()}
+                onInput={(e) => setNamaEvaluasi(e.currentTarget.value)}
+                required
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Bobot Penilaian (%)</label>
-              <Input type="number" min="1" max="100" value={bobotEvaluasi()} onInput={(e) => setBobotEvaluasi(Number(e.currentTarget.value))} required />
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Bobot Penilaian (%)
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="100"
+                value={bobotEvaluasi()}
+                onInput={(e) => setBobotEvaluasi(Number(e.currentTarget.value))}
+                required
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Deskripsi / Indikator (Opsional)</label>
-              <textarea rows="3" class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" value={evalDeskripsi()} onInput={(e) => setEvalDeskripsi(e.currentTarget.value)} />
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Deskripsi / Indikator (Opsional)
+              </label>
+              <textarea
+                rows="3"
+                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                value={evalDeskripsi()}
+                onInput={(e) => setEvalDeskripsi(e.currentTarget.value)}
+              />
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" type="button" onClick={() => setShowEvalModal(false)}>Batal</Button>
+              <Button variant="secondary" type="button" onClick={() => setShowEvalModal(false)}>
+                Batal
+              </Button>
               <Button type="submit">Simpan</Button>
             </div>
           </form>

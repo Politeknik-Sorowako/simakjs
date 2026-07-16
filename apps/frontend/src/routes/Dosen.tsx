@@ -170,7 +170,9 @@ export default function Dosen() {
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Dosen</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">Kelola data dosen pengajar dan program studi terkait.</p>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+              Kelola data dosen pengajar dan program studi terkait.
+            </p>
           </div>
           <div class="flex gap-2">
             <Show when={selectedIds().length > 0}>
@@ -216,7 +218,10 @@ export default function Dosen() {
           />
         </div>
 
-        <Show when={!dosens.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
+        <Show
+          when={!dosens.loading}
+          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
+        >
           <Table
             headers={[
               <input
@@ -244,7 +249,9 @@ export default function Dosen() {
                       class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
                     />
                   </td>
-                  <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">{item.nip}</td>
+                  <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">
+                    {item.nip}
+                  </td>
                   <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.email}</td>
                   <td class="px-6 py-4 text-secondary-600 dark:text-secondary-200">{item.programStudi?.nama || '-'}</td>

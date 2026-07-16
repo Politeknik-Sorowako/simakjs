@@ -1987,4 +1987,3 @@ export const evaluasiKurikulumRelations = relations(evaluasiKurikulum, ({ one })
     references: [users.id],
   }),
 }));
-

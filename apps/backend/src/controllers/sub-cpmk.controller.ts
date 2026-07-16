@@ -2,13 +2,13 @@ import { SubCpmkService } from '../services/sub-cpmk.service';
 import { AuthContext } from '../utils/types';
 
 export class SubCpmkController {
-  static async getByCpmk({ query, getCurrentUser }: AuthContext) {
+  static async getByCpmk({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const cpmkId = parseInt(query.cpmkId);
     return await SubCpmkService.getByCpmk(cpmkId);
   }
 
-  static async getById({ params, getCurrentUser }: AuthContext) {
+  static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const data = await SubCpmkService.getById(parseInt(params.id));
     if (!data) {
@@ -17,7 +17,7 @@ export class SubCpmkController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -28,7 +28,7 @@ export class SubCpmkController {
     return newData;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -42,7 +42,7 @@ export class SubCpmkController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;

@@ -727,16 +727,26 @@ export default function Yudisium() {
               <form onSubmit={handleAdminVerify} class="flex flex-col gap-4">
                 <div class="text-xs text-secondary-600 flex flex-col gap-1 font-medium">
                   <p>
-                    Nama: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.mahasiswa?.nama}</span>
+                    Nama:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedSubmission()?.mahasiswa?.nama}
+                    </span>
                   </p>
                   <p>
-                    NIM: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.mahasiswa?.nim}</span>
+                    NIM:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedSubmission()?.mahasiswa?.nim}
+                    </span>
                   </p>
                   <p>
-                    Prodi: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.prodi?.nama}</span>
+                    Prodi:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedSubmission()?.prodi?.nama}
+                    </span>
                   </p>
                   <p>
-                    Judul TA: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.judulTa}</span>
+                    Judul TA:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.judulTa}</span>
                   </p>
                 </div>
 

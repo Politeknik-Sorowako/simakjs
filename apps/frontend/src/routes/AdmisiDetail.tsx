@@ -1,10 +1,10 @@
+import { useNavigate, useParams } from '@solidjs/router';
 import { createResource, createSignal, For, Show } from 'solid-js';
-import { useParams, useNavigate } from '@solidjs/router';
+import TimelineStatus from '../components/admisi/TimelineStatus';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { useToast } from '../contexts/ToastContext';
 import { admisiController } from '../controllers/admisiController';
-import TimelineStatus from '../components/admisi/TimelineStatus';
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -43,8 +43,9 @@ export default function AdmisiDetail() {
 
   const [submitting, setSubmitting] = createSignal(false);
 
-  const [app] = createResource(() => Number(params.id), (id) =>
-    admisiController.getApplicationDetail(id).then((r) => r.data),
+  const [app] = createResource(
+    () => Number(params.id),
+    (id) => admisiController.getApplicationDetail(id).then((r) => r.data),
   );
 
   const handleSubmit = async () => {
@@ -87,19 +88,30 @@ export default function AdmisiDetail() {
             <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5">
               <h2 class="font-semibold mb-3">Informasi Pribadi</h2>
               <Show when={app()?.namaLengkap}>
-                <div class="text-sm mb-1"><span class="text-secondary-400">Nama:</span> {app()?.namaLengkap}</div>
+                <div class="text-sm mb-1">
+                  <span class="text-secondary-400">Nama:</span> {app()?.namaLengkap}
+                </div>
               </Show>
               <Show when={app()?.nik}>
-                <div class="text-sm mb-1"><span class="text-secondary-400">NIK:</span> {app()?.nik}</div>
+                <div class="text-sm mb-1">
+                  <span class="text-secondary-400">NIK:</span> {app()?.nik}
+                </div>
               </Show>
               <Show when={app()?.tanggalLahir}>
-                <div class="text-sm mb-1"><span class="text-secondary-400">Tgl Lahir:</span> {new Date(app()?.tanggalLahir).toLocaleDateString('id-ID')}</div>
+                <div class="text-sm mb-1">
+                  <span class="text-secondary-400">Tgl Lahir:</span>{' '}
+                  {new Date(app()?.tanggalLahir).toLocaleDateString('id-ID')}
+                </div>
               </Show>
               <Show when={app()?.jenisKelamin}>
-                <div class="text-sm mb-1"><span class="text-secondary-400">JK:</span> {app()?.jenisKelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</div>
+                <div class="text-sm mb-1">
+                  <span class="text-secondary-400">JK:</span> {app()?.jenisKelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
+                </div>
               </Show>
               <Show when={app()?.asalSekolah}>
-                <div class="text-sm mb-1"><span class="text-secondary-400">Asal Sekolah:</span> {app()?.asalSekolah}</div>
+                <div class="text-sm mb-1">
+                  <span class="text-secondary-400">Asal Sekolah:</span> {app()?.asalSekolah}
+                </div>
               </Show>
             </div>
 
@@ -131,7 +143,11 @@ export default function AdmisiDetail() {
           <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6">
             <div class="flex items-center justify-between mb-3">
               <h2 class="font-semibold">Dokumen</h2>
-              <Show when={app()?.status === 'draft' || app()?.status === 'documents_rejected' || app()?.status === 'returned'}>
+              <Show
+                when={
+                  app()?.status === 'draft' || app()?.status === 'documents_rejected' || app()?.status === 'returned'
+                }
+              >
                 <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/dokumen`)} size="sm">
                   Kelola Dokumen
                 </Button>
@@ -145,7 +161,12 @@ export default function AdmisiDetail() {
                 <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 last:border-0">
                   <div class="flex items-center gap-3 min-w-0">
                     {doc.fileLink ? (
-                      <a href={doc.fileLink} target="_blank" rel="noopener noreferrer" class="text-sm text-brand-600 hover:underline truncate">
+                      <a
+                        href={doc.fileLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-sm text-brand-600 hover:underline truncate"
+                      >
                         🔗 {doc.originalName || 'Link Google Drive'}
                       </a>
                     ) : doc.filePath ? (
@@ -160,7 +181,9 @@ export default function AdmisiDetail() {
                     ) : (
                       <span class="text-sm">{doc.originalName || 'Dokumen'}</span>
                     )}
-                    <span class={`text-xs px-2 py-0.5 rounded-full ${doc.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    <span
+                      class={`text-xs px-2 py-0.5 rounded-full ${doc.isVerified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+                    >
                       {doc.isVerified ? 'Terverifikasi' : 'Menunggu'}
                     </span>
                   </div>
@@ -173,13 +196,16 @@ export default function AdmisiDetail() {
           </div>
 
           {/* Timeline Visual */}
-          <TimelineStatus status={app()?.status || 'draft'} session={{
-            tanggalMulai: app()?.session?.tanggalMulai,
-            tanggalTutup: app()?.session?.tanggalTutup,
-            tanggalVerif: app()?.session?.tanggalVerif,
-            tanggalUjian: app()?.session?.tanggalUjian,
-            tanggalPengumuman: app()?.session?.tanggalPengumuman,
-          }} />
+          <TimelineStatus
+            status={app()?.status || 'draft'}
+            session={{
+              tanggalMulai: app()?.session?.tanggalMulai,
+              tanggalTutup: app()?.session?.tanggalTutup,
+              tanggalVerif: app()?.session?.tanggalVerif,
+              tanggalUjian: app()?.session?.tanggalUjian,
+              tanggalPengumuman: app()?.session?.tanggalPengumuman,
+            }}
+          />
 
           {/* Actions */}
           <Show when={app()?.status === 'draft'}>
@@ -196,9 +222,7 @@ export default function AdmisiDetail() {
                 </Button>
               </Show>
               <Show when={!app()?.isFree}>
-                <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)}>
-                  Bayar Sekarang →
-                </Button>
+                <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)}>Bayar Sekarang →</Button>
               </Show>
             </div>
           </Show>
@@ -206,14 +230,20 @@ export default function AdmisiDetail() {
           <Show when={app()?.status === 'awaiting_payment'}>
             <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
               <p class="text-sm font-semibold text-amber-700 dark:text-amber-400">⏳ Menunggu Pembayaran</p>
-              <p class="text-xs text-amber-600 dark:text-amber-300 mt-1">Lakukan pembayaran melalui VA yang telah digenerate.</p>
+              <p class="text-xs text-amber-600 dark:text-amber-300 mt-1">
+                Lakukan pembayaran melalui VA yang telah digenerate.
+              </p>
               <Button onClick={() => navigate(`/admisi/pembayaran/${params.id}`)} variant="secondary" class="mt-2">
                 Cek Status Pembayaran
               </Button>
             </div>
           </Show>
 
-          <Show when={app()?.status === 'submitted' || app()?.status === 'documents_rejected' || app()?.status === 'returned'}>
+          <Show
+            when={
+              app()?.status === 'submitted' || app()?.status === 'documents_rejected' || app()?.status === 'returned'
+            }
+          >
             <div class="flex gap-3">
               <Button onClick={() => navigate(`/admisi/pendaftaran/${params.id}/edit`)} variant="secondary">
                 Edit Biodata

@@ -27,8 +27,8 @@ import {
   mataKuliah,
   mataKuliahBahanKajian,
   nilaiKomponenMahasiswa,
-  pelanggaran,
   paymentVirtualAccounts,
+  pelanggaran,
   pengajuanYudisium,
   periodeAkademik,
   presensi,
@@ -195,7 +195,6 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
           sksTotal: 4,
           sksTatapMuka: 2,
           sksPraktek: 2,
-          programStudiId: prodi.id,
         })
         .returning();
 

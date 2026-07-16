@@ -20,7 +20,7 @@ export class BimbinganController {
     return dsn ? dsn.id : null;
   }
 
-  static async getByMhsId(ctx: AuthContext<any, any>) {
+  static async getByMhsId(ctx: AuthContext<any, any>): Promise<any> {
     const { params, query, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -127,7 +127,7 @@ export class BimbinganController {
     }
   }
 
-  static async updateBimbingan({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateBimbingan({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -169,7 +169,7 @@ export class BimbinganController {
     }
   }
 
-  static async getMonitoring({ set, getCurrentUser }: AuthContext) {
+  static async getMonitoring({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -185,7 +185,7 @@ export class BimbinganController {
     return await BimbinganService.getMonitoringBimbingan(dosenId);
   }
 
-  static async getRekapBkd({ query, set, getCurrentUser }: AuthContext) {
+  static async getRekapBkd({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -252,7 +252,7 @@ export class BimbinganController {
           const prevPeriode = periodes[activeIdx - 1];
           try {
             const prevKhs = await KhsService.getKhs(mhsId, prevPeriode.id);
-            ipsSemesterLalu = prevKhs.ipSemester;
+            ipsSemesterLalu = prevKhs.summary.ipSemester;
           } catch (e) {}
         }
       }
@@ -260,7 +260,7 @@ export class BimbinganController {
       try {
         const activePId = activePeriode?.id || '20251';
         const currentKhs = await KhsService.getKhs(mhsId, activePId);
-        ipk = currentKhs.ipk;
+        ipk = currentKhs.summary.ipk;
       } catch (e) {}
 
       return {

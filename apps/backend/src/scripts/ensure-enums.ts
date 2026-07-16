@@ -26,11 +26,8 @@ async function ensureEnums() {
 
   for (const fix of ENUM_FIXES) {
     // Check if the type exists first
-    const typeCheck = await pool.query(
-      `SELECT 1 FROM pg_type WHERE typname = $1`,
-      [fix.name]
-    );
-    
+    const typeCheck = await pool.query(`SELECT 1 FROM pg_type WHERE typname = $1`, [fix.name]);
+
     if (typeCheck.rows.length === 0) {
       console.log(`[ENSURE ENUMS] Type ${fix.name} does not exist yet — skipping.`);
       continue;

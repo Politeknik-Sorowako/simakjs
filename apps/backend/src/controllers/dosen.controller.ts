@@ -3,26 +3,26 @@ import { DosenService } from '../services/dosen.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class DosenController {
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery & { programStudiId?: string }>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data dosen.' };
     }
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 10;
+    const page = query?.page ? parseInt(String(query.page)) : 1;
+    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
-    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+    const programStudiId = query?.programStudiId ? parseInt(String(query.programStudiId)) : undefined;
     return await DosenService.getAll(page, limit, search, programStudiId);
   }
 
-  static async getById({ params, set, getCurrentUser }: AuthContext) {
+  static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data dosen.' };
     }
-    const data = await DosenService.getById(parseInt(params.id));
+    const data = await DosenService.getById(parseInt(String(params.id)));
     if (!data) {
       set.status = 404;
       return { error: 'Data tidak ditemukan' };
@@ -30,7 +30,7 @@ export class DosenController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -41,7 +41,7 @@ export class DosenController {
     return newDosen;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -55,7 +55,7 @@ export class DosenController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -69,7 +69,7 @@ export class DosenController {
     return { message: 'Dosen berhasil dihapus' };
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

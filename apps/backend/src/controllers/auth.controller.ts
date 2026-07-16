@@ -6,7 +6,7 @@ const loginRateLimit = new Map<string, { count: number; resetTime: number }>();
 const forgotRateLimit = new Map<string, { count: number; resetTime: number }>();
 
 export class AuthController {
-  static async register({ body, set }: AuthContext) {
+  static async register({ body, set }: AuthContext): Promise<any> {
     if (body.role === 'admin' || body.role === 'prodi' || body.role === 'keuangan') {
       set.status = 403;
       return { error: 'Registrasi dengan role tersebut tidak diizinkan.' };
@@ -29,7 +29,7 @@ export class AuthController {
     jwt,
     set,
     cookie,
-  }: AuthContext & { jwt: { sign: (payload: Record<string, unknown>) => Promise<string> } }) {
+  }: AuthContext & { jwt: any }): Promise<any> {
     if (process.env.NODE_ENV !== 'test') {
       const now = Date.now();
       const limitKey = `login:${body.email.toLowerCase().trim()}`;
@@ -92,7 +92,7 @@ export class AuthController {
     };
   }
 
-  static async forgotPassword({ body, set }: AuthContext) {
+  static async forgotPassword({ body, set }: AuthContext): Promise<any> {
     try {
       const email = (body as { email?: string })?.email;
       if (!email) {
@@ -176,7 +176,7 @@ export class AuthController {
     }
   }
 
-  static async resetPassword({ body, set }: AuthContext) {
+  static async resetPassword({ body, set }: AuthContext): Promise<any> {
     try {
       const token = (body as { token?: string; password?: string })?.token;
       const password = (body as { token?: string; password?: string })?.password;
@@ -252,7 +252,7 @@ export class AuthController {
     }
   }
 
-  static async validateResetToken({ body, set }: AuthContext) {
+  static async validateResetToken({ body, set }: AuthContext): Promise<any> {
     try {
       const token = (body as { token?: string })?.token;
       if (!token) {

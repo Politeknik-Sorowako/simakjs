@@ -112,7 +112,7 @@ export class BimbinganService {
 
   static async addThreadMessage(
     bimbinganId: number,
-    senderRole: 'dosen' | 'mahasiswa' | 'admin',
+    senderRole: 'dosen' | 'mahasiswa' | 'admin' | 'prodi',
     pesan: string,
     tipe?: string,
   ) {
@@ -143,6 +143,7 @@ export class BimbinganService {
       .update(bimbingan)
       .set({
         ...data,
+        tanggalBimbingan: data.tanggalBimbingan ? data.tanggalBimbingan.toISOString().split('T')[0] : undefined,
         updatedAt: new Date(),
       })
       .where(eq(bimbingan.id, bimbinganId))
@@ -164,6 +165,7 @@ export class BimbinganService {
       .values({
         bimbinganId,
         ...data,
+        tanggalBimbingan: data.tanggalBimbingan.toISOString().split('T')[0],
       })
       .returning();
     return newSesi;
@@ -183,6 +185,7 @@ export class BimbinganService {
       .update(sesiBimbingan)
       .set({
         ...data,
+        tanggalBimbingan: data.tanggalBimbingan ? data.tanggalBimbingan.toISOString().split('T')[0] : undefined,
         updatedAt: new Date(),
       })
       .where(eq(sesiBimbingan.id, sesiId))

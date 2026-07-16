@@ -10,7 +10,7 @@ export class YudisiumController {
     return mhs ? mhs.id : null;
   }
 
-  static async getPengajuan({ params, set, getCurrentUser }: AuthContext) {
+  static async getPengajuan({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -40,7 +40,7 @@ export class YudisiumController {
     return result;
   }
 
-  static async submitPengajuan({ params, body, set, getCurrentUser }: AuthContext) {
+  static async submitPengajuan({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -75,7 +75,7 @@ export class YudisiumController {
     }
   }
 
-  static async updateStatus({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateStatus({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -97,7 +97,7 @@ export class YudisiumController {
     }
   }
 
-  static async getAll({ set, getCurrentUser }: AuthContext) {
+  static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -107,7 +107,7 @@ export class YudisiumController {
     return await YudisiumService.getAllPengajuan();
   }
 
-  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>) {
+  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -118,11 +118,11 @@ export class YudisiumController {
 
   // --- GRADE COMPONENTS CONTROLLERS ---
 
-  static async getKomponen({ params }: AuthContext) {
+  static async getKomponen({ params }: AuthContext): Promise<any> {
     return await YudisiumService.getKomponen(parseInt(params.kelasKuliahId));
   }
 
-  static async saveKomponen({ body, set, getCurrentUser }: AuthContext) {
+  static async saveKomponen({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -139,7 +139,7 @@ export class YudisiumController {
     }
   }
 
-  static async getNilaiMahasiswa({ params, set, getCurrentUser }: AuthContext) {
+  static async getNilaiMahasiswa({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -149,7 +149,7 @@ export class YudisiumController {
     return await YudisiumService.getNilaiMahasiswa(parseInt(params.kelasKuliahId));
   }
 
-  static async saveNilaiMahasiswa({ body, set, getCurrentUser }: AuthContext) {
+  static async saveNilaiMahasiswa({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -165,7 +165,7 @@ export class YudisiumController {
     }
   }
 
-  static async lockKelas({ params, set, getCurrentUser }: AuthContext) {
+  static async lockKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -181,7 +181,7 @@ export class YudisiumController {
     }
   }
 
-  static async unlockKelas({ params, set, getCurrentUser }: AuthContext) {
+  static async unlockKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;

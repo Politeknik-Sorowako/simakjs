@@ -3,13 +3,13 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class VisiMisiController {
-  static async getAll({ query, getCurrentUser }: AuthContext) {
+  static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = query.prodiId ? parseInt(query.prodiId) : undefined;
     return await VisiMisiService.getAll(prodiId);
   }
 
-  static async getAktif({ query, getCurrentUser }: AuthContext) {
+  static async getAktif({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = parseInt(query.prodiId);
     const data = await VisiMisiService.getAktif(prodiId);
@@ -19,7 +19,7 @@ export class VisiMisiController {
     return data;
   }
 
-  static async getById({ params, getCurrentUser }: AuthContext) {
+  static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const data = await VisiMisiService.getById(parseInt(params.id));
     if (!data) {
@@ -28,7 +28,7 @@ export class VisiMisiController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -39,7 +39,7 @@ export class VisiMisiController {
     return newData;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -53,7 +53,7 @@ export class VisiMisiController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -67,7 +67,7 @@ export class VisiMisiController {
     return { message: 'Visi Misi berhasil dihapus' };
   }
 
-  static async setAktif({ params, set, getCurrentUser }: AuthContext) {
+  static async setAktif({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -81,7 +81,7 @@ export class VisiMisiController {
     return updated;
   }
 
-  static async import({ body, set, getCurrentUser }: AuthContext) {
+  static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -100,7 +100,7 @@ export class VisiMisiController {
     return result;
   }
 
-  static async getTemplate({ set, getCurrentUser }: AuthContext) {
+  static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     set.headers['content-type'] = 'text/csv; charset=utf-8';
     set.headers['content-disposition'] = 'attachment; filename=template-visi-misi.csv';

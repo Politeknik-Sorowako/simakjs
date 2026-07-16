@@ -3,13 +3,13 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class MataKuliahBahanKajianController {
-  static async getByMataKuliah({ params, getCurrentUser }: AuthContext) {
+  static async getByMataKuliah({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const mataKuliahId = parseInt(params.id);
     return await MataKuliahBahanKajianService.getByMataKuliah(mataKuliahId);
   }
 
-  static async attach({ params, body, set, getCurrentUser }: AuthContext) {
+  static async attach({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;
@@ -21,7 +21,7 @@ export class MataKuliahBahanKajianController {
     return newData;
   }
 
-  static async detach({ params, set, getCurrentUser }: AuthContext) {
+  static async detach({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
       set.status = 403;

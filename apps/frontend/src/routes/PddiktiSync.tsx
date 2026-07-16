@@ -63,7 +63,9 @@ export function PddiktiSync() {
         {/* Header */}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
           <div>
-            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">PDDIKTI Feeder Sync</h1>
+            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
+              PDDIKTI Feeder Sync
+            </h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Sinkronisasi data mahasiswa, kelas kuliah, KRS, dan nilai akhir ke pangkalan data nasional
             </p>
@@ -82,17 +84,25 @@ export function PddiktiSync() {
         {/* Stats Grid */}
         <Show
           when={stats()}
-          fallback={<div class="text-center py-12 text-secondary-400 dark:text-secondary-200">Memuat status sinkronisasi...</div>}
+          fallback={
+            <div class="text-center py-12 text-secondary-400 dark:text-secondary-200">
+              Memuat status sinkronisasi...
+            </div>
+          }
         >
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Mahasiswa Stats */}
             <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center">
-                <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">Data Mahasiswa</span>
+                <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">
+                  Data Mahasiswa
+                </span>
                 <span class="px-2 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-bold rounded">PDDIKTI</span>
               </div>
               <div class="flex flex-col gap-1">
-                <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">{stats()?.mahasiswa?.total}</span>
+                <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">
+                  {stats()?.mahasiswa?.total}
+                </span>
                 <span class="text-xs text-secondary-400 font-medium">Total Mahasiswa Terdaftar</span>
               </div>
               <div class="grid grid-cols-2 gap-2 border-t pt-3 text-xs">
@@ -110,11 +120,17 @@ export function PddiktiSync() {
             {/* Kelas Stats */}
             <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center">
-                <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">Kelas Kuliah</span>
-                <span class="px-2 py-0.5 bg-accent-50 text-accent-600 text-[10px] font-bold rounded dark:bg-accent-900/30 dark:text-accent-400">PDDIKTI</span>
+                <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">
+                  Kelas Kuliah
+                </span>
+                <span class="px-2 py-0.5 bg-accent-50 text-accent-600 text-[10px] font-bold rounded dark:bg-accent-900/30 dark:text-accent-400">
+                  PDDIKTI
+                </span>
               </div>
               <div class="flex flex-col gap-1">
-                <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">{stats()?.kelasKuliah?.total}</span>
+                <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">
+                  {stats()?.kelasKuliah?.total}
+                </span>
                 <span class="text-xs text-secondary-400 font-medium">Total Kelas Kuliah</span>
               </div>
               <div class="grid grid-cols-2 gap-2 border-t pt-3 text-xs">
@@ -132,7 +148,9 @@ export function PddiktiSync() {
             {/* KRS Stats */}
             <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center">
-                <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">KRS & Nilai</span>
+                <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">
+                  KRS & Nilai
+                </span>
                 <span class="px-2 py-0.5 bg-accent-50 text-accent-600 text-[10px] font-bold rounded">PDDIKTI</span>
               </div>
               <div class="flex flex-col gap-1">
@@ -157,7 +175,9 @@ export function PddiktiSync() {
         <Show when={syncLogs().length > 0}>
           <div class="bg-secondary-900 rounded-2xl p-6 border border-secondary-800 shadow-xl flex flex-col gap-4 font-mono text-xs text-secondary-300 dark:border-secondary-700">
             <div class="flex justify-between items-center border-b border-secondary-800 pb-2">
-              <span class="text-secondary-400 font-bold uppercase tracking-wider dark:text-secondary-200">Sync Log Console</span>
+              <span class="text-secondary-400 font-bold uppercase tracking-wider dark:text-secondary-200">
+                Sync Log Console
+              </span>
               <span class="w-3 h-3 bg-accent-500 rounded-full animate-ping"></span>
             </div>
             <div class="flex flex-col gap-2 max-h-72 overflow-y-auto">

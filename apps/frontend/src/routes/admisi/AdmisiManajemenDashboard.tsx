@@ -29,9 +29,7 @@ export default function AdmisiManajemenDashboard() {
             <StatCard title="Total Pendaftar" value={stats()?.totalPendaftar || 0} />
             <StatCard title="Hari Ini" value={stats()?.todayPendaftar || 0} color="text-green-600" />
             <For each={stats()?.statusCounts || []}>
-              {(s: any) => (
-                <StatCard title={`Status: ${s.status}`} value={s.count} />
-              )}
+              {(s: any) => <StatCard title={`Status: ${s.status}`} value={s.count} />}
             </For>
           </div>
         </Show>

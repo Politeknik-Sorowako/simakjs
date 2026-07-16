@@ -2,7 +2,7 @@ import { DosenPengajarService } from '../services/dosen-pengajar.service';
 import { AuthContext } from '../utils/types';
 
 export class DosenPengajarController {
-  static async getAll({ query }: AuthContext<any, any>) {
+  static async getAll({ query }: AuthContext<any, any>): Promise<any> {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const kelasKuliahId = query?.kelasKuliahId ? parseInt(query.kelasKuliahId) : undefined;
@@ -10,7 +10,7 @@ export class DosenPengajarController {
     return await DosenPengajarService.getAll(page, limit, kelasKuliahId, dosenId);
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;
@@ -26,7 +26,7 @@ export class DosenPengajarController {
     }
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
       set.status = 403;

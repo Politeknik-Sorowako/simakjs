@@ -308,7 +308,9 @@ export default function Bimbingan() {
         {/* Header */}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm print:hidden dark:bg-secondary-900 dark:border-secondary-800">
           <div>
-            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Bimbingan Akademik</h1>
+            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
+              Bimbingan Akademik
+            </h1>
             <p class="text-sm text-secondary-500">Modul bimbingan wali & persetujuan prasyarat UTS/UAS</p>
           </div>
 
@@ -407,7 +409,10 @@ export default function Bimbingan() {
               </div>
 
               {/* Chat Input */}
-              <form onSubmit={handleSendMessage} class="p-4 border-t border-secondary-100 bg-white flex flex-col gap-3 dark:border-secondary-800 dark:bg-secondary-900">
+              <form
+                onSubmit={handleSendMessage}
+                class="p-4 border-t border-secondary-100 bg-white flex flex-col gap-3 dark:border-secondary-800 dark:bg-secondary-900"
+              >
                 <div class="flex items-center gap-4 text-xs font-semibold text-secondary-500">
                   <span>Tipe Bimbingan:</span>
                   <label class="flex items-center gap-1.5 cursor-pointer text-secondary-900 dark:text-white">
@@ -483,11 +488,15 @@ export default function Bimbingan() {
                           </div>
                           <div class="flex flex-col gap-1">
                             <span class="text-[9px] font-bold text-rose-500 uppercase">Permasalahan:</span>
-                            <p class="text-xs text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">{sesi.permasalahan}</p>
+                            <p class="text-xs text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
+                              {sesi.permasalahan}
+                            </p>
                           </div>
                           <div class="flex flex-col gap-1">
                             <span class="text-[9px] font-bold text-accent-600 uppercase">Solusi / Masukan:</span>
-                            <p class="text-xs text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">{sesi.solusi}</p>
+                            <p class="text-xs text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
+                              {sesi.solusi}
+                            </p>
                           </div>
                         </div>
                       )}
@@ -512,7 +521,9 @@ export default function Bimbingan() {
               <div class="flex-1 overflow-y-auto">
                 <Show
                   when={filteredMonitoring().length > 0}
-                  fallback={<div class="p-8 text-center text-secondary-400 text-sm">Tidak ada mahasiswa terdaftar.</div>}
+                  fallback={
+                    <div class="p-8 text-center text-secondary-400 text-sm">Tidak ada mahasiswa terdaftar.</div>
+                  }
                 >
                   <div class="divide-y divide-secondary-50">
                     <For each={filteredMonitoring()}>
@@ -670,7 +681,9 @@ export default function Bimbingan() {
                   <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800">
                     {/* Resume Akademik */}
                     <div class="flex flex-col gap-3">
-                      <h3 class="font-extrabold text-secondary-800 text-sm border-b pb-2 dark:text-white">📊 Resume Akademik</h3>
+                      <h3 class="font-extrabold text-secondary-800 text-sm border-b pb-2 dark:text-white">
+                        📊 Resume Akademik
+                      </h3>
                       <div class="grid grid-cols-2 gap-3 text-xs">
                         <div class="p-3 bg-red-50 border border-red-100 rounded-xl flex flex-col gap-0.5">
                           <span class="text-[10px] text-red-600 font-bold uppercase">Pelanggaran</span>
@@ -770,7 +783,9 @@ export default function Bimbingan() {
 
                     {/* Ringkasan & Approval */}
                     <form onSubmit={handleUpdateBimbingan} class="flex flex-col gap-4 border-t pt-4">
-                      <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">🔑 Status Kelayakan & Ringkasan</h3>
+                      <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">
+                        🔑 Status Kelayakan & Ringkasan
+                      </h3>
 
                       <div class="flex items-center justify-between p-3 bg-secondary-50 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
                         <div class="flex flex-col">
@@ -905,7 +920,9 @@ export default function Bimbingan() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-4 print:shadow-none print:p-0 print:max-w-full dark:bg-secondary-900">
               {/* Modal header (hidden in print) */}
               <div class="flex justify-between items-center border-b pb-3 print:hidden">
-                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">Pratinjau Laporan BKD Bimbingan Akademik</h3>
+                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">
+                  Pratinjau Laporan BKD Bimbingan Akademik
+                </h3>
                 <div class="flex gap-2">
                   <button
                     onClick={() => window.print()}
@@ -926,7 +943,9 @@ export default function Bimbingan() {
               <div class="flex flex-col gap-4 font-serif" id="print-area-bkd">
                 {/* Kop Surat */}
                 <div class="flex flex-col items-center justify-center border-b-2 border-double border-secondary-800 pb-4 text-center">
-                  <h2 class="text-xl font-bold tracking-wider text-secondary-900 dark:text-white">POLITEKNIK SOROWAKO</h2>
+                  <h2 class="text-xl font-bold tracking-wider text-secondary-900 dark:text-white">
+                    POLITEKNIK SOROWAKO
+                  </h2>
                   <p class="text-[10px] text-secondary-500 italic mt-0.5">
                     Program Diploma Terapan / Sarjana Terapan Teknik Informatika
                   </p>
@@ -967,12 +986,22 @@ export default function Bimbingan() {
                       <tr class="bg-secondary-100 dark:bg-secondary-800 text-secondary-800 font-bold dark:text-white">
                         <th class="border border-secondary-300 p-2.5 w-8 text-center dark:border-secondary-700">No</th>
                         <th class="border border-secondary-300 p-2.5 w-44 dark:border-secondary-700">Nama Mahasiswa</th>
-                        <th class="border border-secondary-300 p-2.5 w-24 text-center dark:border-secondary-700">NIM</th>
-                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">Total Sesi</th>
+                        <th class="border border-secondary-300 p-2.5 w-24 text-center dark:border-secondary-700">
+                          NIM
+                        </th>
+                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">
+                          Total Sesi
+                        </th>
                         <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">Permasalahan</th>
-                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">Solusi / Saran Masukan</th>
-                        <th class="border border-secondary-300 p-2.5 w-28 text-center dark:border-secondary-700">Tanggal Sesi</th>
-                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">Lapor BKD</th>
+                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">
+                          Solusi / Saran Masukan
+                        </th>
+                        <th class="border border-secondary-300 p-2.5 w-28 text-center dark:border-secondary-700">
+                          Tanggal Sesi
+                        </th>
+                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">
+                          Lapor BKD
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -980,7 +1009,10 @@ export default function Bimbingan() {
                         each={rekapBkdData()?.data}
                         fallback={
                           <tr>
-                            <td colspan="8" class="border border-secondary-300 p-6 text-center text-secondary-400 italic dark:border-secondary-700">
+                            <td
+                              colspan="8"
+                              class="border border-secondary-300 p-6 text-center text-secondary-400 italic dark:border-secondary-700"
+                            >
                               Tidak ada riwayat bimbingan resmi tercatat untuk periode ini.
                             </td>
                           </tr>
@@ -988,9 +1020,15 @@ export default function Bimbingan() {
                       >
                         {(item, idx) => (
                           <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">{idx() + 1}</td>
-                            <td class="border border-secondary-300 p-2.5 font-bold dark:border-secondary-700">{item.mahasiswa?.nama}</td>
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">{item.mahasiswa?.nim}</td>
+                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
+                              {idx() + 1}
+                            </td>
+                            <td class="border border-secondary-300 p-2.5 font-bold dark:border-secondary-700">
+                              {item.mahasiswa?.nama}
+                            </td>
+                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
+                              {item.mahasiswa?.nim}
+                            </td>
                             <td class="border border-secondary-300 p-2.5 text-center font-bold dark:border-secondary-700">
                               {item.totalSesi || 0} Kali
                             </td>

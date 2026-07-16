@@ -1,5 +1,5 @@
 import { spawnSync } from 'child_process';
-import { existsSync, mkdirSync, readdirSync, unlinkSync, statSync, writeFileSync, appendFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import { gzipSync } from 'zlib';
 
@@ -56,18 +56,15 @@ async function main() {
   const filepath = join(backupDir, filename);
 
   try {
-    const dumpProcess = spawnSync('pg_dump', [
-      '-h', config.host,
-      '-p', config.port,
-      '-U', config.user,
-      '-d', config.db,
-      '--no-owner',
-      '--no-acl',
-    ], {
-      env: { ...process.env, PGPASSWORD: config.password },
-      stdio: ['inherit', 'pipe', 'inherit'],
-      timeout: 300000,
-    });
+    const dumpProcess = spawnSync(
+      'pg_dump',
+      ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '--no-owner', '--no-acl'],
+      {
+        env: { ...process.env, PGPASSWORD: config.password },
+        stdio: ['inherit', 'pipe', 'inherit'],
+        timeout: 300000,
+      },
+    );
 
     if (dumpProcess.error) {
       throw new Error('pg_dump spawn failed: ' + dumpProcess.error.message);

@@ -2,15 +2,15 @@ import { KelasKuliahService } from '../services/kelas-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class KelasKuliahController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery & { periodeId?: string }>) {
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 10;
+  static async getAll({ query }: AuthContext<any, PaginationQuery & { periodeId?: string }>): Promise<any> {
+    const page = query?.page ? parseInt(String(query.page)) : 1;
+    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
     const periodeId = query?.periodeId || undefined;
     return await KelasKuliahService.getAll(page, limit, search, periodeId);
   }
 
-  static async getByMk({ query, set }: AuthContext) {
+  static async getByMk({ query, set }: AuthContext): Promise<any> {
     const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
     const periodeId = query?.periodeId;
     if (!mkId || !periodeId) {
@@ -20,7 +20,7 @@ export class KelasKuliahController {
     return await KelasKuliahService.getByMk(mkId, periodeId);
   }
 
-  static async getById({ params, set }: AuthContext) {
+  static async getById({ params, set }: AuthContext): Promise<any> {
     const data = await KelasKuliahService.getById(parseInt(params.id));
     if (!data) {
       set.status = 404;
@@ -29,7 +29,7 @@ export class KelasKuliahController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -40,7 +40,7 @@ export class KelasKuliahController {
     return newKelas;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -54,7 +54,7 @@ export class KelasKuliahController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

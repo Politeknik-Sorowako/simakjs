@@ -3,7 +3,7 @@ import { MahasiswaService } from '../services/mahasiswa.service';
 import { AuthContext } from '../utils/types';
 
 export class KhsController {
-  static async getByMhsIdAndPeriode({ params, set, getCurrentUser }: AuthContext) {
+  static async getByMhsIdAndPeriode({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -49,7 +49,7 @@ export class KhsController {
     }
   }
 
-  static async getTranskrip({ params, set, getCurrentUser }: AuthContext) {
+  static async getTranskrip({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -79,7 +79,7 @@ export class KhsController {
     }
   }
 
-  static async getExamEligibility({ params, set, getCurrentUser }: AuthContext) {
+  static async getExamEligibility({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -113,7 +113,7 @@ export class KhsController {
 
   // --- KONVERSI NILAI ---
 
-  static async getAllKonversi({ query, set, getCurrentUser }: AuthContext) {
+  static async getAllKonversi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -123,7 +123,7 @@ export class KhsController {
     return await KhsService.getAllKonversi(prodiId);
   }
 
-  static async saveKonversi({ body, set, getCurrentUser }: AuthContext) {
+  static async saveKonversi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -137,7 +137,7 @@ export class KhsController {
     }
   }
 
-  static async deleteKonversi({ params, set, getCurrentUser }: AuthContext) {
+  static async deleteKonversi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -154,7 +154,7 @@ export class KhsController {
 
   // --- SKALA PREDIKAT KELULUSAN ---
 
-  static async getAllPredikat({ set, getCurrentUser }: AuthContext) {
+  static async getAllPredikat({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -163,7 +163,7 @@ export class KhsController {
     return await KhsService.getAllPredikat();
   }
 
-  static async savePredikat({ body, set, getCurrentUser }: AuthContext) {
+  static async savePredikat({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -177,7 +177,7 @@ export class KhsController {
     }
   }
 
-  static async deletePredikat({ params, set, getCurrentUser }: AuthContext) {
+  static async deletePredikat({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -194,7 +194,7 @@ export class KhsController {
 
   // --- REKAP NILAI ---
 
-  static async getRekapNilai({ params, query, set, getCurrentUser }: AuthContext) {
+  static async getRekapNilai({ params, query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -214,7 +214,7 @@ export class KhsController {
     }
   }
 
-  static async getRekapPerProdi({ query, set, getCurrentUser }: AuthContext) {
+  static async getRekapPerProdi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;

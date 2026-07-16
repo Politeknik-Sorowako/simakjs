@@ -1,8 +1,8 @@
 import { execSync, spawnSync } from 'child_process';
-import { join } from 'path';
-import { appendFileSync, readdirSync } from 'fs';
-import { Pool } from 'pg';
 import * as dns from 'dns';
+import { appendFileSync, readdirSync } from 'fs';
+import { join } from 'path';
+import { Pool } from 'pg';
 
 const { promises: dnsPromises } = dns;
 

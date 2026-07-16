@@ -43,7 +43,7 @@ jobs:
       - name: Run TypeScript type check
         run: |
           cd apps/backend
-          bunx tsc --noEmit
+          bunx tsc --noEmit -p tsconfig.ci.json
 
   build-frontend:
     name: Build Frontend

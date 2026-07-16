@@ -3,14 +3,14 @@ import { ProdiService } from '../services/prodi.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class ProdiController {
-  static async getAll({ query }: AuthContext<any, PaginationQuery>) {
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 10;
+  static async getAll({ query }: AuthContext<any, PaginationQuery>): Promise<any> {
+    const page = query?.page ? parseInt(String(query.page)) : 1;
+    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
     return await ProdiService.getAll(page, limit, search);
   }
 
-  static async getById({ params, set }: AuthContext) {
+  static async getById({ params, set }: AuthContext): Promise<any> {
     const prodi = await ProdiService.getById(parseInt(params.id));
     if (!prodi) {
       set.status = 404;
@@ -19,7 +19,7 @@ export class ProdiController {
     return prodi;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -30,7 +30,7 @@ export class ProdiController {
     return newProdi;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -44,7 +44,7 @@ export class ProdiController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -58,7 +58,7 @@ export class ProdiController {
     return { message: 'Program Studi berhasil dihapus' };
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

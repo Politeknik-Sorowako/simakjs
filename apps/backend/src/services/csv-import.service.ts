@@ -285,7 +285,6 @@ export class CsvImportService {
         sksPraktek: record.skspraktek ? parseSks(record.skspraktek) : 0,
         sksPraktekLapangan: record.sksprakteklapangan ? parseSks(record.sksprakteklapangan) : 0,
         sksSimulasi: record.skssimulasi ? parseSks(record.skssimulasi) : 0,
-        programStudiId: prodiId || null,
       });
     }
 
@@ -305,7 +304,6 @@ export class CsvImportService {
                   sksPraktek: item.sksPraktek,
                   sksPraktekLapangan: item.sksPraktekLapangan,
                   sksSimulasi: item.sksSimulasi,
-                  programStudiId: item.programStudiId,
                 },
               });
             result.successCount++;

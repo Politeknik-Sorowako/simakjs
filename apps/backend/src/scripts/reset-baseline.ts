@@ -1,8 +1,10 @@
 import { execSync } from 'child_process';
-import { Pool } from 'pg';
 import { join } from 'path';
+import { Pool } from 'pg';
 
-function ts() { return new Date().toISOString(); }
+function ts() {
+  return new Date().toISOString();
+}
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -89,7 +91,7 @@ async function main() {
   try {
     const verifyPool = new Pool({ connectionString: process.env.DATABASE_URL });
     const result = await verifyPool.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
     );
     console.log('[OK] Tables created:');
     for (const row of result.rows) {
