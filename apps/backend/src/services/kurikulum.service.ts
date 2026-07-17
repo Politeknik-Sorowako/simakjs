@@ -100,7 +100,10 @@ export class KurikulumService {
       if (data.isAktif) {
         const existing = await this.getById(id);
         if (existing) {
-          await tx.update(kurikulum).set({ isAktif: false }).where(eq(kurikulum.programStudiId, existing.programStudiId));
+          await tx
+            .update(kurikulum)
+            .set({ isAktif: false })
+            .where(eq(kurikulum.programStudiId, existing.programStudiId));
         }
       }
       const [updatedKur] = await tx.update(kurikulum).set(data).where(eq(kurikulum.id, id)).returning();
@@ -114,6 +117,17 @@ export class KurikulumService {
   }
 
   static async addMataKuliah(kurikulumId: number, data: AddMataKuliahDto) {
+    const existing = await db.query.kurikulumMataKuliah.findFirst({
+      where: and(
+        eq(kurikulumMataKuliah.kurikulumId, kurikulumId),
+        eq(kurikulumMataKuliah.mataKuliahId, data.mataKuliahId),
+      ),
+    });
+
+    if (existing) {
+      throw new Error('Mata kuliah sudah ada dalam kurikulum ini');
+    }
+
     const [newKmk] = await db
       .insert(kurikulumMataKuliah)
       .values({
@@ -143,7 +157,12 @@ export class KurikulumService {
     const toInsert = source.kurikulumMataKuliah.filter((kmk) => !existingSet.has(kmk.mataKuliahId));
 
     if (toInsert.length === 0) {
-      return { copied: 0, skipped: source.kurikulumMataKuliah.length, sourceKode: source.kode, sourceNama: source.nama };
+      return {
+        copied: 0,
+        skipped: source.kurikulumMataKuliah.length,
+        sourceKode: source.kode,
+        sourceNama: source.nama,
+      };
     }
 
     return await db.transaction(async (tx) => {
@@ -160,13 +179,21 @@ export class KurikulumService {
           isWajib: kmk.isWajib,
         })),
       );
-      return { copied: toInsert.length, skipped: source.kurikulumMataKuliah.length - toInsert.length, sourceKode: source.kode, sourceNama: source.nama };
+      return {
+        copied: toInsert.length,
+        skipped: source.kurikulumMataKuliah.length - toInsert.length,
+        sourceKode: source.kode,
+        sourceNama: source.nama,
+      };
     });
   }
 
   static async importMkCsv(kurikulumId: number, csvText: string) {
     // Robust CSV parsing: handle BOM, CRLF
-    const cleanText = csvText.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const cleanText = csvText
+      .replace(/^\uFEFF/, '')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
     const lines = cleanText.trim().split('\n');
     if (lines.length < 2) throw new Error('CSV harus memiliki header dan minimal 1 baris data');
 
@@ -184,7 +211,10 @@ export class KurikulumService {
     const existingSet = new Set(target.kurikulumMataKuliah.map((kmk) => kmk.mataKuliahId));
 
     // Pre-fetch all MK codes in one query
-    const allKodes = lines.slice(1).map((l) => l.split(',')[kodeIdx]?.trim()).filter(Boolean);
+    const allKodes = lines
+      .slice(1)
+      .map((l) => l.split(',')[kodeIdx]?.trim())
+      .filter(Boolean);
     const uniqueKodes = [...new Set(allKodes)];
     const allMk = await db.query.mataKuliah.findMany({
       where: inArray(mataKuliah.kode, uniqueKodes),

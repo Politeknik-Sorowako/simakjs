@@ -1,5 +1,5 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
+import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -105,9 +105,9 @@ export default function KelasKuliah() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
-      toast.showToast(e.message || 'Gagal menyimpan data', 'error');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
+      toast.showToast((e as Error).message || 'Gagal menyimpan data', 'error');
     }
   };
 
@@ -123,9 +123,9 @@ export default function KelasKuliah() {
       setShowPlotModal(false);
       toast.showToast('Dosen berhasil di-plot ke kelas', 'success');
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal melakukan plotting dosen');
-      toast.showToast(e.message || 'Gagal melakukan plotting dosen', 'error');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal melakukan plotting dosen');
+      toast.showToast((e as Error).message || 'Gagal melakukan plotting dosen', 'error');
     }
   };
 
@@ -135,8 +135,8 @@ export default function KelasKuliah() {
       await dosenPengajarController.delete(plottingId);
       toast.showToast('Plotting dosen berhasil dihapus', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan plotting', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan plotting', 'error');
     }
   };
 
@@ -146,8 +146,8 @@ export default function KelasKuliah() {
       await kelasKuliahController.delete(id);
       toast.showToast('Kelas kuliah berhasil dihapus', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus data', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus data', 'error');
     }
   };
 
@@ -157,7 +157,9 @@ export default function KelasKuliah() {
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Kelas Kuliah</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.</p>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+              Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.
+            </p>
           </div>
           <Button onClick={openAddModal}>+ Tambah Kelas</Button>
         </div>
@@ -173,7 +175,10 @@ export default function KelasKuliah() {
           />
         </div>
 
-        <Show when={!kelas.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
+        <Show
+          when={!kelas.loading}
+          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
+        >
           <Table headers={['Nama Kelas', 'Mata Kuliah', 'Periode Akademik', 'Dosen Pengajar', 'Aksi']}>
             <For each={kelas()?.data}>
               {(item) => (
@@ -181,9 +186,13 @@ export default function KelasKuliah() {
                   <td class="px-6 py-4 font-semibold text-secondary-800 dark:text-secondary-200">{item.namaKelas}</td>
                   <td class="px-6 py-4 text-secondary-700 dark:text-secondary-200">
                     {item.mataKuliah?.nama}{' '}
-                    <span class="text-xs text-secondary-400 dark:text-secondary-200 font-mono">({item.mataKuliah?.kode})</span>
+                    <span class="text-xs text-secondary-400 dark:text-secondary-200 font-mono">
+                      ({item.mataKuliah?.kode})
+                    </span>
                   </td>
-                  <td class="px-6 py-4 text-secondary-600 dark:text-secondary-200">{item.periodeAkademik?.nama || item.periodeId}</td>
+                  <td class="px-6 py-4 text-secondary-600 dark:text-secondary-200">
+                    {item.periodeAkademik?.nama || item.periodeId}
+                  </td>
                   <td class="px-6 py-4 text-secondary-700 dark:text-secondary-200">
                     <div class="flex flex-wrap gap-1.5 items-center">
                       <For each={item.dosenPengajarKelas}>
@@ -209,7 +218,11 @@ export default function KelasKuliah() {
                     </div>
                   </td>
                   <td class="px-6 py-4 flex gap-2">
-                    <Button variant="primary" onClick={() => navigate(`/rps?mataKuliahId=${item.mataKuliahId}&periodeId=${item.periodeId}`)} class="!py-1 !px-2.5 text-xs">
+                    <Button
+                      variant="primary"
+                      onClick={() => navigate(`/rps?mataKuliahId=${item.mataKuliahId}&periodeId=${item.periodeId}`)}
+                      class="!py-1 !px-2.5 text-xs"
+                    >
                       RPS
                     </Button>
                     <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5 text-xs">

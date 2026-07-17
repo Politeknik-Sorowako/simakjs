@@ -2,21 +2,24 @@ import { AngkatanKurikulumService } from '../services/angkatan-kurikulum.service
 import { AuthContext } from '../utils/types';
 
 export interface AngkatanKurikulumQuery {
-  programStudiId?: string;
+  programStudiId?: number;
 }
 
 export class AngkatanKurikulumController {
-  static async getAll({ query }: AuthContext<any, AngkatanKurikulumQuery>) {
-    const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+  static async getAll({ query }: AuthContext<any, AngkatanKurikulumQuery>): Promise<any> {
+    const prodiId = query?.programStudiId ? Number(query.programStudiId) : undefined;
     return await AngkatanKurikulumService.getAll(prodiId);
   }
 
-  static async getAktif({ query, set }: AuthContext<any, { programStudiId?: string; angkatan?: string }>) {
+  static async getAktif({
+    query,
+    set,
+  }: AuthContext<any, { programStudiId?: number; angkatan?: string }>): Promise<any> {
     if (!query?.programStudiId || !query?.angkatan) {
       set.status = 400;
       return { error: 'Parameter programStudiId dan angkatan diperlukan' };
     }
-    const data = await AngkatanKurikulumService.getAktif(parseInt(query.programStudiId), query.angkatan);
+    const data = await AngkatanKurikulumService.getAktif(Number(query.programStudiId), query.angkatan);
     if (!data) {
       set.status = 404;
       return { error: 'Tidak ada kurikulum aktif untuk angkatan ini' };
@@ -24,7 +27,7 @@ export class AngkatanKurikulumController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -35,7 +38,7 @@ export class AngkatanKurikulumController {
     return newBinding;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -49,7 +52,7 @@ export class AngkatanKurikulumController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

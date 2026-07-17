@@ -91,14 +91,20 @@ export const kurikulumController = {
     });
   },
 
-  async copyFromKurikulum(kurikulumId: number, sourceKurikulumId: number): Promise<{ copied: number; skipped: number; sourceKode: string; sourceNama: string }> {
+  async copyFromKurikulum(
+    kurikulumId: number,
+    sourceKurikulumId: number,
+  ): Promise<{ copied: number; skipped: number; sourceKode: string; sourceNama: string }> {
     return fetchApi(`/kurikulum/${kurikulumId}/copy-from`, {
       method: 'POST',
       body: JSON.stringify({ sourceKurikulumId }),
     });
   },
 
-  async importMkCsv(kurikulumId: number, file: File): Promise<{ imported: number; skipped: number; errors: { baris: number; pesan: string }[] }> {
+  async importMkCsv(
+    kurikulumId: number,
+    file: File,
+  ): Promise<{ imported: number; skipped: number; errors: { baris: number; pesan: string }[] }> {
     const formData = new FormData();
     formData.append('file', file);
     return fetchApi(`/kurikulum/${kurikulumId}/import-mk`, {

@@ -4,10 +4,10 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
+import type { AngkatanKurikulum } from '../controllers/angkatanKurikulumController';
 import { angkatanKurikulumController } from '../controllers/angkatanKurikulumController';
 import { kurikulumController } from '../controllers/kurikulumController';
 import { prodiController } from '../controllers/prodiController';
-import type { AngkatanKurikulum } from '../controllers/angkatanKurikulumController';
 
 export default function AngkatanKurikulum() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -32,7 +32,10 @@ export default function AngkatanKurikulum() {
   // Fetch Kurikulum for form dropdown — depends on formProdiId, NOT prodiFilter
   const [formKurikulums] = createResource(
     () => formProdiId(),
-    (prodiId) => (prodiId ? kurikulumController.getAll('', 1, 100, prodiId) : { data: [], meta: { total: 0, page: 1, limit: 100, totalPages: 0 } }),
+    (prodiId) =>
+      prodiId
+        ? kurikulumController.getAll('', 1, 100, prodiId)
+        : { data: [], meta: { total: 0, page: 1, limit: 100, totalPages: 0 } },
   );
 
   const openAddModal = () => {
@@ -74,8 +77,8 @@ export default function AngkatanKurikulum() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -84,8 +87,8 @@ export default function AngkatanKurikulum() {
     try {
       await angkatanKurikulumController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 
@@ -105,7 +108,9 @@ export default function AngkatanKurikulum() {
         {/* Filter */}
         <div class="flex flex-wrap gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
           <div class="w-[300px]">
-            <label class="block text-sm font-semibold text-secondary-700 dark:text-secondary-200 mb-1">Program Studi</label>
+            <label class="block text-sm font-semibold text-secondary-700 dark:text-secondary-200 mb-1">
+              Program Studi
+            </label>
             <select
               class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               onChange={(e) => setProdiFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
@@ -120,19 +125,25 @@ export default function AngkatanKurikulum() {
         <Table headers={['Program Studi', 'Angkatan', 'Kurikulum', 'Status', 'Aksi']}>
           <Show when={bindings.loading}>
             <tr>
-              <td colspan="5" class="p-8 text-center text-secondary-500">Memuat data...</td>
+              <td colspan="5" class="p-8 text-center text-secondary-500">
+                Memuat data...
+              </td>
             </tr>
           </Show>
           <Show when={!bindings.loading && (!bindings() || bindings()?.length === 0)}>
             <tr>
-              <td colspan="5" class="p-8 text-center text-secondary-500">Belum ada binding.</td>
+              <td colspan="5" class="p-8 text-center text-secondary-500">
+                Belum ada binding.
+              </td>
             </tr>
           </Show>
           <For each={bindings()}>
             {(item) => (
               <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
                 <td class="px-6 py-4 text-sm text-secondary-900 dark:text-white">{item.programStudi?.nama || '-'}</td>
-                <td class="px-6 py-4 text-sm font-semibold text-secondary-700 dark:text-secondary-200">{item.angkatan}</td>
+                <td class="px-6 py-4 text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                  {item.angkatan}
+                </td>
                 <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
                   {item.kurikulum?.nama || '-'} ({item.kurikulum?.kode || '-'})
                 </td>
@@ -144,8 +155,12 @@ export default function AngkatanKurikulum() {
                   </span>
                 </td>
                 <td class="px-6 py-4 text-sm space-x-2">
-                  <Button variant="secondary" onClick={() => openEditModal(item)}>Edit</Button>
-                  <Button variant="danger" onClick={() => handleDelete(item.id)}>Hapus</Button>
+                  <Button variant="secondary" onClick={() => openEditModal(item)}>
+                    Edit
+                  </Button>
+                  <Button variant="danger" onClick={() => handleDelete(item.id)}>
+                    Hapus
+                  </Button>
                 </td>
               </tr>
             )}
@@ -167,7 +182,10 @@ export default function AngkatanKurikulum() {
               <select
                 class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={formProdiId()}
-                onChange={(e) => { setFormProdiId(Number(e.currentTarget.value)); setKurikulumId(0); }}
+                onChange={(e) => {
+                  setFormProdiId(Number(e.currentTarget.value));
+                  setKurikulumId(0);
+                }}
                 required
               >
                 <option value={0}>Pilih Program Studi</option>
@@ -203,7 +221,9 @@ export default function AngkatanKurikulum() {
               </select>
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>Batal</Button>
+              <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>
+                Batal
+              </Button>
               <Button type="submit">Simpan</Button>
             </div>
           </form>

@@ -92,7 +92,7 @@ export default function Dosen() {
         programStudiId: Number(prodiId()),
         nidn: nidn() || null,
         nik: nik() || null,
-        jenisKelamin: gender() === '' ? null : (gender() as any),
+        jenisKelamin: gender() === '' ? null : (gender() as 'L' | 'P'),
         tanggalLahir: birthdate() || null,
       };
 
@@ -103,8 +103,8 @@ export default function Dosen() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -113,8 +113,8 @@ export default function Dosen() {
     try {
       await dosenController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 
@@ -157,8 +157,8 @@ export default function Dosen() {
         toast.showToast(`Berhasil membuat ${res.successCount} akun dosen.`, 'success');
       }
       setSelectedIds([]);
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membuat akun secara massal.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membuat akun secara massal.', 'error');
     } finally {
       setBulkLoading(false);
     }
@@ -170,7 +170,9 @@ export default function Dosen() {
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Dosen</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">Kelola data dosen pengajar dan program studi terkait.</p>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+              Kelola data dosen pengajar dan program studi terkait.
+            </p>
           </div>
           <div class="flex gap-2">
             <Show when={selectedIds().length > 0}>
@@ -216,7 +218,10 @@ export default function Dosen() {
           />
         </div>
 
-        <Show when={!dosens.loading} fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}>
+        <Show
+          when={!dosens.loading}
+          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
+        >
           <Table
             headers={[
               <input
@@ -244,7 +249,9 @@ export default function Dosen() {
                       class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
                     />
                   </td>
-                  <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">{item.nip}</td>
+                  <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">
+                    {item.nip}
+                  </td>
                   <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.email}</td>
                   <td class="px-6 py-4 text-secondary-600 dark:text-secondary-200">{item.programStudi?.nama || '-'}</td>
@@ -354,7 +361,7 @@ export default function Dosen() {
                 isSelect
                 label="Jenis Kelamin"
                 value={gender()}
-                onChange={(e) => setGender(e.currentTarget.value as any)}
+                onChange={(e) => setGender(e.currentTarget.value as 'L' | 'P')}
                 selectOptions={[
                   { label: 'Laki-laki', value: 'L' },
                   { label: 'Perempuan', value: 'P' },

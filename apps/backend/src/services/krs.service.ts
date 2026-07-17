@@ -1,5 +1,14 @@
 import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
-import { angkatanKurikulum, dosen, kelasKuliah, krs, kurikulumMataKuliah, mahasiswa, mataKuliah } from '../models/schema';
+import {
+  angkatanKurikulum,
+  dosen,
+  kelasKuliah,
+  krs,
+  kurikulum,
+  kurikulumMataKuliah,
+  mahasiswa,
+  mataKuliah,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateKrsDto {
@@ -273,7 +282,7 @@ export class KrsService {
 
     const binding = await db.query.angkatanKurikulum.findFirst({
       where: and(
-        eq(angkatanKurikulum.programStudiId, mhs.programStudiId),
+        eq(angkatanKurikulum.programStudiId, mhs.programStudiId as number),
         eq(angkatanKurikulum.angkatan, mhs.angkatan || ''),
         eq(angkatanKurikulum.isActive, true),
       ),
@@ -315,24 +324,27 @@ export class KrsService {
       mkMap.set(k.mataKuliahId, arr);
     }
 
-    const rencanaPerSemester = kurikulumData.kurikulumMataKuliah.reduce((acc, kmk) => {
-      const semester = kmk.semester;
-      if (!acc[semester]) acc[semester] = [];
-      const krsData = mkMap.get(kmk.mataKuliahId) || [];
-      const lulus = krsData.some((k) => k.nilaiHuruf && k.nilaiHuruf !== 'E' && k.nilaiHuruf !== '');
-      const diambil = krsData.some((k) => k.isApproved);
-      acc[semester].push({
-        id: kmk.id,
-        mataKuliahId: kmk.mataKuliahId,
-        kode: kmk.mataKuliah?.kode || '',
-        nama: kmk.mataKuliah?.nama || '',
-        sks: kmk.sksMataKuliah,
-        isWajib: kmk.isWajib,
-        status: lulus ? 'lulus' : diambil ? 'diambil' : 'tersedia',
-        nilaiHuruf: lulus ? krsData.find((k) => k.nilaiHuruf)?.nilaiHuruf || null : null,
-      });
-      return acc;
-    }, {} as Record<number, any[]>);
+    const rencanaPerSemester = kurikulumData.kurikulumMataKuliah.reduce(
+      (acc, kmk) => {
+        const semester = kmk.semester;
+        if (!acc[semester]) acc[semester] = [];
+        const krsData = mkMap.get(kmk.mataKuliahId) || [];
+        const lulus = krsData.some((k) => k.nilaiHuruf && k.nilaiHuruf !== 'E' && k.nilaiHuruf !== '');
+        const diambil = krsData.some((k) => k.isApproved);
+        acc[semester].push({
+          id: kmk.id,
+          mataKuliahId: kmk.mataKuliahId,
+          kode: kmk.mataKuliah?.kode || '',
+          nama: kmk.mataKuliah?.nama || '',
+          sks: kmk.sksMataKuliah,
+          isWajib: kmk.isWajib,
+          status: lulus ? 'lulus' : diambil ? 'diambil' : 'tersedia',
+          nilaiHuruf: lulus ? krsData.find((k) => k.nilaiHuruf)?.nilaiHuruf || null : null,
+        });
+        return acc;
+      },
+      {} as Record<number, any[]>,
+    );
 
     const totalSksLulus = Object.values(rencanaPerSemester)
       .flat()
@@ -341,7 +353,10 @@ export class KrsService {
 
     // Tentukan current semester
     const sksPerSemester = 24; // asumsi maks SKS per semester
-    const currentSemester = Math.min(Math.floor(totalSksLulus / sksPerSemester) + 1, Object.keys(rencanaPerSemester).length);
+    const currentSemester = Math.min(
+      Math.floor(totalSksLulus / sksPerSemester) + 1,
+      Object.keys(rencanaPerSemester).length,
+    );
 
     return {
       kurikulum: {
@@ -365,15 +380,21 @@ export class KrsService {
     if (periodeId) conditions.push(eq(kelasKuliah.periodeId, periodeId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [total] = await db.select({ count: count() }).from(krs)
+    const [total] = await db
+      .select({ count: count() })
+      .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .where(whereClause);
 
-    const [approved] = await db.select({ count: count() }).from(krs)
+    const [approved] = await db
+      .select({ count: count() })
+      .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .where(and(eq(krs.isApproved, true), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
 
-    const [pending] = await db.select({ count: count() }).from(krs)
+    const [pending] = await db
+      .select({ count: count() })
+      .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .where(and(eq(krs.isApproved, false), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
 
@@ -397,7 +418,12 @@ export class KrsService {
       total: Number(total?.count || 0),
       approved: Number(approved?.count || 0),
       pending: Number(pending?.count || 0),
-      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', total: Number(p.total), approved: Number(p.approved) })),
+      perProdi: perProdi.map((p) => ({
+        prodiId: p.prodiId,
+        prodiNama: p.prodiNama || '-',
+        total: Number(p.total),
+        approved: Number(p.approved),
+      })),
     };
   }
 

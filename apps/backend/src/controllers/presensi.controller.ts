@@ -2,7 +2,7 @@ import { PresensiService } from '../services/presensi.service';
 import { AuthContext } from '../utils/types';
 
 export class PresensiController {
-  static async saveBulk({ body, set, getCurrentUser }: AuthContext) {
+  static async saveBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -11,7 +11,7 @@ export class PresensiController {
     return await PresensiService.saveBulkPresensi(body.bapId, body.presensiList);
   }
 
-  static async getByBap({ params, set, getCurrentUser }: AuthContext) {
+  static async getByBap({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -20,7 +20,7 @@ export class PresensiController {
     return await PresensiService.getPresensiByBap(parseInt(params.bapId));
   }
 
-  static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext) {
+  static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -33,7 +33,7 @@ export class PresensiController {
     return await PresensiService.getLaporanKompensasi(page, limit, search, prodiId);
   }
 
-  static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext) {
+  static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -42,7 +42,7 @@ export class PresensiController {
     return await PresensiService.getLaporanKompensasiStats();
   }
 
-  static async getKompensasiDetail({ params, set, getCurrentUser }: AuthContext) {
+  static async getKompensasiDetail({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -57,7 +57,11 @@ export class PresensiController {
     return detail;
   }
 
-  static async getRekapKehadiran({ query, set, getCurrentUser }: AuthContext<any, { kelasKuliahId?: string }>) {
+  static async getRekapKehadiran({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { kelasKuliahId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -71,15 +75,25 @@ export class PresensiController {
     return await PresensiService.getRekapKehadiran(kelasKuliahId);
   }
 
-  static async getRekapKehadiranMahasiswa({ query, set, getCurrentUser }: AuthContext<any, { mahasiswaId?: string; periodeId?: string }>) {
+  static async getRekapKehadiranMahasiswa({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { mahasiswaId?: string; periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user) { set.status = 401; return { error: 'Unauthorized' }; }
+    if (!user) {
+      set.status = 401;
+      return { error: 'Unauthorized' };
+    }
     const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
-    if (!mahasiswaId) { set.status = 400; return { error: 'Parameter mahasiswaId diperlukan.' }; }
+    if (!mahasiswaId) {
+      set.status = 400;
+      return { error: 'Parameter mahasiswaId diperlukan.' };
+    }
     return await PresensiService.getRekapKehadiranMahasiswa(mahasiswaId, query?.periodeId);
   }
 
-  static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext) {
+  static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -94,7 +108,7 @@ export class PresensiController {
     return newPayment;
   }
 
-  static async updateKompensasiBayar({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateKompensasiBayar({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

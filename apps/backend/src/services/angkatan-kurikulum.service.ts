@@ -24,7 +24,11 @@ export class AngkatanKurikulumService {
 
   static async getAktif(programStudiId: number, angkatan: string) {
     const binding = await db.query.angkatanKurikulum.findFirst({
-      where: and(eq(angkatanKurikulum.programStudiId, programStudiId), eq(angkatanKurikulum.angkatan, angkatan), eq(angkatanKurikulum.isActive, true)),
+      where: and(
+        eq(angkatanKurikulum.programStudiId, programStudiId),
+        eq(angkatanKurikulum.angkatan, angkatan),
+        eq(angkatanKurikulum.isActive, true),
+      ),
       with: {
         kurikulum: {
           with: {
@@ -57,7 +61,9 @@ export class AngkatanKurikulumService {
       // 2. Delete old record to avoid unique constraint violation on insert
       await tx
         .delete(angkatanKurikulum)
-        .where(and(eq(angkatanKurikulum.programStudiId, data.programStudiId), eq(angkatanKurikulum.angkatan, data.angkatan)));
+        .where(
+          and(eq(angkatanKurikulum.programStudiId, data.programStudiId), eq(angkatanKurikulum.angkatan, data.angkatan)),
+        );
 
       // 3. Unlock old kurikulum (using saved reference, not post-update query)
       if (oldActive) {

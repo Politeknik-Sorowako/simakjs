@@ -57,8 +57,8 @@ export const krsController = {
     });
   },
 
-  async getPendingStudents(periodeId: string): Promise<any[]> {
-    return fetchApi<any[]>(`/krs/pending-students?periodeId=${periodeId}`);
+  async getPendingStudents(periodeId: string): Promise<Record<string, unknown>[]> {
+    return fetchApi<Record<string, unknown>[]>(`/krs/pending-students?periodeId=${periodeId}`);
   },
 
   async approveBatch(mahasiswaIds: number[], periodeId: string): Promise<{ message: string; count: number }> {
@@ -74,7 +74,16 @@ export const krsController = {
     totalSksLulus: number;
     rencanaPerSemester: {
       semester: number;
-      mataKuliah: { id: number; mataKuliahId: number; kode: string; nama: string; sks: number; isWajib: boolean; status: string; nilaiHuruf: string | null }[];
+      mataKuliah: {
+        id: number;
+        mataKuliahId: number;
+        kode: string;
+        nama: string;
+        sks: number;
+        isWajib: boolean;
+        status: string;
+        nilaiHuruf: string | null;
+      }[];
       totalSks: number;
       sksLulus: number;
     }[];
@@ -82,7 +91,10 @@ export const krsController = {
     return fetchApi(`/krs/rencana-studi?mahasiswaId=${mahasiswaId}`);
   },
 
-  async validasiKrs(mahasiswaId: number, periodeId: string): Promise<{
+  async validasiKrs(
+    mahasiswaId: number,
+    periodeId: string,
+  ): Promise<{
     isValid: boolean;
     warnings: { type: string; mk: string; semester?: number }[];
     summary: { totalSksDiRencana: string; totalSksDiKrs: string; mkWajibTerpenuhi: number; mkWajibTotal: number };
@@ -90,8 +102,8 @@ export const krsController = {
     return fetchApi(`/krs/validasi?mahasiswaId=${mahasiswaId}&periodeId=${periodeId}`);
   },
 
-  async getStats(periodeId?: string): Promise<any> {
-    const qs = periodeId ? '?periodeId=' + periodeId : '';
-    return fetchApi<any>('/krs/stats' + qs);
+  async getStats(periodeId?: string): Promise<Record<string, unknown>> {
+    const qs = periodeId ? `?periodeId=${periodeId}` : '';
+    return fetchApi<Record<string, unknown>>(`/krs/stats${qs}`);
   },
 };

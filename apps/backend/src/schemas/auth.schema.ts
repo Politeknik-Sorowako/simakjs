@@ -4,7 +4,8 @@ export const registerSchema = {
   detail: {
     tags: ['Autentikasi'],
     summary: 'Registrasi Pengguna Baru',
-    description: 'Mendaftarkan akun baru ke sistem dengan role dosen, mahasiswa, atau guest. Admin, prodi, dan keuangan tidak dapat registrasi mandiri.',
+    description:
+      'Mendaftarkan akun baru ke sistem dengan role dosen, mahasiswa, atau guest. Admin, prodi, dan keuangan tidak dapat registrasi mandiri.',
   },
   body: t.Object({
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
@@ -14,14 +15,7 @@ export const registerSchema = {
     }),
     nama: t.String({ minLength: 3, default: 'Nama Pengguna' }),
     role: t.Optional(
-      t.Union(
-        [
-          t.Literal('dosen'),
-          t.Literal('mahasiswa'),
-          t.Literal('guest'),
-        ],
-        { default: 'mahasiswa' },
-      ),
+      t.Union([t.Literal('dosen'), t.Literal('mahasiswa'), t.Literal('guest')], { default: 'mahasiswa' }),
     ),
   }),
   response: {
@@ -47,7 +41,8 @@ export const validateResetTokenSchema = {
   detail: {
     tags: ['Autentikasi'],
     summary: 'Validasi Token Reset Password',
-    description: 'Memvalidasi token reset password dan mengambil email pengguna. Token hanya valid 1 jam dan single-use.',
+    description:
+      'Memvalidasi token reset password dan mengambil email pengguna. Token hanya valid 1 jam dan single-use.',
   },
   body: t.Object({
     token: t.String({ description: 'Token dari email reset password' }),
@@ -66,11 +61,15 @@ export const resetPasswordSchema = {
   detail: {
     tags: ['Autentikasi'],
     summary: 'Reset Password dengan Token',
-    description: 'Mengatur ulang password menggunakan token reset. Password minimal 8 karakter dengan huruf kapital dan angka.',
+    description:
+      'Mengatur ulang password menggunakan token reset. Password minimal 8 karakter dengan huruf kapital dan angka.',
   },
   body: t.Object({
     token: t.String({ description: 'Token dari email reset password' }),
-    password: t.String({ minLength: 8, description: 'Password baru (min. 8 karakter, harus ada huruf kapital dan angka)' }),
+    password: t.String({
+      minLength: 8,
+      description: 'Password baru (min. 8 karakter, harus ada huruf kapital dan angka)',
+    }),
   }),
   response: {
     200: t.Object({
@@ -78,6 +77,11 @@ export const resetPasswordSchema = {
     }),
     400: t.Object({
       error: t.String({ default: 'Token reset password tidak valid atau kedaluwarsa' }),
+    }),
+    422: t.Object({
+      success: t.Boolean(),
+      error: t.String(),
+      message: t.String(),
     }),
   },
 };
@@ -92,9 +96,15 @@ export const forgotPasswordSchema = {
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
   }),
   response: {
-    200: t.Object({
-      message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
-    }),
+    200: t.Union([
+      t.Object({
+        message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
+      }),
+      t.Object({
+        message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
+        token: t.String(),
+      }),
+    ]),
     429: t.Object({
       error: t.String({ default: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.' }),
     }),

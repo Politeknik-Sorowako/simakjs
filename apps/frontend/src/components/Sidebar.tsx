@@ -1,5 +1,5 @@
 import { A, useLocation } from '@solidjs/router';
-import { createSignal, Show, createEffect } from 'solid-js';
+import { createEffect, createSignal, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -17,13 +17,29 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const [isLaporanOpen, setIsLaporanOpen] = createSignal(false);
   const [isLayananOpen, setIsLayananOpen] = createSignal(false);
   const [isIntegrasiOpen, setIsIntegrasiOpen] = createSignal(false);
+  const [isAdmisiOpen, setIsAdmisiOpen] = createSignal(false);
 
   createEffect(() => {
     const currentPath = path();
     if (['/program-studi', '/mahasiswa', '/dosen', '/pengguna'].includes(currentPath)) {
       setIsMasterOpen(true);
     }
-    if (['/kurikulum', '/angkatan-kurikulum', '/rps', '/periode-akademik', '/mata-kuliah', '/kelas-kuliah'].includes(currentPath)) {
+    if (
+      [
+        '/kurikulum',
+        '/angkatan-kurikulum',
+        '/rps',
+        '/periode-akademik',
+        '/mata-kuliah',
+        '/kelas-kuliah',
+        '/profil-lulusan',
+        '/visi-misi-prodi',
+        '/bahan-kajian',
+        '/cpl',
+        '/cpmk',
+        '/peta-obe',
+      ].includes(currentPath)
+    ) {
       setIsPerencanaanOpen(true);
     }
     if (['/krs', '/keuangan'].includes(currentPath)) {
@@ -35,7 +51,24 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (['/khs', '/yudisium'].includes(currentPath)) {
       setIsEvaluasiOpen(true);
     }
-    if (['/laporan-kompensasi', '/laporan/rekap-nilai', '/laporan/peringatan', '/laporan/mahasiswa-baru', '/laporan/presensi-kelas', '/laporan/akademik', '/laporan/bkd', '/laporan/krs', '/laporan/keuangan', '/laporan/yudisium', '/laporan/mahasiswa-keluar'].includes(currentPath)) {
+    if (
+      [
+        '/laporan-kompensasi',
+        '/laporan/rekap-nilai',
+        '/laporan/peringatan',
+        '/laporan/mahasiswa-baru',
+        '/laporan/presensi-kelas',
+        '/laporan/akademik',
+        '/laporan/bkd',
+        '/laporan/krs',
+        '/laporan/keuangan',
+        '/laporan/yudisium',
+        '/laporan/mahasiswa-keluar',
+        '/laporan/obe',
+        '/obe/bobot-penilaian',
+        '/obe/evaluasi-kurikulum',
+      ].includes(currentPath)
+    ) {
       setIsLaporanOpen(true);
     }
     if (['/pengajuan-cuti', '/manajemen-cuti', '/penonaktifan'].includes(currentPath)) {
@@ -44,6 +77,15 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (['/pddikti'].includes(currentPath)) {
       setIsIntegrasiOpen(true);
     }
+    if (
+      ['/admisi/dashboard', '/admisi/sesi', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) =>
+        currentPath.startsWith(p),
+      ) ||
+      currentPath.startsWith('/admisi/manajemen') ||
+      currentPath.startsWith('/admisi/pembayaran')
+    ) {
+      setIsAdmisiOpen(true);
+    }
   });
 
   const isAdmin = () => role() === 'admin';
@@ -51,7 +93,9 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const isMahasiswa = () => role() === 'mahasiswa';
   const isProdi = () => role() === 'prodi';
   const isKeuangan = () => role() === 'keuangan';
+  const isCalonMhs = () => role() === 'calon_mahasiswa';
   const notGuest = () => role() !== 'guest';
+  const isMahasiswaOrMore = () => !isCalonMhs() && notGuest();
 
   return (
     <aside
@@ -79,7 +123,9 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
       {/* Nav Menu */}
       <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-        <div class="px-3 mb-2 text-[10px] font-semibold text-secondary-300/70 uppercase tracking-widest">Menu Utama</div>
+        <div class="px-3 mb-2 text-[10px] font-semibold text-secondary-300/70 uppercase tracking-widest">
+          Menu Utama
+        </div>
 
         {/* Dashboard Link */}
         <A
@@ -104,6 +150,86 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </svg>
           Dashboard
         </A>
+
+        {/* PMB - Calon Mahasiswa Only */}
+        <Show when={isCalonMhs()}>
+          <div class="pt-2">
+            <div class="px-3 mb-2 text-[10px] font-semibold text-secondary-300/70 uppercase tracking-widest">
+              Admisi
+            </div>
+            <A
+              href="/admisi/dashboard"
+              onClick={() => props.onClose()}
+              activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
+              inactiveClass="hover:bg-brand-800/60 hover:text-white"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Dashboard PMB
+            </A>
+
+            <button
+              onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
+              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+            >
+              <span>Pendaftaran</span>
+              <svg
+                class={`w-3.5 h-3.5 transition-transform duration-200 ${isAdmisiOpen() ? 'transform rotate-90' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <Show when={isAdmisiOpen()}>
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+                <A
+                  href="/admisi/sesi"
+                  onClick={() => props.onClose()}
+                  activeClass="text-accent-400 font-semibold"
+                  inactiveClass="hover:text-white text-secondary-200"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Sesi Admisi
+                </A>
+                <A
+                  href="/admisi/pendaftaran/baru"
+                  onClick={() => props.onClose()}
+                  activeClass="text-accent-400 font-semibold"
+                  inactiveClass="hover:text-white text-secondary-200"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                  Pendaftaran Baru
+                </A>
+              </div>
+            </Show>
+          </div>
+        </Show>
 
         {/* Data Master - Admin Only */}
         <Show when={isAdmin()}>
@@ -274,7 +400,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     </svg>
                     RPS & Evaluasi
                   </A>
-                </Show>                
+                </Show>
                 <Show when={isAdmin()}>
                   <A
                     href="/mata-kuliah"
@@ -303,9 +429,134 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
                     </svg>
                     Binding Angkatan
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isDosen()}>
+                  <A
+                    href="/peta-obe"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Peta OBE
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/profil-lulusan"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    Profil Lulusan
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/cpl"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    CPL
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi() || isDosen()}>
+                  <A
+                    href="/cpmk"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    CPMK
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/visi-misi-prodi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
+                    Visi Misi Prodi
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/bahan-kajian"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.168.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.168.477-4.5 1.253"
+                      />
+                    </svg>
+                    Bahan Kajian
                   </A>
                 </Show>
                 <Show when={isAdmin()}>
@@ -333,7 +584,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         </Show>
 
         {/* Registrasi Akademik */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsRegistrasiOpen(!isRegistrasiOpen())}
@@ -396,7 +647,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         </Show>
 
         {/* Pelaksanaan Akademik */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsPelaksanaanOpen(!isPelaksanaanOpen())}
@@ -471,14 +722,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     </svg>
                     Bimbingan Akademik
                   </A>
-                </Show>                
+                </Show>
               </div>
             </Show>
           </div>
         </Show>
 
         {/* Evaluasi & Kelulusan */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsEvaluasiOpen(!isEvaluasiOpen())}
@@ -540,7 +791,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </div>
         </Show>
         {/* Laporan */}
-        <Show when={isAdmin() || isDosen() || isProdi()} >
+        <Show when={isAdmin() || isDosen() || isProdi()}>
           <div class="pt-2">
             <button
               onClick={() => setIsLaporanOpen(!isLaporanOpen())}
@@ -548,7 +799,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             >
               <span>Laporan</span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isLaporanOpen() ? "transform rotate-90" : ""}`}
+                class={`w-3.5 h-3.5 transition-transform duration-200 ${isLaporanOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -557,9 +808,9 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               </svg>
             </button>
 
-            <Show when={isLaporanOpen()} >
+            <Show when={isLaporanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <Show when={isAdmin() || isProdi() || isDosen()} >
+                <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/rekap-nilai"
                     onClick={() => props.onClose()}
@@ -568,12 +819,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
                     </svg>
                     Rekap Nilai
                   </A>
                 </Show>
-                <Show when={isAdmin() || isProdi() || isDosen()} >
+                <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/presensi-kelas"
                     onClick={() => props.onClose()}
@@ -582,12 +838,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     Presensi Kelas
                   </A>
                 </Show>
-                <Show when={isAdmin() || isProdi() || isDosen()} >
+                <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/peringatan"
                     onClick={() => props.onClose()}
@@ -596,12 +857,74 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
                     </svg>
                     Peringatan
                   </A>
                 </Show>
-                <Show when={isAdmin() || isProdi()} >
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/laporan/obe"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                    Laporan OBE
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/obe/bobot-penilaian"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
+                      />
+                    </svg>
+                    Bobot Penilaian OBE
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/obe/evaluasi-kurikulum"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                      />
+                    </svg>
+                    Evaluasi Kurikulum
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
                   <A
                     href="/laporan/mahasiswa-baru"
                     onClick={() => props.onClose()}
@@ -610,12 +933,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
                     </svg>
-                    Penerimaan Mhs Baru
+                    ADMISI
                   </A>
                 </Show>
-                <Show when={isAdmin()} >
+                <Show when={isAdmin()}>
                   <A
                     href="/laporan-kompensasi"
                     onClick={() => props.onClose()}
@@ -624,7 +952,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     Jam Kompensasi
                   </A>
@@ -638,7 +971,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                      />
                     </svg>
                     Akademik
                   </A>
@@ -652,7 +990,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
                     </svg>
                     BKD / Beban Dosen
                   </A>
@@ -666,7 +1009,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
                     </svg>
                     KRS
                   </A>
@@ -680,7 +1028,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     Keuangan
                   </A>
@@ -694,7 +1047,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                      />
                     </svg>
                     Yudisium
                   </A>
@@ -708,7 +1066,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
                     </svg>
                     Mahasiswa Keluar
                   </A>
@@ -718,7 +1081,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </div>
         </Show>
         {/* Layanan Mahasiswa */}
-        <Show when={notGuest()}>
+        <Show when={isMahasiswaOrMore()}>
           <div class="pt-2">
             <button
               onClick={() => setIsLayananOpen(!isLayananOpen())}
@@ -818,6 +1181,258 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </div>
         </Show>
 
+        {/* PMB Admin - Admin Only */}
+        <Show when={isAdmin()}>
+          <div class="pt-2">
+            <button
+              onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
+              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+            >
+              <span>Admisi</span>
+              <svg
+                class={`w-3.5 h-3.5 transition-transform duration-200 ${isAdmisiOpen() ? 'transform rotate-90' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <Show when={isAdmisiOpen()}>
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                      />
+                    </svg>
+                    Dashboard PMB
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/sesi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                    Manajemen Sesi
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/verifikasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Verifikasi Dokumen
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/penilaian"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Penilaian
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/jadwal"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
+                    </svg>
+                    Jadwal Ujian
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/import-ujian"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                      />
+                    </svg>
+                    Import Peserta Ujian
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/seleksi-massal"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Seleksi Massal
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/daftar-ulang"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
+                    </svg>
+                    Daftar Ulang & NIM
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/va-banks"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
+                    </svg>
+                    Bank VA
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/pengumuman"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                      />
+                    </svg>
+                    Pengumuman
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/admisi/manajemen/laporan"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Laporan PMB
+                  </A>
+                </Show>
+              </div>
+            </Show>
+          </div>
+        </Show>
+
         {/* Integrasi Data */}
         <Show when={isAdmin() || isDosen()}>
           <div class="pt-2">
@@ -884,6 +1499,13 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             <div class="text-sm font-semibold text-white truncate">{auth.user()?.nama || auth.user()?.email}</div>
             <div class="text-xs text-accent-200/50 capitalize">{auth.user()?.role}</div>
           </div>
+        </div>
+
+        <div class="text-center text-[10px] text-brand-400/40 pt-1">
+          SIMAK v1.0.0
+          <Show when={import.meta.env.VITE_APP_MODE === 'development'}>
+            <span class="ml-1 text-amber-400/70 font-semibold">• DEV</span>
+          </Show>
         </div>
 
         <div class="flex gap-2 text-xs border-t border-brand-950/60 pt-2.5">

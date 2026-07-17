@@ -10,7 +10,7 @@ export class TagihanController {
     return mhs ? mhs.id : null;
   }
 
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -36,7 +36,7 @@ export class TagihanController {
     return await TagihanService.getAll(page, limit, search, status, filterMhsId);
   }
 
-  static async generate({ body, set, getCurrentUser }: AuthContext) {
+  static async generate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -53,7 +53,7 @@ export class TagihanController {
     }
   }
 
-  static async updateNominal({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateNominal({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -73,7 +73,7 @@ export class TagihanController {
     }
   }
 
-  static async bayar({ params, body, set, getCurrentUser }: AuthContext) {
+  static async bayar({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -101,7 +101,7 @@ export class TagihanController {
     }
   }
 
-  static async voidTransaksi({ params, body, set, getCurrentUser }: AuthContext) {
+  static async voidTransaksi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -125,7 +125,7 @@ export class TagihanController {
     }
   }
 
-  static async getRiwayat({ params, set, getCurrentUser }: AuthContext) {
+  static async getRiwayat({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -141,7 +141,7 @@ export class TagihanController {
     }
   }
 
-  static async getAllTarif({ set, getCurrentUser }: AuthContext) {
+  static async getAllTarif({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -164,7 +164,7 @@ export class TagihanController {
     return { data: list };
   }
 
-  static async createTarif({ body, set, getCurrentUser }: AuthContext) {
+  static async createTarif({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -205,7 +205,11 @@ export class TagihanController {
     }
   }
 
-  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string; programStudiId?: string }>) {
+  static async getStats({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<any, { periodeId?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;
@@ -216,7 +220,7 @@ export class TagihanController {
     return await TagihanService.getStats(periodeId, prodiId);
   }
 
-  static async deleteTarif({ params, set, getCurrentUser }: AuthContext) {
+  static async deleteTarif({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
       set.status = 403;

@@ -35,15 +35,15 @@ export default function Pengguna() {
       const res = await userController.toggleActive(user.id);
       toast.showToast(res.message, 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengubah status aktif', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengubah status aktif', 'error');
     } finally {
       setActionLoading(null);
     }
   };
 
-  let debounceTimer: any;
-  const handleSearchInput = (e: any) => {
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  const handleSearchInput = (e: Event) => {
     clearTimeout(debounceTimer);
     const val = e.currentTarget.value;
     debounceTimer = setTimeout(() => {
@@ -57,7 +57,9 @@ export default function Pengguna() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex flex-col gap-1">
-            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Manajemen Pengguna</h1>
+            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
+              Manajemen Pengguna
+            </h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Aktivasi akun, pencarian, dan manajemen otorisasi peran (role) pengguna SIMAK.
             </p>
@@ -88,7 +90,9 @@ export default function Pengguna() {
         />
 
         <Show when={usersRes.loading}>
-          <div class="flex justify-center py-12 text-secondary-400 dark:text-secondary-200">Memuat data pengguna...</div>
+          <div class="flex justify-center py-12 text-secondary-400 dark:text-secondary-200">
+            Memuat data pengguna...
+          </div>
         </Show>
 
         <Show when={!usersRes.loading && usersRes()}>
@@ -97,7 +101,9 @@ export default function Pengguna() {
               <For each={usersRes()?.data}>
                 {(user) => (
                   <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
-                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-secondary-800 dark:text-white">{user.nama}</td>
+                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-secondary-800 dark:text-white">
+                      {user.nama}
+                    </td>
                     <td class="whitespace-nowrap px-6 py-4 text-secondary-500 dark:text-secondary-200">{user.email}</td>
                     <td class="whitespace-nowrap px-6 py-4 text-secondary-600 dark:text-secondary-200">
                       <select
@@ -109,8 +115,8 @@ export default function Pengguna() {
                             await userController.updateRole(user.id, newRole);
                             toast.showToast('Peran pengguna berhasil diperbarui', 'success');
                             refetch();
-                          } catch (err: any) {
-                            toast.showToast(err.message || 'Gagal memperbarui peran', 'error');
+                          } catch (err: unknown) {
+                            toast.showToast((err as Error).message || 'Gagal memperbarui peran', 'error');
                             e.currentTarget.value = user.role;
                           }
                         }}
@@ -121,6 +127,7 @@ export default function Pengguna() {
                         <option value="admin">Admin</option>
                         <option value="prodi">Prodi</option>
                         <option value="keuangan">Keuangan</option>
+                        <option value="calon_mahasiswa">Calon Mahasiswa</option>
                         <option value="guest">Guest</option>
                       </select>
                     </td>
@@ -146,6 +153,22 @@ export default function Pengguna() {
                       >
                         {actionLoading() === user.id ? 'Memproses...' : user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
                       </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={user.id === currentUser()?.id}
+                        onClick={async () => {
+                          const newPw = prompt('Masukkan password baru (min 6 karakter):');
+                          if (!newPw || newPw.length < 6) return;
+                          try {
+                            const res = await userController.resetPassword(user.id, newPw);
+                            toast.showToast(res.message, 'success');
+                          } catch (err: unknown) {
+                            toast.showToast((err as Error).message, 'error');
+                          }
+                        }}
+                      >
+                        Reset Password
+                      </Button>
                     </td>
                   </tr>
                 )}
@@ -169,9 +192,16 @@ export default function Pengguna() {
               <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                 <div>
                   <p class="text-sm text-secondary-500 dark:text-secondary-200">
-                    Menampilkan Halaman <span class="font-semibold text-secondary-700 dark:text-secondary-200">{page()}</span> dari{' '}
-                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">{usersRes()?.meta?.totalPages || 1}</span> ({' '}
-                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">{usersRes()?.meta?.total || 0}</span> total pengguna)
+                    Menampilkan Halaman{' '}
+                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">{page()}</span> dari{' '}
+                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">
+                      {usersRes()?.meta?.totalPages || 1}
+                    </span>{' '}
+                    ({' '}
+                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">
+                      {usersRes()?.meta?.total || 0}
+                    </span>{' '}
+                    total pengguna)
                   </p>
                 </div>
                 <div class="flex gap-2">

@@ -162,8 +162,8 @@ export default function Khs() {
       toast.showToast('Aturan konversi nilai berhasil disimpan.', 'success');
       setShowKonversiModal(false);
       refetchKonversis();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan aturan konversi.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan aturan konversi.', 'error');
     }
   };
 
@@ -173,8 +173,8 @@ export default function Khs() {
       await khsController.deleteKonversi(id);
       toast.showToast('Aturan konversi nilai berhasil dihapus.', 'success');
       refetchKonversis();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus aturan konversi.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus aturan konversi.', 'error');
     }
   };
 
@@ -184,7 +184,9 @@ export default function Khs() {
         {/* Header */}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
           <div>
-            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Hasil Studi Akademik</h1>
+            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
+              Hasil Studi Akademik
+            </h1>
             <p class="text-sm text-secondary-500">Kartu Hasil Studi (KHS) dan Transkrip Nilai Akademik Mahasiswa</p>
           </div>
 
@@ -387,7 +389,9 @@ export default function Khs() {
                       {/* Summary Cards */}
                       <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
-                          <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">IP Semester</span>
+                          <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                            IP Semester
+                          </span>
                           <span class="text-3xl font-extrabold text-brand-600">
                             {khsData()?.summary?.ipSemester?.toFixed(2)}
                           </span>
@@ -404,7 +408,9 @@ export default function Khs() {
                           <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
                             SKS Terkontrak
                           </span>
-                          <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">{khsData()?.summary?.totalSks} SKS</span>
+                          <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">
+                            {khsData()?.summary?.totalSks} SKS
+                          </span>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                           <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
@@ -463,7 +469,9 @@ export default function Khs() {
                               {(item) => (
                                 <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                                   <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
-                                  <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.mataKuliah?.nama}</td>
+                                  <td class="p-3 font-bold text-secondary-800 dark:text-white">
+                                    {item.mataKuliah?.nama}
+                                  </td>
                                   <td class="p-3">{item.mataKuliah?.sksTotal}</td>
                                   <td class="p-3">{item.nilaiAngka || '-'}</td>
                                   <td class="p-3">
@@ -529,7 +537,9 @@ export default function Khs() {
                       <span class="text-3xl font-extrabold text-brand-600">{transkripData()?.ipk?.toFixed(2)}</span>
                     </div>
                     <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
-                      <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">Total SKS Lulus</span>
+                      <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                        Total SKS Lulus
+                      </span>
                       <span class="text-3xl font-extrabold text-accent-600">{transkripData()?.totalSksLulus} SKS</span>
                     </div>
                   </div>
@@ -624,10 +634,12 @@ export default function Khs() {
                 <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-secondary-600 mb-2">
                   <div>
                     <p>
-                      NIM: <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
+                      NIM:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
                     </p>
                     <p>
-                      Nama: <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
+                      Nama:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
                   </div>
                   <div class="text-right">
@@ -729,10 +741,12 @@ export default function Khs() {
                 <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-secondary-600 mb-2">
                   <div>
                     <p>
-                      NIM: <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
+                      NIM:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
                     </p>
                     <p>
-                      Nama: <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
+                      Nama:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
                   </div>
                   <div class="text-right">
@@ -743,7 +757,10 @@ export default function Khs() {
                       </span>
                     </p>
                     <p>
-                      SKS Terkontrak: <span class="text-secondary-900 font-bold dark:text-white">{khsData()?.summary?.totalSks} SKS</span>
+                      SKS Terkontrak:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">
+                        {khsData()?.summary?.totalSks} SKS
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -764,7 +781,9 @@ export default function Khs() {
                       {(item) => (
                         <tr>
                           <td class="p-2 border-r">{item.mataKuliah?.kode}</td>
-                          <td class="p-2 border-r font-bold text-secondary-800 dark:text-white">{item.mataKuliah?.nama}</td>
+                          <td class="p-2 border-r font-bold text-secondary-800 dark:text-white">
+                            {item.mataKuliah?.nama}
+                          </td>
                           <td class="p-2 border-r text-center">{item.mataKuliah?.sksTotal}</td>
                           <td class="p-2 border-r text-center">{item.nilaiAngka || '-'}</td>
                           <td class="p-2 border-r text-center">{item.nilaiHuruf || '-'}</td>
@@ -799,7 +818,10 @@ export default function Khs() {
             <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Print Preview - Transkrip Akademik</h3>
-                <button onClick={() => setShowPrintTranskrip(false)} class="text-secondary-400 hover:text-secondary-600">
+                <button
+                  onClick={() => setShowPrintTranskrip(false)}
+                  class="text-secondary-400 hover:text-secondary-600"
+                >
                   ❌
                 </button>
               </div>
@@ -815,19 +837,26 @@ export default function Khs() {
                 <div class="grid grid-cols-2 gap-4 text-xs font-semibold text-secondary-600 mb-2">
                   <div>
                     <p>
-                      NIM: <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
+                      NIM:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
                     </p>
                     <p>
-                      Nama: <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
+                      Nama:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
                   </div>
                   <div class="text-right">
                     <p>
                       IPK Kumulatif:{' '}
-                      <span class="text-secondary-900 font-extrabold text-brand-600 dark:text-white">{transkripData()?.ipk?.toFixed(2)}</span>
+                      <span class="text-secondary-900 font-extrabold text-brand-600 dark:text-white">
+                        {transkripData()?.ipk?.toFixed(2)}
+                      </span>
                     </p>
                     <p>
-                      Total SKS Lulus: <span class="text-secondary-900 font-bold dark:text-white">{transkripData()?.totalSksLulus} SKS</span>
+                      Total SKS Lulus:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">
+                        {transkripData()?.totalSksLulus} SKS
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -850,7 +879,9 @@ export default function Khs() {
                         <tr>
                           <td class="p-2 border-r">{item.periodeId}</td>
                           <td class="p-2 border-r">{item.mataKuliah?.kode}</td>
-                          <td class="p-2 border-r font-bold text-secondary-800 dark:text-white">{item.mataKuliah?.nama}</td>
+                          <td class="p-2 border-r font-bold text-secondary-800 dark:text-white">
+                            {item.mataKuliah?.nama}
+                          </td>
                           <td class="p-2 border-r text-center">{item.mataKuliah?.sksTotal}</td>
                           <td class="p-2 border-r text-center">{item.nilaiAngka || '-'}</td>
                           <td class="p-2 border-r text-center">{item.nilaiHuruf || '-'}</td>
@@ -894,7 +925,9 @@ export default function Khs() {
 
               <form onSubmit={handleSaveKonversi} class="flex flex-col gap-4">
                 <div class="flex flex-col gap-1.5">
-                  <label class="text-xs font-bold text-secondary-700">Program Studi (Pilih jika aturan khusus prodi)</label>
+                  <label class="text-xs font-bold text-secondary-700">
+                    Program Studi (Pilih jika aturan khusus prodi)
+                  </label>
                   <select
                     class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 bg-white font-medium dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                     value={konversiProdiId()}

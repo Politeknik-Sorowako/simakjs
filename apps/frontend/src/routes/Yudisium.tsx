@@ -117,8 +117,8 @@ export default function Yudisium() {
       });
       toast.showToast('Pengajuan yudisium berhasil dikirim.', 'success');
       refetchMyYudisium();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengirim pengajuan.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengirim pengajuan.', 'error');
     }
   };
 
@@ -153,8 +153,8 @@ export default function Yudisium() {
       setAdminBebasPerpustakaan(false);
       setAdminBebasLab(false);
       setAdminBuktiPembayaranWisuda(false);
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan pengajuan.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan pengajuan.', 'error');
     }
   };
 
@@ -180,8 +180,8 @@ export default function Yudisium() {
       toast.showToast('Status yudisium berhasil diperbarui.', 'success');
       setShowVerifyModal(false);
       refetchAllYudisium();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal memperbarui status.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memperbarui status.', 'error');
     }
   };
 
@@ -214,8 +214,8 @@ export default function Yudisium() {
       toast.showToast('Skala predikat kelulusan berhasil disimpan.', 'success');
       setShowPredikatModal(false);
       refetchPredikats();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan skala predikat.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan skala predikat.', 'error');
     }
   };
 
@@ -225,8 +225,8 @@ export default function Yudisium() {
       await khsController.deletePredikat(id);
       toast.showToast('Skala predikat kelulusan berhasil dihapus.', 'success');
       refetchPredikats();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus skala predikat.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus skala predikat.', 'error');
     }
   };
 
@@ -727,16 +727,26 @@ export default function Yudisium() {
               <form onSubmit={handleAdminVerify} class="flex flex-col gap-4">
                 <div class="text-xs text-secondary-600 flex flex-col gap-1 font-medium">
                   <p>
-                    Nama: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.mahasiswa?.nama}</span>
+                    Nama:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedSubmission()?.mahasiswa?.nama}
+                    </span>
                   </p>
                   <p>
-                    NIM: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.mahasiswa?.nim}</span>
+                    NIM:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedSubmission()?.mahasiswa?.nim}
+                    </span>
                   </p>
                   <p>
-                    Prodi: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.prodi?.nama}</span>
+                    Prodi:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedSubmission()?.prodi?.nama}
+                    </span>
                   </p>
                   <p>
-                    Judul TA: <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.judulTa}</span>
+                    Judul TA:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">{selectedSubmission()?.judulTa}</span>
                   </p>
                 </div>
 
@@ -745,7 +755,9 @@ export default function Yudisium() {
                   <select
                     class="border border-secondary-200 rounded-xl px-3 py-2.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 bg-white font-semibold dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                     value={adminStatus()}
-                    onChange={(e) => setAdminStatus(e.currentTarget.value as any)}
+                    onChange={(e) =>
+                      setAdminStatus(e.currentTarget.value as 'diajukan' | 'diverifikasi' | 'disetujui' | 'ditolak')
+                    }
                   >
                     <option value="diajukan">Diajukan</option>
                     <option value="diverifikasi">Diverifikasi</option>

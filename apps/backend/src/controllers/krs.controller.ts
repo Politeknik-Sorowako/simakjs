@@ -11,14 +11,14 @@ export class KrsController {
     return mhs ? mhs.id : null;
   }
 
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data KRS.' };
     }
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 10;
+    const page = query?.page ? parseInt(String(query.page)) : 1;
+    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
 
     let filterMhsId: number | undefined = undefined;
@@ -36,7 +36,7 @@ export class KrsController {
     return await KrsService.getAll(page, limit, search, filterMhsId);
   }
 
-  static async getById({ params, set, getCurrentUser }: AuthContext) {
+  static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -57,7 +57,7 @@ export class KrsController {
     return data;
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 403;
@@ -80,7 +80,7 @@ export class KrsController {
     }
   }
 
-  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>) {
+  static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -89,7 +89,7 @@ export class KrsController {
     return await KrsService.getStats(query?.periodeId);
   }
 
-  static async approve({ body, set, getCurrentUser }: AuthContext) {
+  static async approve({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -104,7 +104,7 @@ export class KrsController {
     }
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 403;
@@ -122,7 +122,7 @@ export class KrsController {
     return updated;
   }
 
-  static async delete({ params, set, getCurrentUser }: AuthContext) {
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 403;
@@ -136,7 +136,7 @@ export class KrsController {
     return { message: 'KRS berhasil dihapus' };
   }
 
-  static async getPendingStudents({ query, set, getCurrentUser }: AuthContext) {
+  static async getPendingStudents({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -155,7 +155,7 @@ export class KrsController {
     }
   }
 
-  static async approveBatch({ body, set, getCurrentUser }: AuthContext) {
+  static async approveBatch({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
       set.status = 403;
@@ -170,7 +170,7 @@ export class KrsController {
     }
   }
 
-  static async getRencanaStudi({ query, set }: AuthContext) {
+  static async getRencanaStudi({ query, set }: AuthContext): Promise<any> {
     const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
     if (!mahasiswaId) {
       set.status = 400;
@@ -184,7 +184,7 @@ export class KrsController {
     return data;
   }
 
-  static async validasiKrs({ query, set }: AuthContext) {
+  static async validasiKrs({ query, set }: AuthContext): Promise<any> {
     const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
     const periodeId = query?.periodeId;
     if (!mahasiswaId || !periodeId) {
@@ -199,7 +199,7 @@ export class KrsController {
     return data;
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

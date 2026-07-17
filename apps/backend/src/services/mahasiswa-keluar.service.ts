@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, or, SQL } from 'drizzle-orm';
 import { mahasiswa, mahasiswaKeluar, periodeAkademik } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -95,7 +95,7 @@ export class MahasiswaKeluarService {
     const { count: count2 } = await import('drizzle-orm');
     const { programStudi: ps } = await import('../models/schema');
 
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (periodeId) conditions.push(eq(mahasiswaKeluar.periodeId, periodeId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

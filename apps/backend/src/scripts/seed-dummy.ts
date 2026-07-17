@@ -104,10 +104,7 @@ async function seed() {
       });
       dosenCount++;
 
-      const [dosenUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email));
+      const [dosenUser] = await db.select().from(users).where(eq(users.email, email));
       if (!dosenUser) {
         await db
           .insert(users)

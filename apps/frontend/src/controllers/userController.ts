@@ -42,8 +42,8 @@ export const userController = {
     password?: string,
     theme?: string,
     avatar?: string,
-  ): Promise<{ message: string; user: any }> {
-    const payload: Record<string, any> = { nama };
+  ): Promise<{ message: string; user: Record<string, unknown> }> {
+    const payload: Record<string, unknown> = { nama };
     if (password) {
       payload.password = password;
     }
@@ -53,9 +53,16 @@ export const userController = {
     if (avatar) {
       payload.avatar = avatar;
     }
-    return fetchApi<{ message: string; user: any }>('/users/profile', {
+    return fetchApi<{ message: string; user: Record<string, unknown> }>('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(payload),
+    });
+  },
+
+  async resetPassword(id: number, password: string): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/users/${id}/reset-password`, {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
     });
   },
 

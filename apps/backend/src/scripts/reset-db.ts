@@ -1,6 +1,6 @@
+import { sql } from 'drizzle-orm';
 import { users } from '../models/schema';
 import { db } from '../utils/db';
-import { sql } from 'drizzle-orm';
 
 async function reset() {
   console.log('=== MEMULAI RESET DATABASE ===');
@@ -38,7 +38,7 @@ async function reset() {
     'konversi_nilai',
     'skala_predikat_kelulusan',
     'pengajuan_cuti',
-    'mahasiswa_keluar'
+    'mahasiswa_keluar',
   ];
 
   try {
@@ -49,7 +49,7 @@ async function reset() {
       FROM pg_tables 
       WHERE schemaname = 'public';
     `);
-    const dbTables = dbTablesQuery.rows.map((row: any) => row.tablename);
+    const dbTables = dbTablesQuery.rows.map((row: Record<string, unknown>) => row.tablename as string);
     const tablesToTruncate = tables.filter((t) => dbTables.includes(t));
 
     if (tablesToTruncate.length > 0) {

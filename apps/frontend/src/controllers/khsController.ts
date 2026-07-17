@@ -47,6 +47,8 @@ export interface KomponenNilai {
   kelasKuliahId: number;
   nama: string;
   bobot: number;
+  subCpmkId?: number | null;
+  rencanaEvaluasiId?: number | null;
 }
 
 export interface NilaiMahasiswa {
@@ -216,8 +218,8 @@ export const khsController = {
     });
   },
 
-  async deletePredikat(id: number): Promise<any> {
-    return fetchApi<any>(`/khs/predikat/${id}`, {
+  async deletePredikat(id: number): Promise<Record<string, unknown>> {
+    return fetchApi<Record<string, unknown>>(`/khs/predikat/${id}`, {
       method: 'DELETE',
     });
   },

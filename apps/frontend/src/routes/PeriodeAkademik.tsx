@@ -29,8 +29,8 @@ export default function PeriodeAkademik() {
     async ({ search, page, limit }) => {
       try {
         return await periodeAkademikController.getAll(search, page, limit);
-      } catch (e: any) {
-        toast.showToast(e.message || 'Gagal memuat data periode akademik', 'error');
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat data periode akademik', 'error');
         throw e;
       }
     },
@@ -86,8 +86,8 @@ export default function PeriodeAkademik() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      const errText = e.message || 'Gagal menyimpan data';
+    } catch (e: unknown) {
+      const errText = (e as Error).message || 'Gagal menyimpan data';
       setErrorMsg(errText);
       toast.showToast(errText, 'error');
     }
@@ -99,8 +99,8 @@ export default function PeriodeAkademik() {
       await periodeAkademikController.delete(id);
       toast.showToast('Periode akademik berhasil dihapus', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus data', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus data', 'error');
     }
   };
 
@@ -110,7 +110,9 @@ export default function PeriodeAkademik() {
         <div class="flex justify-between items-center">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Periode Akademik</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">Kelola semester aktif dan periode akademik perkuliahan.</p>
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+              Kelola semester aktif dan periode akademik perkuliahan.
+            </p>
           </div>
           <Button onClick={openAddModal}>+ Tambah Periode</Button>
         </div>
@@ -135,7 +137,9 @@ export default function PeriodeAkademik() {
                 class="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"
                 aria-hidden="true"
               />
-              <p class="text-sm font-medium text-secondary-500 dark:text-secondary-200 animate-pulse">Memuat data periode akademik...</p>
+              <p class="text-sm font-medium text-secondary-500 dark:text-secondary-200 animate-pulse">
+                Memuat data periode akademik...
+              </p>
             </div>
           }
         >
@@ -143,7 +147,9 @@ export default function PeriodeAkademik() {
             <For each={periodes()?.data}>
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50 transition-colors">
-                  <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200 font-semibold">{item.id}</td>
+                  <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200 font-semibold">
+                    {item.id}
+                  </td>
                   <td class="px-6 py-4 font-medium text-secondary-800 dark:text-secondary-200">{item.nama}</td>
                   <td class="px-6 py-4">
                     <span

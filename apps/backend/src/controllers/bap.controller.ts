@@ -2,25 +2,25 @@ import { BapService } from '../services/bap.service';
 import { AuthContext } from '../utils/types';
 
 export class BapController {
-  static async getByKelas({ params, set, getCurrentUser }: AuthContext) {
+  static async getByKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    return await BapService.getByKelas(parseInt(params.kelasKuliahId));
+    return await BapService.getByKelas(parseInt(String(params.kelasKuliahId)));
   }
 
-  static async getRpsTopik({ params, set, getCurrentUser }: AuthContext) {
+  static async getRpsTopik({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    return await BapService.getRpsTopikByKelas(parseInt(params.kelasKuliahId));
+    return await BapService.getRpsTopikByKelas(parseInt(String(params.kelasKuliahId)));
   }
 
-  static async create({ body, set, getCurrentUser }: AuthContext) {
+  static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -61,7 +61,7 @@ export class BapController {
     return newBap;
   }
 
-  static async update({ params, body, set, getCurrentUser }: AuthContext) {
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;

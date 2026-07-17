@@ -1,5 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import {
+  angkatanKurikulum,
+  capaianCpmk,
+  cpmk,
   kelasKuliah,
   komponenNilai,
   konversiNilai,
@@ -9,6 +12,7 @@ import {
   nilaiKomponenMahasiswa,
   pengajuanYudisium,
   programStudi,
+  subCpmk,
 } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -149,10 +153,7 @@ export class YudisiumService {
 
     const [total] = await db.select({ count: count2() }).from(py);
 
-    const statusBreakdown = await db
-      .select({ status: py.status, count: count2() })
-      .from(py)
-      .groupBy(py.status);
+    const statusBreakdown = await db.select({ status: py.status, count: count2() }).from(py).groupBy(py.status);
 
     const perProdi = await db
       .select({
@@ -178,10 +179,18 @@ export class YudisiumService {
   // --- GRADE COMPONENTS & GRADING INTEGRITY ---
 
   static async getKomponen(kelasKuliahId: number) {
-    return await db.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+    const data = await db.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+    return data.map((d) => ({
+      ...d,
+      subCpmkId: d.subCpmkId,
+      rencanaEvaluasiId: d.rencanaEvaluasiId,
+    }));
   }
 
-  static async saveKomponen(kelasKuliahId: number, list: Array<{ nama: string; bobot: number }>) {
+  static async saveKomponen(
+    kelasKuliahId: number,
+    list: Array<{ nama: string; bobot: number; subCpmkId?: number | null; rencanaEvaluasiId?: number | null }>,
+  ) {
     const foundKelas = await db.query.kelasKuliah.findFirst({
       where: eq(kelasKuliah.id, kelasKuliahId),
     });
@@ -213,6 +222,8 @@ export class YudisiumService {
         kelasKuliahId,
         nama: item.nama,
         bobot: item.bobot,
+        subCpmkId: item.subCpmkId || null,
+        rencanaEvaluasiId: item.rencanaEvaluasiId || null,
       }));
 
       if (inserts.length > 0) {
@@ -372,77 +383,189 @@ export class YudisiumService {
   }
 
   static async lockKelas(kelasKuliahId: number) {
-    const [updated] = await db
-      .update(kelasKuliah)
-      .set({ isLocked: true, updatedAt: new Date() })
-      .where(eq(kelasKuliah.id, kelasKuliahId))
-      .returning();
-    if (!updated) {
-      throw new Error('Kelas kuliah tidak ditemukan.');
-    }
+    return await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(kelasKuliah)
+        .set({ isLocked: true, updatedAt: new Date() })
+        .where(eq(kelasKuliah.id, kelasKuliahId))
+        .returning();
+      if (!updated) {
+        throw new Error('Kelas kuliah tidak ditemukan.');
+      }
 
-    // Recalculate grades for all students in this class
-    const components = await this.getKomponen(kelasKuliahId);
-    const compMap = new Map<number, number>();
-    let totalWeight = 0;
-    for (const c of components) {
-      compMap.set(c.id, c.bobot);
-      totalWeight += c.bobot;
-    }
+      // Load components for this class
+      const components = await tx.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+      const compMap = new Map<number, number>();
+      let totalWeight = 0;
+      for (const c of components) {
+        compMap.set(c.id, c.bobot);
+        totalWeight += c.bobot;
+      }
 
-    const allRules = await db.select().from(konversiNilai);
-    const activeRules = allRules.filter((r) => r.programStudiId === null);
+      // Load conversion rules
+      const allRules = await tx.select().from(konversiNilai);
+      const activeRules = allRules.filter((r) => r.programStudiId === null);
 
-    const getGradeFromRules = (score: number) => {
-      for (const rule of activeRules) {
-        const min = parseFloat(rule.nilaiMin);
-        const max = parseFloat(rule.nilaiMax);
-        if (score >= min && score <= max) {
-          return { huruf: rule.nilaiHuruf, indeks: parseFloat(rule.bobotIndeks) };
+      const getGradeFromRules = (score: number) => {
+        for (const rule of activeRules) {
+          const min = parseFloat(rule.nilaiMin);
+          const max = parseFloat(rule.nilaiMax);
+          if (score >= min && score <= max) {
+            return { huruf: rule.nilaiHuruf, indeks: parseFloat(rule.bobotIndeks) };
+          }
+        }
+        if (score >= 80) return { huruf: 'A', indeks: 4.0 };
+        if (score >= 75) return { huruf: 'B+', indeks: 3.5 };
+        if (score >= 70) return { huruf: 'B', indeks: 3.0 };
+        if (score >= 65) return { huruf: 'C+', indeks: 2.5 };
+        if (score >= 60) return { huruf: 'C', indeks: 2.0 };
+        if (score >= 50) return { huruf: 'D', indeks: 1.0 };
+        return { huruf: 'E', indeks: 0.0 };
+      };
+
+      // Get all KRS records for this class
+      const krsRecords = await tx.select().from(krs).where(eq(krs.kelasKuliahId, kelasKuliahId));
+
+      // Calculate NA_MK for each student
+      for (const krsItem of krsRecords) {
+        const studentGrades = await tx
+          .select()
+          .from(nilaiKomponenMahasiswa)
+          .where(eq(nilaiKomponenMahasiswa.krsId, krsItem.id));
+
+        let finalScore = 0;
+        let registeredWeight = 0;
+        for (const g of studentGrades) {
+          const weight = compMap.get(g.komponenNilaiId) || 0;
+          finalScore += parseFloat(g.nilai) * (weight / 100);
+          registeredWeight += weight;
+        }
+
+        if (totalWeight === 100 && registeredWeight === 100) {
+          const finalScoreFixed = parseFloat(finalScore.toFixed(2));
+          const conversion = getGradeFromRules(finalScoreFixed);
+
+          await tx
+            .update(krs)
+            .set({
+              nilaiAngka: String(finalScoreFixed),
+              nilaiHuruf: conversion.huruf,
+              nilaiIndeks: String(conversion.indeks),
+              updatedAt: new Date(),
+            })
+            .where(eq(krs.id, krsItem.id));
         }
       }
-      if (score >= 80) return { huruf: 'A', indeks: 4.0 };
-      if (score >= 75) return { huruf: 'B+', indeks: 3.5 };
-      if (score >= 70) return { huruf: 'B', indeks: 3.0 };
-      if (score >= 65) return { huruf: 'C+', indeks: 2.5 };
-      if (score >= 60) return { huruf: 'C', indeks: 2.0 };
-      if (score >= 50) return { huruf: 'D', indeks: 1.0 };
-      return { huruf: 'E', indeks: 0.0 };
-    };
 
-    const krsRecords = await db.select().from(krs).where(eq(krs.kelasKuliahId, kelasKuliahId));
+      // Calculate capaian_cpmk for each student
+      const kelas = await tx.query.kelasKuliah.findFirst({
+        where: eq(kelasKuliah.id, kelasKuliahId),
+        with: { mataKuliah: true },
+      });
+      if (kelas) {
+        const cpmkInMk = await tx.query.cpmk.findMany({
+          where: eq(cpmk.mataKuliahId, kelas.mataKuliahId),
+        });
 
-    for (const krsItem of krsRecords) {
-      const studentGrades = await db
-        .select()
-        .from(nilaiKomponenMahasiswa)
-        .where(eq(nilaiKomponenMahasiswa.krsId, krsItem.id));
+        const komponenWithSubCpmk = await tx.query.komponenNilai.findMany({
+          where: eq(komponenNilai.kelasKuliahId, kelasKuliahId),
+        });
 
-      let finalScore = 0;
-      let registeredWeight = 0;
-      for (const g of studentGrades) {
-        const weight = compMap.get(g.komponenNilaiId) || 0;
-        finalScore += parseFloat(g.nilai) * (weight / 100);
-        registeredWeight += weight;
+        // Get subCpmk for each komponen
+        const subCpmkIds = komponenWithSubCpmk.map((k) => k.subCpmkId).filter((id): id is number => id !== null);
+        let subCpmkMap = new Map<number, number>();
+        if (subCpmkIds.length > 0) {
+          const subCpmkList = await tx.query.subCpmk.findMany({
+            where: inArray(subCpmk.id, subCpmkIds),
+          });
+          for (const sc of subCpmkList) {
+            subCpmkMap.set(sc.id, sc.cpmkId);
+          }
+        }
+
+        // Clear existing capaian_cpmk for this kelas
+        await tx.delete(capaianCpmk).where(eq(capaianCpmk.kelasKuliahId, kelasKuliahId));
+
+        // Get mahasiswa details for kurikulum lookup
+        const mahasiswaIds = [...new Set(krsRecords.map((k) => k.mahasiswaId))];
+        const mahasiswaList = await tx.query.mahasiswa.findMany({
+          where: inArray(mahasiswa.id, mahasiswaIds),
+        });
+        const mahasiswaMap = new Map(mahasiswaList.map((m) => [m.id, m]));
+
+        // Build kurikulumId map per mahasiswa
+        const kurikulumPerMahasiswa = new Map<number, number | null>();
+        for (const mhs of mahasiswaList) {
+          if (!mhs.angkatan || !mhs.programStudiId) {
+            kurikulumPerMahasiswa.set(mhs.id, null);
+            continue;
+          }
+          const angkatanKur = await tx.query.angkatanKurikulum.findFirst({
+            where: and(
+              eq(angkatanKurikulum.angkatan, mhs.angkatan),
+              eq(angkatanKurikulum.programStudiId, mhs.programStudiId),
+            ),
+          });
+          kurikulumPerMahasiswa.set(mhs.id, angkatanKur?.kurikulumId ?? null);
+        }
+
+        for (const krsItem of krsRecords) {
+          const mahasiswaId = krsItem.mahasiswaId;
+          const kurikulumId = kurikulumPerMahasiswa.get(mahasiswaId) ?? null;
+
+          const compIds = komponenWithSubCpmk.map((c) => c.id);
+          let studentGrades: (typeof nilaiKomponenMahasiswa.$inferSelect)[] = [];
+          if (compIds.length > 0) {
+            studentGrades = await tx
+              .select()
+              .from(nilaiKomponenMahasiswa)
+              .where(
+                and(
+                  eq(nilaiKomponenMahasiswa.krsId, krsItem.id),
+                  inArray(nilaiKomponenMahasiswa.komponenNilaiId, compIds),
+                ),
+              );
+          }
+
+          const gradeMap = new Map<number, number>();
+          for (const g of studentGrades) {
+            gradeMap.set(g.komponenNilaiId, parseFloat(g.nilai));
+          }
+
+          for (const cpmkItem of cpmkInMk) {
+            const relevantKomponen = komponenWithSubCpmk.filter(
+              (k) => k.subCpmkId && subCpmkMap.get(k.subCpmkId) === cpmkItem.id,
+            );
+
+            if (relevantKomponen.length === 0) continue;
+
+            let totalScore = 0;
+            let count = 0;
+            for (const komp of relevantKomponen) {
+              const score = gradeMap.get(komp.id);
+              if (score !== undefined) {
+                totalScore += score;
+                count++;
+              }
+            }
+
+            if (count === 0) continue;
+
+            const nilaiCpmk = parseFloat((totalScore / count).toFixed(2));
+
+            await tx.insert(capaianCpmk).values({
+              mahasiswaId: krsItem.mahasiswaId,
+              cpmkId: cpmkItem.id,
+              kelasKuliahId,
+              kurikulumId,
+              nilai: nilaiCpmk.toString(),
+            });
+          }
+        }
       }
 
-      if (totalWeight === 100 && registeredWeight === 100) {
-        const finalScoreFixed = parseFloat(finalScore.toFixed(2));
-        const conversion = getGradeFromRules(finalScoreFixed);
-
-        await db
-          .update(krs)
-          .set({
-            nilaiAngka: String(finalScoreFixed),
-            nilaiHuruf: conversion.huruf,
-            nilaiIndeks: String(conversion.indeks),
-            updatedAt: new Date(),
-          })
-          .where(eq(krs.id, krsItem.id));
-      }
-    }
-
-    return updated;
+      return updated;
+    });
   }
 
   static async unlockKelas(kelasKuliahId: number) {

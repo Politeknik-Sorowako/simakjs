@@ -317,7 +317,8 @@ describe('BAP, Presensi & Kompensasi API', () => {
         }),
       );
       expect(reportRes.status).toBe(200);
-      const reportList = await reportRes.json();
+      const reportResponse = await reportRes.json();
+      const reportList = (reportResponse as any).data;
       const mhsReport = reportList.find((r: any) => r.id === mhsId);
       expect(mhsReport).toBeDefined();
       expect(mhsReport.sisaKompensasi).toBe(40);

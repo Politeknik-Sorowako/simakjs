@@ -1,8 +1,10 @@
 import { execSync } from 'child_process';
-import { Pool } from 'pg';
 import { join } from 'path';
+import { Pool } from 'pg';
 
-function ts() { return new Date().toISOString(); }
+function ts() {
+  return new Date().toISOString();
+}
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -52,8 +54,8 @@ async function main() {
     `);
     console.log('[OK] All enums dropped.');
     await pool.end();
-  } catch (err: any) {
-    console.error('[FAILED] Failed to drop objects:', err.message);
+  } catch (err: unknown) {
+    console.error('[FAILED] Failed to drop objects:', (err as Error).message);
     await pool.end();
     process.exit(1);
   }
@@ -62,8 +64,8 @@ async function main() {
   try {
     execSync('bun run src/scripts/ensure-enums.ts', { stdio: 'inherit', timeout: 30000, cwd: process.cwd() });
     console.log('[OK] Enums ensured.');
-  } catch (err: any) {
-    console.error('[FAILED] Enum validation failed:', err.message);
+  } catch (err: unknown) {
+    console.error('[FAILED] Enum validation failed:', (err as Error).message);
     process.exit(1);
   }
 
@@ -71,8 +73,8 @@ async function main() {
   try {
     execSync('bunx drizzle-kit push', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
     console.log('[OK] All tables created.');
-  } catch (err: any) {
-    console.error('[FAILED] drizzle-kit push failed:', err.message);
+  } catch (err: unknown) {
+    console.error('[FAILED] drizzle-kit push failed:', (err as Error).message);
     process.exit(1);
   }
 
@@ -80,8 +82,8 @@ async function main() {
   try {
     execSync('bun run src/scripts/seed-admin.ts', { stdio: 'inherit', timeout: 30000, cwd: process.cwd() });
     console.log('[OK] Admin user seeded.');
-  } catch (err: any) {
-    console.error('[FAILED] Admin seed failed:', err.message);
+  } catch (err: unknown) {
+    console.error('[FAILED] Admin seed failed:', (err as Error).message);
     process.exit(1);
   }
 
@@ -89,7 +91,7 @@ async function main() {
   try {
     const verifyPool = new Pool({ connectionString: process.env.DATABASE_URL });
     const result = await verifyPool.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
     );
     console.log('[OK] Tables created:');
     for (const row of result.rows) {
@@ -97,8 +99,8 @@ async function main() {
     }
     console.log('Total: ' + result.rows.length + ' tables');
     await verifyPool.end();
-  } catch (err: any) {
-    console.log('[WARN] Verification query failed:', err.message);
+  } catch (err: unknown) {
+    console.log('[WARN] Verification query failed:', (err as Error).message);
   }
 
   console.log('');

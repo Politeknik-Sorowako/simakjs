@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, SQL, sql, sum } from 'drizzle-orm';
 import { mahasiswa, pelanggaran, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -69,12 +69,12 @@ export class PelanggaranService {
   static async getRekap(periodeId?: string, programStudiId?: number) {
     const { mahasiswa: mhs, programStudi: ps } = await import('../models/schema');
 
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (programStudiId) conditions.push(eq(mhs.programStudiId, programStudiId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [totals] = await db
-      .select({ totalPelanggaran: count(), totalMahasiswa: count().distinct() })
+      .select({ totalPelanggaran: count(), totalMahasiswa: sql<number>`count(distinct ${pelanggaran.mahasiswaId})` })
       .from(pelanggaran)
       .innerJoin(mhs, eq(pelanggaran.mahasiswaId, mhs.id))
       .where(whereClause);
@@ -122,9 +122,24 @@ export class PelanggaranService {
     return {
       totalPelanggaran: Number(totals?.totalPelanggaran || 0),
       totalMahasiswa: Number(totals?.totalMahasiswa || 0),
-      perJenis: perJenis.map((j) => ({ jenis: j.jenis, jumlah: Number(j.jumlah), totalPoin: Number(j.totalPoin || 0) })),
-      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', totalPelanggaran: Number(p.totalPelanggaran), totalPoin: Number(p.totalPoin || 0) })),
-      topPelanggar: topPelanggar.map((t) => ({ mahasiswaId: t.mahasiswaId, nim: t.nim, nama: t.nama, totalPoin: Number(t.totalPoin || 0), jumlahPelanggaran: Number(t.jumlahPelanggaran) })),
+      perJenis: perJenis.map((j) => ({
+        jenis: j.jenis,
+        jumlah: Number(j.jumlah),
+        totalPoin: Number(j.totalPoin || 0),
+      })),
+      perProdi: perProdi.map((p) => ({
+        prodiId: p.prodiId,
+        prodiNama: p.prodiNama || '-',
+        totalPelanggaran: Number(p.totalPelanggaran),
+        totalPoin: Number(p.totalPoin || 0),
+      })),
+      topPelanggar: topPelanggar.map((t) => ({
+        mahasiswaId: t.mahasiswaId,
+        nim: t.nim,
+        nama: t.nama,
+        totalPoin: Number(t.totalPoin || 0),
+        jumlahPelanggaran: Number(t.jumlahPelanggaran),
+      })),
     };
   }
 

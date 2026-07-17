@@ -96,7 +96,8 @@ export const copyFromKurikulumSchema = {
   detail: {
     tags: ['Kurikulum'],
     summary: 'Salin Mata Kuliah dari Kurikulum Lain',
-    description: 'Menyalin daftar mata kuliah dari kurikulum sumber ke kurikulum target. Skip jika sudah ada (Hanya Admin).',
+    description:
+      'Menyalin daftar mata kuliah dari kurikulum sumber ke kurikulum target. Skip jika sudah ada (Hanya Admin).',
   },
   params: t.Object({
     id: t.Numeric(),

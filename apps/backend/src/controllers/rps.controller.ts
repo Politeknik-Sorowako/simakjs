@@ -2,7 +2,7 @@ import { RpsService } from '../services/rps.service';
 import { AuthContext } from '../utils/types';
 
 export class RpsController {
-  static async bulkGenerate({ body, set, getCurrentUser }: AuthContext) {
+  static async bulkGenerate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -16,8 +16,7 @@ export class RpsController {
     };
   }
 
-
-  static async getRps({ query, set }: AuthContext) {
+  static async getRps({ query, set }: AuthContext): Promise<any> {
     const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
     const periodeId = query?.periodeId;
     if (!mkId || !periodeId) {
@@ -27,7 +26,7 @@ export class RpsController {
     return await RpsService.getRps(mkId, periodeId);
   }
 
-  static async createRps({ body, set, getCurrentUser }: AuthContext) {
+  static async createRps({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -38,7 +37,7 @@ export class RpsController {
     return newRps;
   }
 
-  static async updateRps({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateRps({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -52,7 +51,7 @@ export class RpsController {
     return updated;
   }
 
-  static async addTopik({ params, body, set, getCurrentUser }: AuthContext) {
+  static async addTopik({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -63,7 +62,7 @@ export class RpsController {
     return newTopik;
   }
 
-  static async updateTopik({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateTopik({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -77,7 +76,7 @@ export class RpsController {
     return updated;
   }
 
-  static async deleteTopik({ params, set, getCurrentUser }: AuthContext) {
+  static async deleteTopik({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -91,7 +90,7 @@ export class RpsController {
     return { message: 'Topik RPS berhasil dihapus' };
   }
 
-  static async getRencanaEvaluasi({ query, set }: AuthContext) {
+  static async getRencanaEvaluasi({ query, set }: AuthContext): Promise<any> {
     const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
     if (!mkId) {
       set.status = 400;
@@ -100,7 +99,7 @@ export class RpsController {
     return await RpsService.getRencanaEvaluasi(mkId);
   }
 
-  static async createRencanaEvaluasi({ body, set, getCurrentUser }: AuthContext) {
+  static async createRencanaEvaluasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -116,7 +115,7 @@ export class RpsController {
     }
   }
 
-  static async updateRencanaEvaluasi({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateRencanaEvaluasi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -135,7 +134,7 @@ export class RpsController {
     }
   }
 
-  static async copyRps({ body, set, getCurrentUser }: AuthContext) {
+  static async copyRps({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -151,7 +150,7 @@ export class RpsController {
     }
   }
 
-  static async deleteRencanaEvaluasi({ params, set, getCurrentUser }: AuthContext) {
+  static async deleteRencanaEvaluasi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
       set.status = 403;
@@ -163,5 +162,39 @@ export class RpsController {
       return { error: 'Data tidak ditemukan' };
     }
     return { message: 'Rencana Evaluasi berhasil dihapus' };
+  }
+
+  static async getEvaluasiSubCpmk({ params, getCurrentUser }: AuthContext): Promise<any> {
+    await getCurrentUser();
+    const evaluasiId = parseInt(params.id);
+    return await RpsService.getEvaluasiSubCpmk(evaluasiId);
+  }
+
+  static async attachEvaluasiSubCpmk({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const evaluasiId = parseInt(params.id);
+    const newData = await RpsService.attachEvaluasiSubCpmk(evaluasiId, body);
+    set.status = 201;
+    return newData;
+  }
+
+  static async detachEvaluasiSubCpmk({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const evaluasiId = parseInt(params.id);
+    const subCpmkId = parseInt(params.subCpmkId);
+    const deleted = await RpsService.detachEvaluasiSubCpmk(evaluasiId, subCpmkId);
+    if (!deleted) {
+      set.status = 404;
+      return { error: 'Data tidak ditemukan' };
+    }
+    return { message: 'SubCPMK berhasil diunlink dari Evaluasi' };
   }
 }

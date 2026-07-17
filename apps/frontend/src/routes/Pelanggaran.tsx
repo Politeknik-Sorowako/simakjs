@@ -114,8 +114,8 @@ export default function Pelanggaran() {
       }
       setShowModal(false);
       refetchAllViolations();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan data.');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menyimpan data.');
     }
   };
 
@@ -125,7 +125,9 @@ export default function Pelanggaran() {
         {/* Header Section */}
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
           <div>
-            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Kedisiplinan Mahasiswa</h1>
+            <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
+              Kedisiplinan Mahasiswa
+            </h1>
             <p class="text-sm text-secondary-500">Pencatatan pelanggaran indisipliner dan rekap poin kedisiplinan</p>
           </div>
           <Show when={user()?.role === 'admin' || user()?.role === 'dosen'}>
@@ -152,7 +154,9 @@ export default function Pelanggaran() {
                 >
                   {studentViolations.loading ? '...' : studentViolations()?.totalPoin || 0}
                 </span>
-                <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">Total Poin Pelanggaran</span>
+                <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                  Total Poin Pelanggaran
+                </span>
               </div>
               <div class="p-3.5 bg-secondary-50 border border-secondary-100 rounded-xl dark:bg-secondary-800 dark:border-secondary-800">
                 <p class="text-[10px] text-secondary-400 leading-relaxed uppercase tracking-wider font-semibold">

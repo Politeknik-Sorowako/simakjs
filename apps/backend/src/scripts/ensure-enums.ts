@@ -11,6 +11,7 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'user_role', value: 'prodi', before: 'keuangan' },
   { name: 'user_role', value: 'keuangan', before: 'guest' },
   { name: 'user_role', value: 'guest' },
+  { name: 'user_role', value: 'calon_mahasiswa', before: 'guest' },
 ];
 
 async function ensureEnums() {
@@ -25,11 +26,8 @@ async function ensureEnums() {
 
   for (const fix of ENUM_FIXES) {
     // Check if the type exists first
-    const typeCheck = await pool.query(
-      `SELECT 1 FROM pg_type WHERE typname = $1`,
-      [fix.name]
-    );
-    
+    const typeCheck = await pool.query(`SELECT 1 FROM pg_type WHERE typname = $1`, [fix.name]);
+
     if (typeCheck.rows.length === 0) {
       console.log(`[ENSURE ENUMS] Type ${fix.name} does not exist yet — skipping.`);
       continue;
@@ -39,7 +37,7 @@ async function ensureEnums() {
       `SELECT enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = $1`,
       [fix.name],
     );
-    const exists = rows.some((r: any) => r.enumlabel === fix.value);
+    const exists = rows.some((r: Record<string, unknown>) => r.enumlabel === fix.value);
 
     if (exists) {
       console.log(`[ENSURE ENUMS] ${fix.name}.${fix.value} already exists — no action needed.`);

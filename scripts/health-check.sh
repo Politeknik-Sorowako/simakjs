@@ -5,7 +5,7 @@
 # ===========================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/.deployment/deploy.config.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/../.deployment/deploy.config.sh" 2>/dev/null || true
 
 # Colors
 RED='\033[0;31m'
@@ -69,8 +69,8 @@ check_tables() {
 check_api() {
   local http_code
 
-  # Use docker exec for internal health check (works on remote VPS)
-  http_code=$(docker exec "$BACKEND_CONTAINER" curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
+  # Check API from host via mapped port
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$BACKEND_PORT/health" --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
 
   if [ "$http_code" = "200" ]; then
     ok "API health endpoint returned HTTP 200"
@@ -84,8 +84,8 @@ check_api() {
 check_frontend() {
   local http_code
 
-  # Check frontend via Docker internal network (backend → frontend)
-  http_code=$(docker exec "$BACKEND_CONTAINER" curl -s -o /dev/null -w "%{http_code}" http://$FRONTEND_CONTAINER:80 --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
+  # Check Frontend from host via mapped port
+  http_code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$FRONTEND_PORT" --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
 
   if [ "$http_code" = "200" ] || [ "$http_code" = "302" ] || [ "$http_code" = "301" ]; then
     ok "Frontend is accessible (HTTP $http_code)"
@@ -158,7 +158,7 @@ run_all_checks() {
     db_ok=$(docker exec "$DB_CONTAINER" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1" 2>/dev/null && echo "true" || echo "false")
     results+="\"database\":$db_ok,"
     
-    api_http=$(docker exec "$BACKEND_CONTAINER" curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
+    api_http=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$BACKEND_PORT/health" --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
     results+="\"api_http\":${api_http:-0},"
     
     disk_usage=$(df -h / | awk 'NR==2 {print $5}' | sed 's/%//')

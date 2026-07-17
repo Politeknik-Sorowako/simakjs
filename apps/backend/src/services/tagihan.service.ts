@@ -377,7 +377,7 @@ export class TagihanService {
       totalMahasiswa: Number(totals?.totalMahasiswa || 0),
       totalTagihan: Number(totals?.totalTagihan || 0),
       totalTerbayar: Number(totals?.totalTerbayar || 0),
-      totalTunggakan: Number((totals?.totalTagihan || 0) - (totals?.totalTerbayar || 0)),
+      totalTunggakan: Number(Number(totals?.totalTagihan || 0) - Number(totals?.totalTerbayar || 0)),
       statusBreakdown: statusMap,
       rekapPerProdi: rekapPerProdi.map((p) => ({
         prodiId: p.prodiId,

@@ -5,7 +5,7 @@ import { db } from '../utils/db';
 import { AuthContext } from '../utils/types';
 
 export class UserController {
-  static async getAll({ query, set, getCurrentUser }: AuthContext) {
+  static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user || user.role !== 'admin') {
@@ -59,7 +59,7 @@ export class UserController {
     }
   }
 
-  static async toggleActive({ params, set, getCurrentUser }: AuthContext) {
+  static async toggleActive({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
@@ -107,7 +107,7 @@ export class UserController {
     }
   }
 
-  static async updateRole({ params, body, set, getCurrentUser }: AuthContext) {
+  static async updateRole({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
       if (!currentUser || currentUser.role !== 'admin') {
@@ -122,7 +122,7 @@ export class UserController {
       }
 
       const newRole = (body as any)?.role;
-      const validRoles = ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest'];
+      const validRoles = ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest', 'calon_mahasiswa'];
       if (!newRole || !validRoles.includes(newRole)) {
         set.status = 400;
         return { error: 'Peran tidak valid' };
@@ -158,7 +158,7 @@ export class UserController {
     }
   }
 
-  static async updateProfile({ body, set, getCurrentUser }: AuthContext) {
+  static async updateProfile({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
       if (!currentUser) {
@@ -229,7 +229,7 @@ export class UserController {
     }
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext) {
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
@@ -248,7 +248,38 @@ export class UserController {
     return result;
   }
 
-  static async generateAccounts({ body, set, getCurrentUser }: AuthContext) {
+  static async resetPassword({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || currentUser.role !== 'admin') {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin.' };
+      }
+
+      const userId = parseInt(params.id);
+      if (isNaN(userId)) {
+        set.status = 400;
+        return { error: 'ID pengguna tidak valid' };
+      }
+
+      const newPassword = (body as any)?.password;
+      if (!newPassword || newPassword.length < 6) {
+        set.status = 400;
+        return { error: 'Password minimal 6 karakter' };
+      }
+
+      const hashed = await Bun.password.hash(newPassword, { algorithm: 'bcrypt', cost: 10 });
+
+      await db.update(users).set({ password: hashed }).where(eq(users.id, userId));
+
+      return { message: 'Password berhasil direset' };
+    } catch (error: any) {
+      set.status = 500;
+      return { error: 'Gagal mereset password' };
+    }
+  }
+
+  static async generateAccounts({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;

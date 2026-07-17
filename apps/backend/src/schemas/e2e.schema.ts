@@ -4,7 +4,8 @@ export const resetE2eSchema = {
   detail: {
     tags: ['E2E Testing'],
     summary: '⚠️ Reset Database & Seed Data',
-    description: '⚠️ **DANGER:** Menghapus semua data dan melakukan seeding ulang data awal. **Hanya untuk development/testing.** Diblokir otomatis di production. **Hanya Admin** yang dapat mengakses.',
+    description:
+      '⚠️ **DANGER:** Menghapus semua data dan melakukan seeding ulang data awal. **Hanya untuk development/testing.** Diblokir otomatis di production. **Hanya Admin** yang dapat mengakses.',
   },
   response: {
     200: t.Object({

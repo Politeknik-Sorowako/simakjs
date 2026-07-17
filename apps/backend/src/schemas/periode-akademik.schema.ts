@@ -101,7 +101,11 @@ export const updatePeriodeSchema = {
   params: t.Object({
     id: t.String(),
   }),
-  body: t.Partial(t.Omit(periodeBody, ['id'])),
+  body: t.Object({
+    nama: t.Optional(t.String()),
+    aktif: t.Optional(t.Boolean()),
+    idPddikti: t.Optional(t.String()),
+  }),
   response: {
     200: t.Object({
       id: t.String({ default: '20231' }),

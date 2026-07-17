@@ -448,10 +448,7 @@ export class KhsService {
 
     const result = [];
     for (const p of prodis) {
-      const mhsList = await db
-        .select({ id: mahasiswa.id })
-        .from(mahasiswa)
-        .where(eq(mahasiswa.programStudiId, p.id));
+      const mhsList = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.programStudiId, p.id));
 
       if (mhsList.length === 0) {
         result.push({ prodiId: p.id, prodiNama: p.nama, totalMahasiswa: 0, rataIP: 0 });
@@ -468,12 +465,7 @@ export class KhsService {
           .from(krs)
           .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
           .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-          .where(
-            and(
-              eq(krs.mahasiswaId, mhsId),
-              ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : []),
-            ),
-          );
+          .where(and(eq(krs.mahasiswaId, mhsId), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
 
         let bobot = 0;
         let sks = 0;

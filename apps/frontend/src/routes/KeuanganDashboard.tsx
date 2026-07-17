@@ -1,9 +1,9 @@
 import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { PieChart, StatCard } from '../components/charts';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
-import { StatCard, PieChart } from '../components/charts';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
@@ -85,8 +85,8 @@ export default function KeuanganDashboard() {
     async ({ search, status, page, limit }) => {
       try {
         return await tagihanController.getAll(search, status || undefined, page, limit);
-      } catch (e: any) {
-        toast.showToast(e.message || 'Gagal memuat data tagihan', 'error');
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat data tagihan', 'error');
         throw e;
       }
     },
@@ -114,8 +114,8 @@ export default function KeuanganDashboard() {
       toast.showToast(`${res.message} (${res.count} mahasiswa)`, 'success');
       setShowGenerateModal(false);
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal melakukan generate tagihan massal', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal melakukan generate tagihan massal', 'error');
     } finally {
       setIsGenerating(false);
     }
@@ -146,8 +146,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setShowPayModal(false);
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal memproses pembayaran', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memproses pembayaran', 'error');
     }
   };
 
@@ -175,8 +175,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setNewTarifAngkatan('');
       refetchTarif();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan skema tarif', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan skema tarif', 'error');
     }
   };
 
@@ -186,8 +186,8 @@ export default function KeuanganDashboard() {
       const res = await tagihanController.deleteTarif(id);
       toast.showToast(res.message, 'success');
       refetchTarif();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus skema tarif', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus skema tarif', 'error');
     }
   };
 
@@ -211,8 +211,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       refetchRiwayat();
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan transaksi', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan transaksi', 'error');
     }
   };
 
@@ -238,8 +238,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setShowEditModal(false);
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengubah nominal tagihan', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengubah nominal tagihan', 'error');
     }
   };
 
@@ -265,7 +265,15 @@ export default function KeuanganDashboard() {
     const lunas = items.filter((t) => t.status === 'lunas').length;
     const cicilan = items.filter((t) => t.status === 'cicilan').length;
     const belumBayar = items.filter((t) => t.status === 'belum_bayar').length;
-    return { totalNominal, totalTerbayar, totalTunggakan: totalNominal - totalTerbayar, lunas, cicilan, belumBayar, total: items.length };
+    return {
+      totalNominal,
+      totalTerbayar,
+      totalTunggakan: totalNominal - totalTerbayar,
+      lunas,
+      cicilan,
+      belumBayar,
+      total: items.length,
+    };
   });
 
   return (
@@ -327,7 +335,12 @@ export default function KeuanganDashboard() {
               color="brand"
               icon={
                 <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
                 </svg>
               }
             />
@@ -337,7 +350,12 @@ export default function KeuanganDashboard() {
               color="green"
               icon={
                 <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               }
             />
@@ -347,7 +365,12 @@ export default function KeuanganDashboard() {
               color="rose"
               icon={
                 <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               }
             />
@@ -358,7 +381,12 @@ export default function KeuanganDashboard() {
               color="yellow"
               icon={
                 <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
                 </svg>
               }
             />
@@ -572,14 +600,22 @@ export default function KeuanganDashboard() {
               <form onSubmit={submitBayar} class="flex flex-col gap-4">
                 <div class="text-xs text-secondary-600 flex flex-col gap-1 font-medium bg-secondary-50 p-3 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
                   <p>
-                    Mahasiswa: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nama}</span>
+                    Mahasiswa:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedTagihan()?.mahasiswa?.nama}
+                    </span>
                   </p>
                   <p>
-                    NIM: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nim}</span>
+                    NIM:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedTagihan()?.mahasiswa?.nim}
+                    </span>
                   </p>
                   <p>
                     Total Tagihan:{' '}
-                    <span class="font-bold text-secondary-800 dark:text-white">{formatRupiah(selectedTagihan()?.nominal || 0)}</span>
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {formatRupiah(selectedTagihan()?.nominal || 0)}
+                    </span>
                   </p>
                   <p>
                     Telah Dibayar:{' '}
@@ -653,10 +689,16 @@ export default function KeuanganDashboard() {
                 <div class="grid grid-cols-2 gap-4 text-xs font-medium text-secondary-600 mb-2">
                   <div>
                     <p>
-                      Nama: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nama}</span>
+                      Nama:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">
+                        {selectedPrintItem()?.mahasiswa?.nama}
+                      </span>
                     </p>
                     <p>
-                      NIM: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nim}</span>
+                      NIM:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">
+                        {selectedPrintItem()?.mahasiswa?.nim}
+                      </span>
                     </p>
                     <p>
                       Prodi:{' '}
@@ -667,10 +709,14 @@ export default function KeuanganDashboard() {
                   </div>
                   <div class="text-right">
                     <p>
-                      Periode: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.periodeId}</span>
+                      Periode:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.periodeId}</span>
                     </p>
                     <p>
-                      Status: <span class="text-secondary-900 font-extrabold uppercase dark:text-white">{selectedPrintItem()?.status}</span>
+                      Status:{' '}
+                      <span class="text-secondary-900 font-extrabold uppercase dark:text-white">
+                        {selectedPrintItem()?.status}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -748,15 +794,21 @@ export default function KeuanganDashboard() {
                   <div>
                     <p>
                       Nama Mahasiswa:{' '}
-                      <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nama}</span>
+                      <span class="text-secondary-900 font-bold dark:text-white">
+                        {selectedPrintItem()?.mahasiswa?.nama}
+                      </span>
                     </p>
                     <p>
-                      NIM: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.mahasiswa?.nim}</span>
+                      NIM:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">
+                        {selectedPrintItem()?.mahasiswa?.nim}
+                      </span>
                     </p>
                   </div>
                   <div class="text-right">
                     <p>
-                      Periode: <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.periodeId}</span>
+                      Periode:{' '}
+                      <span class="text-secondary-900 font-bold dark:text-white">{selectedPrintItem()?.periodeId}</span>
                     </p>
                     <p>
                       Tanggal Bayar:{' '}
@@ -837,7 +889,9 @@ export default function KeuanganDashboard() {
                 class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-secondary-55/40 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800"
               >
                 <div class="flex flex-col gap-1">
-                  <label class="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">Angkatan (Tahun)</label>
+                  <label class="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">
+                    Angkatan (Tahun)
+                  </label>
                   <input
                     type="text"
                     placeholder="Misal: 2024"
@@ -857,7 +911,9 @@ export default function KeuanganDashboard() {
                   </select>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <label class="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">Nominal SPP (Rp)</label>
+                  <label class="text-[10px] font-bold text-secondary-500 uppercase tracking-wider">
+                    Nominal SPP (Rp)
+                  </label>
                   <input
                     type="number"
                     value={newTarifNominal()}
@@ -887,7 +943,9 @@ export default function KeuanganDashboard() {
                         <tr class="border-b hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                           <td class="p-3 font-semibold text-secondary-800 dark:text-white">{t.angkatan}</td>
                           <td class="p-3 text-secondary-600">{t.programStudi?.nama || '-'}</td>
-                          <td class="p-3 font-semibold text-secondary-800 dark:text-white">{formatRupiah(t.nominal)}</td>
+                          <td class="p-3 font-semibold text-secondary-800 dark:text-white">
+                            {formatRupiah(t.nominal)}
+                          </td>
                           <td class="p-3 text-center">
                             <button
                               onClick={() => handleDeleteTarif(t.id)}
@@ -956,7 +1014,9 @@ export default function KeuanganDashboard() {
                           <td class="p-3 font-mono text-[10px]">
                             {new Date(tr.tanggalTransaksi).toLocaleString('id-ID')}
                           </td>
-                          <td class="p-3 font-semibold text-secondary-800 dark:text-white">{formatRupiah(tr.nominalBayar)}</td>
+                          <td class="p-3 font-semibold text-secondary-800 dark:text-white">
+                            {formatRupiah(tr.nominalBayar)}
+                          </td>
                           <td class="p-3 text-secondary-600 text-[11px]">{tr.catatanKoreksi || '-'}</td>
                           <td class="p-3 text-secondary-500">{tr.petugas?.nama || 'System'}</td>
                           <td class="p-3 text-center">
@@ -1016,14 +1076,22 @@ export default function KeuanganDashboard() {
               <form onSubmit={submitEdit} class="flex flex-col gap-4">
                 <div class="text-xs text-secondary-600 flex flex-col gap-1 font-medium bg-secondary-50 p-3 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
                   <p>
-                    Mahasiswa: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nama}</span>
+                    Mahasiswa:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedTagihan()?.mahasiswa?.nama}
+                    </span>
                   </p>
                   <p>
-                    NIM: <span class="font-bold text-secondary-800 dark:text-white">{selectedTagihan()?.mahasiswa?.nim}</span>
+                    NIM:{' '}
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {selectedTagihan()?.mahasiswa?.nim}
+                    </span>
                   </p>
                   <p>
                     Nominal Lama:{' '}
-                    <span class="font-bold text-secondary-800 dark:text-white">{formatRupiah(selectedTagihan()?.nominal || 0)}</span>
+                    <span class="font-bold text-secondary-800 dark:text-white">
+                      {formatRupiah(selectedTagihan()?.nominal || 0)}
+                    </span>
                   </p>
                   <p>
                     Sudah Terbayar:{' '}

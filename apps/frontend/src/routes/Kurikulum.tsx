@@ -1,14 +1,15 @@
 import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
-import { API_URL } from '../utils/api';
 import { Kurikulum as IKurikulum, kurikulumController } from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
+import { API_URL, fetchApi } from '../utils/api';
 
 export default function Kurikulum() {
   const [search, setSearch] = createSignal('');
@@ -55,21 +56,31 @@ export default function Kurikulum() {
   const [addMkError, setAddMkError] = createSignal('');
   // Copy from kurikulum state
   const [sourceKurikulumId, setSourceKurikulumId] = createSignal<number>(0);
-  const [copyResult, setCopyResult] = createSignal<{ copied: number; skipped: number; sourceKode: string; sourceNama: string } | null>(null);
+  const [copyResult, setCopyResult] = createSignal<{
+    copied: number;
+    skipped: number;
+    sourceKode: string;
+    sourceNama: string;
+  } | null>(null);
   const [copyLoading, setCopyLoading] = createSignal(false);
 
   const handleCopyFromKurikulum = async () => {
     const targetId = manageKurikulumId();
     if (!targetId || !sourceKurikulumId()) return;
-    if (!confirm(`Salin semua mata kuliah dari kurikulum sumber ke "${kurikulumDetail()?.nama}"? MK yang sudah ada akan dilewati.`)) return;
+    if (
+      !confirm(
+        `Salin semua mata kuliah dari kurikulum sumber ke "${kurikulumDetail()?.nama}"? MK yang sudah ada akan dilewati.`,
+      )
+    )
+      return;
     setCopyLoading(true);
     setCopyResult(null);
     try {
       const result = await kurikulumController.copyFromKurikulum(targetId, sourceKurikulumId());
       setCopyResult(result);
       refetchDetail();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menyalin');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menyalin');
     } finally {
       setCopyLoading(false);
     }
@@ -98,13 +109,17 @@ export default function Kurikulum() {
       await kurikulumController.duplicate(dupId()!, dupKode(), dupNama());
       setShowDuplicateModal(false);
       refetch();
-    } catch (e: any) {
-      setDupError(e.message || 'Gagal menduplikasi');
+    } catch (e: unknown) {
+      setDupError((e as Error).message || 'Gagal menduplikasi');
     }
   };
 
   // Import CSV state
-  const [csvImportResult, setCsvImportResult] = createSignal<{ imported: number; skipped: number; errors: { baris: number; pesan: string }[] } | null>(null);
+  const [csvImportResult, setCsvImportResult] = createSignal<{
+    imported: number;
+    skipped: number;
+    errors: { baris: number; pesan: string }[];
+  } | null>(null);
   const [csvImportLoading, setCsvImportLoading] = createSignal(false);
 
   const handleImportCsv = async (e: Event) => {
@@ -117,8 +132,8 @@ export default function Kurikulum() {
       const result = await kurikulumController.importMkCsv(manageKurikulumId()!, file);
       setCsvImportResult(result);
       refetchDetail();
-    } catch (e: any) {
-      alert(e.message || 'Gagal impor CSV');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal impor CSV');
     } finally {
       setCsvImportLoading(false);
       input.value = '';
@@ -161,8 +176,8 @@ export default function Kurikulum() {
       });
       setAddMkMataKuliahId(0);
       refetchDetail();
-    } catch (e: any) {
-      setAddMkError(e.message || 'Gagal menambahkan mata kuliah');
+    } catch (e: unknown) {
+      setAddMkError((e as Error).message || 'Gagal menambahkan mata kuliah');
     }
   };
 
@@ -173,8 +188,8 @@ export default function Kurikulum() {
     try {
       await kurikulumController.removeMataKuliah(kurId, mkId);
       refetchDetail();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus');
     }
   };
 
@@ -211,6 +226,10 @@ export default function Kurikulum() {
   const handleSave = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
+    if (!semesterMulai()) {
+      setErrorMsg('Semester mulai berlaku harus dipilih');
+      return;
+    }
     try {
       const payload = {
         kode: kode(),
@@ -229,8 +248,8 @@ export default function Kurikulum() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -239,15 +258,15 @@ export default function Kurikulum() {
     try {
       await kurikulumController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 
   // Group MK by semester (memoized)
   const mkBySemester = createMemo(() => {
     const mks = kurikulumDetail()?.kurikulumMataKuliah || [];
-    const groups: { [sem: number]: any[] } = {};
+    const groups: { [sem: number]: Record<string, unknown>[] } = {};
     for (const mk of mks) {
       if (!groups[mk.semester]) groups[mk.semester] = [];
       groups[mk.semester].push(mk);
@@ -256,6 +275,26 @@ export default function Kurikulum() {
       .map(([sem, items]) => ({ semester: parseInt(sem), items }))
       .sort((a, b) => a.semester - b.semester);
   });
+
+  // Fetch BK mappings for all MK in this kurikulum
+  const [bkMappings, { refetch: refetchBkMappings }] = createResource(
+    () => manageKurikulumId(),
+    async (kurikulumId) => {
+      if (!kurikulumId) return {};
+      const detail = await kurikulumController.getById(kurikulumId);
+      const mkIds = detail.kurikulumMataKuliah.map((kmk) => kmk.mataKuliahId);
+      const mappings: { [mkId: number]: Record<string, unknown>[] } = {};
+      for (const mkId of mkIds) {
+        try {
+          const bkList = await fetchApi<Record<string, unknown>[]>(`/mata-kuliah/${mkId}/bahan-kajian`);
+          mappings[mkId] = bkList;
+        } catch {
+          mappings[mkId] = [];
+        }
+      }
+      return mappings;
+    },
+  );
 
   return (
     <MainLayout>
@@ -295,12 +334,16 @@ export default function Kurikulum() {
         <Table headers={['Kode', 'Nama Kurikulum', 'Program Studi', 'Mulai Berlaku', 'SKS (L/W/P)', 'Status', 'Aksi']}>
           <Show when={kurikulums.loading}>
             <tr>
-              <td colspan="7" class="p-8 text-center text-secondary-500">Memuat data...</td>
+              <td colspan="7" class="p-8 text-center text-secondary-500">
+                Memuat data...
+              </td>
             </tr>
           </Show>
-           <Show when={!kurikulums.loading && (kurikulums()?.data?.length ?? 0) === 0}>
+          <Show when={!kurikulums.loading && (kurikulums()?.data?.length ?? 0) === 0}>
             <tr>
-              <td colspan="7" class="p-8 text-center text-secondary-500">Belum ada data kurikulum.</td>
+              <td colspan="7" class="p-8 text-center text-secondary-500">
+                Belum ada data kurikulum.
+              </td>
             </tr>
           </Show>
           <For each={kurikulums()?.data ?? []}>
@@ -308,7 +351,9 @@ export default function Kurikulum() {
               <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
                 <td class="px-6 py-4 text-sm font-medium text-secondary-900 dark:text-white">{item.kode}</td>
                 <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.nama}</td>
-                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.programStudi?.nama || '-'}</td>
+                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
+                  {item.programStudi?.nama || '-'}
+                </td>
                 <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.semesterMulai}</td>
                 <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
                   {item.jumlahSksLulus} / {item.jumlahSksWajib} / {item.jumlahSksPilihan}
@@ -346,10 +391,20 @@ export default function Kurikulum() {
               Menampilkan halaman {page()} dari {kurikulums()?.meta.totalPages} ({kurikulums()?.meta.total} total data)
             </span>
             <div class="flex gap-2">
-              <Button variant="secondary" disabled={page() === 1} onClick={() => setPage((p) => Math.max(p - 1, 1))} class="!py-1 !px-3">
+              <Button
+                variant="secondary"
+                disabled={page() === 1}
+                onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                class="!py-1 !px-3"
+              >
                 Sebelumnya
               </Button>
-              <Button variant="secondary" disabled={page() >= kurikulums()!.meta.totalPages} onClick={() => setPage((p) => Math.min(p + 1, kurikulums()!.meta.totalPages))} class="!py-1 !px-3">
+              <Button
+                variant="secondary"
+                disabled={page() >= kurikulums()!.meta.totalPages}
+                onClick={() => setPage((p) => Math.min(p + 1, kurikulums()!.meta.totalPages))}
+                class="!py-1 !px-3"
+              >
                 Berikutnya
               </Button>
             </div>
@@ -385,36 +440,74 @@ export default function Kurikulum() {
               </select>
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Semester Mulai Berlaku</label>
-              <select
-                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-                value={semesterMulai()}
-                onChange={(e) => setSemesterMulai(e.currentTarget.value)}
+              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Semester Mulai Berlaku
+              </label>
+              <Show
+                when={periodes.loading}
+                fallback={
+                  <select
+                    class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    value={semesterMulai()}
+                    onChange={(e) => setSemesterMulai(e.currentTarget.value)}
+                  >
+                    <option value="">Pilih Semester</option>
+                    <For each={periodes()?.data}>{(periode) => <option value={periode.id}>{periode.nama}</option>}</For>
+                  </select>
+                }
               >
-                <For each={periodes()?.data}>{(periode) => <option value={periode.id}>{periode.nama}</option>}</For>
-              </select>
+                <div class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-secondary-50 dark:bg-secondary-800 flex items-center text-sm text-secondary-500">
+                  Memuat data periode...
+                </div>
+              </Show>
             </div>
             <div class="grid grid-cols-3 gap-4">
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">SKS Lulus</label>
-                <Input type="number" value={jumlahSksLulus()} onInput={(e) => setJumlahSksLulus(Number(e.currentTarget.value))} required />
+                <Input
+                  type="number"
+                  value={jumlahSksLulus()}
+                  onInput={(e) => setJumlahSksLulus(Number(e.currentTarget.value))}
+                  required
+                />
               </div>
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">SKS Wajib</label>
-                <Input type="number" value={jumlahSksWajib()} onInput={(e) => setJumlahSksWajib(Number(e.currentTarget.value))} required />
+                <Input
+                  type="number"
+                  value={jumlahSksWajib()}
+                  onInput={(e) => setJumlahSksWajib(Number(e.currentTarget.value))}
+                  required
+                />
               </div>
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">SKS Pilihan</label>
-                <Input type="number" value={jumlahSksPilihan()} onInput={(e) => setJumlahSksPilihan(Number(e.currentTarget.value))} required />
+                <Input
+                  type="number"
+                  value={jumlahSksPilihan()}
+                  onInput={(e) => setJumlahSksPilihan(Number(e.currentTarget.value))}
+                  required
+                />
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <input type="checkbox" id="isAktif" checked={isAktif()} onChange={(e) => setIsAktif(e.currentTarget.checked)} />
-              <label for="isAktif" class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Aktifkan Kurikulum ini</label>
+              <input
+                type="checkbox"
+                id="isAktif"
+                checked={isAktif()}
+                onChange={(e) => setIsAktif(e.currentTarget.checked)}
+              />
+              <label for="isAktif" class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Aktifkan Kurikulum ini
+              </label>
             </div>
             <div class="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>Batal</Button>
-              <Button type="submit">Simpan</Button>
+              <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={periodes.loading || !semesterMulai()}>
+                Simpan
+              </Button>
             </div>
           </form>
         </Modal>
@@ -430,9 +523,15 @@ export default function Kurikulum() {
             <div class="flex flex-col gap-6">
               {/* Info */}
               <div class="p-3 bg-secondary-50 dark:bg-secondary-800 rounded-lg text-sm grid grid-cols-3 gap-3">
-                <div><span class="font-semibold">Kode:</span> {kurikulumDetail()?.kode}</div>
-                <div><span class="font-semibold">Prodi:</span> {kurikulumDetail()?.programStudi?.nama}</div>
-                <div><span class="font-semibold">Mulai:</span> {kurikulumDetail()?.semesterMulai}</div>
+                <div>
+                  <span class="font-semibold">Kode:</span> {kurikulumDetail()?.kode}
+                </div>
+                <div>
+                  <span class="font-semibold">Prodi:</span> {kurikulumDetail()?.programStudi?.nama}
+                </div>
+                <div>
+                  <span class="font-semibold">Mulai:</span> {kurikulumDetail()?.semesterMulai}
+                </div>
               </div>
 
               {/* Daftar MK per Semester */}
@@ -447,11 +546,24 @@ export default function Kurikulum() {
                       <table class="w-full text-sm">
                         <thead>
                           <tr class="border-b border-secondary-100 dark:border-secondary-800">
-                            <th class="px-4 py-2 text-left text-xs font-semibold text-secondary-500 dark:text-secondary-200">Kode</th>
-                            <th class="px-4 py-2 text-left text-xs font-semibold text-secondary-500 dark:text-secondary-200">Nama</th>
-                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">SKS</th>
-                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">Wajib</th>
-                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">Aksi</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-secondary-500 dark:text-secondary-200">
+                              Kode
+                            </th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-secondary-500 dark:text-secondary-200">
+                              Nama
+                            </th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">
+                              SKS
+                            </th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">
+                              Wajib
+                            </th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">
+                              BK
+                            </th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-secondary-500 dark:text-secondary-200">
+                              Aksi
+                            </th>
                           </tr>
                         </thead>
                         <tbody>
@@ -459,12 +571,21 @@ export default function Kurikulum() {
                             {(item) => (
                               <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
                                 <td class="px-4 py-2 font-mono text-secondary-600">{item.mataKuliah?.kode}</td>
-                                <td class="px-4 py-2 text-secondary-800 dark:text-secondary-200">{item.mataKuliah?.nama}</td>
+                                <td class="px-4 py-2 text-secondary-800 dark:text-secondary-200">
+                                  {item.mataKuliah?.nama}
+                                </td>
                                 <td class="px-4 py-2 text-center text-secondary-700">{item.sksMataKuliah}</td>
                                 <td class="px-4 py-2 text-center">
-                                  <span class={`px-2 py-0.5 rounded-full text-xs font-semibold ${item.isWajib ? 'bg-green-50 text-green-700' : 'bg-secondary-100 text-secondary-600'}`}>
+                                  <span
+                                    class={`px-2 py-0.5 rounded-full text-xs font-semibold ${item.isWajib ? 'bg-green-50 text-green-700' : 'bg-secondary-100 text-secondary-600'}`}
+                                  >
                                     {item.isWajib ? 'Ya' : 'Tidak'}
                                   </span>
+                                </td>
+                                <td class="px-4 py-2 text-center">
+                                  <Show when={bkMappings() && bkMappings()![item.mataKuliahId]}>
+                                    <Badge variant="info">{bkMappings()![item.mataKuliahId]?.length || 0} BK</Badge>
+                                  </Show>
                                 </td>
                                 <td class="px-4 py-2 text-center">
                                   <button
@@ -491,7 +612,14 @@ export default function Kurikulum() {
               <div class="border-t border-secondary-100 dark:border-secondary-800 pt-4">
                 <details class="group">
                   <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-secondary-700 dark:text-secondary-200">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                      />
+                    </svg>
                     Impor dari Kurikulum Lain
                   </summary>
                   <div class="mt-3 flex flex-wrap items-end gap-3">
@@ -504,7 +632,11 @@ export default function Kurikulum() {
                       >
                         <option value={0}>Pilih Kurikulum Sumber</option>
                         <For each={(kurikulums()?.data ?? []).filter((k) => k.id !== manageKurikulumId())}>
-                          {(k) => <option value={k.id}>{k.nama} ({k.kode})</option>}
+                          {(k) => (
+                            <option value={k.id}>
+                              {k.nama} ({k.kode})
+                            </option>
+                          )}
                         </For>
                       </select>
                     </div>
@@ -525,12 +657,21 @@ export default function Kurikulum() {
               <div class="border-t border-secondary-100 dark:border-secondary-800 pt-4">
                 <details class="group">
                   <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-secondary-700 dark:text-secondary-200">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                      />
+                    </svg>
                     Impor CSV Mata Kuliah
                   </summary>
                   <div class="mt-3 flex flex-wrap items-end gap-3">
                     <div class="flex-1">
-                      <label class="text-xs font-semibold text-secondary-500 block mb-1">File CSV (kode_mata_kuliah, semester, sks, is_wajib)</label>
+                      <label class="text-xs font-semibold text-secondary-500 block mb-1">
+                        File CSV (kode_mata_kuliah, semester, sks, is_wajib)
+                      </label>
                       <div class="flex items-center gap-3">
                         <a
                           href={`${API_URL}/kurikulum/template-import-mk`}
@@ -558,9 +699,13 @@ export default function Kurikulum() {
                     </div>
                     <Show when={csvImportResult()?.errors.length}>
                       <div class="mt-1 space-y-0.5">
-                        <For each={csvImportResult()?.errors}>{(err) => (
-                          <p class="text-xs text-red-600">Baris {err.baris}: {err.pesan}</p>
-                        )}</For>
+                        <For each={csvImportResult()?.errors}>
+                          {(err) => (
+                            <p class="text-xs text-red-600">
+                              Baris {err.baris}: {err.pesan}
+                            </p>
+                          )}
+                        </For>
                       </div>
                     </Show>
                   </Show>
@@ -591,9 +736,13 @@ export default function Kurikulum() {
                       }}
                     >
                       <option value={0}>Pilih MK</option>
-                      <For each={allMatkuls()?.data}>{(mk) => (
-                        <option value={mk.id}>{mk.kode} - {mk.nama}</option>
-                      )}</For>
+                      <For each={allMatkuls()?.data}>
+                        {(mk) => (
+                          <option value={mk.id}>
+                            {mk.kode} - {mk.nama}
+                          </option>
+                        )}
+                      </For>
                     </select>
                   </div>
                   <div class="flex flex-col gap-1">
@@ -603,7 +752,7 @@ export default function Kurikulum() {
                       value={addMkSemester()}
                       onChange={(e) => setAddMkSemester(Number(e.currentTarget.value))}
                     >
-                      <For each={[1,2,3,4,5,6,7,8]}>{(s) => <option value={s}>Semester {s}</option>}</For>
+                      <For each={[1, 2, 3, 4, 5, 6, 7, 8]}>{(s) => <option value={s}>Semester {s}</option>}</For>
                     </select>
                   </div>
                   <div class="flex flex-col gap-1">
@@ -616,9 +765,18 @@ export default function Kurikulum() {
                     />
                   </div>
                   <div class="flex items-center gap-2 pt-5">
-                    <input type="checkbox" id="addMkWajib" checked={addMkIsWajib()} onChange={(e) => setAddMkIsWajib(e.currentTarget.checked)} />
-                    <label for="addMkWajib" class="text-xs font-semibold text-secondary-600">Wajib</label>
-                    <Button type="submit" class="!py-1.5 !px-3 !text-xs ml-auto">Tambah</Button>
+                    <input
+                      type="checkbox"
+                      id="addMkWajib"
+                      checked={addMkIsWajib()}
+                      onChange={(e) => setAddMkIsWajib(e.currentTarget.checked)}
+                    />
+                    <label for="addMkWajib" class="text-xs font-semibold text-secondary-600">
+                      Wajib
+                    </label>
+                    <Button type="submit" class="!py-1.5 !px-3 !text-xs ml-auto">
+                      Tambah
+                    </Button>
                   </div>
                 </form>
               </div>
@@ -626,11 +784,7 @@ export default function Kurikulum() {
           </Show>
         </Modal>
         {/* Modal Duplikasi */}
-        <Modal
-          show={showDuplicateModal()}
-          onClose={() => setShowDuplicateModal(false)}
-          title="Duplikasi Kurikulum"
-        >
+        <Modal show={showDuplicateModal()} onClose={() => setShowDuplicateModal(false)} title="Duplikasi Kurikulum">
           <form onSubmit={handleDuplicate} class="flex flex-col gap-4">
             <Show when={dupError()}>
               <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{dupError()}</div>
@@ -647,7 +801,9 @@ export default function Kurikulum() {
               Semua mata kuliah dari kurikulum sumber akan disalin ke kurikulum baru.
             </p>
             <div class="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" type="button" onClick={() => setShowDuplicateModal(false)}>Batal</Button>
+              <Button variant="secondary" type="button" onClick={() => setShowDuplicateModal(false)}>
+                Batal
+              </Button>
               <Button type="submit">Duplikasi</Button>
             </div>
           </form>

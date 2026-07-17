@@ -30,9 +30,10 @@ async function run() {
       try {
         await client.query(statement);
         console.log('Success.');
-      } catch (error: any) {
-        if (error.code === '42701' || error.code === '42P07') {
-          console.warn(`Warning skipped: ${error.message}`);
+      } catch (error: unknown) {
+        const pgError = error as { code?: string; message?: string };
+        if (pgError.code === '42701' || pgError.code === '42P07') {
+          console.warn(`Warning skipped: ${pgError.message}`);
         } else {
           console.error(`Error executing statement:`, error);
         }

@@ -3,15 +3,26 @@ import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
 import { authMiddleware } from './middlewares/auth.middleware';
 import { jwtPlugin } from './plugins/jwt.plugin';
+import { admisiRoutes } from './routes/admisi.routes';
+import { admisiAdminRoutes } from './routes/admisi-admin.routes';
 import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
 import { authRoutes } from './routes/auth.routes';
+import { bahanKajianRoutes } from './routes/bahan-kajian.routes';
+import { bahanKajianCplMappingRoutes } from './routes/bahan-kajian-cpl-mapping.routes';
 import { bapRoutes } from './routes/bap.routes';
 import { bimbinganRoutes } from './routes/bimbingan.routes';
+import { capaianCplRoutes } from './routes/capaian-cpl.routes';
+import { capaianCpmkRoutes } from './routes/capaian-cpmk.routes';
+import { cplRoutes } from './routes/cpl.routes';
+import { cplMappingRoutes } from './routes/cpl-mapping.routes';
+import { cplMataKuliahRoutes } from './routes/cpl-mata-kuliah.routes';
 import { cpmkRoutes } from './routes/cpmk.routes';
+import { cpmkCplMappingRoutes } from './routes/cpmk-cpl-mapping.routes';
 import { cutiRoutes } from './routes/cuti.routes';
 import { dosenRoutes } from './routes/dosen.routes';
 import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
 import { e2eRoutes } from './routes/e2e.routes';
+import { evaluasiKurikulumRoutes } from './routes/evaluasi-kurikulum.routes';
 import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { khsRoutes } from './routes/khs.routes';
 import { krsRoutes } from './routes/krs.routes';
@@ -19,14 +30,19 @@ import { kurikulumRoutes } from './routes/kurikulum.routes';
 import { mahasiswaRoutes } from './routes/mahasiswa.routes';
 import { mahasiswaKeluarRoutes } from './routes/mahasiswa-keluar.routes';
 import { mataKuliahRoutes } from './routes/mata-kuliah.routes';
+import { mataKuliahBahanKajianRoutes } from './routes/mata-kuliah-bahan-kajian.routes';
+import { obeReportRoutes } from './routes/obe-report.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { presensiRoutes } from './routes/presensi.routes';
 import { prodiRoutes } from './routes/prodi.routes';
+import { profilLulusanRoutes } from './routes/profil-lulusan.routes';
 import { rpsRoutes } from './routes/rps.routes';
+import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
+import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -56,8 +72,21 @@ if (isDevelopment) {
           { name: 'Dosen Pengajar Kelas', description: 'Plotting dosen ke kelas kuliah' },
           { name: 'Kurikulum', description: 'Manajemen kurikulum dan mata kuliah kurikulum' },
           { name: 'Angkatan Kurikulum', description: 'Binding angkatan ke kurikulum' },
+          { name: 'Profil Lulusan', description: 'Profil Lulusan Program Studi' },
+          { name: 'CPL', description: 'Capaian Pembelajaran Lulusan' },
+          { name: 'CPL Mapping', description: 'Pemetaan CPL ke Profil Lulusan' },
+          { name: 'SubCPMK', description: 'Sub-Capaian Pembelajaran Mata Kuliah' },
+          { name: 'CPMK-CPL Mapping', description: 'Pemetaan CPMK ke CPL' },
+          { name: 'Visi Misi Prodi', description: 'Visi Misi Program Studi' },
+          { name: 'Bahan Kajian', description: 'Bahan Kajian Program Studi' },
+          { name: 'BK-CPL Mapping', description: 'Pemetaan Bahan Kajian ke CPL' },
           { name: 'CPMK', description: 'Capaian Pembelajaran Mata Kuliah' },
           { name: 'RPS', description: 'Rencana Pembelajaran Semester' },
+          { name: 'Laporan OBE', description: 'Laporan dan analisis Outcome-Based Education' },
+          { name: 'CPL Mata Kuliah', description: 'Pemetaan CPL ke Mata Kuliah (Top-Down)' },
+          { name: 'Capaian CPMK', description: 'Capaian CPMK per mahasiswa per kelas' },
+          { name: 'Capaian CPL', description: 'Capaian CPL per mahasiswa' },
+          { name: 'Evaluasi Kurikulum', description: 'Evaluasi dan rekomendasi perbaikan kurikulum (PPEPP)' },
           { name: 'Rencana Evaluasi', description: 'Rencana evaluasi/penilaian mata kuliah' },
           { name: 'BAP', description: 'Berita Acara Perkuliahan' },
           { name: 'Presensi', description: 'Presensi kehadiran mahasiswa' },
@@ -70,7 +99,16 @@ if (isDevelopment) {
           { name: 'Tagihan', description: 'Tagihan SPP dan pembayaran' },
           { name: 'Yudisium & Komponen Nilai', description: 'Pengajuan yudisium dan input nilai akhir' },
           { name: 'PDDIKTI', description: 'Sinkronisasi data ke PDDIKTI' },
-          { name: 'E2E Testing', description: '⚠️ DANGER: Reset database & seed data. **Hanya untuk development/testing.** JANGAN panggil di production. Restricted ke role Admin.' },
+          {
+            name: 'Admisi - Calon Mahasiswa',
+            description: 'Endpoint untuk calon mahasiswa: registrasi, pendaftaran, upload dokumen, daftar ulang',
+          },
+          { name: 'Admisi - Admin', description: 'Endpoint admin: manajemen sesi, verifikasi, penilaian, jadwal, NIM' },
+          {
+            name: 'E2E Testing',
+            description:
+              '⚠️ DANGER: Reset database & seed data. **Hanya untuk development/testing.** JANGAN panggil di production. Restricted ke role Admin.',
+          },
           { name: 'Health Check', description: 'Monitoring kesehatan server' },
         ],
         components: {
@@ -103,7 +141,7 @@ app
       set.status = 422;
       return { success: false, error: 'Validasi gagal', message: error.message };
     }
-    const err = (error as any)?.cause || error as any;
+    const err = (error as any)?.cause || (error as any);
     if (err && err.code === '23505') {
       set.status = 409;
       return { success: false, error: 'Data duplikat terdeteksi. Kunci unik sudah digunakan.' };
@@ -156,7 +194,7 @@ app
         ws.close();
         return;
       }
-      const payload = await ws.data.jwt.verify(token);
+      const payload = (await ws.data.jwt.verify(token)) as { role: string; email: string } | null;
       if (!payload) {
         ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
         ws.close();
@@ -177,7 +215,7 @@ app
 
       const bimbingan = await db.query.bimbingan.findFirst({
         where: eq(bimbinganTable.id, bimbinganId),
-        with: { mahasiswa: true, dosenPa: true },
+        with: { mahasiswa: true, dosen: true },
       });
 
       if (!bimbingan) {
@@ -189,7 +227,7 @@ app
       const userRole = payload.role as string;
       const userEmail = payload.email as string;
       const isAdmin = userRole === 'admin';
-      const isDosenPa = userRole === 'dosen' && bimbingan.dosenPa?.email === userEmail;
+      const isDosenPa = userRole === 'dosen' && bimbingan.dosen?.email === userEmail;
       const isMahasiswa = userRole === 'mahasiswa' && bimbingan.mahasiswa?.email === userEmail;
 
       if (!isAdmin && !isDosenPa && !isMahasiswa) {
@@ -203,6 +241,8 @@ app
   })
   .use(authMiddleware)
   .use(authRoutes)
+  .use(admisiRoutes)
+  .use(admisiAdminRoutes)
   .use(angkatanKurikulumRoutes)
   .use(prodiRoutes)
   .use(mahasiswaRoutes)
@@ -213,8 +253,22 @@ app
   .use(krsRoutes)
   .use(tagihanRoutes)
   .use(dosenPengajarRoutes)
+  .use(profilLulusanRoutes)
+  .use(cplRoutes)
+  .use(cplMappingRoutes)
+  .use(subCpmkRoutes)
+  .use(cpmkCplMappingRoutes)
+  .use(visiMisiRoutes)
+  .use(bahanKajianRoutes)
+  .use(bahanKajianCplMappingRoutes)
+  .use(mataKuliahBahanKajianRoutes)
   .use(cpmkRoutes)
   .use(bapRoutes)
+  .use(obeReportRoutes)
+  .use(cplMataKuliahRoutes)
+  .use(capaianCpmkRoutes)
+  .use(capaianCplRoutes)
+  .use(evaluasiKurikulumRoutes)
   .use(presensiRoutes)
   .use(bimbinganRoutes)
   .use(pelanggaranRoutes)

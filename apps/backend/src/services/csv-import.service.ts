@@ -77,8 +77,8 @@ export class CsvImportService {
       const lineNum = i + 1;
 
       // Validasi field wajib
-      if (!record.nim || !record.nama || !record.email || !record.nik || !record.namaibukandung) {
-        result.errors.push({ line: lineNum, error: 'Kolom NIM, Nama, Email, NIK, dan Nama Ibu Kandung wajib diisi.' });
+      if (!record.nim || !record.nama || !record.email) {
+        result.errors.push({ line: lineNum, error: 'Kolom NIM, Nama, dan Email wajib diisi.' });
         continue;
       }
 
@@ -95,8 +95,8 @@ export class CsvImportService {
         email: record.email,
         programStudiId: prodiId,
         status: record.status || 'aktif',
-        namaIbuKandung: record.namaibukandung,
-        nik: record.nik,
+        namaIbuKandung: record.namaibukandung || null,
+        nik: record.nik || null,
         jenisKelamin: record.jeniskelamin === 'P' ? 'P' : 'L',
         tanggalLahir: record.tanggallahir || new Date().toISOString().split('T')[0],
         tempatLahir: record.tempatlahir || null,
@@ -285,7 +285,6 @@ export class CsvImportService {
         sksPraktek: record.skspraktek ? parseSks(record.skspraktek) : 0,
         sksPraktekLapangan: record.sksprakteklapangan ? parseSks(record.sksprakteklapangan) : 0,
         sksSimulasi: record.skssimulasi ? parseSks(record.skssimulasi) : 0,
-        programStudiId: prodiId || null,
       });
     }
 
@@ -305,7 +304,6 @@ export class CsvImportService {
                   sksPraktek: item.sksPraktek,
                   sksPraktekLapangan: item.sksPraktekLapangan,
                   sksSimulasi: item.sksSimulasi,
-                  programStudiId: item.programStudiId,
                 },
               });
             result.successCount++;

@@ -48,8 +48,9 @@ cleanup() {
 trap cleanup EXIT
 
 pull_latest_code() {
-  log "Step 0: Pulling latest code..."
-  git pull origin main || {
+  local branch="${1:-main}"
+  log "Step 0: Pulling latest code from branch '$branch'..."
+  git pull origin "$branch" || {
     fail "Failed to pull latest code"
     return 1
   }
@@ -91,6 +92,20 @@ check_prerequisites() {
     fail "POSTGRES_USER and POSTGRES_PASSWORD must be set in .env"
     exit 1
   fi
+  ok "Database credentials configured"
+
+  # Check required environment variables
+  if [ -z "$DATABASE_URL" ]; then
+    fail "DATABASE_URL not set in .env"
+    exit 1
+  fi
+  ok "DATABASE_URL configured"
+
+  if [ -z "$JWT_SECRET" ]; then
+    fail "JWT_SECRET not set in .env"
+    exit 1
+  fi
+  ok "JWT_SECRET configured"
 }
 
 run_pre_tests() {
@@ -197,21 +212,42 @@ build_and_deploy() {
 verify_deployment() {
   log "Step 6: Verifying deployment..."
 
+  # Check container is running
+  log "  Checking container status..."
+  if docker ps --filter "name=$BACKEND_CONTAINER" --format "{{.Names}}" | grep -q "$BACKEND_CONTAINER"; then
+    CONTAINER_STATUS=$(docker ps --filter "name=$BACKEND_CONTAINER" --format "{{.Status}}")
+    ok "Container $BACKEND_CONTAINER is running ($CONTAINER_STATUS)"
+  else
+    fail "Container $BACKEND_CONTAINER is NOT running"
+    echo "=== Docker PS ==="
+    docker ps -a --filter "name=$BACKEND_CONTAINER"
+    echo "=== Container Logs ==="
+    docker compose logs backend --tail="$BACKEND_LOG_LINES" 2>/dev/null || docker logs "$BACKEND_CONTAINER" --tail 50 2>/dev/null || true
+    if [ "$ROLLBACK_ON_FAILURE" = "true" ]; then
+      return 1
+    fi
+    exit 1
+  fi
+
   # Dynamic wait for database migration
   log "  Waiting for database migration to complete..."
   MAX_WAIT=60
   WAITED=0
   MIGRATION_OK=false
   while [ $WAITED -lt $MAX_WAIT ]; do
-    if docker exec "$BACKEND_CONTAINER" curl -s http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null | grep -q '"status":"ok"'; then
-      ok "Database migration completed and API is healthy"
-      MIGRATION_OK=true
-      break
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null || echo "000")
+    if [ "$HTTP_CODE" = "200" ]; then
+      HEALTH_BODY=$(curl -s http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null)
+      if echo "$HEALTH_BODY" | grep -q '"status":"ok"'; then
+        ok "Database migration completed and API is healthy"
+        MIGRATION_OK=true
+        break
+      fi
     fi
     sleep 3
     WAITED=$((WAITED + 3))
     if [ $((WAITED % 9)) -eq 0 ]; then
-      log "    Still waiting... ($WAITED/$MAX_WAIT seconds)"
+      log "    Still waiting... ($WAITED/$MAX_WAIT seconds, HTTP $HTTP_CODE)"
     fi
   done
 
@@ -219,7 +255,7 @@ verify_deployment() {
     fail "Service did not become healthy within ${MAX_WAIT}s"
 
     echo "=== Backend Log ==="
-    docker compose logs "$BACKEND_CONTAINER" --tail="$BACKEND_LOG_LINES"
+    docker compose logs backend --tail="$BACKEND_LOG_LINES" 2>/dev/null || docker logs "$BACKEND_CONTAINER" --tail 50 2>/dev/null || true
 
     if [ "$ROLLBACK_ON_FAILURE" = "true" ]; then
       return 1
@@ -229,10 +265,10 @@ verify_deployment() {
 
   # Health check with retry
   for i in $(seq 1 "$HEALTH_CHECK_RETRIES"); do
-    HTTP_CODE=$(docker exec "$BACKEND_CONTAINER" curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null)
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout "$HEALTH_CHECK_TIMEOUT" 2>/dev/null || echo "000")
     if [ "$HTTP_CODE" = "200" ]; then
       ok "Health check passed (HTTP $HTTP_CODE)"
-      docker exec "$BACKEND_CONTAINER" curl -s http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null | head -c 200
+      curl -s http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null | head -c 200
       echo ""
       break
     fi
@@ -243,7 +279,7 @@ verify_deployment() {
       fail "Health check failed after $HEALTH_CHECK_RETRIES attempts"
 
       echo "=== Backend Log ==="
-      docker compose logs "$BACKEND_CONTAINER" --tail="$BACKEND_LOG_LINES"
+      docker compose logs backend --tail="$BACKEND_LOG_LINES" 2>/dev/null || docker logs "$BACKEND_CONTAINER" --tail 50 2>/dev/null || true
 
       if [ "$ROLLBACK_ON_FAILURE" = "true" ]; then
         return 1
@@ -253,7 +289,7 @@ verify_deployment() {
   done
 
   # Run full health check
-  bash "$SCRIPT_DIR/health-check.sh" || true
+  bash "$SCRIPT_DIR/scripts/health-check.sh" || true
 }
 
 run_post_tests() {
@@ -294,7 +330,7 @@ main() {
   log "Log file: $LOG_FILE"
   echo ""
   
-  pull_latest_code
+  pull_latest_code "$branch"
   check_prerequisites
   run_pre_tests
   backup_database

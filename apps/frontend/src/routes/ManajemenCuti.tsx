@@ -131,8 +131,8 @@ export default function ManajemenCuti() {
       toast.showToast(`Mahasiswa "${mhs.nama}" berhasil dicatat cuti.`, 'success');
       setShowInputModal(false);
       refetchInput();
-    } catch (e: any) {
-      setInputError(e.message || 'Gagal mencatat cuti mahasiswa.');
+    } catch (e: unknown) {
+      setInputError((e as Error).message || 'Gagal mencatat cuti mahasiswa.');
     } finally {
       setInputSubmitting(false);
     }
@@ -144,8 +144,8 @@ export default function ManajemenCuti() {
       await cutiController.delete(id);
       toast.showToast(`Cuti "${nama}" berhasil dibatalkan.`, 'success');
       refetchInput();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan cuti.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan cuti.', 'error');
     }
   };
 
@@ -155,8 +155,8 @@ export default function ManajemenCuti() {
       await cutiController.aktifKembali(id);
       toast.showToast(`"${nama}" berhasil diaktifkan kembali.`, 'success');
       refetchInput();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal.', 'error');
     }
   };
 
@@ -217,8 +217,8 @@ export default function ManajemenCuti() {
       );
       setShowApprModal(false);
       refetchApprovals();
-    } catch (e: any) {
-      setApprError(e.message || 'Gagal memproses persetujuan.');
+    } catch (e: unknown) {
+      setApprError((e as Error).message || 'Gagal memproses persetujuan.');
     } finally {
       setApprSubmitting(false);
     }
@@ -262,8 +262,8 @@ export default function ManajemenCuti() {
       await cutiController.aktifKembali(id);
       toast.showToast(`Mahasiswa "${nama}" berhasil diaktifkan kembali.`, 'success');
       refetchAktif();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengaktifkan kembali.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengaktifkan kembali.', 'error');
     } finally {
       setProcessing(null);
     }
@@ -275,7 +275,9 @@ export default function ManajemenCuti() {
       <div class="flex flex-col gap-6">
         <div>
           <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Manajemen Cuti Mahasiswa</h1>
-          <p class="text-sm text-secondary-500">Input cuti, persetujuan, dan aktivasi kembali mahasiswa secara terpadu.</p>
+          <p class="text-sm text-secondary-500">
+            Input cuti, persetujuan, dan aktivasi kembali mahasiswa secara terpadu.
+          </p>
         </div>
 
         <div class="flex gap-1 border-b border-secondary-200 dark:border-secondary-700">
@@ -436,7 +438,10 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show when={!approvals.loading} fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}>
+          <Show
+            when={!approvals.loading}
+            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
+          >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode', 'Alasan Cuti', 'Status', 'SK Cuti', 'Aksi']}>
               <For
                 each={approvals()?.data}
@@ -516,7 +521,10 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show when={!aktifList.loading} fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}>
+          <Show
+            when={!aktifList.loading}
+            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
+          >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode Cuti', 'Rentang Cuti', 'Aksi']}>
               <For
                 each={aktifList()?.data}

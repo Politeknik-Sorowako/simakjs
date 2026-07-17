@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { dosen, mahasiswa, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -10,8 +10,8 @@ export interface CreateMahasiswaDto {
   dosenPaId?: number | null;
   status?: string;
   idPddikti?: string;
-  namaIbuKandung: string;
-  nik: string;
+  namaIbuKandung?: string | null;
+  nik?: string | null;
   jenisKelamin: 'L' | 'P';
   tanggalLahir: string;
 }
@@ -115,7 +115,7 @@ export class MahasiswaService {
   }
 
   static async getStats(angkatan?: string, programStudiId?: number) {
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (angkatan) conditions.push(eq(mahasiswa.angkatan, angkatan));
     if (programStudiId) conditions.push(eq(mahasiswa.programStudiId, programStudiId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -156,7 +156,7 @@ export class MahasiswaService {
   }
 
   static async getMahasiswaBaru(angkatan?: string) {
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (angkatan) conditions.push(eq(mahasiswa.angkatan, angkatan));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -185,7 +185,13 @@ export class MahasiswaService {
 
     return {
       total: totalCount,
-      perProdi: perProdi.map((p) => ({ prodiId: p.prodiId, prodiNama: p.prodiNama || '-', total: p.total, laki: Number(p.laki), perempuan: Number(p.perempuan) })),
+      perProdi: perProdi.map((p) => ({
+        prodiId: p.prodiId,
+        prodiNama: p.prodiNama || '-',
+        total: p.total,
+        laki: Number(p.laki),
+        perempuan: Number(p.perempuan),
+      })),
       trend: trend.map((t) => ({ angkatan: t.angkatan || '-', total: t.total })),
     };
   }

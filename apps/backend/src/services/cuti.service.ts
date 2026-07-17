@@ -133,7 +133,7 @@ export class CutiService {
     const conditions = [eq(mahasiswa.status, 'cuti')];
 
     if (params.search) {
-      conditions.push(or(like(mahasiswa.nama, `%${params.search}%`), like(mahasiswa.nim, `%${params.search}%`)));
+      conditions.push(or(like(mahasiswa.nama, `%${params.search}%`), like(mahasiswa.nim, `%${params.search}%`))!);
     }
 
     const mahasiswaData = await db.query.mahasiswa.findMany({

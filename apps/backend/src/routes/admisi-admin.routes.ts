@@ -1,0 +1,177 @@
+import { Elysia } from 'elysia';
+import { AdmisiAdminController } from '../controllers/admisi-admin.controller';
+import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  addSessionProdiSchema,
+  createDocumentRequirementSchema,
+  createExamScheduleSchema,
+  createSelectionComponentSchema,
+  createSessionSchema,
+  inputScoreSchema,
+  issueNimSchema,
+  updateApplicationStatusSchema,
+  updateSessionSchema,
+  verifyDocumentSchema,
+  verifyPaymentSchema,
+} from '../schemas/admisi-admin.schema';
+
+const adminGuard = new Elysia({ name: 'admin-guard' }).use(authMiddleware).derive(async ({ getCurrentUser, set }) => {
+  const user = await getCurrentUser();
+  if (!user || user.role !== 'admin') {
+    set.status = 403;
+    throw new Error('Akses ditolak. Hanya admin yang dapat mengakses endpoint ini.');
+  }
+  return { adminUser: user };
+});
+
+export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
+  .use(adminGuard)
+  // ─── SESI ────────────────────────────────────────────────────────
+  .get('/sessions', AdmisiAdminController.getAllSessions, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar semua sesi admisi' },
+  })
+  .get('/sessions/:id', AdmisiAdminController.getSessionDetail, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Detail sesi + prodi + syarat' },
+  })
+  .post('/sessions', AdmisiAdminController.createSession, createSessionSchema)
+  .put('/sessions/:id', AdmisiAdminController.updateSession, updateSessionSchema)
+
+  // ─── SESI PRODI ──────────────────────────────────────────────────
+  .post('/sessions/:id/prodis', AdmisiAdminController.addProdiToSession, addSessionProdiSchema)
+  .put('/sessions/:id/prodis/:prodiId', AdmisiAdminController.updateSesiProdi, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Update prodi dalam sesi (kuota, biaya, grade)' },
+  })
+  .delete('/sessions/:id/prodis/:prodiId', AdmisiAdminController.removeProdiFromSession, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Hapus prodi dari sesi' },
+  })
+  .put('/sessions/:id/prodis/:prodiId/toggle', AdmisiAdminController.toggleProdiActive, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Aktif/nonaktifkan prodi dalam sesi' },
+  })
+
+  // ─── SYARAT DOKUMEN ──────────────────────────────────────────────
+  .post('/document-requirements', AdmisiAdminController.createDocumentRequirement, createDocumentRequirementSchema)
+  .put('/document-requirements/:id', AdmisiAdminController.updateDocumentRequirement, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Update syarat dokumen' },
+  })
+  .delete('/document-requirements/:id', AdmisiAdminController.deleteDocumentRequirement, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Hapus syarat dokumen' },
+  })
+
+  // ─── APLIKASI / VERIFIKASI ──────────────────────────────────────
+  .get('/applications', AdmisiAdminController.getApplications, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar pendaftar + filter' },
+  })
+  .post('/applications/:id/upload-document', AdmisiAdminController.adminUploadDocument, {
+    type: 'none',
+    detail: { tags: ['Admisi - Admin'], summary: 'Admin upload dokumen untuk peserta' },
+  } as any)
+  .put('/documents/verify', AdmisiAdminController.verifyDocument, verifyDocumentSchema)
+  .post('/applications/:id/verify-all-docs', AdmisiAdminController.verifyAllDocuments, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Verifikasi semua dokumen & ubah status' },
+  })
+  .post('/applications/:id/mark-verified', AdmisiAdminController.markDocsVerified, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Ubah status ke Terverifikasi (jika semua dokumen sdh verified)' },
+  })
+  .put('/applications/:id/status', AdmisiAdminController.updateApplicationStatus, updateApplicationStatusSchema)
+  .put('/applications/:id/biodata', AdmisiAdminController.updateAppBiodata, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Edit biodata peserta' },
+  })
+  .put('/applications/:id/update-prodi', AdmisiAdminController.updateAppProdi, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Ubah pilihan prodi peserta' },
+  })
+  .post('/applications/:id/reopen', AdmisiAdminController.reopenApplication, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Buka akses peserta untuk lengkapi berkas' },
+  })
+
+  // ─── KOMPONEN PENILAIAN ─────────────────────────────────────────
+  .get('/sessions/:id/components', AdmisiAdminController.getSelectionComponents, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Komponen penilaian sesi' },
+  })
+  .post('/components', AdmisiAdminController.createSelectionComponent, createSelectionComponentSchema)
+  .delete('/components/:id', AdmisiAdminController.deleteSelectionComponent, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Hapus komponen penilaian' },
+  })
+
+  // ─── NILAI ───────────────────────────────────────────────────────
+  .post('/scores', AdmisiAdminController.inputScore, inputScoreSchema)
+
+  // ─── JADWAL UJIAN ────────────────────────────────────────────────
+  .post('/exam-schedules', AdmisiAdminController.createExamSchedule, createExamScheduleSchema)
+  .get('/sessions/:id/exam-schedules', AdmisiAdminController.getExamSchedules, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Jadwal ujian per sesi' },
+  })
+
+  // ─── DAFTAR ULANG ────────────────────────────────────────────────
+  .get('/payments', AdmisiAdminController.getPayments, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar pembayaran daftar ulang' },
+  })
+  .put('/payments/verify', AdmisiAdminController.verifyPayment, verifyPaymentSchema)
+
+  // ─── NIM ─────────────────────────────────────────────────────────
+  .get('/sessions/:id/prodis/:prodiId/generate-nim', AdmisiAdminController.generateNIMBulk, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Generate NIM bulk per prodi' },
+  })
+  .get('/validate-nim', AdmisiAdminController.validateNIM, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Validasi NIM unik' },
+  })
+  .post('/applications/:id/issue-nim', AdmisiAdminController.issueNIM, issueNimSchema)
+  .put('/applications/:id/edit-nim', AdmisiAdminController.editNIM, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Edit NIM sebelum diterbitkan' },
+  })
+
+  // ─── PENGUMUMAN ──────────────────────────────────────────────────
+  .get('/sessions/:id/candidates', AdmisiAdminController.getPassedCandidates, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Kandidat lulus/gagal' },
+  })
+  .post('/sessions/:id/announce', AdmisiAdminController.announceResults, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Terbitkan pengumuman kelulusan' },
+  })
+
+  // ─── STATISTIK & EXPORT ─────────────────────────────────────────
+  .get('/stats', AdmisiAdminController.getDashboardStats, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Dashboard statistik' },
+  })
+  .get('/export', AdmisiAdminController.exportApplications, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Ekspor data pendaftar' },
+  })
+
+  // ─── PRODI ───────────────────────────────────────────────────────
+  .get('/prodis', AdmisiAdminController.getAllProdi, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar semua program studi' },
+  })
+
+  // ─── VA BANKS ─────────────────────────────────────────────────
+  .get('/va-banks', AdmisiAdminController.getAllVABanks, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar bank VA' },
+  })
+  .post('/va-banks', AdmisiAdminController.createVABank, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Tambah bank VA' },
+  })
+  .put('/va-banks/:id', AdmisiAdminController.updateVABank, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Edit bank VA' },
+  })
+  .delete('/va-banks/:id', AdmisiAdminController.deleteVABank, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Hapus bank VA' },
+  })
+  .get('/pending-payments', AdmisiAdminController.getPendingPayments, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Daftar pembayaran menunggu verifikasi' },
+  })
+  .post('/payments/:id/verify', AdmisiAdminController.verifyPaymentVA, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Verifikasi pembayaran VA' },
+  })
+
+  // ─── ANNOUNCEMENTS ──────────────────────────────────────────────
+  .post('/announcements', AdmisiAdminController.createAnnouncement, {
+    type: 'none',
+    detail: { tags: ['Admisi - Admin'], summary: 'Buat pengumuman (support file upload)' },
+  } as any)
+  .get('/announcements', AdmisiAdminController.getAnnouncements, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Lihat pengumuman' },
+  })
+  .put('/announcements/:id', AdmisiAdminController.updateAnnouncement, {
+    type: 'none',
+    detail: { tags: ['Admisi - Admin'], summary: 'Edit pengumuman (support file upload)' },
+  } as any)
+  .delete('/announcements/:id', AdmisiAdminController.deleteAnnouncement, {
+    detail: { tags: ['Admisi - Admin'], summary: 'Hapus pengumuman' },
+  });
