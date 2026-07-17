@@ -1,4 +1,6 @@
 import { createSignal, For, Show } from 'solid-js';
+import { fetchApi } from '../../utils/api';
+import { parseCsv } from '../../utils/csv';
 import { Button } from './Button';
 import { Modal } from './Modal';
 
@@ -40,7 +42,7 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
-      const rows = text.split(/\r?\n/).map((line) => line.split(','));
+      const rows = parseCsv(text);
       setPreview(rows.slice(0, 6).filter((row) => row.some((cell) => cell.trim() !== '')));
     };
     reader.readAsText(selectedFile);
@@ -75,21 +77,10 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
       formData.append('file', selectedFile);
       formData.append('mode', duplicateMode());
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api${props.importUrl}`, {
+      const res = await fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>(props.importUrl, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
         body: formData,
       });
-
-      if (!response.ok) {
-        const errJson = await response.json();
-        throw new Error(errJson.error || 'Terjadi kesalahan saat mengimpor.');
-      }
-
-      const res = await response.json();
       setImportReport(res);
       if (res.errors && res.errors.length > 0) {
         if (res.successCount > 0) {
@@ -105,8 +96,9 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
           props.onClose();
         }, 1500);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Terjadi kesalahan sistem.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem.';
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
