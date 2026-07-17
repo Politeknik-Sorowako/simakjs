@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: simak_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-simak_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simak_password}
@@ -22,6 +23,7 @@ services:
       context: .
       dockerfile: apps/backend/Dockerfile
     init: true
+    restart: unless-stopped
     container_name: simak_backend
     ports:
       - "${BACKEND_PORT:-3000}:3000"

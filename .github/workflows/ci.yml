@@ -19,8 +19,21 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
       - name: Install dependencies
-        run: bun install
+        run: |
+          for i in 1 2 3; do
+            bun install --frozen-lockfile && break
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
 
       - name: Run Biome lint
         run: bunx biome ci .
@@ -37,8 +50,21 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
       - name: Install dependencies
-        run: bun install
+        run: |
+          for i in 1 2 3; do
+            bun install --frozen-lockfile && break
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
 
       - name: Run TypeScript type check
         run: |
@@ -57,8 +83,21 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
       - name: Install dependencies
-        run: bun install
+        run: |
+          for i in 1 2 3; do
+            bun install --frozen-lockfile && break
+            echo "Attempt $i failed, retrying in 5s..."
+            sleep 5
+          done
 
       - name: Build frontend
         run: |

@@ -188,55 +188,64 @@ app
   .use(jwtPlugin)
   .ws('/bimbingan/ws/:bimbinganId', {
     async open(ws) {
-      const token = ws.data.query?.token;
-      if (!token) {
-        ws.send(JSON.stringify({ error: 'Unauthorized: Missing token' }));
-        ws.close();
-        return;
+      try {
+        const token = ws.data.query?.token;
+        if (!token) {
+          ws.send(JSON.stringify({ error: 'Unauthorized: Missing token' }));
+          ws.close();
+          return;
+        }
+        const payload = (await ws.data.jwt.verify(token)) as { role: string; email: string } | null;
+        if (!payload) {
+          ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
+          ws.close();
+          return;
+        }
+
+        const bimbinganId = Number(ws.data.params.bimbinganId);
+        if (!bimbinganId) {
+          ws.send(JSON.stringify({ error: 'Invalid bimbingan ID' }));
+          ws.close();
+          return;
+        }
+
+        const { bimbingan: bimbinganTable } = await import('./models/schema');
+        const { db } = await import('./utils/db');
+        const { eq } = await import('drizzle-orm');
+
+        const bimbingan = await db.query.bimbingan.findFirst({
+          where: eq(bimbinganTable.id, bimbinganId),
+          with: { mahasiswa: true, dosen: true },
+        });
+
+        if (!bimbingan) {
+          ws.send(JSON.stringify({ error: 'Bimbingan not found' }));
+          ws.close();
+          return;
+        }
+
+        const userRole = payload.role as string;
+        const userEmail = payload.email as string;
+        const isAdmin = userRole === 'admin';
+        const isDosenPa = userRole === 'dosen' && bimbingan.dosen?.email === userEmail;
+        const isMahasiswa = userRole === 'mahasiswa' && bimbingan.mahasiswa?.email === userEmail;
+
+        if (!isAdmin && !isDosenPa && !isMahasiswa) {
+          ws.send(JSON.stringify({ error: 'Forbidden: You are not a participant of this bimbingan' }));
+          ws.close();
+          return;
+        }
+
+        ws.subscribe(`bimbingan-${bimbinganId}`);
+      } catch (err: unknown) {
+        console.error('[WS] Error in open handler:', err instanceof Error ? err.message : err);
+        try {
+          ws.send(JSON.stringify({ error: 'Internal server error' }));
+          ws.close();
+        } catch {
+          // ws may already be closed
+        }
       }
-      const payload = (await ws.data.jwt.verify(token)) as { role: string; email: string } | null;
-      if (!payload) {
-        ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
-        ws.close();
-        return;
-      }
-
-      const bimbinganId = Number(ws.data.params.bimbinganId);
-      if (!bimbinganId) {
-        ws.send(JSON.stringify({ error: 'Invalid bimbingan ID' }));
-        ws.close();
-        return;
-      }
-
-      const { bimbingan: bimbinganTable } = await import('./models/schema');
-      const { db } = await import('./utils/db');
-      const { eq } = await import('drizzle-orm');
-      const { mahasiswa, dosen } = await import('./models/schema');
-
-      const bimbingan = await db.query.bimbingan.findFirst({
-        where: eq(bimbinganTable.id, bimbinganId),
-        with: { mahasiswa: true, dosen: true },
-      });
-
-      if (!bimbingan) {
-        ws.send(JSON.stringify({ error: 'Bimbingan not found' }));
-        ws.close();
-        return;
-      }
-
-      const userRole = payload.role as string;
-      const userEmail = payload.email as string;
-      const isAdmin = userRole === 'admin';
-      const isDosenPa = userRole === 'dosen' && bimbingan.dosen?.email === userEmail;
-      const isMahasiswa = userRole === 'mahasiswa' && bimbingan.mahasiswa?.email === userEmail;
-
-      if (!isAdmin && !isDosenPa && !isMahasiswa) {
-        ws.send(JSON.stringify({ error: 'Forbidden: You are not a participant of this bimbingan' }));
-        ws.close();
-        return;
-      }
-
-      ws.subscribe(`bimbingan-${bimbinganId}`);
     },
   })
   .use(authMiddleware)
