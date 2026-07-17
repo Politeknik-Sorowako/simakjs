@@ -1501,6 +1501,13 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </div>
         </div>
 
+        <div class="text-center text-[10px] text-brand-400/40 pt-1">
+          SIMAK v1.0.0
+          <Show when={import.meta.env.VITE_APP_MODE === 'development'}>
+            <span class="ml-1 text-amber-400/70 font-semibold">• DEV</span>
+          </Show>
+        </div>
+
         <div class="flex gap-2 text-xs border-t border-brand-950/60 pt-2.5">
           <A
             href="/profil"

@@ -26,6 +26,13 @@ export function MainLayout(props: { children: JSX.Element }) {
         {/* Content Viewport */}
         <main class="flex-1 p-4 md:p-8 overflow-y-auto w-full mx-auto">{props.children}</main>
       </div>
+
+      {/* DEV Environment Overlay */}
+      <Show when={import.meta.env.VITE_APP_MODE === 'development'}>
+        <div class="fixed top-3 right-3 z-[100] px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full shadow-lg select-none pointer-events-none">
+          DEV
+        </div>
+      </Show>
     </div>
   );
 }
