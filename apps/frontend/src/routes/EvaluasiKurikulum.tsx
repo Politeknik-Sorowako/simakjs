@@ -62,8 +62,8 @@ export default function EvaluasiKurikulum() {
       toast.showToast('Evaluasi berhasil ditambahkan', 'success');
       setShowForm(false);
       setFormData({ aspek: '', temuan: '', rekomendasi: '', tindakLanjut: '', status: 'open' });
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menambahkan evaluasi', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menambahkan evaluasi', 'error');
     }
   };
 
@@ -71,8 +71,8 @@ export default function EvaluasiKurikulum() {
     try {
       await evaluasiKurikulumController.update(id, { status });
       toast.showToast('Status berhasil diupdate', 'success');
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal update status', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal update status', 'error');
     }
   };
 
@@ -105,7 +105,7 @@ export default function EvaluasiKurikulum() {
               type="select"
               placeholder="Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
+              onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
                 setKurikulumFilter(undefined);
@@ -123,9 +123,7 @@ export default function EvaluasiKurikulum() {
                 type="select"
                 placeholder="Kurikulum"
                 value={kurikulumFilter() ?? ''}
-                onInput={(e: any) =>
-                  setKurikulumFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)
-                }
+                onInput={(e) => setKurikulumFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
                 isSelect
                 selectOptions={[
                   { value: '', label: 'Pilih Kurikulum' },
@@ -139,7 +137,7 @@ export default function EvaluasiKurikulum() {
               type="select"
               placeholder="Periode"
               value={periodeFilter() ?? ''}
-              onInput={(e: any) => setPeriodeFilter(e.currentTarget.value || undefined)}
+              onInput={(e) => setPeriodeFilter(e.currentTarget.value || undefined)}
               isSelect
               selectOptions={[
                 { value: '', label: 'Semua Periode' },
@@ -159,7 +157,7 @@ export default function EvaluasiKurikulum() {
                   type="text"
                   placeholder="Contoh: Pembelajaran, Kurikulum, Sarana"
                   value={formData().aspek}
-                  onInput={(e: any) => setFormData({ ...formData(), aspek: e.currentTarget.value })}
+                  onInput={(e) => setFormData({ ...formData(), aspek: e.currentTarget.value })}
                 />
               </div>
               <div>
@@ -168,7 +166,7 @@ export default function EvaluasiKurikulum() {
                   class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white min-h-[100px]"
                   placeholder="Deskripsikan temuan evaluasi..."
                   value={formData().temuan}
-                  onInput={(e: any) => setFormData({ ...formData(), temuan: e.currentTarget.value })}
+                  onInput={(e) => setFormData({ ...formData(), temuan: e.currentTarget.value })}
                 />
               </div>
               <div>
@@ -177,7 +175,7 @@ export default function EvaluasiKurikulum() {
                   class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white min-h-[80px]"
                   placeholder="Rekomendasi perbaikan..."
                   value={formData().rekomendasi}
-                  onInput={(e: any) => setFormData({ ...formData(), rekomendasi: e.currentTarget.value })}
+                  onInput={(e) => setFormData({ ...formData(), rekomendasi: e.currentTarget.value })}
                 />
               </div>
               <div>
@@ -186,7 +184,7 @@ export default function EvaluasiKurikulum() {
                   class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white min-h-[80px]"
                   placeholder="Tindak lanjut yang dilakukan..."
                   value={formData().tindakLanjut}
-                  onInput={(e: any) => setFormData({ ...formData(), tindakLanjut: e.currentTarget.value })}
+                  onInput={(e) => setFormData({ ...formData(), tindakLanjut: e.currentTarget.value })}
                 />
               </div>
               <div class="flex gap-2">

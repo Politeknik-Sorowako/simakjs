@@ -39,8 +39,8 @@ export default function AdmisiJadwal() {
       toast.showToast('Jadwal ujian berhasil dibuat', 'success');
       setShowForm(false);
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setSaving(false);
     }
@@ -176,7 +176,16 @@ export default function AdmisiJadwal() {
             </thead>
             <tbody>
               <For each={schedules()?.data || []}>
-                {(s: any) => (
+                {(s: {
+                  applicationId: number;
+                  tipeUjian: string;
+                  tanggal: string;
+                  waktuMulai: string;
+                  waktuSelesai?: string;
+                  lokasiType: string;
+                  lokasiDetail?: string;
+                  isCompleted: boolean;
+                }) => (
                   <tr class="border-b border-secondary-100 dark:border-secondary-800">
                     <td class="py-3 px-4">{s.applicationId}</td>
                     <td class="py-3 px-4">

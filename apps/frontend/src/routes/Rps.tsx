@@ -135,8 +135,8 @@ export default function Rps() {
       refetchEvals();
       setSourceRps(null);
       setSourcePeriodeId('');
-    } catch (e: any) {
-      setCopyError(e.message || 'Gagal menyalin RPS');
+    } catch (e: unknown) {
+      setCopyError((e as Error).message || 'Gagal menyalin RPS');
     } finally {
       setCopyLoading(false);
     }
@@ -151,8 +151,8 @@ export default function Rps() {
         cplProdi: '',
       });
       refetchRps();
-    } catch (e: any) {
-      alert(e.message || 'Gagal membuat RPS');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal membuat RPS');
     }
   };
 
@@ -163,8 +163,8 @@ export default function Rps() {
       await rpsController.updateRps(rps()!.id, { deskripsi: deskripsi(), cplProdi: cplProdi() });
       setShowRpsModal(false);
       refetchRps();
-    } catch (e: any) {
-      alert(e.message || 'Gagal memperbarui RPS');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal memperbarui RPS');
     }
   };
 
@@ -213,8 +213,8 @@ export default function Rps() {
       }
       setShowTopikModal(false);
       refetchRps();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan topik');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan topik');
     }
   };
 
@@ -223,8 +223,8 @@ export default function Rps() {
     try {
       await rpsController.deleteTopik(id);
       refetchRps();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus topik');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus topik');
     }
   };
 
@@ -278,8 +278,8 @@ export default function Rps() {
       }
       setShowEvalModal(false);
       refetchEvals();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan rencana evaluasi');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan rencana evaluasi');
     }
   };
 
@@ -288,8 +288,8 @@ export default function Rps() {
     try {
       await rpsController.deleteRencanaEvaluasi(id);
       refetchEvals();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus rencana evaluasi');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus rencana evaluasi');
     }
   };
 
@@ -410,7 +410,11 @@ export default function Rps() {
                       {kelas.namaKelas}
                       <Show when={kelas.dosenPengajarKelas?.length}>
                         <span class="text-secondary-500 font-normal ml-1">
-                          ({kelas.dosenPengajarKelas.map((dp: any) => dp.dosen?.nama).join(', ')})
+                          (
+                          {kelas.dosenPengajarKelas
+                            .map((dp: { dosen?: { nama: string } }) => dp.dosen?.nama)
+                            .join(', ')}
+                          )
                         </span>
                       </Show>
                     </span>

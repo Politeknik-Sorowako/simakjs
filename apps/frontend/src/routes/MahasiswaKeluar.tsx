@@ -102,8 +102,8 @@ export default function MahasiswaKeluarPage() {
       toast.showToast('Status mahasiswa berhasil diubah ke non-aktif.', 'success');
       setShowModal(false);
       refetchRecords();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal mengubah status mahasiswa.');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal mengubah status mahasiswa.');
     } finally {
       setSubmitting(false);
     }
@@ -116,8 +116,8 @@ export default function MahasiswaKeluarPage() {
       await mahasiswaKeluarController.delete(id);
       toast.showToast('Status mahasiswa kembali AKTIF.', 'success');
       refetchRecords();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan status keluar.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan status keluar.', 'error');
     }
   };
 

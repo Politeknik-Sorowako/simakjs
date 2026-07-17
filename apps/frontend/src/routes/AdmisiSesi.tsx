@@ -41,9 +41,11 @@ export default function AdmisiSesi() {
   const historySessions = createMemo(() => apps()?.data || []);
 
   // Sesi aktif yang belum didaftar
-  const activeSessionIds = createMemo(() => new Set((activeSessions()?.data || []).map((s: any) => s.id)));
+  const activeSessionIds = createMemo(() => new Set((activeSessions()?.data || []).map((s: { id: number }) => s.id)));
   const newSessions = createMemo(() =>
-    (activeSessions()?.data || []).filter((s: any) => !historySessions().some((a: any) => a.sessionId === s.id)),
+    (activeSessions()?.data || []).filter(
+      (s: { id: number }) => !historySessions().some((a: { sessionId: number }) => a.sessionId === s.id),
+    ),
   );
 
   return (
@@ -65,7 +67,17 @@ export default function AdmisiSesi() {
           <h2 class="text-sm font-semibold text-secondary-500 uppercase tracking-wider mb-3">Riwayat Pendaftaran</h2>
           <div class="grid gap-4 mb-8">
             <For each={historySessions()}>
-              {(app: any) => (
+              {(app: {
+                id: number;
+                sessionNama?: string;
+                sessionId: number;
+                status: string;
+                noPendaftar: string;
+                tanggalMulai?: string;
+                tanggalTutup?: string;
+                tanggalUjian?: string;
+                tanggalPengumuman?: string;
+              }) => (
                 <div class="bg-white dark:bg-secondary-800/40 border-2 border-brand-200 dark:border-brand-800 rounded-xl p-5">
                   <div class="flex items-start justify-between">
                     <div class="flex-1">
@@ -146,7 +158,15 @@ export default function AdmisiSesi() {
           <h2 class="text-sm font-semibold text-secondary-500 uppercase tracking-wider mb-3">Sesi Aktif Lainnya</h2>
           <div class="grid gap-4">
             <For each={newSessions()}>
-              {(session: any) => (
+              {(session: {
+                id: number;
+                nama: string;
+                deskripsi?: string;
+                tanggalMulai: string;
+                tanggalTutup: string;
+                tanggalUjian?: string;
+                tanggalPengumuman?: string;
+              }) => (
                 <div class="bg-white dark:bg-secondary-800/40 border-2 border-secondary-200 dark:border-secondary-700 rounded-xl p-5">
                   <div class="flex items-start justify-between">
                     <div class="flex-1">

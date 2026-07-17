@@ -30,8 +30,8 @@ export default function AdmisiEditPendaftaran() {
       await admisiController.updateApplication(Number(params.id), form());
       toast.showToast('Biodata berhasil disimpan!', 'success');
       navigate(`/admisi/pendaftaran/${params.id}`);
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal menyimpan', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal menyimpan', 'error');
     } finally {
       setSaving(false);
     }

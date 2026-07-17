@@ -53,8 +53,8 @@ export default function BobotPenilaianObe() {
       setBobotInput('');
       setSelectedCpl(undefined);
       setSelectedMk(undefined);
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menambahkan mapping', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menambahkan mapping', 'error');
     }
   };
 
@@ -71,7 +71,7 @@ export default function BobotPenilaianObe() {
               type="select"
               placeholder="Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
+              onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
                 setKurikulumFilter(undefined);
@@ -89,9 +89,7 @@ export default function BobotPenilaianObe() {
                 type="select"
                 placeholder="Kurikulum"
                 value={kurikulumFilter() ?? ''}
-                onInput={(e: any) =>
-                  setKurikulumFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)
-                }
+                onInput={(e) => setKurikulumFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
                 isSelect
                 selectOptions={[
                   { value: '', label: 'Pilih Kurikulum' },
@@ -154,7 +152,7 @@ export default function BobotPenilaianObe() {
                           type="select"
                           placeholder="Pilih CPL"
                           value={selectedCpl() ?? ''}
-                          onInput={(e: any) =>
+                          onInput={(e) =>
                             setSelectedCpl(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)
                           }
                           isSelect
@@ -172,7 +170,7 @@ export default function BobotPenilaianObe() {
                           type="select"
                           placeholder="Pilih MK"
                           value={selectedMk() ?? ''}
-                          onInput={(e: any) =>
+                          onInput={(e) =>
                             setSelectedMk(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)
                           }
                           isSelect
@@ -190,7 +188,7 @@ export default function BobotPenilaianObe() {
                           type="number"
                           placeholder="Bobot %"
                           value={bobotInput()}
-                          onInput={(e: any) => setBobotInput(e.currentTarget.value)}
+                          onInput={(e) => setBobotInput(e.currentTarget.value)}
                         />
                       </div>
                       <Button onClick={handleAddCplMk}>Tambah</Button>
@@ -240,8 +238,8 @@ function CpmkMkSection(props: { kurikulumId: number }) {
     try {
       await cpmkController.update(cpmkId, { bobotMk });
       toast.showToast('Bobot CPMK berhasil diupdate', 'success');
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal update bobot', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal update bobot', 'error');
     }
   };
 
@@ -252,13 +250,15 @@ function CpmkMkSection(props: { kurikulumId: number }) {
           type="select"
           placeholder="Filter Mata Kuliah"
           value={mkFilter() ?? ''}
-          onInput={(e: any) => setMkFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
+          onInput={(e) => setMkFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
           isSelect
           selectOptions={[
             { value: '', label: 'Semua MK' },
             ...(cpmkList()
               ? [...new Map(cpmkList()!.map((c) => [c.mataKuliah?.id, c.mataKuliah])).values()]
-                  .map((mk: any) => (mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null))
+                  .map((mk: { id: number; kode: string; nama: string }) =>
+                    mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null,
+                  )
                   .filter(Boolean)
               : []),
           ]}

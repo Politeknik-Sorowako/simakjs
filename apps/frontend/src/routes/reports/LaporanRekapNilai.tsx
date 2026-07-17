@@ -135,7 +135,7 @@ export default function LaporanRekapNilai() {
                 </thead>
                 <tbody>
                   <For each={rekapProdi()?.prodi || []}>
-                    {(p: any) => (
+                    {(p: { prodiNama: string; totalMahasiswa: number; rataIP: number }) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                         <td class="py-3 px-5 text-center text-secondary-600">{p.totalMahasiswa}</td>
@@ -169,7 +169,7 @@ export default function LaporanRekapNilai() {
                 </thead>
                 <tbody>
                   <For each={mahasiswas()?.data || []}>
-                    {(m: any) => (
+                    {(m: { id: number; nim: string; nama: string; status: string }) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-mono text-secondary-600">{m.nim}</td>
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
@@ -242,7 +242,14 @@ export default function LaporanRekapNilai() {
                     </thead>
                     <tbody>
                       <For each={data.mataKuliah}>
-                        {(mk: any) => (
+                        {(mk: {
+                          kodeMk: string;
+                          namaMk: string;
+                          sks: number;
+                          nilaiAngka?: number;
+                          nilaiHuruf?: string;
+                          nilaiIndeks?: number;
+                        }) => (
                           <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                             <td class="py-3 px-5 font-mono text-secondary-500">{mk.kodeMk}</td>
                             <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{mk.namaMk}</td>

@@ -108,11 +108,11 @@ export const tagihanController = {
     });
   },
 
-  async getStats(periodeId?: string, programStudiId?: number): Promise<any> {
+  async getStats(periodeId?: string, programStudiId?: number): Promise<Record<string, unknown>> {
     const params = new URLSearchParams();
     if (periodeId) params.append('periodeId', periodeId);
     if (programStudiId) params.append('programStudiId', String(programStudiId));
-    const qs = params.toString() ? '?' + params.toString() : '';
-    return fetchApi<any>('/tagihan/stats' + qs);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<Record<string, unknown>>(`/tagihan/stats${qs}`);
   },
 };

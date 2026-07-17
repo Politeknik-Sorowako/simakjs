@@ -18,7 +18,7 @@ export default function AdmisiSesiDetail() {
   const [showAddProdi, setShowAddProdi] = createSignal(false);
   const [prodiId, setProdiId] = createSignal('');
   const [biayaDaftar, setBiayaDaftar] = createSignal('');
-  const [allProdis, setAllProdis] = createSignal<any[]>([]);
+  const [allProdis, setAllProdis] = createSignal<{ id: number; nama: string; jenjang: string }[]>([]);
   const [editBiaya, setEditBiaya] = createSignal<string>(''); // 'prodiId:value' or ''
 
   // Syarat Dokumen state
@@ -51,8 +51,8 @@ export default function AdmisiSesiDetail() {
       setProdiId('');
       setBiayaDaftar('');
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -61,8 +61,8 @@ export default function AdmisiSesiDetail() {
       await admisiAdminController.removeProdiFromSession(Number(params.id), prodiId);
       toast.showToast('Prodi dihapus', 'success');
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -71,8 +71,8 @@ export default function AdmisiSesiDetail() {
       const res = await admisiAdminController.toggleProdiActive(Number(params.id), prodiId);
       toast.showToast(res.message, 'success');
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -95,8 +95,8 @@ export default function AdmisiSesiDetail() {
       setShowAddReq(false);
       setReqForm({});
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setSavingReq(false);
     }
@@ -107,8 +107,8 @@ export default function AdmisiSesiDetail() {
       await admisiAdminController.deleteDocumentRequirement(reqId);
       toast.showToast('Syarat dokumen dihapus', 'success');
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -130,8 +130,8 @@ export default function AdmisiSesiDetail() {
       setExamForm({});
       refetch();
       refetchComponents();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setSavingExam(false);
     }
@@ -143,8 +143,8 @@ export default function AdmisiSesiDetail() {
       toast.showToast('Tipe ujian dihapus', 'success');
       refetch();
       refetchComponents();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -245,7 +245,7 @@ export default function AdmisiSesiDetail() {
                   >
                     <option value="">-- Pilih Prodi --</option>
                     <For each={allProdis()}>
-                      {(p: any) => (
+                      {(p: { id: number; nama: string; jenjang: string }) => (
                         <option value={p.id}>
                           {p.nama} ({p.jenjang})
                         </option>
@@ -267,7 +267,13 @@ export default function AdmisiSesiDetail() {
 
               <div class="space-y-1">
                 <For each={session()?.prodis || []}>
-                  {(sp: any) => (
+                  {(sp: {
+                    namaProdi: string;
+                    prodiId: number;
+                    jenjang: string;
+                    isActive: boolean;
+                    biayaDaftar?: number;
+                  }) => (
                     <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 text-sm">
                       <div class="flex items-center gap-2">
                         <span class="font-medium">{sp.namaProdi || `Prodi #${sp.prodiId}`}</span>
@@ -299,9 +305,9 @@ export default function AdmisiSesiDetail() {
                           <input
                             type="number"
                             defaultValue={sp.biayaDaftar || ''}
-                            ref={(el: any) => setTimeout(() => el?.focus(), 100)}
-                            onBlur={async (e: any) => {
-                              const val = e.currentTarget.value;
+                            ref={(el: HTMLInputElement) => setTimeout(() => el?.focus(), 100)}
+                            onBlur={async (e: FocusEvent) => {
+                              const val = (e.currentTarget as HTMLInputElement).value;
                               try {
                                 await admisiAdminController.updateSesiProdi(Number(params.id), sp.prodiId, {
                                   biayaDaftar: val ? Number(val) : null,
@@ -464,7 +470,13 @@ export default function AdmisiSesiDetail() {
             {/* Daftar syarat dokumen */}
             <div class="space-y-1">
               <For each={session()?.requirements || []}>
-                {(req: any) => (
+                {(req: {
+                  id: number;
+                  namaDokumen: string;
+                  isWajib: boolean;
+                  formatFile?: string;
+                  maxSizeKb: number;
+                }) => (
                   <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 text-sm">
                     <div class="flex items-center gap-2">
                       <span class="font-medium">{req.namaDokumen}</span>
@@ -578,7 +590,7 @@ export default function AdmisiSesiDetail() {
 
             <div class="space-y-1">
               <For each={components() || []}>
-                {(c: any) => (
+                {(c: { id: number; namaKomponen: string; bobot: number; tipePenilai: string }) => (
                   <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 text-sm">
                     <div class="flex items-center gap-2">
                       <span class="font-medium">{c.namaKomponen}</span>

@@ -8,7 +8,7 @@ export default function AdmisiDaftarUlangNIM() {
   const toast = useToast();
   const [sessionId, setSessionId] = createSignal('');
   const [prodiId, setProdiId] = createSignal('');
-  const [nimResults, setNimResults] = createSignal<any[]>([]);
+  const [nimResults, setNimResults] = createSignal<{ applicationId: number; nama: string; nim: string }[]>([]);
   const [generating, setGenerating] = createSignal(false);
   const [editingNIM, setEditingNIM] = createSignal<Record<number, string>>({});
 
@@ -24,13 +24,13 @@ export default function AdmisiDaftarUlangNIM() {
       const res = await admisiAdminController.generateNIMBulk(Number(sessionId()), Number(prodiId()));
       setNimResults(res.data);
       const edits: Record<number, string> = {};
-      res.data.forEach((r: any) => {
+      res.data.forEach((r: { applicationId: number; nama: string; nim: string }) => {
         edits[r.applicationId] = r.nim;
       });
       setEditingNIM(edits);
       toast.showToast('NIM berhasil digenerate', 'success');
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setGenerating(false);
     }
@@ -42,8 +42,8 @@ export default function AdmisiDaftarUlangNIM() {
     try {
       await admisiAdminController.editNIM(applicationId, nim);
       toast.showToast('NIM diupdate', 'success');
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -54,8 +54,8 @@ export default function AdmisiDaftarUlangNIM() {
       const res = await admisiAdminController.issueNIM(applicationId, nim);
       toast.showToast(`NIM ${res.nim} diterbitkan!`, 'success');
       setNimResults((prev) => prev.filter((r) => r.applicationId !== applicationId));
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -63,8 +63,8 @@ export default function AdmisiDaftarUlangNIM() {
     for (const r of nimResults()) {
       try {
         await admisiAdminController.issueNIM(r.applicationId, editingNIM()[r.applicationId] || r.nim);
-      } catch (err: any) {
-        toast.showToast(`Gagal untuk ${r.nama}: ${err.message}`, 'error');
+      } catch (err: unknown) {
+        toast.showToast(`Gagal untuk ${r.nama}: ${(err as Error).message}`, 'error');
       }
     }
     toast.showToast('Semua NIM diterbitkan!', 'success');
@@ -84,7 +84,7 @@ export default function AdmisiDaftarUlangNIM() {
             <p class="text-sm text-secondary-400">Belum ada pembayaran.</p>
           </Show>
           <For each={payments()?.data || []}>
-            {(p: any) => (
+            {(p: { id: number; nominal: number; isVerified: boolean }) => (
               <div class="flex items-center justify-between py-2 border-b border-secondary-100 last:border-0">
                 <div class="text-sm">
                   Payment #{p.id} — Rp {p.nominal?.toLocaleString('id-ID')}

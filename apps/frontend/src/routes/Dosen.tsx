@@ -92,7 +92,7 @@ export default function Dosen() {
         programStudiId: Number(prodiId()),
         nidn: nidn() || null,
         nik: nik() || null,
-        jenisKelamin: gender() === '' ? null : (gender() as any),
+        jenisKelamin: gender() === '' ? null : (gender() as 'L' | 'P'),
         tanggalLahir: birthdate() || null,
       };
 
@@ -103,8 +103,8 @@ export default function Dosen() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -113,8 +113,8 @@ export default function Dosen() {
     try {
       await dosenController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 
@@ -157,8 +157,8 @@ export default function Dosen() {
         toast.showToast(`Berhasil membuat ${res.successCount} akun dosen.`, 'success');
       }
       setSelectedIds([]);
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membuat akun secara massal.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membuat akun secara massal.', 'error');
     } finally {
       setBulkLoading(false);
     }
@@ -361,7 +361,7 @@ export default function Dosen() {
                 isSelect
                 label="Jenis Kelamin"
                 value={gender()}
-                onChange={(e) => setGender(e.currentTarget.value as any)}
+                onChange={(e) => setGender(e.currentTarget.value as 'L' | 'P')}
                 selectOptions={[
                   { label: 'Laki-laki', value: 'L' },
                   { label: 'Perempuan', value: 'P' },

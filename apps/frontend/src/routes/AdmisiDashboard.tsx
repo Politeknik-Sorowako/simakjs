@@ -62,7 +62,14 @@ export default function AdmisiDashboard() {
           <div class="mb-6 space-y-3">
             <h2 class="text-sm font-semibold text-secondary-500 uppercase tracking-wider">Pengumuman</h2>
             <For each={announcements()?.data || []}>
-              {(a: any) => (
+              {(a: {
+                id: number;
+                isPinned: boolean;
+                judul: string;
+                isi: string;
+                fileName?: string;
+                createdAt: string;
+              }) => (
                 <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-4">
                   <div class="flex items-center gap-2 mb-1">
                     {a.isPinned ? (
@@ -116,7 +123,7 @@ export default function AdmisiDashboard() {
 
         <div class="grid gap-4">
           <For each={apps()?.data || []}>
-            {(app: any) => (
+            {(app: { id: number; noPendaftar?: string; sessionId: number; status: string; createdAt: string }) => (
               <A
                 href={`/admisi/pendaftaran/${app.id}`}
                 class="block bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 hover:shadow-md transition-shadow"

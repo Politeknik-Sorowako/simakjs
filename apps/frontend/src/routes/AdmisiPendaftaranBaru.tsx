@@ -11,7 +11,7 @@ export default function AdmisiPendaftaranBaru() {
 
   const [sessions] = createResource(() => admisiController.getActiveSessions());
   const [selectedSession, setSelectedSession] = createSignal<number | null>(null);
-  const [sessionProdis, setSessionProdis] = createSignal<any[]>([]);
+  const [sessionProdis, setSessionProdis] = createSignal<{ prodiId: number; namaProdi: string; jenjang: string }[]>([]);
   const [prodi1, setProdi1] = createSignal<string>('');
   const [prodi2, setProdi2] = createSignal<string>('');
   const [loading, setLoading] = createSignal(false);
@@ -47,8 +47,8 @@ export default function AdmisiPendaftaranBaru() {
       });
       toast.showToast('Pendaftaran berhasil dibuat!', 'success');
       navigate(`/admisi/pendaftaran/${result.applicationId}`);
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal membuat pendaftaran', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal membuat pendaftaran', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -70,7 +70,13 @@ export default function AdmisiPendaftaranBaru() {
           </Show>
           <div class="grid gap-3">
             <For each={sessions()?.data || []}>
-              {(session: any) => (
+              {(session: {
+                id: number;
+                nama: string;
+                tanggalMulai: string;
+                tanggalTutup: string;
+                deskripsi?: string;
+              }) => (
                 <button
                   onClick={() => handleSessionSelect(session.id)}
                   class={`text-left p-4 rounded-lg border-2 transition-colors ${
@@ -117,7 +123,7 @@ export default function AdmisiPendaftaranBaru() {
                     style={{ 'pointer-events': 'auto', opacity: '1' }}
                   >
                     <option value="">-- Pilih Prodi --</option>
-                    {sessionProdis().map((sp: any) => (
+                    {sessionProdis().map((sp) => (
                       <option value={String(sp.prodiId)}>
                         {sp.namaProdi} ({sp.jenjang})
                       </option>
@@ -136,7 +142,7 @@ export default function AdmisiPendaftaranBaru() {
                     style={{ 'pointer-events': 'auto', opacity: '1' }}
                   >
                     <option value="">-- Tidak Ada --</option>
-                    {sessionProdis().map((sp: any) => (
+                    {sessionProdis().map((sp) => (
                       <option value={String(sp.prodiId)} disabled={String(sp.prodiId) === prodi1()}>
                         {sp.namaProdi} ({sp.jenjang})
                       </option>

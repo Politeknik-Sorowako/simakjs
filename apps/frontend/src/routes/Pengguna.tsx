@@ -35,15 +35,15 @@ export default function Pengguna() {
       const res = await userController.toggleActive(user.id);
       toast.showToast(res.message, 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengubah status aktif', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengubah status aktif', 'error');
     } finally {
       setActionLoading(null);
     }
   };
 
-  let debounceTimer: any;
-  const handleSearchInput = (e: any) => {
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  const handleSearchInput = (e: Event) => {
     clearTimeout(debounceTimer);
     const val = e.currentTarget.value;
     debounceTimer = setTimeout(() => {
@@ -115,8 +115,8 @@ export default function Pengguna() {
                             await userController.updateRole(user.id, newRole);
                             toast.showToast('Peran pengguna berhasil diperbarui', 'success');
                             refetch();
-                          } catch (err: any) {
-                            toast.showToast(err.message || 'Gagal memperbarui peran', 'error');
+                          } catch (err: unknown) {
+                            toast.showToast((err as Error).message || 'Gagal memperbarui peran', 'error');
                             e.currentTarget.value = user.role;
                           }
                         }}
@@ -162,8 +162,8 @@ export default function Pengguna() {
                           try {
                             const res = await userController.resetPassword(user.id, newPw);
                             toast.showToast(res.message, 'success');
-                          } catch (err: any) {
-                            toast.showToast(err.message, 'error');
+                          } catch (err: unknown) {
+                            toast.showToast((err as Error).message, 'error');
                           }
                         }}
                       >

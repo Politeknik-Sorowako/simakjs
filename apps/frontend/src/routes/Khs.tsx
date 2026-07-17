@@ -162,8 +162,8 @@ export default function Khs() {
       toast.showToast('Aturan konversi nilai berhasil disimpan.', 'success');
       setShowKonversiModal(false);
       refetchKonversis();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan aturan konversi.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan aturan konversi.', 'error');
     }
   };
 
@@ -173,8 +173,8 @@ export default function Khs() {
       await khsController.deleteKonversi(id);
       toast.showToast('Aturan konversi nilai berhasil dihapus.', 'success');
       refetchKonversis();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus aturan konversi.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus aturan konversi.', 'error');
     }
   };
 

@@ -102,7 +102,7 @@ export default function LaporanYudisium() {
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
                     <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Pengajuan per Prodi</h3>
                     <For each={s.perProdi || []}>
-                      {(p: any) => (
+                      {(p: { prodiNama: string; total: number }) => (
                         <div class="flex justify-between items-center py-2 border-b border-secondary-50 last:border-0">
                           <span class="text-xs font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</span>
                           <span class="text-xs font-bold">{p.total} pengajuan</span>

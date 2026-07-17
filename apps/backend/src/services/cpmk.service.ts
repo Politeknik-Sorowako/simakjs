@@ -137,7 +137,7 @@ export class CpmkService {
       }
     }
 
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, unknown> = {};
     if (data.kode !== undefined) updateData.kode = data.kode;
     if (data.deskripsi !== undefined) updateData.deskripsi = data.deskripsi;
     if (data.kurikulumMataKuliahId !== undefined) updateData.kurikulumMataKuliahId = data.kurikulumMataKuliahId;

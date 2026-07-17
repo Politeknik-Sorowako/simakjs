@@ -57,14 +57,14 @@ export default function AdmisiPengumuman() {
       }
       resetForm();
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleEdit = (a: any) => {
+  const handleEdit = (a: { id: number; judul: string; isi: string; isPinned: boolean }) => {
     setEditingId(a.id);
     setJudul(a.judul);
     setIsi(a.isi);
@@ -79,8 +79,8 @@ export default function AdmisiPengumuman() {
       await admisiAdminController.deleteAnnouncement(id);
       toast.showToast('Pengumuman dihapus', 'success');
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -164,7 +164,14 @@ export default function AdmisiPengumuman() {
 
         <div class="space-y-3">
           <For each={list()?.data || []}>
-            {(a: any) => (
+            {(a: {
+              id: number;
+              isPinned: boolean;
+              judul: string;
+              isi: string;
+              fileName?: string;
+              createdAt: string;
+            }) => (
               <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
                 <div class="flex items-start justify-between">
                   <div class="flex-1">

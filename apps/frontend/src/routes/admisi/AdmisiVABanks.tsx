@@ -26,8 +26,8 @@ export default function AdmisiVABanks() {
       setNama('');
       setIsMidtrans(false);
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setSaving(false);
     }
@@ -37,8 +37,8 @@ export default function AdmisiVABanks() {
     try {
       await admisiAdminController.updateVABank(id, { isActive: !current });
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -48,8 +48,8 @@ export default function AdmisiVABanks() {
       await admisiAdminController.deleteVABank(id);
       toast.showToast('Bank dihapus', 'success');
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -133,7 +133,7 @@ export default function AdmisiVABanks() {
 
         <div class="space-y-3">
           <For each={banks()?.data || []}>
-            {(b: any) => (
+            {(b: { id: number; nama: string; isActive: boolean; isMidtrans: boolean; kode: string }) => (
               <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <div class="flex items-center gap-2">

@@ -50,8 +50,8 @@ export function PddiktiSync() {
         refetchStats();
         toast.showToast('Sinkronisasi PDDIKTI berhasil dilaksanakan!', 'success');
       }, 2500);
-    } catch (e: any) {
-      setSyncLogs((prev) => [...prev, `❌ ERROR: ${e.message || 'Gagal terhubung ke Neo Feeder PDDIKTI'}`]);
+    } catch (e: unknown) {
+      setSyncLogs((prev) => [...prev, `❌ ERROR: ${(e as Error).message || 'Gagal terhubung ke Neo Feeder PDDIKTI'}`]);
       setIsSyncing(false);
       toast.showToast('Gagal melakukan sinkronisasi PDDIKTI.', 'error');
     }

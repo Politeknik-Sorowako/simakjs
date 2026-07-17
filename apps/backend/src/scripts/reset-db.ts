@@ -49,7 +49,7 @@ async function reset() {
       FROM pg_tables 
       WHERE schemaname = 'public';
     `);
-    const dbTables = dbTablesQuery.rows.map((row: any) => row.tablename);
+    const dbTables = dbTablesQuery.rows.map((row: Record<string, unknown>) => row.tablename as string);
     const tablesToTruncate = tables.filter((t) => dbTables.includes(t));
 
     if (tablesToTruncate.length > 0) {

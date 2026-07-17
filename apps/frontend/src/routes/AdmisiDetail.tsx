@@ -54,8 +54,8 @@ export default function AdmisiDetail() {
       await admisiController.submitApplication(Number(params.id));
       toast.showToast('Pendaftaran berhasil dikirim!', 'success');
       window.location.reload();
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal mengirim', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal mengirim', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -157,7 +157,14 @@ export default function AdmisiDetail() {
               <p class="text-sm text-secondary-400">Belum ada dokumen diupload.</p>
             </Show>
             <For each={app()?.documents || []}>
-              {(doc: any) => (
+              {(doc: {
+                id: number;
+                fileLink?: string;
+                filePath?: string;
+                originalName?: string;
+                isVerified: boolean;
+                rejectionNote?: string;
+              }) => (
                 <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 last:border-0">
                   <div class="flex items-center gap-3 min-w-0">
                     {doc.fileLink ? (

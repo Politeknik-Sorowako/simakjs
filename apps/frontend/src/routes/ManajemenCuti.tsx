@@ -131,8 +131,8 @@ export default function ManajemenCuti() {
       toast.showToast(`Mahasiswa "${mhs.nama}" berhasil dicatat cuti.`, 'success');
       setShowInputModal(false);
       refetchInput();
-    } catch (e: any) {
-      setInputError(e.message || 'Gagal mencatat cuti mahasiswa.');
+    } catch (e: unknown) {
+      setInputError((e as Error).message || 'Gagal mencatat cuti mahasiswa.');
     } finally {
       setInputSubmitting(false);
     }
@@ -144,8 +144,8 @@ export default function ManajemenCuti() {
       await cutiController.delete(id);
       toast.showToast(`Cuti "${nama}" berhasil dibatalkan.`, 'success');
       refetchInput();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan cuti.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan cuti.', 'error');
     }
   };
 
@@ -155,8 +155,8 @@ export default function ManajemenCuti() {
       await cutiController.aktifKembali(id);
       toast.showToast(`"${nama}" berhasil diaktifkan kembali.`, 'success');
       refetchInput();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal.', 'error');
     }
   };
 
@@ -217,8 +217,8 @@ export default function ManajemenCuti() {
       );
       setShowApprModal(false);
       refetchApprovals();
-    } catch (e: any) {
-      setApprError(e.message || 'Gagal memproses persetujuan.');
+    } catch (e: unknown) {
+      setApprError((e as Error).message || 'Gagal memproses persetujuan.');
     } finally {
       setApprSubmitting(false);
     }
@@ -262,8 +262,8 @@ export default function ManajemenCuti() {
       await cutiController.aktifKembali(id);
       toast.showToast(`Mahasiswa "${nama}" berhasil diaktifkan kembali.`, 'success');
       refetchAktif();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengaktifkan kembali.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengaktifkan kembali.', 'error');
     } finally {
       setProcessing(null);
     }

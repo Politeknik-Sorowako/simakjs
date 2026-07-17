@@ -25,8 +25,8 @@ export default function LaporanKeuangan() {
   const columns: ExportColumn[] = [
     { header: 'Program Studi', accessor: 'prodiNama' },
     { header: 'Total', accessor: 'total' },
-    { header: 'Terbayar', accessor: (row: any) => formatRupiah(row.terbayar) },
-    { header: 'Tunggakan', accessor: (row: any) => formatRupiah(row.tunggakan) },
+    { header: 'Terbayar', accessor: (row: Record<string, unknown>) => formatRupiah(row.terbayar as number) },
+    { header: 'Tunggakan', accessor: (row: Record<string, unknown>) => formatRupiah(row.tunggakan as number) },
   ];
 
   function formatRupiah(num: number) {
@@ -152,11 +152,16 @@ export default function LaporanKeuangan() {
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
                     <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Tunggakan per Prodi</h3>
                     <BarChart
-                      labels={(s.rekapPerProdi || []).map((p: any) => p.prodiNama)}
+                      labels={(s.rekapPerProdi || []).map(
+                        (p: { prodiNama: string; total: number; terbayar: number; tunggakan: number }) => p.prodiNama,
+                      )}
                       datasets={[
                         {
                           label: 'Tunggakan',
-                          data: (s.rekapPerProdi || []).map((p: any) => p.tunggakan),
+                          data: (s.rekapPerProdi || []).map(
+                            (p: { prodiNama: string; total: number; terbayar: number; tunggakan: number }) =>
+                              p.tunggakan,
+                          ),
                           backgroundColor: '#f43f5e',
                         },
                       ]}
@@ -181,7 +186,7 @@ export default function LaporanKeuangan() {
                       </thead>
                       <tbody>
                         <For each={s.rekapPerProdi || []}>
-                          {(p: any) => (
+                          {(p: { prodiNama: string; total: number; terbayar: number; tunggakan: number }) => (
                             <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                               <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                               <td class="py-3 px-5 text-center">{p.total}</td>

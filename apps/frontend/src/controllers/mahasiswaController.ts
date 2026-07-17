@@ -59,15 +59,15 @@ export const mahasiswaController = {
     });
   },
 
-  async getStats(angkatan?: string, programStudiId?: number): Promise<any> {
+  async getStats(angkatan?: string, programStudiId?: number): Promise<Record<string, unknown>> {
     const params = new URLSearchParams();
     if (angkatan) params.append('angkatan', angkatan);
     if (programStudiId) params.append('programStudiId', String(programStudiId));
-    return fetchApi<any>(`/mahasiswa/stats?${params.toString()}`);
+    return fetchApi<Record<string, unknown>>(`/mahasiswa/stats?${params.toString()}`);
   },
 
-  async getMahasiswaBaru(angkatan?: string): Promise<any> {
+  async getMahasiswaBaru(angkatan?: string): Promise<Record<string, unknown>> {
     const params = angkatan ? `?angkatan=${angkatan}` : '';
-    return fetchApi<any>(`/mahasiswa/baru${params}`);
+    return fetchApi<Record<string, unknown>>(`/mahasiswa/baru${params}`);
   },
 };

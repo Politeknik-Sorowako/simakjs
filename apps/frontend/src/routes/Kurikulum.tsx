@@ -79,8 +79,8 @@ export default function Kurikulum() {
       const result = await kurikulumController.copyFromKurikulum(targetId, sourceKurikulumId());
       setCopyResult(result);
       refetchDetail();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menyalin');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menyalin');
     } finally {
       setCopyLoading(false);
     }
@@ -109,8 +109,8 @@ export default function Kurikulum() {
       await kurikulumController.duplicate(dupId()!, dupKode(), dupNama());
       setShowDuplicateModal(false);
       refetch();
-    } catch (e: any) {
-      setDupError(e.message || 'Gagal menduplikasi');
+    } catch (e: unknown) {
+      setDupError((e as Error).message || 'Gagal menduplikasi');
     }
   };
 
@@ -132,8 +132,8 @@ export default function Kurikulum() {
       const result = await kurikulumController.importMkCsv(manageKurikulumId()!, file);
       setCsvImportResult(result);
       refetchDetail();
-    } catch (e: any) {
-      alert(e.message || 'Gagal impor CSV');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal impor CSV');
     } finally {
       setCsvImportLoading(false);
       input.value = '';
@@ -176,8 +176,8 @@ export default function Kurikulum() {
       });
       setAddMkMataKuliahId(0);
       refetchDetail();
-    } catch (e: any) {
-      setAddMkError(e.message || 'Gagal menambahkan mata kuliah');
+    } catch (e: unknown) {
+      setAddMkError((e as Error).message || 'Gagal menambahkan mata kuliah');
     }
   };
 
@@ -188,8 +188,8 @@ export default function Kurikulum() {
     try {
       await kurikulumController.removeMataKuliah(kurId, mkId);
       refetchDetail();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus');
     }
   };
 
@@ -248,8 +248,8 @@ export default function Kurikulum() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -258,15 +258,15 @@ export default function Kurikulum() {
     try {
       await kurikulumController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 
   // Group MK by semester (memoized)
   const mkBySemester = createMemo(() => {
     const mks = kurikulumDetail()?.kurikulumMataKuliah || [];
-    const groups: { [sem: number]: any[] } = {};
+    const groups: { [sem: number]: Record<string, unknown>[] } = {};
     for (const mk of mks) {
       if (!groups[mk.semester]) groups[mk.semester] = [];
       groups[mk.semester].push(mk);
@@ -283,10 +283,10 @@ export default function Kurikulum() {
       if (!kurikulumId) return {};
       const detail = await kurikulumController.getById(kurikulumId);
       const mkIds = detail.kurikulumMataKuliah.map((kmk) => kmk.mataKuliahId);
-      const mappings: { [mkId: number]: any[] } = {};
+      const mappings: { [mkId: number]: Record<string, unknown>[] } = {};
       for (const mkId of mkIds) {
         try {
-          const bkList = await fetchApi<any[]>(`/mata-kuliah/${mkId}/bahan-kajian`);
+          const bkList = await fetchApi<Record<string, unknown>[]>(`/mata-kuliah/${mkId}/bahan-kajian`);
           mappings[mkId] = bkList;
         } catch {
           mappings[mkId] = [];

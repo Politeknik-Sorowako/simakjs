@@ -59,8 +59,8 @@ export default function CutiMahasiswa() {
       toast.showToast('Pengajuan cuti berhasil diajukan.', 'success');
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal mengajukan cuti.');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal mengajukan cuti.');
     } finally {
       setSubmitting(false);
     }
@@ -72,8 +72,8 @@ export default function CutiMahasiswa() {
       await cutiController.delete(id);
       toast.showToast('Pengajuan cuti berhasil dibatalkan.', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan pengajuan.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan pengajuan.', 'error');
     }
   };
 

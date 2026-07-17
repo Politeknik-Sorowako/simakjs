@@ -198,8 +198,8 @@ export default function Bimbingan() {
       setMessageText('');
       // Optimistic/immediate local update
       setMessages((prev) => [newMsg, ...prev]);
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengirim pesan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal mengirim pesan.');
     }
   };
 
@@ -216,8 +216,8 @@ export default function Bimbingan() {
       alert('Kelayakan ujian & ringkasan bimbingan berhasil diperbarui.');
       refetchSelectedBimb();
       refetchMonitoring();
-    } catch (err: any) {
-      alert(err.message || 'Gagal memperbarui bimbingan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal memperbarui bimbingan.');
     }
   };
 
@@ -230,8 +230,8 @@ export default function Bimbingan() {
       await bimbinganController.clearChatThread(targetId);
       setMessages([]);
       alert('Pesan obrolan berhasil dikosongkan.');
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengosongkan obrolan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal mengosongkan obrolan.');
     }
   };
 
@@ -247,7 +247,14 @@ export default function Bimbingan() {
     setShowSesiModal(true);
   };
 
-  const handleOpenEditSesi = (sesi: any) => {
+  const handleOpenEditSesi = (sesi: {
+    id: number;
+    pertemuanKe: number;
+    tanggalBimbingan: string;
+    permasalahan: string;
+    solusi: string;
+    statusBkd: string;
+  }) => {
     setEditingSesiId(sesi.id);
     setPertemuanKeInput(sesi.pertemuanKe);
     setTanggalInput(new Date(sesi.tanggalBimbingan).toISOString().split('T')[0]);
@@ -283,8 +290,8 @@ export default function Bimbingan() {
       refetchRekapBkd();
       refetchAkademik();
       alert('Sesi bimbingan berhasil disimpan.');
-    } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan sesi bimbingan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menyimpan sesi bimbingan.');
     }
   };
 
@@ -297,8 +304,8 @@ export default function Bimbingan() {
       refetchRekapBkd();
       refetchAkademik();
       alert('Sesi bimbingan berhasil dihapus.');
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus sesi bimbingan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus sesi bimbingan.');
     }
   };
 

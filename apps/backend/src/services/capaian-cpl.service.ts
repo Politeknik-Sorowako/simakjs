@@ -39,7 +39,7 @@ export class CapaianCplService {
       },
     });
 
-    const cplMap = new Map<number, { cpl: any; scores: number[] }>();
+    const cplMap = new Map<number, { cpl: Record<string, unknown>; scores: number[] }>();
     for (const c of capaian) {
       const key = c.cplId;
       if (!cplMap.has(key)) {

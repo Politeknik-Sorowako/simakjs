@@ -139,7 +139,7 @@ export class RpsService {
       throw new Error('Total bobot rencana evaluasi tidak boleh melebihi 100%');
     }
 
-    const updateData: any = { ...data };
+    const updateData: Record<string, unknown> = { ...data };
     if (data.bobotEvaluasi !== undefined) {
       updateData.bobotEvaluasi = data.bobotEvaluasi.toString();
     }

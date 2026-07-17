@@ -38,8 +38,8 @@ export default function AdmisiDaftarUlang() {
       await admisiController.updateApplication(Number(params.id), { ukuranJas: ukuranJas() });
       toast.showToast('Bukti pembayaran berhasil dikirim!', 'success');
       navigate(`/admisi/pendaftaran/${params.id}`);
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal', 'error');
     } finally {
       setSaving(false);
     }

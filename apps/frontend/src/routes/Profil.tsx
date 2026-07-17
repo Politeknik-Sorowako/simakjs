@@ -68,8 +68,8 @@ export default function Profil() {
       // Clear password fields
       setPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal memperbarui profil', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal memperbarui profil', 'error');
     } finally {
       setLoading(false);
     }

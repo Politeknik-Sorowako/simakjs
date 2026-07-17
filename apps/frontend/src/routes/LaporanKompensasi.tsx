@@ -15,12 +15,17 @@ export default function LaporanKompensasi() {
 
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
   const [showPayModal, setShowPayModal] = createSignal(false);
-  const [editingPay, setEditingPay] = createSignal<any | null>(null);
+  const [editingPay, setEditingPay] = createSignal<{
+    id: number;
+    jumlahMenit: number;
+    keterangan: string;
+    tanggal: string;
+  } | null>(null);
   const [jumlahMenit, setJumlahMenit] = createSignal(60);
   const [keterangan, setKeterangan] = createSignal('');
   const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
   const [search, setSearch] = createSignal('');
-  const [filterProdiId, setFilterProdiId] = createSignal<number | undefined>();
+  const [filterProdiId, setFilterProdiId] = createSignal<number | string | undefined>();
   const [page, setPage] = createSignal(1);
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
 
@@ -55,7 +60,7 @@ export default function LaporanKompensasi() {
     try {
       return await presensiController.getKompensasiDetail(id);
     } catch (e: unknown) {
-      toast.showToast(e instanceof Error ? e.message : 'Gagal memuat detail', 'error');
+      toast.showToast(e instanceof Error ? (e as Error).message : 'Gagal memuat detail', 'error');
       return null;
     }
   });
@@ -70,7 +75,7 @@ export default function LaporanKompensasi() {
     setTanggal(new Date().toISOString().split('T')[0]);
     setShowPayModal(true);
   };
-  const openEditPaymentModal = (pay: any) => {
+  const openEditPaymentModal = (pay: { id: number; jumlahMenit: number; keterangan: string; tanggal: string }) => {
     setEditingPay(pay);
     setJumlahMenit(pay.jumlahMenit);
     setKeterangan(pay.keterangan);
@@ -99,7 +104,7 @@ export default function LaporanKompensasi() {
       refetchLaporan();
       stats.refetch();
     } catch (err: unknown) {
-      toast.showToast(err instanceof Error ? err.message : 'Gagal menyimpan', 'error');
+      toast.showToast(err instanceof Error ? (err as Error).message : 'Gagal menyimpan', 'error');
     }
   };
 
@@ -231,9 +236,7 @@ export default function LaporanKompensasi() {
                     <For each={stats()?.rekapProdi || []}>
                       {(p) => (
                         <button
-                          onClick={() =>
-                            setFilterProdiId(filterProdiId() === undefined ? (p.prodiNama as any) : undefined)
-                          }
+                          onClick={() => setFilterProdiId(filterProdiId() === undefined ? p.prodiNama : undefined)}
                           class={`text-left text-xs px-3 py-2 rounded-lg border transition-all ${filterProdiId() !== undefined ? 'bg-brand-50 border-brand-300 text-brand-700 font-bold dark:bg-brand-950/40 dark:border-brand-700 dark:text-brand-400' : 'border-secondary-100 hover:bg-secondary-50 dark:border-secondary-800 dark:hover:bg-secondary-800/50'}`}
                         >
                           <span class="font-semibold">{p.prodiNama}</span>

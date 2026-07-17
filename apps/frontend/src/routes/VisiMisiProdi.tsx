@@ -97,8 +97,8 @@ export default function VisiMisiProdi() {
       }
       refetch();
       setShowModal(false);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menyimpan data');
     }
   }
 
@@ -107,8 +107,8 @@ export default function VisiMisiProdi() {
     try {
       await visiMisiController.delete(id);
       refetch();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus');
     }
   }
 
@@ -117,8 +117,8 @@ export default function VisiMisiProdi() {
     try {
       await visiMisiController.setAktif(id);
       refetch();
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengubah status aktif');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal mengubah status aktif');
     }
   }
 
@@ -196,8 +196,8 @@ export default function VisiMisiProdi() {
       if (result.success > 0) {
         refetch();
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengimpor data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal mengimpor data');
     } finally {
       setImportLoading(false);
     }
@@ -240,7 +240,7 @@ export default function VisiMisiProdi() {
               type="select"
               placeholder="Filter Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
+              onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
               }}
@@ -333,7 +333,7 @@ export default function VisiMisiProdi() {
               type="select"
               label="Program Studi"
               value={prodiId()}
-              onInput={(e: any) => setProdiId(Number(e.currentTarget.value))}
+              onInput={(e) => setProdiId(Number(e.currentTarget.value))}
               isSelect
               selectOptions={[
                 { value: '0', label: 'Pilih Program Studi' },
@@ -345,7 +345,7 @@ export default function VisiMisiProdi() {
             label="Tahun Berlaku"
             placeholder="2024"
             value={tahunBerlaku()}
-            onInput={(e: any) => setTahunBerlaku(e.currentTarget.value)}
+            onInput={(e) => setTahunBerlaku(e.currentTarget.value)}
           />
           <div>
             <label class="block text-sm font-medium text-secondary-200 mb-1">Visi</label>
@@ -354,7 +354,7 @@ export default function VisiMisiProdi() {
               rows={3}
               placeholder="Visi program studi"
               value={visi()}
-              onInput={(e: any) => setVisi(e.currentTarget.value)}
+              onInput={(e) => setVisi(e.currentTarget.value)}
             />
           </div>
           <div>
@@ -364,7 +364,7 @@ export default function VisiMisiProdi() {
               rows={4}
               placeholder="Misi program studi"
               value={misi()}
-              onInput={(e: any) => setMisi(e.currentTarget.value)}
+              onInput={(e) => setMisi(e.currentTarget.value)}
             />
           </div>
           <div>
@@ -374,7 +374,7 @@ export default function VisiMisiProdi() {
               rows={3}
               placeholder="Tujuan program studi"
               value={tujuan()}
-              onInput={(e: any) => setTujuan(e.currentTarget.value)}
+              onInput={(e) => setTujuan(e.currentTarget.value)}
             />
           </div>
           <div>
@@ -384,7 +384,7 @@ export default function VisiMisiProdi() {
               rows={3}
               placeholder="Sasaran program studi"
               value={sasaran()}
-              onInput={(e: any) => setSasaran(e.currentTarget.value)}
+              onInput={(e) => setSasaran(e.currentTarget.value)}
             />
           </div>
           <div class="flex justify-end gap-3 pt-2">
@@ -431,7 +431,7 @@ export default function VisiMisiProdi() {
                 type="select"
                 label="Program Studi"
                 value={importProdiId()}
-                onInput={(e: any) => setImportProdiId(Number(e.currentTarget.value))}
+                onInput={(e) => setImportProdiId(Number(e.currentTarget.value))}
                 isSelect
                 selectOptions={[
                   { value: '0', label: 'Pilih Program Studi' },

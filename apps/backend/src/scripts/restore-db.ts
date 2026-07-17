@@ -26,10 +26,10 @@ function resolveBackupDir(): string {
 const AUDIT_LOG = process.env.AUDIT_LOG_PATH || join(resolveBackupDir(), '../db-migrations.log');
 
 function auditLog(msg: string) {
-  const entry = '[' + new Date().toISOString() + '] ' + msg;
+  const entry = `[${new Date().toISOString()}] ${msg}`;
   console.log(entry);
   try {
-    appendFileSync(AUDIT_LOG, entry + '\n');
+    appendFileSync(AUDIT_LOG, `${entry}\n`);
   } catch {
     // audit log write failure is non-fatal
   }
@@ -43,13 +43,13 @@ function isValidBackupFilename(name: string): boolean {
 
 function validateFilePath(backupDir: string, filename: string): string {
   if (!isValidBackupFilename(filename)) {
-    auditLog('Invalid backup filename format: ' + filename);
+    auditLog(`Invalid backup filename format: ${filename}`);
     process.exit(1);
   }
   const filepath = resolve(backupDir, filename);
   const resolvedBackupDir = resolve(backupDir);
-  if (!filepath.startsWith(resolvedBackupDir + '/') && filepath !== resolvedBackupDir + '/' + filename) {
-    auditLog('Path traversal detected: ' + filename);
+  if (!filepath.startsWith(`${resolvedBackupDir}/`) && filepath !== `${resolvedBackupDir}/${filename}`) {
+    auditLog(`Path traversal detected: ${filename}`);
     process.exit(1);
   }
   return filepath;
@@ -60,7 +60,7 @@ function acquireLock(backupDir: string): boolean {
   if (existsSync(lockFile)) {
     try {
       const pid = readFileSync(lockFile, 'utf-8').trim();
-      auditLog('Another restore is in progress (PID: ' + pid + '). Please wait.');
+      auditLog(`Another restore is in progress (PID: ${pid}). Please wait.`);
     } catch {
       auditLog('Another restore is in progress. Please wait.');
     }
@@ -101,7 +101,7 @@ async function main() {
   const backupDir = resolveBackupDir();
 
   auditLog('=== DATABASE RESTORE ===');
-  auditLog('Target: ' + config.db + ' @ ' + config.host + ':' + config.port);
+  auditLog(`Target: ${config.db} @ ${config.host}:${config.port}`);
 
   if (!acquireLock(backupDir)) {
     process.exit(1);
@@ -125,9 +125,9 @@ async function main() {
       try {
         const stats = statSync(join(backupDir, f));
         const size = (stats.size / 1024 / 1024).toFixed(1);
-        console.log('  ' + (i + 1) + '. ' + f + ' (' + size + ' MB)');
+        console.log(`  ${i + 1}. ${f} (${size} MB)`);
       } catch {
-        console.log('  ' + (i + 1) + '. ' + f + ' (unknown size)');
+        console.log(`  ${i + 1}. ${f} (unknown size)`);
       }
     }
 
@@ -149,7 +149,7 @@ async function main() {
   const filepath = validateFilePath(backupDir, selectedFile);
 
   if (!existsSync(filepath)) {
-    auditLog('Backup file not found: ' + filepath);
+    auditLog(`Backup file not found: ${filepath}`);
     releaseLock(backupDir);
     process.exit(1);
   }
@@ -157,8 +157,8 @@ async function main() {
   const stats = statSync(filepath);
   const size = (stats.size / 1024 / 1024).toFixed(1);
 
-  auditLog('Selected backup: ' + selectedFile + ' (' + size + ' MB)');
-  auditLog('Database: ' + config.db + ' @ ' + config.host + ':' + config.port);
+  auditLog(`Selected backup: ${selectedFile} (${size} MB)`);
+  auditLog(`Database: ${config.db} @ ${config.host}:${config.port}`);
 
   const confirm = await askQuestion('WARNING: This will DESTROY all current data. Continue? (yes/no): ');
   if (confirm.toLowerCase() !== 'yes') {
@@ -185,15 +185,15 @@ async function main() {
     );
 
     if (restoreProcess.error) {
-      throw new Error('psql spawn failed: ' + restoreProcess.error.message);
+      throw new Error(`psql spawn failed: ${restoreProcess.error.message}`);
     }
     if (restoreProcess.status !== 0) {
-      throw new Error('psql exited with code ' + restoreProcess.status);
+      throw new Error(`psql exited with code ${restoreProcess.status}`);
     }
 
-    auditLog('Database restored successfully from: ' + selectedFile);
-  } catch (err: any) {
-    auditLog('Restore failed: ' + (err.message || err));
+    auditLog(`Database restored successfully from: ${selectedFile}`);
+  } catch (err: unknown) {
+    auditLog(`Restore failed: ${(err as Error).message || err}`);
     releaseLock(backupDir);
     process.exit(1);
   }

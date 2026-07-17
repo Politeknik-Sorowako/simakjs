@@ -25,7 +25,7 @@ export default function AdmisiLaporan() {
       }
       const headers = Object.keys(res.data[0]).join(',');
       const rows = res.data
-        .map((r: any) =>
+        .map((r: Record<string, unknown>) =>
           Object.values(r)
             .map((v) => `"${v || ''}"`)
             .join(','),
@@ -39,8 +39,8 @@ export default function AdmisiLaporan() {
       a.click();
       URL.revokeObjectURL(url);
       toast.showToast('Export berhasil!', 'success');
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setExporting(false);
     }
@@ -68,7 +68,7 @@ export default function AdmisiLaporan() {
           <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6">
             <h2 class="font-semibold mb-3">Status Pipeline</h2>
             <For each={stats()?.statusCounts || []}>
-              {(s: any) => (
+              {(s: { status: string; count: number }) => (
                 <div class="flex items-center gap-3 py-1">
                   <span class="text-sm w-40">{s.status}</span>
                   <div class="flex-1 bg-secondary-200 dark:bg-secondary-700 rounded-full h-2.5">

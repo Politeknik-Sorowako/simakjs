@@ -60,7 +60,7 @@ export default function LaporanObe() {
               type="select"
               placeholder="Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
+              onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
                 setKurikulumFilter(undefined);
@@ -78,9 +78,7 @@ export default function LaporanObe() {
                 type="select"
                 placeholder="Kurikulum"
                 value={kurikulumFilter() ?? ''}
-                onInput={(e: any) =>
-                  setKurikulumFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)
-                }
+                onInput={(e) => setKurikulumFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
                 isSelect
                 selectOptions={[
                   { value: '', label: 'Pilih Kurikulum' },

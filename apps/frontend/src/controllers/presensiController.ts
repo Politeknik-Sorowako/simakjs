@@ -118,7 +118,17 @@ export const presensiController = {
       cpmkId: number | null;
     }>
   > {
-    return fetchApi<any[]>(`/bap/kelas/${kelasKuliahId}/topik`);
+    return fetchApi<
+      Array<{
+        id: number;
+        rpsId: number;
+        pertemuanKe: number;
+        topik: string;
+        subTopik: string | null;
+        metode: string | null;
+        cpmkId: number | null;
+      }>
+    >(`/bap/kelas/${kelasKuliahId}/topik`);
   },
 
   async createBap(data: Omit<BAP, 'id'>): Promise<BAP> {
@@ -151,14 +161,14 @@ export const presensiController = {
   },
 
   // Rekap Kehadiran
-  async getRekapKehadiran(kelasKuliahId: number): Promise<any> {
-    return fetchApi<any>(`/presensi/rekap-kehadiran?kelasKuliahId=${kelasKuliahId}`);
+  async getRekapKehadiran(kelasKuliahId: number): Promise<Record<string, unknown>> {
+    return fetchApi<Record<string, unknown>>(`/presensi/rekap-kehadiran?kelasKuliahId=${kelasKuliahId}`);
   },
 
-  async getRekapKehadiranMahasiswa(mahasiswaId: number, periodeId?: string): Promise<any> {
+  async getRekapKehadiranMahasiswa(mahasiswaId: number, periodeId?: string): Promise<Record<string, unknown>> {
     const params = new URLSearchParams({ mahasiswaId: String(mahasiswaId) });
     if (periodeId) params.append('periodeId', periodeId);
-    return fetchApi<any>(`/presensi/rekap-kehadiran-mahasiswa?${params.toString()}`);
+    return fetchApi<Record<string, unknown>>(`/presensi/rekap-kehadiran-mahasiswa?${params.toString()}`);
   },
 
   // Kompensasi

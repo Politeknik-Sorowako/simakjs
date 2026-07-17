@@ -7,7 +7,10 @@ import { admisiAdminController } from '../../controllers/admisiAdminController';
 export default function AdmisiSeleksiMassal() {
   const toast = useToast();
   const [sessionId, setSessionId] = createSignal('');
-  const [results, setResults] = createSignal<{ passed: any[]; failed: any[] } | null>(null);
+  const [results, setResults] = createSignal<{
+    passed: { noPendaftar: string; namaLengkap: string; finalScore: number }[];
+    failed: { noPendaftar: string; namaLengkap: string; finalScore: number }[];
+  } | null>(null);
   const [processing, setProcessing] = createSignal(false);
 
   const [sessions] = createResource(() => admisiAdminController.getSessions());
@@ -17,8 +20,8 @@ export default function AdmisiSeleksiMassal() {
     try {
       const res = await admisiAdminController.getPassedCandidates(Number(sessionId()));
       setResults(res);
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -29,8 +32,8 @@ export default function AdmisiSeleksiMassal() {
       const res = await admisiAdminController.announceResults(Number(sessionId()));
       toast.showToast(res.message, 'success');
       setResults(null);
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setProcessing(false);
     }
@@ -54,7 +57,9 @@ export default function AdmisiSeleksiMassal() {
             class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800"
           >
             <option value="">-- Pilih Sesi --</option>
-            <For each={sessions()?.data || []}>{(s: any) => <option value={s.id}>{s.nama}</option>}</For>
+            <For each={sessions()?.data || []}>
+              {(s: { id: number; nama: string }) => <option value={s.id}>{s.nama}</option>}
+            </For>
           </select>
           <Button onClick={handlePreview} disabled={!sessionId()}>
             Preview Hasil
@@ -70,7 +75,7 @@ export default function AdmisiSeleksiMassal() {
               </h2>
               <div class="space-y-1 max-h-80 overflow-y-auto">
                 <For each={results()!.passed}>
-                  {(p: any) => (
+                  {(p: { noPendaftar: string; namaLengkap: string; finalScore: number }) => (
                     <div class="flex items-center justify-between py-1 text-sm border-b border-green-100 dark:border-green-900/30">
                       <span class="font-mono text-xs text-secondary-400">{p.noPendaftar}</span>
                       <span>{p.namaLengkap}</span>
@@ -91,7 +96,7 @@ export default function AdmisiSeleksiMassal() {
               </h2>
               <div class="space-y-1 max-h-80 overflow-y-auto">
                 <For each={results()!.failed}>
-                  {(f: any) => (
+                  {(f: { noPendaftar: string; namaLengkap: string; finalScore: number }) => (
                     <div class="flex items-center justify-between py-1 text-sm border-b border-red-100 dark:border-red-900/30">
                       <span class="font-mono text-xs text-secondary-400">{f.noPendaftar}</span>
                       <span>{f.namaLengkap}</span>

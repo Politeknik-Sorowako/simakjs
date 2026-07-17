@@ -76,8 +76,8 @@ export default function Login() {
           navigate('/dashboard', { replace: true });
         }
       }
-    } catch (e: any) {
-      const errText = e.message || 'Gagal terhubung ke server';
+    } catch (e: unknown) {
+      const errText = (e as Error).message || 'Gagal terhubung ke server';
       setErrorMsg(errText);
       toast.showToast(errText, 'error');
     } finally {
