@@ -26,8 +26,38 @@ export function parseCsvLine(line: string): string[] {
 }
 
 export function parseCsv(text: string): string[][] {
-  const lines = text.split(/\r?\n/).filter((line) => line.trim());
-  return lines.map(parseCsvLine);
+  const rows: string[][] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (char === '"') {
+      if (inQuotes && text[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (!inQuotes && (char === '\n' || char === '\r')) {
+      if (current.trim()) {
+        rows.push(parseCsvLine(current));
+      }
+      current = '';
+      if (char === '\r' && text[i + 1] === '\n') {
+        i++;
+      }
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.trim()) {
+    rows.push(parseCsvLine(current));
+  }
+
+  return rows;
 }
 
 export function isHeaderRow(line: string, keywords: string[]): boolean {

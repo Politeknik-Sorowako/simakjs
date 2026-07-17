@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import { eq } from 'drizzle-orm';
 import { programStudi, reRegistrationPayments } from '../models/schema';
 import { AdmisiAdminService } from '../services/admisi-admin.service';
@@ -218,7 +219,7 @@ export class AdmisiAdminController {
 
       const { STORAGE_DIR } = await import('./admisi.controller');
       const dir = `${STORAGE_DIR}/${params.id}`;
-      await Bun.$`mkdir -p ${dir}`.quiet();
+      await mkdir(dir, { recursive: true });
       const fullPath = `${dir}/${newName}`;
       await Bun.write(fullPath, file);
 
