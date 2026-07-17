@@ -7,11 +7,11 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { cplController } from '../controllers/cplController';
 import { cpmkController, Cpmk as ICpmk } from '../controllers/cpmkController';
-import { cpmkCplMappingController } from '../controllers/cpmkCplMappingController';
+import { CpmkCplMapping, cpmkCplMappingController } from '../controllers/cpmkCplMappingController';
 import { kurikulumController } from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
-import { subCpmkController } from '../controllers/subCpmkController';
+import { SubCpmk, subCpmkController } from '../controllers/subCpmkController';
 
 export default function Cpmk() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -67,14 +67,14 @@ export default function Cpmk() {
   const [subCpmkDeskripsi, setSubCpmkDeskripsi] = createSignal('');
   const [subCpmkUrutan, setSubCpmkUrutan] = createSignal(0);
   const [subCpmkEditId, setSubCpmkEditId] = createSignal<number | null>(null);
-  const [subCpmkList, setSubCpmkList] = createSignal<any[]>([]);
+  const [subCpmkList, setSubCpmkList] = createSignal<SubCpmk[]>([]);
   const [subCpmkErrorMsg, setSubCpmkErrorMsg] = createSignal('');
 
   const [showMappingModal, setShowMappingModal] = createSignal(false);
   const [mappingCpmkId, setMappingCpmkId] = createSignal<number | null>(null);
   const [selectedCplId, setSelectedCplId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
-  const [mappingList, setMappingList] = createSignal<any[]>([]);
+  const [mappingList, setMappingList] = createSignal<CpmkCplMapping[]>([]);
   const [mappingErrorMsg, setMappingErrorMsg] = createSignal('');
 
   const openAddModal = () => {
@@ -117,8 +117,8 @@ export default function Cpmk() {
       }
       setShowModal(false);
       refetch();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan data');
+    } catch (err: unknown) {
+      setErrorMsg((err instanceof Error ? (err as Error).message : null) || 'Gagal menyimpan data');
     }
   };
 
@@ -127,8 +127,8 @@ export default function Cpmk() {
     try {
       await cpmkController.delete(id);
       refetch();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus');
+    } catch (err: unknown) {
+      alert((err instanceof Error ? (err as Error).message : null) || 'Gagal menghapus');
     }
   };
 
@@ -171,12 +171,12 @@ export default function Cpmk() {
       setSubCpmkEditId(null);
       const list = await subCpmkController.getByCpmk(subCpmkCpmkId()!);
       setSubCpmkList(list);
-    } catch (err: any) {
-      setSubCpmkErrorMsg(err.message || 'Gagal menyimpan Sub-CPMK');
+    } catch (err: unknown) {
+      setSubCpmkErrorMsg((err instanceof Error ? (err as Error).message : null) || 'Gagal menyimpan Sub-CPMK');
     }
   };
 
-  const openEditSubCpmk = (item: any) => {
+  const openEditSubCpmk = (item: SubCpmk) => {
     setSubCpmkEditId(item.id);
     setSubCpmkKode(item.kode);
     setSubCpmkDeskripsi(item.deskripsi);
@@ -189,8 +189,8 @@ export default function Cpmk() {
       await subCpmkController.delete(id);
       const list = await subCpmkController.getByCpmk(subCpmkCpmkId()!);
       setSubCpmkList(list);
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus');
+    } catch (err: unknown) {
+      alert((err instanceof Error ? (err as Error).message : null) || 'Gagal menghapus');
     }
   };
 
@@ -220,8 +220,8 @@ export default function Cpmk() {
       setMappingBobot('');
       const list = await cpmkCplMappingController.getAll(mappingCpmkId()!);
       setMappingList(list);
-    } catch (err: any) {
-      setMappingErrorMsg(err.message || 'Gagal menambah mapping');
+    } catch (err: unknown) {
+      setMappingErrorMsg((err instanceof Error ? (err as Error).message : null) || 'Gagal menambah mapping');
     }
   };
 
@@ -231,8 +231,8 @@ export default function Cpmk() {
       await cpmkCplMappingController.delete(id);
       const list = await cpmkCplMappingController.getAll(mappingCpmkId()!);
       setMappingList(list);
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus');
+    } catch (err: unknown) {
+      alert((err instanceof Error ? (err as Error).message : null) || 'Gagal menghapus');
     }
   };
 
@@ -253,8 +253,8 @@ export default function Cpmk() {
               label="Program Studi"
               placeholder="Filter Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
-                const val = e.currentTarget.value;
+              onInput={(e: Event) => {
+                const val = (e.target as HTMLSelectElement).value;
                 setProdiFilter(val ? Number(val) : undefined);
                 setKurikulumFilter(undefined);
                 setMataKuliahFilter(undefined);
@@ -273,8 +273,8 @@ export default function Cpmk() {
               label="Kurikulum"
               placeholder="Filter Kurikulum"
               value={kurikulumFilter() ?? ''}
-              onInput={(e: any) => {
-                const val = e.currentTarget.value;
+              onInput={(e: Event) => {
+                const val = (e.target as HTMLSelectElement).value;
                 setKurikulumFilter(val ? Number(val) : undefined);
                 setMataKuliahFilter(undefined);
                 setPage(1);
@@ -292,8 +292,8 @@ export default function Cpmk() {
               label="Mata Kuliah"
               placeholder="Filter Mata Kuliah"
               value={mataKuliahFilter() ?? ''}
-              onInput={(e: any) => {
-                const val = e.currentTarget.value;
+              onInput={(e: Event) => {
+                const val = (e.target as HTMLSelectElement).value;
                 setMataKuliahFilter(val ? Number(val) : undefined);
                 setPage(1);
               }}
@@ -310,8 +310,8 @@ export default function Cpmk() {
               label="Cari"
               placeholder="Cari kode atau deskripsi..."
               value={search()}
-              onInput={(e: any) => {
-                setSearch(e.currentTarget.value);
+              onInput={(e: Event) => {
+                setSearch((e.target as HTMLInputElement).value);
                 setPage(1);
               }}
             />
@@ -405,8 +405,8 @@ export default function Cpmk() {
               type="select"
               label="Mata Kuliah"
               value={String(mataKuliahId())}
-              onInput={(e: any) => {
-                const val = Number(e.currentTarget.value);
+              onInput={(e: Event) => {
+                const val = Number((e.target as HTMLSelectElement).value);
                 setMataKuliahId(val);
                 setKurikulumMataKuliahId(null);
               }}
@@ -418,14 +418,18 @@ export default function Cpmk() {
               ]}
             />
 
-            <Input label="Kode CPMK" value={kode()} onInput={(e: any) => setKode(e.currentTarget.value)} />
+            <Input
+              label="Kode CPMK"
+              value={kode()}
+              onInput={(e: Event) => setKode((e.target as HTMLInputElement).value)}
+            />
             <div>
               <label class="block text-sm font-medium text-secondary-200 mb-1">Deskripsi</label>
               <textarea
                 class="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50"
                 rows={3}
                 value={deskripsi()}
-                onInput={(e: any) => setDeskripsi(e.currentTarget.value)}
+                onInput={(e: Event) => setDeskripsi((e.target as HTMLTextAreaElement).value)}
               />
             </div>
 
@@ -453,14 +457,14 @@ export default function Cpmk() {
                   <Input
                     label="Kode"
                     value={subCpmkKode()}
-                    onInput={(e: any) => setSubCpmkKode(e.currentTarget.value)}
+                    onInput={(e: Event) => setSubCpmkKode((e.target as HTMLInputElement).value)}
                   />
                 </div>
                 <div class="col-span-2">
                   <Input
                     label="Deskripsi"
                     value={subCpmkDeskripsi()}
-                    onInput={(e: any) => setSubCpmkDeskripsi(e.currentTarget.value)}
+                    onInput={(e: Event) => setSubCpmkDeskripsi((e.target as HTMLInputElement).value)}
                   />
                 </div>
                 <div class="col-span-1">
@@ -468,7 +472,7 @@ export default function Cpmk() {
                     type="number"
                     label="Urutan"
                     value={subCpmkUrutan()}
-                    onInput={(e: any) => setSubCpmkUrutan(Number(e.currentTarget.value))}
+                    onInput={(e: Event) => setSubCpmkUrutan(Number((e.target as HTMLInputElement).value))}
                   />
                 </div>
               </div>
@@ -551,11 +555,11 @@ export default function Cpmk() {
                   type="select"
                   label="CPL"
                   value={selectedCplId()}
-                  onInput={(e: any) => setSelectedCplId(Number(e.currentTarget.value))}
+                  onInput={(e: Event) => setSelectedCplId(Number((e.target as HTMLSelectElement).value))}
                   isSelect
                   selectOptions={[
                     { value: '0', label: 'Pilih CPL' },
-                    ...(cplOptions()?.map((c: any) => ({ value: String(c.id), label: `${c.kode} - ${c.deskripsi}` })) ||
+                    ...(cplOptions()?.map((c: Cpl) => ({ value: String(c.id), label: `${c.kode} - ${c.deskripsi}` })) ||
                       []),
                   ]}
                 />
@@ -566,7 +570,7 @@ export default function Cpmk() {
                   type="number"
                   placeholder="(opsional)"
                   value={mappingBobot()}
-                  onInput={(e: any) => setMappingBobot(e.currentTarget.value)}
+                  onInput={(e: Event) => setMappingBobot((e.target as HTMLInputElement).value)}
                 />
               </div>
               <Button variant="primary" size="sm" onClick={handleAddMapping}>

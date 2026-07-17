@@ -105,9 +105,9 @@ export default function KelasKuliah() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
-      toast.showToast(e.message || 'Gagal menyimpan data', 'error');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
+      toast.showToast((e as Error).message || 'Gagal menyimpan data', 'error');
     }
   };
 
@@ -123,9 +123,9 @@ export default function KelasKuliah() {
       setShowPlotModal(false);
       toast.showToast('Dosen berhasil di-plot ke kelas', 'success');
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal melakukan plotting dosen');
-      toast.showToast(e.message || 'Gagal melakukan plotting dosen', 'error');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal melakukan plotting dosen');
+      toast.showToast((e as Error).message || 'Gagal melakukan plotting dosen', 'error');
     }
   };
 
@@ -135,8 +135,8 @@ export default function KelasKuliah() {
       await dosenPengajarController.delete(plottingId);
       toast.showToast('Plotting dosen berhasil dihapus', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan plotting', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan plotting', 'error');
     }
   };
 
@@ -146,8 +146,8 @@ export default function KelasKuliah() {
       await kelasKuliahController.delete(id);
       toast.showToast('Kelas kuliah berhasil dihapus', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus data', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus data', 'error');
     }
   };
 

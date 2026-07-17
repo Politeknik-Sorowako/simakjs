@@ -35,7 +35,7 @@ export default function AdmisiImportUjian() {
   };
 
   const selectAll = () => {
-    const ids = candidates()?.data?.map((a: any) => a.id) || [];
+    const ids = candidates()?.data?.map((a: { id: number }) => a.id) || [];
     if (selected().size === ids.length) setSelected(new Set());
     else setSelected(new Set(ids));
   };
@@ -89,7 +89,9 @@ export default function AdmisiImportUjian() {
             class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800"
           >
             <option value="">-- Pilih Sesi --</option>
-            <For each={sessions()?.data || []}>{(s: any) => <option value={s.id}>{s.nama}</option>}</For>
+            <For each={sessions()?.data || []}>
+              {(s: { id: number; nama: string }) => <option value={s.id}>{s.nama}</option>}
+            </For>
           </select>
         </div>
 
@@ -111,7 +113,7 @@ export default function AdmisiImportUjian() {
               </Show>
               <div class="space-y-1 max-h-96 overflow-y-auto">
                 <For each={candidates()?.data || []}>
-                  {(a: any) => (
+                  {(a: { id: number; noPendaftar: string; namaLengkap: string }) => (
                     <div class="flex items-center gap-2 py-1.5 text-sm border-b border-secondary-100 dark:border-secondary-800">
                       <input
                         type="checkbox"

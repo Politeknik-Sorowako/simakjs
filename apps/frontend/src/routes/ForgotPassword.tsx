@@ -47,8 +47,8 @@ export default function ForgotPassword() {
       if (res.token) {
         setResetToken(res.token);
       }
-    } catch (e: any) {
-      const errText = e.message || 'Gagal membuat token reset';
+    } catch (e: unknown) {
+      const errText = (e as Error).message || 'Gagal membuat token reset';
       setErrorMsg(errText);
       toast.showToast(errText, 'error');
     } finally {

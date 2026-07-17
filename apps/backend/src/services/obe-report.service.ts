@@ -175,7 +175,10 @@ export class ObeReportService {
       },
     });
 
-    const cpmkMap = new Map<number, { cpmk: any; mataKuliah: any; scores: number[] }>();
+    const cpmkMap = new Map<
+      number,
+      { cpmk: Record<string, unknown>; mataKuliah: Record<string, unknown>; scores: number[] }
+    >();
     for (const c of capaian) {
       const key = c.cpmkId;
       if (!cpmkMap.has(key)) {
@@ -214,7 +217,7 @@ export class ObeReportService {
       },
     });
 
-    const cplMap = new Map<number, { cpl: any; scores: number[] }>();
+    const cplMap = new Map<number, { cpl: Record<string, unknown>; scores: number[] }>();
     for (const c of capaian) {
       const key = c.cplId;
       if (!cplMap.has(key)) {

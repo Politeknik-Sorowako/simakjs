@@ -23,8 +23,8 @@ export default function AdmisiDaftar() {
       await admisiController.register(email(), password(), nama());
       setSuccess(true);
       toast.showToast('Akun berhasil dibuat! Silakan cek email untuk verifikasi.', 'success');
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal mendaftar', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal mendaftar', 'error');
     } finally {
       setLoading(false);
     }

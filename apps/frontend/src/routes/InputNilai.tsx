@@ -127,7 +127,7 @@ export default function InputNilai() {
   };
 
   // Helper to update component fields
-  const updateComponentField = (index: number, field: 'name' | 'bobot', value: any) => {
+  const updateComponentField = (index: number, field: 'name' | 'bobot', value: string | number) => {
     setEditableComponents((prev) =>
       prev.map((item, i) => {
         if (i === index) {
@@ -171,8 +171,8 @@ export default function InputNilai() {
       toast.showToast('Komponen nilai berhasil disimpan.', 'success');
       refetchComponents();
       refetchStudentsGrades();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan komponen.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan komponen.', 'error');
     }
   };
 
@@ -206,7 +206,7 @@ export default function InputNilai() {
     }));
   };
 
-  const getDynamicFinalGrade = (stud: any) => {
+  const getDynamicFinalGrade = (stud: { krsId: number }) => {
     const list = components();
     if (!list || list.length === 0) return null;
 
@@ -278,8 +278,8 @@ export default function InputNilai() {
       await khsController.saveNilaiMahasiswa(kelasId, payload);
       toast.showToast('Nilai mahasiswa berhasil disimpan.', 'success');
       refetchStudentsGrades();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan nilai.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan nilai.', 'error');
     }
   };
 
@@ -298,8 +298,8 @@ export default function InputNilai() {
       toast.showToast('Nilai kelas berhasil dikunci!', 'success');
       refetchStudentsGrades();
       refetchClasses();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengunci kelas.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengunci kelas.', 'error');
     }
   };
 
@@ -318,8 +318,8 @@ export default function InputNilai() {
       toast.showToast('Kunci nilai kelas berhasil dibuka!', 'success');
       refetchStudentsGrades();
       refetchClasses();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membuka kunci kelas.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membuka kunci kelas.', 'error');
     }
   };
 

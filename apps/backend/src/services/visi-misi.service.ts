@@ -143,7 +143,7 @@ export class VisiMisiService {
           );
         });
         result.success = validItems.length;
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.failed += validItems.length;
         result.errors.push({
           row: 0,

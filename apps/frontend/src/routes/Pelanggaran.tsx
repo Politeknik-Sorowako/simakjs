@@ -114,8 +114,8 @@ export default function Pelanggaran() {
       }
       setShowModal(false);
       refetchAllViolations();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan data.');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menyimpan data.');
     }
   };
 

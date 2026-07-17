@@ -38,8 +38,8 @@ export default function AdmisiPenilaian() {
         score: Number(score),
       });
       toast.showToast('Nilai disimpan', 'success');
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     } finally {
       setSaving(false);
     }
@@ -73,7 +73,7 @@ export default function AdmisiPenilaian() {
             <h2 class="font-semibold text-sm mb-2">Komponen Penilaian</h2>
             <div class="flex gap-3 flex-wrap">
               <For each={components()?.data || []}>
-                {(c: any) => (
+                {(c: { namaKomponen: string; bobot: number }) => (
                   <span class="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 rounded-full">
                     {c.namaKomponen} ({c.bobot}%)
                   </span>
@@ -90,19 +90,19 @@ export default function AdmisiPenilaian() {
                 <th class="text-left py-3 px-4">No Pendaftar</th>
                 <th class="text-left py-3 px-4">Nama</th>
                 <For each={components()?.data || []}>
-                  {(c: any) => <th class="text-left py-3 px-4">{c.namaKomponen}</th>}
+                  {(c: { namaKomponen: string; id: number }) => <th class="text-left py-3 px-4">{c.namaKomponen}</th>}
                 </For>
                 <th class="text-left py-3 px-4">Aksi</th>
               </tr>
             </thead>
             <tbody>
               <For each={apps()?.data || []}>
-                {(app: any) => (
+                {(app: { id: number; noPendaftar: string; namaLengkap: string }) => (
                   <tr class="border-b border-secondary-100 dark:border-secondary-800">
                     <td class="py-3 px-4 font-mono text-xs">{app.noPendaftar}</td>
                     <td class="py-3 px-4">{app.namaLengkap || '-'}</td>
                     <For each={components()?.data || []}>
-                      {(c: any) => {
+                      {(c: { id: number }) => {
                         const key = `${app.id}-${c.id}`;
                         return (
                           <td class="py-3 px-4">
@@ -124,7 +124,7 @@ export default function AdmisiPenilaian() {
                       <Button
                         size="sm"
                         onClick={() => {
-                          components()?.data?.forEach((c: any) => handleInputScore(app.id, c.id));
+                          components()?.data?.forEach((c: { id: number }) => handleInputScore(app.id, c.id));
                         }}
                         disabled={saving()}
                       >

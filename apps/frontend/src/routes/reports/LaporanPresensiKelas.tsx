@@ -44,7 +44,7 @@ export default function LaporanPresensiKelas() {
   ];
 
   const statusColumns: ExportColumn[] = [
-    { header: 'Status', accessor: (row: any) => row.status },
+    { header: 'Status', accessor: (row: { status: string; jumlah: number }) => row.status },
     { header: 'Jumlah', accessor: 'jumlah' },
   ];
 
@@ -97,7 +97,7 @@ export default function LaporanPresensiKelas() {
             >
               <option value="">Pilih Kelas</option>
               <For each={kelasList()?.data || []}>
-                {(k: any) => (
+                {(k: { id: number; namaKelas: string; mataKuliah?: { nama: string } }) => (
                   <option value={k.id}>
                     {k.mataKuliah?.nama || k.namaKelas} ({k.namaKelas})
                   </option>
@@ -110,15 +110,16 @@ export default function LaporanPresensiKelas() {
         <Show when={rekap()}>
           {() => {
             const data = rekap()!;
-            const totalHadir = data.mahasiswa.reduce((s: number, m: any) => s + m.hadir, 0);
-            const totalSakit = data.mahasiswa.reduce((s: number, m: any) => s + m.sakit, 0);
-            const totalIzin = data.mahasiswa.reduce((s: number, m: any) => s + m.izin, 0);
-            const totalAlpa = data.mahasiswa.reduce((s: number, m: any) => s + m.alpa, 0);
-            const totalTelat = data.mahasiswa.reduce((s: number, m: any) => s + m.telat, 0);
+            const totalHadir = data.mahasiswa.reduce((s: number, m: { hadir: number }) => s + m.hadir, 0);
+            const totalSakit = data.mahasiswa.reduce((s: number, m: { sakit: number }) => s + m.sakit, 0);
+            const totalIzin = data.mahasiswa.reduce((s: number, m: { izin: number }) => s + m.izin, 0);
+            const totalAlpa = data.mahasiswa.reduce((s: number, m: { alpa: number }) => s + m.alpa, 0);
+            const totalTelat = data.mahasiswa.reduce((s: number, m: { telat: number }) => s + m.telat, 0);
             const rataHadir =
               data.mahasiswa.length > 0
                 ? Math.round(
-                    data.mahasiswa.reduce((s: number, m: any) => s + m.persentaseHadir, 0) / data.mahasiswa.length,
+                    data.mahasiswa.reduce((s: number, m: { persentaseHadir: number }) => s + m.persentaseHadir, 0) /
+                      data.mahasiswa.length,
                   )
                 : 0;
 
@@ -245,7 +246,16 @@ export default function LaporanPresensiKelas() {
                       </thead>
                       <tbody>
                         <For each={data.mahasiswa}>
-                          {(m: any) => (
+                          {(m: {
+                            nim: string;
+                            nama: string;
+                            hadir: number;
+                            sakit: number;
+                            izin: number;
+                            alpa: number;
+                            telat: number;
+                            persentaseHadir: number;
+                          }) => (
                             <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                               <td class="py-3 px-5 font-mono text-secondary-500">{m.nim}</td>
                               <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>

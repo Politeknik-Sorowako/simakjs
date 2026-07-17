@@ -52,7 +52,7 @@ export interface CplAchievement {
 export interface EvaluasiRekap {
   total: number;
   statusCount: { open: number; in_progress: number; closed: number };
-  evaluasi: any[];
+  evaluasi: Record<string, unknown>[];
 }
 
 export const obeReportController = {

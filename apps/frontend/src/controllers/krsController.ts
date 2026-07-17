@@ -57,8 +57,8 @@ export const krsController = {
     });
   },
 
-  async getPendingStudents(periodeId: string): Promise<any[]> {
-    return fetchApi<any[]>(`/krs/pending-students?periodeId=${periodeId}`);
+  async getPendingStudents(periodeId: string): Promise<Record<string, unknown>[]> {
+    return fetchApi<Record<string, unknown>[]>(`/krs/pending-students?periodeId=${periodeId}`);
   },
 
   async approveBatch(mahasiswaIds: number[], periodeId: string): Promise<{ message: string; count: number }> {
@@ -102,8 +102,8 @@ export const krsController = {
     return fetchApi(`/krs/validasi?mahasiswaId=${mahasiswaId}&periodeId=${periodeId}`);
   },
 
-  async getStats(periodeId?: string): Promise<any> {
-    const qs = periodeId ? '?periodeId=' + periodeId : '';
-    return fetchApi<any>('/krs/stats' + qs);
+  async getStats(periodeId?: string): Promise<Record<string, unknown>> {
+    const qs = periodeId ? `?periodeId=${periodeId}` : '';
+    return fetchApi<Record<string, unknown>>(`/krs/stats${qs}`);
   },
 };

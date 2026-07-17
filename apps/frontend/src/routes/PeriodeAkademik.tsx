@@ -29,8 +29,8 @@ export default function PeriodeAkademik() {
     async ({ search, page, limit }) => {
       try {
         return await periodeAkademikController.getAll(search, page, limit);
-      } catch (e: any) {
-        toast.showToast(e.message || 'Gagal memuat data periode akademik', 'error');
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat data periode akademik', 'error');
         throw e;
       }
     },
@@ -86,8 +86,8 @@ export default function PeriodeAkademik() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      const errText = e.message || 'Gagal menyimpan data';
+    } catch (e: unknown) {
+      const errText = (e as Error).message || 'Gagal menyimpan data';
       setErrorMsg(errText);
       toast.showToast(errText, 'error');
     }
@@ -99,8 +99,8 @@ export default function PeriodeAkademik() {
       await periodeAkademikController.delete(id);
       toast.showToast('Periode akademik berhasil dihapus', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus data', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus data', 'error');
     }
   };
 

@@ -218,8 +218,8 @@ export const khsController = {
     });
   },
 
-  async deletePredikat(id: number): Promise<any> {
-    return fetchApi<any>(`/khs/predikat/${id}`, {
+  async deletePredikat(id: number): Promise<Record<string, unknown>> {
+    return fetchApi<Record<string, unknown>>(`/khs/predikat/${id}`, {
       method: 'DELETE',
     });
   },

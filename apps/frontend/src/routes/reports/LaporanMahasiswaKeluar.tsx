@@ -60,7 +60,9 @@ export default function LaporanMahasiswaKeluar() {
                   />
                   <StatCard
                     title="Drop Out"
-                    value={s.perStatus?.find((x: any) => x.status === 'drop_out')?.jumlah || 0}
+                    value={
+                      s.perStatus?.find((x: { status: string; jumlah: number }) => x.status === 'drop_out')?.jumlah || 0
+                    }
                     color="yellow"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -75,7 +77,9 @@ export default function LaporanMahasiswaKeluar() {
                   />
                   <StatCard
                     title="Lulus"
-                    value={s.perStatus?.find((x: any) => x.status === 'lulus')?.jumlah || 0}
+                    value={
+                      s.perStatus?.find((x: { status: string; jumlah: number }) => x.status === 'lulus')?.jumlah || 0
+                    }
                     color="green"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,8 +97,8 @@ export default function LaporanMahasiswaKeluar() {
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
                     <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Distribusi Status Keluar</h3>
                     <PieChart
-                      labels={(s.perStatus || []).map((x: any) => x.status)}
-                      data={(s.perStatus || []).map((x: any) => x.jumlah)}
+                      labels={(s.perStatus || []).map((x: { status: string; jumlah: number }) => x.status)}
+                      data={(s.perStatus || []).map((x: { status: string; jumlah: number }) => x.jumlah)}
                       height={250}
                       donut
                     />
@@ -102,11 +106,11 @@ export default function LaporanMahasiswaKeluar() {
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
                     <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Per Prodi</h3>
                     <BarChart
-                      labels={(s.perProdi || []).map((p: any) => p.prodiNama)}
+                      labels={(s.perProdi || []).map((p: { prodiNama: string; total: number }) => p.prodiNama)}
                       datasets={[
                         {
                           label: 'Jumlah',
-                          data: (s.perProdi || []).map((p: any) => p.total),
+                          data: (s.perProdi || []).map((p: { prodiNama: string; total: number }) => p.total),
                           backgroundColor: '#f43f5e',
                         },
                       ]}

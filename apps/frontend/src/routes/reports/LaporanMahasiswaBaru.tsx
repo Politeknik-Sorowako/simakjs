@@ -78,7 +78,15 @@ export default function LaporanMahasiswaBaru() {
           />
           <StatCard
             title="Perempuan"
-            value={stats.loading ? '...' : (stats().perProdi || []).reduce((s: number, p: any) => s + p.perempuan, 0)}
+            value={
+              stats.loading
+                ? '...'
+                : (stats().perProdi || []).reduce(
+                    (s: number, p: { prodiNama: string; total: number; laki: number; perempuan: number }) =>
+                      s + p.perempuan,
+                    0,
+                  )
+            }
             color="accent"
             icon={
               <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,7 +101,14 @@ export default function LaporanMahasiswaBaru() {
           />
           <StatCard
             title="Laki-laki"
-            value={stats.loading ? '...' : (stats().perProdi || []).reduce((s: number, p: any) => s + p.laki, 0)}
+            value={
+              stats.loading
+                ? '...'
+                : (stats().perProdi || []).reduce(
+                    (s: number, p: { prodiNama: string; total: number; laki: number; perempuan: number }) => s + p.laki,
+                    0,
+                  )
+            }
             color="green"
             icon={
               <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,11 +142,15 @@ export default function LaporanMahasiswaBaru() {
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Mahasiswa Baru per Prodi</h3>
               <BarChart
-                labels={(stats().perProdi || []).map((p: any) => p.prodiNama)}
+                labels={(stats().perProdi || []).map(
+                  (p: { prodiNama: string; total: number; laki: number; perempuan: number }) => p.prodiNama,
+                )}
                 datasets={[
                   {
                     label: 'Mahasiswa Baru',
-                    data: (stats().perProdi || []).map((p: any) => p.total),
+                    data: (stats().perProdi || []).map(
+                      (p: { prodiNama: string; total: number; laki: number; perempuan: number }) => p.total,
+                    ),
                     backgroundColor: '#6366f1',
                   },
                 ]}
@@ -142,7 +161,7 @@ export default function LaporanMahasiswaBaru() {
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Tren Penerimaan per Angkatan</h3>
               <BarChart
-                labels={(stats().trend || []).map((t: any) => t.angkatan)}
+                labels={(stats().trend || []).map((t: { angkatan: string; total: number }) => t.angkatan)}
                 datasets={[
                   {
                     label: 'Total Mahasiswa',
@@ -172,7 +191,7 @@ export default function LaporanMahasiswaBaru() {
                 </thead>
                 <tbody>
                   <For each={stats().perProdi || []}>
-                    {(p: any) => (
+                    {(p: { prodiNama: string; total: number; laki: number; perempuan: number }) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                         <td class="py-3 px-5 text-center font-bold">{p.total}</td>

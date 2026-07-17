@@ -51,7 +51,7 @@ export default function BapPresensi() {
     if (!kelasId) return [];
     try {
       return await presensiController.getBapByKelas(kelasId);
-    } catch (e: any) {
+    } catch (e: unknown) {
       toast.showToast('Gagal memuat BAP', 'error');
       return [];
     }
@@ -64,7 +64,7 @@ export default function BapPresensi() {
       if (!mkId) return [];
       try {
         return await presensiController.getCpmkByMataKuliah(mkId);
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast.showToast('Gagal memuat CPMK', 'error');
         return [];
       }
@@ -90,7 +90,7 @@ export default function BapPresensi() {
         // Load KRS entries for this class
         const res = await krsController.getAll(undefined, 1, 1000);
         return res.data.filter((k) => k.kelasKuliahId === kelasId) || [];
-      } catch (e: any) {
+      } catch (e: unknown) {
         toast.showToast('Gagal memuat mahasiswa kelas', 'error');
         return [];
       }
@@ -191,8 +191,8 @@ export default function BapPresensi() {
       if (activeBapId) {
         setSelectedBapId(activeBapId);
       }
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan BAP', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan BAP', 'error');
     }
   };
 
@@ -213,8 +213,8 @@ export default function BapPresensi() {
       setSelectedCpmkId(newCpmk.id);
       setNewCpmkKode('');
       setNewCpmkDeskripsi('');
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menambahkan CPMK', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menambahkan CPMK', 'error');
     }
   };
 
@@ -253,8 +253,8 @@ export default function BapPresensi() {
     try {
       await presensiController.saveBulkPresensi({ bapId, presensiList });
       toast.showToast('Presensi berhasil disimpan', 'success');
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan presensi', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan presensi', 'error');
     }
   };
 

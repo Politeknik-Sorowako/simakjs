@@ -64,8 +64,8 @@ export default function Krs() {
       if (role === 'mahasiswa' || tab !== 'massal' || !periodeId) return [];
       try {
         return await krsController.getPendingStudents(periodeId);
-      } catch (e: any) {
-        toast.showToast(e.message || 'Gagal memuat mahasiswa pending', 'error');
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat mahasiswa pending', 'error');
         return [];
       }
     },
@@ -100,8 +100,8 @@ export default function Krs() {
       if (!mhsLoaded) return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 1 } };
       try {
         return await krsController.getAll(search, page, limit);
-      } catch (e: any) {
-        toast.showToast(e.message || 'Gagal memuat data KRS', 'error');
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat data KRS', 'error');
         throw e;
       }
     },
@@ -133,8 +133,8 @@ export default function Krs() {
     try {
       const result = await krsController.validasiKrs(mahasiswaProfile()!.id, selectedPeriode());
       setValidasiResult(result);
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal validasi KRS', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal validasi KRS', 'error');
     } finally {
       setValidasiLoading(false);
     }
@@ -204,9 +204,9 @@ export default function Krs() {
       setShowAddModal(false);
       toast.showToast('KRS berhasil dikontrak', 'success');
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menambahkan KRS');
-      toast.showToast(e.message || 'Gagal menambahkan KRS', 'error');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menambahkan KRS');
+      toast.showToast((e as Error).message || 'Gagal menambahkan KRS', 'error');
     }
   };
 
@@ -222,9 +222,9 @@ export default function Krs() {
       setShowGradeModal(false);
       toast.showToast('Nilai berhasil disimpan', 'success');
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal memperbarui nilai');
-      toast.showToast(e.message || 'Gagal memperbarui nilai', 'error');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal memperbarui nilai');
+      toast.showToast((e as Error).message || 'Gagal memperbarui nilai', 'error');
     }
   };
 
@@ -233,11 +233,11 @@ export default function Krs() {
       return;
 
     try {
-      await krsController.approve(null as any, selectedPeriode() || '20252');
+      await krsController.approve(null as unknown as number, selectedPeriode() || '20252');
       toast.showToast('Seluruh KRS pending berhasil disetujui', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyetujui KRS', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyetujui KRS', 'error');
     }
   };
 
@@ -247,8 +247,8 @@ export default function Krs() {
       await krsController.delete(id);
       toast.showToast('KRS berhasil dihapus/dibatalkan', 'success');
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus KRS', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus KRS', 'error');
     }
   };
 
@@ -272,8 +272,8 @@ export default function Krs() {
       setSelectedMhsIds([]);
       refetchPending();
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyetujui KRS secara massal.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyetujui KRS secara massal.', 'error');
     }
   };
 

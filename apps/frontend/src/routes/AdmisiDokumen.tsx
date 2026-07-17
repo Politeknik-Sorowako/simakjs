@@ -30,11 +30,20 @@ export default function AdmisiDokumen() {
 
   // Gabung requirements + docs jadi satu array reaktif
   const reqWithDocs = createMemo(() =>
-    (requirements() || []).map((req: any) => ({
-      ...req,
-      uploaded: docs()?.filter((d: any) => d.requirementId === req.id) || [],
-      latest: (docs()?.filter((d: any) => d.requirementId === req.id) || []).slice(-1)[0],
-    })),
+    (requirements() || []).map(
+      (req: {
+        id: number;
+        namaDokumen: string;
+        isWajib: boolean;
+        formatFile?: string;
+        maxSizeKb: number;
+        deskripsi?: string;
+      }) => ({
+        ...req,
+        uploaded: docs()?.filter((d: { requirementId: number }) => d.requirementId === req.id) || [],
+        latest: (docs()?.filter((d: { requirementId: number }) => d.requirementId === req.id) || []).slice(-1)[0],
+      }),
+    ),
   );
 
   const handleUpload = async (requirementId: number) => {
@@ -51,8 +60,8 @@ export default function AdmisiDokumen() {
         await admisiController.uploadDocument(Number(params.id), fd);
         toast.showToast('Dokumen berhasil diupload!', 'success');
         refetchDocs();
-      } catch (err: any) {
-        toast.showToast(err.message || 'Gagal upload', 'error');
+      } catch (err: unknown) {
+        toast.showToast((err as Error).message || 'Gagal upload', 'error');
       }
     };
     input.click();
@@ -69,8 +78,8 @@ export default function AdmisiDokumen() {
       setShowLinkInput(null);
       setLinkValue('');
       refetchDocs();
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal', 'error');
     }
   };
 
@@ -79,8 +88,8 @@ export default function AdmisiDokumen() {
       await admisiController.deleteDocument(documentId);
       toast.showToast('Dokumen dihapus', 'success');
       refetchDocs();
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal hapus', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal hapus', 'error');
     }
   };
 
@@ -119,7 +128,16 @@ export default function AdmisiDokumen() {
 
           <div class="space-y-4">
             <For each={reqWithDocs()}>
-              {(item: any) => (
+              {(item: {
+                id: number;
+                namaDokumen: string;
+                isWajib: boolean;
+                latest?: { isVerified: boolean };
+                uploaded: { id: number }[];
+                deskripsi?: string;
+                formatFile?: string;
+                maxSizeKb: number;
+              }) => (
                 <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
                   <div class="flex items-start justify-between">
                     <div class="flex-1">
@@ -149,7 +167,15 @@ export default function AdmisiDokumen() {
                       <Show when={item.uploaded.length > 0}>
                         <div class="mt-2 space-y-1">
                           <For each={item.uploaded}>
-                            {(doc: any) => (
+                            {(doc: {
+                              id: number;
+                              uploadMethod?: string;
+                              fileLink?: string;
+                              filePath?: string;
+                              originalName?: string;
+                              fileSizeKb?: number;
+                              rejectionNote?: string;
+                            }) => (
                               <div class="flex items-center justify-between text-xs pl-3 border-l-2 border-secondary-300 dark:border-secondary-600 py-1">
                                 <div class="flex items-center gap-2 min-w-0">
                                   {doc.uploadMethod === 'link' && doc.fileLink ? (

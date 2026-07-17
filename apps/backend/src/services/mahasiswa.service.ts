@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { dosen, mahasiswa, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -115,7 +115,7 @@ export class MahasiswaService {
   }
 
   static async getStats(angkatan?: string, programStudiId?: number) {
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (angkatan) conditions.push(eq(mahasiswa.angkatan, angkatan));
     if (programStudiId) conditions.push(eq(mahasiswa.programStudiId, programStudiId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -156,7 +156,7 @@ export class MahasiswaService {
   }
 
   static async getMahasiswaBaru(angkatan?: string) {
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (angkatan) conditions.push(eq(mahasiswa.angkatan, angkatan));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

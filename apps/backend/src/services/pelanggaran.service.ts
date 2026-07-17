@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, SQL, sql, sum } from 'drizzle-orm';
 import { mahasiswa, pelanggaran, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -69,7 +69,7 @@ export class PelanggaranService {
   static async getRekap(periodeId?: string, programStudiId?: number) {
     const { mahasiswa: mhs, programStudi: ps } = await import('../models/schema');
 
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (programStudiId) conditions.push(eq(mhs.programStudiId, programStudiId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 

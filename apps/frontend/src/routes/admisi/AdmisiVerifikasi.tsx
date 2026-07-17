@@ -9,11 +9,11 @@ export default function AdmisiVerifikasi() {
   const toast = useToast();
   const [sessionFilter, setSessionFilter] = createSignal('');
   const [statusFilter, setStatusFilter] = createSignal('');
-  const [selectedApp, setSelectedApp] = createSignal<any>(null);
-  const [appDocs, setAppDocs] = createSignal<any[]>([]);
-  const [requirements, setRequirements] = createSignal<any[]>([]);
+  const [selectedApp, setSelectedApp] = createSignal<Record<string, unknown> | null>(null);
+  const [appDocs, setAppDocs] = createSignal<Record<string, unknown>[]>([]);
+  const [requirements, setRequirements] = createSignal<{ id: number; namaDokumen: string; isWajib: boolean }[]>([]);
   const [uploadingReq, setUploadingReq] = createSignal<number | null>(null);
-  const [allProdis, setAllProdis] = createSignal<any[]>([]);
+  const [allProdis, setAllProdis] = createSignal<{ id: number; nama: string; jenjang: string }[]>([]);
   const [editProdi, setEditProdi] = createSignal<number | null>(null);
   const [newP1, setNewP1] = createSignal<number | null>(null);
   const [newP2, setNewP2] = createSignal<number | null>(null);
@@ -34,7 +34,7 @@ export default function AdmisiVerifikasi() {
     (f) => admisiAdminController.getApplications(f),
   );
 
-  const loadDocs = async (app: any) => {
+  const loadDocs = async (app: { id: number; sessionId: number }) => {
     try {
       const [docsRes, reqsRes] = await Promise.all([
         admisiController.getDocuments(app.id),
@@ -48,7 +48,7 @@ export default function AdmisiVerifikasi() {
     }
   };
 
-  const handleSelectApp = async (app: any) => {
+  const handleSelectApp = async (app: { id: number }) => {
     if (selectedApp()?.id === app.id) {
       setSelectedApp(null);
       setAppDocs([]);
@@ -65,8 +65,8 @@ export default function AdmisiVerifikasi() {
       toast.showToast(verified ? 'Dokumen diverifikasi' : 'Dokumen ditolak', 'success');
       await loadDocs(selectedApp());
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -75,7 +75,7 @@ export default function AdmisiVerifikasi() {
     const reqs = requirements();
     const docs = appDocs();
     return reqs.map((req) => {
-      const uploaded = docs.filter((d: any) => d.requirementId === req.id);
+      const uploaded = docs.filter((d: { requirementId: number }) => d.requirementId === req.id);
       const latest = uploaded[uploaded.length - 1] || null;
       return { req, uploaded, latest };
     });
@@ -97,7 +97,9 @@ export default function AdmisiVerifikasi() {
             class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800"
           >
             <option value="">-- Semua Sesi --</option>
-            <For each={sessions()?.data || []}>{(s: any) => <option value={s.id}>{s.nama}</option>}</For>
+            <For each={sessions()?.data || []}>
+              {(s: { id: number; nama: string }) => <option value={s.id}>{s.nama}</option>}
+            </For>
           </select>
           <select
             value={statusFilter()}
@@ -132,7 +134,24 @@ export default function AdmisiVerifikasi() {
 
         <div class="grid gap-3">
           <For each={apps()?.data || []}>
-            {(app: any) => (
+            {(app: {
+              id: number;
+              noPendaftar?: string;
+              namaLengkap?: string;
+              nama?: string;
+              status: string;
+              sessionId: number;
+              nik?: string;
+              tempatLahir?: string;
+              tanggalLahir?: string;
+              jenisKelamin?: string;
+              namaIbuKandung?: string;
+              asalSekolah?: string;
+              telepon?: string;
+              jalan?: string;
+              prodiPilihan1?: number;
+              prodiPilihan2?: number;
+            }) => (
               <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
                 <div class="flex items-center justify-between mb-2">
                   <div>
@@ -171,8 +190,8 @@ export default function AdmisiVerifikasi() {
                             const res = await admisiAdminController.verifyAllDocuments(app.id);
                             toast.showToast(res.message, 'success');
                             refetch();
-                          } catch (err: any) {
-                            toast.showToast(err.message, 'error');
+                          } catch (err: unknown) {
+                            toast.showToast((err as Error).message, 'error');
                           }
                         }}
                       >
@@ -186,8 +205,8 @@ export default function AdmisiVerifikasi() {
                             const res = await admisiAdminController.markDocsVerified(app.id);
                             toast.showToast(res.message, 'success');
                             refetch();
-                          } catch (err: any) {
-                            toast.showToast(err.message, 'error');
+                          } catch (err: unknown) {
+                            toast.showToast((err as Error).message, 'error');
                           }
                         }}
                       >
@@ -203,8 +222,8 @@ export default function AdmisiVerifikasi() {
                         await admisiAdminController.reopenApplication(app.id);
                         toast.showToast('Akses dibuka untuk melengkapi berkas', 'success');
                         refetch();
-                      } catch (err: any) {
-                        toast.showToast(err.message, 'error');
+                      } catch (err: unknown) {
+                        toast.showToast((err as Error).message, 'error');
                       }
                     }}
                   >
@@ -370,8 +389,8 @@ export default function AdmisiVerifikasi() {
                                   toast.showToast('Biodata diperbarui', 'success');
                                   setEditBiodata(null);
                                   refetch();
-                                } catch (err: any) {
-                                  toast.showToast(err.message, 'error');
+                                } catch (err: unknown) {
+                                  toast.showToast((err as Error).message, 'error');
                                 }
                               }}
                               class="text-xs px-3 py-1 bg-brand-600 text-white rounded hover:bg-brand-700"
@@ -391,12 +410,12 @@ export default function AdmisiVerifikasi() {
                           <Show when={editProdi() !== app.id}>
                             <p>
                               P1: {(() => {
-                                const p = allProdis().find((x: any) => x.id === app.prodiPilihan1);
+                                const p = allProdis().find((x) => x.id === app.prodiPilihan1);
                                 return p ? `${p.nama} (${p.jenjang || '-'})` : `#${app.prodiPilihan1}`;
                               })()}
                               {app.prodiPilihan2
                                 ? ` | P2: ${(() => {
-                                    const p = allProdis().find((x: any) => x.id === app.prodiPilihan2);
+                                    const p = allProdis().find((x) => x.id === app.prodiPilihan2);
                                     return p ? `${p.nama} (${p.jenjang || '-'})` : `#${app.prodiPilihan2}`;
                                   })()}`
                                 : ''}
@@ -409,7 +428,9 @@ export default function AdmisiVerifikasi() {
                                 onChange={(e) => setNewP1(Number(e.currentTarget.value))}
                                 class="px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800"
                               >
-                                <For each={allProdis()}>{(p: any) => <option value={p.id}>{p.nama}</option>}</For>
+                                <For each={allProdis()}>
+                                  {(p: { id: number; nama: string }) => <option value={p.id}>{p.nama}</option>}
+                                </For>
                               </select>
                               <span class="text-secondary-400">P2:</span>
                               <select
@@ -418,7 +439,9 @@ export default function AdmisiVerifikasi() {
                                 class="px-2 py-1 border border-secondary-300 rounded text-xs bg-white dark:bg-secondary-800"
                               >
                                 <option value="">--</option>
-                                <For each={allProdis()}>{(p: any) => <option value={p.id}>{p.nama}</option>}</For>
+                                <For each={allProdis()}>
+                                  {(p: { id: number; nama: string }) => <option value={p.id}>{p.nama}</option>}
+                                </For>
                               </select>
                               <button
                                 onClick={async () => {
@@ -431,8 +454,8 @@ export default function AdmisiVerifikasi() {
                                     toast.showToast('Prodi diubah', 'success');
                                     setEditProdi(null);
                                     refetch();
-                                  } catch (err: any) {
-                                    toast.showToast(err.message, 'error');
+                                  } catch (err: unknown) {
+                                    toast.showToast((err as Error).message, 'error');
                                   }
                                 }}
                                 class="text-xs px-2 py-1 bg-brand-600 text-white rounded hover:bg-brand-700"
@@ -469,7 +492,15 @@ export default function AdmisiVerifikasi() {
                         <p class="text-xs text-secondary-400">Memuat data dokumen...</p>
                       </Show>
                       <For each={mergedDocs()}>
-                        {({ req, uploaded, latest }: any) => {
+                        {({
+                          req,
+                          uploaded,
+                          latest,
+                        }: {
+                          req: { id: number; namaDokumen: string; isWajib: boolean };
+                          uploaded: { requirementId: number }[];
+                          latest: { id: number; isVerified: boolean; rejectionNote?: string; fileLink?: string } | null;
+                        }) => {
                           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
                           const isMissing = !latest;
                           const isRejected = latest && !latest.isVerified && latest.rejectionNote;
@@ -529,8 +560,8 @@ export default function AdmisiVerifikasi() {
                                         await admisiAdminController.adminUploadDocument(app.id, fd);
                                         toast.showToast('Dokumen diupload admin', 'success');
                                         await loadDocs(app);
-                                      } catch (err: any) {
-                                        toast.showToast(err.message, 'error');
+                                      } catch (err: unknown) {
+                                        toast.showToast((err as Error).message, 'error');
                                       } finally {
                                         setUploadingReq(null);
                                       }

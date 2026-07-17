@@ -140,7 +140,7 @@ export class CapaianCpmkService {
   static async getRekapPerCpmk(kelasKuliahId: number) {
     const capaian = await this.getByKelas(kelasKuliahId);
 
-    const cpmkMap = new Map<number, { cpmk: any; scores: number[] }>();
+    const cpmkMap = new Map<number, { cpmk: Record<string, unknown>; scores: number[] }>();
     for (const c of capaian) {
       const key = c.cpmkId;
       if (!cpmkMap.has(key)) {

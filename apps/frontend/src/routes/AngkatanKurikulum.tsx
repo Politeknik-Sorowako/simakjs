@@ -77,8 +77,8 @@ export default function AngkatanKurikulum() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -87,8 +87,8 @@ export default function AngkatanKurikulum() {
     try {
       await angkatanKurikulumController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 

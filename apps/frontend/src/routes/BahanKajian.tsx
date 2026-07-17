@@ -34,7 +34,7 @@ export default function BahanKajian() {
   const [mappingProdiId, setMappingProdiId] = createSignal<number>(0);
   const [selectedCplId, setSelectedCplId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
-  const [mappings, setMappings] = createSignal<any[]>([]);
+  const [mappings, setMappings] = createSignal<{ id: number; cpl?: { kode: string }; bobot?: number }[]>([]);
 
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [importProdiId, setImportProdiId] = createSignal<number>(0);
@@ -96,8 +96,8 @@ export default function BahanKajian() {
       }
       refetch();
       setShowModal(false);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menyimpan data');
     }
   }
 
@@ -106,8 +106,8 @@ export default function BahanKajian() {
     try {
       await bahanKajianController.delete(id);
       refetch();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus');
     }
   }
 
@@ -137,8 +137,8 @@ export default function BahanKajian() {
       setMappingBobot('');
       const existMappings = await bahanKajianController.getMappings(mappingBkId()!);
       setMappings(existMappings);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menambah mapping');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menambah mapping');
     }
   }
 
@@ -147,8 +147,8 @@ export default function BahanKajian() {
       await bahanKajianController.deleteMapping(mappingId);
       const existMappings = await bahanKajianController.getMappings(mappingBkId()!);
       setMappings(existMappings);
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus mapping');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus mapping');
     }
   }
 
@@ -222,8 +222,8 @@ export default function BahanKajian() {
       if (result.success > 0) {
         refetch();
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengimpor data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal mengimpor data');
     } finally {
       setImportLoading(false);
     }
@@ -274,7 +274,7 @@ export default function BahanKajian() {
               type="select"
               placeholder="Filter Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
+              onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
               }}
@@ -367,7 +367,7 @@ export default function BahanKajian() {
               type="select"
               label="Program Studi"
               value={prodiId()}
-              onInput={(e: any) => setProdiId(Number(e.currentTarget.value))}
+              onInput={(e) => setProdiId(Number(e.currentTarget.value))}
               isSelect
               selectOptions={[
                 { value: '0', label: 'Pilih Program Studi' },
@@ -375,12 +375,12 @@ export default function BahanKajian() {
               ]}
             />
           </Show>
-          <Input label="Kode" placeholder="BK-1" value={kode()} onInput={(e: any) => setKode(e.currentTarget.value)} />
+          <Input label="Kode" placeholder="BK-1" value={kode()} onInput={(e) => setKode(e.currentTarget.value)} />
           <Input
             label="Nama"
             placeholder="Nama Bahan Kajian"
             value={nama()}
-            onInput={(e: any) => setNama(e.currentTarget.value)}
+            onInput={(e) => setNama(e.currentTarget.value)}
           />
           <div>
             <label class="block text-sm font-medium text-secondary-200 mb-1">Deskripsi (Opsional)</label>
@@ -389,14 +389,14 @@ export default function BahanKajian() {
               rows={3}
               placeholder="Deskripsi Bahan Kajian"
               value={deskripsi()}
-              onInput={(e: any) => setDeskripsi(e.currentTarget.value)}
+              onInput={(e) => setDeskripsi(e.currentTarget.value)}
             />
           </div>
           <Input
             label="Urutan"
             type="number"
             value={urutan()}
-            onInput={(e: any) => setUrutan(Number(e.currentTarget.value))}
+            onInput={(e) => setUrutan(Number(e.currentTarget.value))}
           />
           <div class="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowModal(false)}>
@@ -426,12 +426,14 @@ export default function BahanKajian() {
                 type="select"
                 label="CPL"
                 value={selectedCplId()}
-                onInput={(e: any) => setSelectedCplId(Number(e.currentTarget.value))}
+                onInput={(e) => setSelectedCplId(Number(e.currentTarget.value))}
                 isSelect
                 selectOptions={[
                   { value: '0', label: 'Pilih CPL' },
-                  ...(cplOptions()?.map((c: any) => ({ value: String(c.id), label: `${c.kode} - ${c.deskripsi}` })) ||
-                    []),
+                  ...(cplOptions()?.map((c: { id: number; kode: string; deskripsi: string }) => ({
+                    value: String(c.id),
+                    label: `${c.kode} - ${c.deskripsi}`,
+                  })) || []),
                 ]}
               />
             </div>
@@ -441,7 +443,7 @@ export default function BahanKajian() {
                 type="number"
                 placeholder="(opsional)"
                 value={mappingBobot()}
-                onInput={(e: any) => setMappingBobot(e.currentTarget.value)}
+                onInput={(e) => setMappingBobot(e.currentTarget.value)}
               />
             </div>
             <Button variant="primary" size="sm" onClick={handleAddMapping}>
@@ -462,7 +464,7 @@ export default function BahanKajian() {
                 </thead>
                 <tbody>
                   <For each={mappings()}>
-                    {(m: any) => (
+                    {(m: { id: number; cpl?: { kode: string }; bobot?: number }) => (
                       <tr class="border-b border-slate-700/50">
                         <td class="py-2 text-black dark:text-white">{m.cpl?.kode || '-'}</td>
                         <td class="py-2 text-black dark:text-white">{m.bobot ?? '(merata)'}</td>
@@ -514,7 +516,7 @@ export default function BahanKajian() {
                 type="select"
                 label="Program Studi"
                 value={importProdiId()}
-                onInput={(e: any) => setImportProdiId(Number(e.currentTarget.value))}
+                onInput={(e) => setImportProdiId(Number(e.currentTarget.value))}
                 isSelect
                 selectOptions={[
                   { value: '0', label: 'Pilih Program Studi' },

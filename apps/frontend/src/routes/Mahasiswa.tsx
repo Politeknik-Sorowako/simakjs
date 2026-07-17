@@ -117,8 +117,8 @@ export default function Mahasiswa() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -162,8 +162,8 @@ export default function Mahasiswa() {
         toast.showToast(`Berhasil membuat ${res.successCount} akun mahasiswa.`, 'success');
       }
       setSelectedIds([]);
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membuat akun secara massal.', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membuat akun secara massal.', 'error');
     } finally {
       setBulkLoading(false);
     }
@@ -174,8 +174,8 @@ export default function Mahasiswa() {
     try {
       await mahasiswaController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 

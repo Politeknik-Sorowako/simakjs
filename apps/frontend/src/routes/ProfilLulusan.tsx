@@ -81,8 +81,8 @@ export default function ProfilLulusan() {
       }
       refetch();
       setShowModal(false);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menyimpan data');
     }
   }
 
@@ -91,8 +91,8 @@ export default function ProfilLulusan() {
     try {
       await profilLulusanController.delete(id);
       refetch();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus');
     }
   }
 
@@ -165,8 +165,8 @@ export default function ProfilLulusan() {
       if (result.success > 0) {
         refetch();
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengimpor data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal mengimpor data');
     } finally {
       setImportLoading(false);
     }
@@ -209,7 +209,7 @@ export default function ProfilLulusan() {
               type="select"
               placeholder="Filter Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
+              onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
               }}
@@ -291,7 +291,7 @@ export default function ProfilLulusan() {
               type="select"
               label="Program Studi"
               value={prodiId()}
-              onInput={(e: any) => setProdiId(Number(e.currentTarget.value))}
+              onInput={(e) => setProdiId(Number(e.currentTarget.value))}
               isSelect
               selectOptions={[
                 { value: '0', label: 'Pilih Program Studi' },
@@ -299,7 +299,7 @@ export default function ProfilLulusan() {
               ]}
             />
           </Show>
-          <Input label="Kode" placeholder="PL-1" value={kode()} onInput={(e: any) => setKode(e.currentTarget.value)} />
+          <Input label="Kode" placeholder="PL-1" value={kode()} onInput={(e) => setKode(e.currentTarget.value)} />
           <div>
             <label class="block text-sm font-medium text-secondary-200 mb-1">Deskripsi</label>
             <textarea
@@ -307,14 +307,14 @@ export default function ProfilLulusan() {
               rows={3}
               placeholder="Deskripsi Profil Lulusan"
               value={deskripsi()}
-              onInput={(e: any) => setDeskripsi(e.currentTarget.value)}
+              onInput={(e) => setDeskripsi(e.currentTarget.value)}
             />
           </div>
           <Input
             label="Urutan"
             type="number"
             value={urutan()}
-            onInput={(e: any) => setUrutan(Number(e.currentTarget.value))}
+            onInput={(e) => setUrutan(Number(e.currentTarget.value))}
           />
           <div class="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowModal(false)}>
@@ -360,7 +360,7 @@ export default function ProfilLulusan() {
                 type="select"
                 label="Program Studi"
                 value={importProdiId()}
-                onInput={(e: any) => setImportProdiId(Number(e.currentTarget.value))}
+                onInput={(e) => setImportProdiId(Number(e.currentTarget.value))}
                 isSelect
                 selectOptions={[
                   { value: '0', label: 'Pilih Program Studi' },

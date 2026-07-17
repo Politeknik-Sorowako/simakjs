@@ -37,7 +37,7 @@ async function ensureEnums() {
       `SELECT enumlabel FROM pg_enum e JOIN pg_type t ON e.enumtypid = t.oid WHERE t.typname = $1`,
       [fix.name],
     );
-    const exists = rows.some((r: any) => r.enumlabel === fix.value);
+    const exists = rows.some((r: Record<string, unknown>) => r.enumlabel === fix.value);
 
     if (exists) {
       console.log(`[ENSURE ENUMS] ${fix.name}.${fix.value} already exists — no action needed.`);

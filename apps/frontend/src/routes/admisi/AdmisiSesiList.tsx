@@ -31,8 +31,8 @@ export default function AdmisiSesiList() {
       toast.showToast('Sesi berhasil dibuat!', 'success');
       setShowForm(false);
       refetch();
-    } catch (err: any) {
-      toast.showToast(err.message || 'Gagal', 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal', 'error');
     } finally {
       setSaving(false);
     }
@@ -43,8 +43,8 @@ export default function AdmisiSesiList() {
       await admisiAdminController.updateSession(id, { isActive: !current });
       refetch();
       toast.showToast('Status sesi diubah', 'success');
-    } catch (err: any) {
-      toast.showToast(err.message, 'error');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message, 'error');
     }
   };
 
@@ -167,16 +167,24 @@ export default function AdmisiSesiList() {
         <Show when={sessions()}>
           {(() => {
             const today = new Date();
-            const all = sessions()!.data || [];
+            type SessionItem = {
+              id: number;
+              nama: string;
+              tanggalMulai: string;
+              tanggalTutup: string;
+              kuota?: number;
+              isActive: boolean;
+            };
+            const all = (sessions()!.data || []) as SessionItem[];
 
             const aktif = all.filter(
-              (s: any) => s.isActive && today >= new Date(s.tanggalMulai) && today <= new Date(s.tanggalTutup),
+              (s) => s.isActive && today >= new Date(s.tanggalMulai) && today <= new Date(s.tanggalTutup),
             );
-            const akanDatang = all.filter((s: any) => s.isActive && today < new Date(s.tanggalMulai));
-            const ditutup = all.filter((s: any) => s.isActive && today > new Date(s.tanggalTutup));
-            const nonaktif = all.filter((s: any) => !s.isActive);
+            const akanDatang = all.filter((s) => s.isActive && today < new Date(s.tanggalMulai));
+            const ditutup = all.filter((s) => s.isActive && today > new Date(s.tanggalTutup));
+            const nonaktif = all.filter((s) => !s.isActive);
 
-            const sections: { label: string; icon: string; color: string; items: any[] }[] = [];
+            const sections: { label: string; icon: string; color: string; items: SessionItem[] }[] = [];
             if (aktif.length)
               sections.push({ label: 'Sedang Berlangsung', icon: '🟢', color: 'border-l-green-500', items: aktif });
             if (akanDatang.length)
@@ -196,7 +204,7 @@ export default function AdmisiSesiList() {
                       </h3>
                       <div class="grid gap-3">
                         <For each={sec.items}>
-                          {(session: any) => {
+                          {(session: SessionItem) => {
                             const mulai = new Date(session.tanggalMulai);
                             const tutup = new Date(session.tanggalTutup);
                             const visibleToPublic = session.isActive && today >= mulai && today <= tutup;

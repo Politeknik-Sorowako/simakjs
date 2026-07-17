@@ -93,7 +93,9 @@ export default function MataKuliah() {
   const [bkMataKuliahId, setBkMataKuliahId] = createSignal<number | null>(null);
   const [bkMataKuliahNama, setBkMataKuliahNama] = createSignal('');
   const [selectedBkId, setSelectedBkId] = createSignal<number>(0);
-  const [bkMappings, setBkMappings] = createSignal<any[]>([]);
+  const [bkMappings, setBkMappings] = createSignal<
+    { id: number; bahanKajian?: { id: number; kode: string; nama: string }; bobot?: number }[]
+  >([]);
 
   const [allBk] = createResource(
     () => filterProdi(),
@@ -144,8 +146,8 @@ export default function MataKuliah() {
       }
       setShowModal(false);
       refetch();
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menyimpan data');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data');
     }
   };
 
@@ -154,8 +156,8 @@ export default function MataKuliah() {
     try {
       await mataKuliahController.delete(id);
       refetch();
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus data');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus data');
     }
   };
 
@@ -163,7 +165,9 @@ export default function MataKuliah() {
     setBkMataKuliahId(item.id);
     setBkMataKuliahNama(item.nama);
     setErrorMsg('');
-    const mappings = await fetchApi<any[]>(`/mata-kuliah/${item.id}/bahan-kajian`);
+    const mappings = await fetchApi<
+      { id: number; bahanKajian?: { id: number; kode: string; nama: string }; bobot?: number }[]
+    >(`/mata-kuliah/${item.id}/bahan-kajian`);
     setBkMappings(mappings);
     setShowBkModal(true);
   };
@@ -179,10 +183,12 @@ export default function MataKuliah() {
         body: JSON.stringify({ bahanKajianId: selectedBkId() }),
       });
       setSelectedBkId(0);
-      const mappings = await fetchApi<any[]>(`/mata-kuliah/${bkMataKuliahId()}/bahan-kajian`);
+      const mappings = await fetchApi<
+        { id: number; bahanKajian?: { id: number; kode: string; nama: string }; bobot?: number }[]
+      >(`/mata-kuliah/${bkMataKuliahId()}/bahan-kajian`);
       setBkMappings(mappings);
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Gagal menambah Bahan Kajian');
+    } catch (e: unknown) {
+      setErrorMsg((e as Error).message || 'Gagal menambah Bahan Kajian');
     }
   };
 
@@ -191,10 +197,12 @@ export default function MataKuliah() {
       await fetchApi(`/mata-kuliah/${bkMataKuliahId()}/bahan-kajian/${bkId}`, {
         method: 'DELETE',
       });
-      const mappings = await fetchApi<any[]>(`/mata-kuliah/${bkMataKuliahId()}/bahan-kajian`);
+      const mappings = await fetchApi<
+        { id: number; bahanKajian?: { id: number; kode: string; nama: string }; bobot?: number }[]
+      >(`/mata-kuliah/${bkMataKuliahId()}/bahan-kajian`);
       setBkMappings(mappings);
-    } catch (e: any) {
-      alert(e.message || 'Gagal menghapus Bahan Kajian');
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus Bahan Kajian');
     }
   };
 
@@ -485,11 +493,14 @@ export default function MataKuliah() {
                   type="select"
                   label="Bahan Kajian"
                   value={selectedBkId()}
-                  onInput={(e: any) => setSelectedBkId(Number(e.currentTarget.value))}
+                  onInput={(e) => setSelectedBkId(Number(e.currentTarget.value))}
                   isSelect
                   selectOptions={[
                     { value: '0', label: 'Pilih Bahan Kajian' },
-                    ...(allBk()?.map((bk: any) => ({ value: String(bk.id), label: `${bk.kode} - ${bk.nama}` })) || []),
+                    ...(allBk()?.map((bk: { id: number; kode: string; nama: string }) => ({
+                      value: String(bk.id),
+                      label: `${bk.kode} - ${bk.nama}`,
+                    })) || []),
                   ]}
                 />
               </div>
@@ -514,7 +525,11 @@ export default function MataKuliah() {
                   </thead>
                   <tbody>
                     <For each={bkMappings()}>
-                      {(m: any) => (
+                      {(m: {
+                        id: number;
+                        bahanKajian?: { id: number; kode: string; nama: string };
+                        bobot?: number;
+                      }) => (
                         <tr class="border-b border-slate-700/50">
                           <td class="py-2 text-white">{m.bahanKajian?.kode || '-'}</td>
                           <td class="py-2 text-secondary-200">{m.bahanKajian?.nama || '-'}</td>

@@ -202,7 +202,7 @@ export class AdmisiService {
     return app;
   }
 
-  static async updateApplication(applicationId: number, userId: number, data: Record<string, any>) {
+  static async updateApplication(applicationId: number, userId: number, data: Record<string, unknown>) {
     const [app] = await db
       .select()
       .from(applications)

@@ -33,7 +33,7 @@ export default function Cpl() {
   const [mappingProdiId, setMappingProdiId] = createSignal<number>(0);
   const [selectedPlId, setSelectedPlId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
-  const [mappings, setMappings] = createSignal<any[]>([]);
+  const [mappings, setMappings] = createSignal<{ id: number; profilLulusan?: { kode: string }; bobot?: number }[]>([]);
 
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [importProdiId, setImportProdiId] = createSignal<number>(0);
@@ -86,8 +86,8 @@ export default function Cpl() {
       }
       refetch();
       setShowModal(false);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menyimpan data');
     }
   }
 
@@ -96,8 +96,8 @@ export default function Cpl() {
     try {
       await cplController.delete(id);
       refetch();
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus');
     }
   }
 
@@ -127,8 +127,8 @@ export default function Cpl() {
       setMappingBobot('');
       const existMappings = await cplController.getMappings(undefined, mappingCplId()!);
       setMappings(existMappings);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menambah mapping');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal menambah mapping');
     }
   }
 
@@ -137,8 +137,8 @@ export default function Cpl() {
       await cplController.deleteMapping(mappingId);
       const existMappings = await cplController.getMappings(undefined, mappingCplId()!);
       setMappings(existMappings);
-    } catch (err: any) {
-      alert(err.message || 'Gagal menghapus mapping');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus mapping');
     }
   }
 
@@ -211,8 +211,8 @@ export default function Cpl() {
       if (result.success > 0) {
         refetch();
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengimpor data');
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal mengimpor data');
     } finally {
       setImportLoading(false);
     }
@@ -263,7 +263,7 @@ export default function Cpl() {
               type="select"
               placeholder="Filter Program Studi"
               value={prodiFilter() ?? ''}
-              onInput={(e: any) => {
+              onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
               }}
@@ -355,7 +355,7 @@ export default function Cpl() {
               type="select"
               label="Program Studi"
               value={prodiId()}
-              onInput={(e: any) => setProdiId(Number(e.currentTarget.value))}
+              onInput={(e) => setProdiId(Number(e.currentTarget.value))}
               isSelect
               selectOptions={[
                 { value: '0', label: 'Pilih Program Studi' },
@@ -363,7 +363,7 @@ export default function Cpl() {
               ]}
             />
           </Show>
-          <Input label="Kode" placeholder="CPL-1" value={kode()} onInput={(e: any) => setKode(e.currentTarget.value)} />
+          <Input label="Kode" placeholder="CPL-1" value={kode()} onInput={(e) => setKode(e.currentTarget.value)} />
           <div>
             <label class="block text-sm font-medium text-secondary-200 mb-1">Deskripsi</label>
             <textarea
@@ -371,14 +371,14 @@ export default function Cpl() {
               rows={3}
               placeholder="Deskripsi CPL"
               value={deskripsi()}
-              onInput={(e: any) => setDeskripsi(e.currentTarget.value)}
+              onInput={(e) => setDeskripsi(e.currentTarget.value)}
             />
           </div>
           <Input
             label="Urutan"
             type="number"
             value={urutan()}
-            onInput={(e: any) => setUrutan(Number(e.currentTarget.value))}
+            onInput={(e) => setUrutan(Number(e.currentTarget.value))}
           />
           <div class="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowModal(false)}>
@@ -408,11 +408,11 @@ export default function Cpl() {
                 type="select"
                 label="Profil Lulusan"
                 value={selectedPlId()}
-                onInput={(e: any) => setSelectedPlId(Number(e.currentTarget.value))}
+                onInput={(e) => setSelectedPlId(Number(e.currentTarget.value))}
                 isSelect
                 selectOptions={[
                   { value: '0', label: 'Pilih Profil Lulusan' },
-                  ...(plOptions()?.map((pl: any) => ({
+                  ...(plOptions()?.map((pl: { id: number; kode: string; deskripsi: string }) => ({
                     value: String(pl.id),
                     label: `${pl.kode} - ${pl.deskripsi}`,
                   })) || []),
@@ -425,7 +425,7 @@ export default function Cpl() {
                 type="number"
                 placeholder="(opsional)"
                 value={mappingBobot()}
-                onInput={(e: any) => setMappingBobot(e.currentTarget.value)}
+                onInput={(e) => setMappingBobot(e.currentTarget.value)}
               />
             </div>
             <Button variant="primary" size="sm" onClick={handleAddMapping}>
@@ -446,7 +446,7 @@ export default function Cpl() {
                 </thead>
                 <tbody>
                   <For each={mappings()}>
-                    {(m: any) => (
+                    {(m: { id: number; profilLulusan?: { kode: string }; bobot?: number }) => (
                       <tr class="border-b border-slate-700/50">
                         <td class="py-2 text-black dark:text-white">{m.profilLulusan?.kode || '-'}</td>
                         <td class="py-2 text-black dark:text-white">{m.bobot ?? '(merata)'}</td>
@@ -498,7 +498,7 @@ export default function Cpl() {
                 type="select"
                 label="Program Studi"
                 value={importProdiId()}
-                onInput={(e: any) => setImportProdiId(Number(e.currentTarget.value))}
+                onInput={(e) => setImportProdiId(Number(e.currentTarget.value))}
                 isSelect
                 selectOptions={[
                   { value: '0', label: 'Pilih Program Studi' },

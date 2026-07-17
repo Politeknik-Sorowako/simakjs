@@ -85,8 +85,8 @@ export default function KeuanganDashboard() {
     async ({ search, status, page, limit }) => {
       try {
         return await tagihanController.getAll(search, status || undefined, page, limit);
-      } catch (e: any) {
-        toast.showToast(e.message || 'Gagal memuat data tagihan', 'error');
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat data tagihan', 'error');
         throw e;
       }
     },
@@ -114,8 +114,8 @@ export default function KeuanganDashboard() {
       toast.showToast(`${res.message} (${res.count} mahasiswa)`, 'success');
       setShowGenerateModal(false);
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal melakukan generate tagihan massal', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal melakukan generate tagihan massal', 'error');
     } finally {
       setIsGenerating(false);
     }
@@ -146,8 +146,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setShowPayModal(false);
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal memproses pembayaran', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memproses pembayaran', 'error');
     }
   };
 
@@ -175,8 +175,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setNewTarifAngkatan('');
       refetchTarif();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menyimpan skema tarif', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan skema tarif', 'error');
     }
   };
 
@@ -186,8 +186,8 @@ export default function KeuanganDashboard() {
       const res = await tagihanController.deleteTarif(id);
       toast.showToast(res.message, 'success');
       refetchTarif();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal menghapus skema tarif', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus skema tarif', 'error');
     }
   };
 
@@ -211,8 +211,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       refetchRiwayat();
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal membatalkan transaksi', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan transaksi', 'error');
     }
   };
 
@@ -238,8 +238,8 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setShowEditModal(false);
       refetch();
-    } catch (e: any) {
-      toast.showToast(e.message || 'Gagal mengubah nominal tagihan', 'error');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengubah nominal tagihan', 'error');
     }
   };
 

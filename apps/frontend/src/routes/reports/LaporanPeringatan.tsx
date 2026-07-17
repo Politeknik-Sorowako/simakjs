@@ -113,8 +113,16 @@ export default function LaporanPeringatan() {
                 Distribusi Pelanggaran per Jenis
               </h3>
               <PieChart
-                labels={rekapPelanggaran()?.perJenis.map((j: any) => j.jenis) || []}
-                data={rekapPelanggaran()?.perJenis.map((j: any) => j.jumlah) || []}
+                labels={
+                  rekapPelanggaran()?.perJenis.map(
+                    (j: { jenis: string; jumlah: number; totalPoin: number }) => j.jenis,
+                  ) || []
+                }
+                data={
+                  rekapPelanggaran()?.perJenis.map(
+                    (j: { jenis: string; jumlah: number; totalPoin: number }) => j.jumlah,
+                  ) || []
+                }
                 height={250}
                 donut
               />
@@ -132,7 +140,7 @@ export default function LaporanPeringatan() {
                   </thead>
                   <tbody>
                     <For each={rekapPelanggaran()?.perJenis || []}>
-                      {(j: any) => (
+                      {(j: { jenis: string; jumlah: number; totalPoin: number }) => (
                         <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                           <td class="py-2 font-semibold text-secondary-800 dark:text-white">{j.jenis}</td>
                           <td class="py-2 text-center">{j.jumlah}</td>
@@ -173,7 +181,7 @@ export default function LaporanPeringatan() {
                     </tr>
                   }
                 >
-                  {(item: any) => (
+                  {(item: { tanggal: string; jenisPelanggaran: string; bobotPoin: number; keterangan: string }) => (
                     <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                       <td class="py-3 px-5">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
                       <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">

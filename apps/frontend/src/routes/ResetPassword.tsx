@@ -86,8 +86,8 @@ export default function ResetPassword() {
       await authController.resetPassword(token(), password());
       toast.showToast('Kata sandi berhasil diubah! Silakan login.', 'success');
       navigate('/login', { replace: true });
-    } catch (e: any) {
-      const errText = e.message || 'Gagal mengubah kata sandi';
+    } catch (e: unknown) {
+      const errText = (e as Error).message || 'Gagal mengubah kata sandi';
       setErrorMsg(errText);
       toast.showToast(errText, 'error');
     } finally {
