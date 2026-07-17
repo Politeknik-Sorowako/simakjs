@@ -442,7 +442,7 @@ describe('9. Tagihan (/tagihan)', () => {
       }),
     );
     const cutiTagihanBody = await cutiTagihanRes.json();
-    const tag2025 = cutiTagihanBody.data.find((t: Record<string, unknown>) => t.periodeId === '20251');
+    const tag2025 = cutiTagihanBody.data.find((t: any) => t.periodeId === '20251');
     expect(tag2025).toBeDefined();
     expect(tag2025.nominal).toBe(4000000); // Harus menggunakan tarif 2025 alih-alih tarif angkatan 8888!
 

@@ -31,7 +31,7 @@ describe('1. Autentikasi (/auth)', () => {
       expect(body.user).toBeDefined();
       expect(body.user.email).toBe('dosen@test.com');
       expect(body.user.role).toBe('dosen');
-      expect((body.user as Record<string, unknown>).password).toBeUndefined();
+      expect((body.user as any).password).toBeUndefined();
     });
 
     it('harus gagal registrasi jika email sudah terdaftar', async () => {
@@ -217,7 +217,7 @@ describe('1. Autentikasi (/auth)', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = (await response.json()) as Record<string, unknown>;
+      const body = (await response.json()) as any;
       expect(body.token).toBeDefined();
     });
 
@@ -255,7 +255,7 @@ describe('1. Autentikasi (/auth)', () => {
       );
 
       expect(resetResponse.status).toBe(200);
-      const resetBody = (await resetResponse.json()) as Record<string, unknown>;
+      const resetBody = (await resetResponse.json()) as any;
       expect(resetBody.message).toBe('Password Anda berhasil diubah. Silakan login kembali.');
 
       // Try logging in with new password (activate first)

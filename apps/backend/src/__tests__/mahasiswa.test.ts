@@ -234,7 +234,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
     it('harus gagal mengambil list mahasiswa jika diakses oleh Guest (RBAC)', async () => {
       // Guest is not supported directly by getAuthToken type definition helper but since we updated the enum and schemas it will register and authenticate correctly
-      const guestToken = await getAuthToken('guest-mhs@test.com', 'guest' as string & Record<never, never>);
+      const guestToken = await getAuthToken('guest-mhs@test.com', 'guest' as any);
       const response = await app.handle(
         new Request('http://localhost/mahasiswa', {
           method: 'GET',
@@ -635,7 +635,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
         }),
       );
       expect(listRes.status).toBe(200);
-      const listData = (await listRes.json()) as { data: Array<Record<string, unknown>> };
+      const listData = (await listRes.json()) as { data: any[] };
       expect(listData.data.length).toBe(1);
       expect(listData.data[0].id).toBe(mhsX.id);
 
@@ -722,7 +722,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
       );
 
       expect(importRes.status).toBe(200);
-      const importResult = (await importRes.json()) as { successCount: number; errors: Array<Record<string, unknown>> };
+      const importResult = (await importRes.json()) as { successCount: number; errors: any[] };
       expect(importResult.successCount).toBe(1);
       expect(importResult.errors.length).toBe(0);
 

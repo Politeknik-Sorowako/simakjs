@@ -29,7 +29,7 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGIN: "http://localhost:8081,http://localhost:3001"
+      CORS_ORIGIN: "http://localhost:8082,http://localhost:3001,https://staging-simak.politekniksorowako.ac.id"
       NODE_ENV: development
       DOMAIN_NAME: staging-simak.politekniksorowako.ac.id
       PGHOST: db_staging
@@ -52,7 +52,7 @@ services:
     init: true
     container_name: simak_frontend_staging
     ports:
-      - "${FRONTEND_PORT:-8081}:80"
+      - "${FRONTEND_PORT:-8082}:80"
     depends_on:
       - backend_staging
 
