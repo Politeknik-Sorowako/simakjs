@@ -40,12 +40,14 @@ export const userController = {
   async updateProfile(
     nama: string,
     password?: string,
+    currentPassword?: string,
     theme?: string,
     avatar?: string,
   ): Promise<{ message: string; user: Record<string, unknown> }> {
     const payload: Record<string, unknown> = { nama };
     if (password) {
       payload.password = password;
+      payload.currentPassword = currentPassword;
     }
     if (theme) {
       payload.theme = theme;

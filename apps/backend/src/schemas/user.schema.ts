@@ -60,7 +60,7 @@ export const updateProfileSchema = {
       nama: t.String(),
       email: t.String({ format: 'email' }),
       currentPassword: t.String(),
-      newPassword: t.String({ minLength: 6 }),
+      password: t.String({ minLength: 6 }),
       theme: t.String(),
       avatar: t.String(),
     }),
