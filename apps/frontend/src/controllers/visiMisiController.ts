@@ -62,12 +62,18 @@ export const visiMisiController = {
   },
 
   async import(
-    programStudiId: number,
-    items: { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[],
+    items: {
+      kodeProdi?: string;
+      tahunBerlaku: string;
+      visi: string;
+      misi: string;
+      tujuan?: string;
+      sasaran?: string;
+    }[],
   ): Promise<ImportResult> {
     return fetchApi<ImportResult>('/visi-misi/import', {
       method: 'POST',
-      body: JSON.stringify({ programStudiId, items }),
+      body: JSON.stringify({ items }),
     });
   },
 

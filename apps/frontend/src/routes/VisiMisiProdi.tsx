@@ -64,9 +64,8 @@ export default function VisiMisiProdi() {
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const [showImportModal, setShowImportModal] = createSignal(false);
-  const [importProdiId, setImportProdiId] = createSignal<number>(0);
   const [importItems, setImportItems] = createSignal<
-    { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[]
+    { kodeProdi: string; tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[]
   >([]);
   const [importResult, setImportResult] = createSignal<ImportResult | null>(null);
   const [importLoading, setImportLoading] = createSignal(false);
@@ -157,7 +156,6 @@ export default function VisiMisiProdi() {
   }
 
   function openImportModal() {
-    setImportProdiId(prodiFilter() || 0);
     setImportItems([]);
     setImportResult(null);
     setErrorMsg('');
@@ -166,26 +164,41 @@ export default function VisiMisiProdi() {
 
   function parseVmCsv(
     text: string,
-  ): { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[] {
+  ): { kodeProdi: string; tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[] {
     const rows = parseCsv(text);
-    const items: { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[] = [];
+    const items: {
+      kodeProdi: string;
+      tahunBerlaku: string;
+      visi: string;
+      misi: string;
+      tujuan?: string;
+      sasaran?: string;
+    }[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || row.length < 3) continue;
+      if (!row || row.length < 4) continue;
 
-      if (i === 0 && isHeaderRow(row[0], ['tahunberlaku'])) {
+      if (i === 0 && isHeaderRow(row[0], ['kode_prodi', 'kodeprodi'])) {
         continue;
       }
 
-      const tahunBerlaku = row[0] || '';
-      const visi = row[1] || '';
-      const misi = row[2] || '';
-      const tujuan = row[3] || undefined;
-      const sasaran = row[4] || undefined;
+      const kodeProdi = row[0] || '';
+      const tahunBerlaku = row[1] || '';
+      const visi = row[2] || '';
+      const misi = row[3] || '';
+      const tujuan = row[4] || undefined;
+      const sasaran = row[5] || undefined;
 
-      if (visi && misi) {
-        items.push({ tahunBerlaku, visi, misi, tujuan: tujuan || undefined, sasaran: sasaran || undefined });
+      if (kodeProdi && visi && misi) {
+        items.push({
+          kodeProdi,
+          tahunBerlaku,
+          visi,
+          misi,
+          tujuan: tujuan || undefined,
+          sasaran: sasaran || undefined,
+        });
       }
     }
 
@@ -203,7 +216,7 @@ export default function VisiMisiProdi() {
       const items = parseVmCsv(text);
       setImportItems(items);
       if (items.length === 0) {
-        setErrorMsg('File CSV tidak valid. Format: tahunBerlaku,visi,misi,tujuan,sasaran');
+        setErrorMsg('File CSV tidak valid. Format: kode_prodi,tahunBerlaku,visi,misi,tujuan,sasaran');
       } else {
         setErrorMsg('');
       }
@@ -213,10 +226,6 @@ export default function VisiMisiProdi() {
   }
 
   async function handleImport() {
-    if (!importProdiId()) {
-      setErrorMsg('Pilih Program Studi terlebih dahulu');
-      return;
-    }
     if (importItems().length === 0) {
       setErrorMsg('Upload file CSV terlebih dahulu');
       return;
@@ -225,7 +234,7 @@ export default function VisiMisiProdi() {
     setImportLoading(true);
     setErrorMsg('');
     try {
-      const result = await visiMisiController.import(importProdiId(), importItems());
+      const result = await visiMisiController.import(importItems());
       setImportResult(result);
       if (result.success > 0) {
         refetch();
@@ -475,30 +484,18 @@ export default function VisiMisiProdi() {
               <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                 <h4 class="text-blue-300 font-medium mb-2">Format CSV:</h4>
                 <p class="text-slate-300 text-sm mb-2">
-                  Baris pertama (header) akan dilewati jika mengandung kata "tahunBerlaku"
+                  Baris pertama (header) akan dilewati jika mengandung kata "kode_prodi"
                 </p>
                 <code class="block bg-slate-900 p-3 rounded text-sm text-green-400">
-                  tahunBerlaku,visi,misi,tujuan,sasaran
+                  kode_prodi,tahunBerlaku,visi,misi,tujuan,sasaran
                   <br />
-                  2024,Menjadi program studi unggul,Menyelenggarakan pendidikan berkualitas,Menghasilkan lulusan
+                  TI,2024,Menjadi program studi unggul,Menyelenggarakan pendidikan berkualitas,Menghasilkan lulusan
                   kompeten,Meningkatkan akreditasi
                   <br />
-                  2025,Menjadi pusat inovasi,Melakukan penelitian terapan,Mengembangkan teknologi,Meningkatkan kerjasama
-                  industri
+                  TK,2025,Menjadi pusat inovasi,Melakukan penelitian terapan,Mengembangkan teknologi,Meningkatkan
+                  kerjasama industri
                 </code>
               </div>
-
-              <Input
-                type="select"
-                label="Program Studi"
-                value={importProdiId()}
-                onInput={(e) => setImportProdiId(Number(e.currentTarget.value))}
-                isSelect
-                selectOptions={[
-                  { value: '0', label: 'Pilih Program Studi' },
-                  ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
-                ]}
-              />
 
               <div>
                 <label class="block text-sm font-medium text-secondary-200 mb-2">Upload File CSV</label>
@@ -518,6 +515,7 @@ export default function VisiMisiProdi() {
                       <thead class="bg-slate-800 sticky top-0">
                         <tr class="text-secondary-400 border-b border-slate-700">
                           <th class="text-left py-2 px-3 w-12">#</th>
+                          <th class="text-left py-2 px-3 w-16">Prodi</th>
                           <th class="text-left py-2 px-3 w-20">Tahun</th>
                           <th class="text-left py-2 px-3">Visi</th>
                         </tr>
@@ -527,6 +525,7 @@ export default function VisiMisiProdi() {
                           {(item, index) => (
                             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
                               <td class="py-2 px-3 text-secondary-400">{index() + 1}</td>
+                              <td class="py-2 px-3 text-accent-400 font-medium">{item.kodeProdi}</td>
                               <td class="py-2 px-3 text-black dark:text-white font-medium">{item.tahunBerlaku}</td>
                               <td class="py-2 px-3 text-slate-200 truncate max-w-xs">{item.visi}</td>
                             </tr>
@@ -545,7 +544,7 @@ export default function VisiMisiProdi() {
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  disabled={importLoading() || importItems().length === 0 || !importProdiId()}
+                  disabled={importLoading() || importItems().length === 0}
                 >
                   {importLoading() ? 'Mengimpor...' : 'Impor'}
                 </Button>
