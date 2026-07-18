@@ -21,7 +21,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
   createEffect(() => {
     const currentPath = path();
-    if (['/program-studi', '/mahasiswa', '/dosen', '/pengguna'].includes(currentPath)) {
+    if (['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'].includes(currentPath)) {
       setIsMasterOpen(true);
     }
     if (
@@ -29,7 +29,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         '/kurikulum',
         '/angkatan-kurikulum',
         '/rps',
-        '/periode-akademik',
         '/mata-kuliah',
         '/kelas-kuliah',
         '/profil-lulusan',
@@ -319,19 +318,36 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   </svg>
                   Pengguna
                 </A>
+                <A
+                  href="/periode-akademik"
+                  onClick={() => props.onClose()}
+                  activeClass="text-accent-400 font-semibold"
+                  inactiveClass="hover:text-white text-secondary-200"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  Periode Akademik
+                </A>
               </div>
             </Show>
           </div>
         </Show>
 
-        {/* Perencanaan Akademik */}
+        {/* Persiapan Semester */}
         <Show when={isAdmin() || isDosen()}>
           <div class="pt-2">
             <button
               onClick={() => setIsPerencanaanOpen(!isPerencanaanOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
-              <span>Perencanaan Akademik</span>
+              <span>Persiapan Semester</span>
               <svg
                 class={`w-3.5 h-3.5 transition-transform duration-200 ${isPerencanaanOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
@@ -344,9 +360,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
             <Show when={isPerencanaanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <Show when={isAdmin()}>
+                <div class="px-3 pt-2 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
+                  1. Kurikulum OBE
+                </div>
+                <Show when={isAdmin() || isProdi()}>
                   <A
-                    href="/periode-akademik"
+                    href="/visi-misi-prodi"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
@@ -357,105 +376,16 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                       />
-                    </svg>
-                    Periode Akademik
-                  </A>
-                </Show>
-                <Show when={isAdmin()}>
-                  <A
-                    href="/kurikulum"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         stroke-width="2"
-                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                       />
                     </svg>
-                    Kurikulum
-                  </A>
-                </Show>
-                <Show when={isAdmin() || isDosen()}>
-                  <A
-                    href="/rps"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.168.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.168.477-4.5 1.253"
-                      />
-                    </svg>
-                    RPS & Evaluasi
-                  </A>
-                </Show>
-                <Show when={isAdmin()}>
-                  <A
-                    href="/mata-kuliah"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.168.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.168.477-4.5 1.253"
-                      />
-                    </svg>
-                    Mata Kuliah
-                  </A>
-                </Show>
-                <Show when={isAdmin()}>
-                  <A
-                    href="/angkatan-kurikulum"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M13 10V3L4 14h7v7l9-11h-7z"
-                      />
-                    </svg>
-                    Binding Angkatan
-                  </A>
-                </Show>
-                <Show when={isAdmin() || isDosen()}>
-                  <A
-                    href="/peta-obe"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    Peta OBE
+                    Visi Misi Prodi
                   </A>
                 </Show>
                 <Show when={isAdmin() || isProdi()}>
@@ -496,50 +426,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     CPL
                   </A>
                 </Show>
-                <Show when={isAdmin() || isProdi() || isDosen()}>
-                  <A
-                    href="/cpmk"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    CPMK
-                  </A>
-                </Show>
-                <Show when={isAdmin() || isProdi()}>
-                  <A
-                    href="/visi-misi-prodi"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                      />
-                    </svg>
-                    Visi Misi Prodi
-                  </A>
-                </Show>
                 <Show when={isAdmin() || isProdi()}>
                   <A
                     href="/bahan-kajian"
@@ -559,6 +445,132 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Bahan Kajian
                   </A>
                 </Show>
+                <Show when={isAdmin() || isProdi() || isDosen()}>
+                  <A
+                    href="/cpmk"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    CPMK
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isDosen()}>
+                  <A
+                    href="/peta-obe"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    Peta OBE
+                  </A>
+                </Show>
+
+                <div class="px-3 pt-3 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
+                  2. Mata Kuliah & Kurikulum
+                </div>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/mata-kuliah"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.168.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.168.477-4.5 1.253"
+                      />
+                    </svg>
+                    Mata Kuliah
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/kurikulum"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                      />
+                    </svg>
+                    Kurikulum
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/angkatan-kurikulum"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      />
+                    </svg>
+                    Binding Angkatan
+                  </A>
+                </Show>
+
+                <div class="px-3 pt-3 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
+                  3. RPS
+                </div>
+                <Show when={isAdmin() || isDosen()}>
+                  <A
+                    href="/rps"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.168.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.168.477-4.5 1.253"
+                      />
+                    </svg>
+                    RPS & Evaluasi
+                  </A>
+                </Show>
+
+                <div class="px-3 pt-3 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
+                  4. Kelas
+                </div>
                 <Show when={isAdmin()}>
                   <A
                     href="/kelas-kuliah"
