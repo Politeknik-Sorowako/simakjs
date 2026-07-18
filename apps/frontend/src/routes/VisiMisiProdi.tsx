@@ -4,9 +4,12 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { prodiController } from '../controllers/prodiController';
 import { ImportResult, visiMisiController } from '../controllers/visiMisiController';
+import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function VisiMisiProdi() {
@@ -18,6 +21,37 @@ export default function VisiMisiProdi() {
   );
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
+
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
+
+  const [sortBy, setSortBy] = createSignal('kode');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const allData = data() ?? [];
+    return [...allData].sort((a, b) => {
+      const getVal = (item: Record<string, unknown>) => {
+        if (sortBy() === 'programStudi') return (item.programStudi as Record<string, unknown>)?.nama ?? '';
+        return item[sortBy()] ?? '';
+      };
+      const aVal = getVal(a as unknown as Record<string, unknown>);
+      const bVal = getVal(b as unknown as Record<string, unknown>);
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
+  const pagedData = () => {
+    const sorted = sortedData();
+    const start = (page() - 1) * limit();
+    return sorted.slice(start, start + limit());
+  };
+  const totalPages = () => Math.ceil((data()?.length ?? 0) / limit());
 
   const [showModal, setShowModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
@@ -214,7 +248,24 @@ export default function VisiMisiProdi() {
     URL.revokeObjectURL(url);
   }
 
-  const headers = ['Tahun Berlaku', 'Visi', 'Misi', 'Program Studi', 'Status', 'Aksi'];
+  const headers = [
+    <SortableHeader field="tahunBerlaku" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Tahun Berlaku
+    </SortableHeader>,
+    <SortableHeader field="visi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Visi
+    </SortableHeader>,
+    <SortableHeader field="misi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Misi
+    </SortableHeader>,
+    <SortableHeader field="programStudi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Program Studi
+    </SortableHeader>,
+    <SortableHeader field="isAktif" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Status
+    </SortableHeader>,
+    'Aksi',
+  ];
 
   return (
     <MainLayout>
@@ -243,6 +294,7 @@ export default function VisiMisiProdi() {
               onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
+                resetPage();
               }}
               isSelect
               selectOptions={[
@@ -269,7 +321,7 @@ export default function VisiMisiProdi() {
               }
             >
               <For
-                each={data() ?? []}
+                each={pagedData()}
                 fallback={
                   <tr>
                     <td colspan={headers.length} class="text-center py-8 text-secondary-300">
@@ -310,6 +362,15 @@ export default function VisiMisiProdi() {
             </Show>
           </Table>
         </div>
+
+        <Pagination
+          currentPage={page()}
+          totalPages={totalPages()}
+          total={data()?.length ?? 0}
+          limit={limit()}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       <Modal

@@ -4,19 +4,42 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { bahanKajianController, BahanKajian as IBahanKajian, ImportResult } from '../controllers/bahanKajianController';
 import { cplController } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
+import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function BahanKajian() {
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
 
   const [bkList, { refetch }] = createResource(
     () => ({ prodiId: prodiFilter() }),
     ({ prodiId }) => bahanKajianController.getAll(prodiId),
   );
+
+  const [sortBy, setSortBy] = createSignal('kode');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = bkList() ?? [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
@@ -248,8 +271,6 @@ export default function BahanKajian() {
     },
   );
 
-  const headers = ['Kode', 'Nama', 'Deskripsi', 'Program Studi', 'Mapping CPL', 'Urutan', 'Aksi'];
-
   return (
     <MainLayout>
       <div class="space-y-6">
@@ -277,6 +298,7 @@ export default function BahanKajian() {
               onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
+                resetPage();
               }}
               isSelect
               selectOptions={[
@@ -291,22 +313,42 @@ export default function BahanKajian() {
         </div>
 
         <div class="bg-[#1e293b] rounded-2xl overflow-hidden">
-          <Table headers={headers}>
+          <Table
+            headers={[
+              <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kode
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama
+              </SortableHeader>,
+              <SortableHeader field="deskripsi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Deskripsi
+              </SortableHeader>,
+              <SortableHeader field="programStudi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Program Studi
+              </SortableHeader>,
+              'Mapping CPL',
+              <SortableHeader field="urutan" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Urutan
+              </SortableHeader>,
+              'Aksi',
+            ]}
+          >
             <Show
               when={!bkList.loading}
               fallback={
                 <tr>
-                  <td colspan={headers.length} class="text-center py-8 text-secondary-300">
+                  <td colspan={7} class="text-center py-8 text-secondary-300">
                     Memuat...
                   </td>
                 </tr>
               }
             >
               <For
-                each={bkList() ?? []}
+                each={sortedData()}
                 fallback={
                   <tr>
-                    <td colspan={headers.length} class="text-center py-8 text-secondary-300">
+                    <td colspan={7} class="text-center py-8 text-secondary-300">
                       Belum ada data
                     </td>
                   </tr>
@@ -345,6 +387,17 @@ export default function BahanKajian() {
             </Show>
           </Table>
         </div>
+
+        <Show when={bkList()}>
+          <Pagination
+            currentPage={page()}
+            totalPages={Math.ceil((bkList()?.length ?? 0) / limit()) || 1}
+            total={bkList()?.length ?? 0}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
+        </Show>
       </div>
 
       <Modal

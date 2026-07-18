@@ -4,10 +4,13 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { cplController, Cpl as ICpl, ImportCplResult } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
 import { profilLulusanController } from '../controllers/profilLulusanController';
+import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpl() {
@@ -40,6 +43,27 @@ export default function Cpl() {
   const [importItems, setImportItems] = createSignal<{ kode: string; deskripsi: string }[]>([]);
   const [importResult, setImportResult] = createSignal<ImportCplResult | null>(null);
   const [importLoading, setImportLoading] = createSignal(false);
+
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
+
+  const [sortBy, setSortBy] = createSignal('kode');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = cplList() || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   function openAddModal() {
     setEditId(null);
@@ -237,7 +261,20 @@ export default function Cpl() {
     },
   );
 
-  const headers = ['Kode', 'Deskripsi', 'Program Studi', 'Mapping Profil Lulusan', 'Urutan', 'Aksi'];
+  const headers = [
+    <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Kode
+    </SortableHeader>,
+    <SortableHeader field="deskripsi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Deskripsi
+    </SortableHeader>,
+    'Program Studi',
+    'Mapping Profil Lulusan',
+    <SortableHeader field="urutan" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+      Urutan
+    </SortableHeader>,
+    'Aksi',
+  ];
 
   return (
     <MainLayout>
@@ -292,7 +329,7 @@ export default function Cpl() {
               }
             >
               <For
-                each={cplList() ?? []}
+                each={sortedData()}
                 fallback={
                   <tr>
                     <td colspan={headers.length} class="text-center py-8 text-secondary-300">
@@ -333,6 +370,15 @@ export default function Cpl() {
             </Show>
           </Table>
         </div>
+
+        <Pagination
+          currentPage={page()}
+          totalPages={Math.ceil((cplList()?.length || 0) / limit())}
+          total={cplList()?.length || 0}
+          limit={limit()}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       <Modal

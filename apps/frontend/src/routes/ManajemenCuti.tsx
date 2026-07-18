@@ -3,13 +3,16 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { CutiRequest, cutiController, MahasiswaCuti } from '../controllers/cutiController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
 
 type Tab = 'input' | 'approval' | 'aktif';
 
@@ -47,15 +50,54 @@ export default function ManajemenCuti() {
   };
 
   // =========================== TAB 1: INPUT CUTI ===========================
-  const [inputPage, setInputPage] = createSignal(1);
-  const [inputSearch, setInputSearch] = createSignal('');
+  const pendingPagination = usePagination();
   const [inputPeriode, setInputPeriode] = createSignal('');
+  const [pendingSortBy, setPendingSortBy] = createSignal('nim');
+  const [pendingSortOrder, setPendingSortOrder] = createSignal<'asc' | 'desc'>('asc');
 
   const [inputRecords, { refetch: refetchInput }] = createResource(
-    () => ({ page: inputPage(), limit: 10, search: inputSearch(), periodeId: inputPeriode() }),
+    () => ({
+      page: pendingPagination.page(),
+      limit: pendingPagination.limit(),
+      search: pendingPagination.search(),
+      periodeId: inputPeriode(),
+    }),
     ({ page, limit, search, periodeId }) =>
       cutiController.getMahasiswaCuti(page, limit, search || undefined, periodeId || undefined),
   );
+
+  const pendingSortedData = () => {
+    const data = inputRecords()?.data || [];
+    const field = pendingSortBy();
+    const order = pendingSortOrder();
+    return [...data].sort((a, b) => {
+      let va = '';
+      let vb = '';
+      if (field === 'nim') {
+        va = a.nim || '';
+        vb = b.nim || '';
+      } else if (field === 'nama') {
+        va = a.nama || '';
+        vb = b.nama || '';
+      } else if (field === 'status') {
+        va = a.pengajuanCuti?.[0]?.status || '';
+        vb = b.pengajuanCuti?.[0]?.status || '';
+      } else if (field === 'periode') {
+        va = a.pengajuanCuti?.[0]?.periodeAkademik?.nama || '';
+        vb = b.pengajuanCuti?.[0]?.periodeAkademik?.nama || '';
+      }
+      return order === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  };
+
+  const handlePendingSort = (field: string) => {
+    if (pendingSortBy() === field) {
+      setPendingSortOrder(pendingSortOrder() === 'asc' ? 'desc' : 'asc');
+    } else {
+      setPendingSortBy(field);
+      setPendingSortOrder('asc');
+    }
+  };
 
   const [mhsList, setMhsList] = createSignal<Mahasiswa[]>([]);
 
@@ -161,15 +203,61 @@ export default function ManajemenCuti() {
   };
 
   // =========================== TAB 2: APPROVAL ===========================
-  const [apprPage, setApprPage] = createSignal(1);
+  const approvedPagination = usePagination();
   const [apprStatus, setApprStatus] = createSignal('');
   const [apprPeriode, setApprPeriode] = createSignal('');
+  const [approvedSortBy, setApprovedSortBy] = createSignal('nim');
+  const [approvedSortOrder, setApprovedSortOrder] = createSignal<'asc' | 'desc'>('asc');
 
   const [approvals, { refetch: refetchApprovals }] = createResource(
-    () => ({ page: apprPage(), limit: 10, periodeId: apprPeriode(), status: apprStatus() }),
+    () => ({
+      page: approvedPagination.page(),
+      limit: approvedPagination.limit(),
+      periodeId: apprPeriode(),
+      status: apprStatus(),
+    }),
     ({ page, limit, periodeId, status }) =>
       cutiController.getAll(page, limit, periodeId || undefined, status || undefined),
   );
+
+  const approvedSortedData = () => {
+    const data = approvals()?.data || [];
+    const field = approvedSortBy();
+    const order = approvedSortOrder();
+    return [...data].sort((a, b) => {
+      let va = '';
+      let vb = '';
+      if (field === 'nim') {
+        va = a.mahasiswa?.nim || '';
+        vb = b.mahasiswa?.nim || '';
+      } else if (field === 'nama') {
+        va = a.mahasiswa?.nama || '';
+        vb = b.mahasiswa?.nama || '';
+      } else if (field === 'prodi') {
+        va = a.mahasiswa?.programStudi?.nama || '';
+        vb = b.mahasiswa?.programStudi?.nama || '';
+      } else if (field === 'periode') {
+        va = a.periodeAkademik?.nama || '';
+        vb = b.periodeAkademik?.nama || '';
+      } else if (field === 'alasan') {
+        va = a.alasan || '';
+        vb = b.alasan || '';
+      } else if (field === 'status') {
+        va = a.status || '';
+        vb = b.status || '';
+      }
+      return order === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  };
+
+  const handleApprovedSort = (field: string) => {
+    if (approvedSortBy() === field) {
+      setApprovedSortOrder(approvedSortOrder() === 'asc' ? 'desc' : 'asc');
+    } else {
+      setApprovedSortBy(field);
+      setApprovedSortOrder('asc');
+    }
+  };
 
   const [showApprModal, setShowApprModal] = createSignal(false);
   const [selectedRequest, setSelectedRequest] = createSignal<CutiRequest | null>(null);
@@ -233,15 +321,54 @@ export default function ManajemenCuti() {
   };
 
   // =========================== TAB 3: AKTIFKAN KEMBALI ===========================
-  const [aktifPage, setAktifPage] = createSignal(1);
-  const [aktifSearch, setAktifSearch] = createSignal('');
+  const rejectedPagination = usePagination();
   const [aktifPeriode, setAktifPeriode] = createSignal('');
+  const [rejectedSortBy, setRejectedSortBy] = createSignal('nim');
+  const [rejectedSortOrder, setRejectedSortOrder] = createSignal<'asc' | 'desc'>('asc');
 
   const [aktifList, { refetch: refetchAktif }] = createResource(
-    () => ({ page: aktifPage(), limit: 10, search: aktifSearch(), periodeId: aktifPeriode() }),
+    () => ({
+      page: rejectedPagination.page(),
+      limit: rejectedPagination.limit(),
+      search: rejectedPagination.search(),
+      periodeId: aktifPeriode(),
+    }),
     ({ page, limit, search, periodeId }) =>
       cutiController.getMahasiswaCuti(page, limit, search || undefined, periodeId || undefined),
   );
+
+  const rejectedSortedData = () => {
+    const data = aktifList()?.data || [];
+    const field = rejectedSortBy();
+    const order = rejectedSortOrder();
+    return [...data].sort((a, b) => {
+      let va = '';
+      let vb = '';
+      if (field === 'nim') {
+        va = a.nim || '';
+        vb = b.nim || '';
+      } else if (field === 'nama') {
+        va = a.nama || '';
+        vb = b.nama || '';
+      } else if (field === 'prodi') {
+        va = a.programStudi?.nama || '';
+        vb = b.programStudi?.nama || '';
+      } else if (field === 'periode') {
+        va = getPeriodeCuti(a);
+        vb = getPeriodeCuti(b);
+      }
+      return order === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  };
+
+  const handleRejectedSort = (field: string) => {
+    if (rejectedSortBy() === field) {
+      setRejectedSortOrder(rejectedSortOrder() === 'asc' ? 'desc' : 'asc');
+    } else {
+      setRejectedSortBy(field);
+      setRejectedSortOrder('asc');
+    }
+  };
 
   const [processing, setProcessing] = createSignal<number | null>(null);
 
@@ -304,10 +431,10 @@ export default function ManajemenCuti() {
               <div class="max-w-xs flex-1">
                 <Input
                   placeholder="Cari NIM atau nama..."
-                  value={inputSearch()}
+                  value={pendingPagination.search()}
                   onInput={(e) => {
-                    setInputSearch(e.currentTarget.value);
-                    setInputPage(1);
+                    pendingPagination.setSearch(e.currentTarget.value);
+                    pendingPagination.resetPage();
                   }}
                 />
               </div>
@@ -317,7 +444,7 @@ export default function ManajemenCuti() {
                   value={inputPeriode()}
                   onChange={(e) => {
                     setInputPeriode(e.currentTarget.value);
-                    setInputPage(1);
+                    pendingPagination.resetPage();
                   }}
                 >
                   <option value="">Semua Periode</option>
@@ -334,7 +461,7 @@ export default function ManajemenCuti() {
           >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Status', 'Periode Cuti', 'Rentang Cuti', 'No SK', 'Aksi']}>
               <For
-                each={inputRecords()?.data}
+                each={pendingSortedData()}
                 fallback={
                   <tr>
                     <td colspan="7" class="text-center py-10 text-secondary-400">
@@ -400,9 +527,16 @@ export default function ManajemenCuti() {
                 }}
               </For>
             </Table>
+            <Pagination
+              currentPage={pendingPagination.page()}
+              totalPages={Math.ceil((inputRecords()?.meta?.total || 0) / pendingPagination.limit())}
+              total={inputRecords()?.meta?.total || 0}
+              limit={pendingPagination.limit()}
+              onPageChange={pendingPagination.setPage}
+              onLimitChange={pendingPagination.setLimit}
+            />
           </Show>
         </Show>
-
         {/* ===================== TAB: PERSETUJUAN CUTI ===================== */}
         <Show when={activeTab() === 'approval'}>
           <div class="flex gap-4 items-center">
@@ -412,7 +546,7 @@ export default function ManajemenCuti() {
                 value={apprPeriode()}
                 onChange={(e) => {
                   setApprPeriode(e.currentTarget.value);
-                  setApprPage(1);
+                  approvedPagination.resetPage();
                 }}
               >
                 <option value="">Semua Periode</option>
@@ -425,7 +559,7 @@ export default function ManajemenCuti() {
                 value={apprStatus()}
                 onChange={(e) => {
                   setApprStatus(e.currentTarget.value);
-                  setApprPage(1);
+                  approvedPagination.resetPage();
                 }}
               >
                 <option value="">Semua Status</option>
@@ -444,7 +578,7 @@ export default function ManajemenCuti() {
           >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode', 'Alasan Cuti', 'Status', 'SK Cuti', 'Aksi']}>
               <For
-                each={approvals()?.data}
+                each={approvedSortedData()}
                 fallback={
                   <tr>
                     <td colspan="8" class="text-center py-10 text-secondary-400">
@@ -488,6 +622,14 @@ export default function ManajemenCuti() {
                 )}
               </For>
             </Table>
+            <Pagination
+              currentPage={approvedPagination.page()}
+              totalPages={Math.ceil((approvals()?.meta?.total || 0) / approvedPagination.limit())}
+              total={approvals()?.meta?.total || 0}
+              limit={approvedPagination.limit()}
+              onPageChange={approvedPagination.setPage}
+              onLimitChange={approvedPagination.setLimit}
+            />
           </Show>
         </Show>
 
@@ -498,10 +640,10 @@ export default function ManajemenCuti() {
               <input
                 type="text"
                 placeholder="Cari NIM atau Nama..."
-                value={aktifSearch()}
+                value={rejectedPagination.search()}
                 onInput={(e) => {
-                  setAktifSearch(e.currentTarget.value);
-                  setAktifPage(1);
+                  rejectedPagination.setSearch(e.currentTarget.value);
+                  rejectedPagination.resetPage();
                 }}
                 class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               />
@@ -512,7 +654,7 @@ export default function ManajemenCuti() {
                 value={aktifPeriode()}
                 onChange={(e) => {
                   setAktifPeriode(e.currentTarget.value);
-                  setAktifPage(1);
+                  rejectedPagination.resetPage();
                 }}
               >
                 <option value="">Semua Periode</option>
@@ -527,7 +669,7 @@ export default function ManajemenCuti() {
           >
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode Cuti', 'Rentang Cuti', 'Aksi']}>
               <For
-                each={aktifList()?.data}
+                each={rejectedSortedData()}
                 fallback={
                   <tr>
                     <td colspan="6" class="text-center py-10 text-secondary-400">
@@ -569,6 +711,14 @@ export default function ManajemenCuti() {
                 )}
               </For>
             </Table>
+            <Pagination
+              currentPage={rejectedPagination.page()}
+              totalPages={Math.ceil((aktifList()?.meta?.total || 0) / rejectedPagination.limit())}
+              total={aktifList()?.meta?.total || 0}
+              limit={rejectedPagination.limit()}
+              onPageChange={rejectedPagination.setPage}
+              onLimitChange={rejectedPagination.setLimit}
+            />
           </Show>
         </Show>
       </div>

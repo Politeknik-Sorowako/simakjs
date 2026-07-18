@@ -4,13 +4,15 @@ import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { Prodi, prodiController } from '../controllers/prodiController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function ProgramStudi() {
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Fetch data
@@ -18,6 +20,29 @@ export default function ProgramStudi() {
     () => ({ search: search(), page: page(), limit: limit() }),
     ({ search, page, limit }) => prodiController.getAll(search, page, limit),
   );
+
+  // Sorting state
+  const [sortBy, setSortBy] = createSignal('kode');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) {
+      setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedData = () => {
+    const data = prodis()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -106,7 +131,7 @@ export default function ProgramStudi() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              setPage(1);
+              resetPage();
             }}
           />
         </div>
@@ -116,8 +141,21 @@ export default function ProgramStudi() {
           when={!prodis.loading}
           fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
         >
-          <Table headers={['Kode', 'Nama Program Studi', 'Jenjang', 'Aksi']}>
-            <For each={prodis()?.data}>
+          <Table
+            headers={[
+              <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kode
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama Program Studi
+              </SortableHeader>,
+              <SortableHeader field="jenjang" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Jenjang
+              </SortableHeader>,
+              'Aksi',
+            ]}
+          >
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-brand-50/50 transition-colors dark:hover:bg-brand-900/50">
                   <td class="px-6 py-4 font-mono font-semibold text-secondary-700 dark:text-secondary-200">
@@ -149,32 +187,14 @@ export default function ProgramStudi() {
             </Show>
           </Table>
 
-          {/* Pagination */}
-          <Show when={prodis() && prodis()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                Menampilkan halaman {page()} dari {prodis()?.meta.totalPages} ({prodis()?.meta.total} total data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= prodis()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, prodis()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
-          </Show>
+          <Pagination
+            currentPage={page()}
+            totalPages={prodis()?.meta.totalPages || 1}
+            total={prodis()?.meta.total || 0}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </Show>
 
         {/* Modal Form */}

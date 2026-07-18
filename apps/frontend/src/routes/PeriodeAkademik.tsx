@@ -4,9 +4,12 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
 import { PeriodeAkademik as IPeriode, periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
 
 const periodeSchema = z.object({
   id: z
@@ -20,8 +23,7 @@ const periodeSchema = z.object({
 export default function PeriodeAkademik() {
   const toast = useToast();
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
   // Fetch Periode Data
   const [periodes, { refetch }] = createResource(
@@ -35,6 +37,25 @@ export default function PeriodeAkademik() {
       }
     },
   );
+
+  const [sortBy, setSortBy] = createSignal('id');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = periodes()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -124,7 +145,7 @@ export default function PeriodeAkademik() {
             aria-label="Cari periode akademik"
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              setPage(1);
+              resetPage();
             }}
           />
         </div>
@@ -143,8 +164,21 @@ export default function PeriodeAkademik() {
             </div>
           }
         >
-          <Table headers={['ID / Kode', 'Nama Semester', 'Status', 'Aksi']}>
-            <For each={periodes()?.data}>
+          <Table
+            headers={[
+              <SortableHeader field="id" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                ID / Kode
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama Semester
+              </SortableHeader>,
+              <SortableHeader field="aktif" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Status
+              </SortableHeader>,
+              'Aksi',
+            ]}
+          >
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50 transition-colors">
                   <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200 font-semibold">
@@ -192,34 +226,14 @@ export default function PeriodeAkademik() {
             </Show>
           </Table>
 
-          {/* Pagination */}
-          <Show when={periodes() && periodes()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                Menampilkan halaman {page()} dari {periodes()?.meta.totalPages} ({periodes()?.meta.total} total data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                  aria-label="Halaman sebelumnya"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= periodes()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, periodes()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                  aria-label="Halaman berikutnya"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
-          </Show>
+          <Pagination
+            currentPage={page()}
+            totalPages={periodes()?.meta.totalPages ?? 1}
+            total={periodes()?.meta.total ?? 0}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </Show>
 
         <Modal
