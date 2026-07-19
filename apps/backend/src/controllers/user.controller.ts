@@ -168,6 +168,7 @@ export class UserController {
 
       const nama = (body as any)?.nama;
       const password = (body as any)?.password;
+      const currentPassword = (body as any)?.currentPassword;
       const theme = (body as any)?.theme;
       const avatar = (body as any)?.avatar;
 
@@ -195,6 +196,20 @@ export class UserController {
       }
 
       if (password) {
+        if (!currentPassword) {
+          set.status = 400;
+          return { error: 'Kata sandi saat ini wajib diisi' };
+        }
+        const [fullUser] = await db.select().from(users).where(eq(users.id, currentUser.id)).limit(1);
+        if (!fullUser) {
+          set.status = 404;
+          return { error: 'Pengguna tidak ditemukan' };
+        }
+        const isMatch = await Bun.password.verify(currentPassword, fullUser.password);
+        if (!isMatch) {
+          set.status = 400;
+          return { error: 'Kata sandi saat ini salah' };
+        }
         if (password.length < 6) {
           set.status = 400;
           return { error: 'Password minimal harus 6 karakter' };
