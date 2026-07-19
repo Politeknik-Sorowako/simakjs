@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm';
-import { bahanKajian } from '../models/schema';
+import { and, eq, inArray } from 'drizzle-orm';
+import { bahanKajian, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateBahanKajianDto {
@@ -11,6 +11,7 @@ export interface CreateBahanKajianDto {
 }
 
 export interface ImportBahanKajianItem {
+  kodeProdi?: string;
   kode: string;
   nama: string;
   deskripsi?: string;
@@ -67,9 +68,21 @@ export class BahanKajianService {
     return deleted || null;
   }
 
-  static async import(programStudiId: number, items: ImportBahanKajianItem[]): Promise<ImportResult> {
+  static async import(programStudiId: number | undefined, items: ImportBahanKajianItem[]): Promise<ImportResult> {
     const result: ImportResult = { success: 0, failed: 0, errors: [] };
-    const validItems: { kode: string; nama: string; deskripsi?: string; urutan: number }[] = [];
+
+    const uniqueKodes = [...new Set(items.map((item) => item.kodeProdi).filter((k): k is string => !!k))];
+    let kodeToId = new Map<string, number>();
+    if (uniqueKodes.length > 0) {
+      const prodis = await db
+        .select({ id: programStudi.id, kode: programStudi.kode })
+        .from(programStudi)
+        .where(inArray(programStudi.kode, uniqueKodes));
+      kodeToId = new Map(prodis.map((p) => [p.kode, p.id]));
+    }
+
+    const validItems: { kode: string; nama: string; deskripsi?: string; urutan: number; resolvedProdiId: number }[] =
+      [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -77,6 +90,27 @@ export class BahanKajianService {
       const kode = item.kode?.trim();
       const nama = item.nama?.trim();
       const deskripsi = item.deskripsi?.trim() || undefined;
+
+      let resolvedProdiId: number | undefined;
+      if (item.kodeProdi) {
+        const found = kodeToId.get(item.kodeProdi);
+        if (!found) {
+          result.failed++;
+          result.errors.push({
+            row: urutan,
+            kode: kode || '',
+            error: `Program studi dengan kode '${item.kodeProdi}' tidak ditemukan`,
+          });
+          continue;
+        }
+        resolvedProdiId = found;
+      } else if (programStudiId) {
+        resolvedProdiId = programStudiId;
+      } else {
+        result.failed++;
+        result.errors.push({ row: urutan, kode: kode || '', error: 'kode_prodi wajib diisi' });
+        continue;
+      }
 
       if (!kode || !nama) {
         result.failed++;
@@ -91,7 +125,7 @@ export class BahanKajianService {
       }
 
       const existing = await db.query.bahanKajian.findFirst({
-        where: and(eq(bahanKajian.programStudiId, programStudiId), eq(bahanKajian.kode, kode)),
+        where: and(eq(bahanKajian.programStudiId, resolvedProdiId), eq(bahanKajian.kode, kode)),
       });
 
       if (existing) {
@@ -100,7 +134,7 @@ export class BahanKajianService {
         continue;
       }
 
-      validItems.push({ kode, nama, deskripsi, urutan });
+      validItems.push({ kode, nama, deskripsi, urutan, resolvedProdiId });
     }
 
     if (validItems.length > 0) {
@@ -108,7 +142,7 @@ export class BahanKajianService {
         await db.transaction(async (tx) => {
           await tx.insert(bahanKajian).values(
             validItems.map((item) => ({
-              programStudiId,
+              programStudiId: item.resolvedProdiId,
               kode: item.kode,
               nama: item.nama,
               deskripsi: item.deskripsi || undefined,
@@ -132,6 +166,6 @@ export class BahanKajianService {
   }
 
   static getTemplateCsv(): string {
-    return 'kode,nama,deskripsi\nBK-01,Pemrograman Dasar,Konsep dasar pemrograman dan algoritma\nBK-02,Basis Data,Perancangan dan implementasi basis data\nBK-03,Jaringan Komputer,Fundamental jaringan dan protokol komunikasi';
+    return 'kode_prodi,kode,nama,deskripsi\nTI,BK-01,Pemrograman Dasar,Konsep dasar pemrograman dan algoritma\nTI,BK-02,Basis Data,Perancangan dan implementasi basis data\nTK,BK-03,Jaringan Komputer,Fundamental jaringan dan protokol komunikasi';
   }
 }

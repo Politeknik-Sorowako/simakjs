@@ -71,12 +71,13 @@ export const importBahanKajianSchema = {
   detail: {
     tags: ['Bahan Kajian'],
     summary: 'Impor Bahan Kajian dari CSV',
-    description: 'Impor data Bahan Kajian dari file CSV. Format: kode,nama,deskripsi (Hanya Admin/Prodi).',
+    description: 'Impor data Bahan Kajian dari file CSV. Format: kode_prodi,kode,nama,deskripsi (Hanya Admin/Prodi).',
   },
   body: t.Object({
-    programStudiId: t.Integer(),
+    programStudiId: t.Optional(t.Integer()),
     items: t.Array(
       t.Object({
+        kodeProdi: t.Optional(t.String()),
         kode: t.String(),
         nama: t.String(),
         deskripsi: t.Optional(t.String()),

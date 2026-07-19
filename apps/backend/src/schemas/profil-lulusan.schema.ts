@@ -69,12 +69,13 @@ export const importProfilLulusanSchema = {
   detail: {
     tags: ['Profil Lulusan'],
     summary: 'Impor Profil Lulusan dari CSV',
-    description: 'Impor data Profil Lulusan dari file CSV. Format: kode,deskripsi (Hanya Admin/Prodi).',
+    description: 'Impor data Profil Lulusan dari file CSV. Format: kode_prodi,kode,deskripsi (Hanya Admin/Prodi).',
   },
   body: t.Object({
-    programStudiId: t.Integer(),
+    programStudiId: t.Optional(t.Integer()),
     items: t.Array(
       t.Object({
+        kodeProdi: t.Optional(t.String()),
         kode: t.String(),
         deskripsi: t.String(),
       }),
