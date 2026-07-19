@@ -1,4 +1,3 @@
-import { CsvImportService } from '../services/csv-import.service';
 import { MataKuliahService } from '../services/mata-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
@@ -7,16 +6,32 @@ export class MataKuliahController {
     query,
   }: AuthContext<
     any,
-    PaginationQuery & { kurikulumId?: number; semester?: number; sortBy?: string; sortOrder?: string }
+    PaginationQuery & {
+      programStudiId?: number;
+      kurikulumId?: number;
+      semester?: number;
+      sortBy?: string;
+      sortOrder?: string;
+    }
   >): Promise<any> {
     const page = query?.page ? parseInt(String(query.page)) : 1;
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
+    const programStudiId = query?.programStudiId ? Number(query.programStudiId) : undefined;
     const kurikulumId = query?.kurikulumId ? Number(query.kurikulumId) : undefined;
     const semester = query?.semester !== undefined ? Number(query.semester) : undefined;
     const sortBy = query?.sortBy || 'nama';
     const sortOrder = (query?.sortOrder as 'asc' | 'desc') || 'asc';
-    return await MataKuliahService.getAll(page, limit, search, kurikulumId, semester, sortBy, sortOrder);
+    return await MataKuliahService.getAll(
+      page,
+      limit,
+      search,
+      programStudiId,
+      kurikulumId,
+      semester,
+      sortBy,
+      sortOrder,
+    );
   }
 
   static async getById({ params, set }: AuthContext): Promise<any> {
@@ -67,23 +82,26 @@ export class MataKuliahController {
     return { message: 'Mata Kuliah berhasil dihapus' };
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
+  static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
-
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const mode = (formData.get('mode') as string) || 'skip';
-    if (!file) {
+    const { items } = body as { items: any[] };
+    if (!items || !Array.isArray(items) || items.length === 0) {
       set.status = 400;
-      return { error: 'File CSV tidak ditemukan.' };
+      return { error: 'Data harus diisi' };
     }
-
-    const text = await file.text();
-    const result = await CsvImportService.importMataKuliah(text, mode);
+    const result = await MataKuliahService.import(items);
+    set.status = 200;
     return result;
+  }
+
+  static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
+    await getCurrentUser();
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename=template-mata-kuliah.csv';
+    return MataKuliahService.getTemplateCsv();
   }
 }

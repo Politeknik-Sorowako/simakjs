@@ -190,6 +190,7 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
       const [matkul] = await db
         .insert(mataKuliah)
         .values({
+          programStudiId: prodi.id,
           kode: 'MK001',
           nama: 'Pemrograman Web',
           sksTotal: 4,

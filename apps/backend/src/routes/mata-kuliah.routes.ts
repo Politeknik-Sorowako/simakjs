@@ -6,6 +6,7 @@ import {
   deleteMataKuliahSchema,
   getMataKuliahByIdSchema,
   getMataKuliahSchema,
+  getTemplateMataKuliahSchema,
   importMataKuliahSchema,
   updateMataKuliahSchema,
 } from '../schemas/mata-kuliah.schema';
@@ -14,7 +15,8 @@ export const mataKuliahRoutes = new Elysia({ prefix: '/mata-kuliah' })
   .use(authMiddleware)
   .get('/', MataKuliahController.getAll, getMataKuliahSchema)
   .post('/', MataKuliahController.create, createMataKuliahSchema)
-  .post('/import', MataKuliahController.importCsv, importMataKuliahSchema)
+  .post('/import', MataKuliahController.import, importMataKuliahSchema)
+  .get('/template/csv', MataKuliahController.getTemplate, getTemplateMataKuliahSchema)
   .get('/:id', MataKuliahController.getById, getMataKuliahByIdSchema)
   .put('/:id', MataKuliahController.update, updateMataKuliahSchema)
   .delete('/:id', MataKuliahController.delete, deleteMataKuliahSchema);

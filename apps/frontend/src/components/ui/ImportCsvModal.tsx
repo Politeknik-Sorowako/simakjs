@@ -11,6 +11,10 @@ interface ImportCsvModalProps {
   templateHeaders: string[];
   title: string;
   onSuccess: () => void;
+  onImport?: (
+    rows: string[][],
+    mode: string,
+  ) => Promise<{ successCount: number; errors: { line: number; error: string }[] }>;
 }
 
 export function ImportCsvModal(props: ImportCsvModalProps) {
@@ -73,14 +77,26 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
     setImportReport(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('mode', duplicateMode());
+      let res: { successCount: number; errors: { line: number; error: string }[] };
 
-      const res = await fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>(props.importUrl, {
-        method: 'POST',
-        body: formData,
-      });
+      if (props.onImport) {
+        const reader = new FileReader();
+        const text = await new Promise<string>((resolve, reject) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsText(selectedFile);
+        });
+        const rows = parseCsv(text);
+        res = await props.onImport(rows, duplicateMode());
+      } else {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('mode', duplicateMode());
+        res = await fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>(props.importUrl, {
+          method: 'POST',
+          body: formData,
+        });
+      }
       setImportReport(res);
       if (res.errors && res.errors.length > 0) {
         if (res.successCount > 0) {

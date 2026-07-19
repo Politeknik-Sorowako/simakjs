@@ -7,6 +7,8 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { bahanKajianController } from '../controllers/bahanKajianController';
 import { kurikulumController } from '../controllers/kurikulumController';
 import { MataKuliah as IMataKuliah, mataKuliahController } from '../controllers/mataKuliahController';
@@ -17,11 +19,14 @@ import { fetchApi } from '../utils/api';
 type SortField = 'nama' | 'kode' | 'sks' | 'semester' | 'programStudi' | 'kurikulum';
 
 export default function MataKuliah() {
+  const auth = useAuth();
+  const ws = useWorkspace();
+  const isAdmin = () => auth.user()?.role === 'admin';
   const [showImportModal, setShowImportModal] = createSignal(false);
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
 
   // Filters
-  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(undefined);
+  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(ws.selectedProdiId() ?? undefined);
   const [filterKurikulum, setFilterKurikulum] = createSignal<number | undefined>(undefined);
   const [filterSemester, setFilterSemester] = createSignal<number | undefined>(undefined);
   const [sortBy, setSortBy] = createSignal<SortField>('nama');
@@ -65,9 +70,10 @@ export default function MataKuliah() {
       semester: filterSemester(),
       sortBy: sortBy(),
       sortOrder: sortOrder(),
+      programStudiId: filterProdi(),
     }),
-    ({ search, page, limit, kurikulumId, semester, sortBy, sortOrder }) =>
-      mataKuliahController.getAll(search, page, limit, kurikulumId, semester, sortBy, sortOrder),
+    ({ search, page, limit, kurikulumId, semester, sortBy, sortOrder, programStudiId }) =>
+      mataKuliahController.getAll(search, page, limit, kurikulumId, semester, sortBy, sortOrder, programStudiId),
   );
 
   const sortedData = () => {
@@ -85,6 +91,7 @@ export default function MataKuliah() {
   // Form State
   const [showModal, setShowModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
+  const [formProdiId, setFormProdiId] = createSignal<number>(ws.selectedProdiId() || 0);
   const [kode, setKode] = createSignal('');
   const [nama, setNama] = createSignal('');
   const [sksTotal, setSksTotal] = createSignal(3);
@@ -111,6 +118,7 @@ export default function MataKuliah() {
 
   const openAddModal = () => {
     setEditId(null);
+    setFormProdiId(ws.selectedProdiId() || 0);
     setKode('');
     setNama('');
     setSksTotal(3);
@@ -122,6 +130,7 @@ export default function MataKuliah() {
 
   const openEditModal = (item: IMataKuliah) => {
     setEditId(item.id);
+    setFormProdiId(item.programStudiId || 0);
     setKode(item.kode);
     setNama(item.nama);
     setSksTotal(item.sksTotal);
@@ -136,12 +145,18 @@ export default function MataKuliah() {
     setErrorMsg('');
     try {
       const payload = {
+        programStudiId: formProdiId(),
         kode: kode(),
         nama: nama(),
         sksTotal: Number(sksTotal()),
         sksTatapMuka: Number(sksTatapMuka()),
         sksPraktek: Number(sksPraktek()),
       };
+
+      if (!payload.programStudiId) {
+        setErrorMsg('Pilih Program Studi terlebih dahulu');
+        return;
+      }
 
       if (editId()) {
         await mataKuliahController.update(editId()!, payload);
@@ -217,8 +232,7 @@ export default function MataKuliah() {
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Mata Kuliah</h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
-              Daftar mata kuliah berdasarkan kurikulum. MK bersifat global — hubungkan ke kurikulum lewat menu
-              Kurikulum.
+              Daftar mata kuliah per Program Studi. Hubungkan MK ke kurikulum lewat menu Kurikulum.
             </p>
           </div>
           <div class="flex gap-2">
@@ -234,15 +248,20 @@ export default function MataKuliah() {
           onClose={() => setShowImportModal(false)}
           importUrl="/mata-kuliah/import"
           templateHeaders={[
+            'kode_prodi',
             'kode',
             'nama',
-            'sksTotal',
-            'sksTatapMuka',
-            'sksPraktek',
-            'sksPraktekLapangan',
-            'sksSimulasi',
+            'sks_total',
+            'sks_tatap_muka',
+            'sks_praktek',
+            'sks_praktek_lapangan',
+            'sks_simulasi',
           ]}
           title="Mata Kuliah"
+          onImport={async (rows, mode) => {
+            const defaultProdiId = filterProdi() || ws.selectedProdiId() || undefined;
+            return mataKuliahController.import(rows, mode, defaultProdiId);
+          }}
           onSuccess={() => refetch()}
         />
 
@@ -412,6 +431,25 @@ export default function MataKuliah() {
               </div>
             </Show>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Show when={isAdmin()}>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
+                  <select
+                    class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    value={formProdiId()}
+                    onChange={(e) => setFormProdiId(Number(e.currentTarget.value))}
+                  >
+                    <option value="0">Pilih Prodi</option>
+                    <For each={prodis()?.data}>
+                      {(p) => (
+                        <option value={p.id}>
+                          {p.jenjang} - {p.nama}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </div>
+              </Show>
               <Input
                 label="Kode Matkul"
                 required
@@ -449,8 +487,7 @@ export default function MataKuliah() {
               />
             </div>
             <p class="text-xs text-secondary-500 dark:text-secondary-200">
-              Mata kuliah bersifat global. Untuk menempatkan MK dalam kurikulum, gunakan menu{' '}
-              <strong>Kurikulum → MK</strong>.
+              MK bersifat per-prodi. Untuk menempatkan MK dalam kurikulum, gunakan menu <strong>Kurikulum → MK</strong>.
             </p>
             <div class="flex justify-end gap-2 border-t dark:border-secondary-800 pt-4">
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>

@@ -1,6 +1,7 @@
 import { t } from 'elysia';
 
 export const mataKuliahBody = t.Object({
+  programStudiId: t.Integer({ default: 1 }),
   kode: t.String({ default: 'MK001' }),
   nama: t.String({ default: 'Pemrograman Web' }),
   sksTotal: t.Integer({ default: 3 }),
@@ -12,6 +13,7 @@ export const mataKuliahBody = t.Object({
 });
 
 export const updateMataKuliahBody = t.Object({
+  programStudiId: t.Optional(t.Integer()),
   kode: t.Optional(t.String()),
   nama: t.Optional(t.String()),
   sksTotal: t.Optional(t.Integer()),
@@ -24,6 +26,7 @@ export const updateMataKuliahBody = t.Object({
 
 const mataKuliahResponseFields = {
   id: t.Integer({ default: 1 }),
+  programStudiId: t.Integer({ default: 1 }),
   kode: t.String({ default: 'MK001' }),
   nama: t.String({ default: 'Pemrograman Web' }),
   sksTotal: t.Integer({ default: 3 }),
@@ -42,12 +45,13 @@ export const getMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Daftar Mata Kuliah',
-    description: 'Mengambil semua data mata kuliah dengan filter kurikulum, semester, dan sorting.',
+    description: 'Mengambil semua data mata kuliah dengan filter program studi, kurikulum, semester, dan sorting.',
   },
   query: t.Object({
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
+    programStudiId: t.Optional(t.Numeric()),
     kurikulumId: t.Optional(t.Numeric()),
     semester: t.Optional(t.Numeric()),
     sortBy: t.Optional(t.String({ default: 'nama' })),
@@ -64,7 +68,6 @@ export const getMataKuliahSchema = {
               id: t.Integer(),
               kode: t.String(),
               nama: t.String(),
-              jenjang: t.String(),
             }),
             t.Null(),
           ]),
@@ -93,7 +96,7 @@ export const createMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Tambah Mata Kuliah Baru',
-    description: 'Menambahkan mata kuliah baru secara global (Hanya dapat diakses Admin).',
+    description: 'Menambahkan mata kuliah baru untuk program studi tertentu (Hanya dapat diakses Admin).',
   },
   body: mataKuliahBody,
   response: {
@@ -142,11 +145,48 @@ export const updateMataKuliahSchema = {
   },
 };
 
+export const importMataKuliahBody = t.Object({
+  items: t.Array(
+    t.Object({
+      kodeProdi: t.Optional(t.String()),
+      kode: t.String(),
+      nama: t.String(),
+      sksTotal: t.Integer(),
+      sksTatapMuka: t.Optional(t.Integer()),
+      sksPraktek: t.Optional(t.Integer()),
+      idPddikti: t.Optional(t.String()),
+    }),
+  ),
+});
+
 export const importMataKuliahSchema = {
   detail: {
     tags: ['Mata Kuliah'],
     summary: 'Impor Mata Kuliah dari CSV',
     description: 'Mengimpor data mata kuliah secara massal dari file CSV.',
+  },
+  body: importMataKuliahBody,
+  response: {
+    200: t.Object({
+      success: t.Integer(),
+      failed: t.Integer(),
+      errors: t.Array(
+        t.Object({
+          row: t.Integer(),
+          kode: t.String(),
+          error: t.String(),
+        }),
+      ),
+    }),
+    400: t.Object({ error: t.String() }),
+  },
+};
+
+export const getTemplateMataKuliahSchema = {
+  detail: {
+    tags: ['Mata Kuliah'],
+    summary: 'Download Template CSV Mata Kuliah',
+    description: 'Download template CSV untuk import Mata Kuliah.',
   },
 };
 
