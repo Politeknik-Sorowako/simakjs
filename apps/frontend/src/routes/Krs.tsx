@@ -1,9 +1,11 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -12,6 +14,7 @@ import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { Krs as IKrs, krsController } from '../controllers/krsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function Krs() {
   const auth = useAuth();
@@ -20,11 +23,37 @@ export default function Krs() {
   const role = () => auth.user()?.role;
   const userEmail = () => auth.user()?.email;
 
+  const mainPagination = usePagination();
+
+  const [sortBy, setSortBy] = createSignal('mahasiswa');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   const [activeTab, setActiveTab] = createSignal<'kelola' | 'massal'>('kelola');
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedMhsIds, setSelectedMhsIds] = createSignal<number[]>([]);
+
+  // Mahasiswa picker pagination & sorting
+  const pickerPagination = usePagination(20);
+  const [pickerSortBy, setPickerSortBy] = createSignal('nim');
+  const [pickerSortOrder, setPickerSortOrder] = createSignal<'asc' | 'desc'>('asc');
+
+  const togglePickerSort = (field: string) => {
+    if (pickerSortBy() === field) setPickerSortOrder(pickerSortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setPickerSortBy(field);
+      setPickerSortOrder('asc');
+    }
+  };
 
   // Load all academic periods
   const [periodes] = createResource(async () => {
@@ -71,9 +100,24 @@ export default function Krs() {
     },
   );
 
-  const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const sortedPendingStudents = createMemo(() => {
+    const list = pendingStudents() || [];
+    const field = pickerSortBy();
+    const order = pickerSortOrder();
+    return [...list].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const aVal = a[field] ?? '';
+      const bVal = b[field] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return order === 'asc' ? cmp : -cmp;
+    });
+  });
+
+  const paginatedPendingStudents = createMemo(() => {
+    const list = sortedPendingStudents();
+    const p = pickerPagination.page();
+    const l = pickerPagination.limit();
+    return list.slice((p - 1) * l, p * l);
+  });
 
   // Load Mahasiswa profile if current user is Mahasiswa
   const [mahasiswaProfile] = createResource(
@@ -91,9 +135,9 @@ export default function Krs() {
   // Fetch KRS data (filtered dynamically)
   const [krsData, { refetch }] = createResource(
     () => ({
-      search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : search(),
-      page: page(),
-      limit: limit(),
+      search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : mainPagination.search(),
+      page: mainPagination.page(),
+      limit: mainPagination.limit(),
       mhsLoaded: role() === 'mahasiswa' ? !!mahasiswaProfile() : true,
     }),
     async ({ search, page, limit, mhsLoaded }) => {
@@ -106,6 +150,44 @@ export default function Krs() {
       }
     },
   );
+
+  const sortedKrsData = createMemo(() => {
+    const items = krsData()?.data || [];
+    const field = sortBy();
+    const order = sortOrder();
+    if (!items.length) return items;
+    return [...items].sort((a, b) => {
+      let aVal: string | number = '';
+      let bVal: string | number = '';
+      if (field === 'mahasiswa') {
+        aVal = a.mahasiswa?.nama ?? '';
+        bVal = b.mahasiswa?.nama ?? '';
+      } else if (field === 'kelasKuliah') {
+        aVal = a.kelasKuliah?.namaKelas ?? '';
+        bVal = b.kelasKuliah?.namaKelas ?? '';
+      } else if (field === 'periode') {
+        aVal = a.kelasKuliah?.periodeId ?? '';
+        bVal = b.kelasKuliah?.periodeId ?? '';
+      } else if (field === 'nilaiAngka') {
+        aVal = a.nilaiAngka ?? '';
+        bVal = b.nilaiAngka ?? '';
+      } else if (field === 'nilaiHuruf') {
+        aVal = a.nilaiHuruf ?? '';
+        bVal = b.nilaiHuruf ?? '';
+      } else if (field === 'nilaiIndeks') {
+        aVal = a.nilaiIndeks ?? '';
+        bVal = b.nilaiIndeks ?? '';
+      } else if (field === 'status') {
+        aVal = (a as unknown as Record<string, unknown>).isApproved ? 1 : 0;
+        bVal = (b as unknown as Record<string, unknown>).isApproved ? 1 : 0;
+      }
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return order === 'asc' ? aVal - bVal : bVal - aVal;
+      }
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return order === 'asc' ? cmp : -cmp;
+    });
+  });
 
   // Rencana Studi & Validasi
   const [rencanaStudi, { refetch: refetchRencana }] = createResource(
@@ -461,10 +543,10 @@ export default function Krs() {
             <div class="max-w-xs">
               <Input
                 placeholder="Cari NIM atau Nama..."
-                value={search()}
+                value={mainPagination.search()}
                 onInput={(e) => {
-                  setSearch(e.currentTarget.value);
-                  setPage(1);
+                  mainPagination.setSearch(e.currentTarget.value);
+                  mainPagination.resetPage();
                 }}
               />
             </div>
@@ -476,17 +558,31 @@ export default function Krs() {
           >
             <Table
               headers={[
-                'Mahasiswa',
-                'Kelas Kuliah',
-                'Periode',
-                'Nilai Angka',
-                'Nilai Huruf',
-                'Nilai Indeks',
-                'Status',
+                <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Mahasiswa
+                </SortableHeader>,
+                <SortableHeader field="kelasKuliah" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Kelas Kuliah
+                </SortableHeader>,
+                <SortableHeader field="periode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Periode
+                </SortableHeader>,
+                <SortableHeader field="nilaiAngka" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Nilai Angka
+                </SortableHeader>,
+                <SortableHeader field="nilaiHuruf" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Nilai Huruf
+                </SortableHeader>,
+                <SortableHeader field="nilaiIndeks" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Nilai Indeks
+                </SortableHeader>,
+                <SortableHeader field="status" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Status
+                </SortableHeader>,
                 'Aksi',
               ]}
             >
-              <For each={krsData()?.data}>
+              <For each={sortedKrsData()}>
                 {(item) => (
                   <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                     <td class="px-6 py-4">
@@ -526,7 +622,7 @@ export default function Krs() {
                   </tr>
                 )}
               </For>
-              <Show when={krsData()?.data.length === 0}>
+              <Show when={sortedKrsData().length === 0}>
                 <tr>
                   <td colspan="8" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                     Tidak ada kontrak KRS ditemukan.
@@ -535,31 +631,15 @@ export default function Krs() {
               </Show>
             </Table>
 
-            {/* Pagination */}
             <Show when={krsData() && krsData()!.meta.totalPages > 1}>
-              <div class="flex justify-between items-center mt-4">
-                <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                  Menampilkan halaman {page()} dari {krsData()?.meta.totalPages} ({krsData()?.meta.total} total data)
-                </span>
-                <div class="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    disabled={page() === 1}
-                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                    class="!py-1 !px-3"
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={page() >= krsData()!.meta.totalPages}
-                    onClick={() => setPage((p) => Math.min(p + 1, krsData()!.meta.totalPages))}
-                    class="!py-1 !px-3"
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
+              <Pagination
+                currentPage={mainPagination.page()}
+                totalPages={krsData()!.meta.totalPages}
+                total={krsData()!.meta.total}
+                limit={mainPagination.limit()}
+                onPageChange={mainPagination.setPage}
+                onLimitChange={mainPagination.setLimit}
+              />
             </Show>
           </Show>
         </Show>
@@ -586,9 +666,38 @@ export default function Krs() {
             when={!pendingStudents.loading}
             fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
           >
-            <Table headers={['Pilih', 'NIM', 'Nama Mahasiswa', 'Email', 'Status']}>
+            <Table
+              headers={[
+                'Pilih',
+                <SortableHeader
+                  field="nim"
+                  sortBy={pickerSortBy()}
+                  sortOrder={pickerSortOrder()}
+                  onSort={togglePickerSort}
+                >
+                  NIM
+                </SortableHeader>,
+                <SortableHeader
+                  field="nama"
+                  sortBy={pickerSortBy()}
+                  sortOrder={pickerSortOrder()}
+                  onSort={togglePickerSort}
+                >
+                  Nama Mahasiswa
+                </SortableHeader>,
+                <SortableHeader
+                  field="email"
+                  sortBy={pickerSortBy()}
+                  sortOrder={pickerSortOrder()}
+                  onSort={togglePickerSort}
+                >
+                  Email
+                </SortableHeader>,
+                'Status',
+              ]}
+            >
               <For
-                each={pendingStudents()}
+                each={paginatedPendingStudents()}
                 fallback={
                   <tr>
                     <td colspan="5" class="px-6 py-10 text-center text-secondary-400 italic dark:text-secondary-200">
@@ -632,6 +741,17 @@ export default function Krs() {
                 }}
               </For>
             </Table>
+
+            <Show when={sortedPendingStudents().length > pickerPagination.limit()}>
+              <Pagination
+                currentPage={pickerPagination.page()}
+                totalPages={Math.ceil(sortedPendingStudents().length / pickerPagination.limit())}
+                total={sortedPendingStudents().length}
+                limit={pickerPagination.limit()}
+                onPageChange={pickerPagination.setPage}
+                onLimitChange={pickerPagination.setLimit}
+              />
+            </Show>
           </Show>
         </Show>
 

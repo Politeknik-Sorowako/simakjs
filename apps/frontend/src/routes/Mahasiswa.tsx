@@ -4,7 +4,9 @@ import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -13,12 +15,12 @@ import { dosenController } from '../controllers/dosenController';
 import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function Mahasiswa() {
   const toast = useToast();
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [showImportPaModal, setShowImportPaModal] = createSignal(false);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
@@ -38,6 +40,26 @@ export default function Mahasiswa() {
     }),
     ({ search, page, limit, prodiId }) => mahasiswaController.getAll(search, page, limit, prodiId || undefined),
   );
+
+  // Sorting state
+  const [sortBy, setSortBy] = createSignal('nim');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = mahasiswas()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   // Fetch Program Studi for Dropdowns
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
@@ -246,7 +268,7 @@ export default function Mahasiswa() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              setPage(1);
+              resetPage();
             }}
           />
         </div>
@@ -263,16 +285,22 @@ export default function Mahasiswa() {
                 onChange={toggleSelectAll}
                 class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
               />,
-              'NIM',
-              'Nama',
-              'Email',
+              <SortableHeader field="nim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                NIM
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama
+              </SortableHeader>,
+              <SortableHeader field="email" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Email
+              </SortableHeader>,
               'Program Studi',
               'Dosen Wali (PA)',
               'Status',
               'Aksi',
             ]}
           >
-            <For each={mahasiswas()?.data}>
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                   <td class="px-6 py-4">
@@ -322,31 +350,15 @@ export default function Mahasiswa() {
           </Table>
 
           {/* Pagination */}
-          <Show when={mahasiswas() && mahasiswas()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                Menampilkan halaman {page()} dari {mahasiswas()?.meta.totalPages} ({mahasiswas()?.meta.total} total
-                data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= mahasiswas()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, mahasiswas()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
+          <Show when={mahasiswas() && mahasiswas()!.meta.totalPages > 0}>
+            <Pagination
+              currentPage={page()}
+              totalPages={mahasiswas()!.meta.totalPages}
+              total={mahasiswas()!.meta.total}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+            />
           </Show>
         </Show>
 

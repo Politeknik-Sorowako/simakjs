@@ -4,6 +4,8 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { cplController } from '../controllers/cplController';
 import { cpmkController, Cpmk as ICpmk } from '../controllers/cpmkController';
@@ -12,14 +14,14 @@ import { kurikulumController } from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
 import { SubCpmk, subCpmkController } from '../controllers/subCpmkController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function Cpmk() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
   const [kurikulumFilter, setKurikulumFilter] = createSignal<number | undefined>(undefined);
   const [mataKuliahFilter, setMataKuliahFilter] = createSignal<number | undefined>(undefined);
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
@@ -52,6 +54,25 @@ export default function Cpmk() {
     () => prodiFilter(),
     (prodiId) => (prodiId ? cplController.getAll(prodiId) : null),
   );
+
+  const [sortBy, setSortBy] = createSignal('kode');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = cpmkList()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const [showModal, setShowModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
@@ -258,7 +279,7 @@ export default function Cpmk() {
                 setProdiFilter(val ? Number(val) : undefined);
                 setKurikulumFilter(undefined);
                 setMataKuliahFilter(undefined);
-                setPage(1);
+                resetPage();
               }}
               isSelect
               selectOptions={[
@@ -277,7 +298,7 @@ export default function Cpmk() {
                 const val = (e.target as HTMLSelectElement).value;
                 setKurikulumFilter(val ? Number(val) : undefined);
                 setMataKuliahFilter(undefined);
-                setPage(1);
+                resetPage();
               }}
               isSelect
               selectOptions={[
@@ -295,7 +316,7 @@ export default function Cpmk() {
               onInput={(e: Event) => {
                 const val = (e.target as HTMLSelectElement).value;
                 setMataKuliahFilter(val ? Number(val) : undefined);
-                setPage(1);
+                resetPage();
               }}
               isSelect
               selectOptions={[
@@ -312,7 +333,7 @@ export default function Cpmk() {
               value={search()}
               onInput={(e: Event) => {
                 setSearch((e.target as HTMLInputElement).value);
-                setPage(1);
+                resetPage();
               }}
             />
           </div>
@@ -322,7 +343,22 @@ export default function Cpmk() {
         </div>
 
         <div class="bg-[#1e293b] rounded-2xl overflow-hidden">
-          <Table headers={['Kode', 'Deskripsi', 'Mata Kuliah', 'Sub-CPMK', 'CPL Mapping', 'Aksi']}>
+          <Table
+            headers={[
+              <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kode
+              </SortableHeader>,
+              <SortableHeader field="deskripsi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Deskripsi
+              </SortableHeader>,
+              <SortableHeader field="mataKuliahId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Mata Kuliah
+              </SortableHeader>,
+              'Sub-CPMK',
+              'CPL Mapping',
+              'Aksi',
+            ]}
+          >
             <Show
               when={!cpmkList.loading}
               fallback={
@@ -334,7 +370,7 @@ export default function Cpmk() {
               }
             >
               <For
-                each={cpmkList()?.data ?? []}
+                each={sortedData()}
                 fallback={
                   <tr>
                     <td colspan={6} class="text-center py-8 text-secondary-300">
@@ -375,25 +411,14 @@ export default function Cpmk() {
           </Table>
         </div>
 
-        <Show when={cpmkList() && cpmkList()!.meta.totalPages > 1}>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-secondary-400">
-              Halaman {page()} dari {cpmkList()?.meta.totalPages} ({cpmkList()?.meta.total} total)
-            </span>
-            <div class="flex gap-2">
-              <Button variant="secondary" disabled={page() === 1} onClick={() => setPage((p) => Math.max(p - 1, 1))}>
-                Sebelumnya
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={page() >= cpmkList()!.meta.totalPages}
-                onClick={() => setPage((p) => Math.min(p + 1, cpmkList()!.meta.totalPages))}
-              >
-                Berikutnya
-              </Button>
-            </div>
-          </div>
-        </Show>
+        <Pagination
+          currentPage={page()}
+          totalPages={cpmkList()?.meta.totalPages || 1}
+          total={cpmkList()?.meta.total || 0}
+          limit={limit()}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
 
         <Modal show={showModal()} onClose={() => setShowModal(false)} title={editId() ? 'Edit CPMK' : 'Tambah CPMK'}>
           <div class="space-y-4">

@@ -4,6 +4,8 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -13,6 +15,7 @@ import { dosenPengajarController } from '../controllers/dosenPengajarController'
 import { KelasKuliah as IKelas, kelasKuliahController } from '../controllers/kelasKuliahController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function KelasKuliah() {
   const navigate = useNavigate();
@@ -22,8 +25,7 @@ export default function KelasKuliah() {
   const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
   // Fetch Kelas Data
   const [kelas, { refetch }] = createResource(
@@ -42,6 +44,26 @@ export default function KelasKuliah() {
   const [matkuls] = createResource(() => mataKuliahController.getAll(undefined, 1, 100));
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
   const [dosens] = createResource(() => dosenController.getAll(undefined, 1, 100));
+
+  // Sorting
+  const [sortBy, setSortBy] = createSignal('nama');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = kelas()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -170,7 +192,7 @@ export default function KelasKuliah() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              setPage(1);
+              resetPage();
             }}
           />
         </div>
@@ -179,8 +201,24 @@ export default function KelasKuliah() {
           when={!kelas.loading}
           fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
         >
-          <Table headers={['Nama Kelas', 'Mata Kuliah', 'Periode Akademik', 'Dosen Pengajar', 'Aksi']}>
-            <For each={kelas()?.data}>
+          <Table
+            headers={[
+              <SortableHeader field="namaKelas" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama Kelas
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Mata Kuliah
+              </SortableHeader>,
+              <SortableHeader field="periodeId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Periode Akademik
+              </SortableHeader>,
+              <SortableHeader field="dosenPengajarKelas" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Dosen Pengajar
+              </SortableHeader>,
+              'Aksi',
+            ]}
+          >
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50 transition-colors">
                   <td class="px-6 py-4 font-semibold text-secondary-800 dark:text-secondary-200">{item.namaKelas}</td>
@@ -246,29 +284,14 @@ export default function KelasKuliah() {
 
           {/* Pagination */}
           <Show when={kelas() && kelas()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                Menampilkan halaman {page()} dari {kelas()?.meta.totalPages} ({kelas()?.meta.total} total data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= kelas()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, kelas()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={page()}
+              totalPages={kelas()!.meta.totalPages}
+              total={kelas()!.meta.total}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+            />
           </Show>
         </Show>
 

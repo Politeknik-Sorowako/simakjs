@@ -3,12 +3,15 @@ import { PieChart, StatCard } from '../components/charts';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
 import { SkemaTarif, Tagihan, TransaksiPembayaran, tagihanController } from '../controllers/tagihanController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function KeuanganDashboard() {
   const toast = useToast();
@@ -17,8 +20,7 @@ export default function KeuanganDashboard() {
 
   const [search, setSearch] = createSignal('');
   const [statusFilter, setStatusFilter] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [isGenerating, setIsGenerating] = createSignal(false);
 
@@ -91,6 +93,25 @@ export default function KeuanganDashboard() {
       }
     },
   );
+
+  const [sortBy, setSortBy] = createSignal('mahasiswa');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = tagihanData()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const handleGenerate = async () => {
     if (!selectedPeriode()) {
@@ -401,7 +422,10 @@ export default function KeuanganDashboard() {
                 type="text"
                 placeholder="Cari mahasiswa atau NIM..."
                 value={search()}
-                onInput={(e) => setSearch(e.currentTarget.value)}
+                onInput={(e) => {
+                  setSearch(e.currentTarget.value);
+                  resetPage();
+                }}
                 class="w-full"
               />
             </Show>
@@ -426,8 +450,25 @@ export default function KeuanganDashboard() {
           when={!tagihanData.loading}
           fallback={<div class="text-center py-10 text-secondary-400">Loading data keuangan...</div>}
         >
-          <Table headers={['Mahasiswa', 'Periode', 'Tagihan', 'Terbayar', 'Sisa', 'Status', 'Tanggal Bayar', 'Aksi']}>
-            <For each={tagihanData()?.data}>
+          <Table
+            headers={[
+              <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Mahasiswa
+              </SortableHeader>,
+              <SortableHeader field="periodeId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Periode
+              </SortableHeader>,
+              <SortableHeader field="nominal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Tagihan
+              </SortableHeader>,
+              'Terbayar',
+              'Sisa',
+              'Status',
+              'Tanggal Bayar',
+              'Aksi',
+            ]}
+          >
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                   <td class="px-6 py-4">
@@ -514,30 +555,14 @@ export default function KeuanganDashboard() {
 
           {/* Pagination */}
           <Show when={tagihanData() && tagihanData()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500">
-                Menampilkan halaman {page()} dari {tagihanData()?.meta.totalPages} ({tagihanData()?.meta.total} total
-                data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= tagihanData()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, tagihanData()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={page()}
+              totalPages={tagihanData()!.meta.totalPages}
+              total={tagihanData()!.meta.total}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+            />
           </Show>
         </Show>
 
