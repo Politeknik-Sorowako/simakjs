@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm';
-import { visiMisiProdi } from '../models/schema';
+import { and, eq, inArray } from 'drizzle-orm';
+import { programStudi, visiMisiProdi } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateVisiMisiDto {
@@ -13,6 +13,7 @@ export interface CreateVisiMisiDto {
 }
 
 export interface ImportVisiMisiItem {
+  kodeProdi?: string;
   tahunBerlaku: string;
   visi: string;
   misi: string;
@@ -92,9 +93,21 @@ export class VisiMisiService {
     });
   }
 
-  static async import(programStudiId: number, items: ImportVisiMisiItem[]): Promise<ImportResult> {
+  static async import(programStudiId: number | undefined, items: ImportVisiMisiItem[]): Promise<ImportResult> {
     const result: ImportResult = { success: 0, failed: 0, errors: [] };
-    const validItems: ImportVisiMisiItem[] = [];
+
+    // Resolve kodeProdi → programStudiId
+    const uniqueKodes = [...new Set(items.map((item) => item.kodeProdi).filter((k): k is string => !!k))];
+    let kodeToId = new Map<string, number>();
+    if (uniqueKodes.length > 0) {
+      const prodis = await db
+        .select({ id: programStudi.id, kode: programStudi.kode })
+        .from(programStudi)
+        .where(inArray(programStudi.kode, uniqueKodes));
+      kodeToId = new Map(prodis.map((p) => [p.kode, p.id]));
+    }
+
+    const validItems: { item: ImportVisiMisiItem; resolvedProdiId: number }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -108,9 +121,35 @@ export class VisiMisiService {
         continue;
       }
 
+      // Resolve program studi
+      let resolvedProdiId: number | undefined;
+      if (item.kodeProdi) {
+        const found = kodeToId.get(item.kodeProdi);
+        if (!found) {
+          result.failed++;
+          result.errors.push({
+            row: i + 1,
+            tahunBerlaku: tahunBerlaku || '',
+            error: `Program studi dengan kode '${item.kodeProdi}' tidak ditemukan`,
+          });
+          continue;
+        }
+        resolvedProdiId = found;
+      } else if (programStudiId) {
+        resolvedProdiId = programStudiId;
+      } else {
+        result.failed++;
+        result.errors.push({
+          row: i + 1,
+          tahunBerlaku: tahunBerlaku || '',
+          error: 'kode_prodi wajib diisi',
+        });
+        continue;
+      }
+
       if (tahunBerlaku) {
         const existing = await db.query.visiMisiProdi.findFirst({
-          where: and(eq(visiMisiProdi.programStudiId, programStudiId), eq(visiMisiProdi.tahunBerlaku, tahunBerlaku)),
+          where: and(eq(visiMisiProdi.programStudiId, resolvedProdiId), eq(visiMisiProdi.tahunBerlaku, tahunBerlaku)),
         });
 
         if (existing) {
@@ -124,15 +163,15 @@ export class VisiMisiService {
         }
       }
 
-      validItems.push({ ...item, visi, misi, tahunBerlaku });
+      validItems.push({ item: { ...item, visi, misi, tahunBerlaku }, resolvedProdiId });
     }
 
     if (validItems.length > 0) {
       try {
         await db.transaction(async (tx) => {
           await tx.insert(visiMisiProdi).values(
-            validItems.map((item) => ({
-              programStudiId,
+            validItems.map(({ item, resolvedProdiId }) => ({
+              programStudiId: resolvedProdiId,
               visi: item.visi,
               misi: item.misi,
               tujuan: item.tujuan?.trim() || undefined,
@@ -158,6 +197,6 @@ export class VisiMisiService {
   }
 
   static getTemplateCsv(): string {
-    return 'tahunBerlaku,visi,misi,tujuan,sasaran\n2024,Menjadi program studi unggul dalam teknologi informasi,Menyelenggarakan pendidikan berkualitas,Menghasilkan lulusan kompeten,Meningkatkan akreditasi';
+    return 'kode_prodi,tahunBerlaku,visi,misi,tujuan,sasaran\nTI,2024,Menjadi program studi unggul dalam teknologi informasi,Menyelenggarakan pendidikan berkualitas,Menghasilkan lulusan kompeten,Meningkatkan akreditasi';
   }
 }
