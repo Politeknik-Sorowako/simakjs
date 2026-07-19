@@ -15,7 +15,7 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
 import { SubCpmk, subCpmkController } from '../controllers/subCpmkController';
 import { usePagination } from '../hooks/usePagination';
-import { parseCsv } from '../utils/csv';
+import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpmk() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -292,17 +292,29 @@ export default function Cpmk() {
     setImportLoading(true);
     try {
       const text = await importFile()!.text();
-      const rows = parseCsv(text, ['kode_mata_kuliah', 'kode', 'deskripsi']);
+      const rows = parseCsv(text);
       if (rows.length === 0) {
         setImportLoading(false);
         alert('File CSV kosong atau format tidak sesuai');
         return;
       }
-      const items = rows.map((r) => ({
-        kodeMataKuliah: r.kode_mata_kuliah || undefined,
-        kode: r.kode || '',
-        deskripsi: r.deskripsi || '',
-      }));
+      const items: { kodeMataKuliah?: string; kode: string; deskripsi: string }[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length < 3) continue;
+        if (i === 0 && isHeaderRow(row[0], ['kode_mata_kuliah', 'kode_matakuliah'])) continue;
+        const kodeMataKuliah = row[0]?.trim() || undefined;
+        const kode = row[1]?.trim() || '';
+        const deskripsi = row[2]?.trim() || '';
+        if (kode && deskripsi) {
+          items.push({ kodeMataKuliah, kode, deskripsi });
+        }
+      }
+      if (items.length === 0) {
+        setImportLoading(false);
+        alert('Tidak ada data valid untuk diimport');
+        return;
+      }
       const result = await cpmkController.import(items);
       setImportResult(result);
       if (result.failed === 0) {
