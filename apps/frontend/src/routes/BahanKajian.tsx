@@ -41,6 +41,12 @@ export default function BahanKajian() {
     });
   };
 
+  const pagedData = () => {
+    const sorted = sortedData();
+    const start = (page() - 1) * limit();
+    return sorted.slice(start, start + limit());
+  };
+
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
   const [showModal, setShowModal] = createSignal(false);
@@ -339,7 +345,7 @@ export default function BahanKajian() {
               }
             >
               <For
-                each={sortedData()}
+                each={pagedData()}
                 fallback={
                   <tr>
                     <td colspan={7} class="text-center py-8 text-secondary-300">

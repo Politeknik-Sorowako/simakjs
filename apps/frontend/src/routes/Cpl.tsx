@@ -64,6 +64,12 @@ export default function Cpl() {
     });
   };
 
+  const pagedData = () => {
+    const sorted = sortedData();
+    const start = (page() - 1) * limit();
+    return sorted.slice(start, start + limit());
+  };
+
   function openAddModal() {
     setEditId(null);
     setKode('');
@@ -321,7 +327,7 @@ export default function Cpl() {
               }
             >
               <For
-                each={sortedData()}
+                each={pagedData()}
                 fallback={
                   <tr>
                     <td colspan={headers.length} class="text-center py-8 text-secondary-300">
