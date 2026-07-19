@@ -1,24 +1,24 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
-import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { bahanKajianController } from '../controllers/bahanKajianController';
 import { kurikulumController } from '../controllers/kurikulumController';
 import { MataKuliah as IMataKuliah, mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
+import { usePagination } from '../hooks/usePagination';
 import { fetchApi } from '../utils/api';
 
 type SortField = 'nama' | 'kode' | 'sks' | 'semester' | 'programStudi' | 'kurikulum';
 
 export default function MataKuliah() {
-  const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
   const [showImportModal, setShowImportModal] = createSignal(false);
+  const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
 
   // Filters
   const [filterProdi, setFilterProdi] = createSignal<number | undefined>(undefined);
@@ -27,18 +27,12 @@ export default function MataKuliah() {
   const [sortBy, setSortBy] = createSignal<SortField>('nama');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
 
-  const toggleSort = (field: SortField) => {
-    if (sortBy() === field) {
-      setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field as SortField);
       setSortOrder('asc');
     }
-  };
-
-  const sortArrow = (field: SortField) => {
-    if (sortBy() !== field) return '';
-    return sortOrder() === 'asc' ? ' ▲' : ' ▼';
   };
 
   // Fetch program studi for dropdown
@@ -75,6 +69,16 @@ export default function MataKuliah() {
     ({ search, page, limit, kurikulumId, semester, sortBy, sortOrder }) =>
       mataKuliahController.getAll(search, page, limit, kurikulumId, semester, sortBy, sortOrder),
   );
+
+  const sortedData = () => {
+    const data = matkuls()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const semesters = () => [1, 2, 3, 4, 5, 6, 7, 8];
 
@@ -250,7 +254,7 @@ export default function MataKuliah() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                setPage(1);
+                resetPage();
               }}
             />
           </div>
@@ -265,7 +269,7 @@ export default function MataKuliah() {
                 setFilterProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
                 setFilterKurikulum(undefined);
                 setFilterSemester(undefined);
-                setPage(1);
+                resetPage();
               }}
             >
               <option value="">Semua Prodi</option>
@@ -286,7 +290,7 @@ export default function MataKuliah() {
               onChange={(e) => {
                 setFilterKurikulum(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
                 setFilterSemester(undefined);
-                setPage(1);
+                resetPage();
               }}
             >
               <option value="">Semua Kurikulum</option>
@@ -306,7 +310,7 @@ export default function MataKuliah() {
               value={filterSemester() ?? ''}
               onChange={(e) => {
                 setFilterSemester(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
-                setPage(1);
+                resetPage();
               }}
             >
               <option value="">Semua Semester</option>
@@ -321,28 +325,28 @@ export default function MataKuliah() {
         >
           <Table
             headers={[
-              <button onClick={() => toggleSort('kode')} class="hover:text-brand-700 transition-colors">
-                Kode{sortArrow('kode')}
-              </button>,
-              <button onClick={() => toggleSort('nama')} class="hover:text-brand-700 transition-colors">
-                Nama{sortArrow('nama')}
-              </button>,
-              <button onClick={() => toggleSort('sks')} class="hover:text-brand-700 transition-colors">
-                SKS{sortArrow('sks')}
-              </button>,
-              <button onClick={() => toggleSort('semester')} class="hover:text-brand-700 transition-colors">
-                Smt{sortArrow('semester')}
-              </button>,
-              <button onClick={() => toggleSort('programStudi')} class="hover:text-brand-700 transition-colors">
-                Program Studi{sortArrow('programStudi')}
-              </button>,
-              <button onClick={() => toggleSort('kurikulum')} class="hover:text-brand-700 transition-colors">
-                Kurikulum{sortArrow('kurikulum')}
-              </button>,
+              <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kode
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama
+              </SortableHeader>,
+              <SortableHeader field="sks" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                SKS
+              </SortableHeader>,
+              <SortableHeader field="semester" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Smt
+              </SortableHeader>,
+              <SortableHeader field="programStudi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Program Studi
+              </SortableHeader>,
+              <SortableHeader field="kurikulum" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kurikulum
+              </SortableHeader>,
               'Aksi',
             ]}
           >
-            <For each={matkuls()?.data}>
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-brand-50/50 dark:hover:bg-secondary-800/50 transition-colors">
                   <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200 font-semibold">
@@ -375,7 +379,7 @@ export default function MataKuliah() {
                 </tr>
               )}
             </For>
-            <Show when={matkuls()?.data.length === 0}>
+            <Show when={sortedData().length === 0}>
               <tr>
                 <td colspan="7" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   {filterKurikulum()
@@ -386,32 +390,14 @@ export default function MataKuliah() {
             </Show>
           </Table>
 
-          {/* Pagination */}
-          <Show when={matkuls() && matkuls()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                Menampilkan halaman {page()} dari {matkuls()?.meta.totalPages} ({matkuls()?.meta.total} total data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= matkuls()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, matkuls()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
-          </Show>
+          <Pagination
+            currentPage={page()}
+            totalPages={matkuls()?.meta.totalPages || 1}
+            total={matkuls()?.meta.total || 0}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </Show>
 
         <Modal

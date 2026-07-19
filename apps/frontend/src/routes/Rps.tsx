@@ -4,6 +4,8 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { kurikulumController } from '../controllers/kurikulumController';
@@ -11,9 +13,11 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
 import { Rps as IRps, RencanaEvaluasi, RpsTopik, rpsController } from '../controllers/rpsController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function Rps() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
   // Dropdown options
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
@@ -73,6 +77,32 @@ export default function Rps() {
       return rpsController.getRps(mkId, periodeId);
     },
   );
+
+  // Sorting state for topik table
+  const [sortBy, setSortBy] = createSignal('pertemuanKe');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = rps()?.topik || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
+  const paginatedData = () => {
+    const all = sortedData();
+    const start = (page() - 1) * limit();
+    return all.slice(start, start + limit());
+  };
+  const totalPages = () => Math.ceil((rps()?.topik?.length || 0) / limit());
 
   // Rencana Evaluasi
   const [rencanaEvals, { refetch: refetchEvals }] = createResource(
@@ -529,7 +559,23 @@ export default function Rps() {
                       <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Rencana Pertemuan Mingguan</h2>
                       <Button onClick={openAddTopik}>+ Tambah Pertemuan</Button>
                     </div>
-                    <Table headers={['Mng', 'Topik Pembahasan', 'Metode', 'Aksi']}>
+                    <Table
+                      headers={[
+                        <SortableHeader
+                          field="pertemuanKe"
+                          sortBy={sortBy()}
+                          sortOrder={sortOrder()}
+                          onSort={toggleSort}
+                        >
+                          Minggu
+                        </SortableHeader>,
+                        <SortableHeader field="topik" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                          Topik Pembahasan
+                        </SortableHeader>,
+                        'Metode',
+                        'Aksi',
+                      ]}
+                    >
                       <Show when={!rps()?.topik || rps()?.topik?.length === 0}>
                         <tr>
                           <td colspan="4" class="p-6 text-center text-secondary-500">
@@ -537,7 +583,7 @@ export default function Rps() {
                           </td>
                         </tr>
                       </Show>
-                      <For each={[...(rps()?.topik || [])].sort((a, b) => a.pertemuanKe - b.pertemuanKe)}>
+                      <For each={paginatedData()}>
                         {(t) => (
                           <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
                             <td class="px-6 py-4 text-sm font-bold text-secondary-900 dark:text-white">
@@ -564,6 +610,14 @@ export default function Rps() {
                         )}
                       </For>
                     </Table>
+                    <Pagination
+                      currentPage={page()}
+                      totalPages={totalPages()}
+                      total={rps()?.topik?.length || 0}
+                      limit={limit()}
+                      onPageChange={setPage}
+                      onLimitChange={setLimit}
+                    />
                   </div>
                 </Show>
               </div>

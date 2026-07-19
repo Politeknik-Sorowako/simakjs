@@ -4,6 +4,8 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -13,6 +15,8 @@ import { dosenPengajarController } from '../controllers/dosenPengajarController'
 import { KelasKuliah as IKelas, kelasKuliahController } from '../controllers/kelasKuliahController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
+import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function KelasKuliah() {
   const navigate = useNavigate();
@@ -22,8 +26,7 @@ export default function KelasKuliah() {
   const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
   // Fetch Kelas Data
   const [kelas, { refetch }] = createResource(
@@ -42,6 +45,26 @@ export default function KelasKuliah() {
   const [matkuls] = createResource(() => mataKuliahController.getAll(undefined, 1, 100));
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
   const [dosens] = createResource(() => dosenController.getAll(undefined, 1, 100));
+
+  // Sorting
+  const [sortBy, setSortBy] = createSignal('nama');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = kelas()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -151,6 +174,75 @@ export default function KelasKuliah() {
     }
   };
 
+  const [showImportModal, setShowImportModal] = createSignal(false);
+  const [importFile, setImportFile] = createSignal<File | null>(null);
+  const [importResult, setImportResult] = createSignal<{
+    success: number;
+    failed: number;
+    errors: { row: number; namaKelas: string; error: string }[];
+  } | null>(null);
+  const [importLoading, setImportLoading] = createSignal(false);
+
+  const handleDownloadTemplate = () => {
+    const csv = 'kode_mata_kuliah,periode_id,nama_kelas,id_pddikti\nTI001,20241,4A,\nTI001,20241,4B,\nTI002,20241,1A,';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template-kelas-kuliah.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFileChange = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    setImportFile(input.files?.[0] || null);
+  };
+
+  const handleImport = async () => {
+    if (!importFile()) {
+      toast.showToast('Pilih file CSV terlebih dahulu', 'error');
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const text = await importFile()!.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) {
+        setImportLoading(false);
+        toast.showToast('File CSV kosong atau format tidak sesuai', 'error');
+        return;
+      }
+      const items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length < 3) continue;
+        if (i === 0 && isHeaderRow(row[0], ['kode_mata_kuliah', 'kode_matakuliah'])) continue;
+        const kodeMataKuliah = row[0]?.trim() || undefined;
+        const periodeId = row[1]?.trim() || '';
+        const namaKelas = row[2]?.trim() || '';
+        const idPddikti = row[3]?.trim() || undefined;
+        if (periodeId && namaKelas) {
+          items.push({ kodeMataKuliah, periodeId, namaKelas, idPddikti });
+        }
+      }
+      if (items.length === 0) {
+        setImportLoading(false);
+        toast.showToast('Tidak ada data valid untuk diimport', 'error');
+        return;
+      }
+      const result = await kelasKuliahController.import(items);
+      setImportResult(result);
+      if (result.failed === 0) {
+        refetch();
+      }
+    } catch (err: unknown) {
+      toast.showToast((err instanceof Error ? err.message : null) || 'Gagal import', 'error');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -161,7 +253,19 @@ export default function KelasKuliah() {
               Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.
             </p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Kelas</Button>
+          <div class="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setImportResult(null);
+                setImportFile(null);
+                setShowImportModal(true);
+              }}
+            >
+              Import CSV
+            </Button>
+            <Button onClick={openAddModal}>+ Tambah Kelas</Button>
+          </div>
         </div>
 
         <div class="max-w-xs">
@@ -170,7 +274,7 @@ export default function KelasKuliah() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              setPage(1);
+              resetPage();
             }}
           />
         </div>
@@ -179,8 +283,24 @@ export default function KelasKuliah() {
           when={!kelas.loading}
           fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
         >
-          <Table headers={['Nama Kelas', 'Mata Kuliah', 'Periode Akademik', 'Dosen Pengajar', 'Aksi']}>
-            <For each={kelas()?.data}>
+          <Table
+            headers={[
+              <SortableHeader field="namaKelas" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama Kelas
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Mata Kuliah
+              </SortableHeader>,
+              <SortableHeader field="periodeId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Periode Akademik
+              </SortableHeader>,
+              <SortableHeader field="dosenPengajarKelas" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Dosen Pengajar
+              </SortableHeader>,
+              'Aksi',
+            ]}
+          >
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50 transition-colors">
                   <td class="px-6 py-4 font-semibold text-secondary-800 dark:text-secondary-200">{item.namaKelas}</td>
@@ -246,29 +366,14 @@ export default function KelasKuliah() {
 
           {/* Pagination */}
           <Show when={kelas() && kelas()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                Menampilkan halaman {page()} dari {kelas()?.meta.totalPages} ({kelas()?.meta.total} total data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= kelas()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, kelas()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
+            <Pagination
+              currentPage={page()}
+              totalPages={kelas()!.meta.totalPages}
+              total={kelas()!.meta.total}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+            />
           </Show>
         </Show>
 
@@ -343,6 +448,86 @@ export default function KelasKuliah() {
               <Button type="submit">Plot Dosen</Button>
             </div>
           </form>
+        </Modal>
+
+        <Modal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          title="Import Kelas Kuliah dari CSV"
+          maxWidth="lg"
+        >
+          <div class="flex flex-col gap-4">
+            <Show when={importResult()}>
+              <div class="flex flex-col gap-3">
+                <div
+                  class={`p-4 rounded-lg border ${
+                    importResult()!.failed === 0
+                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                      : 'bg-amber-500/10 border-amber-500/30'
+                  }`}
+                >
+                  <p class="font-medium text-black dark:text-white">
+                    {importResult()!.failed === 0
+                      ? `Semua ${importResult()!.success} data berhasil diimport!`
+                      : `${importResult()!.success} berhasil, ${importResult()!.failed} gagal`}
+                  </p>
+                  <Show when={importResult()!.errors.length > 0}>
+                    <div class="mt-3 space-y-1 max-h-48 overflow-y-auto">
+                      <For each={importResult()!.errors}>
+                        {(err) => (
+                          <p class="text-sm text-red-600 dark:text-red-300">
+                            Baris {err.row}: {err.namaKelas ? `(${err.namaKelas}) ` : ''}
+                            {err.error}
+                          </p>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
+                </div>
+                <div class="flex justify-end">
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportResult(null);
+                    }}
+                  >
+                    Tutup
+                  </Button>
+                </div>
+              </div>
+            </Show>
+
+            <Show when={!importResult()}>
+              <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <p class="text-sm text-black dark:text-blue-300">
+                  Format CSV: <code>kode_mata_kuliah,periode_id,nama_kelas,id_pddikti</code>
+                </p>
+                <p class="text-xs text-black dark:text-secondary-400 mt-1">
+                  Kode Mata Kuliah dan Periode harus terdaftar di sistem. ID PDDikti bersifat opsional.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
+                Download Template CSV
+              </Button>
+              <div>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImportFileChange}
+                  class="block w-full text-sm text-secondary-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-accent-600 file:text-white hover:file:bg-accent-500 file:cursor-pointer"
+                />
+              </div>
+              <div class="flex justify-end gap-3 pt-2">
+                <Button variant="secondary" onClick={() => setShowImportModal(false)}>
+                  Batal
+                </Button>
+                <Button variant="primary" onClick={handleImport} disabled={importLoading()}>
+                  {importLoading() ? 'Mengimport...' : 'Import'}
+                </Button>
+              </div>
+            </Show>
+          </div>
         </Modal>
       </div>
     </MainLayout>

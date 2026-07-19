@@ -60,7 +60,7 @@ export const updateProfileSchema = {
       nama: t.String(),
       email: t.String({ format: 'email' }),
       currentPassword: t.String(),
-      newPassword: t.String({ minLength: 6 }),
+      password: t.String({ minLength: 6 }),
       theme: t.String(),
       avatar: t.String(),
     }),
@@ -157,16 +157,10 @@ export const generateAccountsSchema = {
     summary: 'Generate Akun Massal',
     description: 'Membuat akun pengguna secara massal. **Hanya Admin** yang dapat mengakses.',
   },
-  body: t.Optional(
-    t.Object({
-      role: t.Optional(
-        t.Union([t.Literal('dosen'), t.Literal('mahasiswa'), t.Literal('guest'), t.Literal('calon_mahasiswa')], {
-          default: 'mahasiswa',
-        }),
-      ),
-      jumlah: t.Optional(t.Integer({ default: 1 })),
-    }),
-  ),
+  body: t.Object({
+    targetType: t.Union([t.Literal('dosen'), t.Literal('mahasiswa')]),
+    ids: t.Array(t.Number()),
+  }),
 };
 
 export const userResponseObject = t.Object({

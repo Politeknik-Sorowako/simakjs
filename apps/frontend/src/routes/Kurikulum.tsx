@@ -4,17 +4,19 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { Kurikulum as IKurikulum, kurikulumController } from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
+import { usePagination } from '../hooks/usePagination';
 import { API_URL, fetchApi } from '../utils/api';
 
 export default function Kurikulum() {
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
 
   const [kurikulums, { refetch }] = createResource(
@@ -24,6 +26,25 @@ export default function Kurikulum() {
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
   const [periodes] = createResource(() => periodeAkademikController.getAll());
+
+  const [sortBy, setSortBy] = createSignal('kode');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = kurikulums()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   // Form State for CRUD
   const [showModal, setShowModal] = createSignal(false);
@@ -316,7 +337,10 @@ export default function Kurikulum() {
               type="text"
               placeholder="Cari kode atau nama kurikulum..."
               value={search()}
-              onInput={(e) => setSearch(e.currentTarget.value)}
+              onInput={(e) => {
+                setSearch(e.currentTarget.value);
+                resetPage();
+              }}
             />
           </div>
           <div class="w-[200px]">
@@ -331,7 +355,23 @@ export default function Kurikulum() {
         </div>
 
         {/* Kurikulum Table */}
-        <Table headers={['Kode', 'Nama Kurikulum', 'Program Studi', 'Mulai Berlaku', 'SKS (L/W/P)', 'Status', 'Aksi']}>
+        <Table
+          headers={[
+            <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+              Kode
+            </SortableHeader>,
+            <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+              Nama Kurikulum
+            </SortableHeader>,
+            <SortableHeader field="programStudiId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+              Program Studi
+            </SortableHeader>,
+            'Mulai Berlaku',
+            'SKS (L/W/P)',
+            'Status',
+            'Aksi',
+          ]}
+        >
           <Show when={kurikulums.loading}>
             <tr>
               <td colspan="7" class="p-8 text-center text-secondary-500">
@@ -346,7 +386,7 @@ export default function Kurikulum() {
               </td>
             </tr>
           </Show>
-          <For each={kurikulums()?.data ?? []}>
+          <For each={sortedData()}>
             {(item) => (
               <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
                 <td class="px-6 py-4 text-sm font-medium text-secondary-900 dark:text-white">{item.kode}</td>
@@ -385,30 +425,15 @@ export default function Kurikulum() {
         </Table>
 
         {/* Pagination */}
-        <Show when={kurikulums() && kurikulums()!.meta.totalPages > 1}>
-          <div class="flex justify-between items-center mt-4">
-            <span class="text-xs text-secondary-500">
-              Menampilkan halaman {page()} dari {kurikulums()?.meta.totalPages} ({kurikulums()?.meta.total} total data)
-            </span>
-            <div class="flex gap-2">
-              <Button
-                variant="secondary"
-                disabled={page() === 1}
-                onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                class="!py-1 !px-3"
-              >
-                Sebelumnya
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={page() >= kurikulums()!.meta.totalPages}
-                onClick={() => setPage((p) => Math.min(p + 1, kurikulums()!.meta.totalPages))}
-                class="!py-1 !px-3"
-              >
-                Berikutnya
-              </Button>
-            </div>
-          </div>
+        <Show when={kurikulums() && kurikulums()!.meta.totalPages > 0}>
+          <Pagination
+            currentPage={page()}
+            totalPages={kurikulums()!.meta.totalPages}
+            total={kurikulums()!.meta.total}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </Show>
 
         {/* Modal CRUD Kurikulum */}

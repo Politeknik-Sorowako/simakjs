@@ -1,5 +1,12 @@
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+/**
+ * SafeAny — use for dynamic API data in SolidJS <For> loops
+ * and contexts where strict typing causes compilation failures
+ * due to optional/null fields from the backend.
+ */
+export type SafeAny = Record<string, unknown>;
+
 interface FetchOptions extends RequestInit {
   requireAuth?: boolean;
 }

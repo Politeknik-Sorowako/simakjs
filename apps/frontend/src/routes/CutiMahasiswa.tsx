@@ -2,15 +2,17 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
 import { cutiController } from '../controllers/cutiController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function CutiMahasiswa() {
   const toast = useToast();
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [showModal, setShowModal] = createSignal(false);
   const [periodeId, setPeriodeId] = createSignal('');
   const [alasan, setAlasan] = createSignal('');
@@ -28,6 +30,25 @@ export default function CutiMahasiswa() {
 
   // Fetch Periods
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 50));
+
+  const [sortBy, setSortBy] = createSignal('nim');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = cutis()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const handleOpenModal = () => {
     setErrorMsg('');
@@ -137,17 +158,23 @@ export default function CutiMahasiswa() {
         >
           <Table
             headers={[
-              'Periode Akademik',
-              'Alasan Cuti',
+              <SortableHeader field="periodeId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Periode Akademik
+              </SortableHeader>,
+              <SortableHeader field="alasan" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Alasan Cuti
+              </SortableHeader>,
               'Status',
               'SK & Tanggal Surat',
               'Catatan',
-              'Tanggal Pengajuan',
+              <SortableHeader field="createdAt" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Tanggal Pengajuan
+              </SortableHeader>,
               'Aksi',
             ]}
           >
             <For
-              each={cutis()?.data}
+              each={sortedData()}
               fallback={
                 <tr>
                   <td colspan="7" class="text-center py-10 text-secondary-400 dark:text-secondary-200">
@@ -194,6 +221,17 @@ export default function CutiMahasiswa() {
               )}
             </For>
           </Table>
+        </Show>
+
+        <Show when={cutis()?.meta}>
+          <Pagination
+            currentPage={page()}
+            totalPages={cutis()!.meta.totalPages}
+            total={cutis()!.meta.total}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </Show>
       </div>
 

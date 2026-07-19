@@ -2,27 +2,48 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { UserItem, userController } from '../controllers/userController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function Pengguna() {
   const toast = useToast();
   const auth = useAuth();
   const currentUser = () => auth.user();
 
-  const [page, setPage] = createSignal(1);
-  const [search, setSearch] = createSignal('');
+  const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
   const [actionLoading, setActionLoading] = createSignal<number | null>(null);
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   const [usersRes, { refetch }] = createResource(
-    () => ({ page: page(), search: search() }),
-    async ({ page, search }) => {
-      return userController.getAll(page, 10, search);
+    () => ({ page: page(), limit: limit(), search: search() }),
+    async ({ page, limit, search }) => {
+      return userController.getAll(page, limit, search);
     },
   );
+
+  const [sortBy, setSortBy] = createSignal('nama');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = usersRes()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const handleToggleActive = async (user: UserItem) => {
     if (user.id === currentUser()?.id) {
@@ -47,7 +68,7 @@ export default function Pengguna() {
     clearTimeout(debounceTimer);
     const val = e.currentTarget.value;
     debounceTimer = setTimeout(() => {
-      setPage(1);
+      resetPage();
       setSearch(val);
     }, 400);
   };
@@ -97,8 +118,22 @@ export default function Pengguna() {
 
         <Show when={!usersRes.loading && usersRes()}>
           <div class="bg-white rounded-xl shadow-sm border border-secondary-100 overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
-            <Table headers={['Nama', 'Email', 'Role / Peran', 'Status', 'Aksi']}>
-              <For each={usersRes()?.data}>
+            <Table
+              headers={[
+                <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Nama
+                </SortableHeader>,
+                <SortableHeader field="email" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Email
+                </SortableHeader>,
+                <SortableHeader field="role" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Role / Peran
+                </SortableHeader>,
+                'Status',
+                'Aksi',
+              ]}
+            >
+              <For each={sortedData()}>
                 {(user) => (
                   <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                     <td class="whitespace-nowrap px-6 py-4 font-semibold text-secondary-800 dark:text-white">
@@ -175,53 +210,14 @@ export default function Pengguna() {
               </For>
             </Table>
 
-            {/* Pagination Controls */}
-            <div class="flex items-center justify-between border-t border-secondary-100 bg-white px-6 py-4 dark:border-secondary-800 dark:bg-secondary-900">
-              <div class="flex flex-1 justify-between sm:hidden">
-                <Button variant="secondary" onClick={() => setPage((p) => Math.max(p - 1, 1))} disabled={page() === 1}>
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setPage((p) => Math.min(p + 1, usersRes()?.meta?.totalPages || 1))}
-                  disabled={page() >= (usersRes()?.meta?.totalPages || 1)}
-                >
-                  Berikutnya
-                </Button>
-              </div>
-              <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                <div>
-                  <p class="text-sm text-secondary-500 dark:text-secondary-200">
-                    Menampilkan Halaman{' '}
-                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">{page()}</span> dari{' '}
-                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">
-                      {usersRes()?.meta?.totalPages || 1}
-                    </span>{' '}
-                    ({' '}
-                    <span class="font-semibold text-secondary-700 dark:text-secondary-200">
-                      {usersRes()?.meta?.total || 0}
-                    </span>{' '}
-                    total pengguna)
-                  </p>
-                </div>
-                <div class="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                    disabled={page() === 1}
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setPage((p) => Math.min(p + 1, usersRes()?.meta?.totalPages || 1))}
-                    disabled={page() >= (usersRes()?.meta?.totalPages || 1)}
-                  >
-                    Berikutnya
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <Pagination
+              currentPage={page()}
+              totalPages={usersRes()?.meta?.totalPages || 1}
+              total={usersRes()?.meta?.total || 0}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+            />
           </div>
         </Show>
       </div>

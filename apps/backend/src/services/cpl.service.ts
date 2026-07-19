@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm';
-import { cpl } from '../models/schema';
+import { and, eq, inArray } from 'drizzle-orm';
+import { cpl, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateCplDto {
@@ -10,6 +10,7 @@ export interface CreateCplDto {
 }
 
 export interface ImportCplItem {
+  kodeProdi?: string;
   kode: string;
   deskripsi: string;
 }
@@ -69,15 +70,47 @@ export class CplService {
     return deleted || null;
   }
 
-  static async import(programStudiId: number, items: ImportCplItem[]): Promise<ImportCplResult> {
+  static async import(programStudiId: number | undefined, items: ImportCplItem[]): Promise<ImportCplResult> {
     const result: ImportCplResult = { success: 0, failed: 0, errors: [] };
-    const validItems: { kode: string; deskripsi: string; urutan: number }[] = [];
+
+    const uniqueKodes = [...new Set(items.map((item) => item.kodeProdi).filter((k): k is string => !!k))];
+    let kodeToId = new Map<string, number>();
+    if (uniqueKodes.length > 0) {
+      const prodis = await db
+        .select({ id: programStudi.id, kode: programStudi.kode })
+        .from(programStudi)
+        .where(inArray(programStudi.kode, uniqueKodes));
+      kodeToId = new Map(prodis.map((p) => [p.kode, p.id]));
+    }
+
+    const validItems: { kode: string; deskripsi: string; urutan: number; resolvedProdiId: number }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const urutan = i + 1;
       const kode = item.kode?.trim();
       const deskripsi = item.deskripsi?.trim();
+
+      let resolvedProdiId: number | undefined;
+      if (item.kodeProdi) {
+        const found = kodeToId.get(item.kodeProdi);
+        if (!found) {
+          result.failed++;
+          result.errors.push({
+            row: urutan,
+            kode: kode || '',
+            error: `Program studi dengan kode '${item.kodeProdi}' tidak ditemukan`,
+          });
+          continue;
+        }
+        resolvedProdiId = found;
+      } else if (programStudiId) {
+        resolvedProdiId = programStudiId;
+      } else {
+        result.failed++;
+        result.errors.push({ row: urutan, kode: kode || '', error: 'kode_prodi wajib diisi' });
+        continue;
+      }
 
       if (!kode || !deskripsi) {
         result.failed++;
@@ -92,7 +125,7 @@ export class CplService {
       }
 
       const existing = await db.query.cpl.findFirst({
-        where: and(eq(cpl.programStudiId, programStudiId), eq(cpl.kode, kode)),
+        where: and(eq(cpl.programStudiId, resolvedProdiId), eq(cpl.kode, kode)),
       });
 
       if (existing) {
@@ -101,7 +134,7 @@ export class CplService {
         continue;
       }
 
-      validItems.push({ kode, deskripsi, urutan });
+      validItems.push({ kode, deskripsi, urutan, resolvedProdiId });
     }
 
     if (validItems.length > 0) {
@@ -109,7 +142,7 @@ export class CplService {
         await db.transaction(async (tx) => {
           await tx.insert(cpl).values(
             validItems.map((item) => ({
-              programStudiId,
+              programStudiId: item.resolvedProdiId,
               kode: item.kode,
               deskripsi: item.deskripsi,
               urutan: item.urutan,
@@ -132,6 +165,6 @@ export class CplService {
   }
 
   static getTemplateCsv(): string {
-    return 'kode,deskripsi\nCPL-01,Mampu menerapkan konsep dasar pemrograman\nCPL-02,Mampu menganalisis kebutuhan sistem\nCPL-03,Mampu merancang solusi teknologi informasi';
+    return 'kode_prodi,kode,deskripsi\nTI,CPL-01,Mampu menerapkan konsep dasar pemrograman\nTI,CPL-02,Mampu menganalisis kebutuhan sistem\nTK,CPL-03,Mampu merancang solusi teknologi informasi';
   }
 }

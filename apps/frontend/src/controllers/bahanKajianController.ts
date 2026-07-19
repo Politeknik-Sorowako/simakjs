@@ -78,13 +78,10 @@ export const bahanKajianController = {
     });
   },
 
-  async import(
-    programStudiId: number,
-    items: { kode: string; nama: string; deskripsi?: string }[],
-  ): Promise<ImportResult> {
+  async import(items: { kodeProdi?: string; kode: string; nama: string; deskripsi?: string }[]): Promise<ImportResult> {
     return fetchApi<ImportResult>('/bahan-kajian/import', {
       method: 'POST',
-      body: JSON.stringify({ programStudiId, items }),
+      body: JSON.stringify({ items }),
     });
   },
 

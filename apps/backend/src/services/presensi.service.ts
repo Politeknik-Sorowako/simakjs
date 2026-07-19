@@ -154,44 +154,36 @@ export class PresensiService {
     }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    const kompensasiExpr = sql<number>`COALESCE(SUM(CASE
+      WHEN ${presensi.status} IN ('alpa', 'telat') THEN ${presensi.durasiMangkir} * 5
+      WHEN ${presensi.status} IN ('sakit', 'izin') THEN ${presensi.durasiMangkir}
+      ELSE 0 END), 0)`;
+
     const listMahasiswa = await db
       .select({
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
         prodiNama: programStudi.nama,
+        totalKompensasi: kompensasiExpr,
       })
       .from(mahasiswa)
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(presensi, eq(presensi.mahasiswaId, mahasiswa.id))
       .where(whereClause)
+      .groupBy(mahasiswa.id, mahasiswa.nim, mahasiswa.nama, programStudi.nama)
       .limit(limit)
       .offset(offset);
 
-    const allPresensi = await db
-      .select({
-        mahasiswaId: presensi.mahasiswaId,
-        status: presensi.status,
-        durasiMangkir: presensi.durasiMangkir,
-      })
-      .from(presensi);
-
-    const allPayments = await db
+    const paymentsAgg = await db
       .select({
         mahasiswaId: kompensasiBayar.mahasiswaId,
-        jumlahMenit: kompensasiBayar.jumlahMenit,
+        totalDibayar: sql<number>`COALESCE(SUM(${kompensasiBayar.jumlahMenit}), 0)`,
       })
-      .from(kompensasiBayar);
+      .from(kompensasiBayar)
+      .groupBy(kompensasiBayar.mahasiswaId);
 
-    const mapPresensi = new Map<number, number>();
-    for (const p of allPresensi) {
-      const minutes = this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
-      mapPresensi.set(p.mahasiswaId, (mapPresensi.get(p.mahasiswaId) || 0) + minutes);
-    }
-
-    const mapPayments = new Map<number, number>();
-    for (const pay of allPayments) {
-      mapPayments.set(pay.mahasiswaId, (mapPayments.get(pay.mahasiswaId) || 0) + pay.jumlahMenit);
-    }
+    const mapPayments = new Map<number, number>(paymentsAgg.map((p) => [p.mahasiswaId, Number(p.totalDibayar)]));
 
     const [totalResult] = await db.select({ total: sql<number>`count(*)` }).from(mahasiswa).where(whereClause);
 
@@ -199,53 +191,45 @@ export class PresensiService {
     const totalPages = Math.ceil(total / limit);
 
     const data = listMahasiswa.map((mhs) => {
-      const totalKompensasi = mapPresensi.get(mhs.id) || 0;
-      const totalDibayar = mapPayments.get(mhs.id) || 0;
-      const sisaKompensasi = Math.max(0, totalKompensasi - totalDibayar);
-      return { ...mhs, totalKompensasi, totalDibayar, sisaKompensasi };
+      const tk = Number(mhs.totalKompensasi);
+      const td = mapPayments.get(mhs.id) || 0;
+      return { ...mhs, totalKompensasi: tk, totalDibayar: td, sisaKompensasi: Math.max(0, tk - td) };
     });
 
     return { data, meta: { total, page, limit, totalPages } };
   }
 
   static async getLaporanKompensasiStats() {
-    const allMahasiswa = await db
+    const kompensasiExpr = sql<number>`COALESCE(SUM(CASE
+      WHEN ${presensi.status} IN ('alpa', 'telat') THEN ${presensi.durasiMangkir} * 5
+      WHEN ${presensi.status} IN ('sakit', 'izin') THEN ${presensi.durasiMangkir}
+      ELSE 0 END), 0)`;
+
+    const perMhs = await db
       .select({
         id: mahasiswa.id,
-        programStudiId: mahasiswa.programStudiId,
+        nama: mahasiswa.nama,
+        nim: mahasiswa.nim,
         prodiNama: programStudi.nama,
+        totalKompensasi: kompensasiExpr,
       })
       .from(mahasiswa)
-      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id));
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(presensi, eq(presensi.mahasiswaId, mahasiswa.id))
+      .groupBy(mahasiswa.id, mahasiswa.nama, mahasiswa.nim, programStudi.nama);
 
-    const allPresensi = await db
-      .select({
-        mahasiswaId: presensi.mahasiswaId,
-        status: presensi.status,
-        durasiMangkir: presensi.durasiMangkir,
-      })
-      .from(presensi);
-
-    const allPayments = await db
+    const paymentsAgg = await db
       .select({
         mahasiswaId: kompensasiBayar.mahasiswaId,
-        jumlahMenit: kompensasiBayar.jumlahMenit,
+        totalDibayar: sql<number>`COALESCE(SUM(${kompensasiBayar.jumlahMenit}), 0)`,
       })
-      .from(kompensasiBayar);
+      .from(kompensasiBayar)
+      .groupBy(kompensasiBayar.mahasiswaId);
 
-    const mapPresensi = new Map<number, number>();
-    for (const p of allPresensi) {
-      const minutes = this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
-      mapPresensi.set(p.mahasiswaId, (mapPresensi.get(p.mahasiswaId) || 0) + minutes);
-    }
+    const mapPayments = new Map<number, number>(paymentsAgg.map((p) => [p.mahasiswaId, Number(p.totalDibayar)]));
 
-    const mapPayments = new Map<number, number>();
-    for (const pay of allPayments) {
-      mapPayments.set(pay.mahasiswaId, (mapPayments.get(pay.mahasiswaId) || 0) + pay.jumlahMenit);
-    }
-
-    let totalKomp = 0,
-      totalDby = 0;
+    let totalKomp = 0;
+    let totalDby = 0;
     const prodiMap = new Map<
       string,
       {
@@ -256,15 +240,14 @@ export class PresensiService {
         sisaKompensasi: number;
       }
     >();
-    const mhsList: any[] = [];
 
-    for (const mhs of allMahasiswa) {
-      const totalKompensasi = mapPresensi.get(mhs.id) || 0;
-      const totalDibayar = mapPayments.get(mhs.id) || 0;
-      const sisaKompensasi = Math.max(0, totalKompensasi - totalDibayar);
+    const mhsAgg = perMhs.map((mhs) => {
+      const tk = Number(mhs.totalKompensasi);
+      const td = mapPayments.get(mhs.id) || 0;
+      const sisa = Math.max(0, tk - td);
 
-      totalKomp += totalKompensasi;
-      totalDby += totalDibayar;
+      totalKomp += tk;
+      totalDby += td;
 
       const prodi = mhs.prodiNama || 'Tanpa Prodi';
       const existing = prodiMap.get(prodi) || {
@@ -275,57 +258,36 @@ export class PresensiService {
         sisaKompensasi: 0,
       };
       existing.jumlahMahasiswa++;
-      existing.totalKompensasi += totalKompensasi;
-      existing.totalDibayar += totalDibayar;
-      existing.sisaKompensasi += sisaKompensasi;
+      existing.totalKompensasi += tk;
+      existing.totalDibayar += td;
+      existing.sisaKompensasi += sisa;
       prodiMap.set(prodi, existing);
 
-      if (totalKompensasi > 0 || totalDibayar > 0) {
-        mhsList.push({
-          id: mhs.id,
-          nama: '',
-          nim: '',
-          prodiNama: prodi,
-          totalKompensasi,
-          totalDibayar,
-          sisaKompensasi,
-        });
-      }
-    }
-
-    const rekapProdi = [...prodiMap.values()].sort((a, b) => b.sisaKompensasi - a.sisaKompensasi);
-
-    // Top 10 by sisaKompensasi (we need names: fetch from full list)
-    const mhsFull = await db.select({ id: mahasiswa.id, nama: mahasiswa.nama, nim: mahasiswa.nim }).from(mahasiswa);
-
-    const mhsNameMap = new Map(mhsFull.map((m) => [m.id, m]));
-
-    const mhsAgg = allMahasiswa.map((mhs) => {
-      const nama = mhsNameMap.get(mhs.id)?.nama || '';
-      const nim = mhsNameMap.get(mhs.id)?.nim || '';
-      const totalKompensasi = mapPresensi.get(mhs.id) || 0;
-      const totalDibayar = mapPayments.get(mhs.id) || 0;
-      const sisaKompensasi = Math.max(0, totalKompensasi - totalDibayar);
       return {
         id: mhs.id,
-        nama,
-        nim,
-        prodiNama: mhs.prodiNama || 'Tanpa Prodi',
-        totalKompensasi,
-        totalDibayar,
-        sisaKompensasi,
+        nama: mhs.nama,
+        nim: mhs.nim,
+        prodiNama: prodi,
+        totalKompensasi: tk,
+        totalDibayar: td,
+        sisaKompensasi: sisa,
       };
     });
+
+    const rekapProdi = [...prodiMap.values()].sort((a, b) => b.sisaKompensasi - a.sisaKompensasi);
 
     const top10 = mhsAgg
       .filter((m) => m.sisaKompensasi > 0)
       .sort((a, b) => b.sisaKompensasi - a.sisaKompensasi)
       .slice(0, 10);
 
-    const totalSisa = Math.max(0, totalKomp - totalDby);
-
     return {
-      summary: { totalMahasiswa: allMahasiswa.length, totalKompensasi: totalKomp, totalDibayar: totalDby, totalSisa },
+      summary: {
+        totalMahasiswa: perMhs.length,
+        totalKompensasi: totalKomp,
+        totalDibayar: totalDby,
+        totalSisa: Math.max(0, totalKomp - totalDby),
+      },
       rekapProdi,
       top10,
     };

@@ -3,11 +3,14 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import type { AngkatanKurikulum } from '../controllers/angkatanKurikulumController';
 import { angkatanKurikulumController } from '../controllers/angkatanKurikulumController';
 import { kurikulumController } from '../controllers/kurikulumController';
 import { prodiController } from '../controllers/prodiController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function AngkatanKurikulum() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -37,6 +40,33 @@ export default function AngkatanKurikulum() {
         ? kurikulumController.getAll('', 1, 100, prodiId)
         : { data: [], meta: { total: 0, page: 1, limit: 100, totalPages: 0 } },
   );
+
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
+
+  const [sortBy, setSortBy] = createSignal('prodi');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = bindings() || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
+  const paginatedData = () => {
+    const sorted = sortedData();
+    const start = (page() - 1) * limit();
+    return sorted.slice(start, start + limit());
+  };
+  const totalPages = () => Math.ceil(sortedData().length / limit());
 
   const openAddModal = () => {
     setEditId(null);
@@ -122,7 +152,21 @@ export default function AngkatanKurikulum() {
         </div>
 
         {/* Binding Table */}
-        <Table headers={['Program Studi', 'Angkatan', 'Kurikulum', 'Status', 'Aksi']}>
+        <Table
+          headers={[
+            <SortableHeader field="prodi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+              Program Studi
+            </SortableHeader>,
+            <SortableHeader field="angkatan" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+              Angkatan
+            </SortableHeader>,
+            <SortableHeader field="kurikulum" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+              Kurikulum
+            </SortableHeader>,
+            'Status',
+            'Aksi',
+          ]}
+        >
           <Show when={bindings.loading}>
             <tr>
               <td colspan="5" class="p-8 text-center text-secondary-500">
@@ -137,7 +181,7 @@ export default function AngkatanKurikulum() {
               </td>
             </tr>
           </Show>
-          <For each={bindings()}>
+          <For each={paginatedData()}>
             {(item) => (
               <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
                 <td class="px-6 py-4 text-sm text-secondary-900 dark:text-white">{item.programStudi?.nama || '-'}</td>
@@ -166,6 +210,17 @@ export default function AngkatanKurikulum() {
             )}
           </For>
         </Table>
+
+        <Show when={sortedData().length > 0}>
+          <Pagination
+            currentPage={page()}
+            totalPages={totalPages()}
+            total={sortedData().length}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
+        </Show>
 
         {/* Modal Form */}
         <Modal

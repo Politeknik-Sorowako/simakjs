@@ -231,17 +231,23 @@ export class BimbinganService {
     const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
 
     const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
+    const bimbinganIds: number[] = [];
     for (const b of listBimbingan) {
       mapBimbingan.set(b.mahasiswaId, b);
+      bimbinganIds.push(b.id);
     }
 
-    // Ambil rekap total sesi per bimbingan
-    const allSesi = await db
-      .select({
-        id: sesiBimbingan.id,
-        bimbinganId: sesiBimbingan.bimbinganId,
-      })
-      .from(sesiBimbingan);
+    // Ambil rekap total sesi per bimbingan (hanya untuk bimbingan di periode aktif)
+    const allSesi =
+      bimbinganIds.length > 0
+        ? await db
+            .select({
+              id: sesiBimbingan.id,
+              bimbinganId: sesiBimbingan.bimbinganId,
+            })
+            .from(sesiBimbingan)
+            .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds))
+        : [];
 
     const sesiCountMap = new Map<number, number>();
     for (const s of allSesi) {

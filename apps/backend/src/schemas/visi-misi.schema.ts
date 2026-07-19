@@ -97,12 +97,13 @@ export const importVisiMisiSchema = {
     tags: ['Visi Misi Prodi'],
     summary: 'Impor Visi Misi dari CSV',
     description:
-      'Impor data Visi Misi dari file CSV. Format: tahunBerlaku,visi,misi,tujuan,sasaran (Hanya Admin/Prodi).',
+      'Impor data Visi Misi dari file CSV. Format: kode_prodi,tahunBerlaku,visi,misi,tujuan,sasaran (Hanya Admin/Prodi).',
   },
   body: t.Object({
-    programStudiId: t.Integer(),
+    programStudiId: t.Optional(t.Integer()),
     items: t.Array(
       t.Object({
+        kodeProdi: t.Optional(t.String()),
         tahunBerlaku: t.String(),
         visi: t.String(),
         misi: t.String(),

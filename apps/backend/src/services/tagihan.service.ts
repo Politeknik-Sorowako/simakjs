@@ -4,7 +4,7 @@ import { db } from '../utils/db';
 
 export class TagihanService {
   static async generateTagihanPeriode(periodeId: string, nominalAmount?: number) {
-    const students = await db.select().from(mahasiswa);
+    const students = await db.select().from(mahasiswa).where(eq(mahasiswa.status, 'aktif'));
     let createdCount = 0;
     const defaultNominal = nominalAmount !== undefined ? nominalAmount : 5000000;
 

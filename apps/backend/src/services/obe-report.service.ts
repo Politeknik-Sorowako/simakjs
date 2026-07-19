@@ -41,7 +41,9 @@ export class ObeReportService {
     });
     const cpmkIdsInKurikulum = new Set(cpmkInKurikulum.map((c) => c.id));
 
-    const allCpmkCplMappings = await db.query.cpmkCpl.findMany();
+    const allCpmkCplMappings = await db.query.cpmkCpl.findMany({
+      where: inArray(cpmkCpl.cpmkId, Array.from(cpmkIdsInKurikulum)),
+    });
 
     const cplWithCpmk = new Set<number>();
     const cpmkCountPerCpl = new Map<number, number>();
@@ -88,7 +90,9 @@ export class ObeReportService {
     const mkIds = mkInKurikulum.map((kmk) => kmk.mataKuliahId);
 
     const mkIdsSet = new Set(mkIds);
-    const allMkBkMappings = await db.query.mataKuliahBahanKajian.findMany();
+    const allMkBkMappings = await db.query.mataKuliahBahanKajian.findMany({
+      where: inArray(mataKuliahBahanKajian.mataKuliahId, mkIds),
+    });
 
     const bkWithMk = new Set<number>();
     for (const mapping of allMkBkMappings) {
@@ -206,6 +210,10 @@ export class ObeReportService {
   }
 
   static async getCplAchievement(kurikulumId?: number, periodeId?: string) {
+    if (!kurikulumId && !periodeId) {
+      throw new Error('Minimal salah satu dari kurikulumId atau periodeId harus disediakan.');
+    }
+
     const conditions = [];
     if (kurikulumId) conditions.push(eq(capaianCpl.kurikulumId, kurikulumId));
     if (periodeId) conditions.push(eq(capaianCpl.periodeId, periodeId));

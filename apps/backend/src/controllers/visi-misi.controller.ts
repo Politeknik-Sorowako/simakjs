@@ -88,12 +88,19 @@ export class VisiMisiController {
       return { error: 'Akses ditolak.' };
     }
     const { programStudiId, items } = body as {
-      programStudiId: number;
-      items: { tahunBerlaku: string; visi: string; misi: string; tujuan?: string; sasaran?: string }[];
+      programStudiId?: number;
+      items: {
+        kodeProdi?: string;
+        tahunBerlaku: string;
+        visi: string;
+        misi: string;
+        tujuan?: string;
+        sasaran?: string;
+      }[];
     };
-    if (!programStudiId || !items || !Array.isArray(items) || items.length === 0) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       set.status = 400;
-      return { error: 'Program studi dan data harus diisi' };
+      return { error: 'Data harus diisi' };
     }
     const result = await VisiMisiService.import(programStudiId, items);
     set.status = 200;

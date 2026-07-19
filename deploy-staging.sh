@@ -8,6 +8,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/.deployment/deploy-staging.config.sh" 2>/dev/null || true
 
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  set -a
+  source "$SCRIPT_DIR/.env"
+  set +a
+fi
+
 # Setup logging
 LOG_FILE="$SCRIPT_DIR/deploy-staging-$(date +%Y%m%d-%H%M%S).log"
 DEPLOY_START=$(date +%s)

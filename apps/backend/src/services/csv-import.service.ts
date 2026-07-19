@@ -484,58 +484,59 @@ export class CsvImportService {
 
     const validRoles = ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest'];
 
-    try {
-      await db.transaction(async (tx) => {
-        for (let i = 1; i < rows.length; i++) {
-          const row = rows[i];
-          const lineNum = i + 1;
-          if (row.length < headers.length) continue;
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
 
-          const emailVal = row[emailIdx].trim().toLowerCase();
-          const namaVal = row[namaIdx].trim();
-          const roleVal = row[roleIdx].trim().toLowerCase();
-          let passwordVal = emailVal;
-          if (passwordIdx !== -1 && row[passwordIdx] && row[passwordIdx].trim()) {
-            passwordVal = row[passwordIdx].trim();
-          }
+      const emailVal = row[emailIdx].trim().toLowerCase();
+      const namaVal = row[namaIdx].trim();
+      const roleVal = row[roleIdx].trim().toLowerCase();
+      let passwordVal = emailVal;
+      if (passwordIdx !== -1 && row[passwordIdx] && row[passwordIdx].trim()) {
+        passwordVal = row[passwordIdx].trim();
+      }
 
-          if (!emailVal || !namaVal || !roleVal) {
-            throw new Error(`Baris ${lineNum}: Kolom email, nama, dan role wajib diisi.`);
-          }
+      if (!emailVal || !namaVal || !roleVal) {
+        result.errors.push({ line: lineNum, error: 'Kolom email, nama, dan role wajib diisi.' });
+        continue;
+      }
 
-          if (!validRoles.includes(roleVal)) {
-            throw new Error(
-              `Baris ${lineNum}: Role "${roleVal}" tidak valid. Role yang diizinkan: ${validRoles.join(', ')}`,
-            );
-          }
+      if (!validRoles.includes(roleVal)) {
+        result.errors.push({
+          line: lineNum,
+          error: `Role "${roleVal}" tidak valid. Role yang diizinkan: ${validRoles.join(', ')}`,
+        });
+        continue;
+      }
 
-          const [existingUser] = await tx.select().from(users).where(eq(users.email, emailVal)).limit(1);
+      try {
+        const [existingUser] = await db.select().from(users).where(eq(users.email, emailVal)).limit(1);
 
-          if (existingUser) {
-            throw new Error(`Baris ${lineNum}: Email "${emailVal}" sudah terdaftar.`);
-          }
-
-          const defaultPassword = crypto.randomUUID().replace(/-/g, '').slice(0, 12) + 'Aa1';
-          const finalPassword = passwordVal === emailVal ? defaultPassword : passwordVal;
-
-          const hashedPassword = await Bun.password.hash(finalPassword, {
-            algorithm: 'bcrypt',
-            cost: 12,
-          });
-
-          await tx.insert(users).values({
-            email: emailVal,
-            password: hashedPassword,
-            nama: namaVal,
-            role: roleVal as any,
-            isActive: false,
-          });
+        if (existingUser) {
+          result.errors.push({ line: lineNum, error: `Email "${emailVal}" sudah terdaftar.` });
+          continue;
         }
-      });
-      result.successCount = rows.length - 1;
-    } catch (err: any) {
-      result.successCount = 0;
-      result.errors.push({ line: 0, error: err.message || 'Gagal menyimpan data.' });
+
+        const defaultPassword = crypto.randomUUID().replace(/-/g, '').slice(0, 12) + 'Aa1';
+        const finalPassword = passwordVal === emailVal ? defaultPassword : passwordVal;
+
+        const hashedPassword = await Bun.password.hash(finalPassword, {
+          algorithm: 'bcrypt',
+          cost: 12,
+        });
+
+        await db.insert(users).values({
+          email: emailVal,
+          password: hashedPassword,
+          nama: namaVal,
+          role: roleVal as any,
+          isActive: false,
+        });
+        result.successCount++;
+      } catch (err: any) {
+        result.errors.push({ line: lineNum, error: err.message || 'Gagal menyimpan data.' });
+      }
     }
 
     return result;

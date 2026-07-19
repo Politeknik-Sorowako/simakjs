@@ -2,6 +2,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: simak_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-simak_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simak_password}
@@ -11,7 +12,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "simak_user", "-d", "simak_vokasi"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 15
@@ -22,11 +23,12 @@ services:
       context: .
       dockerfile: apps/backend/Dockerfile
     init: true
+    restart: unless-stopped
     container_name: simak_backend
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://simak_user:simak_password@db:5432/simak_vokasi}
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: "http://localhost:8080,http://localhost:3000"

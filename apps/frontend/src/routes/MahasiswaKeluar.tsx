@@ -3,17 +3,19 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { mahasiswaKeluarController } from '../controllers/mahasiswaKeluarController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function MahasiswaKeluarPage() {
   const toast = useToast();
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [searchFilter, setSearchFilter] = createSignal('');
   const [periodeFilter, setPeriodeFilter] = createSignal('');
 
@@ -31,6 +33,36 @@ export default function MahasiswaKeluarPage() {
 
   // Fetch Periods
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 50));
+
+  const [sortBy, setSortBy] = createSignal('nim');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = records()?.data || [];
+    return [...data].sort((a, b) => {
+      const field = sortBy();
+      let aVal: string;
+      let bVal: string;
+      if (field === 'nim') {
+        aVal = a.mahasiswa?.nim ?? '';
+        bVal = b.mahasiswa?.nim ?? '';
+      } else if (field === 'namaMahasiswa') {
+        aVal = a.mahasiswa?.nama ?? '';
+        bVal = b.mahasiswa?.nama ?? '';
+      } else {
+        aVal = String((a as unknown as Record<string, unknown>)[field] ?? '');
+        bVal = String((b as unknown as Record<string, unknown>)[field] ?? '');
+      }
+      const cmp = aVal.localeCompare(bVal, 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   const [mhsList, setMhsList] = createSignal<Mahasiswa[]>([]);
 
@@ -180,7 +212,7 @@ export default function MahasiswaKeluarPage() {
               value={searchFilter()}
               onInput={(e) => {
                 setSearchFilter(e.currentTarget.value);
-                setPage(1);
+                resetPage();
               }}
             />
           </div>
@@ -190,7 +222,7 @@ export default function MahasiswaKeluarPage() {
               value={periodeFilter()}
               onChange={(e) => {
                 setPeriodeFilter(e.currentTarget.value);
-                setPage(1);
+                resetPage();
               }}
             >
               <option value="">Semua Periode</option>
@@ -205,8 +237,12 @@ export default function MahasiswaKeluarPage() {
         >
           <Table
             headers={[
-              'NIM',
-              'Nama Mahasiswa',
+              <SortableHeader field="nim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                NIM
+              </SortableHeader>,
+              <SortableHeader field="namaMahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama Mahasiswa
+              </SortableHeader>,
               'Status Baru',
               'Periode',
               'Tanggal Keluar',
@@ -216,7 +252,7 @@ export default function MahasiswaKeluarPage() {
             ]}
           >
             <For
-              each={records()?.data}
+              each={sortedData()}
               fallback={
                 <tr>
                   <td colspan="8" class="text-center py-10 text-secondary-400 dark:text-secondary-200">
@@ -261,6 +297,14 @@ export default function MahasiswaKeluarPage() {
             </For>
           </Table>
         </Show>
+        <Pagination
+          currentPage={page()}
+          totalPages={records()?.meta?.totalPages ?? 1}
+          total={records()?.meta?.total ?? 0}
+          limit={limit()}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
       </div>
 
       <Modal show={showModal()} onClose={() => setShowModal(false)} title="Pencatatan Mahasiswa Keluar/Non-Aktif">

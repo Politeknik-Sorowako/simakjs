@@ -4,6 +4,8 @@ import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -11,12 +13,12 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { dosenController, Dosen as IDosen } from '../controllers/dosenController';
 import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function Dosen() {
   const toast = useToast();
   const [search, setSearch] = createSignal('');
-  const [page, setPage] = createSignal(1);
-  const [limit] = createSignal(10);
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
   const [bulkLoading, setBulkLoading] = createSignal(false);
@@ -38,6 +40,25 @@ export default function Dosen() {
 
   // Fetch Program Studi for Dropdown
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
+
+  const [sortBy, setSortBy] = createSignal('nama');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = dosens()?.data || [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -213,7 +234,7 @@ export default function Dosen() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              setPage(1);
+              resetPage();
             }}
           />
         </div>
@@ -230,15 +251,23 @@ export default function Dosen() {
                 onChange={toggleSelectAll}
                 class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
               />,
-              'NIP',
-              'Nama',
-              'Email',
+              <SortableHeader field="nip" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                NIP
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama
+              </SortableHeader>,
+              <SortableHeader field="email" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Email
+              </SortableHeader>,
               'Program Studi',
-              'NIDN',
+              <SortableHeader field="nidn" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                NIDN
+              </SortableHeader>,
               'Aksi',
             ]}
           >
-            <For each={dosens()?.data}>
+            <For each={sortedData()}>
               {(item) => (
                 <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
                   <td class="px-6 py-4">
@@ -277,30 +306,15 @@ export default function Dosen() {
           </Table>
 
           {/* Pagination */}
-          <Show when={dosens() && dosens()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-xs text-secondary-500 dark:text-secondary-200">
-                Menampilkan halaman {page()} dari {dosens()?.meta.totalPages} ({dosens()?.meta.total} total data)
-              </span>
-              <div class="flex gap-2">
-                <Button
-                  variant="secondary"
-                  disabled={page() === 1}
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  class="!py-1 !px-3"
-                >
-                  Sebelumnya
-                </Button>
-                <Button
-                  variant="secondary"
-                  disabled={page() >= dosens()!.meta.totalPages}
-                  onClick={() => setPage((p) => Math.min(p + 1, dosens()!.meta.totalPages))}
-                  class="!py-1 !px-3"
-                >
-                  Berikutnya
-                </Button>
-              </div>
-            </div>
+          <Show when={dosens() && dosens()!.meta.totalPages > 0}>
+            <Pagination
+              currentPage={page()}
+              totalPages={dosens()!.meta.totalPages}
+              total={dosens()!.meta.total}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+            />
           </Show>
         </Show>
 

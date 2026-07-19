@@ -4,19 +4,53 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
-import { bahanKajianController, BahanKajian as IBahanKajian, ImportResult } from '../controllers/bahanKajianController';
+import {
+  BahanKajianCplMapping,
+  bahanKajianController,
+  BahanKajian as IBahanKajian,
+  ImportResult,
+} from '../controllers/bahanKajianController';
 import { cplController } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
+import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function BahanKajian() {
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
 
   const [bkList, { refetch }] = createResource(
     () => ({ prodiId: prodiFilter() }),
     ({ prodiId }) => bahanKajianController.getAll(prodiId),
   );
+
+  const [sortBy, setSortBy] = createSignal('kode');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
+  const sortedData = () => {
+    const data = bkList() ?? [];
+    return [...data].sort((a, b) => {
+      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
+      const cmp = String(aVal).localeCompare(String(bVal), 'id');
+      return sortOrder() === 'asc' ? cmp : -cmp;
+    });
+  };
+
+  const pagedData = () => {
+    const sorted = sortedData();
+    const start = (page() - 1) * limit();
+    return sorted.slice(start, start + limit());
+  };
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
@@ -34,11 +68,12 @@ export default function BahanKajian() {
   const [mappingProdiId, setMappingProdiId] = createSignal<number>(0);
   const [selectedCplId, setSelectedCplId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
-  const [mappings, setMappings] = createSignal<{ id: number; cpl?: { kode: string }; bobot?: number }[]>([]);
+  const [mappings, setMappings] = createSignal<BahanKajianCplMapping[]>([]);
 
   const [showImportModal, setShowImportModal] = createSignal(false);
-  const [importProdiId, setImportProdiId] = createSignal<number>(0);
-  const [importItems, setImportItems] = createSignal<{ kode: string; nama: string; deskripsi?: string }[]>([]);
+  const [importItems, setImportItems] = createSignal<
+    { kodeProdi: string; kode: string; nama: string; deskripsi?: string }[]
+  >([]);
   const [importResult, setImportResult] = createSignal<ImportResult | null>(null);
   const [importLoading, setImportLoading] = createSignal(false);
 
@@ -153,31 +188,31 @@ export default function BahanKajian() {
   }
 
   function openImportModal() {
-    setImportProdiId(prodiFilter() || 0);
     setImportItems([]);
     setImportResult(null);
     setErrorMsg('');
     setShowImportModal(true);
   }
 
-  function parseBkCsv(text: string): { kode: string; nama: string; deskripsi?: string }[] {
+  function parseBkCsv(text: string): { kodeProdi: string; kode: string; nama: string; deskripsi?: string }[] {
     const rows = parseCsv(text);
-    const items: { kode: string; nama: string; deskripsi?: string }[] = [];
+    const items: { kodeProdi: string; kode: string; nama: string; deskripsi?: string }[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || row.length < 2) continue;
+      if (!row || row.length < 3) continue;
 
-      if (i === 0 && isHeaderRow(row[0], ['kode', 'code'])) {
+      if (i === 0 && isHeaderRow(row[0], ['kode_prodi', 'kodeprodi'])) {
         continue;
       }
 
-      const kode = row[0] || '';
-      const nama = row[1] || '';
-      const deskripsi = row.slice(2).join(',') || undefined;
+      const kodeProdi = row[0] || '';
+      const kode = row[1] || '';
+      const nama = row[2] || '';
+      const deskripsi = row.slice(3).join(',') || undefined;
 
       if (kode && nama) {
-        items.push({ kode, nama, deskripsi: deskripsi || undefined });
+        items.push({ kodeProdi, kode, nama, deskripsi: deskripsi || undefined });
       }
     }
 
@@ -195,7 +230,7 @@ export default function BahanKajian() {
       const items = parseBkCsv(text);
       setImportItems(items);
       if (items.length === 0) {
-        setErrorMsg('File CSV tidak valid. Format: kode,nama,deskripsi');
+        setErrorMsg('File CSV tidak valid. Format: kode_prodi,kode,nama,deskripsi');
       } else {
         setErrorMsg('');
       }
@@ -205,10 +240,6 @@ export default function BahanKajian() {
   }
 
   async function handleImport() {
-    if (!importProdiId()) {
-      setErrorMsg('Pilih Program Studi terlebih dahulu');
-      return;
-    }
     if (importItems().length === 0) {
       setErrorMsg('Upload file CSV terlebih dahulu');
       return;
@@ -217,7 +248,7 @@ export default function BahanKajian() {
     setImportLoading(true);
     setErrorMsg('');
     try {
-      const result = await bahanKajianController.import(importProdiId(), importItems());
+      const result = await bahanKajianController.import(importItems());
       setImportResult(result);
       if (result.success > 0) {
         refetch();
@@ -248,17 +279,12 @@ export default function BahanKajian() {
     },
   );
 
-  const headers = ['Kode', 'Nama', 'Deskripsi', 'Program Studi', 'Mapping CPL', 'Urutan', 'Aksi'];
-
   return (
     <MainLayout>
       <div class="space-y-6">
         <div class="flex justify-between items-center">
           <h1 class="text-2xl font-bold text-white">Bahan Kajian</h1>
           <div class="flex gap-2">
-            <Button variant="secondary" onClick={handleDownloadTemplate}>
-              Download Template
-            </Button>
             <Button variant="secondary" onClick={openImportModal}>
               Impor CSV
             </Button>
@@ -277,6 +303,7 @@ export default function BahanKajian() {
               onInput={(e) => {
                 const val = e.currentTarget.value;
                 setProdiFilter(val ? Number(val) : undefined);
+                resetPage();
               }}
               isSelect
               selectOptions={[
@@ -291,22 +318,42 @@ export default function BahanKajian() {
         </div>
 
         <div class="bg-[#1e293b] rounded-2xl overflow-hidden">
-          <Table headers={headers}>
+          <Table
+            headers={[
+              <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kode
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama
+              </SortableHeader>,
+              <SortableHeader field="deskripsi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Deskripsi
+              </SortableHeader>,
+              <SortableHeader field="programStudi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Program Studi
+              </SortableHeader>,
+              'Mapping CPL',
+              <SortableHeader field="urutan" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Urutan
+              </SortableHeader>,
+              'Aksi',
+            ]}
+          >
             <Show
               when={!bkList.loading}
               fallback={
                 <tr>
-                  <td colspan={headers.length} class="text-center py-8 text-secondary-300">
+                  <td colspan={7} class="text-center py-8 text-secondary-300">
                     Memuat...
                   </td>
                 </tr>
               }
             >
               <For
-                each={bkList() ?? []}
+                each={pagedData()}
                 fallback={
                   <tr>
-                    <td colspan={headers.length} class="text-center py-8 text-secondary-300">
+                    <td colspan={7} class="text-center py-8 text-secondary-300">
                       Belum ada data
                     </td>
                   </tr>
@@ -345,6 +392,17 @@ export default function BahanKajian() {
             </Show>
           </Table>
         </div>
+
+        <Show when={bkList()}>
+          <Pagination
+            currentPage={page()}
+            totalPages={Math.ceil((bkList()?.length ?? 0) / limit()) || 1}
+            total={bkList()?.length ?? 0}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
+        </Show>
       </div>
 
       <Modal
@@ -464,7 +522,7 @@ export default function BahanKajian() {
                 </thead>
                 <tbody>
                   <For each={mappings()}>
-                    {(m: { id: number; cpl?: { kode: string }; bobot?: number }) => (
+                    {(m: BahanKajianCplMapping) => (
                       <tr class="border-b border-slate-700/50">
                         <td class="py-2 text-black dark:text-white">{m.cpl?.kode || '-'}</td>
                         <td class="py-2 text-black dark:text-white">{m.bobot ?? '(merata)'}</td>
@@ -499,30 +557,22 @@ export default function BahanKajian() {
               <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                 <h4 class="text-blue-300 font-medium mb-2">Format CSV:</h4>
                 <p class="text-slate-300 text-sm mb-2">
-                  Baris pertama (header) akan dilewati jika mengandung kata "kode" atau "code"
+                  Baris pertama (header) akan dilewati jika mengandung kata "kode_prodi"
                 </p>
                 <code class="block bg-slate-900 p-3 rounded text-sm text-green-400">
-                  kode,nama,deskripsi
+                  kode_prodi,kode,nama,deskripsi
                   <br />
-                  BK-01,Pemrograman Dasar,Konsep dasar pemrograman dan algoritma
+                  TI,BK-01,Pemrograman Dasar,Konsep dasar pemrograman dan algoritma
                   <br />
-                  BK-02,Basis Data,Perancangan dan implementasi basis data
+                  TI,BK-02,Basis Data,Perancangan dan implementasi basis data
                   <br />
-                  BK-03,Jaringan Komputer,Fundamental jaringan dan protokol komunikasi
+                  TK,BK-03,Jaringan Komputer,Fundamental jaringan dan protokol komunikasi
                 </code>
               </div>
 
-              <Input
-                type="select"
-                label="Program Studi"
-                value={importProdiId()}
-                onInput={(e) => setImportProdiId(Number(e.currentTarget.value))}
-                isSelect
-                selectOptions={[
-                  { value: '0', label: 'Pilih Program Studi' },
-                  ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
-                ]}
-              />
+              <Button variant="secondary" onClick={handleDownloadTemplate} class="w-full">
+                Download Template CSV
+              </Button>
 
               <div>
                 <label class="block text-sm font-medium text-secondary-200 mb-2">Upload File CSV</label>
@@ -542,6 +592,7 @@ export default function BahanKajian() {
                       <thead class="bg-slate-800 sticky top-0">
                         <tr class="text-secondary-400 border-b border-slate-700">
                           <th class="text-left py-2 px-3 w-12">#</th>
+                          <th class="text-left py-2 px-3 w-16">Prodi</th>
                           <th class="text-left py-2 px-3 w-24">Kode</th>
                           <th class="text-left py-2 px-3 w-40">Nama</th>
                           <th class="text-left py-2 px-3">Deskripsi</th>
@@ -552,6 +603,7 @@ export default function BahanKajian() {
                           {(item, index) => (
                             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
                               <td class="py-2 px-3 text-secondary-400">{index() + 1}</td>
+                              <td class="py-2 px-3 text-accent-400 font-medium">{item.kodeProdi}</td>
                               <td class="py-2 px-3 text-black dark:text-white font-medium">{item.kode}</td>
                               <td class="py-2 px-3 text-black dark:text-white">{item.nama}</td>
                               <td class="py-2 px-3 text-black dark:text-white">{item.deskripsi || '-'}</td>
@@ -571,7 +623,7 @@ export default function BahanKajian() {
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  disabled={importLoading() || importItems().length === 0 || !importProdiId()}
+                  disabled={importLoading() || importItems().length === 0}
                 >
                   {importLoading() ? 'Mengimpor...' : 'Impor'}
                 </Button>

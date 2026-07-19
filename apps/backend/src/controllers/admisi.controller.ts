@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises';
 import { resolve } from 'path';
 import { AdmisiService } from '../services/admisi.service';
 import { AuthContext } from '../utils/types';
@@ -194,7 +195,7 @@ export class AdmisiController {
       const newFileName = `${noPendaftar}_${namaSlug}_${berkasSlug}-${timestamp}.${ext}`;
 
       const uploadDir = `${STORAGE_DIR}/${params.id}`;
-      await Bun.$`mkdir -p ${uploadDir}`.quiet();
+      await mkdir(uploadDir, { recursive: true });
       const fullPath = `${uploadDir}/${newFileName}`;
       await Bun.write(fullPath, file);
 
