@@ -736,7 +736,7 @@ export default function Cpmk() {
                       : 'bg-amber-500/10 border-amber-500/30'
                   }`}
                 >
-                  <p class="font-medium text-white">
+                  <p class="font-medium text-black dark:text-white">
                     {importResult()!.failed === 0
                       ? `Semua ${importResult()!.success} data berhasil diimport!`
                       : `${importResult()!.success} berhasil, ${importResult()!.failed} gagal`}
@@ -745,7 +745,7 @@ export default function Cpmk() {
                     <div class="mt-3 space-y-1 max-h-48 overflow-y-auto">
                       <For each={importResult()!.errors}>
                         {(err) => (
-                          <p class="text-sm text-red-300">
+                          <p class="text-sm text-red-600 dark:text-red-300">
                             Baris {err.row}: {err.kode ? `(${err.kode}) ` : ''}
                             {err.error}
                           </p>
@@ -770,10 +770,10 @@ export default function Cpmk() {
 
             <Show when={!importResult()}>
               <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <p class="text-sm text-blue-300">
+                <p class="text-sm text-black dark:text-blue-300">
                   Format CSV: <code>kode_mata_kuliah,kode,deskripsi</code>
                 </p>
-                <p class="text-xs text-secondary-400 mt-1">
+                <p class="text-xs text-black dark:text-secondary-400 mt-1">
                   Kode Mata Kuliah harus terdaftar di sistem. Kode CPMK harus unik per Mata Kuliah.
                 </p>
               </div>
