@@ -70,13 +70,19 @@ export const mataKuliahController = {
   },
 
   async import(
-    rows: string[][],
-    mode: string,
-    defaultProdiId?: number,
-  ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> {
+    items: {
+      kodeProdi?: string;
+      kode: string;
+      nama: string;
+      sksTotal: number;
+      sksTatapMuka?: number;
+      sksPraktek?: number;
+      idPddikti?: string;
+    }[],
+  ): Promise<{ success: number; failed: number; errors: { row: number; kode: string; error: string }[] }> {
     return fetchApi('/mata-kuliah/import', {
       method: 'POST',
-      body: JSON.stringify({ rows, mode, defaultProdiId }),
+      body: JSON.stringify({ items }),
     });
   },
 };

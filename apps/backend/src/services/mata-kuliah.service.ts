@@ -212,7 +212,7 @@ export class MataKuliahService {
   static async import(items: ImportMataKuliahItem[]): Promise<ImportMataKuliahResult> {
     const result: ImportMataKuliahResult = { success: 0, failed: 0, errors: [] };
 
-    const uniqueProdiKodes = [...new Set(items.map((item) => item.kodeProdi).filter((k): k is string => !!k))];
+    const uniqueProdiKodes = [...new Set(items.map((item) => item.kodeProdi?.trim()).filter((k): k is string => !!k))];
     let prodiKodeToId = new Map<string, number>();
     if (uniqueProdiKodes.length > 0) {
       const prodiList = await db
@@ -231,14 +231,15 @@ export class MataKuliahService {
       const nama = item.nama?.trim();
 
       let resolvedProdiId: number | undefined;
-      if (item.kodeProdi) {
-        const found = prodiKodeToId.get(item.kodeProdi);
+      const trimmedProdiKode = item.kodeProdi?.trim();
+      if (trimmedProdiKode) {
+        const found = prodiKodeToId.get(trimmedProdiKode);
         if (!found) {
           result.failed++;
           result.errors.push({
             row: urutan,
             kode: kode || '',
-            error: `Program Studi dengan kode '${item.kodeProdi}' tidak ditemukan`,
+            error: `Program Studi dengan kode '${trimmedProdiKode}' tidak ditemukan`,
           });
           continue;
         }

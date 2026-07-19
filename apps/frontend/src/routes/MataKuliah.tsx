@@ -247,20 +247,26 @@ export default function MataKuliah() {
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
           importUrl="/mata-kuliah/import"
-          templateHeaders={[
-            'kode_prodi',
-            'kode',
-            'nama',
-            'sks_total',
-            'sks_tatap_muka',
-            'sks_praktek',
-            'sks_praktek_lapangan',
-            'sks_simulasi',
-          ]}
+          templateHeaders={['kode_prodi', 'kode', 'nama', 'sks_total', 'sks_tatap_muka', 'sks_praktek', 'id_pddikti']}
           title="Mata Kuliah"
           onImport={async (rows, mode) => {
-            const defaultProdiId = filterProdi() || ws.selectedProdiId() || undefined;
-            return mataKuliahController.import(rows, mode, defaultProdiId);
+            const items = rows
+              .slice(1)
+              .filter((row) => row.some((cell) => cell.trim() !== ''))
+              .map((row) => ({
+                kodeProdi: row[0]?.trim() || undefined,
+                kode: row[1]?.trim() || '',
+                nama: row[2]?.trim() || '',
+                sksTotal: Number(row[3]) || 0,
+                sksTatapMuka: row[4]?.trim() ? Number(row[4]) : undefined,
+                sksPraktek: row[5]?.trim() ? Number(row[5]) : undefined,
+                idPddikti: row[6]?.trim() || undefined,
+              }));
+            const res = await mataKuliahController.import(items);
+            return {
+              successCount: res.success,
+              errors: res.errors.map((e) => ({ line: e.row, error: e.error })),
+            };
           }}
           onSuccess={() => refetch()}
         />
