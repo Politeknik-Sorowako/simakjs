@@ -282,9 +282,6 @@ export default function VisiMisiProdi() {
         <div class="flex justify-between items-center">
           <h1 class="text-2xl font-bold text-white">Visi Misi Prodi</h1>
           <div class="flex gap-2">
-            <Button variant="secondary" onClick={handleDownloadTemplate}>
-              Download Template
-            </Button>
             <Button variant="secondary" onClick={openImportModal}>
               Impor CSV
             </Button>
@@ -496,6 +493,10 @@ export default function VisiMisiProdi() {
                   kerjasama industri
                 </code>
               </div>
+
+              <Button variant="secondary" onClick={handleDownloadTemplate} class="w-full">
+                Download Template CSV
+              </Button>
 
               <div>
                 <label class="block text-sm font-medium text-secondary-200 mb-2">Upload File CSV</label>
