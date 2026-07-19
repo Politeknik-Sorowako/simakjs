@@ -26,7 +26,7 @@ export const updateMataKuliahBody = t.Object({
 
 const mataKuliahResponseFields = {
   id: t.Integer({ default: 1 }),
-  programStudiId: t.Integer({ default: 1 }),
+  programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
   kode: t.String({ default: 'MK001' }),
   nama: t.String({ default: 'Pemrograman Web' }),
   sksTotal: t.Integer({ default: 3 }),
