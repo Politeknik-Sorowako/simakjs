@@ -62,4 +62,13 @@ export const kelasKuliahController = {
       method: 'DELETE',
     });
   },
+
+  async import(
+    items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[],
+  ): Promise<{ success: number; failed: number; errors: { row: number; namaKelas: string; error: string }[] }> {
+    return fetchApi('/kelas-kuliah/import', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  },
 };
