@@ -73,4 +73,29 @@ export class CpmkController {
     }
     return { message: 'CPMK berhasil dihapus' };
   }
+
+  static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!isAdminOrProdiOrDosen(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const { items } = body as {
+      items: { kodeMataKuliah?: string; kode: string; deskripsi: string }[];
+    };
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      set.status = 400;
+      return { error: 'Data harus diisi' };
+    }
+    const result = await CpmkService.import(items);
+    set.status = 200;
+    return result;
+  }
+
+  static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
+    await getCurrentUser();
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename=template-cpmk.csv';
+    return CpmkService.getTemplateCsv();
+  }
 }

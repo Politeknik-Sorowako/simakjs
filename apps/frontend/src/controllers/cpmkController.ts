@@ -81,4 +81,13 @@ export const cpmkController = {
       method: 'DELETE',
     });
   },
+
+  async import(
+    items: { kodeMataKuliah?: string; kode: string; deskripsi: string }[],
+  ): Promise<{ success: number; failed: number; errors: { row: number; kode: string; error: string }[] }> {
+    return fetchApi('/cpmk/import', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  },
 };

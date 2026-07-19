@@ -140,3 +140,44 @@ export const deleteCpmkSchema = {
     }),
   },
 };
+
+export const importCpmkBody = t.Object({
+  items: t.Array(
+    t.Object({
+      kodeMataKuliah: t.Optional(t.String()),
+      kode: t.String(),
+      deskripsi: t.String(),
+    }),
+  ),
+});
+
+export const importCpmkSchema = {
+  detail: {
+    tags: ['CPMK'],
+    summary: 'Import CPMK',
+    description: 'Import CPMK dari CSV.',
+  },
+  body: importCpmkBody,
+  response: {
+    200: t.Object({
+      success: t.Integer(),
+      failed: t.Integer(),
+      errors: t.Array(
+        t.Object({
+          row: t.Integer(),
+          kode: t.String(),
+          error: t.String(),
+        }),
+      ),
+    }),
+    400: t.Object({ error: t.String() }),
+  },
+};
+
+export const getTemplateCpmkSchema = {
+  detail: {
+    tags: ['CPMK'],
+    summary: 'Download Template CSV CPMK',
+    description: 'Download template CSV untuk import CPMK.',
+  },
+};
