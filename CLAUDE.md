@@ -19,6 +19,7 @@
 - **ALWAYS** clear `GITHUB_TOKEN` before `git push`/`git pull`: `env -u GITHUB_TOKEN git ...`
 - **ALWAYS** run `bun run lint` before committing
 - **ALWAYS** run `cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json` before committing
+- **DO NOT redefine** controller response types inline in SolidJS signals — use exported interfaces instead (e.g., `CplMapping`)
 
 ## CI/CD Pipeline
 
