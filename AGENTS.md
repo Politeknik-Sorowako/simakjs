@@ -326,6 +326,23 @@ import { SafeAny } from '../utils/api';
 
 **Reason:** SolidJS detects type mismatches aggressively inside `<For>` flow components. Inline types with optional/null fields from the backend often cause TS strict mode compilation failures.
 
+### TypeScript Signal Typing & Controller Interfaces
+When creating SolidJS state signals to store data fetched from backend controllers, **always use the exported types/interfaces from the controllers** rather than writing inline object types. 
+
+**Reason:** Backend response shapes can represent specific SQL types differently (e.g., numeric fields returning as `string | null` instead of `number | undefined`). Inline types trigger type mismatch compile errors when setting the signal value.
+
+**Correct:**
+```typescript
+import { cplController, CplMapping } from '../controllers/cplController';
+
+const [mappings, setMappings] = createSignal<CplMapping[]>([]);
+```
+
+**Wrong:**
+```typescript
+const [mappings, setMappings] = createSignal<{ id: number; bobot?: number }[]>([]);
+```
+
 ### Error handling
 
 ```typescript
@@ -625,3 +642,4 @@ utils/           # Shared: api.ts, csv.ts, export.ts
 | Not clearing `GITHUB_TOKEN` for git push | Sandbox auth failure | `env -u GITHUB_TOKEN git ...` |
 | Using `CORS_ORIGIN: *` in production | Security risk | Use specific origins |
 | Deploying via SSH when CI/CD works | Bypasses quality gates | Use CI/CD first |
+| Redefining controller types inline in signals | Causes TS strict compilation failures on API updates | Use exported controller interfaces (e.g., `CplMapping`) |

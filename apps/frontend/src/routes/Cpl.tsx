@@ -7,7 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
-import { cplController, Cpl as ICpl, ImportCplResult } from '../controllers/cplController';
+import { CplMapping, cplController, Cpl as ICpl, ImportCplResult } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
 import { profilLulusanController } from '../controllers/profilLulusanController';
 import { usePagination } from '../hooks/usePagination';
@@ -36,7 +36,7 @@ export default function Cpl() {
   const [mappingProdiId, setMappingProdiId] = createSignal<number>(0);
   const [selectedPlId, setSelectedPlId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
-  const [mappings, setMappings] = createSignal<{ id: number; profilLulusan?: { kode: string }; bobot?: number }[]>([]);
+  const [mappings, setMappings] = createSignal<CplMapping[]>([]);
 
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [importItems, setImportItems] = createSignal<{ kodeProdi: string; kode: string; deskripsi: string }[]>([]);
@@ -490,7 +490,7 @@ export default function Cpl() {
                 </thead>
                 <tbody>
                   <For each={mappings()}>
-                    {(m: { id: number; profilLulusan?: { kode: string }; bobot?: number }) => (
+                    {(m: CplMapping) => (
                       <tr class="border-b border-slate-700/50">
                         <td class="py-2 text-black dark:text-white">{m.profilLulusan?.kode || '-'}</td>
                         <td class="py-2 text-black dark:text-white">{m.bobot ?? '(merata)'}</td>
