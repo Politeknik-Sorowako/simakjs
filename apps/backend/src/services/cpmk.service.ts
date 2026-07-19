@@ -2,6 +2,18 @@ import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
 import { cpmk, kurikulum, kurikulumMataKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
+export interface ImportCpmkItem {
+  kodeMataKuliah?: string;
+  kode: string;
+  deskripsi: string;
+}
+
+export interface ImportCpmkResult {
+  success: number;
+  failed: number;
+  errors: { row: number; kode: string; error: string }[];
+}
+
 export class CpmkService {
   static async getAll(page = 1, limit = 10, search = '', kurikulumId?: number, mataKuliahId?: number) {
     const offset = (page - 1) * limit;
@@ -162,5 +174,100 @@ export class CpmkService {
     });
     const total = cpmkList.reduce((s, c) => s + parseFloat(c.bobotMk || '0'), 0);
     return { total, isValid: Math.abs(total - 100) < 0.01, jumlahCpmk: cpmkList.length };
+  }
+
+  static async import(items: ImportCpmkItem[]): Promise<ImportCpmkResult> {
+    const result: ImportCpmkResult = { success: 0, failed: 0, errors: [] };
+
+    const uniqueKodes = [...new Set(items.map((item) => item.kodeMataKuliah).filter((k): k is string => !!k))];
+    let kodeToId = new Map<string, number>();
+    if (uniqueKodes.length > 0) {
+      const mkList = await db
+        .select({ id: mataKuliah.id, kode: mataKuliah.kode })
+        .from(mataKuliah)
+        .where(inArray(mataKuliah.kode, uniqueKodes));
+      kodeToId = new Map(mkList.map((m) => [m.kode, m.id]));
+    }
+
+    const validItems: { kode: string; deskripsi: string; resolvedMkId: number }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const urutan = i + 1;
+      const kode = item.kode?.trim();
+      const deskripsi = item.deskripsi?.trim();
+
+      let resolvedMkId: number | undefined;
+      if (item.kodeMataKuliah) {
+        const found = kodeToId.get(item.kodeMataKuliah);
+        if (!found) {
+          result.failed++;
+          result.errors.push({
+            row: urutan,
+            kode: kode || '',
+            error: `Mata Kuliah dengan kode '${item.kodeMataKuliah}' tidak ditemukan`,
+          });
+          continue;
+        }
+        resolvedMkId = found;
+      } else {
+        result.failed++;
+        result.errors.push({ row: urutan, kode: kode || '', error: 'kode_mata_kuliah wajib diisi' });
+        continue;
+      }
+
+      if (!kode || !deskripsi) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode: kode || '', error: 'Kode dan deskripsi wajib diisi' });
+        continue;
+      }
+
+      if (kode.length > 50) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode, error: 'Kode maksimal 50 karakter' });
+        continue;
+      }
+
+      const existing = await db.query.cpmk.findFirst({
+        where: and(eq(cpmk.mataKuliahId, resolvedMkId), eq(cpmk.kode, kode)),
+      });
+
+      if (existing) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode, error: 'Kode sudah ada untuk mata kuliah ini' });
+        continue;
+      }
+
+      validItems.push({ kode, deskripsi, resolvedMkId });
+    }
+
+    if (validItems.length > 0) {
+      try {
+        await db.transaction(async (tx) => {
+          await tx.insert(cpmk).values(
+            validItems.map((item) => ({
+              mataKuliahId: item.resolvedMkId,
+              kode: item.kode,
+              deskripsi: item.deskripsi,
+            })),
+          );
+        });
+        result.success = validItems.length;
+      } catch (err: unknown) {
+        result.failed += validItems.length;
+        result.errors.push({
+          row: 0,
+          kode: '',
+          error: 'Gagal menyimpan data ke database',
+        });
+        console.error('CPMK import error:', err);
+      }
+    }
+
+    return result;
+  }
+
+  static getTemplateCsv(): string {
+    return 'kode_mata_kuliah,kode,deskripsi\nTI001,CPMK-01,Mampu menerapkan konsep dasar pemrograman\nTI001,CPMK-02,Mampu menganalisis kebutuhan sistem\nTI002,CPMK-01,Mampu merancang basis data relasional';
   }
 }
