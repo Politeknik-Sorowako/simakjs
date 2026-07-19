@@ -49,10 +49,10 @@ export const profilLulusanController = {
     });
   },
 
-  async import(programStudiId: number, items: { kode: string; deskripsi: string }[]): Promise<ImportResult> {
+  async import(items: { kodeProdi?: string; kode: string; deskripsi: string }[]): Promise<ImportResult> {
     return fetchApi<ImportResult>('/profil-lulusan/import', {
       method: 'POST',
-      body: JSON.stringify({ programStudiId, items }),
+      body: JSON.stringify({ items }),
     });
   },
 

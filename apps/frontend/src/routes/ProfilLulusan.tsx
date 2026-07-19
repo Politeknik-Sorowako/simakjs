@@ -60,8 +60,7 @@ export default function ProfilLulusan() {
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const [showImportModal, setShowImportModal] = createSignal(false);
-  const [importProdiId, setImportProdiId] = createSignal<number>(0);
-  const [importItems, setImportItems] = createSignal<{ kode: string; deskripsi: string }[]>([]);
+  const [importItems, setImportItems] = createSignal<{ kodeProdi: string; kode: string; deskripsi: string }[]>([]);
   const [importResult, setImportResult] = createSignal<ImportResult | null>(null);
   const [importLoading, setImportLoading] = createSignal(false);
 
@@ -130,30 +129,30 @@ export default function ProfilLulusan() {
   }
 
   function openImportModal() {
-    setImportProdiId(prodiFilter() || 0);
     setImportItems([]);
     setImportResult(null);
     setErrorMsg('');
     setShowImportModal(true);
   }
 
-  function parsePlCsv(text: string): { kode: string; deskripsi: string }[] {
+  function parsePlCsv(text: string): { kodeProdi: string; kode: string; deskripsi: string }[] {
     const rows = parseCsv(text);
-    const items: { kode: string; deskripsi: string }[] = [];
+    const items: { kodeProdi: string; kode: string; deskripsi: string }[] = [];
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || row.length < 2) continue;
+      if (!row || row.length < 3) continue;
 
-      if (i === 0 && isHeaderRow(row[0], ['kode', 'code'])) {
+      if (i === 0 && isHeaderRow(row[0], ['kode_prodi', 'kodeprodi'])) {
         continue;
       }
 
-      const kode = row[0] || '';
-      const deskripsi = row.slice(1).join(',') || '';
+      const kodeProdi = row[0] || '';
+      const kode = row[1] || '';
+      const deskripsi = row.slice(2).join(',') || '';
 
       if (kode && deskripsi) {
-        items.push({ kode, deskripsi });
+        items.push({ kodeProdi, kode, deskripsi });
       }
     }
 
@@ -171,7 +170,7 @@ export default function ProfilLulusan() {
       const items = parsePlCsv(text);
       setImportItems(items);
       if (items.length === 0) {
-        setErrorMsg('File CSV tidak valid. Format: kode,deskripsi');
+        setErrorMsg('File CSV tidak valid. Format: kode_prodi,kode,deskripsi');
       } else {
         setErrorMsg('');
       }
@@ -181,10 +180,6 @@ export default function ProfilLulusan() {
   }
 
   async function handleImport() {
-    if (!importProdiId()) {
-      setErrorMsg('Pilih Program Studi terlebih dahulu');
-      return;
-    }
     if (importItems().length === 0) {
       setErrorMsg('Upload file CSV terlebih dahulu');
       return;
@@ -193,7 +188,7 @@ export default function ProfilLulusan() {
     setImportLoading(true);
     setErrorMsg('');
     try {
-      const result = await profilLulusanController.import(importProdiId(), importItems());
+      const result = await profilLulusanController.import(importItems());
       setImportResult(result);
       if (result.success > 0) {
         refetch();
@@ -238,9 +233,6 @@ export default function ProfilLulusan() {
         <div class="flex justify-between items-center">
           <h1 class="text-2xl font-bold text-white">Profil Lulusan</h1>
           <div class="flex gap-2">
-            <Button variant="secondary" onClick={handleDownloadTemplate}>
-              Download Template
-            </Button>
             <Button variant="secondary" onClick={openImportModal}>
               Impor CSV
             </Button>
@@ -400,30 +392,22 @@ export default function ProfilLulusan() {
               <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                 <h4 class="text-blue-300 font-medium mb-2">Format CSV:</h4>
                 <p class="text-slate-300 text-sm mb-2">
-                  Baris pertama (header) akan dilewati jika mengandung kata "kode" atau "code"
+                  Baris pertama (header) akan dilewati jika mengandung kata "kode_prodi"
                 </p>
                 <code class="block bg-slate-900 p-3 rounded text-sm text-green-400">
-                  kode,deskripsi
+                  kode_prodi,kode,deskripsi
                   <br />
-                  PL-01,Mampu mengaplikasikan pengetahuan bidang teknologi informasi
+                  TI,PL-01,Mampu mengaplikasikan pengetahuan bidang teknologi informasi
                   <br />
-                  PL-02,Mampu merancang solusi berbasis teknologi informasi
+                  TI,PL-02,Mampu merancang solusi berbasis teknologi informasi
                   <br />
-                  PL-03,Mampu mengelola proyek teknologi informasi secara profesional
+                  TK,PL-03,Mampu mengelola proyek teknologi informasi secara profesional
                 </code>
               </div>
 
-              <Input
-                type="select"
-                label="Program Studi"
-                value={importProdiId()}
-                onInput={(e) => setImportProdiId(Number(e.currentTarget.value))}
-                isSelect
-                selectOptions={[
-                  { value: '0', label: 'Pilih Program Studi' },
-                  ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
-                ]}
-              />
+              <Button variant="secondary" onClick={handleDownloadTemplate} class="w-full">
+                Download Template CSV
+              </Button>
 
               <div>
                 <label class="block text-sm font-medium text-secondary-200 mb-2">Upload File CSV</label>
@@ -443,6 +427,7 @@ export default function ProfilLulusan() {
                       <thead class="bg-slate-800 sticky top-0">
                         <tr class="text-secondary-400 border-b border-slate-700">
                           <th class="text-left py-2 px-3 w-12">#</th>
+                          <th class="text-left py-2 px-3 w-16">Prodi</th>
                           <th class="text-left py-2 px-3 w-32">Kode</th>
                           <th class="text-left py-2 px-3">Deskripsi</th>
                         </tr>
@@ -452,6 +437,7 @@ export default function ProfilLulusan() {
                           {(item, index) => (
                             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
                               <td class="py-2 px-3 text-secondary-400">{index() + 1}</td>
+                              <td class="py-2 px-3 text-accent-400 font-medium">{item.kodeProdi}</td>
                               <td class="py-2 px-3 text-black dark:text-white font-medium">{item.kode}</td>
                               <td class="py-2 px-3 text-slate-200">{item.deskripsi}</td>
                             </tr>
@@ -470,7 +456,7 @@ export default function ProfilLulusan() {
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  disabled={importLoading() || importItems().length === 0 || !importProdiId()}
+                  disabled={importLoading() || importItems().length === 0}
                 >
                   {importLoading() ? 'Mengimpor...' : 'Impor'}
                 </Button>

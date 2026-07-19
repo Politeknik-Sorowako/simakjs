@@ -63,10 +63,13 @@ export class CplController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const { programStudiId, items } = body as { programStudiId: number; items: { kode: string; deskripsi: string }[] };
-    if (!programStudiId || !items || !Array.isArray(items) || items.length === 0) {
+    const { programStudiId, items } = body as {
+      programStudiId?: number;
+      items: { kodeProdi?: string; kode: string; deskripsi: string }[];
+    };
+    if (!items || !Array.isArray(items) || items.length === 0) {
       set.status = 400;
-      return { error: 'Program studi dan data CPL harus diisi' };
+      return { error: 'Data CPL harus diisi' };
     }
     const result = await CplService.import(programStudiId, items);
     set.status = 200;

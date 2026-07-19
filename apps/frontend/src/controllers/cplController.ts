@@ -77,10 +77,10 @@ export const cplController = {
     });
   },
 
-  async import(programStudiId: number, items: { kode: string; deskripsi: string }[]): Promise<ImportCplResult> {
+  async import(items: { kodeProdi?: string; kode: string; deskripsi: string }[]): Promise<ImportCplResult> {
     return fetchApi<ImportCplResult>('/cpl/import', {
       method: 'POST',
-      body: JSON.stringify({ programStudiId, items }),
+      body: JSON.stringify({ items }),
     });
   },
 
