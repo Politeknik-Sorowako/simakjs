@@ -348,6 +348,11 @@ export default function MataKuliah() {
           when={!matkuls.loading}
           fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
         >
+          <Show when={matkuls.error}>
+            <div class="p-4 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+              Gagal memuat data: {String(matkuls.error)}
+            </div>
+          </Show>
           <Table
             headers={[
               <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>

@@ -36,7 +36,7 @@ const mataKuliahResponseFields = {
   sksSimulasi: t.Optional(t.Union([t.Integer(), t.Null()])),
   idPddikti: t.Union([t.String(), t.Null()], { default: null }),
   isSynced: t.Boolean({ default: false }),
-  lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+  lastSyncAt: t.Any(),
   createdAt: t.Any(),
   updatedAt: t.Any(),
 };

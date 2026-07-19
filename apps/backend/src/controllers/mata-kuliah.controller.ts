@@ -4,6 +4,7 @@ import { AuthContext, PaginationQuery } from '../utils/types';
 export class MataKuliahController {
   static async getAll({
     query,
+    set,
   }: AuthContext<
     any,
     PaginationQuery & {
@@ -14,24 +15,29 @@ export class MataKuliahController {
       sortOrder?: string;
     }
   >): Promise<any> {
-    const page = query?.page ? parseInt(String(query.page)) : 1;
-    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
-    const search = query?.search || '';
-    const programStudiId = query?.programStudiId ? Number(query.programStudiId) : undefined;
-    const kurikulumId = query?.kurikulumId ? Number(query.kurikulumId) : undefined;
-    const semester = query?.semester !== undefined ? Number(query.semester) : undefined;
-    const sortBy = query?.sortBy || 'nama';
-    const sortOrder = (query?.sortOrder as 'asc' | 'desc') || 'asc';
-    return await MataKuliahService.getAll(
-      page,
-      limit,
-      search,
-      programStudiId,
-      kurikulumId,
-      semester,
-      sortBy,
-      sortOrder,
-    );
+    try {
+      const page = query?.page ? parseInt(String(query.page)) : 1;
+      const limit = query?.limit ? parseInt(String(query.limit)) : 10;
+      const search = query?.search || '';
+      const programStudiId = query?.programStudiId ? Number(query.programStudiId) : undefined;
+      const kurikulumId = query?.kurikulumId ? Number(query.kurikulumId) : undefined;
+      const semester = query?.semester !== undefined ? Number(query.semester) : undefined;
+      const sortBy = query?.sortBy || 'nama';
+      const sortOrder = (query?.sortOrder as 'asc' | 'desc') || 'asc';
+      return await MataKuliahService.getAll(
+        page,
+        limit,
+        search,
+        programStudiId,
+        kurikulumId,
+        semester,
+        sortBy,
+        sortOrder,
+      );
+    } catch (e: any) {
+      set.status = 500;
+      return { error: e.message || 'Gagal mengambil data mata kuliah' };
+    }
   }
 
   static async getById({ params, set }: AuthContext): Promise<any> {
