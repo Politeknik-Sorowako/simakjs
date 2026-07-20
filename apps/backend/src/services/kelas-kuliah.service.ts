@@ -140,6 +140,17 @@ export class KelasKuliahService {
       nipToDosen = new Map(dosenList.map((d) => [d.nip, { id: d.id, nama: d.nama }]));
     }
 
+    const uniqueMkIds = Array.from(mkKodeToId.values());
+    const uniqueNamaKelas = [...new Set(items.map((i) => i.namaKelas?.trim()).filter((n): n is string => !!n))];
+    let existingKeySet = new Set<string>();
+    if (uniqueMkIds.length > 0 && uniqueNamaKelas.length > 0) {
+      const existingKelas = await db
+        .select({ mataKuliahId: kelasKuliah.mataKuliahId, namaKelas: kelasKuliah.namaKelas })
+        .from(kelasKuliah)
+        .where(and(inArray(kelasKuliah.mataKuliahId, uniqueMkIds), inArray(kelasKuliah.namaKelas, uniqueNamaKelas)));
+      existingKeySet = new Set(existingKelas.map((k) => `${k.mataKuliahId}:${k.namaKelas}`));
+    }
+
     const validKelas: { mataKuliahId: number; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
     const dosenToPlot: {
       nama: string;
@@ -221,22 +232,7 @@ export class KelasKuliahService {
         });
       }
 
-      const existing = await db.query.kelasKuliah.findFirst({
-        where: and(eq(kelasKuliah.mataKuliahId, mkId), eq(kelasKuliah.namaKelas, namaKelas)),
-      });
-
-      if (existing) {
-        const dosenInfo = item.nipDosen?.trim() ? nipToDosen.get(item.nipDosen.trim()) : undefined;
-        if (dosenInfo) {
-          dosenToPlot.push({
-            nama: dosenInfo.nama,
-            nip: item.nipDosen!.trim(),
-            mataKuliahId: mkId,
-            namaKelas,
-            periodeId: item.periodeId.trim(),
-            sksBebanMengajar: item.sksBebanMengajar ?? 0,
-          });
-        }
+      if (existingKeySet.has(`${mkId}:${namaKelas}`)) {
         continue;
       }
 
