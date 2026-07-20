@@ -1,4 +1,3 @@
-import { CsvImportService } from '../services/csv-import.service';
 import { KelasKuliahService } from '../services/kelas-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
@@ -69,23 +68,35 @@ export class KelasKuliahController {
     return { message: 'Kelas Kuliah berhasil dihapus' };
   }
 
-  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
+  static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
-
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const mode = (formData.get('mode') as string) || 'skip';
-    if (!file) {
+    const { items } = body as {
+      items: {
+        kodeMataKuliah?: string;
+        periodeId: string;
+        namaKelas: string;
+        nipDosen?: string;
+        sksBebanMengajar?: number;
+        idPddikti?: string;
+      }[];
+    };
+    if (!items || !Array.isArray(items) || items.length === 0) {
       set.status = 400;
-      return { error: 'File CSV tidak ditemukan.' };
+      return { error: 'Data harus diisi' };
     }
-
-    const text = await file.text();
-    const result = await CsvImportService.importKelasKuliahWithDosen(text, mode);
+    const result = await KelasKuliahService.import(items);
+    set.status = 200;
     return result;
+  }
+
+  static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
+    await getCurrentUser();
+    set.headers['content-type'] = 'text/csv; charset=utf-8';
+    set.headers['content-disposition'] = 'attachment; filename=template-kelas-kuliah.csv';
+    return KelasKuliahService.getTemplateCsv();
   }
 }

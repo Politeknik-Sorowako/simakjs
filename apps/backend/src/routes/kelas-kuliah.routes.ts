@@ -7,6 +7,7 @@ import {
   getKelasByIdSchema,
   getKelasByMkSchema,
   getKelasSchema,
+  getTemplateKelasSchema,
   importKelasSchema,
   updateKelasSchema,
 } from '../schemas/kelas-kuliah.schema';
@@ -15,7 +16,6 @@ export const kelasKuliahRoutes = new Elysia({ prefix: '/kelas-kuliah' })
   .use(authMiddleware)
   .get('/', KelasKuliahController.getAll, getKelasSchema)
   .post('/', KelasKuliahController.create, createKelasSchema)
-  .post('/import', KelasKuliahController.importCsv, importKelasSchema)
   .get('/by-mk', KelasKuliahController.getByMk, getKelasByMkSchema)
   .post('/import', KelasKuliahController.import, importKelasSchema)
   .get('/template/csv', KelasKuliahController.getTemplate, getTemplateKelasSchema)

@@ -81,7 +81,6 @@ export default function KelasKuliah() {
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
-  const [showImportModal, setShowImportModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
   const [matkulId, setMatkulId] = createSignal<number>(0);
   const [periodeId, setPeriodeId] = createSignal('');
@@ -198,7 +197,8 @@ export default function KelasKuliah() {
   const [importLoading, setImportLoading] = createSignal(false);
 
   const handleDownloadTemplate = () => {
-    const csv = 'kode_mata_kuliah,periode_id,nama_kelas,id_pddikti\nTI001,20241,4A,\nTI001,20241,4B,\nTI002,20241,1A,';
+    const csv =
+      'kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI001,20241,1A,198501012010011001,3,\nTI001,20241,1A,198705152015012002,4,\nTI002,20241,2B,198501012010011001,6,';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -227,7 +227,14 @@ export default function KelasKuliah() {
         toast.showToast('File CSV kosong atau format tidak sesuai', 'error');
         return;
       }
-      const items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
+      const items: {
+        kodeMataKuliah?: string;
+        periodeId: string;
+        namaKelas: string;
+        nipDosen?: string;
+        sksBebanMengajar?: number;
+        idPddikti?: string;
+      }[] = [];
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         if (!row || row.length < 3) continue;
@@ -235,9 +242,11 @@ export default function KelasKuliah() {
         const kodeMataKuliah = row[0]?.trim() || undefined;
         const periodeId = row[1]?.trim() || '';
         const namaKelas = row[2]?.trim() || '';
-        const idPddikti = row[3]?.trim() || undefined;
+        const nipDosen = row[3]?.trim() || undefined;
+        const sksBebanMengajar = row[4]?.trim() ? Number(row[4]?.trim()) : undefined;
+        const idPddikti = row[5]?.trim() || undefined;
         if (periodeId && namaKelas) {
-          items.push({ kodeMataKuliah, periodeId, namaKelas, idPddikti });
+          items.push({ kodeMataKuliah, periodeId, namaKelas, nipDosen, sksBebanMengajar, idPddikti });
         }
       }
       if (items.length === 0) {

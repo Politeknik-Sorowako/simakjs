@@ -224,14 +224,6 @@ export const getKelasByMkSchema = {
   }),
 };
 
-export const importKelasSchema = {
-  detail: {
-    tags: ['Kelas Kuliah'],
-    summary: 'Impor Kelas Kuliah + Dosen Pengajar dari CSV',
-    description: 'Mengimpor data kelas kuliah dan plotting dosen pengajar secara massal dari file CSV.',
-  },
-};
-
 export const deleteKelasSchema = {
   detail: {
     tags: ['Kelas Kuliah'],
@@ -260,6 +252,8 @@ export const importKelasBody = t.Object({
       kodeMataKuliah: t.Optional(t.String()),
       periodeId: t.String(),
       namaKelas: t.String(),
+      nipDosen: t.Optional(t.String()),
+      sksBebanMengajar: t.Optional(t.Number()),
       idPddikti: t.Optional(t.String()),
     }),
   ),
