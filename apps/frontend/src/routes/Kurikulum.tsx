@@ -163,7 +163,11 @@ export default function Kurikulum() {
 
   const [allMatkuls] = createResource(
     () => manageKurikulumId(),
-    () => mataKuliahController.getAll('', 1, 500),
+    async (id) => {
+      if (!id) return { data: [], meta: { total: 0, page: 1, limit: 500, totalPages: 1 } };
+      const detail = await kurikulumController.getById(id);
+      return mataKuliahController.getAll('', 1, 500, undefined, undefined, undefined, undefined, detail.programStudiId);
+    },
   );
 
   const openManageModal = async (id: number) => {

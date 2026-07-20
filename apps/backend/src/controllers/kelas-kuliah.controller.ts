@@ -75,7 +75,14 @@ export class KelasKuliahController {
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
     const { items } = body as {
-      items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[];
+      items: {
+        kodeMataKuliah?: string;
+        periodeId: string;
+        namaKelas: string;
+        nipDosen?: string;
+        sksBebanMengajar?: number;
+        idPddikti?: string;
+      }[];
     };
     if (!items || !Array.isArray(items) || items.length === 0) {
       set.status = 400;

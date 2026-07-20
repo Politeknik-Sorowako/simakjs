@@ -1,5 +1,5 @@
 import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
-import { kelasKuliah, mataKuliah } from '../models/schema';
+import { dosen, dosenPengajarKelas, kelasKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateKelasDto {
@@ -13,6 +13,8 @@ export interface ImportKelasItem {
   kodeMataKuliah?: string;
   periodeId: string;
   namaKelas: string;
+  nipDosen?: string;
+  sksBebanMengajar?: number;
   idPddikti?: string;
 }
 
@@ -128,7 +130,25 @@ export class KelasKuliahService {
       mkKodeToId = new Map(mkList.map((m) => [m.kode, m.id]));
     }
 
-    const validItems: { mataKuliahId: number; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
+    const uniqueNips = [...new Set(items.map((item) => item.nipDosen?.trim()).filter((n): n is string => !!n))];
+    let nipToDosen = new Map<string, { id: number; nama: string }>();
+    if (uniqueNips.length > 0) {
+      const dosenList = await db
+        .select({ id: dosen.id, nip: dosen.nip, nama: dosen.nama })
+        .from(dosen)
+        .where(inArray(dosen.nip, uniqueNips));
+      nipToDosen = new Map(dosenList.map((d) => [d.nip, { id: d.id, nama: d.nama }]));
+    }
+
+    const validKelas: { mataKuliahId: number; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
+    const dosenToPlot: {
+      nama: string;
+      nip: string;
+      mataKuliahId: number;
+      namaKelas: string;
+      periodeId: string;
+      sksBebanMengajar: number;
+    }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
@@ -170,21 +190,57 @@ export class KelasKuliahService {
         continue;
       }
 
+      if (item.nipDosen?.trim()) {
+        const dosenInfo = nipToDosen.get(item.nipDosen.trim());
+        if (!dosenInfo) {
+          result.failed++;
+          result.errors.push({
+            row: urutan,
+            namaKelas,
+            error: `Dosen dengan NIP '${item.nipDosen}' tidak ditemukan`,
+          });
+          continue;
+        }
+        const sks = item.sksBebanMengajar ?? 0;
+        if (sks < 0 || sks > 24) {
+          result.failed++;
+          result.errors.push({
+            row: urutan,
+            namaKelas,
+            error: `SKS Beban Mengajar harus antara 0-24 (diterima: ${sks})`,
+          });
+          continue;
+        }
+        dosenToPlot.push({
+          nama: dosenInfo.nama,
+          nip: item.nipDosen.trim(),
+          mataKuliahId: mkId,
+          namaKelas,
+          periodeId: item.periodeId.trim(),
+          sksBebanMengajar: sks,
+        });
+      }
+
       const existing = await db.query.kelasKuliah.findFirst({
         where: and(eq(kelasKuliah.mataKuliahId, mkId), eq(kelasKuliah.namaKelas, namaKelas)),
       });
 
       if (existing) {
-        result.failed++;
-        result.errors.push({
-          row: urutan,
-          namaKelas,
-          error: `Kelas '${namaKelas}' sudah ada untuk mata kuliah ini`,
-        });
+        const dosenInfo = item.nipDosen?.trim() ? nipToDosen.get(item.nipDosen.trim()) : undefined;
+        if (dosenInfo) {
+          dosenToPlot.push({
+            nama: dosenInfo.nama,
+            nip: item.nipDosen!.trim(),
+            mataKuliahId: mkId,
+            namaKelas,
+            periodeId: item.periodeId.trim(),
+            sksBebanMengajar: item.sksBebanMengajar ?? 0,
+          });
+        }
         continue;
       }
 
-      validItems.push({
+      validKelas.push({
         mataKuliahId: mkId,
         periodeId: item.periodeId.trim(),
         namaKelas,
@@ -192,16 +248,76 @@ export class KelasKuliahService {
       });
     }
 
-    if (validItems.length > 0) {
+    if (validKelas.length > 0) {
       try {
-        await db.transaction(async (tx) => {
-          await tx.insert(kelasKuliah).values(validItems);
-        });
-        result.success = validItems.length;
+        const inserted = await db.insert(kelasKuliah).values(validKelas).returning({ id: kelasKuliah.id });
+        result.success = inserted.length;
+
+        for (const plot of dosenToPlot) {
+          let kelasId: number | undefined;
+          const kelasIdx = validKelas.findIndex(
+            (v) => v.mataKuliahId === plot.mataKuliahId && v.namaKelas === plot.namaKelas,
+          );
+          if (kelasIdx !== -1 && inserted[kelasIdx]) {
+            kelasId = inserted[kelasIdx].id;
+          } else {
+            const existing = await db.query.kelasKuliah.findFirst({
+              where: and(eq(kelasKuliah.mataKuliahId, plot.mataKuliahId), eq(kelasKuliah.namaKelas, plot.namaKelas)),
+            });
+            kelasId = existing?.id;
+          }
+
+          if (!kelasId) continue;
+
+          const existingMapping = await db.query.dosenPengajarKelas.findFirst({
+            where: and(
+              eq(dosenPengajarKelas.kelasKuliahId, kelasId),
+              eq(dosenPengajarKelas.dosenId, nipToDosen.get(plot.nip)?.id ?? 0),
+            ),
+          });
+
+          if (!existingMapping) {
+            await db.insert(dosenPengajarKelas).values({
+              kelasKuliahId: kelasId,
+              dosenId: nipToDosen.get(plot.nip)!.id,
+              sksBebanMengajar: plot.sksBebanMengajar,
+            });
+          }
+        }
       } catch (err: unknown) {
-        result.failed += validItems.length;
+        result.failed += validKelas.length;
         result.errors.push({ row: 0, namaKelas: '', error: 'Gagal menyimpan data ke database' });
         console.error('Kelas Kuliah import error:', err);
+      }
+    }
+
+    for (const plot of dosenToPlot) {
+      const kelasStillMissing = !validKelas.some(
+        (v) => v.mataKuliahId === plot.mataKuliahId && v.namaKelas === plot.namaKelas,
+      );
+      if (kelasStillMissing) {
+        const existing = await db.query.kelasKuliah.findFirst({
+          where: and(eq(kelasKuliah.mataKuliahId, plot.mataKuliahId), eq(kelasKuliah.namaKelas, plot.namaKelas)),
+        });
+        if (existing) {
+          const dosenId = nipToDosen.get(plot.nip)?.id;
+          if (dosenId) {
+            const existingMapping = await db.query.dosenPengajarKelas.findFirst({
+              where: and(eq(dosenPengajarKelas.kelasKuliahId, existing.id), eq(dosenPengajarKelas.dosenId, dosenId)),
+            });
+            if (!existingMapping) {
+              try {
+                await db.insert(dosenPengajarKelas).values({
+                  kelasKuliahId: existing.id,
+                  dosenId,
+                  sksBebanMengajar: plot.sksBebanMengajar,
+                });
+              } catch {
+                // skip duplicate
+              }
+            }
+          }
+        }
       }
     }
 
@@ -209,6 +325,6 @@ export class KelasKuliahService {
   }
 
   static getTemplateCsv(): string {
-    return 'kode_mata_kuliah,periode_id,nama_kelas,id_pddikti\nTI001,20241,4A,\nTI001,20241,4B,\nTI002,20241,1A,';
+    return 'kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI001,20241,1A,198501012010011001,3,\nTI001,20241,1A,198705152015012002,4,\nTI002,20241,2B,198501012010011001,6,';
   }
 }

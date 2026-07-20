@@ -252,6 +252,8 @@ export const importKelasBody = t.Object({
       kodeMataKuliah: t.Optional(t.String()),
       periodeId: t.String(),
       namaKelas: t.String(),
+      nipDosen: t.Optional(t.String()),
+      sksBebanMengajar: t.Optional(t.Number()),
       idPddikti: t.Optional(t.String()),
     }),
   ),

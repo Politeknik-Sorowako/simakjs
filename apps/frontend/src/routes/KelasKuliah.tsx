@@ -1,7 +1,8 @@
 import { useNavigate } from '@solidjs/router';
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
@@ -42,9 +43,21 @@ export default function KelasKuliah() {
   );
 
   // Fetch Dropdown Data
-  const [matkuls] = createResource(() => mataKuliahController.getAll(undefined, 1, 100));
+  const [matkuls] = createResource(
+    () => workspace.selectedProdiId(),
+    (prodiId) =>
+      mataKuliahController.getAll(undefined, 1, 100, undefined, undefined, undefined, undefined, prodiId || undefined),
+  );
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
   const [dosens] = createResource(() => dosenController.getAll(undefined, 1, 100));
+
+  // Reset matkulId when prodi changes and matkuls refetch
+  createEffect(() => {
+    const data = matkuls()?.data;
+    if (data && data.length > 0 && !data.find((m) => m.id === matkulId())) {
+      setMatkulId(data[0].id);
+    }
+  });
 
   // Sorting
   const [sortBy, setSortBy] = createSignal('nama');
@@ -184,7 +197,8 @@ export default function KelasKuliah() {
   const [importLoading, setImportLoading] = createSignal(false);
 
   const handleDownloadTemplate = () => {
-    const csv = 'kode_mata_kuliah,periode_id,nama_kelas,id_pddikti\nTI001,20241,4A,\nTI001,20241,4B,\nTI002,20241,1A,';
+    const csv =
+      'kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI001,20241,1A,198501012010011001,3,\nTI001,20241,1A,198705152015012002,4,\nTI002,20241,2B,198501012010011001,6,';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -213,7 +227,14 @@ export default function KelasKuliah() {
         toast.showToast('File CSV kosong atau format tidak sesuai', 'error');
         return;
       }
-      const items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
+      const items: {
+        kodeMataKuliah?: string;
+        periodeId: string;
+        namaKelas: string;
+        nipDosen?: string;
+        sksBebanMengajar?: number;
+        idPddikti?: string;
+      }[] = [];
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         if (!row || row.length < 3) continue;
@@ -221,9 +242,11 @@ export default function KelasKuliah() {
         const kodeMataKuliah = row[0]?.trim() || undefined;
         const periodeId = row[1]?.trim() || '';
         const namaKelas = row[2]?.trim() || '';
-        const idPddikti = row[3]?.trim() || undefined;
+        const nipDosen = row[3]?.trim() || undefined;
+        const sksBebanMengajar = row[4]?.trim() ? Number(row[4]?.trim()) : undefined;
+        const idPddikti = row[5]?.trim() || undefined;
         if (periodeId && namaKelas) {
-          items.push({ kodeMataKuliah, periodeId, namaKelas, idPddikti });
+          items.push({ kodeMataKuliah, periodeId, namaKelas, nipDosen, sksBebanMengajar, idPddikti });
         }
       }
       if (items.length === 0) {
@@ -254,15 +277,8 @@ export default function KelasKuliah() {
             </p>
           </div>
           <div class="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setImportResult(null);
-                setImportFile(null);
-                setShowImportModal(true);
-              }}
-            >
-              Import CSV
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor CSV
             </Button>
             <Button onClick={openAddModal}>+ Tambah Kelas</Button>
           </div>
@@ -450,85 +466,22 @@ export default function KelasKuliah() {
           </form>
         </Modal>
 
-        <Modal
+        {/* Modal Import CSV */}
+        <ImportCsvModal
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
-          title="Import Kelas Kuliah dari CSV"
-          maxWidth="lg"
-        >
-          <div class="flex flex-col gap-4">
-            <Show when={importResult()}>
-              <div class="flex flex-col gap-3">
-                <div
-                  class={`p-4 rounded-lg border ${
-                    importResult()!.failed === 0
-                      ? 'bg-emerald-500/10 border-emerald-500/30'
-                      : 'bg-amber-500/10 border-amber-500/30'
-                  }`}
-                >
-                  <p class="font-medium text-black dark:text-white">
-                    {importResult()!.failed === 0
-                      ? `Semua ${importResult()!.success} data berhasil diimport!`
-                      : `${importResult()!.success} berhasil, ${importResult()!.failed} gagal`}
-                  </p>
-                  <Show when={importResult()!.errors.length > 0}>
-                    <div class="mt-3 space-y-1 max-h-48 overflow-y-auto">
-                      <For each={importResult()!.errors}>
-                        {(err) => (
-                          <p class="text-sm text-red-600 dark:text-red-300">
-                            Baris {err.row}: {err.namaKelas ? `(${err.namaKelas}) ` : ''}
-                            {err.error}
-                          </p>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
-                </div>
-                <div class="flex justify-end">
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportResult(null);
-                    }}
-                  >
-                    Tutup
-                  </Button>
-                </div>
-              </div>
-            </Show>
-
-            <Show when={!importResult()}>
-              <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <p class="text-sm text-black dark:text-blue-300">
-                  Format CSV: <code>kode_mata_kuliah,periode_id,nama_kelas,id_pddikti</code>
-                </p>
-                <p class="text-xs text-black dark:text-secondary-400 mt-1">
-                  Kode Mata Kuliah dan Periode harus terdaftar di sistem. ID PDDikti bersifat opsional.
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
-                Download Template CSV
-              </Button>
-              <div>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleImportFileChange}
-                  class="block w-full text-sm text-secondary-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-accent-600 file:text-white hover:file:bg-accent-500 file:cursor-pointer"
-                />
-              </div>
-              <div class="flex justify-end gap-3 pt-2">
-                <Button variant="secondary" onClick={() => setShowImportModal(false)}>
-                  Batal
-                </Button>
-                <Button variant="primary" onClick={handleImport} disabled={importLoading()}>
-                  {importLoading() ? 'Mengimport...' : 'Import'}
-                </Button>
-              </div>
-            </Show>
-          </div>
-        </Modal>
+          importUrl="/kelas-kuliah/import"
+          templateHeaders={[
+            'kode_mata_kuliah',
+            'periode_id',
+            'nama_kelas',
+            'nip_dosen',
+            'sks_beban_mengajar',
+            'id_pddikti',
+          ]}
+          title="Kelas Kuliah + Dosen Pengajar"
+          onSuccess={() => refetch()}
+        />
       </div>
     </MainLayout>
   );

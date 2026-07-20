@@ -1,5 +1,14 @@
 import { and, eq } from 'drizzle-orm';
-import { dosen, kelasKuliah, krs, mahasiswa, mataKuliah, programStudi, users } from '../models/schema';
+import {
+  dosen,
+  dosenPengajarKelas,
+  kelasKuliah,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  programStudi,
+  users,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export interface ImportResult {
