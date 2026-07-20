@@ -1,7 +1,8 @@
 import { useNavigate } from '@solidjs/router';
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
@@ -41,9 +42,21 @@ export default function KelasKuliah() {
   );
 
   // Fetch Dropdown Data
-  const [matkuls] = createResource(() => mataKuliahController.getAll(undefined, 1, 100));
+  const [matkuls] = createResource(
+    () => workspace.selectedProdiId(),
+    (prodiId) =>
+      mataKuliahController.getAll(undefined, 1, 100, undefined, undefined, undefined, undefined, prodiId || undefined),
+  );
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
   const [dosens] = createResource(() => dosenController.getAll(undefined, 1, 100));
+
+  // Reset matkulId when prodi changes and matkuls refetch
+  createEffect(() => {
+    const data = matkuls()?.data;
+    if (data && data.length > 0 && !data.find((m) => m.id === matkulId())) {
+      setMatkulId(data[0].id);
+    }
+  });
 
   // Sorting
   const [sortBy, setSortBy] = createSignal('nama');
@@ -67,6 +80,7 @@ export default function KelasKuliah() {
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
+  const [showImportModal, setShowImportModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
   const [matkulId, setMatkulId] = createSignal<number>(0);
   const [periodeId, setPeriodeId] = createSignal('');
@@ -183,7 +197,12 @@ export default function KelasKuliah() {
               Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.
             </p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Kelas</Button>
+          <div class="flex gap-2">
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor CSV
+            </Button>
+            <Button onClick={openAddModal}>+ Tambah Kelas</Button>
+          </div>
         </div>
 
         <div class="max-w-xs">
@@ -367,6 +386,23 @@ export default function KelasKuliah() {
             </div>
           </form>
         </Modal>
+
+        {/* Modal Import CSV */}
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          importUrl="/kelas-kuliah/import"
+          templateHeaders={[
+            'kode_mata_kuliah',
+            'periode_id',
+            'nama_kelas',
+            'nip_dosen',
+            'sks_beban_mengajar',
+            'id_pddikti',
+          ]}
+          title="Kelas Kuliah + Dosen Pengajar"
+          onSuccess={() => refetch()}
+        />
       </div>
     </MainLayout>
   );
