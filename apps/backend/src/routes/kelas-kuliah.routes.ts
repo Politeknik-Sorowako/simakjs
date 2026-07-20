@@ -17,6 +17,8 @@ export const kelasKuliahRoutes = new Elysia({ prefix: '/kelas-kuliah' })
   .post('/', KelasKuliahController.create, createKelasSchema)
   .post('/import', KelasKuliahController.importCsv, importKelasSchema)
   .get('/by-mk', KelasKuliahController.getByMk, getKelasByMkSchema)
+  .post('/import', KelasKuliahController.import, importKelasSchema)
+  .get('/template/csv', KelasKuliahController.getTemplate, getTemplateKelasSchema)
   .get('/:id', KelasKuliahController.getById, getKelasByIdSchema)
   .put('/:id', KelasKuliahController.update, updateKelasSchema)
   .delete('/:id', KelasKuliahController.delete, deleteKelasSchema);

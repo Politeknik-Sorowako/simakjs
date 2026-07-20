@@ -253,3 +253,45 @@ export const deleteKelasSchema = {
     }),
   },
 };
+
+export const importKelasBody = t.Object({
+  items: t.Array(
+    t.Object({
+      kodeMataKuliah: t.Optional(t.String()),
+      periodeId: t.String(),
+      namaKelas: t.String(),
+      idPddikti: t.Optional(t.String()),
+    }),
+  ),
+});
+
+export const importKelasSchema = {
+  detail: {
+    tags: ['Kelas Kuliah'],
+    summary: 'Import Kelas Kuliah',
+    description: 'Import Kelas Kuliah dari CSV.',
+  },
+  body: importKelasBody,
+  response: {
+    200: t.Object({
+      success: t.Integer(),
+      failed: t.Integer(),
+      errors: t.Array(
+        t.Object({
+          row: t.Integer(),
+          namaKelas: t.String(),
+          error: t.String(),
+        }),
+      ),
+    }),
+    400: t.Object({ error: t.String() }),
+  },
+};
+
+export const getTemplateKelasSchema = {
+  detail: {
+    tags: ['Kelas Kuliah'],
+    summary: 'Download Template CSV Kelas Kuliah',
+    description: 'Download template CSV untuk import Kelas Kuliah.',
+  },
+};

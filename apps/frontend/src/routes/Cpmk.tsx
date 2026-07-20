@@ -7,7 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
-import { cplController } from '../controllers/cplController';
+import { Cpl, cplController } from '../controllers/cplController';
 import { cpmkController, Cpmk as ICpmk } from '../controllers/cpmkController';
 import { CpmkCplMapping, cpmkCplMappingController } from '../controllers/cpmkCplMappingController';
 import { kurikulumController } from '../controllers/kurikulumController';
@@ -15,6 +15,7 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
 import { SubCpmk, subCpmkController } from '../controllers/subCpmkController';
 import { usePagination } from '../hooks/usePagination';
+import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpmk() {
   const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
@@ -257,14 +258,95 @@ export default function Cpmk() {
     }
   };
 
+  const [showImportModal, setShowImportModal] = createSignal(false);
+  const [importFile, setImportFile] = createSignal<File | null>(null);
+  const [importResult, setImportResult] = createSignal<{
+    success: number;
+    failed: number;
+    errors: { row: number; kode: string; error: string }[];
+  } | null>(null);
+  const [importLoading, setImportLoading] = createSignal(false);
+
+  const handleDownloadTemplate = () => {
+    const csv =
+      'kode_mata_kuliah,kode,deskripsi\nTI001,CPMK-01,Mampu menerapkan konsep dasar pemrograman\nTI001,CPMK-02,Mampu menganalisis kebutuhan sistem\nTI002,CPMK-01,Mampu merancang basis data relasional';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template-cpmk.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFileChange = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    setImportFile(input.files?.[0] || null);
+  };
+
+  const handleImport = async () => {
+    if (!importFile()) {
+      alert('Pilih file CSV terlebih dahulu');
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const text = await importFile()!.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) {
+        setImportLoading(false);
+        alert('File CSV kosong atau format tidak sesuai');
+        return;
+      }
+      const items: { kodeMataKuliah?: string; kode: string; deskripsi: string }[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length < 3) continue;
+        if (i === 0 && isHeaderRow(row[0], ['kode_mata_kuliah', 'kode_matakuliah'])) continue;
+        const kodeMataKuliah = row[0]?.trim() || undefined;
+        const kode = row[1]?.trim() || '';
+        const deskripsi = row[2]?.trim() || '';
+        if (kode && deskripsi) {
+          items.push({ kodeMataKuliah, kode, deskripsi });
+        }
+      }
+      if (items.length === 0) {
+        setImportLoading(false);
+        alert('Tidak ada data valid untuk diimport');
+        return;
+      }
+      const result = await cpmkController.import(items);
+      setImportResult(result);
+      if (result.failed === 0) {
+        refetch();
+      }
+    } catch (err: unknown) {
+      alert((err instanceof Error ? (err as Error).message : null) || 'Gagal import');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div class="space-y-6">
         <div class="flex justify-between items-center">
           <h1 class="text-2xl font-bold text-white">Capaian Pembelajaran Mata Kuliah (CPMK)</h1>
-          <Button variant="primary" onClick={openAddModal}>
-            Tambah CPMK
-          </Button>
+          <div class="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setImportResult(null);
+                setImportFile(null);
+                setShowImportModal(true);
+              }}
+            >
+              Import CSV
+            </Button>
+            <Button variant="primary" onClick={openAddModal}>
+              Tambah CPMK
+            </Button>
+          </div>
         </div>
 
         <div class="flex flex-wrap gap-4 items-end">
@@ -635,6 +717,86 @@ export default function Cpmk() {
                 </table>
               </Show>
             </div>
+          </div>
+        </Modal>
+
+        <Modal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          title="Import CPMK dari CSV"
+          maxWidth="lg"
+        >
+          <div class="space-y-4">
+            <Show when={importResult()}>
+              <div class="space-y-3">
+                <div
+                  class={`p-4 rounded-lg border ${
+                    importResult()!.failed === 0
+                      ? 'bg-emerald-500/10 border-emerald-500/30'
+                      : 'bg-amber-500/10 border-amber-500/30'
+                  }`}
+                >
+                  <p class="font-medium text-black dark:text-white">
+                    {importResult()!.failed === 0
+                      ? `Semua ${importResult()!.success} data berhasil diimport!`
+                      : `${importResult()!.success} berhasil, ${importResult()!.failed} gagal`}
+                  </p>
+                  <Show when={importResult()!.errors.length > 0}>
+                    <div class="mt-3 space-y-1 max-h-48 overflow-y-auto">
+                      <For each={importResult()!.errors}>
+                        {(err) => (
+                          <p class="text-sm text-red-600 dark:text-red-300">
+                            Baris {err.row}: {err.kode ? `(${err.kode}) ` : ''}
+                            {err.error}
+                          </p>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
+                </div>
+                <div class="flex justify-end">
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportResult(null);
+                    }}
+                  >
+                    Tutup
+                  </Button>
+                </div>
+              </div>
+            </Show>
+
+            <Show when={!importResult()}>
+              <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <p class="text-sm text-black dark:text-blue-300">
+                  Format CSV: <code>kode_mata_kuliah,kode,deskripsi</code>
+                </p>
+                <p class="text-xs text-black dark:text-secondary-400 mt-1">
+                  Kode Mata Kuliah harus terdaftar di sistem. Kode CPMK harus unik per Mata Kuliah.
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
+                Download Template CSV
+              </Button>
+              <div>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleImportFileChange}
+                  class="block w-full text-sm text-secondary-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-accent-600 file:text-white hover:file:bg-accent-500 file:cursor-pointer"
+                />
+              </div>
+              <div class="flex justify-end gap-3 pt-2">
+                <Button variant="secondary" onClick={() => setShowImportModal(false)}>
+                  Batal
+                </Button>
+                <Button variant="primary" onClick={handleImport} disabled={importLoading()}>
+                  {importLoading() ? 'Mengimport...' : 'Import'}
+                </Button>
+              </div>
+            </Show>
           </div>
         </Modal>
       </div>

@@ -17,6 +17,7 @@ import { KelasKuliah as IKelas, kelasKuliahController } from '../controllers/kel
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
+import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function KelasKuliah() {
   const navigate = useNavigate();
@@ -184,6 +185,75 @@ export default function KelasKuliah() {
       refetch();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menghapus data', 'error');
+    }
+  };
+
+  const [showImportModal, setShowImportModal] = createSignal(false);
+  const [importFile, setImportFile] = createSignal<File | null>(null);
+  const [importResult, setImportResult] = createSignal<{
+    success: number;
+    failed: number;
+    errors: { row: number; namaKelas: string; error: string }[];
+  } | null>(null);
+  const [importLoading, setImportLoading] = createSignal(false);
+
+  const handleDownloadTemplate = () => {
+    const csv = 'kode_mata_kuliah,periode_id,nama_kelas,id_pddikti\nTI001,20241,4A,\nTI001,20241,4B,\nTI002,20241,1A,';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template-kelas-kuliah.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFileChange = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    setImportFile(input.files?.[0] || null);
+  };
+
+  const handleImport = async () => {
+    if (!importFile()) {
+      toast.showToast('Pilih file CSV terlebih dahulu', 'error');
+      return;
+    }
+    setImportLoading(true);
+    try {
+      const text = await importFile()!.text();
+      const rows = parseCsv(text);
+      if (rows.length === 0) {
+        setImportLoading(false);
+        toast.showToast('File CSV kosong atau format tidak sesuai', 'error');
+        return;
+      }
+      const items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length < 3) continue;
+        if (i === 0 && isHeaderRow(row[0], ['kode_mata_kuliah', 'kode_matakuliah'])) continue;
+        const kodeMataKuliah = row[0]?.trim() || undefined;
+        const periodeId = row[1]?.trim() || '';
+        const namaKelas = row[2]?.trim() || '';
+        const idPddikti = row[3]?.trim() || undefined;
+        if (periodeId && namaKelas) {
+          items.push({ kodeMataKuliah, periodeId, namaKelas, idPddikti });
+        }
+      }
+      if (items.length === 0) {
+        setImportLoading(false);
+        toast.showToast('Tidak ada data valid untuk diimport', 'error');
+        return;
+      }
+      const result = await kelasKuliahController.import(items);
+      setImportResult(result);
+      if (result.failed === 0) {
+        refetch();
+      }
+    } catch (err: unknown) {
+      toast.showToast((err instanceof Error ? err.message : null) || 'Gagal import', 'error');
+    } finally {
+      setImportLoading(false);
     }
   };
 

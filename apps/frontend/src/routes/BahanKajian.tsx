@@ -7,7 +7,12 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
-import { bahanKajianController, BahanKajian as IBahanKajian, ImportResult } from '../controllers/bahanKajianController';
+import {
+  BahanKajianCplMapping,
+  bahanKajianController,
+  BahanKajian as IBahanKajian,
+  ImportResult,
+} from '../controllers/bahanKajianController';
 import { cplController } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
@@ -63,7 +68,7 @@ export default function BahanKajian() {
   const [mappingProdiId, setMappingProdiId] = createSignal<number>(0);
   const [selectedCplId, setSelectedCplId] = createSignal<number>(0);
   const [mappingBobot, setMappingBobot] = createSignal<string>('');
-  const [mappings, setMappings] = createSignal<{ id: number; cpl?: { kode: string }; bobot?: number }[]>([]);
+  const [mappings, setMappings] = createSignal<BahanKajianCplMapping[]>([]);
 
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [importItems, setImportItems] = createSignal<
@@ -517,7 +522,7 @@ export default function BahanKajian() {
                 </thead>
                 <tbody>
                   <For each={mappings()}>
-                    {(m: { id: number; cpl?: { kode: string }; bobot?: number }) => (
+                    {(m: BahanKajianCplMapping) => (
                       <tr class="border-b border-slate-700/50">
                         <td class="py-2 text-black dark:text-white">{m.cpl?.kode || '-'}</td>
                         <td class="py-2 text-black dark:text-white">{m.bobot ?? '(merata)'}</td>
