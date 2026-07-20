@@ -216,7 +216,7 @@ export class UserController {
         }
         updateData.password = await Bun.password.hash(password, {
           algorithm: 'bcrypt',
-          cost: 10,
+          cost: 12,
         });
       }
 
@@ -283,7 +283,7 @@ export class UserController {
         return { error: 'Password minimal 6 karakter' };
       }
 
-      const hashed = await Bun.password.hash(newPassword, { algorithm: 'bcrypt', cost: 10 });
+      const hashed = await Bun.password.hash(newPassword, { algorithm: 'bcrypt', cost: 12 });
 
       await db.update(users).set({ password: hashed }).where(eq(users.id, userId));
 
