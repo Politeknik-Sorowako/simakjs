@@ -21,8 +21,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
   createEffect(() => {
     const currentPath = path();
-    const isMatch = (routes: string[]) =>
-      routes.some((r) => currentPath === r || currentPath.startsWith(`${r}/`));
+    const isMatch = (routes: string[]) => routes.some((r) => currentPath === r || currentPath.startsWith(`${r}/`));
 
     if (isMatch(['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'])) {
       setIsMasterOpen(true);
