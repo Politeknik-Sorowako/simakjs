@@ -13,6 +13,9 @@ import AdmisiPembayaran from './routes/AdmisiPembayaran';
 import AdmisiPendaftaranBaru from './routes/AdmisiPendaftaranBaru';
 import AdmisiSesi from './routes/AdmisiSesi';
 import AngkatanKurikulum from './routes/AngkatanKurikulum';
+import ApelKelola from './routes/ApelKelola';
+import ApelMonitor from './routes/ApelMonitor';
+import ApelVerifikasi from './routes/ApelVerifikasi';
 import AdmisiDaftarUlangNIM from './routes/admisi/AdmisiDaftarUlangNIM';
 import AdmisiImportUjian from './routes/admisi/AdmisiImportUjian';
 import AdmisiJadwal from './routes/admisi/AdmisiJadwal';
@@ -169,6 +172,30 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <LaporanKompensasi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/presensi-apel"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+            <ApelKelola />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/apel/verifikasi"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+            <ApelVerifikasi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/apel/monitor"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+            <ApelMonitor />
           </ProtectedRoute>
         }
       />

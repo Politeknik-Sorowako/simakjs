@@ -6,6 +6,7 @@ import { jwtPlugin } from './plugins/jwt.plugin';
 import { admisiRoutes } from './routes/admisi.routes';
 import { admisiAdminRoutes } from './routes/admisi-admin.routes';
 import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
+import { apelRoutes } from './routes/apel.routes';
 import { authRoutes } from './routes/auth.routes';
 import { bahanKajianRoutes } from './routes/bahan-kajian.routes';
 import { bahanKajianCplMappingRoutes } from './routes/bahan-kajian-cpl-mapping.routes';
@@ -251,6 +252,7 @@ app
   .use(authMiddleware)
   .use(authRoutes)
   .use(admisiRoutes)
+  .use(apelRoutes)
   .use(admisiAdminRoutes)
   .use(angkatanKurikulumRoutes)
   .use(prodiRoutes)

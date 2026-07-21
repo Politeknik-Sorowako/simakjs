@@ -155,6 +155,13 @@
       "when": 1784200000000,
       "tag": "0021_mk_per_prodi",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1784634867152,
+      "tag": "0022_worthless_magneto",
+      "breakpoints": true
     }
   ]
 }

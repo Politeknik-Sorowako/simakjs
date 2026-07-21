@@ -697,6 +697,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Jurnal & Presensi
                   </A>
                 </Show>
+                <Show when={isAdmin() || isDosen()}>
+                  <A
+                    href="/presensi-apel"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.478 4.482 9.957 9 10.886V21h-2v2h6v-2h-2v-1.114a11.005 11.005 0 006-3.136"
+                      />
+                    </svg>
+                    Presensi Apel
+                  </A>
+                </Show>
                 <Show when={isAdmin() || isDosen() || isProdi()}>
                   <A
                     href="/input-nilai"
@@ -972,6 +991,44 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       />
                     </svg>
                     Jam Kompensasi
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/apel/verifikasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Verifikasi Apel
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isDosen() || isProdi()}>
+                  <A
+                    href="/apel/monitor"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                    Monitor Apel
                   </A>
                 </Show>
                 <Show when={isAdmin() || isProdi() || isDosen()}>
