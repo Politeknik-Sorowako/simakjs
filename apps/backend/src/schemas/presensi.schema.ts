@@ -70,13 +70,14 @@ export const getKompensasiMahasiswaDetailSchema = {
         t.Array(
           t.Object({
             id: t.Optional(t.Integer({ default: 1 })),
-            bapId: t.Optional(t.Integer({ default: 1 })),
+            bapId: t.Optional(t.Nullable(t.Integer())),
             status: t.Optional(t.String({ default: 'alpa' })),
             durasiMangkir: t.Optional(t.Integer({ default: 120 })),
             createdAt: t.Optional(t.Any()),
-            bapPertemuan: t.Optional(t.Integer({ default: 1 })),
-            bapMateri: t.Optional(t.String({ default: 'Dasar Pemrograman' })),
-            bapTanggal: t.Optional(t.String({ default: '2026-06-27' })),
+            bapPertemuan: t.Optional(t.Nullable(t.Integer())),
+            bapMateri: t.Optional(t.Nullable(t.String())),
+            bapTanggal: t.Optional(t.Nullable(t.String())),
+            sumber: t.Optional(t.String({ default: 'perkuliahan' })),
             poinKompensasi: t.Optional(t.Integer({ default: 120 })),
           }),
         ),

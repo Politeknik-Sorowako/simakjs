@@ -57,12 +57,7 @@ export default function LaporanKompensasi() {
 
   const [mhsDetail, { refetch: refetchDetail }] = createResource(selectedMhsId, async (id) => {
     if (!id) return null;
-    try {
-      return await presensiController.getKompensasiDetail(id);
-    } catch (e: unknown) {
-      toast.showToast(e instanceof Error ? (e as Error).message : 'Gagal memuat detail', 'error');
-      return null;
-    }
+    return await presensiController.getKompensasiDetail(id);
   });
 
   const handleOpenDetail = (id: number) => setSelectedMhsId(id);
@@ -523,10 +518,10 @@ export default function LaporanKompensasi() {
                         <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
                           <div class="flex flex-col gap-0.5">
                             <span class="font-bold text-secondary-700 dark:text-secondary-200">
-                              {log.bapMateri} (Pertemuan {log.bapPertemuan})
+                              {log.sumber === 'apel' ? 'Presensi Apel' : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
                             </span>
                             <span class="text-secondary-400 dark:text-secondary-200">
-                              {new Date(log.bapTanggal).toLocaleDateString('id-ID')}
+                              {log.bapTanggal ? new Date(log.bapTanggal).toLocaleDateString('id-ID') : '-'}
                             </span>
                             <span class="font-semibold text-accent-600 dark:text-accent-400">
                               Status: {log.status.toUpperCase()} ({log.durasiMangkir} Menit)
