@@ -92,7 +92,7 @@ export const submitPresensiSchema = {
       t.Object({
         mahasiswaId: t.Number({ error: 'ID mahasiswa diperlukan' }),
         status: validStatus,
-        menitTerlambat: t.Optional(t.Number({ minimum: 1, error: 'Menit terlambat tidak valid' })),
+        menitTerlambat: t.Optional(t.Nullable(t.Number({ minimum: 0, error: 'Menit terlambat tidak valid' }))),
       }),
       { minItems: 1 },
     ),
