@@ -21,11 +21,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
   createEffect(() => {
     const currentPath = path();
-    if (['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'].includes(currentPath)) {
+    const isMatch = (routes: string[]) =>
+      routes.some((r) => currentPath === r || currentPath.startsWith(`${r}/`));
+
+    if (isMatch(['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'])) {
       setIsMasterOpen(true);
     }
     if (
-      [
+      isMatch([
         '/kurikulum',
         '/angkatan-kurikulum',
         '/rps',
@@ -37,52 +40,38 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         '/cpl',
         '/cpmk',
         '/peta-obe',
-      ].includes(currentPath)
+      ])
     ) {
       setIsPerencanaanOpen(true);
     }
-    if (['/krs', '/keuangan'].includes(currentPath)) {
+    if (isMatch(['/krs', '/keuangan'])) {
       setIsRegistrasiOpen(true);
     }
-    if (['/jurnal-presensi', '/input-nilai', '/bimbingan', '/pelanggaran'].includes(currentPath)) {
+    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan'])) {
       setIsPelaksanaanOpen(true);
     }
-    if (['/khs', '/yudisium'].includes(currentPath)) {
+    if (isMatch(['/khs', '/yudisium'])) {
       setIsEvaluasiOpen(true);
     }
     if (
-      [
+      isMatch([
         '/laporan-kompensasi',
-        '/laporan/rekap-nilai',
-        '/laporan/peringatan',
-        '/laporan/mahasiswa-baru',
-        '/laporan/presensi-kelas',
-        '/laporan/akademik',
-        '/laporan/bkd',
-        '/laporan/krs',
-        '/laporan/keuangan',
-        '/laporan/yudisium',
-        '/laporan/mahasiswa-keluar',
-        '/laporan/obe',
+        '/laporan',
         '/obe/bobot-penilaian',
         '/obe/evaluasi-kurikulum',
-      ].includes(currentPath)
+        '/apel/verifikasi',
+        '/apel/monitor',
+      ])
     ) {
       setIsLaporanOpen(true);
     }
-    if (['/pengajuan-cuti', '/manajemen-cuti', '/penonaktifan'].includes(currentPath)) {
+    if (isMatch(['/pengajuan-cuti', '/manajemen-cuti', '/penonaktifan', '/pelanggaran', '/rekap-pelanggaran'])) {
       setIsLayananOpen(true);
     }
-    if (['/pddikti'].includes(currentPath)) {
+    if (isMatch(['/pddikti'])) {
       setIsIntegrasiOpen(true);
     }
-    if (
-      ['/admisi/dashboard', '/admisi/sesi', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) =>
-        currentPath.startsWith(p),
-      ) ||
-      currentPath.startsWith('/admisi/manajemen') ||
-      currentPath.startsWith('/admisi/pembayaran')
-    ) {
+    if (currentPath.startsWith('/admisi')) {
       setIsAdmisiOpen(true);
     }
   });
