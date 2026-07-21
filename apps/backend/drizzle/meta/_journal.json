@@ -162,6 +162,13 @@
       "when": 1784634867152,
       "tag": "0022_worthless_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1784641426055,
+      "tag": "0023_amused_the_hood",
+      "breakpoints": true
     }
   ]
 }

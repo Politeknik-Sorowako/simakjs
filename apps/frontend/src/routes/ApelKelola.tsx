@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -6,10 +6,13 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import {
   apelController,
   KelompokApel,
+  KelompokApelDetail,
   PresensiApelItem,
   SesiApel,
-  SesiPresensiResponse,
 } from '../controllers/apelController';
+import { Dosen, dosenController } from '../controllers/dosenController';
+import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { Prodi, prodiController } from '../controllers/prodiController';
 
 export default function ApelKelola() {
   const auth = useAuth();
@@ -24,7 +27,31 @@ export default function ApelKelola() {
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
 
-  const [kelompokList] = createResource(
+  // Modal Buat Kelompok State
+  const [showCreateModal, setShowCreateModal] = createSignal(false);
+  const [newNamaKelompok, setNewNamaKelompok] = createSignal('');
+  const [newProdiId, setNewProdiId] = createSignal<number | null>(null);
+  const [newDosenId, setNewDosenId] = createSignal<number | null>(null);
+  const [newShift, setNewShift] = createSignal('pagi');
+  const [newKeterangan, setNewKeterangan] = createSignal('');
+
+  // State Dosen PJ untuk Buka Sesi
+  const [selectedDosenPJSesi, setSelectedDosenPJSesi] = createSignal<number | null>(null);
+
+  // Sinkronisasi state awal saat modal dibuat
+  createEffect(() => {
+    if (showCreateModal()) {
+      setNewProdiId(ws.selectedProdiId());
+    }
+  });
+
+  // Modal Kelola Anggota State
+  const [showAnggotaModal, setShowAnggotaModal] = createSignal(false);
+  const [mhsSearch, setMhsSearch] = createSignal('');
+  const [selectedMhsToAdd, setSelectedMhsToAdd] = createSignal<number[]>([]);
+
+  // Resource Data Kelompok
+  const [kelompokList, { refetch: refetchKelompok }] = createResource(
     () => ws.selectedProdiId(),
     async (prodiId) => {
       const user = auth.user();
@@ -36,6 +63,51 @@ export default function ApelKelola() {
     },
   );
 
+  // Resource Detail Kelompok (untuk anggota)
+  const [kelompokDetail, { refetch: refetchKelompokDetail }] = createResource(
+    () => (showAnggotaModal() ? selectedKelompok() : null),
+    async (id) => {
+      if (!id) return null;
+      return apelController.getKelompokDetail(id);
+    },
+  );
+
+  // Resource Daftar Prodi (jika admin tidak memilih prodi di header)
+  const [prodiList] = createResource(
+    () => showCreateModal(),
+    async (open) => {
+      if (!open) return [];
+      const res = await prodiController.getAll('', 1, 100);
+      return res.data;
+    },
+  );
+
+  // Resource Daftar Dosen (untuk Modal & Form Sesi)
+  const [allDosenList] = createResource(async () => {
+    const res = await dosenController.getAll('', 1, 100);
+    return res.data;
+  });
+
+  const [dosenList] = createResource(
+    () => ({ prodiId: newProdiId() || ws.selectedProdiId(), open: showCreateModal() }),
+    async ({ prodiId, open }) => {
+      if (!open) return [];
+      const res = await dosenController.getAll('', 1, 100, prodiId || undefined);
+      return res.data;
+    },
+  );
+
+  // Resource Daftar Mahasiswa (untuk Modal Kelola Anggota)
+  const [mhsList] = createResource(
+    () => ({ prodiId: ws.selectedProdiId(), search: mhsSearch(), open: showAnggotaModal() }),
+    async ({ prodiId, search, open }) => {
+      if (!open) return [];
+      const res = await mahasiswaController.getAll(search, 1, 50, prodiId || undefined);
+      return res.data;
+    },
+  );
+
+  // Resource Data Sesi
   const [sesiList, { refetch: refetchSesi }] = createResource(
     () => selectedKelompok(),
     async (kelompokId) => {
@@ -44,7 +116,8 @@ export default function ApelKelola() {
     },
   );
 
-  const [sesiPresensi, { refetch: refetchPresensi }] = createResource(
+  // Resource Data Presensi Sesi
+  const [sesiPresensi] = createResource(
     () => selectedSesi(),
     async (sesiId) => {
       if (!sesiId) return null;
@@ -53,6 +126,84 @@ export default function ApelKelola() {
       return data;
     },
   );
+
+  // Handle Buat Kelompok Baru
+  const handleCreateKelompok = async (e: Event) => {
+    e.preventDefault();
+    const prodiId = newProdiId() || ws.selectedProdiId();
+    if (!newNamaKelompok()) {
+      toast.showToast('Isi Nama Kelompok', 'error');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const created = await apelController.createKelompok({
+        namaKelompok: newNamaKelompok(),
+        programStudiId: prodiId || undefined,
+        dosenId: newDosenId() || undefined,
+        shift: newShift(),
+        keterangan: newKeterangan(),
+      });
+      toast.showToast('Kelompok Apel berhasil dibuat', 'success');
+      setShowCreateModal(false);
+      setNewNamaKelompok('');
+      setNewDosenId(null);
+      setNewKeterangan('');
+      refetchKelompok();
+      if (created && created.id) {
+        setSelectedKelompok(created.id);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal membuat kelompok apel';
+      toast.showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle Tambah Anggota Mahasiswa
+  const handleAddAnggota = async () => {
+    const kelId = selectedKelompok();
+    const ids = selectedMhsToAdd();
+    if (!kelId || ids.length === 0) {
+      toast.showToast('Pilih setidaknya satu mahasiswa', 'error');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const res = await apelController.manageAnggota(kelId, ids);
+      toast.showToast(`Berhasil menambahkan ${res.added} anggota`, 'success');
+      setSelectedMhsToAdd([]);
+      refetchKelompokDetail();
+      refetchKelompok();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal menambahkan anggota';
+      toast.showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle Hapus Anggota Mahasiswa
+  const handleRemoveAnggota = async (mahasiswaId: number) => {
+    const kelId = selectedKelompok();
+    if (!kelId) return;
+
+    try {
+      setIsSubmitting(true);
+      await apelController.removeAnggota(kelId, mahasiswaId);
+      toast.showToast('Anggota berhasil dihapus', 'success');
+      refetchKelompokDetail();
+      refetchKelompok();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal menghapus anggota';
+      toast.showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleBukaSesi = async () => {
     if (!selectedKelompok() || !tanggal() || !jamMulai()) {
@@ -66,6 +217,7 @@ export default function ApelKelola() {
         tanggal: tanggal(),
         shift: shift(),
         jamMulai: jamMulai(),
+        dosenId: selectedDosenPJSesi() || undefined,
       });
       toast.showToast(`Sesi dibuka dengan ${result.jumlahAnggota} mahasiswa`, 'success');
       refetchSesi();
@@ -144,34 +296,42 @@ export default function ApelKelola() {
     setSelectedSesi(sesiId);
   };
 
-  const statusBadge = (status: string) => {
-    const colors: Record<string, string> = {
-      hadir: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-      terlambat: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
-      unknown: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    };
-    const labels: Record<string, string> = {
-      hadir: 'Hadir',
-      terlambat: 'Terlambat',
-      unknown: 'Unknown',
-    };
-    return (
-      <span class={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || ''}`}>
-        {labels[status] || status}
-      </span>
-    );
+  const toggleMhsSelection = (mhsId: number) => {
+    setSelectedMhsToAdd((prev) => (prev.includes(mhsId) ? prev.filter((id) => id !== mhsId) : [...prev, mhsId]));
   };
 
   return (
     <MainLayout>
       <div class="space-y-6">
-        <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
+          <button
+            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            + Buat Kelompok Baru
+          </button>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Kelompok + Buat Sesi */}
+          {/* Left: Kelompok + Kelola Anggota + Buat Sesi */}
           <div class="lg:col-span-1 space-y-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <h2 class="text-lg font-semibold mb-3">Pilih Kelompok</h2>
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
+              <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold">Pilih Kelompok</h2>
+                <Show when={selectedKelompok()}>
+                  <button
+                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                    onClick={() => setShowAnggotaModal(true)}
+                  >
+                    ⚙ Kelola Anggota
+                  </button>
+                </Show>
+              </div>
+
               <select
                 class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
                 value={selectedKelompok() ?? ''}
@@ -185,11 +345,26 @@ export default function ApelKelola() {
                 <For each={kelompokList()}>
                   {(item: KelompokApel) => (
                     <option value={item.id}>
-                      {item.namaKelompok} ({item.shift}) - {item.dosenNama}
+                      {item.namaKelompok} ({item.shift}) - {item.dosenNama} ({item.jumlahAnggota} Mhs)
                     </option>
                   )}
                 </For>
               </select>
+
+              <Show when={kelompokList() && kelompokList()!.length === 0}>
+                <div class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                  Belum ada kelompok apel pada prodi ini. Klik tombol <b>+ Buat Kelompok Baru</b> di atas untuk membuat.
+                </div>
+              </Show>
+
+              <Show when={selectedKelompok()}>
+                <button
+                  class="w-full text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-800 dark:text-gray-200 py-1.5 px-3 rounded flex items-center justify-center gap-1 font-medium"
+                  onClick={() => setShowAnggotaModal(true)}
+                >
+                  👥 Kelola Anggota Mahasiswa
+                </button>
+              </Show>
             </div>
 
             <Show when={selectedKelompok()}>
@@ -216,6 +391,23 @@ export default function ApelKelola() {
                   </select>
                 </div>
                 <div>
+                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional / Pelaksana)</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={selectedDosenPJSesi() ?? ''}
+                    onChange={(e) => setSelectedDosenPJSesi(Number(e.target.value) || null)}
+                  >
+                    <option value="">-- Gunakan Dosen PJ Default / Pilihkah PJ Sesi --</option>
+                    <For each={allDosenList()}>
+                      {(d: Dosen) => (
+                        <option value={d.id}>
+                          {d.nama} {d.nip ? `(${d.nip})` : ''}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </div>
+                <div>
                   <label class="block text-sm font-medium mb-1">Jam Mulai</label>
                   <input
                     type="time"
@@ -225,7 +417,7 @@ export default function ApelKelola() {
                   />
                 </div>
                 <button
-                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                   onClick={handleBukaSesi}
                   disabled={isSubmitting()}
                 >
@@ -364,6 +556,233 @@ export default function ApelKelola() {
             </Show>
           </div>
         </div>
+
+        {/* MODAL 1: Buat Kelompok Baru */}
+        <Show when={showCreateModal()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
+                <h3 class="text-lg font-bold">Buat Kelompok Apel Baru</h3>
+                <button
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setShowCreateModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateKelompok} class="space-y-4">
+                <Show when={!ws.selectedProdiId()}>
+                  <div>
+                    <label class="block text-sm font-medium mb-1">Program Studi (Opsional)</label>
+                    <select
+                      class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                      value={newProdiId() ?? ''}
+                      onChange={(e) => setNewProdiId(Number(e.currentTarget.value) || null)}
+                    >
+                      <option value="">-- Pilih Program Studi (Opsional) --</option>
+                      <For each={prodiList()}>{(p: Prodi) => <option value={p.id}>{p.nama}</option>}</For>
+                    </select>
+                  </div>
+                </Show>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Nama Kelompok *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="misal: Kelompok Apel Mesin A"
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                    value={newNamaKelompok()}
+                    onInput={(e) => setNewNamaKelompok(e.currentTarget.value)}
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Dosen Penanggung Jawab (PJ) (Opsional)</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                    value={newDosenId() ?? ''}
+                    onChange={(e) => setNewDosenId(Number(e.currentTarget.value) || null)}
+                  >
+                    <option value="">-- Pilih Dosen PJ (Opsional) --</option>
+                    <For each={dosenList()}>
+                      {(d: Dosen) => (
+                        <option value={d.id}>
+                          {d.nama} {d.nip ? `(${d.nip})` : ''}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Shift Apel</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                    value={newShift()}
+                    onChange={(e) => setNewShift(e.currentTarget.value)}
+                  >
+                    <option value="pagi">Pagi</option>
+                    <option value="sore">Sore</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Keterangan (Opsional)</label>
+                  <textarea
+                    rows={2}
+                    placeholder="misal: Lokasi Lapangan Olahraga"
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                    value={newKeterangan()}
+                    onInput={(e) => setNewKeterangan(e.currentTarget.value)}
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setShowCreateModal(false)}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting()}
+                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                  >
+                    {isSubmitting() ? 'Menyimpan...' : 'Simpan Kelompok'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Show>
+
+        {/* MODAL 2: Kelola Anggota Mahasiswa */}
+        <Show when={showAnggotaModal()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] flex flex-col">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3 flex-shrink-0">
+                <div>
+                  <h3 class="text-lg font-bold">Kelola Anggota Kelompok Apel</h3>
+                  <p class="text-xs text-gray-500">
+                    {kelompokDetail()?.namaKelompok} ({kelompokDetail()?.prodiNama})
+                  </p>
+                </div>
+                <button
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setShowAnggotaModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-hidden">
+                {/* Kiri: Anggota Terdaftar */}
+                <div class="flex flex-col border rounded-lg p-3 dark:border-gray-700 overflow-hidden">
+                  <h4 class="font-semibold text-sm mb-2 flex justify-between items-center">
+                    <span>Anggota Terdaftar</span>
+                    <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                      {kelompokDetail()?.anggota?.length || 0} Mahasiswa
+                    </span>
+                  </h4>
+                  <div class="flex-1 overflow-y-auto space-y-1.5 pr-1">
+                    <For each={kelompokDetail()?.anggota}>
+                      {(mhs) => (
+                        <div class="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-700/50 text-xs">
+                          <div>
+                            <div class="font-semibold">{mhs.nama}</div>
+                            <div class="text-gray-500 font-mono">{mhs.nim}</div>
+                          </div>
+                          <button
+                            class="text-red-600 hover:text-red-800 dark:text-red-400 font-medium px-2 py-1"
+                            onClick={() => handleRemoveAnggota(mhs.mahasiswaId)}
+                            title="Hapus dari kelompok"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      )}
+                    </For>
+                    <Show when={!kelompokDetail()?.anggota || kelompokDetail()?.anggota.length === 0}>
+                      <div class="text-center text-xs text-gray-500 py-6">Belum ada anggota di kelompok ini</div>
+                    </Show>
+                  </div>
+                </div>
+
+                {/* Kanan: Cari & Tambah Mahasiswa */}
+                <div class="flex flex-col border rounded-lg p-3 dark:border-gray-700 overflow-hidden space-y-2">
+                  <h4 class="font-semibold text-sm">Tambah Mahasiswa</h4>
+                  <input
+                    type="text"
+                    placeholder="Cari berdasarkan NIM atau Nama Mahasiswa..."
+                    class="w-full border rounded-lg px-2.5 py-1.5 text-xs dark:bg-gray-700 dark:border-gray-600"
+                    value={mhsSearch()}
+                    onInput={(e) => setMhsSearch(e.currentTarget.value)}
+                  />
+                  <div class="flex-1 overflow-y-auto space-y-1 pr-1">
+                    <For each={mhsList()}>
+                      {(mhs: Mahasiswa) => {
+                        const isAlreadyMember = kelompokDetail()?.anggota?.some((a) => a.mahasiswaId === mhs.id);
+                        const isSelected = selectedMhsToAdd().includes(mhs.id);
+                        return (
+                          <div
+                            class={`flex items-center justify-between p-2 rounded text-xs border ${
+                              isAlreadyMember
+                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-transparent cursor-not-allowed'
+                                : isSelected
+                                  ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-400'
+                                  : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-300'
+                            }`}
+                            onClick={() => !isAlreadyMember && toggleMhsSelection(mhs.id)}
+                          >
+                            <div>
+                              <div class="font-medium">{mhs.nama}</div>
+                              <div class="text-gray-500 font-mono text-[10px]">{mhs.nim}</div>
+                            </div>
+                            <Show
+                              when={!isAlreadyMember}
+                              fallback={<span class="text-[10px] text-gray-400 italic">Sudah Ada</span>}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleMhsSelection(mhs.id)}
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                            </Show>
+                          </div>
+                        );
+                      }}
+                    </For>
+                    <Show when={mhsList() && mhsList()!.length === 0}>
+                      <div class="text-center text-xs text-gray-500 py-6">Mahasiswa tidak ditemukan</div>
+                    </Show>
+                  </div>
+
+                  <button
+                    class="w-full bg-blue-600 text-white text-xs py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex-shrink-0"
+                    onClick={handleAddAnggota}
+                    disabled={isSubmitting() || selectedMhsToAdd().length === 0}
+                  >
+                    {isSubmitting() ? 'Menambahkan...' : `+ Tambahkan (${selectedMhsToAdd().length}) Mahasiswa`}
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex justify-end pt-2 border-t dark:border-gray-700 flex-shrink-0">
+                <button
+                  class="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+                  onClick={() => setShowAnggotaModal(false)}
+                >
+                  Selesai
+                </button>
+              </div>
+            </div>
+          </div>
+        </Show>
       </div>
     </MainLayout>
   );

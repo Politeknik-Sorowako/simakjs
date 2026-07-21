@@ -4,10 +4,10 @@ import { PaginatedResponse } from './prodiController';
 export interface KelompokApel {
   id: number;
   namaKelompok: string;
-  programStudiId: number;
-  prodiNama: string;
-  dosenId: number;
-  dosenNama: string;
+  programStudiId?: number | null;
+  prodiNama?: string | null;
+  dosenId?: number | null;
+  dosenNama?: string | null;
   shift: string;
   keterangan?: string;
   isActive: boolean;
@@ -100,11 +100,11 @@ export interface MonitorResponse {
 export const apelController = {
   createKelompok: (data: {
     namaKelompok: string;
-    programStudiId: number;
-    dosenId: number;
+    programStudiId?: number | null;
+    dosenId?: number | null;
     shift?: string;
     keterangan?: string;
-  }) => fetchApi('/apel/kelompok', { method: 'POST', body: JSON.stringify(data) }),
+  }) => fetchApi<KelompokApel>('/apel/kelompok', { method: 'POST', body: JSON.stringify(data) }),
 
   updateKelompok: (
     id: number,
@@ -124,13 +124,16 @@ export const apelController = {
   getKelompokDetail: (id: number) => fetchApi<KelompokApelDetail>(`/apel/kelompok/${id}`),
 
   manageAnggota: (kelompokId: number, mahasiswaIds: number[]) =>
-    fetchApi(`/apel/kelompok/${kelompokId}/anggota`, { method: 'POST', body: JSON.stringify({ mahasiswaIds }) }),
+    fetchApi<{ added: number; skipped: number }>(`/apel/kelompok/${kelompokId}/anggota`, {
+      method: 'POST',
+      body: JSON.stringify({ mahasiswaIds }),
+    }),
 
   removeAnggota: (kelompokId: number, mahasiswaId: number) =>
     fetchApi(`/apel/kelompok/${kelompokId}/anggota/${mahasiswaId}`, { method: 'DELETE' }),
 
-  bukaSesi: (data: { kelompokApelId: number; tanggal: string; shift: string; jamMulai: string }) =>
-    fetchApi('/apel/sesi/buka', { method: 'POST', body: JSON.stringify(data) }),
+  bukaSesi: (data: { kelompokApelId: number; tanggal: string; shift: string; jamMulai: string; dosenId?: number }) =>
+    fetchApi<SesiApel & { jumlahAnggota: number }>('/apel/sesi/buka', { method: 'POST', body: JSON.stringify(data) }),
 
   submitPresensi: (
     sesiId: number,

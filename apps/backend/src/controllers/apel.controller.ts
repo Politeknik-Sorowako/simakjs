@@ -123,11 +123,20 @@ export class ApelController {
   static async bukaSesi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'dosen'])) {
+      if (!user || !allowed(user, ['admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-      return await ApelService.bukaSesi(body);
+      let dosenId = body?.dosenId;
+      if (!dosenId && user.role === 'dosen') {
+        const dosenUser = await ApelService.getDosenByEmail(user.email);
+        if (dosenUser) dosenId = dosenUser.id;
+      }
+      if (!dosenId) {
+        set.status = 400;
+        return { error: 'Pilih Dosen PJ Sesi terlebih dahulu.' };
+      }
+      return await ApelService.bukaSesi({ ...body, dosenId });
     } catch (e: any) {
       set.status = 400;
       return { error: e.message };

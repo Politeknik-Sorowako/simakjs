@@ -462,12 +462,8 @@ export const kompensasiBayar = pgTable('kompensasi_bayar', {
 export const kelompokApel = pgTable('kelompok_apel', {
   id: serial('id').primaryKey(),
   namaKelompok: varchar('nama_kelompok', { length: 100 }).notNull(),
-  programStudiId: integer('program_studi_id')
-    .notNull()
-    .references(() => programStudi.id, { onDelete: 'restrict' }),
-  dosenId: integer('dosen_id')
-    .notNull()
-    .references(() => dosen.id, { onDelete: 'restrict' }),
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
+  dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'restrict' }),
   shift: varchar('shift', { length: 10 }).notNull().default('pagi'),
   keterangan: text('keterangan'),
   isActive: boolean('is_active').default(true).notNull(),

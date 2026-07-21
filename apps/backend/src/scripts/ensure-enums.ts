@@ -47,7 +47,7 @@ async function ensureEnums() {
     }
 
     const beforeClause = fix.before ? ` BEFORE '${fix.before}'` : '';
-    await pool.query(`ALTER TYPE ${fix.name} ADD VALUE '${fix.value}'${beforeClause}`);
+    await pool.query(`ALTER TYPE ${fix.name} ADD VALUE IF NOT EXISTS '${fix.value}'${beforeClause}`);
     console.log(`[ENSURE ENUMS] Added ${fix.name}.${fix.value}`);
   }
 

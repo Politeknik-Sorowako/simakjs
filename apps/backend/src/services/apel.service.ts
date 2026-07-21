@@ -14,8 +14,8 @@ import { db } from '../utils/db';
 export class ApelService {
   static async createKelompok(data: {
     namaKelompok: string;
-    programStudiId: number;
-    dosenId: number;
+    programStudiId?: number | null;
+    dosenId?: number | null;
     shift?: string;
     keterangan?: string;
   }) {
@@ -23,8 +23,8 @@ export class ApelService {
       .insert(kelompokApel)
       .values({
         namaKelompok: data.namaKelompok,
-        programStudiId: data.programStudiId,
-        dosenId: data.dosenId,
+        programStudiId: data.programStudiId || null,
+        dosenId: data.dosenId || null,
         shift: data.shift || 'pagi',
         keterangan: data.keterangan,
       })
