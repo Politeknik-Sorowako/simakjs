@@ -230,14 +230,22 @@ export default function ApelKelola() {
     }
   };
 
-  const handleStatusChange = (mahasiswaId: number, newStatus: 'hadir' | 'terlambat' | 'unknown') => {
+  const handleStatusChange = (
+    mahasiswaId: number,
+    newStatus: 'hadir' | 'terlambat' | 'unknown' | 'sakit' | 'izin' | 'alpa',
+  ) => {
     setPresensiData((prev) =>
       prev.map((p) => {
         if (p.mahasiswaId === mahasiswaId) {
           return {
             ...p,
             status: newStatus,
-            menitTerlambat: newStatus === 'terlambat' ? p.menitTerlambat || 0 : undefined,
+            menitTerlambat:
+              newStatus !== 'hadir'
+                ? p.menitTerlambat !== undefined && p.menitTerlambat !== null
+                  ? p.menitTerlambat
+                  : 0
+                : undefined,
           };
         }
         return p;
@@ -345,7 +353,8 @@ export default function ApelKelola() {
                 <For each={kelompokList()}>
                   {(item: KelompokApel) => (
                     <option value={item.id}>
-                      {item.namaKelompok} ({item.shift}) {item.dosenNama ? `- ${item.dosenNama}` : ''} ({item.jumlahAnggota ?? 0} Mhs)
+                      {item.namaKelompok} ({item.shift}) {item.dosenNama ? `- ${item.dosenNama}` : ''} (
+                      {item.jumlahAnggota ?? 0} Mhs)
                     </option>
                   )}
                 </For>
@@ -496,7 +505,7 @@ export default function ApelKelola() {
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase">NIM</th>
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase">Nama</th>
                         <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium uppercase">Menit Terlambat</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium uppercase">Durasi (Menit)</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y dark:divide-gray-700">
@@ -511,32 +520,61 @@ export default function ApelKelola() {
                                 <button
                                   class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'hadir' ? 'bg-green-600 text-white ring-2 ring-green-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'hadir')}
+                                  title="Hadir"
                                 >
                                   H
                                 </button>
                                 <button
                                   class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'terlambat' ? 'bg-yellow-500 text-white ring-2 ring-yellow-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'terlambat')}
+                                  title="Terlambat"
                                 >
                                   T
                                 </button>
                                 <button
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'sakit' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  onClick={() => handleStatusChange(item.mahasiswaId, 'sakit')}
+                                  title="Sakit"
+                                >
+                                  S
+                                </button>
+                                <button
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'izin' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  onClick={() => handleStatusChange(item.mahasiswaId, 'izin')}
+                                  title="Izin"
+                                >
+                                  I
+                                </button>
+                                <button
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'alpa' ? 'bg-red-600 text-white ring-2 ring-red-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  onClick={() => handleStatusChange(item.mahasiswaId, 'alpa')}
+                                  title="Alpa"
+                                >
+                                  A
+                                </button>
+                                <button
                                   class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'unknown' ? 'bg-gray-600 text-white ring-2 ring-gray-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'unknown')}
+                                  title="Unknown"
                                 >
                                   ?
                                 </button>
                               </div>
                             </td>
                             <td class="px-4 py-3 text-center">
-                              <Show when={item.status === 'terlambat'}>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  class="w-20 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600"
-                                  value={item.menitTerlambat || ''}
-                                  onChange={(e) => handleMenitChange(item.mahasiswaId, parseInt(e.target.value) || 0)}
-                                />
+                              <Show when={item.status !== 'hadir'}>
+                                <div class="flex items-center justify-center gap-1">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    class="w-20 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600"
+                                    value={item.menitTerlambat ?? 0}
+                                    onInput={(e) =>
+                                      handleMenitChange(item.mahasiswaId, parseInt(e.currentTarget.value) || 0)
+                                    }
+                                  />
+                                  <span class="text-xs text-gray-500">mnt</span>
+                                </div>
                               </Show>
                             </td>
                           </tr>

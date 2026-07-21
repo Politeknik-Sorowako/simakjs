@@ -170,7 +170,7 @@ export class ApelService {
 
   static async submitPresensi(
     sesiId: number,
-    presensiList: Array<{ mahasiswaId: number; status: string; menitTerlambat?: number }>,
+    presensiList: Array<{ mahasiswaId: number; status: string; menitTerlambat?: number | null }>,
   ) {
     const [foundSesi] = await db.select().from(sesiApel).where(eq(sesiApel.id, sesiId));
     if (!foundSesi) throw new Error('Sesi apel tidak ditemukan');
@@ -180,8 +180,13 @@ export class ApelService {
       await db
         .update(presensiApel)
         .set({
-          status: item.status as 'hadir' | 'terlambat' | 'unknown',
-          menitTerlambat: item.status === 'terlambat' ? item.menitTerlambat || 0 : null,
+          status: item.status as any,
+          menitTerlambat:
+            item.status !== 'hadir'
+              ? item.menitTerlambat !== undefined && item.menitTerlambat !== null
+                ? item.menitTerlambat
+                : 0
+              : null,
         })
         .where(and(eq(presensiApel.sesiApelId, sesiId), eq(presensiApel.mahasiswaId, item.mahasiswaId)));
     }
@@ -194,15 +199,16 @@ export class ApelService {
       .select({
         id: sesiApel.id,
         kelompokApelId: sesiApel.kelompokApelId,
+        kelompokNama: kelompokApel.namaKelompok,
         tanggal: sesiApel.tanggal,
         shift: sesiApel.shift,
         dosenId: sesiApel.dosenId,
         dosenNama: dosen.nama,
         jamMulai: sesiApel.jamMulai,
         isClosed: sesiApel.isClosed,
-        closedAt: sesiApel.closedAt,
       })
       .from(sesiApel)
+      .leftJoin(kelompokApel, eq(sesiApel.kelompokApelId, kelompokApel.id))
       .leftJoin(dosen, eq(sesiApel.dosenId, dosen.id))
       .where(eq(sesiApel.id, sesiId));
 
@@ -340,7 +346,7 @@ export class ApelService {
 
   static async verifyPresensi(
     id: number,
-    data: { verifiedStatus: string; verifiedBy: number; verificationNote?: string },
+    data: { verifiedStatus: string; verifiedBy: number; verificationNote?: string; menitTerlambat?: number | null },
   ) {
     const [found] = await db.select().from(presensiApel).where(eq(presensiApel.id, id));
     if (!found) throw new Error('Presensi apel tidak ditemukan');
@@ -354,6 +360,10 @@ export class ApelService {
         verifiedBy: data.verifiedBy,
         verifiedAt: new Date(),
         verificationNote: data.verificationNote,
+        menitTerlambat:
+          data.menitTerlambat !== undefined && data.menitTerlambat !== null
+            ? data.menitTerlambat
+            : found.menitTerlambat,
       })
       .where(eq(presensiApel.id, id))
       .returning();

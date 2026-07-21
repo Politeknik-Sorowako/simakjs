@@ -274,6 +274,7 @@ export class ApelController {
         verifiedStatus: body.verifiedStatus,
         verifiedBy: u.id,
         verificationNote: body.verificationNote,
+        menitTerlambat: body.menitTerlambat,
       });
     } catch (e: any) {
       set.status = 400;

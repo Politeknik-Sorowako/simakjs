@@ -11,6 +11,16 @@ export default function ApelMonitor() {
   const [tanggal, setTanggal] = createSignal(new Date().toISOString().slice(0, 10));
   const [autoRefresh, setAutoRefresh] = createSignal(true);
 
+  const [selectedDetailSesiId, setSelectedDetailSesiId] = createSignal<number | null>(null);
+
+  const [sesiDetailData] = createResource(
+    () => selectedDetailSesiId(),
+    async (id) => {
+      if (!id) return null;
+      return apelController.getSesiPresensi(id);
+    },
+  );
+
   const [data, { refetch }] = createResource(
     () => ({ tanggal: tanggal(), role: auth.user()?.role }),
     async (params) => {
@@ -144,10 +154,8 @@ export default function ApelMonitor() {
                         <td class="px-4 py-3 text-center text-sm text-gray-500 font-semibold">{item.unknown}</td>
                         <td class="px-4 py-3 text-center">
                           <button
-                            class="text-blue-600 hover:text-blue-800 text-xs"
-                            onClick={() => {
-                              /* View detail - navigate to sesi */
-                            }}
+                            class="bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-100 px-3 py-1 rounded text-xs font-semibold"
+                            onClick={() => setSelectedDetailSesiId(item.id)}
                           >
                             Detail
                           </button>
@@ -157,6 +165,93 @@ export default function ApelMonitor() {
                   </For>
                 </tbody>
               </table>
+            </div>
+          </div>
+        </Show>
+
+        {/* Modal Detail Presensi Sesi */}
+        <Show when={selectedDetailSesiId()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] flex flex-col">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3 flex-shrink-0">
+                <div>
+                  <h3 class="text-lg font-bold">Detail Presensi Sesi Apel</h3>
+                  <p class="text-xs text-gray-500">
+                    {sesiDetailData()?.sesi.kelompokNama} — Tanggal: {sesiDetailData()?.sesi.tanggal} (
+                    {sesiDetailData()?.sesi.shift}) | Dosen PJ: {sesiDetailData()?.sesi.dosenNama}
+                  </p>
+                </div>
+                <button
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setSelectedDetailSesiId(null)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div class="flex-1 overflow-y-auto pr-1">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th class="px-3 py-2 text-left text-xs uppercase">No</th>
+                      <th class="px-3 py-2 text-left text-xs uppercase">NIM</th>
+                      <th class="px-3 py-2 text-left text-xs uppercase">Nama</th>
+                      <th class="px-3 py-2 text-center text-xs uppercase">Status</th>
+                      <th class="px-3 py-2 text-center text-xs uppercase">Durasi / Menit</th>
+                      <th class="px-3 py-2 text-left text-xs uppercase">Verifikasi / Catatan</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y dark:divide-gray-700">
+                    <For each={sesiDetailData()?.presensi}>
+                      {(p, idx) => (
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
+                          <td class="px-3 py-2 text-xs">{idx() + 1}</td>
+                          <td class="px-3 py-2 text-xs font-mono">{p.mahasiswaNim}</td>
+                          <td class="px-3 py-2 text-xs font-semibold">{p.mahasiswaNama}</td>
+                          <td class="px-3 py-2 text-center text-xs">
+                            <span
+                              class={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                                p.status === 'hadir'
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                                  : p.status === 'terlambat'
+                                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300'
+                                    : p.status === 'sakit' || p.status === 'izin'
+                                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                                      : p.status === 'alpa'
+                                        ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'
+                                        : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                              }`}
+                            >
+                              {p.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td class="px-3 py-2 text-center text-xs font-mono">
+                            {p.menitTerlambat ? `${p.menitTerlambat} mnt` : '-'}
+                          </td>
+                          <td class="px-3 py-2 text-xs text-gray-500">
+                            {p.verifiedStatus ? (
+                              <span class="text-blue-600 dark:text-blue-400 font-medium">
+                                Diverifikasi: {p.verifiedStatus} {p.verificationNote ? `(${p.verificationNote})` : ''}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="flex justify-end pt-2 border-t dark:border-gray-700 flex-shrink-0">
+                <button
+                  class="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                  onClick={() => setSelectedDetailSesiId(null)}
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
         </Show>

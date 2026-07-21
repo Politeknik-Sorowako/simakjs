@@ -173,7 +173,7 @@ export const apelController = {
     return fetchApi<PaginatedResponse<UnknownPresensiItem>>(`/apel/verifikasi/unknown${qs ? `?${qs}` : ''}`);
   },
 
-  verifyPresensi: (id: number, data: { verifiedStatus: string; verificationNote?: string }) =>
+  verifyPresensi: (id: number, data: { verifiedStatus: string; verificationNote?: string; menitTerlambat?: number }) =>
     fetchApi(`/apel/verifikasi/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   getRekapApel: (kelompokId: number) => fetchApi(`/apel/rekap/${kelompokId}`),

@@ -149,6 +149,7 @@ export const verifyPresensiSchema = {
       error: 'Status verifikasi harus sakit, izin, alpa, atau hadir',
     }),
     verificationNote: t.Optional(t.String({ error: 'Catatan verifikasi tidak valid' })),
+    menitTerlambat: t.Optional(t.Nullable(t.Number({ minimum: 0, error: 'Durasi menit tidak valid' }))),
   }),
 };
 

@@ -18,6 +18,7 @@ export default function ApelVerifikasi() {
   const [verifyModal, setVerifyModal] = createSignal<{ id: number; nama: string } | null>(null);
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
   const [verifyNote, setVerifyNote] = createSignal('');
+  const [verifyDuration, setVerifyDuration] = createSignal(0);
 
   const [data, { refetch }] = createResource(
     () => ({ page: page(), prodiId: filterProdi() || ws.selectedProdiId() }),
@@ -37,13 +38,15 @@ export default function ApelVerifikasi() {
       await apelController.verifyPresensi(modal.id, {
         verifiedStatus: verifyStatus(),
         verificationNote: verifyNote() || undefined,
+        menitTerlambat: verifyStatus() !== 'hadir' ? verifyDuration() : 0,
       });
       toast.showToast('Presensi berhasil diverifikasi', 'success');
       setVerifyModal(null);
       setVerifyNote('');
+      setVerifyDuration(0);
       refetch();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Gagal memverifikasi';
+      const msg = e instanceof Error ? e.message : 'Gagal verifikasi presensi';
       toast.showToast(msg, 'error');
     }
   };
@@ -168,6 +171,19 @@ export default function ApelVerifikasi() {
                     <option value="hadir">Hadir (ternyata datang)</option>
                   </select>
                 </div>
+                <Show when={verifyStatus() !== 'hadir'}>
+                  <div>
+                    <label class="block text-sm font-medium mb-1">Durasi Ketidakhadiran (Menit)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                      value={verifyDuration()}
+                      onInput={(e) => setVerifyDuration(Number(e.currentTarget.value) || 0)}
+                      placeholder="0"
+                    />
+                  </div>
+                </Show>
                 <div>
                   <label class="block text-sm font-medium mb-1">Catatan (opsional)</label>
                   <textarea
