@@ -17,8 +17,8 @@ const validShift = t.Union([t.Literal('pagi'), t.Literal('sore')], { error: 'Shi
 export const createKelompokSchema = {
   body: t.Object({
     namaKelompok: t.String({ minLength: 1, error: 'Nama kelompok harus diisi' }),
-    programStudiId: t.Number({ error: 'Program studi harus dipilih' }),
-    dosenId: t.Number({ error: 'Dosen PJ harus dipilih' }),
+    programStudiId: t.Optional(t.Nullable(t.Number({ error: 'Program studi tidak valid' }))),
+    dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
     shift: t.Optional(t.String({ error: 'Shift tidak valid' })),
     keterangan: t.Optional(t.String({ error: 'Keterangan tidak valid' })),
   }),
@@ -27,7 +27,8 @@ export const createKelompokSchema = {
 export const updateKelompokSchema = {
   body: t.Object({
     namaKelompok: t.Optional(t.String({ minLength: 1, error: 'Nama kelompok tidak valid' })),
-    dosenId: t.Optional(t.Number({ error: 'Dosen PJ tidak valid' })),
+    programStudiId: t.Optional(t.Nullable(t.Number({ error: 'Program studi tidak valid' }))),
+    dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
     shift: t.Optional(t.String({ error: 'Shift tidak valid' })),
     keterangan: t.Optional(t.String({ error: 'Keterangan tidak valid' })),
     isActive: t.Optional(t.Boolean({ error: 'Status aktif tidak valid' })),
@@ -78,6 +79,7 @@ export const bukaSesiSchema = {
     tanggal: t.String({ minLength: 10, error: 'Tanggal harus diisi (YYYY-MM-DD)' }),
     shift: validShift,
     jamMulai: t.String({ error: 'Jam mulai harus diisi' }),
+    dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
   }),
 };
 

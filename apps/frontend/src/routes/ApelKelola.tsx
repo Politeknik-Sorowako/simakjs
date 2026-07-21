@@ -749,8 +749,8 @@ export default function ApelKelola() {
                               <input
                                 type="checkbox"
                                 checked={isSelected}
-                                onChange={() => toggleMhsSelection(mhs.id)}
-                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                readOnly
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
                               />
                             </Show>
                           </div>

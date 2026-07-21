@@ -14,6 +14,10 @@ export class ApelController {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
+      if (!body?.namaKelompok) {
+        set.status = 400;
+        return { error: 'Nama kelompok wajib diisi.' };
+      }
       return await ApelService.createKelompok(body);
     } catch (e: any) {
       set.status = 400;
