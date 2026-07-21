@@ -725,30 +725,30 @@ export default function ApelKelola() {
                   <div class="flex-1 overflow-y-auto space-y-1 pr-1">
                     <For each={mhsList()}>
                       {(mhs: Mahasiswa) => {
-                        const isAlreadyMember = kelompokDetail()?.anggota?.some((a) => a.mahasiswaId === mhs.id);
-                        const isSelected = selectedMhsToAdd().includes(mhs.id);
+                        const isAlreadyMember = () => kelompokDetail()?.anggota?.some((a) => a.mahasiswaId === mhs.id);
+                        const isSelected = () => selectedMhsToAdd().includes(mhs.id);
                         return (
                           <div
                             class={`flex items-center justify-between p-2 rounded text-xs border ${
-                              isAlreadyMember
+                              isAlreadyMember()
                                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-transparent cursor-not-allowed'
-                                : isSelected
+                                : isSelected()
                                   ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-400'
                                   : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-300'
                             }`}
-                            onClick={() => !isAlreadyMember && toggleMhsSelection(mhs.id)}
+                            onClick={() => !isAlreadyMember() && toggleMhsSelection(mhs.id)}
                           >
                             <div>
                               <div class="font-medium">{mhs.nama}</div>
                               <div class="text-gray-500 font-mono text-[10px]">{mhs.nim}</div>
                             </div>
                             <Show
-                              when={!isAlreadyMember}
+                              when={!isAlreadyMember()}
                               fallback={<span class="text-[10px] text-gray-400 italic">Sudah Ada</span>}
                             >
                               <input
                                 type="checkbox"
-                                checked={isSelected}
+                                checked={isSelected()}
                                 readOnly
                                 class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
                               />
