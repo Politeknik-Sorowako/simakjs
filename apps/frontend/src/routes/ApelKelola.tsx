@@ -345,7 +345,7 @@ export default function ApelKelola() {
                 <For each={kelompokList()}>
                   {(item: KelompokApel) => (
                     <option value={item.id}>
-                      {item.namaKelompok} ({item.shift}) - {item.dosenNama} ({item.jumlahAnggota} Mhs)
+                      {item.namaKelompok} ({item.shift}) {item.dosenNama ? `- ${item.dosenNama}` : ''} ({item.jumlahAnggota ?? 0} Mhs)
                     </option>
                   )}
                 </For>

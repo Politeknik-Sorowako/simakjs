@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, isNull, not, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, isNull, not, or, sql } from 'drizzle-orm';
 import {
   dosen,
   kelompokApel,
@@ -49,8 +49,12 @@ export class ApelService {
 
   static async getKelompokByProdi(prodiId?: number, dosenId?: number) {
     const conditions = [eq(kelompokApel.isActive, true)];
-    if (prodiId) conditions.push(eq(kelompokApel.programStudiId, prodiId));
-    if (dosenId) conditions.push(eq(kelompokApel.dosenId, dosenId));
+    if (prodiId) {
+      conditions.push(or(eq(kelompokApel.programStudiId, prodiId), isNull(kelompokApel.programStudiId))!);
+    }
+    if (dosenId) {
+      conditions.push(or(eq(kelompokApel.dosenId, dosenId), isNull(kelompokApel.dosenId))!);
+    }
 
     const rows = await db
       .select({
