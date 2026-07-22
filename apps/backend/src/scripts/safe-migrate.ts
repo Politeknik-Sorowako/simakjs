@@ -309,35 +309,6 @@ async function main() {
       log('  4. Retry migration');
     }
 
-    if (backedUp) {
-      log('');
-      log('Attempting auto-restore from backup...');
-      const backupDir = process.env.BACKUP_DIR || join(process.cwd(), 'backups');
-      try {
-        const files = readdirSync(backupDir)
-          .filter((f) => f.startsWith('backup_') && f.endsWith('.sql.gz'))
-          .sort()
-          .reverse();
-        if (files.length > 0) {
-          const lastBackup = files[0];
-          log(`Restoring from: ${lastBackup}`);
-          const result = spawnSync('bun', ['run', 'src/scripts/restore-db.ts', lastBackup], {
-            stdio: 'inherit',
-            timeout: 300000,
-            cwd: process.cwd(),
-            env: process.env,
-          });
-          if (result.status === 0) {
-            log('[OK] Database restored from backup.');
-          } else {
-            throw new Error(`Restore script exited with code ${result.status}`);
-          }
-        }
-      } catch (restoreErr: unknown) {
-        log('[WARN] Auto-restore failed. Manual restore required: bun run db:restore');
-      }
-    }
-
     process.exit(1);
   }
 
