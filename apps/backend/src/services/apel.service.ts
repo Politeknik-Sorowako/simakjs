@@ -177,18 +177,34 @@ export class ApelService {
     if (foundSesi.isClosed) throw new Error('Sesi apel sudah ditutup');
 
     for (const item of presensiList) {
-      await db
-        .update(presensiApel)
-        .set({
-          status: item.status as any,
-          menitTerlambat:
-            item.status !== 'hadir'
-              ? item.menitTerlambat !== undefined && item.menitTerlambat !== null
-                ? item.menitTerlambat
-                : 0
-              : null,
-        })
+      const menit =
+        item.status !== 'hadir'
+          ? item.menitTerlambat !== undefined && item.menitTerlambat !== null
+            ? item.menitTerlambat
+            : 0
+          : null;
+
+      const [existing] = await db
+        .select({ id: presensiApel.id })
+        .from(presensiApel)
         .where(and(eq(presensiApel.sesiApelId, sesiId), eq(presensiApel.mahasiswaId, item.mahasiswaId)));
+
+      if (existing) {
+        await db
+          .update(presensiApel)
+          .set({
+            status: item.status as any,
+            menitTerlambat: menit,
+          })
+          .where(eq(presensiApel.id, existing.id));
+      } else {
+        await db.insert(presensiApel).values({
+          sesiApelId: sesiId,
+          mahasiswaId: item.mahasiswaId,
+          status: item.status as any,
+          menitTerlambat: menit,
+        });
+      }
     }
 
     return { message: 'Presensi apel berhasil disimpan' };

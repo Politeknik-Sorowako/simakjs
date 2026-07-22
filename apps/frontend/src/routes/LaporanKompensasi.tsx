@@ -281,6 +281,7 @@ export default function LaporanKompensasi() {
                 <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold bg-secondary-50/50 dark:border-secondary-800 dark:bg-secondary-800">
                   <th
                     onClick={() => handleSort('nama')}
+                    title="Klik untuk mengurutkan berdasarkan nama"
                     class="py-3 px-6 cursor-pointer select-none hover:text-brand-600 transition-colors"
                   >
                     Mahasiswa <span class="text-xs font-bold">{getSortIcon('nama')}</span>
@@ -288,6 +289,7 @@ export default function LaporanKompensasi() {
                   <th class="py-3 px-6">Program Studi</th>
                   <th
                     onClick={() => handleSort('total')}
+                    title="Klik untuk mengurutkan berdasarkan total mangkir"
                     class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
                   >
                     Akumulasi Mangkir <span class="text-xs font-bold">{getSortIcon('total')}</span>
@@ -295,6 +297,7 @@ export default function LaporanKompensasi() {
                   <th class="py-3 px-6 text-center">Kompensasi Dilunasi</th>
                   <th
                     onClick={() => handleSort('sisa')}
+                    title="Klik untuk mengurutkan berdasarkan sisa tanggungan"
                     class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
                   >
                     Sisa Tanggungan <span class="text-xs font-bold">{getSortIcon('sisa')}</span>
