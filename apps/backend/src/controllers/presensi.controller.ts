@@ -30,7 +30,20 @@ export class PresensiController {
     const limit = query?.limit ? parseInt(query.limit) : 20;
     const search = query?.search;
     const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
-    return await PresensiService.getLaporanKompensasi(page, limit, search, prodiId);
+    const sortBy = query?.sortBy || 'sisa';
+    const sortOrder = query?.sortOrder || 'desc';
+    const statusLunas = query?.statusLunas;
+    const exportAll = query?.exportAll === 'true';
+    return await PresensiService.getLaporanKompensasi(
+      page,
+      limit,
+      search,
+      prodiId,
+      sortBy,
+      sortOrder,
+      statusLunas,
+      exportAll,
+    );
   }
 
   static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext): Promise<any> {

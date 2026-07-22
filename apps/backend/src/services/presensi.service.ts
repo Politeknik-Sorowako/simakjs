@@ -167,7 +167,16 @@ export class PresensiService {
     };
   }
 
-  static async getLaporanKompensasi(page = 1, limit = 20, search?: string, prodiId?: number) {
+  static async getLaporanKompensasi(
+    page = 1,
+    limit = 20,
+    search?: string,
+    prodiId?: number,
+    sortBy = 'sisa',
+    sortOrder = 'desc',
+    statusLunas?: string,
+    exportAll = false,
+  ) {
     const offset = (page - 1) * limit;
 
     const presensiAggSubquery = db.$with('presensi_mangkir').as(
@@ -209,7 +218,16 @@ export class PresensiService {
     }
     const whereClause = and(...conditions);
 
-    const listMahasiswa = await db
+    let orderClause = sql`${totalKompensasiExpr} DESC`;
+    if (sortBy === 'total') {
+      orderClause = sortOrder === 'asc' ? sql`${totalKompensasiExpr} ASC` : sql`${totalKompensasiExpr} DESC`;
+    } else if (sortBy === 'nama') {
+      orderClause = sortOrder === 'desc' ? sql`${mahasiswa.nama} DESC` : sql`${mahasiswa.nama} ASC`;
+    } else if (sortBy === 'nim') {
+      orderClause = sortOrder === 'desc' ? sql`${mahasiswa.nim} DESC` : sql`${mahasiswa.nim} ASC`;
+    }
+
+    const baseQuery = db
       .with(presensiAggSubquery, apelAggSubquery)
       .select({
         id: mahasiswa.id,
@@ -223,8 +241,9 @@ export class PresensiService {
       .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
       .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
       .where(whereClause)
-      .limit(limit)
-      .offset(offset);
+      .orderBy(orderClause);
+
+    const listMahasiswa = exportAll ? await baseQuery : await baseQuery.limit(limit).offset(offset);
 
     const paymentsAgg = await db
       .select({
@@ -244,16 +263,28 @@ export class PresensiService {
       .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
       .where(whereClause);
 
-    const total = Number(totalResult?.total || 0);
-    const totalPages = Math.ceil(total / limit);
-
-    const data = listMahasiswa.map((mhs) => {
+    let data = listMahasiswa.map((mhs) => {
       const tk = Number(mhs.totalKompensasi);
       const td = mapPayments.get(mhs.id) || 0;
       return { ...mhs, totalKompensasi: tk, totalDibayar: td, sisaKompensasi: Math.max(0, tk - td) };
     });
 
-    return { data, meta: { total, page, limit, totalPages } };
+    if (statusLunas === 'belum_lunas') {
+      data = data.filter((d) => d.sisaKompensasi > 0);
+    } else if (statusLunas === 'lunas') {
+      data = data.filter((d) => d.sisaKompensasi <= 0);
+    }
+
+    if (sortBy === 'sisa') {
+      data.sort((a, b) =>
+        sortOrder === 'asc' ? a.sisaKompensasi - b.sisaKompensasi : b.sisaKompensasi - a.sisaKompensasi,
+      );
+    }
+
+    const total = exportAll ? data.length : Number(totalResult?.total || 0);
+    const totalPages = Math.ceil(total / limit);
+
+    return { data, meta: { total, page, limit: exportAll ? total : limit, totalPages } };
   }
 
   static async getLaporanKompensasiStats() {

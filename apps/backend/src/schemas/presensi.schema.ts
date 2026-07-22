@@ -140,6 +140,10 @@ export const getLaporanKompensasiSchema = {
     limit: t.Optional(t.String({ default: '20' })),
     search: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
+    sortBy: t.Optional(t.String({ default: 'sisa' })),
+    sortOrder: t.Optional(t.String({ default: 'desc' })),
+    statusLunas: t.Optional(t.String()),
+    exportAll: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({
