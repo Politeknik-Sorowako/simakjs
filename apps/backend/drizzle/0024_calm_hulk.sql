@@ -1,0 +1,2 @@
+CREATE INDEX "idx_presensi_mhs_status" ON "presensi" USING btree ("mahasiswa_id","status");--> statement-breakpoint
+CREATE INDEX "idx_presensi_apel_mhs_status" ON "presensi_apel" USING btree ("mahasiswa_id","status","verified_status");

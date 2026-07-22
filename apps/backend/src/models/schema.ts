@@ -424,22 +424,28 @@ export const bap = pgTable('bap', {
     .$onUpdate(() => new Date()),
 });
 
-export const presensi = pgTable('presensi', {
-  id: serial('id').primaryKey(),
-  bapId: integer('bap_id')
-    .notNull()
-    .references(() => bap.id, { onDelete: 'cascade' }),
-  mahasiswaId: integer('mahasiswa_id')
-    .notNull()
-    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  status: presensiStatusEnum('status').notNull(),
-  durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const presensi = pgTable(
+  'presensi',
+  {
+    id: serial('id').primaryKey(),
+    bapId: integer('bap_id')
+      .notNull()
+      .references(() => bap.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    status: presensiStatusEnum('status').notNull(),
+    durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    mhsStatusIdx: index('idx_presensi_mhs_status').on(t.mahasiswaId, t.status),
+  }),
+);
 
 export const kompensasiBayar = pgTable('kompensasi_bayar', {
   id: serial('id').primaryKey(),
@@ -511,26 +517,32 @@ export const sesiApel = pgTable('sesi_apel', {
     .$onUpdate(() => new Date()),
 });
 
-export const presensiApel = pgTable('presensi_apel', {
-  id: serial('id').primaryKey(),
-  sesiApelId: integer('sesi_apel_id')
-    .notNull()
-    .references(() => sesiApel.id, { onDelete: 'cascade' }),
-  mahasiswaId: integer('mahasiswa_id')
-    .notNull()
-    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  status: presensiStatusEnum('status').notNull().default('hadir'),
-  menitTerlambat: integer('menit_terlambat'),
-  verifiedStatus: presensiStatusEnum('verified_status'),
-  verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
-  verifiedAt: timestamp('verified_at'),
-  verificationNote: text('verification_note'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const presensiApel = pgTable(
+  'presensi_apel',
+  {
+    id: serial('id').primaryKey(),
+    sesiApelId: integer('sesi_apel_id')
+      .notNull()
+      .references(() => sesiApel.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    status: presensiStatusEnum('status').notNull().default('hadir'),
+    menitTerlambat: integer('menit_terlambat'),
+    verifiedStatus: presensiStatusEnum('verified_status'),
+    verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at'),
+    verificationNote: text('verification_note'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    mhsStatusVerifiedIdx: index('idx_presensi_apel_mhs_status').on(t.mahasiswaId, t.status, t.verifiedStatus),
+  }),
+);
 
 export const cpmkRelations = relations(cpmk, ({ one, many }) => ({
   mataKuliah: one(mataKuliah, {
