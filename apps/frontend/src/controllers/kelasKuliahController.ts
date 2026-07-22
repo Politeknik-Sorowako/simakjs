@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { DosenPengajar } from './dosenPengajarController';
 import { MataKuliah } from './mataKuliahController';
 import { PeriodeAkademik } from './periodeAkademikController';
 import { PaginatedResponse } from './prodiController';
@@ -13,6 +14,7 @@ export interface KelasKuliah {
   tanggalAkhirEfektif?: string | null;
   mataKuliah?: MataKuliah | null;
   periodeAkademik?: PeriodeAkademik | null;
+  dosenPengajarKelas?: DosenPengajar[] | null;
   idPddikti?: string | null;
   isSynced?: boolean;
 }
