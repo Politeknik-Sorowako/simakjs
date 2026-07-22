@@ -149,6 +149,21 @@ export default function LaporanKompensasi() {
     }
   };
 
+  const handleSort = (field: string) => {
+    if (sortBy() === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'nama' || field === 'nim' ? 'asc' : 'desc');
+    }
+    setPage(1);
+  };
+
+  const getSortIcon = (field: string) => {
+    if (sortBy() !== field) return ' ↕';
+    return sortOrder() === 'asc' ? ' ↑' : ' ↓';
+  };
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -264,11 +279,26 @@ export default function LaporanKompensasi() {
             <table class="w-full text-left text-sm border-collapse">
               <thead>
                 <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold bg-secondary-50/50 dark:border-secondary-800 dark:bg-secondary-800">
-                  <th class="py-3 px-6">Mahasiswa</th>
+                  <th
+                    onClick={() => handleSort('nama')}
+                    class="py-3 px-6 cursor-pointer select-none hover:text-brand-600 transition-colors"
+                  >
+                    Mahasiswa <span class="text-xs font-bold">{getSortIcon('nama')}</span>
+                  </th>
                   <th class="py-3 px-6">Program Studi</th>
-                  <th class="py-3 px-6 text-center">Akumulasi Mangkir</th>
+                  <th
+                    onClick={() => handleSort('total')}
+                    class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                  >
+                    Akumulasi Mangkir <span class="text-xs font-bold">{getSortIcon('total')}</span>
+                  </th>
                   <th class="py-3 px-6 text-center">Kompensasi Dilunasi</th>
-                  <th class="py-3 px-6 text-center">Sisa Tanggungan</th>
+                  <th
+                    onClick={() => handleSort('sisa')}
+                    class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                  >
+                    Sisa Tanggungan <span class="text-xs font-bold">{getSortIcon('sisa')}</span>
+                  </th>
                   <th class="py-3 px-6 text-center">Aksi</th>
                 </tr>
               </thead>
