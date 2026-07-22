@@ -222,6 +222,17 @@ export class MataKuliahService {
       prodiKodeToId = new Map(prodiList.map((p) => [p.kode, p.id]));
     }
 
+    const uniqueKodes = [...new Set(items.map((i) => i.kode?.trim()).filter((k): k is string => !!k))];
+    const prodiIds = Array.from(prodiKodeToId.values());
+    let existingKeySet = new Set<string>();
+    if (uniqueKodes.length > 0 && prodiIds.length > 0) {
+      const existingMks = await db
+        .select({ programStudiId: mataKuliah.programStudiId, kode: mataKuliah.kode })
+        .from(mataKuliah)
+        .where(and(inArray(mataKuliah.programStudiId, prodiIds), inArray(mataKuliah.kode, uniqueKodes)));
+      existingKeySet = new Set(existingMks.map((mk) => `${mk.programStudiId}:${mk.kode}`));
+    }
+
     const validItems: CreateMataKuliahDto[] = [];
 
     for (let i = 0; i < items.length; i++) {
@@ -262,11 +273,7 @@ export class MataKuliahService {
         continue;
       }
 
-      const existing = await db.query.mataKuliah.findFirst({
-        where: and(eq(mataKuliah.programStudiId, resolvedProdiId), eq(mataKuliah.kode, kode)),
-      });
-
-      if (existing) {
+      if (existingKeySet.has(`${resolvedProdiId}:${kode}`)) {
         result.failed++;
         result.errors.push({ row: urutan, kode, error: 'Kode sudah ada untuk program studi ini' });
         continue;
@@ -283,16 +290,14 @@ export class MataKuliahService {
       });
     }
 
-    if (validItems.length > 0) {
+    for (const item of validItems) {
       try {
-        await db.transaction(async (tx) => {
-          await tx.insert(mataKuliah).values(validItems);
-        });
-        result.success = validItems.length;
+        await db.insert(mataKuliah).values(item);
+        result.success++;
       } catch (err: unknown) {
-        result.failed += validItems.length;
-        result.errors.push({ row: 0, kode: '', error: 'Gagal menyimpan data ke database' });
-        console.error('Mata Kuliah import error:', err);
+        result.failed++;
+        const msg = err instanceof Error ? err.message : 'Gagal menyimpan data ke database';
+        result.errors.push({ row: 0, kode: item.kode, error: msg });
       }
     }
 

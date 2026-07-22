@@ -189,6 +189,17 @@ export class CpmkService {
       kodeToId = new Map(mkList.map((m) => [m.kode, m.id]));
     }
 
+    const uniqueCpmkKodes = [...new Set(items.map((i) => i.kode?.trim()).filter((k): k is string => !!k))];
+    const mkIds = Array.from(kodeToId.values());
+    let existingKeySet = new Set<string>();
+    if (uniqueCpmkKodes.length > 0 && mkIds.length > 0) {
+      const existingCpmks = await db
+        .select({ mataKuliahId: cpmk.mataKuliahId, kode: cpmk.kode })
+        .from(cpmk)
+        .where(and(inArray(cpmk.mataKuliahId, mkIds), inArray(cpmk.kode, uniqueCpmkKodes)));
+      existingKeySet = new Set(existingCpmks.map((c) => `${c.mataKuliahId}:${c.kode}`));
+    }
+
     const validItems: { kode: string; deskripsi: string; resolvedMkId: number }[] = [];
 
     for (let i = 0; i < items.length; i++) {
@@ -228,11 +239,7 @@ export class CpmkService {
         continue;
       }
 
-      const existing = await db.query.cpmk.findFirst({
-        where: and(eq(cpmk.mataKuliahId, resolvedMkId), eq(cpmk.kode, kode)),
-      });
-
-      if (existing) {
+      if (existingKeySet.has(`${resolvedMkId}:${kode}`)) {
         result.failed++;
         result.errors.push({ row: urutan, kode, error: 'Kode sudah ada untuk mata kuliah ini' });
         continue;
@@ -241,26 +248,18 @@ export class CpmkService {
       validItems.push({ kode, deskripsi, resolvedMkId });
     }
 
-    if (validItems.length > 0) {
+    for (const item of validItems) {
       try {
-        await db.transaction(async (tx) => {
-          await tx.insert(cpmk).values(
-            validItems.map((item) => ({
-              mataKuliahId: item.resolvedMkId,
-              kode: item.kode,
-              deskripsi: item.deskripsi,
-            })),
-          );
+        await db.insert(cpmk).values({
+          mataKuliahId: item.resolvedMkId,
+          kode: item.kode,
+          deskripsi: item.deskripsi,
         });
-        result.success = validItems.length;
+        result.success++;
       } catch (err: unknown) {
-        result.failed += validItems.length;
-        result.errors.push({
-          row: 0,
-          kode: '',
-          error: 'Gagal menyimpan data ke database',
-        });
-        console.error('CPMK import error:', err);
+        result.failed++;
+        const msg = err instanceof Error ? err.message : 'Gagal menyimpan data ke database';
+        result.errors.push({ row: 0, kode: item.kode, error: msg });
       }
     }
 
