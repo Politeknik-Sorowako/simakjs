@@ -8,5 +8,14 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          xlsx: ['xlsx'],
+          pdf: ['jspdf', 'jspdf-autotable'],
+          charts: ['chart.js'],
+        },
+      },
+    },
   },
 });
