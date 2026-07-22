@@ -226,17 +226,6 @@ export class KelasKuliahService {
       });
 
       if (existing) {
-        const dosenInfo = item.nipDosen?.trim() ? nipToDosen.get(item.nipDosen.trim()) : undefined;
-        if (dosenInfo) {
-          dosenToPlot.push({
-            nama: dosenInfo.nama,
-            nip: item.nipDosen!.trim(),
-            mataKuliahId: mkId,
-            namaKelas,
-            periodeId: item.periodeId.trim(),
-            sksBebanMengajar: item.sksBebanMengajar ?? 0,
-          });
-        }
         continue;
       }
 

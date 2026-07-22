@@ -587,7 +587,7 @@ export class AdmisiAdminController {
         const file = fd.get('file') as File | null;
         if (file) {
           const dir = 'storage/announcements';
-          await Bun.$`mkdir -p ${dir}`.quiet();
+          await mkdir(dir, { recursive: true });
           fileName = `${Date.now()}_${file.name}`;
           filePath = `${dir}/${fileName}`;
           await Bun.write(filePath, file);
@@ -639,7 +639,7 @@ export class AdmisiAdminController {
         const file = fd.get('file') as File | null;
         if (file) {
           const dir = 'storage/announcements';
-          await Bun.$`mkdir -p ${dir}`.quiet();
+          await mkdir(dir, { recursive: true });
           fileName = `${Date.now()}_${file.name}`;
           filePath = `${dir}/${fileName}`;
           await Bun.write(filePath, file);
