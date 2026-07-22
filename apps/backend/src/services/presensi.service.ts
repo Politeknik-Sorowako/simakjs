@@ -198,11 +198,9 @@ export class PresensiService {
         .groupBy(presensiApel.mahasiswaId),
     );
 
-    const totalKompensasiExpr = sql<number>`(COALESCE(${presensiAggSubquery.poin}, 0) + COALESCE(${apelAggSubquery.poin}, 0))`;
+    const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0))`;
 
-    const conditions: any[] = [
-      sql`(COALESCE(${presensiAggSubquery.poin}, 0) + COALESCE(${apelAggSubquery.poin}, 0)) > 0`,
-    ];
+    const conditions: any[] = [sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`];
     if (search) {
       conditions.push(or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`)));
     }
@@ -222,8 +220,8 @@ export class PresensiService {
       })
       .from(mahasiswa)
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
-      .leftJoin(presensiAggSubquery, eq(presensiAggSubquery.mahasiswaId, mahasiswa.id))
-      .leftJoin(apelAggSubquery, eq(apelAggSubquery.mahasiswaId, mahasiswa.id))
+      .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
+      .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
       .where(whereClause)
       .limit(limit)
       .offset(offset);
@@ -242,8 +240,8 @@ export class PresensiService {
       .with(presensiAggSubquery, apelAggSubquery)
       .select({ total: sql<number>`count(*)` })
       .from(mahasiswa)
-      .leftJoin(presensiAggSubquery, eq(presensiAggSubquery.mahasiswaId, mahasiswa.id))
-      .leftJoin(apelAggSubquery, eq(apelAggSubquery.mahasiswaId, mahasiswa.id))
+      .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
+      .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
       .where(whereClause);
 
     const total = Number(totalResult?.total || 0);
@@ -287,7 +285,7 @@ export class PresensiService {
         .groupBy(presensiApel.mahasiswaId),
     );
 
-    const totalKompensasiExpr = sql<number>`(COALESCE(${presensiAggSubquery.poin}, 0) + COALESCE(${apelAggSubquery.poin}, 0))`;
+    const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0))`;
 
     const perMhs = await db
       .with(presensiAggSubquery, apelAggSubquery)
@@ -300,9 +298,9 @@ export class PresensiService {
       })
       .from(mahasiswa)
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
-      .leftJoin(presensiAggSubquery, eq(presensiAggSubquery.mahasiswaId, mahasiswa.id))
-      .leftJoin(apelAggSubquery, eq(apelAggSubquery.mahasiswaId, mahasiswa.id))
-      .where(sql`(COALESCE(${presensiAggSubquery.poin}, 0) + COALESCE(${apelAggSubquery.poin}, 0)) > 0`);
+      .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
+      .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
+      .where(sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`);
 
     const paymentsAgg = await db
       .select({
