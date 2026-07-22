@@ -12,6 +12,8 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'user_role', value: 'keuangan', before: 'guest' },
   { name: 'user_role', value: 'guest' },
   { name: 'user_role', value: 'calon_mahasiswa', before: 'guest' },
+  { name: 'presensi_status', value: 'terlambat' },
+  { name: 'presensi_status', value: 'unknown' },
 ];
 
 async function ensureEnums() {
@@ -45,7 +47,7 @@ async function ensureEnums() {
     }
 
     const beforeClause = fix.before ? ` BEFORE '${fix.before}'` : '';
-    await pool.query(`ALTER TYPE ${fix.name} ADD VALUE '${fix.value}'${beforeClause}`);
+    await pool.query(`ALTER TYPE ${fix.name} ADD VALUE IF NOT EXISTS '${fix.value}'${beforeClause}`);
     console.log(`[ENSURE ENUMS] Added ${fix.name}.${fix.value}`);
   }
 

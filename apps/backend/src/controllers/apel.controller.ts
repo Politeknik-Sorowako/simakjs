@@ -1,0 +1,298 @@
+import { ApelService } from '../services/apel.service';
+import { AuthContext } from '../utils/types';
+
+function allowed(user: any, roles: string[]) {
+  if (!user) return false;
+  return roles.includes(user.role);
+}
+
+export class ApelController {
+  static async createKelompok({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      if (!body?.namaKelompok) {
+        set.status = 400;
+        return { error: 'Nama kelompok wajib diisi.' };
+      }
+      return await ApelService.createKelompok(body);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async updateKelompok({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await ApelService.updateKelompok(parseInt(params.id), body);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async deleteKelompok({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await ApelService.deleteKelompok(parseInt(params.id));
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getKelompokByProdi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      let prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+      let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+
+      if (user.role === 'prodi') {
+        const prodiUser = await ApelService.getDosenByEmail(user.email);
+        if (!prodiUser) {
+          set.status = 404;
+          return { error: 'Prodi user not found in dosen' };
+        }
+        if (!prodiId) prodiId = prodiUser.programStudiId || undefined;
+      } else if (user.role === 'dosen' && !dosenId) {
+        const dosenUser = await ApelService.getDosenByEmail(user.email);
+        if (dosenUser) dosenId = dosenUser.id;
+      }
+
+      return await ApelService.getKelompokByProdi(prodiId, dosenId);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getKelompokDetail({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      return await ApelService.getKelompokDetail(parseInt(params.id));
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async manageAnggota({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await ApelService.addAnggota(parseInt(params.id), body.mahasiswaIds);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async removeAnggota({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await ApelService.removeAnggota(parseInt(params.id), parseInt(params.mhsId));
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async bukaSesi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user || !allowed(user, ['admin', 'dosen', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      let dosenId = body?.dosenId;
+      if (!dosenId && user.role === 'dosen') {
+        const dosenUser = await ApelService.getDosenByEmail(user.email);
+        if (dosenUser) dosenId = dosenUser.id;
+      }
+      if (!dosenId) {
+        set.status = 400;
+        return { error: 'Pilih Dosen PJ Sesi terlebih dahulu.' };
+      }
+      return await ApelService.bukaSesi({ ...body, dosenId });
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async submitPresensi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'dosen'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await ApelService.submitPresensi(parseInt(params.id), body.presensiList);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getSesiPresensi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      return await ApelService.getSesiPresensi(parseInt(params.id));
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getSesiByKelompok({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      return await ApelService.getSesiByKelompok(parseInt(params.kelompokId));
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async tutupSesi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'dosen'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await ApelService.tutupSesi(parseInt(params.id));
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getSesiAktif({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+      if (user.role === 'dosen' && !dosenId) {
+        const dosenUser = await ApelService.getDosenByEmail(user.email);
+        if (dosenUser) dosenId = dosenUser.id;
+      }
+      return await ApelService.getSesiAktif(dosenId);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getMonitorRealtime({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'dosen', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      const u = user!;
+      let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+      const tanggal = query?.tanggal || undefined;
+      if (u.role === 'dosen' && !dosenId) {
+        const dosenUser = await ApelService.getDosenByEmail(u.email);
+        if (dosenUser) dosenId = dosenUser.id;
+      }
+      return await ApelService.getMonitorRealtime(dosenId, tanggal);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getPresensiUnknown({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      const page = query?.page ? parseInt(query.page) : 1;
+      const limit = query?.limit ? parseInt(query.limit) : 20;
+      const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+      const kelompokId = query?.kelompokId ? parseInt(query.kelompokId) : undefined;
+      const tanggal = query?.tanggal || undefined;
+      return await ApelService.getPresensiUnknown(page, limit, prodiId, kelompokId, tanggal);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async verifyPresensi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      const u = user!;
+      return await ApelService.verifyPresensi(parseInt(params.id), {
+        verifiedStatus: body.verifiedStatus,
+        verifiedBy: u.id,
+        verificationNote: body.verificationNote,
+        menitTerlambat: body.menitTerlambat,
+      });
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+
+  static async getRekapApel({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      return await ApelService.getRekapApel(parseInt(params.kelompokId));
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message };
+    }
+  }
+}

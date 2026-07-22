@@ -628,6 +628,18 @@ utils/           # Shared: api.ts, csv.ts, export.ts
 
 ---
 
+## 13. Implementation Planning Standards (Junior & Small-Model Friendly)
+
+When creating or updating an implementation plan (`implementation_plan.md`), all AI agents MUST format it so that it can be effortlessly executed by a junior developer or a smaller/cheaper LLM model:
+
+1. **Sequential Step-by-Step Structure**: Break complex features into self-contained, numbered steps ordered by dependency (e.g., Step 1: Database Schema & Migration → Step 2: Service → Step 3: Controller → Step 4: Frontend Controller → Step 5: Frontend UI).
+2. **Explicit File Paths**: Always provide exact workspace-relative file paths for every file being created or modified (e.g., `apps/backend/src/models/schema.ts`).
+3. **Before & After Code Snippets**: Provide concise before/after code snippets or exact type definitions for every non-trivial change to eliminate guesswork.
+4. **Copy-Pasteable CLI Commands**: Include exact terminal commands for migrations, linting, type-checking, and builds (e.g., `bun run db:generate`, `bun run lint`).
+5. **Clear Verification Steps**: Define explicit verification checks and expected outcomes for each step.
+
+---
+
 ## Quick Reference — Common Mistakes
 
 | Mistake | Why it breaks | Fix |

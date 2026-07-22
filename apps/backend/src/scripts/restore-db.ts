@@ -59,12 +59,23 @@ function acquireLock(backupDir: string): boolean {
   const lockFile = join(backupDir, '.restore.lock');
   if (existsSync(lockFile)) {
     try {
-      const pid = readFileSync(lockFile, 'utf-8').trim();
-      auditLog(`Another restore is in progress (PID: ${pid}). Please wait.`);
+      const pidStr = readFileSync(lockFile, 'utf-8').trim();
+      const pid = parseInt(pidStr, 10);
+      if (!isNaN(pid)) {
+        try {
+          process.kill(pid, 0); // throws if process does not exist
+          auditLog(`Another restore is in progress (PID: ${pid}). Please wait.`);
+          return false;
+        } catch {
+          // Process no longer exists — stale lock file
+          auditLog(`Cleaning up stale restore lock (PID ${pid} not running).`);
+          unlinkSync(lockFile);
+        }
+      }
     } catch {
       auditLog('Another restore is in progress. Please wait.');
+      return false;
     }
-    return false;
   }
   writeFileSync(lockFile, process.pid.toString(), { mode: 0o600 });
   return true;
@@ -160,11 +171,15 @@ async function main() {
   auditLog(`Selected backup: ${selectedFile} (${size} MB)`);
   auditLog(`Database: ${config.db} @ ${config.host}:${config.port}`);
 
-  const confirm = await askQuestion('WARNING: This will DESTROY all current data. Continue? (yes/no): ');
-  if (confirm.toLowerCase() !== 'yes') {
-    auditLog('Restore cancelled by user.');
-    releaseLock(backupDir);
-    process.exit(0);
+  const autoConfirm =
+    process.argv.includes('--yes') || process.argv.includes('-y') || process.env.NON_INTERACTIVE === 'true';
+  if (!autoConfirm) {
+    const confirm = await askQuestion('WARNING: This will DESTROY all current data. Continue? (yes/no): ');
+    if (confirm.toLowerCase() !== 'yes') {
+      auditLog('Restore cancelled by user.');
+      releaseLock(backupDir);
+      process.exit(0);
+    }
   }
 
   auditLog('Restoring database...');
@@ -172,6 +187,34 @@ async function main() {
   try {
     const compressed = readFileSync(filepath);
     const decompressed = gunzipSync(compressed);
+
+    auditLog('Resetting database schema...');
+    const dropSchemaProcess = spawnSync(
+      'psql',
+      [
+        '-h',
+        config.host,
+        '-p',
+        config.port,
+        '-U',
+        config.user,
+        '-d',
+        config.db,
+        '-c',
+        'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public;',
+      ],
+      {
+        env: { ...process.env, PGPASSWORD: config.password },
+        stdio: 'inherit',
+        timeout: 60000,
+      },
+    );
+
+    if (dropSchemaProcess.error || dropSchemaProcess.status !== 0) {
+      throw new Error(
+        `Failed to reset schema before restore: ${dropSchemaProcess.error?.message || dropSchemaProcess.status}`,
+      );
+    }
 
     const restoreProcess = spawnSync(
       'psql',

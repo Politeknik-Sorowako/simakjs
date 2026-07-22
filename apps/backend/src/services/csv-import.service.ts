@@ -602,7 +602,7 @@ export class CsvImportService {
 
         const hashedPassword = await Bun.password.hash(email, {
           algorithm: 'bcrypt',
-          cost: 10,
+          cost: 12,
         });
 
         await tx.insert(users).values({
