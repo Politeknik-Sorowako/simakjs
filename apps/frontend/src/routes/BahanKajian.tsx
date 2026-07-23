@@ -7,6 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import {
   BahanKajianCplMapping,
   bahanKajianController,
@@ -20,7 +21,8 @@ import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function BahanKajian() {
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
-  const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
+  const workspace = useWorkspace();
+  const prodiFilter = () => workspace.activeProdiId() ?? undefined;
 
   const [bkList, { refetch }] = createResource(
     () => ({ prodiId: prodiFilter() }),
@@ -60,7 +62,7 @@ export default function BahanKajian() {
   const [nama, setNama] = createSignal('');
   const [deskripsi, setDeskripsi] = createSignal('');
   const [urutan, setUrutan] = createSignal(0);
-  const [prodiId, setProdiId] = createSignal<number>(0);
+  const [prodiId, setProdiId] = createSignal<number>(workspace.activeProdiId() || 0);
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const [showMappingModal, setShowMappingModal] = createSignal(false);
@@ -295,23 +297,6 @@ export default function BahanKajian() {
         </div>
 
         <div class="flex gap-4 items-center">
-          <div class="w-64">
-            <Input
-              type="select"
-              placeholder="Filter Program Studi"
-              value={prodiFilter() ?? ''}
-              onInput={(e) => {
-                const val = e.currentTarget.value;
-                setProdiFilter(val ? Number(val) : undefined);
-                resetPage();
-              }}
-              isSelect
-              selectOptions={[
-                { value: '', label: 'Semua Program Studi' },
-                ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
-              ]}
-            />
-          </div>
           <Button variant="secondary" onClick={() => refetch()}>
             Refresh
           </Button>

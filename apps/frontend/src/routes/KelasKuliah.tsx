@@ -50,7 +50,6 @@ export default function KelasKuliah() {
     { header: 'ID PDDIKTI', accessor: (row: IKelas) => row.idPddikti || '-' },
   ];
   const workspace = useWorkspace();
-  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   const [search, setSearch] = createSignal('');
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
@@ -61,8 +60,8 @@ export default function KelasKuliah() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
-      periodeId: isGlobalFilterActive() ? workspace.selectedPeriodeId() : null,
+      prodiId: workspace.activeProdiId(),
+      periodeId: workspace.activePeriodeId(),
     }),
     ({ search, page, limit, prodiId, periodeId }) =>
       kelasKuliahController.getAll(search, page, limit, prodiId || undefined, periodeId || undefined),
@@ -70,7 +69,7 @@ export default function KelasKuliah() {
 
   // Fetch Dropdown Data
   const [matkuls] = createResource(
-    () => workspace.selectedProdiId(),
+    () => workspace.activeProdiId(),
     (prodiId) =>
       mataKuliahController.getAll(undefined, 1, 100, undefined, undefined, undefined, undefined, prodiId || undefined),
   );

@@ -40,7 +40,32 @@ export default function Mahasiswa() {
 
   const auth = useAuth();
   const workspace = useWorkspace();
-  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
+
+  // Column Filters
+  const [filterNim, setFilterNim] = createSignal('');
+  const [filterNama, setFilterNama] = createSignal('');
+  const [filterEmail, setFilterEmail] = createSignal('');
+  const [filterStatus, setFilterStatus] = createSignal('');
+
+  // Input fields state (for UI immediate update)
+  const [inputNim, setInputNim] = createSignal('');
+  const [inputNama, setInputNama] = createSignal('');
+  const [inputEmail, setInputEmail] = createSignal('');
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+  const handleDebouncedFilter = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      setFilterNim(inputNim());
+      setFilterNama(inputNama());
+      setFilterEmail(inputEmail());
+      resetPage();
+    }, 500);
+  };
+
+  // Sorting state
+  const [sortBy, setSortBy] = createSignal('nim');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
 
   // Fetch Mahasiswa Data
   const [mahasiswas, { refetch }] = createResource(
@@ -48,14 +73,25 @@ export default function Mahasiswa() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
+      prodiId: workspace.activeProdiId(),
+      sortBy: sortBy(),
+      sortOrder: sortOrder(),
+      filterNim: filterNim(),
+      filterNama: filterNama(),
+      filterEmail: filterEmail(),
+      filterStatus: filterStatus(),
     }),
-    ({ search, page, limit, prodiId }) => mahasiswaController.getAll(search, page, limit, prodiId || undefined),
+    ({ search, page, limit, prodiId, sortBy, sortOrder, filterNim, filterNama, filterEmail, filterStatus }) =>
+      mahasiswaController.getAll(search, page, limit, prodiId || undefined, {
+        sortBy,
+        sortOrder,
+        filterNim,
+        filterNama,
+        filterEmail,
+        filterStatus,
+      }),
   );
 
-  // Sorting state
-  const [sortBy, setSortBy] = createSignal('nim');
-  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
   const toggleSort = (field: string) => {
     if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
     else {
@@ -63,15 +99,7 @@ export default function Mahasiswa() {
       setSortOrder('asc');
     }
   };
-  const sortedData = () => {
-    const data = mahasiswas()?.data || [];
-    return [...data].sort((a, b) => {
-      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const cmp = String(aVal).localeCompare(String(bVal), 'id');
-      return sortOrder() === 'asc' ? cmp : -cmp;
-    });
-  };
+  const sortedData = () => mahasiswas()?.data || [];
 
   // Fetch Program Studi for Dropdowns
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
@@ -304,18 +332,73 @@ export default function Mahasiswa() {
                 onChange={toggleSelectAll}
                 class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
               />,
-              <SortableHeader field="nim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                NIM
-              </SortableHeader>,
-              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Nama
-              </SortableHeader>,
-              <SortableHeader field="email" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Email
-              </SortableHeader>,
+              <div class="flex flex-col gap-2 w-full">
+                <SortableHeader field="nim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  NIM
+                </SortableHeader>
+                <input
+                  type="text"
+                  placeholder="Filter NIM..."
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-24"
+                  value={inputNim()}
+                  onInput={(e) => {
+                    setInputNim(e.currentTarget.value);
+                    handleDebouncedFilter();
+                  }}
+                />
+              </div>,
+              <div class="flex flex-col gap-2 w-full">
+                <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Nama
+                </SortableHeader>
+                <input
+                  type="text"
+                  placeholder="Filter Nama..."
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-32"
+                  value={inputNama()}
+                  onInput={(e) => {
+                    setInputNama(e.currentTarget.value);
+                    handleDebouncedFilter();
+                  }}
+                />
+              </div>,
+              <div class="flex flex-col gap-2 w-full">
+                <SortableHeader field="email" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Email
+                </SortableHeader>
+                <input
+                  type="text"
+                  placeholder="Filter Email..."
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-32"
+                  value={inputEmail()}
+                  onInput={(e) => {
+                    setInputEmail(e.currentTarget.value);
+                    handleDebouncedFilter();
+                  }}
+                />
+              </div>,
               'Program Studi',
               'Dosen Wali (PA)',
-              'Status',
+              <div class="flex flex-col gap-2 w-full">
+                <SortableHeader field="status" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Status
+                </SortableHeader>
+                <select
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-24"
+                  value={filterStatus()}
+                  onChange={(e) => {
+                    setFilterStatus(e.currentTarget.value);
+                    resetPage();
+                  }}
+                >
+                  <option value="">Semua</option>
+                  <option value="aktif">Aktif</option>
+                  <option value="cuti">Cuti</option>
+                  <option value="lulus">Lulus</option>
+                  <option value="drop_out">Drop Out</option>
+                  <option value="keluar">Keluar</option>
+                </select>
+              </div>,
               'Aksi',
             ]}
           >

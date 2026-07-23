@@ -1,10 +1,14 @@
 import { createContext, createSignal, JSX, useContext } from 'solid-js';
+import { useAuth } from './AuthContext';
 
 interface WorkspaceContextType {
   selectedProdiId: () => number | null;
   setSelectedProdiId: (id: number | null) => void;
   selectedPeriodeId: () => string | null;
   setSelectedPeriodeId: (id: string | null) => void;
+  isGlobalFilterActive: () => boolean;
+  activeProdiId: () => number | null;
+  activePeriodeId: () => string | null;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType>();
@@ -37,6 +41,11 @@ export function WorkspaceProvider(props: { children: JSX.Element }) {
     }
   };
 
+  const auth = useAuth();
+  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
+  const activeProdiId = () => (isGlobalFilterActive() ? selectedProdiId() : null);
+  const activePeriodeId = () => (isGlobalFilterActive() ? selectedPeriodeId() : null);
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -44,6 +53,9 @@ export function WorkspaceProvider(props: { children: JSX.Element }) {
         setSelectedProdiId,
         selectedPeriodeId,
         setSelectedPeriodeId,
+        isGlobalFilterActive,
+        activeProdiId,
+        activePeriodeId,
       }}
     >
       {props.children}

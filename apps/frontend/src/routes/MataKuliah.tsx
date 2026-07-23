@@ -27,7 +27,7 @@ export default function MataKuliah() {
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
 
   // Filters
-  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(ws.selectedProdiId() ?? undefined);
+  const filterProdi = () => ws.activeProdiId() ?? undefined;
   const [filterKurikulum, setFilterKurikulum] = createSignal<number | undefined>(undefined);
   const [filterSemester, setFilterSemester] = createSignal<number | undefined>(undefined);
   const [sortBy, setSortBy] = createSignal<SortField>('nama');
@@ -92,7 +92,7 @@ export default function MataKuliah() {
   // Form State
   const [showModal, setShowModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
-  const [formProdiId, setFormProdiId] = createSignal<number>(ws.selectedProdiId() || 0);
+  const [formProdiId, setFormProdiId] = createSignal<number>(ws.activeProdiId() || 0);
   const [kode, setKode] = createSignal('');
   const [nama, setNama] = createSignal('');
   const [sksTotal, setSksTotal] = createSignal(3);
@@ -301,30 +301,7 @@ export default function MataKuliah() {
               }}
             />
           </div>
-          <div class="w-[200px]">
-            <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-200 mb-1">
-              Program Studi
-            </label>
-            <select
-              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-              value={filterProdi() || ''}
-              onChange={(e) => {
-                setFilterProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
-                setFilterKurikulum(undefined);
-                setFilterSemester(undefined);
-                resetPage();
-              }}
-            >
-              <option value="">Semua Prodi</option>
-              <For each={prodis()?.data}>
-                {(p) => (
-                  <option value={p.id}>
-                    {p.jenjang} - {p.nama}
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
+
           <div class="w-[220px]">
             <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-200 mb-1">Kurikulum</label>
             <select
