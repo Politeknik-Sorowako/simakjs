@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, or, SQL, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { dosen, mahasiswa, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -17,7 +17,7 @@ export interface CreateMahasiswaDto {
 }
 
 export class MahasiswaService {
-  static async getAll(page = 1, limit = 10, search = '', dosenPaId?: number, programStudiId?: number) {
+  static async getAll(page = 1, limit = 10, search = '', dosenPaId?: number, programStudiId?: number, filters?: any) {
     const offset = (page - 1) * limit;
 
     let conditions = [];
@@ -37,6 +37,19 @@ export class MahasiswaService {
       conditions.push(eq(mahasiswa.programStudiId, programStudiId));
     }
 
+    if (filters?.filterNim) {
+      conditions.push(ilike(mahasiswa.nim, `%${filters.filterNim}%`));
+    }
+    if (filters?.filterNama) {
+      conditions.push(ilike(mahasiswa.nama, `%${filters.filterNama}%`));
+    }
+    if (filters?.filterEmail) {
+      conditions.push(ilike(mahasiswa.email, `%${filters.filterEmail}%`));
+    }
+    if (filters?.filterStatus) {
+      conditions.push(ilike(mahasiswa.status, `%${filters.filterStatus}%`));
+    }
+
     let whereClause = undefined;
     if (conditions.length > 0) {
       whereClause = and(...conditions);
@@ -46,8 +59,25 @@ export class MahasiswaService {
 
     const total = totalResult?.total || 0;
 
+    let orderByClause = undefined;
+    if (filters?.sortBy) {
+      // Map valid sortBy string to actual column
+      const sortMap: Record<string, any> = {
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        email: mahasiswa.email,
+        status: mahasiswa.status,
+      };
+
+      const sortColumn = sortMap[filters.sortBy];
+      if (sortColumn) {
+        orderByClause = filters.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn);
+      }
+    }
+
     const data = await db.query.mahasiswa.findMany({
       where: whereClause,
+      orderBy: orderByClause,
       columns: {
         tempatLahir: false,
         jalan: false,

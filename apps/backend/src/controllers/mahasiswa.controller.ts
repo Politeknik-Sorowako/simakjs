@@ -3,11 +3,7 @@ import { MahasiswaService } from '../services/mahasiswa.service';
 import { AuthContext, PaginationQuery, parsePagination } from '../utils/types';
 
 export class MahasiswaController {
-  static async getAll({
-    query,
-    set,
-    getCurrentUser,
-  }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
       set.status = 403;
@@ -32,6 +28,15 @@ export class MahasiswaController {
       };
     }
 
+    const filters = {
+      sortBy: query?.sortBy,
+      sortOrder: query?.sortOrder,
+      filterNim: query?.filterNim,
+      filterNama: query?.filterNama,
+      filterEmail: query?.filterEmail,
+      filterStatus: query?.filterStatus,
+    };
+
     if (user.role === 'dosen') {
       const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
       if (!dsnId) {
@@ -40,10 +45,10 @@ export class MahasiswaController {
           meta: { total: 0, page, limit, totalPages: 0 },
         };
       }
-      return await MahasiswaService.getAll(page, limit, search, dsnId, programStudiId);
+      return await MahasiswaService.getAll(page, limit, search, dsnId, programStudiId, filters);
     }
 
-    return await MahasiswaService.getAll(page, limit, search, undefined, programStudiId);
+    return await MahasiswaService.getAll(page, limit, search, undefined, programStudiId, filters);
   }
 
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {

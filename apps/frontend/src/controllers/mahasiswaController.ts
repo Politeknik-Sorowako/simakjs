@@ -25,12 +25,26 @@ export const mahasiswaController = {
     page?: number,
     limit?: number,
     programStudiId?: number,
+    filters?: {
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      filterNim?: string;
+      filterNama?: string;
+      filterEmail?: string;
+      filterStatus?: string;
+    },
   ): Promise<PaginatedResponse<Mahasiswa>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     if (programStudiId) params.append('programStudiId', String(programStudiId));
+    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+    if (filters?.filterNim) params.append('filterNim', filters.filterNim);
+    if (filters?.filterNama) params.append('filterNama', filters.filterNama);
+    if (filters?.filterEmail) params.append('filterEmail', filters.filterEmail);
+    if (filters?.filterStatus) params.append('filterStatus', filters.filterStatus);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Mahasiswa>>(`/mahasiswa${queryString}`);
   },
