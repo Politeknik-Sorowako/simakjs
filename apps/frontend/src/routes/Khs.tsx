@@ -747,22 +747,18 @@ export default function Khs() {
                       <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
                     </p>
                     <p>
-                      Nama:{' '}
-                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
+                      Nama: <span class="font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
                   </div>
                   <div class="text-right">
                     <p>
                       IP Semester:{' '}
-                      <span class="text-secondary-900 font-extrabold text-brand-600 dark:text-white">
+                      <span class="font-extrabold text-brand-600 dark:text-white">
                         {khsData()?.summary?.ipSemester?.toFixed(2)}
                       </span>
                     </p>
                     <p>
-                      SKS Terkontrak:{' '}
-                      <span class="text-secondary-900 font-bold dark:text-white">
-                        {khsData()?.summary?.totalSks} SKS
-                      </span>
+                      SKS Terkontrak: <span class="font-bold dark:text-white">{khsData()?.summary?.totalSks} SKS</span>
                     </p>
                   </div>
                 </div>
@@ -850,7 +846,7 @@ export default function Khs() {
                   <div class="text-right">
                     <p>
                       IPK Kumulatif:{' '}
-                      <span class="text-secondary-900 font-extrabold text-brand-600 dark:text-white">
+                      <span class="font-extrabold text-brand-600 dark:text-white">
                         {transkripData()?.ipk?.toFixed(2)}
                       </span>
                     </p>
