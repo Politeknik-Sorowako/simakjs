@@ -7,12 +7,12 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { Kurikulum as IKurikulum, kurikulumController } from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
-import { useWorkspace } from '../contexts/WorkspaceContext';
 import { API_URL, fetchApi } from '../utils/api';
 
 export default function Kurikulum() {

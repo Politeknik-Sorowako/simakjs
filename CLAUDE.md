@@ -27,6 +27,7 @@
 - **Buat penjelasan maksimal 2-3 kalimat** setelah kode.
 - **Gunakan tool pemindaian berkas secara spesifik**, jangan membaca direktori secara menyeluruh jika tidak diminta.
 - **Buat PR baru** ke arah branch `development` apabila ada kode yang diimplementasi pertama kali di setiap percakapan baru dengan agen AI.
+- **Wajib mengeksekusi `bun run lint`** dan memastikan kepatuhan Biome lint (`bunx biome ci .`) sebelum setiap commit/push agar CI/CD tidak gagal.
 
 ## CI/CD Pipeline
 

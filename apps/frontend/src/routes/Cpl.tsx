@@ -7,11 +7,11 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { CplMapping, cplController, Cpl as ICpl, ImportCplResult } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
 import { profilLulusanController } from '../controllers/profilLulusanController';
 import { usePagination } from '../hooks/usePagination';
-import { useWorkspace } from '../contexts/WorkspaceContext';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpl() {

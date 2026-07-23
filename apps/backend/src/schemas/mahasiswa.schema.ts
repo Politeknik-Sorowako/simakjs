@@ -40,6 +40,12 @@ export const getMahasiswaSchema = {
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
     programStudiId: t.Optional(t.Numeric()),
+    sortBy: t.Optional(t.String()),
+    sortOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')])),
+    filterNim: t.Optional(t.String()),
+    filterNama: t.Optional(t.String()),
+    filterEmail: t.Optional(t.String()),
+    filterStatus: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({
