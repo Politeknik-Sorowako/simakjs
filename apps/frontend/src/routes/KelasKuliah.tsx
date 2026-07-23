@@ -344,7 +344,16 @@ export default function KelasKuliah() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await kelasKuliahController.getAll(
+                  search(),
+                  1,
+                  10000,
+                  workspace.activeProdiId() || undefined,
+                  workspace.activePeriodeId() || undefined,
+                );
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Kelas_Kuliah_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Kelas Kuliah"

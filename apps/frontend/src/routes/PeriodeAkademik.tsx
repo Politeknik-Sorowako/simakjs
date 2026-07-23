@@ -146,7 +146,10 @@ export default function PeriodeAkademik() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await periodeAkademikController.getAll(search(), 1, 10000);
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Periode_Akademik_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Periode Akademik"

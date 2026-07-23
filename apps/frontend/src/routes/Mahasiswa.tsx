@@ -255,7 +255,23 @@ export default function Mahasiswa() {
               </Button>
             </Show>
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await mahasiswaController.getAll(
+                  search(),
+                  1,
+                  10000,
+                  workspace.activeProdiId() || undefined,
+                  {
+                    sortBy: sortBy(),
+                    sortOrder: sortOrder(),
+                    filterNim: filterNim(),
+                    filterNama: filterNama(),
+                    filterEmail: filterEmail(),
+                    filterStatus: filterStatus(),
+                  },
+                );
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Mahasiswa_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Mahasiswa"

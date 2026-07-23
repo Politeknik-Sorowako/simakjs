@@ -2,7 +2,8 @@ import { createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { ExportColumn, exportToCSV, exportToExcel, exportToPDF } from '../../utils/export';
 
 export interface ExportButtonProps {
-  data: () => any[];
+  data?: () => any[];
+  onFetchAll?: () => Promise<any[]>;
   columns: ExportColumn[];
   filename: string;
   title: string;
@@ -12,6 +13,7 @@ export interface ExportButtonProps {
 
 export function ExportButtonGroup(props: ExportButtonProps) {
   const [open, setOpen] = createSignal(false);
+  const [exporting, setExporting] = createSignal(false);
   let dropdownRef: HTMLDivElement | undefined;
 
   const handleClickOutside = (e: MouseEvent) => {
@@ -28,24 +30,39 @@ export function ExportButtonGroup(props: ExportButtonProps) {
     document.removeEventListener('click', handleClickOutside);
   });
 
-  const handleExport = (format: 'excel' | 'pdf' | 'csv') => {
+  const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
     setOpen(false);
-    const data = props.data();
-    if (!data || data.length === 0) return;
-    if (format === 'excel') exportToExcel(data, props.columns, props.filename);
-    else if (format === 'pdf') exportToPDF(data, props.columns, props.filename, props.title, props.subtitle);
-    else if (format === 'csv') exportToCSV(data, props.columns, props.filename);
+    setExporting(true);
+    try {
+      let exportData: any[] = [];
+      if (props.onFetchAll) {
+        exportData = await props.onFetchAll();
+      } else if (props.data) {
+        exportData = props.data();
+      }
+
+      if (!exportData || exportData.length === 0) return;
+
+      if (format === 'excel') exportToExcel(exportData, props.columns, props.filename);
+      else if (format === 'pdf') exportToPDF(exportData, props.columns, props.filename, props.title, props.subtitle);
+      else if (format === 'csv') exportToCSV(exportData, props.columns, props.filename);
+    } catch (err) {
+      console.error('Failed to export data:', err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
     <div class="relative inline-block text-left" ref={dropdownRef}>
       <button
         type="button"
+        disabled={exporting()}
         onClick={() => setOpen(!open())}
-        class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 shadow-sm transition-all focus:outline-none active:scale-95"
+        class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 shadow-sm transition-all focus:outline-none active:scale-95 disabled:opacity-50"
       >
-        <span class="text-sm">📤</span>
-        <span>Ekspor</span>
+        <span class="text-sm">{exporting() ? '⏳' : '📤'}</span>
+        <span>{exporting() ? 'Mengunduh...' : 'Ekspor'}</span>
         <svg
           class={`w-3.5 h-3.5 transition-transform duration-200 ${open() ? 'rotate-180' : ''}`}
           fill="none"
