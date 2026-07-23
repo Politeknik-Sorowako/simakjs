@@ -21,6 +21,7 @@
 - **ALWAYS** run `cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json` before committing
 - **DO NOT redefine** controller response types inline in SolidJS signals — use exported interfaces instead (e.g., `CplMapping`)
 - **ALWAYS structure** implementation plans (`implementation_plan.md`) step-by-step with explicit file paths, before/after code snippets, and exact CLI commands so they are easy to execute by junior developers or smaller models.
+- **ALWAYS verify** backend-frontend cross-consistency between Elysia schemas (`apps/backend/src/schemas/`) and frontend request payloads (`apps/frontend/src/`) in implementation plans to prevent HTTP 422 (Unprocessable Entity) validation errors.
 
 ## CI/CD Pipeline
 

@@ -637,6 +637,9 @@ When creating or updating an implementation plan (`implementation_plan.md`), all
 3. **Before & After Code Snippets**: Provide concise before/after code snippets or exact type definitions for every non-trivial change to eliminate guesswork.
 4. **Copy-Pasteable CLI Commands**: Include exact terminal commands for migrations, linting, type-checking, and builds (e.g., `bun run db:generate`, `bun run lint`).
 5. **Clear Verification Steps**: Define explicit verification checks and expected outcomes for each step.
+6. **Backend-Frontend Cross-Consistency Review**: Whenever a feature involves both API/Backend and UI/Frontend (such as CSV imports, form submissions, new endpoints, or DTO updates), the plan MUST explicitly inspect and align:
+   - Elysia request/response schemas (`apps/backend/src/schemas/*.schema.ts`) vs Frontend payload interfaces (`apps/frontend/src/controllers/` & `routes/`).
+   - Field names, optionality, nullable fields, and type flexibility (e.g., `t.Union([t.String(), t.Number()])` or `t.Union([t.String(), t.Null()])`) to prevent runtime HTTP 422 (Unprocessable Entity) schema validation failures.
 
 ---
 
@@ -655,3 +658,4 @@ When creating or updating an implementation plan (`implementation_plan.md`), all
 | Using `CORS_ORIGIN: *` in production | Security risk | Use specific origins |
 | Deploying via SSH when CI/CD works | Bypasses quality gates | Use CI/CD first |
 | Redefining controller types inline in signals | Causes TS strict compilation failures on API updates | Use exported controller interfaces (e.g., `CplMapping`) |
+| Field mismatch between backend Elysia schema & frontend payload | Causes HTTP 422 (Unprocessable Entity) validation failures | Align Elysia schema (`apps/backend/src/schemas/`) with frontend payload & use flexible types (`Union`) |
