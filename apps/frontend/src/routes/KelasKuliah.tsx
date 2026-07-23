@@ -198,7 +198,7 @@ export default function KelasKuliah() {
 
   const handleDownloadTemplate = () => {
     const csv =
-      'kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI001,20241,1A,198501012010011001,3,\nTI001,20241,1A,198705152015012002,4,\nTI002,20241,2B,198501012010011001,6,';
+      'kode_prodi,kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI,TI001,20241,1A,198501012010011001,3,\nTI,TI001,20241,1A,198705152015012002,2,\nTI,TI002,20241,2B,198501012010011001;198705152015012002,3;3,';
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -227,28 +227,61 @@ export default function KelasKuliah() {
         toast.showToast('File CSV kosong atau format tidak sesuai', 'error');
         return;
       }
+
+      let hasProdiColumn = true;
+      let startIndex = 0;
+      if (rows.length > 0 && isHeaderRow(rows[0][0], ['kode_prodi', 'prodi', 'kode_mata_kuliah', 'kode_matakuliah'])) {
+        startIndex = 1;
+        const firstColHeader = rows[0][0]?.toLowerCase().trim();
+        if (firstColHeader === 'kode_mata_kuliah' || firstColHeader === 'kode_matakuliah') {
+          hasProdiColumn = false;
+        }
+      }
+
       const items: {
+        kodeProdi?: string;
         kodeMataKuliah?: string;
         periodeId: string;
         namaKelas: string;
         nipDosen?: string;
-        sksBebanMengajar?: number;
+        sksBebanMengajar?: number | string;
         idPddikti?: string;
       }[] = [];
-      for (let i = 0; i < rows.length; i++) {
+
+      for (let i = startIndex; i < rows.length; i++) {
         const row = rows[i];
         if (!row || row.length < 3) continue;
-        if (i === 0 && isHeaderRow(row[0], ['kode_mata_kuliah', 'kode_matakuliah'])) continue;
-        const kodeMataKuliah = row[0]?.trim() || undefined;
-        const periodeId = row[1]?.trim() || '';
-        const namaKelas = row[2]?.trim() || '';
-        const nipDosen = row[3]?.trim() || undefined;
-        const sksBebanMengajar = row[4]?.trim() ? Number(row[4]?.trim()) : undefined;
-        const idPddikti = row[5]?.trim() || undefined;
+
+        let kodeProdi: string | undefined;
+        let kodeMataKuliah: string | undefined;
+        let periodeId = '';
+        let namaKelas = '';
+        let nipDosen: string | undefined;
+        let sksBebanMengajar: string | number | undefined;
+        let idPddikti: string | undefined;
+
+        if (hasProdiColumn) {
+          kodeProdi = row[0]?.trim() || undefined;
+          kodeMataKuliah = row[1]?.trim() || undefined;
+          periodeId = row[2]?.trim() || '';
+          namaKelas = row[3]?.trim() || '';
+          nipDosen = row[4]?.trim() || undefined;
+          sksBebanMengajar = row[5]?.trim() || undefined;
+          idPddikti = row[6]?.trim() || undefined;
+        } else {
+          kodeMataKuliah = row[0]?.trim() || undefined;
+          periodeId = row[1]?.trim() || '';
+          namaKelas = row[2]?.trim() || '';
+          nipDosen = row[3]?.trim() || undefined;
+          sksBebanMengajar = row[4]?.trim() || undefined;
+          idPddikti = row[5]?.trim() || undefined;
+        }
+
         if (periodeId && namaKelas) {
-          items.push({ kodeMataKuliah, periodeId, namaKelas, nipDosen, sksBebanMengajar, idPddikti });
+          items.push({ kodeProdi, kodeMataKuliah, periodeId, namaKelas, nipDosen, sksBebanMengajar, idPddikti });
         }
       }
+
       if (items.length === 0) {
         setImportLoading(false);
         toast.showToast('Tidak ada data valid untuk diimport', 'error');
