@@ -196,10 +196,25 @@ export default function KelasKuliah() {
   } | null>(null);
   const [importLoading, setImportLoading] = createSignal(false);
 
+  const sampleTemplateRows = [
+    ['kode_prodi', 'kode_mata_kuliah', 'periode_id', 'nama_kelas', 'nip_dosen', 'sks_beban_mengajar', 'id_pddikti'],
+    ['TI', 'TI001', '20241', '1A', '198501012010011001', '3', ''],
+    ['TI', 'TI001', '20241', '1A', '198705152015012002', '2', ''],
+    ['TI', 'TI002', '20241', '2B', '198501012010011001;198705152015012002', '3;3', ''],
+  ];
+
   const handleDownloadTemplate = () => {
-    const csv =
-      'kode_prodi,kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI,TI001,20241,1A,198501012010011001,3,\nTI,TI001,20241,1A,198705152015012002,2,\nTI,TI002,20241,2B,198501012010011001;198705152015012002,3;3,';
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const rawCsv = sampleTemplateRows
+      .map((row) =>
+        row
+          .map((cell) =>
+            cell.includes(',') || cell.includes(';') || cell.includes('\n') ? `"${cell.replace(/"/g, '""')}"` : cell,
+          )
+          .join(','),
+      )
+      .join('\r\n');
+    const content = `\uFEFF${rawCsv}`;
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -513,7 +528,7 @@ export default function KelasKuliah() {
             'sks_beban_mengajar',
             'id_pddikti',
           ]}
-          customTemplateCsv="kode_prodi,kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI,TI001,20241,1A,198501012010011001,3,\nTI,TI001,20241,1A,198705152015012002,2,\nTI,TI002,20241,2B,198501012010011001;198705152015012002,3;3,"
+          customTemplateRows={sampleTemplateRows}
           title="Kelas Kuliah + Dosen Pengajar"
           onSuccess={() => refetch()}
         />
