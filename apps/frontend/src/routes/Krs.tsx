@@ -169,15 +169,6 @@ export default function Krs() {
       } else if (field === 'periode') {
         aVal = a.kelasKuliah?.periodeId ?? '';
         bVal = b.kelasKuliah?.periodeId ?? '';
-      } else if (field === 'nilaiAngka') {
-        aVal = a.nilaiAngka ?? '';
-        bVal = b.nilaiAngka ?? '';
-      } else if (field === 'nilaiHuruf') {
-        aVal = a.nilaiHuruf ?? '';
-        bVal = b.nilaiHuruf ?? '';
-      } else if (field === 'nilaiIndeks') {
-        aVal = a.nilaiIndeks ?? '';
-        bVal = b.nilaiIndeks ?? '';
       } else if (field === 'status') {
         aVal = (a as unknown as Record<string, unknown>).isApproved ? 1 : 0;
         bVal = (b as unknown as Record<string, unknown>).isApproved ? 1 : 0;
@@ -232,18 +223,12 @@ export default function Krs() {
 
   // Modal Form State
   const [showAddModal, setShowAddModal] = createSignal(false);
-  const [showGradeModal, setShowGradeModal] = createSignal(false);
   const [showMassalModal, setShowMassalModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
 
   // Create Form State
   const [mhsId, setMhsId] = createSignal<number>(0);
   const [kelasId, setKelasId] = createSignal<number>(0);
-
-  // Grade Form State
-  const [nilaiAngka, setNilaiAngka] = createSignal('');
-  const [nilaiHuruf, setNilaiHuruf] = createSignal('');
-  const [nilaiIndeks, setNilaiIndeks] = createSignal('');
 
   const [errorMsg, setErrorMsg] = createSignal('');
 
@@ -268,15 +253,6 @@ export default function Krs() {
     setShowAddModal(true);
   };
 
-  const openGradeModal = (item: IKrs) => {
-    setErrorMsg('');
-    setEditId(item.id);
-    setNilaiAngka(item.nilaiAngka ? String(item.nilaiAngka) : '');
-    setNilaiHuruf(item.nilaiHuruf || '');
-    setNilaiIndeks(item.nilaiIndeks ? String(item.nilaiIndeks) : '');
-    setShowGradeModal(true);
-  };
-
   const handleAddKrs = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
@@ -291,24 +267,6 @@ export default function Krs() {
     } catch (e: unknown) {
       setErrorMsg((e as Error).message || 'Gagal menambahkan KRS');
       toast.showToast((e as Error).message || 'Gagal menambahkan KRS', 'error');
-    }
-  };
-
-  const handleInputGrade = async (e: Event) => {
-    e.preventDefault();
-    setErrorMsg('');
-    try {
-      await krsController.update(editId()!, {
-        nilaiAngka: nilaiAngka() || undefined,
-        nilaiHuruf: nilaiHuruf() || undefined,
-        nilaiIndeks: nilaiIndeks() || undefined,
-      });
-      setShowGradeModal(false);
-      toast.showToast('Nilai berhasil disimpan', 'success');
-      refetch();
-    } catch (e: unknown) {
-      setErrorMsg((e as Error).message || 'Gagal memperbarui nilai');
-      toast.showToast((e as Error).message || 'Gagal memperbarui nilai', 'error');
     }
   };
 
@@ -370,7 +328,7 @@ export default function Krs() {
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               {role() === 'mahasiswa'
                 ? 'Daftar rencana studi semester aktif yang Anda kontrak.'
-                : 'Kelola pendaftaran kontrak rencana studi dan input nilai indeks mahasiswa.'}
+                : 'Kelola pendaftaran dan persetujuan kontrak rencana studi mahasiswa.'}
             </p>
           </div>
           <div class="flex gap-2">
@@ -574,15 +532,6 @@ export default function Krs() {
                 <SortableHeader field="periode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                   Periode
                 </SortableHeader>,
-                <SortableHeader field="nilaiAngka" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Nilai Angka
-                </SortableHeader>,
-                <SortableHeader field="nilaiHuruf" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Nilai Huruf
-                </SortableHeader>,
-                <SortableHeader field="nilaiIndeks" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Nilai Indeks
-                </SortableHeader>,
                 <SortableHeader field="status" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                   Status
                 </SortableHeader>,
@@ -602,9 +551,6 @@ export default function Krs() {
                     <td class="px-6 py-4 text-secondary-500 font-mono text-xs dark:text-secondary-200">
                       {item.kelasKuliah?.periodeId}
                     </td>
-                    <td class="px-6 py-4 font-mono font-semibold">{item.nilaiAngka || '-'}</td>
-                    <td class="px-6 py-4 font-bold text-brand-600">{item.nilaiHuruf || '-'}</td>
-                    <td class="px-6 py-4 font-mono">{item.nilaiIndeks || '-'}</td>
                     <td class="px-6 py-4">
                       <span
                         class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -617,11 +563,6 @@ export default function Krs() {
                       </span>
                     </td>
                     <td class="px-6 py-4 flex gap-2">
-                      <Show when={role() !== 'mahasiswa'}>
-                        <Button variant="secondary" onClick={() => openGradeModal(item)} class="!py-1 !px-2.5 text-xs">
-                          Input Nilai
-                        </Button>
-                      </Show>
                       <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
                         Batal
                       </Button>
@@ -631,7 +572,7 @@ export default function Krs() {
               </For>
               <Show when={sortedKrsData().length === 0}>
                 <tr>
-                  <td colspan="8" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                  <td colspan="5" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                     Tidak ada kontrak KRS ditemukan.
                   </td>
                 </tr>
@@ -813,47 +754,6 @@ export default function Krs() {
                 Batal
               </Button>
               <Button type="submit">Kontrak Kelas</Button>
-            </div>
-          </form>
-        </Modal>
-
-        {/* Modal Grade Input */}
-        <Modal show={showGradeModal()} title="Input Nilai Akademik" onClose={() => setShowGradeModal(false)}>
-          <form onSubmit={handleInputGrade} class="flex flex-col gap-4">
-            <Show when={errorMsg()}>
-              <div class="p-3 bg-red-50 text-red-600 rounded-lg text-xs font-semibold border border-red-100 dark:bg-red-900/30 dark:text-red-400">
-                {errorMsg()}
-              </div>
-            </Show>
-
-            <Input
-              type="number"
-              step="0.01"
-              label="Nilai Angka"
-              value={nilaiAngka()}
-              onInput={(e) => setNilaiAngka(e.currentTarget.value)}
-              placeholder="Contoh: 85.50"
-            />
-            <Input
-              label="Nilai Huruf"
-              value={nilaiHuruf()}
-              onInput={(e) => setNilaiHuruf(e.currentTarget.value)}
-              placeholder="Contoh: A, B+, C"
-            />
-            <Input
-              type="number"
-              step="0.01"
-              label="Nilai Indeks"
-              value={nilaiIndeks()}
-              onInput={(e) => setNilaiIndeks(e.currentTarget.value)}
-              placeholder="Contoh: 4.00, 3.50"
-            />
-
-            <div class="flex justify-end gap-2 border-t pt-4">
-              <Button type="button" variant="secondary" onClick={() => setShowGradeModal(false)}>
-                Batal
-              </Button>
-              <Button type="submit">Simpan Nilai</Button>
             </div>
           </form>
         </Modal>
