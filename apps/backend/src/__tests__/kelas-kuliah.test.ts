@@ -308,4 +308,86 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('GET /kelas-kuliah/template & POST /kelas-kuliah/import', () => {
+    it('harus mengembalikan template CSV dengan kolom kode_prodi', async () => {
+      const adminToken = await getAuthToken('admin-kelas@test.com', 'admin');
+      const response = await app.handle(
+        new Request('http://localhost/kelas-kuliah/template', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const csvText = await response.text();
+      expect(csvText).toContain(
+        'kode_prodi,kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti',
+      );
+    });
+
+    it('harus sukses mengimpor kelas kuliah dengan kodeProdi dan tim dosen (multi-dosen)', async () => {
+      const adminToken = await getAuthToken('admin-kelas@test.com', 'admin');
+
+      // Create a dosen for testing
+      await app.handle(
+        new Request('http://localhost/dosen', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nip: '199001012020011001',
+            nama: 'Dosen Pengampu A',
+            email: 'dosenA@test.com',
+          }),
+        }),
+      );
+
+      await app.handle(
+        new Request('http://localhost/dosen', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nip: '199001012020011002',
+            nama: 'Dosen Pengampu B',
+            email: 'dosenB@test.com',
+          }),
+        }),
+      );
+
+      const importResponse = await app.handle(
+        new Request('http://localhost/kelas-kuliah/import', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            items: [
+              {
+                kodeProdi: 'TI-KELAS-SETUP',
+                kodeMataKuliah: 'MKKELAS001',
+                periodeId: '20232',
+                namaKelas: 'TI-1A',
+                nipDosen: '199001012020011001; 199001012020011002',
+                sksBebanMengajar: '2; 1',
+              },
+            ],
+          }),
+        }),
+      );
+
+      expect(importResponse.status).toBe(200);
+      const result = await importResponse.json();
+      expect(result.success).toBe(1);
+      expect(result.failed).toBe(0);
+    });
+  });
 });

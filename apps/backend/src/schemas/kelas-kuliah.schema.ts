@@ -249,12 +249,13 @@ export const deleteKelasSchema = {
 export const importKelasBody = t.Object({
   items: t.Array(
     t.Object({
-      kodeMataKuliah: t.Optional(t.String()),
-      periodeId: t.String(),
+      kodeProdi: t.Optional(t.Union([t.String(), t.Null()])),
+      kodeMataKuliah: t.Optional(t.Union([t.String(), t.Null()])),
+      periodeId: t.Union([t.String(), t.Number()]),
       namaKelas: t.String(),
-      nipDosen: t.Optional(t.String()),
-      sksBebanMengajar: t.Optional(t.Number()),
-      idPddikti: t.Optional(t.String()),
+      nipDosen: t.Optional(t.Union([t.String(), t.Null()])),
+      sksBebanMengajar: t.Optional(t.Union([t.Number(), t.String(), t.Null()])),
+      idPddikti: t.Optional(t.Union([t.String(), t.Null()])),
     }),
   ),
 });

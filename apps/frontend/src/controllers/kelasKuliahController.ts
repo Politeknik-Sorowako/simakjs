@@ -66,7 +66,15 @@ export const kelasKuliahController = {
   },
 
   async import(
-    items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[],
+    items: {
+      kodeProdi?: string;
+      kodeMataKuliah?: string;
+      periodeId: string;
+      namaKelas: string;
+      nipDosen?: string;
+      sksBebanMengajar?: number | string;
+      idPddikti?: string;
+    }[],
   ): Promise<{ success: number; failed: number; errors: { row: number; namaKelas: string; error: string }[] }> {
     return fetchApi('/kelas-kuliah/import', {
       method: 'POST',

@@ -76,11 +76,12 @@ export class KelasKuliahController {
     }
     const { items } = body as {
       items: {
+        kodeProdi?: string;
         kodeMataKuliah?: string;
         periodeId: string;
         namaKelas: string;
         nipDosen?: string;
-        sksBebanMengajar?: number;
+        sksBebanMengajar?: number | string;
         idPddikti?: string;
       }[];
     };

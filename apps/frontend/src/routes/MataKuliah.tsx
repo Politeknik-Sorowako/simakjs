@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
@@ -14,7 +15,7 @@ import { kurikulumController } from '../controllers/kurikulumController';
 import { MataKuliah as IMataKuliah, mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
-import { fetchApi } from '../utils/api';
+import { ExportColumn } from '../utils/export';
 
 type SortField = 'nama' | 'kode' | 'sks' | 'semester' | 'programStudi' | 'kurikulum';
 
@@ -225,17 +226,34 @@ export default function MataKuliah() {
     }
   };
 
+  const exportColumns: ExportColumn[] = [
+    { header: 'Kode MK', accessor: (row: IMataKuliah) => row.kode },
+    { header: 'Nama Mata Kuliah', accessor: (row: IMataKuliah) => row.nama },
+    { header: 'Program Studi', accessor: (row: IMataKuliah) => row.programStudi?.nama || '-' },
+    { header: 'SKS Total', accessor: (row: IMataKuliah) => row.sksTotal },
+    { header: 'SKS Tatap Muka', accessor: (row: IMataKuliah) => row.sksTatapMuka ?? '-' },
+    { header: 'SKS Praktikum', accessor: (row: IMataKuliah) => row.sksPraktek ?? '-' },
+    { header: 'ID PDDIKTI', accessor: (row: IMataKuliah) => row.idPddikti || '-' },
+  ];
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Mata Kuliah</h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Daftar mata kuliah per Program Studi. Hubungkan MK ke kurikulum lewat menu Kurikulum.
             </p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <ExportButtonGroup
+              data={() => sortedData()}
+              columns={exportColumns}
+              filename={`Mata_Kuliah_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Mata Kuliah"
+              subtitle="Data Mata Kuliah SIMAK Vokasi"
+            />
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
               📥 Impor CSV
             </Button>
