@@ -1,6 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { z } from 'zod';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
@@ -10,6 +11,7 @@ import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
 import { PeriodeAkademik as IPeriode, periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
+import { ExportColumn } from '../utils/export';
 
 const periodeSchema = z.object({
   id: z
@@ -24,6 +26,12 @@ export default function PeriodeAkademik() {
   const toast = useToast();
   const [search, setSearch] = createSignal('');
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'Kode Periode', accessor: (row: IPeriode) => row.id },
+    { header: 'Nama Periode', accessor: (row: IPeriode) => row.nama },
+    { header: 'Status Aktif', accessor: (row: IPeriode) => (row.aktif ? 'Aktif' : 'Tidak Aktif') },
+  ];
 
   // Fetch Periode Data
   const [periodes, { refetch }] = createResource(
@@ -135,7 +143,16 @@ export default function PeriodeAkademik() {
               Kelola semester aktif dan periode akademik perkuliahan.
             </p>
           </div>
-          <Button onClick={openAddModal}>+ Tambah Periode</Button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <ExportButtonGroup
+              data={() => sortedData()}
+              columns={exportColumns}
+              filename={`Periode_Akademik_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Periode Akademik"
+              subtitle="Data Periode Akademik SIMAK Vokasi"
+            />
+            <Button onClick={openAddModal}>+ Tambah Periode</Button>
+          </div>
         </div>
 
         <div class="max-w-xs">

@@ -1,5 +1,6 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
@@ -9,11 +10,18 @@ import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { Prodi, prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
+import { ExportColumn } from '../utils/export';
 
 export default function ProgramStudi() {
   const [search, setSearch] = createSignal('');
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [showImportModal, setShowImportModal] = createSignal(false);
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'Kode Prodi', accessor: (row: Prodi) => row.kode },
+    { header: 'Nama Program Studi', accessor: (row: Prodi) => row.nama },
+    { header: 'Jenjang', accessor: (row: Prodi) => row.jenjang },
+  ];
 
   // Fetch data
   const [prodis, { refetch }] = createResource(
@@ -107,7 +115,14 @@ export default function ProgramStudi() {
               Kelola daftar program studi vokasi yang tersedia.
             </p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <ExportButtonGroup
+              data={() => sortedData()}
+              columns={exportColumns}
+              filename={`Program_Studi_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Program Studi"
+              subtitle="Data Program Studi SIMAK Vokasi"
+            />
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
               📥 Impor CSV
             </Button>

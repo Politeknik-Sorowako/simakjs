@@ -1,5 +1,6 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Pagination } from '../components/ui/Pagination';
@@ -9,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { UserItem, userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
+import { ExportColumn } from '../utils/export';
 
 export default function Pengguna() {
   const toast = useToast();
@@ -18,6 +20,13 @@ export default function Pengguna() {
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
   const [actionLoading, setActionLoading] = createSignal<number | null>(null);
   const [showImportModal, setShowImportModal] = createSignal(false);
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'ID', accessor: (row: UserItem) => row.id },
+    { header: 'Nama', accessor: (row: UserItem) => row.nama },
+    { header: 'Email', accessor: (row: UserItem) => row.email },
+    { header: 'Role', accessor: (row: UserItem) => row.role },
+  ];
 
   const [usersRes, { refetch }] = createResource(
     () => ({ page: page(), limit: limit(), search: search() }),
@@ -95,6 +104,13 @@ export default function Pengguna() {
                 class="w-full rounded-lg border border-secondary-300 bg-white px-4 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               />
             </div>
+            <ExportButtonGroup
+              data={() => usersRes()?.data || []}
+              columns={exportColumns}
+              filename={`Pengguna_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Pengguna"
+              subtitle="Data Pengguna SIMAK Vokasi"
+            />
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
               📥 Impor Pengguna
             </Button>

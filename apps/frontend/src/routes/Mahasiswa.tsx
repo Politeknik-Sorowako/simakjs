@@ -1,5 +1,6 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
@@ -16,6 +17,7 @@ import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mah
 import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
+import { ExportColumn } from '../utils/export';
 
 export default function Mahasiswa() {
   const toast = useToast();
@@ -25,6 +27,16 @@ export default function Mahasiswa() {
   const [showImportPaModal, setShowImportPaModal] = createSignal(false);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
   const [bulkLoading, setBulkLoading] = createSignal(false);
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'NIM', accessor: (row: IMahasiswa) => row.nim },
+    { header: 'Nama Mahasiswa', accessor: (row: IMahasiswa) => row.nama },
+    { header: 'Email', accessor: (row: IMahasiswa) => row.email },
+    { header: 'Program Studi', accessor: (row: IMahasiswa) => row.programStudi?.nama || '-' },
+    { header: 'Dosen PA', accessor: (row: IMahasiswa) => row.dosenPa?.nama || '-' },
+    { header: 'Angkatan', accessor: (row: IMahasiswa) => row.angkatan || '-' },
+    { header: 'Status', accessor: (row: IMahasiswa) => row.status || '-' },
+  ];
 
   const auth = useAuth();
   const workspace = useWorkspace();
@@ -211,12 +223,19 @@ export default function Mahasiswa() {
               Kelola informasi data mahasiswa aktif dan administrasi akademik.
             </p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <Show when={selectedIds().length > 0}>
               <Button variant="success" disabled={bulkLoading()} onClick={handleBulkCreateAccount}>
                 {bulkLoading() ? 'Memproses...' : `🔑 Buat Akun (${selectedIds().length})`}
               </Button>
             </Show>
+            <ExportButtonGroup
+              data={() => sortedData()}
+              columns={exportColumns}
+              filename={`Mahasiswa_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Mahasiswa"
+              subtitle="Data Mahasiswa SIMAK Vokasi"
+            />
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
               📥 Impor Mahasiswa
             </Button>
