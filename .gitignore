@@ -21,3 +21,33 @@ test-results
 apps/backend/backups/
 # Frontend build output
 apps/frontend/dist/
+
+# Ignore Drizzle Migration Metadata & Snapshots
+**/drizzle/meta/**
+*_snapshot.json
+
+# Dependency & Build Output
+node_modules/
+.next/
+dist/
+build/
+out/
+
+# Lockfiles (MEMAKAN PULUHAN RIBU TOKEN!)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+
+# Database & Log Files
+*.log
+*.sqlite
+*.db
+
+# Media & Static Assets
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+*.zip

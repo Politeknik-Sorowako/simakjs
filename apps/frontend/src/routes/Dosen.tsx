@@ -34,7 +34,6 @@ export default function Dosen() {
 
   const auth = useAuth();
   const workspace = useWorkspace();
-  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   // Fetch Dosen Data
   const [dosens, { refetch }] = createResource(
@@ -42,7 +41,7 @@ export default function Dosen() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
+      prodiId: workspace.activeProdiId(),
     }),
     ({ search, page, limit, prodiId }) => dosenController.getAll(search, page, limit, prodiId || undefined),
   );

@@ -40,7 +40,6 @@ export default function Mahasiswa() {
 
   const auth = useAuth();
   const workspace = useWorkspace();
-  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   // Fetch Mahasiswa Data
   const [mahasiswas, { refetch }] = createResource(
@@ -48,7 +47,7 @@ export default function Mahasiswa() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
+      prodiId: workspace.activeProdiId(),
     }),
     ({ search, page, limit, prodiId }) => mahasiswaController.getAll(search, page, limit, prodiId || undefined),
   );

@@ -14,7 +14,8 @@ import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpl() {
-  const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
+  const workspace = useWorkspace();
+  const prodiFilter = () => workspace.activeProdiId() ?? undefined;
 
   const [cplList, { refetch }] = createResource(
     () => ({ prodiId: prodiFilter() }),
@@ -28,7 +29,7 @@ export default function Cpl() {
   const [kode, setKode] = createSignal('');
   const [deskripsi, setDeskripsi] = createSignal('');
   const [urutan, setUrutan] = createSignal(0);
-  const [prodiId, setProdiId] = createSignal<number>(0);
+  const [prodiId, setProdiId] = createSignal<number>(workspace.activeProdiId() || 0);
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const [showMappingModal, setShowMappingModal] = createSignal(false);
@@ -293,22 +294,6 @@ export default function Cpl() {
         </div>
 
         <div class="flex gap-4 items-center">
-          <div class="w-64">
-            <Input
-              type="select"
-              placeholder="Filter Program Studi"
-              value={prodiFilter() ?? ''}
-              onInput={(e) => {
-                const val = e.currentTarget.value;
-                setProdiFilter(val ? Number(val) : undefined);
-              }}
-              isSelect
-              selectOptions={[
-                { value: '', label: 'Semua Program Studi' },
-                ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
-              ]}
-            />
-          </div>
           <Button variant="secondary" onClick={() => refetch()}>
             Refresh
           </Button>

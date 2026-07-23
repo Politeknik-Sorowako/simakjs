@@ -659,3 +659,13 @@ When creating or updating an implementation plan (`implementation_plan.md`), all
 | Deploying via SSH when CI/CD works | Bypasses quality gates | Use CI/CD first |
 | Redefining controller types inline in signals | Causes TS strict compilation failures on API updates | Use exported controller interfaces (e.g., `CplMapping`) |
 | Field mismatch between backend Elysia schema & frontend payload | Causes HTTP 422 (Unprocessable Entity) validation failures | Align Elysia schema (`apps/backend/src/schemas/`) with frontend payload & use flexible types (`Union`) |
+
+---
+
+## 14. Aturan Komunikasi & Inspeksi Agen AI
+
+1. Berikan respon langsung pada inti masalah tanpa salam atau basa-basi.
+2. Jangan pernah mencetak ulang seluruh isi file jika hanya mengubah beberapa baris. Tunjukkan HANYA bagian kode yang diubah (diff / patched code).
+3. Buat penjelasan maksimal 2-3 kalimat setelah kode.
+4. Gunakan tool pemindaian berkas secara spesifik, jangan membaca direktori secara menyeluruh jika tidak diminta.
+5. Buat PR baru ke arah branch `development` apabila ada kode yang diimplementasi pertama kali di setiap percakapan baru dengan agen AI.

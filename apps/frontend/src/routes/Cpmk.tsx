@@ -18,7 +18,8 @@ import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpmk() {
-  const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
+  const workspace = useWorkspace();
+  const prodiFilter = () => workspace.activeProdiId() ?? undefined;
   const [kurikulumFilter, setKurikulumFilter] = createSignal<number | undefined>(undefined);
   const [mataKuliahFilter, setMataKuliahFilter] = createSignal<number | undefined>(undefined);
   const [search, setSearch] = createSignal('');
@@ -350,26 +351,6 @@ export default function Cpmk() {
         </div>
 
         <div class="flex flex-wrap gap-4 items-end">
-          <div class="w-64">
-            <Input
-              type="select"
-              label="Program Studi"
-              placeholder="Filter Program Studi"
-              value={prodiFilter() ?? ''}
-              onInput={(e: Event) => {
-                const val = (e.target as HTMLSelectElement).value;
-                setProdiFilter(val ? Number(val) : undefined);
-                setKurikulumFilter(undefined);
-                setMataKuliahFilter(undefined);
-                resetPage();
-              }}
-              isSelect
-              selectOptions={[
-                { value: '', label: 'Semua Program Studi' },
-                ...(prodis()?.data?.map((p) => ({ value: String(p.id), label: `${p.kode} - ${p.nama}` })) || []),
-              ]}
-            />
-          </div>
           <div class="w-64">
             <Input
               type="select"
