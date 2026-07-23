@@ -223,6 +223,7 @@ export default function Krs() {
 
   // Modal Form State
   const [showAddModal, setShowAddModal] = createSignal(false);
+
   const [showMassalModal, setShowMassalModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
 
@@ -758,6 +759,15 @@ export default function Krs() {
             </div>
           </form>
         </Modal>
+
+        <KrsMassalModal
+          show={showMassalModal()}
+          onClose={() => setShowMassalModal(false)}
+          onSuccess={() => {
+            refetch();
+            refetchPending();
+          }}
+        />
 
         <KrsMassalModal
           show={showMassalModal()}
