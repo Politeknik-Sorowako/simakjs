@@ -1,0 +1,8 @@
+FROM oven/bun:1-alpine
+WORKDIR /app
+COPY package.json bun.lock ./
+COPY apps/frontend/package.json ./apps/frontend/
+RUN bun install --filter frontend
+COPY apps/frontend ./apps/frontend
+EXPOSE 80
+CMD ["bun", "run", "--cwd", "apps/frontend", "dev", "--", "--host", "0.0.0.0", "--port", "80"]
