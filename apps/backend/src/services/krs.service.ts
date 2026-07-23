@@ -21,6 +21,38 @@ export interface CreateKrsDto {
 }
 
 export class KrsService {
+  static async bulkCreate(mahasiswaIds: number[], kelasKuliahIds: number[], isApproved = false) {
+    let createdCount = 0;
+    let skippedCount = 0;
+
+    for (const mId of mahasiswaIds) {
+      for (const kId of kelasKuliahIds) {
+        const [existing] = await db
+          .select({ id: krs.id })
+          .from(krs)
+          .where(and(eq(krs.mahasiswaId, mId), eq(krs.kelasKuliahId, kId)));
+
+        if (existing) {
+          skippedCount++;
+          continue;
+        }
+
+        await db.insert(krs).values({
+          mahasiswaId: mId,
+          kelasKuliahId: kId,
+          isApproved,
+        });
+        createdCount++;
+      }
+    }
+
+    return {
+      createdCount,
+      skippedCount,
+      totalProcessed: mahasiswaIds.length * kelasKuliahIds.length,
+    };
+  }
+
   static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number) {
     const offset = (page - 1) * limit;
 
