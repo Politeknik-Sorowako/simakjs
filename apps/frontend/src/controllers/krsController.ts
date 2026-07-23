@@ -52,6 +52,16 @@ export const krsController = {
     });
   },
 
+  async bulkCreate(
+    mahasiswaIds: number[],
+    kelasKuliahIds: number[],
+  ): Promise<{ createdCount: number; skippedCount: number; totalProcessed: number }> {
+    return fetchApi<{ createdCount: number; skippedCount: number; totalProcessed: number }>('/krs/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ mahasiswaIds, kelasKuliahIds }),
+    });
+  },
+
   async update(id: number, data: Partial<Omit<Krs, 'id'>>): Promise<Krs> {
     return fetchApi<Krs>(`/krs/${id}`, {
       method: 'PUT',

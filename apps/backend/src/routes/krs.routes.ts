@@ -4,6 +4,7 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   approveBatchKrsSchema,
   approveKrsSchema,
+  bulkKrsSchema,
   createKrsSchema,
   deleteKrsSchema,
   getKrsByIdSchema,
@@ -20,6 +21,7 @@ export const krsRoutes = new Elysia({ prefix: '/krs' })
   .use(authMiddleware)
   .get('/', KrsController.getAll, getKrsSchema)
   .post('/', KrsController.create, createKrsSchema)
+  .post('/bulk', KrsController.bulkCreate, bulkKrsSchema)
   .post('/approve', KrsController.approve, approveKrsSchema)
   .get('/pending-students', KrsController.getPendingStudents, getPendingStudentsSchema)
   .post('/approve-batch', KrsController.approveBatch, approveBatchKrsSchema)

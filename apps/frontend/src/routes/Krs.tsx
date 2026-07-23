@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { KrsMassalModal } from '../components/krs/KrsMassalModal';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -232,6 +233,7 @@ export default function Krs() {
   // Modal Form State
   const [showAddModal, setShowAddModal] = createSignal(false);
   const [showGradeModal, setShowGradeModal] = createSignal(false);
+  const [showMassalModal, setShowMassalModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
 
   // Create Form State
@@ -372,6 +374,11 @@ export default function Krs() {
             </p>
           </div>
           <div class="flex gap-2">
+            <Show when={role() === 'admin' || role() === 'dosen' || role() === 'prodi'}>
+              <Button variant="secondary" onClick={() => setShowMassalModal(true)}>
+                ⚡ Buat KRS Massal
+              </Button>
+            </Show>
             <Show when={role() === 'admin'}>
               <Button variant="secondary" onClick={() => setShowImportModal(true)}>
                 📥 Impor KRS
@@ -850,6 +857,15 @@ export default function Krs() {
             </div>
           </form>
         </Modal>
+
+        <KrsMassalModal
+          show={showMassalModal()}
+          onClose={() => setShowMassalModal(false)}
+          onSuccess={() => {
+            refetch();
+            refetchPending();
+          }}
+        />
 
         <ImportCsvModal
           show={showImportModal()}
