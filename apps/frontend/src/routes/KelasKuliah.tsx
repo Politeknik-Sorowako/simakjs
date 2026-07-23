@@ -254,90 +254,83 @@ export default function KelasKuliah() {
     setImportFile(input.files?.[0] || null);
   };
 
-  const handleImport = async () => {
-    if (!importFile()) {
-      toast.showToast('Pilih file CSV terlebih dahulu', 'error');
-      return;
+  const handleImportCsv = async (rows: string[][]) => {
+    if (!rows || rows.length === 0) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'File CSV kosong atau format tidak sesuai.' }],
+      };
     }
-    setImportLoading(true);
-    try {
-      const text = await importFile()!.text();
-      const rows = parseCsv(text);
-      if (rows.length === 0) {
-        setImportLoading(false);
-        toast.showToast('File CSV kosong atau format tidak sesuai', 'error');
-        return;
+
+    let hasProdiColumn = true;
+    let startIndex = 0;
+    if (rows.length > 0 && isHeaderRow(rows[0][0], ['kode_prodi', 'prodi', 'kode_mata_kuliah', 'kode_matakuliah'])) {
+      startIndex = 1;
+      const firstColHeader = rows[0][0]?.toLowerCase().trim();
+      if (firstColHeader === 'kode_mata_kuliah' || firstColHeader === 'kode_matakuliah') {
+        hasProdiColumn = false;
       }
-
-      let hasProdiColumn = true;
-      let startIndex = 0;
-      if (rows.length > 0 && isHeaderRow(rows[0][0], ['kode_prodi', 'prodi', 'kode_mata_kuliah', 'kode_matakuliah'])) {
-        startIndex = 1;
-        const firstColHeader = rows[0][0]?.toLowerCase().trim();
-        if (firstColHeader === 'kode_mata_kuliah' || firstColHeader === 'kode_matakuliah') {
-          hasProdiColumn = false;
-        }
-      }
-
-      const items: {
-        kodeProdi?: string;
-        kodeMataKuliah?: string;
-        periodeId: string;
-        namaKelas: string;
-        nipDosen?: string;
-        sksBebanMengajar?: number | string;
-        idPddikti?: string;
-      }[] = [];
-
-      for (let i = startIndex; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length < 3) continue;
-
-        let kodeProdi: string | undefined;
-        let kodeMataKuliah: string | undefined;
-        let periodeId = '';
-        let namaKelas = '';
-        let nipDosen: string | undefined;
-        let sksBebanMengajar: string | number | undefined;
-        let idPddikti: string | undefined;
-
-        if (hasProdiColumn) {
-          kodeProdi = row[0]?.trim() || undefined;
-          kodeMataKuliah = row[1]?.trim() || undefined;
-          periodeId = row[2]?.trim() || '';
-          namaKelas = row[3]?.trim() || '';
-          nipDosen = row[4]?.trim() || undefined;
-          sksBebanMengajar = row[5]?.trim() || undefined;
-          idPddikti = row[6]?.trim() || undefined;
-        } else {
-          kodeMataKuliah = row[0]?.trim() || undefined;
-          periodeId = row[1]?.trim() || '';
-          namaKelas = row[2]?.trim() || '';
-          nipDosen = row[3]?.trim() || undefined;
-          sksBebanMengajar = row[4]?.trim() || undefined;
-          idPddikti = row[5]?.trim() || undefined;
-        }
-
-        if (periodeId && namaKelas) {
-          items.push({ kodeProdi, kodeMataKuliah, periodeId, namaKelas, nipDosen, sksBebanMengajar, idPddikti });
-        }
-      }
-
-      if (items.length === 0) {
-        setImportLoading(false);
-        toast.showToast('Tidak ada data valid untuk diimport', 'error');
-        return;
-      }
-      const result = await kelasKuliahController.import(items);
-      setImportResult(result);
-      if (result.failed === 0) {
-        refetch();
-      }
-    } catch (err: unknown) {
-      toast.showToast((err instanceof Error ? err.message : null) || 'Gagal import', 'error');
-    } finally {
-      setImportLoading(false);
     }
+
+    const items: {
+      kodeProdi?: string;
+      kodeMataKuliah?: string;
+      periodeId: string;
+      namaKelas: string;
+      nipDosen?: string;
+      sksBebanMengajar?: number | string;
+      idPddikti?: string;
+    }[] = [];
+
+    for (let i = startIndex; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length < 3) continue;
+
+      let kodeProdi: string | undefined;
+      let kodeMataKuliah: string | undefined;
+      let periodeId = '';
+      let namaKelas = '';
+      let nipDosen: string | undefined;
+      let sksBebanMengajar: string | number | undefined;
+      let idPddikti: string | undefined;
+
+      if (hasProdiColumn) {
+        kodeProdi = row[0]?.trim() || undefined;
+        kodeMataKuliah = row[1]?.trim() || undefined;
+        periodeId = row[2]?.trim() || '';
+        namaKelas = row[3]?.trim() || '';
+        nipDosen = row[4]?.trim() || undefined;
+        sksBebanMengajar = row[5]?.trim() || undefined;
+        idPddikti = row[6]?.trim() || undefined;
+      } else {
+        kodeMataKuliah = row[0]?.trim() || undefined;
+        periodeId = row[1]?.trim() || '';
+        namaKelas = row[2]?.trim() || '';
+        nipDosen = row[3]?.trim() || undefined;
+        sksBebanMengajar = row[4]?.trim() || undefined;
+        idPddikti = row[5]?.trim() || undefined;
+      }
+
+      if (periodeId && namaKelas) {
+        items.push({ kodeProdi, kodeMataKuliah, periodeId, namaKelas, nipDosen, sksBebanMengajar, idPddikti });
+      }
+    }
+
+    if (items.length === 0) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'Tidak ada data valid untuk diimpor dalam file CSV.' }],
+      };
+    }
+
+    const result = await kelasKuliahController.import(items);
+    return {
+      successCount: result.success,
+      errors: (result.errors || []).map((e) => ({
+        line: e.row + (startIndex > 0 ? 1 : 0),
+        error: `${e.namaKelas ? `[${e.namaKelas}] ` : ''}${e.error}`,
+      })),
+    };
   };
 
   return (
@@ -552,6 +545,7 @@ export default function KelasKuliah() {
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
           importUrl="/kelas-kuliah/import"
+          onImport={handleImportCsv}
           templateHeaders={[
             'kode_prodi',
             'kode_mata_kuliah',

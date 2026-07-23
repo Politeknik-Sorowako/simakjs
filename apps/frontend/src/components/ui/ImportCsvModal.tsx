@@ -209,19 +209,60 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
             <div class="p-3 bg-green-50 text-green-700 rounded-lg text-xs font-medium">{successMsg()}</div>
           </Show>
 
-          {/* Report Errors log */}
-          <Show when={importReport() && importReport()!.errors.length > 0}>
-            <div class="flex flex-col gap-1.5">
-              <span class="text-xs font-semibold text-red-500">Log Detail Error Pengimporan:</span>
-              <div class="max-h-32 overflow-auto bg-red-50/50 dark:bg-red-950/20 p-3 rounded-lg border border-red-100 dark:border-red-950/50 text-[11px] text-red-700 dark:text-red-400 space-y-1 font-mono">
-                <For each={importReport()!.errors}>
-                  {(err) => (
-                    <div>
-                      <span class="font-bold">{err.line > 0 ? `Baris ${err.line}:` : 'Sistem:'}</span> {err.error}
-                    </div>
-                  )}
-                </For>
+          {/* Report Summary & Error Log */}
+          <Show when={importReport()}>
+            <div class="flex flex-col gap-3 p-3 bg-secondary-50 dark:bg-secondary-900/60 rounded-xl border border-secondary-200 dark:border-secondary-800">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
+                  Laporan Hasil Pengimporan:
+                </span>
+                <div class="flex items-center gap-2">
+                  <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-950/60 dark:text-green-300">
+                    ✅ {importReport()!.successCount} Berhasil
+                  </span>
+                  <Show when={importReport()!.errors.length > 0}>
+                    <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
+                      ❌ {importReport()!.errors.length} Kendala
+                    </span>
+                  </Show>
+                </div>
               </div>
+
+              <Show when={importReport()!.errors.length > 0}>
+                <div class="flex flex-col gap-1.5">
+                  <span class="text-[11px] font-semibold text-red-600 dark:text-red-400">
+                    Detail Kendala per Baris CSV:
+                  </span>
+                  <div class="max-h-48 overflow-auto rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-secondary-900">
+                    <table class="min-w-full divide-y divide-red-100 dark:divide-red-950 text-left text-xs">
+                      <thead class="bg-red-50 dark:bg-red-950/50 text-red-700 dark:text-red-300 font-bold sticky top-0">
+                        <tr>
+                          <th class="px-3 py-1.5 w-24">Baris CSV</th>
+                          <th class="px-3 py-1.5 w-24">Status</th>
+                          <th class="px-3 py-1.5">Detail Kendala</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-red-100 dark:divide-red-950/40 font-mono text-[11px]">
+                        <For each={importReport()!.errors}>
+                          {(err) => (
+                            <tr class="hover:bg-red-50/50 dark:hover:bg-red-950/20">
+                              <td class="px-3 py-1.5 font-bold text-red-800 dark:text-red-300">
+                                {err.line > 0 ? `Baris ${err.line}` : 'Sistem'}
+                              </td>
+                              <td class="px-3 py-1.5">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                                  ❌ Gagal
+                                </span>
+                              </td>
+                              <td class="px-3 py-1.5 text-red-700 dark:text-red-300">{err.error}</td>
+                            </tr>
+                          )}
+                        </For>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </Show>
             </div>
           </Show>
 
