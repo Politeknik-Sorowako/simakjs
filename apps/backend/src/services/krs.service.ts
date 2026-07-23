@@ -11,6 +11,8 @@ import {
 } from '../models/schema';
 import { db } from '../utils/db';
 
+type BulkCreateResult = { createdCount: number; skippedCount: number; totalProcessed: number };
+
 export interface CreateKrsDto {
   mahasiswaId: number;
   kelasKuliahId: number;
@@ -21,36 +23,49 @@ export interface CreateKrsDto {
 }
 
 export class KrsService {
-  static async bulkCreate(mahasiswaIds: number[], kelasKuliahIds: number[], isApproved = false) {
-    let createdCount = 0;
-    let skippedCount = 0;
+  static async bulkCreate(
+    mahasiswaIds: number[],
+    kelasKuliahIds: number[],
+    isApproved = false,
+  ): Promise<BulkCreateResult> {
+    const totalProcessed = mahasiswaIds.length * kelasKuliahIds.length;
 
-    for (const mId of mahasiswaIds) {
-      for (const kId of kelasKuliahIds) {
-        const [existing] = await db
-          .select({ id: krs.id })
-          .from(krs)
-          .where(and(eq(krs.mahasiswaId, mId), eq(krs.kelasKuliahId, kId)));
-
-        if (existing) {
-          skippedCount++;
-          continue;
-        }
-
-        await db.insert(krs).values({
-          mahasiswaId: mId,
-          kelasKuliahId: kId,
-          isApproved,
-        });
-        createdCount++;
-      }
+    if (totalProcessed === 0) {
+      return { createdCount: 0, skippedCount: 0, totalProcessed: 0 };
     }
 
-    return {
-      createdCount,
-      skippedCount,
-      totalProcessed: mahasiswaIds.length * kelasKuliahIds.length,
-    };
+    return await db.transaction(async (tx) => {
+      const existingPairs = await tx
+        .select({ mahasiswaId: krs.mahasiswaId, kelasKuliahId: krs.kelasKuliahId })
+        .from(krs)
+        .where(and(inArray(krs.mahasiswaId, mahasiswaIds), inArray(krs.kelasKuliahId, kelasKuliahIds)));
+
+      const existingSet = new Set(existingPairs.map((p) => `${p.mahasiswaId}-${p.kelasKuliahId}`));
+
+      const newRows: { mahasiswaId: number; kelasKuliahId: number; isApproved: boolean }[] = [];
+      let skippedCount = 0;
+
+      for (const mId of mahasiswaIds) {
+        for (const kId of kelasKuliahIds) {
+          if (existingSet.has(`${mId}-${kId}`)) {
+            skippedCount++;
+          } else {
+            newRows.push({ mahasiswaId: mId, kelasKuliahId: kId, isApproved });
+            existingSet.add(`${mId}-${kId}`);
+          }
+        }
+      }
+
+      if (newRows.length > 0) {
+        await tx.insert(krs).values(newRows);
+      }
+
+      return {
+        createdCount: newRows.length,
+        skippedCount,
+        totalProcessed,
+      };
+    });
   }
 
   static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number) {

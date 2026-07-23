@@ -1,4 +1,5 @@
 import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { useToast } from '../../contexts/ToastContext';
 import { ExportColumn, exportToCSV, exportToExcel, exportToPDF } from '../../utils/export';
 
 export interface ExportButtonProps {
@@ -12,6 +13,7 @@ export interface ExportButtonProps {
 }
 
 export function ExportButtonGroup(props: ExportButtonProps) {
+  const toast = useToast();
   const [open, setOpen] = createSignal(false);
   const [exporting, setExporting] = createSignal(false);
   let dropdownRef: HTMLDivElement | undefined;
@@ -36,18 +38,24 @@ export function ExportButtonGroup(props: ExportButtonProps) {
     try {
       let exportData: any[] = [];
       if (props.onFetchAll) {
+        toast.showToast('Mengunduh data untuk ekspor...', 'info');
         exportData = await props.onFetchAll();
       } else if (props.data) {
         exportData = props.data();
       }
 
-      if (!exportData || exportData.length === 0) return;
+      if (!exportData || exportData.length === 0) {
+        toast.showToast('Tidak ada data untuk diekspor', 'info');
+        return;
+      }
 
       if (format === 'excel') exportToExcel(exportData, props.columns, props.filename);
       else if (format === 'pdf') exportToPDF(exportData, props.columns, props.filename, props.title, props.subtitle);
       else if (format === 'csv') exportToCSV(exportData, props.columns, props.filename);
+
+      toast.showToast('Ekspor berhasil diunduh', 'success');
     } catch (err) {
-      console.error('Failed to export data:', err);
+      toast.showToast('Gagal mengunduh data ekspor', 'error');
     } finally {
       setExporting(false);
     }
