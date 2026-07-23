@@ -57,7 +57,7 @@ export class KrsService {
       }
 
       if (newRows.length > 0) {
-        await tx.insert(krs).values(newRows);
+        await tx.insert(krs).values(newRows).onConflictDoNothing();
       }
 
       return {

@@ -9,7 +9,6 @@ export interface ExportButtonProps {
   filename: string;
   title: string;
   subtitle?: string;
-  variant?: 'primary' | 'secondary' | 'outline';
 }
 
 export function ExportButtonGroup(props: ExportButtonProps) {
@@ -55,6 +54,7 @@ export function ExportButtonGroup(props: ExportButtonProps) {
 
       toast.showToast('Ekspor berhasil diunduh', 'success');
     } catch (err) {
+      console.error('Export failed:', err);
       toast.showToast('Gagal mengunduh data ekspor', 'error');
     } finally {
       setExporting(false);

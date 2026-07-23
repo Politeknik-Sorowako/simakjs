@@ -256,6 +256,7 @@ export const krs = pgTable(
     return {
       mahasiswaIdIdx: index('krs_mahasiswa_id_idx').on(table.mahasiswaId),
       kelasKuliahIdIdx: index('krs_kelas_kuliah_id_idx').on(table.kelasKuliahId),
+      mahasiswaKelasUnique: unique('krs_mahasiswa_kelas_unique').on(table.mahasiswaId, table.kelasKuliahId),
     };
   },
 );
