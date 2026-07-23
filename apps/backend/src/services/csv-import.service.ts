@@ -1,5 +1,14 @@
 import { and, eq } from 'drizzle-orm';
-import { dosen, kelasKuliah, krs, mahasiswa, mataKuliah, programStudi, users } from '../models/schema';
+import {
+  dosen,
+  dosenPengajarKelas,
+  kelasKuliah,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  programStudi,
+  users,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export interface ImportResult {
@@ -593,7 +602,7 @@ export class CsvImportService {
 
         const hashedPassword = await Bun.password.hash(email, {
           algorithm: 'bcrypt',
-          cost: 10,
+          cost: 12,
         });
 
         await tx.insert(users).values({
@@ -631,104 +640,97 @@ export class CsvImportService {
       };
     }
 
-    await db.transaction(async (tx) => {
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        const lineNum = i + 1;
-        if (row.length < headers.length) continue;
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
 
-        const nimVal = row[nimIdx].trim();
-        const kodeMkVal = row[kodeMkIdx].trim();
-        const namaKelasVal = row[namaKelasIdx].trim();
-        const periodeVal = row[periodeIdx].trim();
+      const nimVal = row[nimIdx].trim();
+      const kodeMkVal = row[kodeMkIdx].trim();
+      const namaKelasVal = row[namaKelasIdx].trim();
+      const periodeVal = row[periodeIdx].trim();
 
-        if (!nimVal || !kodeMkVal || !namaKelasVal || !periodeVal) {
-          result.errors.push({
-            line: lineNum,
-            error: 'Semua kolom (nim, kode_mata_kuliah, nama_kelas, periode_id) wajib diisi.',
-          });
+      if (!nimVal || !kodeMkVal || !namaKelasVal || !periodeVal) {
+        result.errors.push({
+          line: lineNum,
+          error: 'Semua kolom (nim, kode_mata_kuliah, nama_kelas, periode_id) wajib diisi.',
+        });
+        continue;
+      }
+
+      try {
+        const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
+        if (!mhs) {
+          throw new Error(`Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.`);
+        }
+
+        if (mhs.status !== 'aktif') {
+          throw new Error(`Mahasiswa dengan NIM "${nimVal}" tidak berstatus aktif.`);
+        }
+
+        const [mk] = await db.select().from(mataKuliah).where(eq(mataKuliah.kode, kodeMkVal)).limit(1);
+        if (!mk) {
+          throw new Error(`Mata Kuliah dengan kode "${kodeMkVal}" tidak ditemukan.`);
+        }
+
+        const [kelas] = await db
+          .select()
+          .from(kelasKuliah)
+          .where(
+            and(
+              eq(kelasKuliah.mataKuliahId, mk.id),
+              eq(kelasKuliah.namaKelas, namaKelasVal),
+              eq(kelasKuliah.periodeId, periodeVal),
+            ),
+          )
+          .limit(1);
+
+        if (!kelas) {
+          throw new Error(
+            `Kelas Kuliah "${namaKelasVal}" untuk MK "${kodeMkVal}" pada Periode "${periodeVal}" tidak ditemukan.`,
+          );
+        }
+
+        const [exactDuplicate] = await db
+          .select({ id: krs.id })
+          .from(krs)
+          .where(and(eq(krs.mahasiswaId, mhs.id), eq(krs.kelasKuliahId, kelas.id)))
+          .limit(1);
+
+        if (exactDuplicate) {
           continue;
         }
 
-        try {
-          // Find Mahasiswa
-          const [mhs] = await tx.select().from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
-          if (!mhs) {
-            throw new Error(`Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.`);
-          }
+        const [existingSameCourse] = await db
+          .select({ id: krs.id, namaKelas: kelasKuliah.namaKelas })
+          .from(krs)
+          .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+          .where(
+            and(
+              eq(krs.mahasiswaId, mhs.id),
+              eq(kelasKuliah.mataKuliahId, mk.id),
+              eq(kelasKuliah.periodeId, periodeVal),
+            ),
+          )
+          .limit(1);
 
-          if (mhs.status !== 'aktif') {
-            throw new Error(`Mahasiswa dengan NIM "${nimVal}" tidak berstatus aktif.`);
-          }
-
-          // Find Mata Kuliah
-          const [mk] = await tx.select().from(mataKuliah).where(eq(mataKuliah.kode, kodeMkVal)).limit(1);
-          if (!mk) {
-            throw new Error(`Mata Kuliah dengan kode "${kodeMkVal}" tidak ditemukan.`);
-          }
-
-          // Find Kelas Kuliah
-          const [kelas] = await tx
-            .select()
-            .from(kelasKuliah)
-            .where(
-              and(
-                eq(kelasKuliah.mataKuliahId, mk.id),
-                eq(kelasKuliah.namaKelas, namaKelasVal),
-                eq(kelasKuliah.periodeId, periodeVal),
-              ),
-            )
-            .limit(1);
-
-          if (!kelas) {
-            throw new Error(
-              `Kelas Kuliah "${namaKelasVal}" untuk MK "${kodeMkVal}" pada Periode "${periodeVal}" tidak ditemukan.`,
-            );
-          }
-
-          // Check for exact duplicate KRS (same student, same class)
-          const [exactDuplicate] = await tx
-            .select({ id: krs.id })
-            .from(krs)
-            .where(and(eq(krs.mahasiswaId, mhs.id), eq(krs.kelasKuliahId, kelas.id)))
-            .limit(1);
-
-          if (exactDuplicate) {
-            continue; // Silently skip exact duplicate
-          }
-
-          // Check if student has already contracted another class of the same course in this period
-          const [existingSameCourse] = await tx
-            .select({ id: krs.id, namaKelas: kelasKuliah.namaKelas })
-            .from(krs)
-            .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-            .where(
-              and(
-                eq(krs.mahasiswaId, mhs.id),
-                eq(kelasKuliah.mataKuliahId, mk.id),
-                eq(kelasKuliah.periodeId, periodeVal),
-              ),
-            )
-            .limit(1);
-
-          if (existingSameCourse) {
-            throw new Error(
-              `Mahasiswa sudah mengontrak mata kuliah "${kodeMkVal}" pada kelas "${existingSameCourse.namaKelas}" di periode "${periodeVal}".`,
-            );
-          }
-
-          await tx.insert(krs).values({
-            mahasiswaId: mhs.id,
-            kelasKuliahId: kelas.id,
-            isApproved: false,
-          });
-
-          result.successCount++;
-        } catch (err: any) {
-          result.errors.push({ line: lineNum, error: err.message });
+        if (existingSameCourse) {
+          throw new Error(
+            `Mahasiswa sudah mengontrak mata kuliah "${kodeMkVal}" pada kelas "${existingSameCourse.namaKelas}" di periode "${periodeVal}".`,
+          );
         }
+
+        await db.insert(krs).values({
+          mahasiswaId: mhs.id,
+          kelasKuliahId: kelas.id,
+          isApproved: false,
+        });
+
+        result.successCount++;
+      } catch (err: any) {
+        result.errors.push({ line: lineNum, error: err.message });
       }
-    });
+    }
 
     return result;
   }

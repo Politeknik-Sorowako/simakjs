@@ -181,12 +181,20 @@ export const presensiController = {
     limit?: number,
     search?: string,
     prodiId?: number,
+    sortBy?: string,
+    sortOrder?: string,
+    statusLunas?: string,
+    exportAll?: boolean,
   ): Promise<PaginatedResponse<KompensasiLaporanItem>> {
     const params = new URLSearchParams();
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     if (search) params.append('search', search);
     if (prodiId) params.append('prodiId', String(prodiId));
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
+    if (statusLunas) params.append('statusLunas', statusLunas);
+    if (exportAll) params.append('exportAll', 'true');
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<KompensasiLaporanItem>>(`/presensi/kompensasi/laporan${queryString}`);
   },

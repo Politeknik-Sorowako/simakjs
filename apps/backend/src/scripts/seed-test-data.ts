@@ -530,6 +530,7 @@ async function seed() {
         const [inserted] = await db
           .insert(mataKuliah)
           .values({
+            programStudiId: prodiId,
             kode: course.kode,
             nama: course.nama,
             sksTotal: sks,

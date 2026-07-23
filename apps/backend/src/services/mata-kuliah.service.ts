@@ -1,8 +1,9 @@
 import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
-import { kurikulum, kurikulumMataKuliah, mataKuliah } from '../models/schema';
+import { kurikulum, kurikulumMataKuliah, mataKuliah, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateMataKuliahDto {
+  programStudiId: number;
   kode: string;
   nama: string;
   sksTotal: number;
@@ -11,18 +12,39 @@ export interface CreateMataKuliahDto {
   idPddikti?: string;
 }
 
+export interface ImportMataKuliahItem {
+  kodeProdi?: string;
+  kode: string;
+  nama: string;
+  sksTotal: number;
+  sksTatapMuka?: number;
+  sksPraktek?: number;
+  idPddikti?: string;
+}
+
+export interface ImportMataKuliahResult {
+  success: number;
+  failed: number;
+  errors: { row: number; kode: string; error: string }[];
+}
+
 export class MataKuliahService {
   static async getAll(
     page = 1,
     limit = 10,
     search = '',
+    programStudiId?: number,
     kurikulumId?: number,
     semester?: number,
     sortBy = 'nama',
     sortOrder: 'asc' | 'desc' = 'asc',
   ) {
     const offset = (page - 1) * limit;
-    let conditions = [];
+    const conditions = [];
+
+    if (programStudiId) {
+      conditions.push(eq(mataKuliah.programStudiId, programStudiId));
+    }
 
     if (search) {
       conditions.push(or(ilike(mataKuliah.nama, `%${search}%`), ilike(mataKuliah.kode, `%${search}%`)));
@@ -36,12 +58,9 @@ export class MataKuliahService {
       conditions.push(inArray(mataKuliah.id, kmkIds));
     }
 
-    let whereClause = undefined;
-    if (conditions.length > 0) {
-      whereClause = and(...conditions);
-    }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // Fast path: no kurikulum enrichment needed — use database-level pagination
+    // Fast path: no kurikulum enrichment needed
     if (!kurikulumId && semester === undefined) {
       let orderField;
       switch (sortBy) {
@@ -64,19 +83,30 @@ export class MataKuliahService {
         limit,
         offset,
         orderBy: (mk, { asc, desc }) => [orderDir === 'desc' ? desc(orderField) : asc(orderField)],
+        with: { programStudi: true },
       });
 
       const totalPages = Math.ceil(total / limit);
       return {
-        data: data.map((mk: any) => ({ ...mk, semester: null, kurikulum: null, programStudi: null })),
+        data: data.map((mk: any) => ({
+          ...mk,
+          semester: null,
+          kurikulum: null,
+          programStudi: mk.programStudi
+            ? { id: mk.programStudi.id, kode: mk.programStudi.kode, nama: mk.programStudi.nama }
+            : null,
+        })),
         meta: { total, page, limit, totalPages },
       };
     }
 
-    // Slow path: with kurikulum enrichment — fetch all, enrich, filter, sort, paginate in-memory
-    let allData = await db.query.mataKuliah.findMany({ where: whereClause });
+    // Slow path: with kurikulum enrichment
+    let allData = await db.query.mataKuliah.findMany({
+      where: whereClause,
+      with: { programStudi: true },
+    });
 
-    let kurikulumProdiInfo: { id: number; kode: string; nama: string; jenjang: string } | null = null;
+    let kurikulumProdiInfo: { id: number; kode: string; nama: string } | null = null;
     if (kurikulumId) {
       const kur = await db.query.kurikulum.findFirst({
         where: eq(kurikulum.id, kurikulumId),
@@ -87,7 +117,6 @@ export class MataKuliahService {
           id: kur.programStudi.id,
           kode: kur.programStudi.kode,
           nama: kur.programStudi.nama,
-          jenjang: kur.programStudi.jenjang,
         };
       }
 
@@ -112,7 +141,9 @@ export class MataKuliahService {
           ...mk,
           semester: info?.semester ?? null,
           kurikulum: info ? { kode: info.kode, nama: info.nama } : null,
-          programStudi: kurikulumProdiInfo,
+          programStudi: mk.programStudi
+            ? { id: mk.programStudi.id, kode: mk.programStudi.kode, nama: mk.programStudi.nama }
+            : kurikulumProdiInfo || null,
         };
       });
     } else {
@@ -120,7 +151,9 @@ export class MataKuliahService {
         ...mk,
         semester: null,
         kurikulum: null,
-        programStudi: null,
+        programStudi: mk.programStudi
+          ? { id: mk.programStudi.id, kode: mk.programStudi.kode, nama: mk.programStudi.nama }
+          : null,
       }));
     }
 
@@ -141,12 +174,6 @@ export class MataKuliahService {
         case 'semester':
           cmp = (a.semester || 0) - (b.semester || 0);
           break;
-        case 'programStudi':
-          cmp = (a.programStudi?.nama || '').localeCompare(b.programStudi?.nama || '');
-          break;
-        case 'kurikulum':
-          cmp = (a.kurikulum?.kode || '').localeCompare(b.kurikulum?.kode || '');
-          break;
         default:
           cmp = a.nama.localeCompare(b.nama);
       }
@@ -160,7 +187,10 @@ export class MataKuliahService {
   }
 
   static async getById(id: number) {
-    const data = await db.query.mataKuliah.findFirst({ where: eq(mataKuliah.id, id) });
+    const data = await db.query.mataKuliah.findFirst({
+      where: eq(mataKuliah.id, id),
+      with: { programStudi: true },
+    });
     return data || null;
   }
 
@@ -177,5 +207,104 @@ export class MataKuliahService {
   static async delete(id: number) {
     const [deletedMk] = await db.delete(mataKuliah).where(eq(mataKuliah.id, id)).returning();
     return deletedMk || null;
+  }
+
+  static async import(items: ImportMataKuliahItem[]): Promise<ImportMataKuliahResult> {
+    const result: ImportMataKuliahResult = { success: 0, failed: 0, errors: [] };
+
+    const uniqueProdiKodes = [...new Set(items.map((item) => item.kodeProdi?.trim()).filter((k): k is string => !!k))];
+    let prodiKodeToId = new Map<string, number>();
+    if (uniqueProdiKodes.length > 0) {
+      const prodiList = await db
+        .select({ id: programStudi.id, kode: programStudi.kode })
+        .from(programStudi)
+        .where(inArray(programStudi.kode, uniqueProdiKodes));
+      prodiKodeToId = new Map(prodiList.map((p) => [p.kode, p.id]));
+    }
+
+    const uniqueKodes = [...new Set(items.map((i) => i.kode?.trim()).filter((k): k is string => !!k))];
+    const prodiIds = Array.from(prodiKodeToId.values());
+    let existingKeySet = new Set<string>();
+    if (uniqueKodes.length > 0 && prodiIds.length > 0) {
+      const existingMks = await db
+        .select({ programStudiId: mataKuliah.programStudiId, kode: mataKuliah.kode })
+        .from(mataKuliah)
+        .where(and(inArray(mataKuliah.programStudiId, prodiIds), inArray(mataKuliah.kode, uniqueKodes)));
+      existingKeySet = new Set(existingMks.map((mk) => `${mk.programStudiId}:${mk.kode}`));
+    }
+
+    const validItems: CreateMataKuliahDto[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const urutan = i + 1;
+      const kode = item.kode?.trim();
+      const nama = item.nama?.trim();
+
+      let resolvedProdiId: number | undefined;
+      const trimmedProdiKode = item.kodeProdi?.trim();
+      if (trimmedProdiKode) {
+        const found = prodiKodeToId.get(trimmedProdiKode);
+        if (!found) {
+          result.failed++;
+          result.errors.push({
+            row: urutan,
+            kode: kode || '',
+            error: `Program Studi dengan kode '${trimmedProdiKode}' tidak ditemukan`,
+          });
+          continue;
+        }
+        resolvedProdiId = found;
+      } else {
+        result.failed++;
+        result.errors.push({ row: urutan, kode: kode || '', error: 'kode_prodi wajib diisi' });
+        continue;
+      }
+
+      if (!kode || !nama) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode: kode || '', error: 'Kode dan nama wajib diisi' });
+        continue;
+      }
+
+      if (!item.sksTotal || item.sksTotal <= 0) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode, error: 'sksTotal wajib diisi dan lebih dari 0' });
+        continue;
+      }
+
+      if (existingKeySet.has(`${resolvedProdiId}:${kode}`)) {
+        result.failed++;
+        result.errors.push({ row: urutan, kode, error: 'Kode sudah ada untuk program studi ini' });
+        continue;
+      }
+
+      validItems.push({
+        programStudiId: resolvedProdiId,
+        kode,
+        nama,
+        sksTotal: item.sksTotal,
+        sksTatapMuka: item.sksTatapMuka,
+        sksPraktek: item.sksPraktek,
+        idPddikti: item.idPddikti?.trim() || undefined,
+      });
+    }
+
+    for (const item of validItems) {
+      try {
+        await db.insert(mataKuliah).values(item);
+        result.success++;
+      } catch (err: unknown) {
+        result.failed++;
+        const msg = err instanceof Error ? err.message : 'Gagal menyimpan data ke database';
+        result.errors.push({ row: 0, kode: item.kode, error: msg });
+      }
+    }
+
+    return result;
+  }
+
+  static getTemplateCsv(): string {
+    return 'kode_prodi,kode,nama,sks_total,sks_tatap_muka,sks_praktek,id_pddikti\nTI,TI001,Pemrograman Web,3,2,1,\nTI,TI002,Basis Data,3,2,1,';
   }
 }

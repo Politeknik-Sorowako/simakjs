@@ -128,6 +128,24 @@ export class KurikulumService {
       throw new Error('Mata kuliah sudah ada dalam kurikulum ini');
     }
 
+    const mk = await db.query.mataKuliah.findFirst({
+      where: eq(mataKuliah.id, data.mataKuliahId),
+    });
+    if (!mk) {
+      throw new Error('Mata kuliah tidak ditemukan');
+    }
+
+    const kur = await db.query.kurikulum.findFirst({
+      where: eq(kurikulum.id, kurikulumId),
+    });
+    if (!kur) {
+      throw new Error('Kurikulum tidak ditemukan');
+    }
+
+    if (mk.programStudiId !== kur.programStudiId) {
+      throw new Error('Mata kuliah harus dari program studi yang sama dengan kurikulum');
+    }
+
     const [newKmk] = await db
       .insert(kurikulumMataKuliah)
       .values({
@@ -152,6 +170,10 @@ export class KurikulumService {
 
     const target = await this.getById(targetKurikulumId);
     if (!target) throw new Error('Kurikulum target tidak ditemukan');
+
+    if (source.programStudiId !== target.programStudiId) {
+      throw new Error('Kurikulum sumber dan target harus dari program studi yang sama');
+    }
 
     const existingSet = new Set(target.kurikulumMataKuliah.map((kmk) => kmk.mataKuliahId));
     const toInsert = source.kurikulumMataKuliah.filter((kmk) => !existingSet.has(kmk.mataKuliahId));
@@ -210,14 +232,14 @@ export class KurikulumService {
 
     const existingSet = new Set(target.kurikulumMataKuliah.map((kmk) => kmk.mataKuliahId));
 
-    // Pre-fetch all MK codes in one query
+    // Pre-fetch all MK codes in one query, scoped to kurikulum's prodi
     const allKodes = lines
       .slice(1)
       .map((l) => l.split(',')[kodeIdx]?.trim())
       .filter(Boolean);
     const uniqueKodes = [...new Set(allKodes)];
     const allMk = await db.query.mataKuliah.findMany({
-      where: inArray(mataKuliah.kode, uniqueKodes),
+      where: and(inArray(mataKuliah.kode, uniqueKodes), eq(mataKuliah.programStudiId, target.programStudiId)),
     });
     const mkMap = new Map(allMk.map((mk) => [mk.kode, mk]));
 

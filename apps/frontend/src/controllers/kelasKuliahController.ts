@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { DosenPengajar } from './dosenPengajarController';
 import { MataKuliah } from './mataKuliahController';
 import { PeriodeAkademik } from './periodeAkademikController';
 import { PaginatedResponse } from './prodiController';
@@ -13,6 +14,7 @@ export interface KelasKuliah {
   tanggalAkhirEfektif?: string | null;
   mataKuliah?: MataKuliah | null;
   periodeAkademik?: PeriodeAkademik | null;
+  dosenPengajarKelas?: DosenPengajar[] | null;
   idPddikti?: string | null;
   isSynced?: boolean;
 }
@@ -64,7 +66,15 @@ export const kelasKuliahController = {
   },
 
   async import(
-    items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[],
+    items: {
+      kodeProdi?: string;
+      kodeMataKuliah?: string;
+      periodeId: string;
+      namaKelas: string;
+      nipDosen?: string;
+      sksBebanMengajar?: number | string;
+      idPddikti?: string;
+    }[],
   ): Promise<{ success: number; failed: number; errors: { row: number; namaKelas: string; error: string }[] }> {
     return fetchApi('/kelas-kuliah/import', {
       method: 'POST',

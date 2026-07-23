@@ -3,6 +3,7 @@ import { PaginatedResponse, Prodi } from './prodiController';
 
 export interface MataKuliah {
   id: number;
+  programStudiId?: number;
   kode: string;
   nama: string;
   sksTotal: number;
@@ -26,6 +27,7 @@ export const mataKuliahController = {
     semester?: number,
     sortBy?: string,
     sortOrder?: string,
+    programStudiId?: number,
   ): Promise<PaginatedResponse<MataKuliah>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
@@ -35,6 +37,7 @@ export const mataKuliahController = {
     if (semester !== undefined) params.append('semester', String(semester));
     if (sortBy) params.append('sortBy', sortBy);
     if (sortOrder) params.append('sortOrder', sortOrder);
+    if (programStudiId) params.append('programStudiId', String(programStudiId));
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<MataKuliah>>(`/mata-kuliah${queryString}`);
   },
@@ -63,6 +66,23 @@ export const mataKuliahController = {
   async delete(id: number): Promise<{ message: string }> {
     return fetchApi<{ message: string }>(`/mata-kuliah/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  async import(
+    items: {
+      kodeProdi?: string;
+      kode: string;
+      nama: string;
+      sksTotal: number;
+      sksTatapMuka?: number;
+      sksPraktek?: number;
+      idPddikti?: string;
+    }[],
+  ): Promise<{ success: number; failed: number; errors: { row: number; kode: string; error: string }[] }> {
+    return fetchApi('/mata-kuliah/import', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
     });
   },
 };

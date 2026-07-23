@@ -58,7 +58,20 @@ async function main() {
   try {
     const dumpProcess = spawnSync(
       'pg_dump',
-      ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '--no-owner', '--no-acl'],
+      [
+        '-h',
+        config.host,
+        '-p',
+        config.port,
+        '-U',
+        config.user,
+        '-d',
+        config.db,
+        '--clean',
+        '--if-exists',
+        '--no-owner',
+        '--no-acl',
+      ],
       {
         env: { ...process.env, PGPASSWORD: config.password },
         stdio: ['inherit', 'pipe', 'inherit'],

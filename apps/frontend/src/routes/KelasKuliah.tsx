@@ -1,7 +1,9 @@
 import { useNavigate } from '@solidjs/router';
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
@@ -17,11 +19,36 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
+import { ExportColumn } from '../utils/export';
 
 export default function KelasKuliah() {
   const navigate = useNavigate();
   const toast = useToast();
   const auth = useAuth();
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'Kode MK', accessor: (row: IKelas) => row.mataKuliah?.kode || '-' },
+    { header: 'Nama Mata Kuliah', accessor: (row: IKelas) => row.mataKuliah?.nama || '-' },
+    { header: 'Periode', accessor: (row: IKelas) => row.periodeId },
+    { header: 'Kelas', accessor: (row: IKelas) => row.namaKelas },
+    {
+      header: 'Dosen Pengajar',
+      accessor: (row: IKelas) =>
+        row.dosenPengajarKelas
+          ?.map((d) => d.dosen?.nama)
+          .filter(Boolean)
+          .join('; ') || '-',
+    },
+    {
+      header: 'SKS Mengajar',
+      accessor: (row: IKelas) =>
+        row.dosenPengajarKelas
+          ?.map((d) => d.sksBebanMengajar)
+          .filter((v) => v !== undefined)
+          .join('; ') || '-',
+    },
+    { header: 'ID PDDIKTI', accessor: (row: IKelas) => row.idPddikti || '-' },
+  ];
   const workspace = useWorkspace();
   const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
@@ -42,9 +69,21 @@ export default function KelasKuliah() {
   );
 
   // Fetch Dropdown Data
-  const [matkuls] = createResource(() => mataKuliahController.getAll(undefined, 1, 100));
+  const [matkuls] = createResource(
+    () => workspace.selectedProdiId(),
+    (prodiId) =>
+      mataKuliahController.getAll(undefined, 1, 100, undefined, undefined, undefined, undefined, prodiId || undefined),
+  );
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
   const [dosens] = createResource(() => dosenController.getAll(undefined, 1, 100));
+
+  // Reset matkulId when prodi changes and matkuls refetch
+  createEffect(() => {
+    const data = matkuls()?.data;
+    if (data && data.length > 0 && !data.find((m) => m.id === matkulId())) {
+      setMatkulId(data[0].id);
+    }
+  });
 
   // Sorting
   const [sortBy, setSortBy] = createSignal('nama');
@@ -183,9 +222,25 @@ export default function KelasKuliah() {
   } | null>(null);
   const [importLoading, setImportLoading] = createSignal(false);
 
+  const sampleTemplateRows = [
+    ['kode_prodi', 'kode_mata_kuliah', 'periode_id', 'nama_kelas', 'nip_dosen', 'sks_beban_mengajar', 'id_pddikti'],
+    ['TI', 'TI001', '20241', '1A', '198501012010011001', '3', ''],
+    ['TI', 'TI001', '20241', '1A', '198705152015012002', '2', ''],
+    ['TI', 'TI002', '20241', '2B', '198501012010011001;198705152015012002', '3;3', ''],
+  ];
+
   const handleDownloadTemplate = () => {
-    const csv = 'kode_mata_kuliah,periode_id,nama_kelas,id_pddikti\nTI001,20241,4A,\nTI001,20241,4B,\nTI002,20241,1A,';
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const rawCsv = sampleTemplateRows
+      .map((row) =>
+        row
+          .map((cell) =>
+            cell.includes(',') || cell.includes(';') || cell.includes('\n') ? `"${cell.replace(/"/g, '""')}"` : cell,
+          )
+          .join(','),
+      )
+      .join('\r\n');
+    const content = `\uFEFF${rawCsv}`;
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -199,70 +254,105 @@ export default function KelasKuliah() {
     setImportFile(input.files?.[0] || null);
   };
 
-  const handleImport = async () => {
-    if (!importFile()) {
-      toast.showToast('Pilih file CSV terlebih dahulu', 'error');
-      return;
+  const handleImportCsv = async (rows: string[][]) => {
+    if (!rows || rows.length === 0) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'File CSV kosong atau format tidak sesuai.' }],
+      };
     }
-    setImportLoading(true);
-    try {
-      const text = await importFile()!.text();
-      const rows = parseCsv(text);
-      if (rows.length === 0) {
-        setImportLoading(false);
-        toast.showToast('File CSV kosong atau format tidak sesuai', 'error');
-        return;
+
+    let hasProdiColumn = true;
+    let startIndex = 0;
+    if (rows.length > 0 && isHeaderRow(rows[0][0], ['kode_prodi', 'prodi', 'kode_mata_kuliah', 'kode_matakuliah'])) {
+      startIndex = 1;
+      const firstColHeader = rows[0][0]?.toLowerCase().trim();
+      if (firstColHeader === 'kode_mata_kuliah' || firstColHeader === 'kode_matakuliah') {
+        hasProdiColumn = false;
       }
-      const items: { kodeMataKuliah?: string; periodeId: string; namaKelas: string; idPddikti?: string }[] = [];
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length < 3) continue;
-        if (i === 0 && isHeaderRow(row[0], ['kode_mata_kuliah', 'kode_matakuliah'])) continue;
-        const kodeMataKuliah = row[0]?.trim() || undefined;
-        const periodeId = row[1]?.trim() || '';
-        const namaKelas = row[2]?.trim() || '';
-        const idPddikti = row[3]?.trim() || undefined;
-        if (periodeId && namaKelas) {
-          items.push({ kodeMataKuliah, periodeId, namaKelas, idPddikti });
-        }
-      }
-      if (items.length === 0) {
-        setImportLoading(false);
-        toast.showToast('Tidak ada data valid untuk diimport', 'error');
-        return;
-      }
-      const result = await kelasKuliahController.import(items);
-      setImportResult(result);
-      if (result.failed === 0) {
-        refetch();
-      }
-    } catch (err: unknown) {
-      toast.showToast((err instanceof Error ? err.message : null) || 'Gagal import', 'error');
-    } finally {
-      setImportLoading(false);
     }
+
+    const items: {
+      kodeProdi?: string;
+      kodeMataKuliah?: string;
+      periodeId: string;
+      namaKelas: string;
+      nipDosen?: string;
+      sksBebanMengajar?: number | string;
+      idPddikti?: string;
+    }[] = [];
+
+    for (let i = startIndex; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length < 3) continue;
+
+      let kodeProdi: string | undefined;
+      let kodeMataKuliah: string | undefined;
+      let periodeId = '';
+      let namaKelas = '';
+      let nipDosen: string | undefined;
+      let sksBebanMengajar: string | number | undefined;
+      let idPddikti: string | undefined;
+
+      if (hasProdiColumn) {
+        kodeProdi = row[0]?.trim() || undefined;
+        kodeMataKuliah = row[1]?.trim() || undefined;
+        periodeId = row[2]?.trim() || '';
+        namaKelas = row[3]?.trim() || '';
+        nipDosen = row[4]?.trim() || undefined;
+        sksBebanMengajar = row[5]?.trim() || undefined;
+        idPddikti = row[6]?.trim() || undefined;
+      } else {
+        kodeMataKuliah = row[0]?.trim() || undefined;
+        periodeId = row[1]?.trim() || '';
+        namaKelas = row[2]?.trim() || '';
+        nipDosen = row[3]?.trim() || undefined;
+        sksBebanMengajar = row[4]?.trim() || undefined;
+        idPddikti = row[5]?.trim() || undefined;
+      }
+
+      if (periodeId && namaKelas) {
+        items.push({ kodeProdi, kodeMataKuliah, periodeId, namaKelas, nipDosen, sksBebanMengajar, idPddikti });
+      }
+    }
+
+    if (items.length === 0) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'Tidak ada data valid untuk diimpor dalam file CSV.' }],
+      };
+    }
+
+    const result = await kelasKuliahController.import(items);
+    return {
+      successCount: result.success,
+      errors: (result.errors || []).map((e) => ({
+        line: e.row + (startIndex > 0 ? 1 : 0),
+        error: `${e.namaKelas ? `[${e.namaKelas}] ` : ''}${e.error}`,
+      })),
+    };
   };
 
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Kelas Kuliah</h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.
             </p>
           </div>
-          <div class="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setImportResult(null);
-                setImportFile(null);
-                setShowImportModal(true);
-              }}
-            >
-              Import CSV
+          <div class="flex items-center gap-2 flex-wrap">
+            <ExportButtonGroup
+              data={() => sortedData()}
+              columns={exportColumns}
+              filename={`Kelas_Kuliah_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Kelas Kuliah"
+              subtitle="Data Kelas Kuliah SIMAK Vokasi"
+            />
+            <Button variant="secondary" onClick={() => setShowImportModal(true)}>
+              📥 Impor CSV
             </Button>
             <Button onClick={openAddModal}>+ Tambah Kelas</Button>
           </div>
@@ -450,85 +540,25 @@ export default function KelasKuliah() {
           </form>
         </Modal>
 
-        <Modal
+        {/* Modal Import CSV */}
+        <ImportCsvModal
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
-          title="Import Kelas Kuliah dari CSV"
-          maxWidth="lg"
-        >
-          <div class="flex flex-col gap-4">
-            <Show when={importResult()}>
-              <div class="flex flex-col gap-3">
-                <div
-                  class={`p-4 rounded-lg border ${
-                    importResult()!.failed === 0
-                      ? 'bg-emerald-500/10 border-emerald-500/30'
-                      : 'bg-amber-500/10 border-amber-500/30'
-                  }`}
-                >
-                  <p class="font-medium text-black dark:text-white">
-                    {importResult()!.failed === 0
-                      ? `Semua ${importResult()!.success} data berhasil diimport!`
-                      : `${importResult()!.success} berhasil, ${importResult()!.failed} gagal`}
-                  </p>
-                  <Show when={importResult()!.errors.length > 0}>
-                    <div class="mt-3 space-y-1 max-h-48 overflow-y-auto">
-                      <For each={importResult()!.errors}>
-                        {(err) => (
-                          <p class="text-sm text-red-600 dark:text-red-300">
-                            Baris {err.row}: {err.namaKelas ? `(${err.namaKelas}) ` : ''}
-                            {err.error}
-                          </p>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
-                </div>
-                <div class="flex justify-end">
-                  <Button
-                    variant="primary"
-                    onClick={() => {
-                      setShowImportModal(false);
-                      setImportResult(null);
-                    }}
-                  >
-                    Tutup
-                  </Button>
-                </div>
-              </div>
-            </Show>
-
-            <Show when={!importResult()}>
-              <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                <p class="text-sm text-black dark:text-blue-300">
-                  Format CSV: <code>kode_mata_kuliah,periode_id,nama_kelas,id_pddikti</code>
-                </p>
-                <p class="text-xs text-black dark:text-secondary-400 mt-1">
-                  Kode Mata Kuliah dan Periode harus terdaftar di sistem. ID PDDikti bersifat opsional.
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
-                Download Template CSV
-              </Button>
-              <div>
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleImportFileChange}
-                  class="block w-full text-sm text-secondary-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-accent-600 file:text-white hover:file:bg-accent-500 file:cursor-pointer"
-                />
-              </div>
-              <div class="flex justify-end gap-3 pt-2">
-                <Button variant="secondary" onClick={() => setShowImportModal(false)}>
-                  Batal
-                </Button>
-                <Button variant="primary" onClick={handleImport} disabled={importLoading()}>
-                  {importLoading() ? 'Mengimport...' : 'Import'}
-                </Button>
-              </div>
-            </Show>
-          </div>
-        </Modal>
+          importUrl="/kelas-kuliah/import"
+          onImport={handleImportCsv}
+          templateHeaders={[
+            'kode_prodi',
+            'kode_mata_kuliah',
+            'periode_id',
+            'nama_kelas',
+            'nip_dosen',
+            'sks_beban_mengajar',
+            'id_pddikti',
+          ]}
+          customTemplateRows={sampleTemplateRows}
+          title="Kelas Kuliah + Dosen Pengajar"
+          onSuccess={() => refetch()}
+        />
       </div>
     </MainLayout>
   );

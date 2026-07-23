@@ -83,6 +83,21 @@ export class CplService {
       kodeToId = new Map(prodis.map((p) => [p.kode, p.id]));
     }
 
+    if (programStudiId && !kodeToId.has(programStudiId.toString())) {
+      kodeToId.set(programStudiId.toString(), programStudiId);
+    }
+
+    const uniqueCplKodes = [...new Set(items.map((i) => i.kode?.trim()).filter((k): k is string => !!k))];
+    const prodiIds = Array.from(kodeToId.values());
+    let existingKeySet = new Set<string>();
+    if (uniqueCplKodes.length > 0 && prodiIds.length > 0) {
+      const existingCpls = await db
+        .select({ programStudiId: cpl.programStudiId, kode: cpl.kode })
+        .from(cpl)
+        .where(and(inArray(cpl.programStudiId, prodiIds), inArray(cpl.kode, uniqueCplKodes)));
+      existingKeySet = new Set(existingCpls.map((c) => `${c.programStudiId}:${c.kode}`));
+    }
+
     const validItems: { kode: string; deskripsi: string; urutan: number; resolvedProdiId: number }[] = [];
 
     for (let i = 0; i < items.length; i++) {
@@ -124,11 +139,7 @@ export class CplService {
         continue;
       }
 
-      const existing = await db.query.cpl.findFirst({
-        where: and(eq(cpl.programStudiId, resolvedProdiId), eq(cpl.kode, kode)),
-      });
-
-      if (existing) {
+      if (existingKeySet.has(`${resolvedProdiId}:${kode}`)) {
         result.failed++;
         result.errors.push({ row: urutan, kode, error: 'Kode sudah ada' });
         continue;
@@ -137,27 +148,19 @@ export class CplService {
       validItems.push({ kode, deskripsi, urutan, resolvedProdiId });
     }
 
-    if (validItems.length > 0) {
+    for (const item of validItems) {
       try {
-        await db.transaction(async (tx) => {
-          await tx.insert(cpl).values(
-            validItems.map((item) => ({
-              programStudiId: item.resolvedProdiId,
-              kode: item.kode,
-              deskripsi: item.deskripsi,
-              urutan: item.urutan,
-            })),
-          );
+        await db.insert(cpl).values({
+          programStudiId: item.resolvedProdiId,
+          kode: item.kode,
+          deskripsi: item.deskripsi,
+          urutan: item.urutan,
         });
-        result.success = validItems.length;
+        result.success++;
       } catch (err: unknown) {
-        result.failed += validItems.length;
-        result.errors.push({
-          row: 0,
-          kode: '',
-          error: 'Gagal menyimpan data ke database',
-        });
-        console.error('CPL import error:', err);
+        result.failed++;
+        const msg = err instanceof Error ? err.message : 'Gagal menyimpan data ke database';
+        result.errors.push({ row: 0, kode: item.kode, error: msg });
       }
     }
 

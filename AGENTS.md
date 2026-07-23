@@ -628,6 +628,21 @@ utils/           # Shared: api.ts, csv.ts, export.ts
 
 ---
 
+## 13. Implementation Planning Standards (Junior & Small-Model Friendly)
+
+When creating or updating an implementation plan (`implementation_plan.md`), all AI agents MUST format it so that it can be effortlessly executed by a junior developer or a smaller/cheaper LLM model:
+
+1. **Sequential Step-by-Step Structure**: Break complex features into self-contained, numbered steps ordered by dependency (e.g., Step 1: Database Schema & Migration → Step 2: Service → Step 3: Controller → Step 4: Frontend Controller → Step 5: Frontend UI).
+2. **Explicit File Paths**: Always provide exact workspace-relative file paths for every file being created or modified (e.g., `apps/backend/src/models/schema.ts`).
+3. **Before & After Code Snippets**: Provide concise before/after code snippets or exact type definitions for every non-trivial change to eliminate guesswork.
+4. **Copy-Pasteable CLI Commands**: Include exact terminal commands for migrations, linting, type-checking, and builds (e.g., `bun run db:generate`, `bun run lint`).
+5. **Clear Verification Steps**: Define explicit verification checks and expected outcomes for each step.
+6. **Backend-Frontend Cross-Consistency Review**: Whenever a feature involves both API/Backend and UI/Frontend (such as CSV imports, form submissions, new endpoints, or DTO updates), the plan MUST explicitly inspect and align:
+   - Elysia request/response schemas (`apps/backend/src/schemas/*.schema.ts`) vs Frontend payload interfaces (`apps/frontend/src/controllers/` & `routes/`).
+   - Field names, optionality, nullable fields, and type flexibility (e.g., `t.Union([t.String(), t.Number()])` or `t.Union([t.String(), t.Null()])`) to prevent runtime HTTP 422 (Unprocessable Entity) schema validation failures.
+
+---
+
 ## Quick Reference — Common Mistakes
 
 | Mistake | Why it breaks | Fix |
@@ -643,3 +658,4 @@ utils/           # Shared: api.ts, csv.ts, export.ts
 | Using `CORS_ORIGIN: *` in production | Security risk | Use specific origins |
 | Deploying via SSH when CI/CD works | Bypasses quality gates | Use CI/CD first |
 | Redefining controller types inline in signals | Causes TS strict compilation failures on API updates | Use exported controller interfaces (e.g., `CplMapping`) |
+| Field mismatch between backend Elysia schema & frontend payload | Causes HTTP 422 (Unprocessable Entity) validation failures | Align Elysia schema (`apps/backend/src/schemas/`) with frontend payload & use flexible types (`Union`) |

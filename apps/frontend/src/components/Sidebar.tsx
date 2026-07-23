@@ -21,11 +21,13 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
   createEffect(() => {
     const currentPath = path();
-    if (['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'].includes(currentPath)) {
+    const isMatch = (routes: string[]) => routes.some((r) => currentPath === r || currentPath.startsWith(`${r}/`));
+
+    if (isMatch(['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'])) {
       setIsMasterOpen(true);
     }
     if (
-      [
+      isMatch([
         '/kurikulum',
         '/angkatan-kurikulum',
         '/rps',
@@ -37,52 +39,38 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         '/cpl',
         '/cpmk',
         '/peta-obe',
-      ].includes(currentPath)
+      ])
     ) {
       setIsPerencanaanOpen(true);
     }
-    if (['/krs', '/keuangan'].includes(currentPath)) {
+    if (isMatch(['/krs', '/keuangan'])) {
       setIsRegistrasiOpen(true);
     }
-    if (['/jurnal-presensi', '/input-nilai', '/bimbingan', '/pelanggaran'].includes(currentPath)) {
+    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan'])) {
       setIsPelaksanaanOpen(true);
     }
-    if (['/khs', '/yudisium'].includes(currentPath)) {
+    if (isMatch(['/khs', '/yudisium'])) {
       setIsEvaluasiOpen(true);
     }
     if (
-      [
+      isMatch([
         '/laporan-kompensasi',
-        '/laporan/rekap-nilai',
-        '/laporan/peringatan',
-        '/laporan/mahasiswa-baru',
-        '/laporan/presensi-kelas',
-        '/laporan/akademik',
-        '/laporan/bkd',
-        '/laporan/krs',
-        '/laporan/keuangan',
-        '/laporan/yudisium',
-        '/laporan/mahasiswa-keluar',
-        '/laporan/obe',
+        '/laporan',
         '/obe/bobot-penilaian',
         '/obe/evaluasi-kurikulum',
-      ].includes(currentPath)
+        '/apel/verifikasi',
+        '/apel/monitor',
+      ])
     ) {
       setIsLaporanOpen(true);
     }
-    if (['/pengajuan-cuti', '/manajemen-cuti', '/penonaktifan'].includes(currentPath)) {
+    if (isMatch(['/pengajuan-cuti', '/manajemen-cuti', '/penonaktifan', '/pelanggaran', '/rekap-pelanggaran'])) {
       setIsLayananOpen(true);
     }
-    if (['/pddikti'].includes(currentPath)) {
+    if (isMatch(['/pddikti'])) {
       setIsIntegrasiOpen(true);
     }
-    if (
-      ['/admisi/dashboard', '/admisi/sesi', '/admisi/pendaftaran/baru', '/admisi/pendaftaran'].some((p) =>
-        currentPath.startsWith(p),
-      ) ||
-      currentPath.startsWith('/admisi/manajemen') ||
-      currentPath.startsWith('/admisi/pembayaran')
-    ) {
+    if (currentPath.startsWith('/admisi')) {
       setIsAdmisiOpen(true);
     }
   });
@@ -697,6 +685,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Jurnal & Presensi
                   </A>
                 </Show>
+                <Show when={isAdmin() || isDosen()}>
+                  <A
+                    href="/presensi-apel"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.478 4.482 9.957 9 10.886V21h-2v2h6v-2h-2v-1.114a11.005 11.005 0 006-3.136"
+                      />
+                    </svg>
+                    Presensi Apel
+                  </A>
+                </Show>
                 <Show when={isAdmin() || isDosen() || isProdi()}>
                   <A
                     href="/input-nilai"
@@ -972,6 +979,44 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       />
                     </svg>
                     Jam Kompensasi
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/apel/verifikasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Verifikasi Apel
+                  </A>
+                </Show>
+                <Show when={isAdmin() || isDosen() || isProdi()}>
+                  <A
+                    href="/apel/monitor"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                    Monitor Apel
                   </A>
                 </Show>
                 <Show when={isAdmin() || isProdi() || isDosen()}>

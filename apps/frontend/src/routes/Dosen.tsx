@@ -1,5 +1,6 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
@@ -14,6 +15,7 @@ import { dosenController, Dosen as IDosen } from '../controllers/dosenController
 import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
+import { ExportColumn } from '../utils/export';
 
 export default function Dosen() {
   const toast = useToast();
@@ -22,6 +24,13 @@ export default function Dosen() {
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
   const [bulkLoading, setBulkLoading] = createSignal(false);
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'NIP', accessor: (row: IDosen) => row.nip },
+    { header: 'Nama Dosen', accessor: (row: IDosen) => row.nama },
+    { header: 'Email', accessor: (row: IDosen) => row.email },
+    { header: 'Program Studi', accessor: (row: IDosen) => row.programStudi?.nama || '-' },
+  ];
 
   const auth = useAuth();
   const workspace = useWorkspace();
@@ -195,12 +204,19 @@ export default function Dosen() {
               Kelola data dosen pengajar dan program studi terkait.
             </p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <Show when={selectedIds().length > 0}>
               <Button variant="success" disabled={bulkLoading()} onClick={handleBulkCreateAccount}>
                 {bulkLoading() ? 'Memproses...' : `🔑 Buat Akun (${selectedIds().length})`}
               </Button>
             </Show>
+            <ExportButtonGroup
+              data={() => sortedData()}
+              columns={exportColumns}
+              filename={`Dosen_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Dosen"
+              subtitle="Data Dosen Pengajar SIMAK Vokasi"
+            />
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
               📥 Impor CSV
             </Button>

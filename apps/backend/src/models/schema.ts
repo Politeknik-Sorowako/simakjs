@@ -9,6 +9,7 @@ import {
   pgTable,
   serial,
   text,
+  time,
   timestamp,
   unique,
   varchar,
@@ -138,24 +139,33 @@ export const periodeAkademik = pgTable('periode_akademik', {
     .$onUpdate(() => new Date()),
 });
 
-export const mataKuliah = pgTable('mata_kuliah', {
-  id: serial('id').primaryKey(),
-  kode: varchar('kode', { length: 50 }).notNull().unique(),
-  nama: varchar('nama', { length: 255 }).notNull(),
-  sksTotal: integer('sks_total').notNull(),
-  sksTatapMuka: integer('sks_tatap_muka'),
-  sksPraktek: integer('sks_praktek'),
-  sksPraktekLapangan: integer('sks_praktek_lapangan').default(0),
-  sksSimulasi: integer('sks_simulasi').default(0),
-  idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
-  isSynced: boolean('is_synced').default(false).notNull(),
-  lastSyncAt: timestamp('last_sync_at'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const mataKuliah = pgTable(
+  'mata_kuliah',
+  {
+    id: serial('id').primaryKey(),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'restrict' }),
+    kode: varchar('kode', { length: 50 }).notNull(),
+    nama: varchar('nama', { length: 255 }).notNull(),
+    sksTotal: integer('sks_total').notNull(),
+    sksTatapMuka: integer('sks_tatap_muka'),
+    sksPraktek: integer('sks_praktek'),
+    sksPraktekLapangan: integer('sks_praktek_lapangan').default(0),
+    sksSimulasi: integer('sks_simulasi').default(0),
+    idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
+    isSynced: boolean('is_synced').default(false).notNull(),
+    lastSyncAt: timestamp('last_sync_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique('mata_kuliah_prodi_kode_unique').on(t.programStudiId, t.kode),
+  }),
+);
 
 export const kelasKuliah = pgTable('kelas_kuliah', {
   id: serial('id').primaryKey(),
@@ -255,6 +265,7 @@ export const programStudiRelations = relations(programStudi, ({ many }) => ({
   mahasiswa: many(mahasiswa),
   dosen: many(dosen),
   angkatanKurikulum: many(angkatanKurikulum),
+  kelompokApel: many(kelompokApel),
 }));
 
 export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
@@ -275,6 +286,8 @@ export const mahasiswaRelations = relations(mahasiswa, ({ one, many }) => ({
   pengajuanYudisium: one(pengajuanYudisium),
   pengajuanCuti: many(pengajuanCuti),
   mahasiswaKeluar: many(mahasiswaKeluar),
+  kelompokApelAnggota: many(kelompokApelAnggota),
+  presensiApel: many(presensiApel),
 }));
 
 export const dosenRelations = relations(dosen, ({ one, many }) => ({
@@ -285,13 +298,19 @@ export const dosenRelations = relations(dosen, ({ one, many }) => ({
   dosenPengajarKelas: many(dosenPengajarKelas),
   mahasiswaWali: many(mahasiswa),
   bimbingan: many(bimbingan),
+  kelompokApelPj: many(kelompokApel, { relationName: 'dosenPj' }),
+  sesiApel: many(sesiApel),
 }));
 
 export const periodeAkademikRelations = relations(periodeAkademik, ({ many }) => ({
   kelasKuliah: many(kelasKuliah),
 }));
 
-export const mataKuliahRelations = relations(mataKuliah, ({ many }) => ({
+export const mataKuliahRelations = relations(mataKuliah, ({ one, many }) => ({
+  programStudi: one(programStudi, {
+    fields: [mataKuliah.programStudiId],
+    references: [programStudi.id],
+  }),
   kelasKuliah: many(kelasKuliah),
   cpmk: many(cpmk),
 }));
@@ -348,7 +367,15 @@ export const tagihanRelations = relations(tagihan, ({ one }) => ({
   }),
 }));
 
-export const presensiStatusEnum = pgEnum('presensi_status', ['hadir', 'sakit', 'izin', 'telat', 'alpa']);
+export const presensiStatusEnum = pgEnum('presensi_status', [
+  'hadir',
+  'sakit',
+  'izin',
+  'telat',
+  'alpa',
+  'terlambat',
+  'unknown',
+]);
 
 export const cpmk = pgTable(
   'cpmk',
@@ -397,22 +424,28 @@ export const bap = pgTable('bap', {
     .$onUpdate(() => new Date()),
 });
 
-export const presensi = pgTable('presensi', {
-  id: serial('id').primaryKey(),
-  bapId: integer('bap_id')
-    .notNull()
-    .references(() => bap.id, { onDelete: 'cascade' }),
-  mahasiswaId: integer('mahasiswa_id')
-    .notNull()
-    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  status: presensiStatusEnum('status').notNull(),
-  durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const presensi = pgTable(
+  'presensi',
+  {
+    id: serial('id').primaryKey(),
+    bapId: integer('bap_id')
+      .notNull()
+      .references(() => bap.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    status: presensiStatusEnum('status').notNull(),
+    durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    mhsStatusIdx: index('idx_presensi_mhs_status').on(t.mahasiswaId, t.status),
+  }),
+);
 
 export const kompensasiBayar = pgTable('kompensasi_bayar', {
   id: serial('id').primaryKey(),
@@ -429,6 +462,87 @@ export const kompensasiBayar = pgTable('kompensasi_bayar', {
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+// --- PRESENSI APEL & KELOMPOK APEL ---
+
+export const kelompokApel = pgTable('kelompok_apel', {
+  id: serial('id').primaryKey(),
+  namaKelompok: varchar('nama_kelompok', { length: 100 }).notNull(),
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
+  dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'restrict' }),
+  shift: varchar('shift', { length: 10 }).notNull().default('pagi'),
+  keterangan: text('keterangan'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const kelompokApelAnggota = pgTable(
+  'kelompok_apel_anggota',
+  {
+    id: serial('id').primaryKey(),
+    kelompokApelId: integer('kelompok_apel_id')
+      .notNull()
+      .references(() => kelompokApel.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    uniqueAnggota: unique('kelompok_apel_anggota_unique').on(t.kelompokApelId, t.mahasiswaId),
+  }),
+);
+
+export const sesiApel = pgTable('sesi_apel', {
+  id: serial('id').primaryKey(),
+  kelompokApelId: integer('kelompok_apel_id')
+    .notNull()
+    .references(() => kelompokApel.id, { onDelete: 'cascade' }),
+  tanggal: date('tanggal').notNull(),
+  shift: varchar('shift', { length: 10 }).notNull(),
+  dosenId: integer('dosen_id')
+    .notNull()
+    .references(() => dosen.id, { onDelete: 'restrict' }),
+  jamMulai: time('jam_mulai').notNull(),
+  isClosed: boolean('is_closed').default(false).notNull(),
+  closedAt: timestamp('closed_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const presensiApel = pgTable(
+  'presensi_apel',
+  {
+    id: serial('id').primaryKey(),
+    sesiApelId: integer('sesi_apel_id')
+      .notNull()
+      .references(() => sesiApel.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    status: presensiStatusEnum('status').notNull().default('hadir'),
+    menitTerlambat: integer('menit_terlambat'),
+    verifiedStatus: presensiStatusEnum('verified_status'),
+    verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at'),
+    verificationNote: text('verification_note'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    mhsStatusVerifiedIdx: index('idx_presensi_apel_mhs_status').on(t.mahasiswaId, t.status, t.verifiedStatus),
+  }),
+);
 
 export const cpmkRelations = relations(cpmk, ({ one, many }) => ({
   mataKuliah: one(mataKuliah, {
@@ -481,6 +595,61 @@ export const kompensasiBayarRelations = relations(kompensasiBayar, ({ one }) => 
     references: [users.id],
   }),
 }));
+
+// --- APEL RELATIONS ---
+
+export const kelompokApelRelations = relations(kelompokApel, ({ one, many }) => ({
+  programStudi: one(programStudi, {
+    fields: [kelompokApel.programStudiId],
+    references: [programStudi.id],
+  }),
+  dosen: one(dosen, {
+    fields: [kelompokApel.dosenId],
+    references: [dosen.id],
+  }),
+  anggota: many(kelompokApelAnggota),
+  sesi: many(sesiApel),
+}));
+
+export const kelompokApelAnggotaRelations = relations(kelompokApelAnggota, ({ one }) => ({
+  kelompokApel: one(kelompokApel, {
+    fields: [kelompokApelAnggota.kelompokApelId],
+    references: [kelompokApel.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [kelompokApelAnggota.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+}));
+
+export const sesiApelRelations = relations(sesiApel, ({ one, many }) => ({
+  kelompokApel: one(kelompokApel, {
+    fields: [sesiApel.kelompokApelId],
+    references: [kelompokApel.id],
+  }),
+  dosen: one(dosen, {
+    fields: [sesiApel.dosenId],
+    references: [dosen.id],
+  }),
+  presensi: many(presensiApel),
+}));
+
+export const presensiApelRelations = relations(presensiApel, ({ one }) => ({
+  sesiApel: one(sesiApel, {
+    fields: [presensiApel.sesiApelId],
+    references: [sesiApel.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [presensiApel.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  verifiedByUser: one(users, {
+    fields: [presensiApel.verifiedBy],
+    references: [users.id],
+  }),
+}));
+
+// --- END APEL RELATIONS ---
 
 export const bimbingan = pgTable('bimbingan', {
   id: serial('id').primaryKey(),
@@ -702,23 +871,29 @@ export const kurikulum = pgTable('kurikulum', {
     .$onUpdate(() => new Date()),
 });
 
-export const kurikulumMataKuliah = pgTable('kurikulum_mata_kuliah', {
-  id: serial('id').primaryKey(),
-  kurikulumId: integer('kurikulum_id')
-    .notNull()
-    .references(() => kurikulum.id, { onDelete: 'cascade' }),
-  mataKuliahId: integer('mata_kuliah_id')
-    .notNull()
-    .references(() => mataKuliah.id, { onDelete: 'cascade' }),
-  semester: integer('semester').notNull(),
-  sksMataKuliah: integer('sks_mata_kuliah').notNull(),
-  sksTatapMuka: integer('sks_tatap_muka'),
-  sksPraktek: integer('sks_praktek'),
-  sksPraktekLapangan: integer('sks_praktek_lapangan').default(0),
-  sksSimulasi: integer('sks_simulasi').default(0),
-  isWajib: boolean('is_wajib').default(true).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-});
+export const kurikulumMataKuliah = pgTable(
+  'kurikulum_mata_kuliah',
+  {
+    id: serial('id').primaryKey(),
+    kurikulumId: integer('kurikulum_id')
+      .notNull()
+      .references(() => kurikulum.id, { onDelete: 'cascade' }),
+    mataKuliahId: integer('mata_kuliah_id')
+      .notNull()
+      .references(() => mataKuliah.id, { onDelete: 'cascade' }),
+    semester: integer('semester').notNull(),
+    sksMataKuliah: integer('sks_mata_kuliah').notNull(),
+    sksTatapMuka: integer('sks_tatap_muka'),
+    sksPraktek: integer('sks_praktek'),
+    sksPraktekLapangan: integer('sks_praktek_lapangan').default(0),
+    sksSimulasi: integer('sks_simulasi').default(0),
+    isWajib: boolean('is_wajib').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    unq: unique('kurikulum_mata_kuliah_unique').on(t.kurikulumId, t.mataKuliahId),
+  }),
+);
 
 export const angkatanKurikulum = pgTable(
   'angkatan_kurikulum',

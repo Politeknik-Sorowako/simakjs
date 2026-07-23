@@ -1,36 +1,93 @@
-import { Show } from 'solid-js';
+import { createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { ExportColumn, exportToCSV, exportToExcel, exportToPDF } from '../../utils/export';
 
-interface ExportButtonProps {
+export interface ExportButtonProps {
   data: () => any[];
   columns: ExportColumn[];
   filename: string;
   title: string;
   subtitle?: string;
+  variant?: 'primary' | 'secondary' | 'outline';
 }
 
 export function ExportButtonGroup(props: ExportButtonProps) {
+  const [open, setOpen] = createSignal(false);
+  let dropdownRef: HTMLDivElement | undefined;
+
+  const handleClickOutside = (e: MouseEvent) => {
+    if (dropdownRef && !dropdownRef.contains(e.target as Node)) {
+      setOpen(false);
+    }
+  };
+
+  onMount(() => {
+    document.addEventListener('click', handleClickOutside);
+  });
+
+  onCleanup(() => {
+    document.removeEventListener('click', handleClickOutside);
+  });
+
+  const handleExport = (format: 'excel' | 'pdf' | 'csv') => {
+    setOpen(false);
+    const data = props.data();
+    if (!data || data.length === 0) return;
+    if (format === 'excel') exportToExcel(data, props.columns, props.filename);
+    else if (format === 'pdf') exportToPDF(data, props.columns, props.filename, props.title, props.subtitle);
+    else if (format === 'csv') exportToCSV(data, props.columns, props.filename);
+  };
+
   return (
-    <div class="flex items-center gap-2">
-      <span class="text-xs font-semibold text-secondary-400 uppercase tracking-wider mr-1">Export:</span>
+    <div class="relative inline-block text-left" ref={dropdownRef}>
       <button
-        onClick={() => exportToExcel(props.data(), props.columns, props.filename)}
-        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 transition-colors dark:bg-green-950/30 dark:border-green-800 dark:text-green-400"
+        type="button"
+        onClick={() => setOpen(!open())}
+        class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 shadow-sm transition-all focus:outline-none active:scale-95"
       >
-        📊 Excel
+        <span class="text-sm">📤</span>
+        <span>Ekspor</span>
+        <svg
+          class={`w-3.5 h-3.5 transition-transform duration-200 ${open() ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
-      <button
-        onClick={() => exportToPDF(props.data(), props.columns, props.filename, props.title, props.subtitle)}
-        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 transition-colors dark:bg-red-950/30 dark:border-red-800 dark:text-red-400"
-      >
-        📄 PDF
-      </button>
-      <button
-        onClick={() => exportToCSV(props.data(), props.columns, props.filename)}
-        class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-300 bg-secondary-50 text-secondary-700 hover:bg-secondary-100 transition-colors dark:bg-secondary-800 dark:border-secondary-700 dark:text-secondary-300"
-      >
-        📋 CSV
-      </button>
+
+      <Show when={open()}>
+        <div class="origin-top-right absolute right-0 mt-1.5 w-48 rounded-xl shadow-lg bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-fadeIn">
+          <div class="py-1" role="menu">
+            <button
+              onClick={() => handleExport('excel')}
+              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-green-50 dark:hover:bg-green-950/40 hover:text-green-700 dark:hover:text-green-400 flex items-center gap-2.5 transition-colors"
+              role="menuitem"
+            >
+              <span class="text-base">📊</span>
+              <span>Excel (.xlsx)</span>
+            </button>
+            <button
+              onClick={() => handleExport('pdf')}
+              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-400 flex items-center gap-2.5 transition-colors"
+              role="menuitem"
+            >
+              <span class="text-base">📄</span>
+              <span>PDF Document (.pdf)</span>
+            </button>
+            <button
+              onClick={() => handleExport('csv')}
+              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2.5 transition-colors"
+              role="menuitem"
+            >
+              <span class="text-base">📋</span>
+              <span>CSV File (.csv)</span>
+            </button>
+          </div>
+        </div>
+      </Show>
     </div>
   );
 }
+
+export const ExportButton = ExportButtonGroup;
