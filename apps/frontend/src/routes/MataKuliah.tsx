@@ -15,6 +15,7 @@ import { kurikulumController } from '../controllers/kurikulumController';
 import { MataKuliah as IMataKuliah, mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
+import { fetchApi } from '../utils/api';
 import { ExportColumn } from '../utils/export';
 
 type SortField = 'nama' | 'kode' | 'sks' | 'semester' | 'programStudi' | 'kurikulum';
@@ -563,7 +564,11 @@ export default function MataKuliah() {
                           <td class="py-2 text-white">{m.bahanKajian?.kode || '-'}</td>
                           <td class="py-2 text-secondary-200">{m.bahanKajian?.nama || '-'}</td>
                           <td class="py-2 text-right">
-                            <Button variant="danger" size="sm" onClick={() => handleDetachBk(m.bahanKajianId)}>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => m.bahanKajian?.id && handleDetachBk(m.bahanKajian.id)}
+                            >
                               Hapus
                             </Button>
                           </td>

@@ -2,6 +2,31 @@ import { fetchApi } from '../utils/api';
 import { Mahasiswa } from './mahasiswaController';
 import { PaginatedResponse } from './prodiController';
 
+export interface TagihanStatsResponse {
+  totalMahasiswa?: number;
+  totalTagihan?: number;
+  totalTerbayar?: number;
+  totalTunggakan?: number;
+  summary?: {
+    totalTagihan: number;
+    totalTerbayar: number;
+    totalTunggakan: number;
+    persentaseLunas: number;
+  };
+  statusBreakdown?: {
+    lunas?: number;
+    cicilan?: number;
+    belum_bayar?: number;
+    [key: string]: number | undefined;
+  };
+  rekapPerProdi?: Array<{
+    prodiNama: string;
+    total: number;
+    terbayar: number;
+    tunggakan: number;
+  }>;
+}
+
 export interface Tagihan {
   id: number;
   mahasiswaId: number;
@@ -108,11 +133,11 @@ export const tagihanController = {
     });
   },
 
-  async getStats(periodeId?: string, programStudiId?: number): Promise<Record<string, unknown>> {
+  async getStats(periodeId?: string, programStudiId?: number): Promise<TagihanStatsResponse> {
     const params = new URLSearchParams();
     if (periodeId) params.append('periodeId', periodeId);
     if (programStudiId) params.append('programStudiId', String(programStudiId));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<Record<string, unknown>>(`/tagihan/stats${qs}`);
+    return fetchApi<TagihanStatsResponse>(`/tagihan/stats${qs}`);
   },
 };

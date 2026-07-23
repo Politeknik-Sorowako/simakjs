@@ -31,7 +31,8 @@ export default function ForgotPassword() {
 
     const result = emailSchema.safeParse({ email: email() });
     if (!result.success) {
-      const firstError = result.error.errors[0]?.message || 'Input tidak valid';
+      const firstError =
+        (result.error as any).issues?.[0]?.message || (result.error as any).errors?.[0]?.message || 'Input tidak valid';
       setErrorMsg(firstError);
       toast.showToast(firstError, 'error');
       return;

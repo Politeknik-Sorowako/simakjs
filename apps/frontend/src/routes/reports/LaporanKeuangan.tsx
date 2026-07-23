@@ -69,14 +69,14 @@ export default function LaporanKeuangan() {
         </div>
 
         <Show when={stats()}>
-          {() => {
+          {(() => {
             const s = stats()!;
             return (
               <>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <StatCard
                     title="Total Mahasiswa"
-                    value={s.totalMahasiswa}
+                    value={s.totalMahasiswa || 0}
                     color="brand"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,7 +91,7 @@ export default function LaporanKeuangan() {
                   />
                   <StatCard
                     title="Total Tagihan"
-                    value={formatRupiah(s.totalTagihan)}
+                    value={formatRupiah(s.totalTagihan || s.summary?.totalTagihan || 0)}
                     color="accent"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -106,7 +106,7 @@ export default function LaporanKeuangan() {
                   />
                   <StatCard
                     title="Total Terbayar"
-                    value={formatRupiah(s.totalTerbayar)}
+                    value={formatRupiah(s.totalTerbayar || s.summary?.totalTerbayar || 0)}
                     color="green"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -121,7 +121,7 @@ export default function LaporanKeuangan() {
                   />
                   <StatCard
                     title="Sisa Tunggakan"
-                    value={formatRupiah(s.totalTunggakan)}
+                    value={formatRupiah(s.totalTunggakan || s.summary?.totalTunggakan || 0)}
                     color="rose"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -201,7 +201,7 @@ export default function LaporanKeuangan() {
                 </div>
               </>
             );
-          }}
+          })()}
         </Show>
       </div>
     </MainLayout>

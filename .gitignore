@@ -50,4 +50,9 @@ bun.lockb
 *.jpeg
 *.svg
 *.pdf
-*.ziprepomix-output.xml
+*.zip
+
+# Repomix outputs
+repomix-output.xml
+repomix-output.txt
+repomix-output.md

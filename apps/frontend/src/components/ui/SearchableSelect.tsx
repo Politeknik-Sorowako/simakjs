@@ -9,7 +9,7 @@ interface SearchableSelectProps {
   label?: string;
   placeholder?: string;
   options: SelectOption[];
-  value?: string | number;
+  value?: string | number | null;
   onChange?: (value: string | number) => void;
   error?: string;
 }

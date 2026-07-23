@@ -297,9 +297,9 @@ export default function Krs() {
     setErrorMsg('');
     try {
       await krsController.update(editId()!, {
-        nilaiAngka: nilaiAngka() ? Number(nilaiAngka()) : undefined,
+        nilaiAngka: nilaiAngka() || undefined,
         nilaiHuruf: nilaiHuruf() || undefined,
-        nilaiIndeks: nilaiIndeks() ? Number(nilaiIndeks()) : undefined,
+        nilaiIndeks: nilaiIndeks() || undefined,
       });
       setShowGradeModal(false);
       toast.showToast('Nilai berhasil disimpan', 'success');
@@ -706,7 +706,7 @@ export default function Krs() {
                   </tr>
                 }
               >
-                {(student) => {
+                {(student: any) => {
                   const isChecked = () => selectedMhsIds().includes(student.id);
                   const toggleCheck = () => {
                     if (isChecked()) {

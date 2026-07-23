@@ -45,7 +45,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
         const res = await userController.updateProfile(auth.user()?.nama || '', undefined, nextTheme);
         auth.login(localStorage.getItem('token') || '', {
           ...auth.user()!,
-          theme: res.user.theme,
+          theme: res.user.theme as string | undefined,
         });
       }
     } catch (err) {

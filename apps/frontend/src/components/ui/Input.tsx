@@ -52,7 +52,7 @@ export function Input(props: InputProps) {
         }
       >
         <select
-          {...others}
+          {...(others as unknown as JSX.SelectHTMLAttributes<HTMLSelectElement>)}
           id={inputId()}
           class={`${baseClasses} pr-10 appearance-none bg-no-repeat bg-[right_0.75rem_center] bg-[length:16px_16px] bg-[url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236c757d' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")] ${local.error ? errorClasses : ''} ${local.class || ''}`}
         >

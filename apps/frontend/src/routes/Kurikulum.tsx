@@ -293,7 +293,7 @@ export default function Kurikulum() {
   // Group MK by semester (memoized)
   const mkBySemester = createMemo(() => {
     const mks = kurikulumDetail()?.kurikulumMataKuliah || [];
-    const groups: { [sem: number]: Record<string, unknown>[] } = {};
+    const groups: { [sem: number]: any[] } = {};
     for (const mk of mks) {
       if (!groups[mk.semester]) groups[mk.semester] = [];
       groups[mk.semester].push(mk);
@@ -590,7 +590,7 @@ export default function Kurikulum() {
                         </thead>
                         <tbody>
                           <For each={group.items}>
-                            {(item) => (
+                            {(item: any) => (
                               <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
                                 <td class="px-4 py-2 font-mono text-secondary-600">{item.mataKuliah?.kode}</td>
                                 <td class="px-4 py-2 text-secondary-800 dark:text-secondary-200">
@@ -697,7 +697,7 @@ export default function Kurikulum() {
                       <div class="flex items-center gap-3">
                         <a
                           href={`${API_URL}/kurikulum/template-import-mk`}
-                          download
+                          download="template-import-mk.csv"
                           class="text-xs text-brand-600 hover:text-brand-800 font-semibold underline"
                         >
                           Download Template CSV

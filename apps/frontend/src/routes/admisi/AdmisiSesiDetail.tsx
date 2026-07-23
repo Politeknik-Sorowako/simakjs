@@ -304,7 +304,7 @@ export default function AdmisiSesiDetail() {
                         <Show when={editBiaya() === `${sp.prodiId}`}>
                           <input
                             type="number"
-                            defaultValue={sp.biayaDaftar || ''}
+                            value={sp.biayaDaftar || ''}
                             ref={(el: HTMLInputElement) => setTimeout(() => el?.focus(), 100)}
                             onBlur={async (e: FocusEvent) => {
                               const val = (e.currentTarget as HTMLInputElement).value;

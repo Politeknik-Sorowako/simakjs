@@ -97,7 +97,7 @@ export default function LaporanPresensiKelas() {
             >
               <option value="">Pilih Kelas</option>
               <For each={kelasList()?.data || []}>
-                {(k: { id: number; namaKelas: string; mataKuliah?: { nama: string } }) => (
+                {(k: { id: number; namaKelas: string; mataKuliah?: { nama: string } | null }) => (
                   <option value={k.id}>
                     {k.mataKuliah?.nama || k.namaKelas} ({k.namaKelas})
                   </option>
@@ -108,7 +108,7 @@ export default function LaporanPresensiKelas() {
         </div>
 
         <Show when={rekap()}>
-          {() => {
+          {(() => {
             const data = rekap()!;
             const totalHadir = data.mahasiswa.reduce((s: number, m: { hadir: number }) => s + m.hadir, 0);
             const totalSakit = data.mahasiswa.reduce((s: number, m: { sakit: number }) => s + m.sakit, 0);
@@ -274,7 +274,7 @@ export default function LaporanPresensiKelas() {
                 </div>
               </>
             );
-          }}
+          })()}
         </Show>
       </div>
     </MainLayout>

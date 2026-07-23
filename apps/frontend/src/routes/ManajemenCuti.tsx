@@ -301,7 +301,7 @@ export default function ManajemenCuti() {
       });
       toast.showToast(
         actionType() === 'approve' ? 'Pengajuan cuti berhasil disetujui.' : 'Pengajuan cuti ditolak.',
-        actionType() === 'approve' ? 'success' : 'warning',
+        actionType() === 'approve' ? 'success' : 'info',
       );
       setShowApprModal(false);
       refetchApprovals();

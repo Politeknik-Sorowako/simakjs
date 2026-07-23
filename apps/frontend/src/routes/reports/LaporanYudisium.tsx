@@ -38,7 +38,7 @@ export default function LaporanYudisium() {
         </div>
 
         <Show when={stats()}>
-          {() => {
+          {(() => {
             const s = stats()!;
             return (
               <>
@@ -113,7 +113,7 @@ export default function LaporanYudisium() {
                 </div>
               </>
             );
-          }}
+          })()}
         </Show>
       </div>
     </MainLayout>

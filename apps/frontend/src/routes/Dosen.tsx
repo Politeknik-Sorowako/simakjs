@@ -178,10 +178,7 @@ export default function Dosen() {
     try {
       const res = await userController.generateAccounts('dosen', ids);
       if (res.errors && res.errors.length > 0) {
-        toast.showToast(
-          `Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`,
-          'warning',
-        );
+        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'info');
       } else {
         toast.showToast(`Berhasil membuat ${res.successCount} akun dosen.`, 'success');
       }

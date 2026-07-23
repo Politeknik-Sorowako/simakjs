@@ -36,8 +36,8 @@ export default function AdmisiImportUjian() {
 
   const selectAll = () => {
     const ids = candidates()?.data?.map((a: { id: number }) => a.id) || [];
-    if (selected().size === ids.length) setSelected(new Set());
-    else setSelected(new Set(ids));
+    if (selected().size === ids.length) setSelected(new Set<number>());
+    else setSelected(new Set<number>(ids));
   };
 
   const handleImport = async () => {
@@ -67,7 +67,7 @@ export default function AdmisiImportUjian() {
     }
     toast.showToast(`${success} peserta dijadwalkan, ${fail} gagal`, success > 0 ? 'success' : 'error');
     setSaving(false);
-    setSelected(new Set());
+    setSelected(new Set<number>());
     refetch();
   };
 
@@ -84,7 +84,7 @@ export default function AdmisiImportUjian() {
             value={sessionId()}
             onChange={(e) => {
               setSessionId(e.currentTarget.value);
-              setSelected(new Set());
+              setSelected(new Set<number>());
             }}
             class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800"
           >

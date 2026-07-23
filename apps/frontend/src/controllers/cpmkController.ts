@@ -23,6 +23,7 @@ export interface Cpmk {
   kurikulumMataKuliahId: number | null;
   kode: string;
   deskripsi: string;
+  bobotMk?: number | null;
   mataKuliah?: { id: number; kode: string; nama: string };
   subCpmk?: SubCpmk[];
   cplMappings?: CpmkCplMapping[];
@@ -59,6 +60,7 @@ export const cpmkController = {
     kurikulumMataKuliahId?: number | null;
     kode: string;
     deskripsi: string;
+    bobotMk?: number | null;
   }): Promise<Cpmk> {
     return fetchApi<Cpmk>('/cpmk', {
       method: 'POST',
@@ -68,7 +70,7 @@ export const cpmkController = {
 
   async update(
     id: number,
-    data: { kode?: string; deskripsi?: string; kurikulumMataKuliahId?: number | null },
+    data: { kode?: string; deskripsi?: string; kurikulumMataKuliahId?: number | null; bobotMk?: number | null },
   ): Promise<Cpmk> {
     return fetchApi<Cpmk>(`/cpmk/${id}`, {
       method: 'PUT',

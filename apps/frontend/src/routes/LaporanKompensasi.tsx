@@ -433,7 +433,7 @@ export default function LaporanKompensasi() {
                         <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
                           <div class="flex flex-col gap-0.5">
                             <span class="font-bold text-secondary-700 dark:text-secondary-200">
-                              {log.sumber === 'apel'
+                              {(log as any).sumber === 'apel'
                                 ? 'Presensi Apel'
                                 : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
                             </span>

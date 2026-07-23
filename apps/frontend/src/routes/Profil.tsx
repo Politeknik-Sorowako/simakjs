@@ -73,8 +73,8 @@ export default function Profil() {
       // Update local auth context user
       auth.login(localStorage.getItem('token') || '', {
         ...user()!,
-        nama: res.user.nama,
-        avatar: res.user.avatar,
+        nama: res.user.nama as string,
+        avatar: res.user.avatar as string | undefined,
       });
 
       // Clear password fields

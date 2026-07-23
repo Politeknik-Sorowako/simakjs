@@ -112,7 +112,7 @@ export default function BobotPenilaianObe() {
         <Show when={activeTab() === 'cpl-mk'}>
           <Card variant="bordered" padding="lg">
             <h2 class="text-lg font-semibold text-white mb-4">Matriks CPL → Mata Kuliah</h2>
-            <Show when={cplMkData() && !cplMkData.loading}>
+            <Show when={cplMkData()} keyed>
               {(data) => (
                 <div class="space-y-4">
                   <div class="overflow-x-auto">
@@ -120,13 +120,13 @@ export default function BobotPenilaianObe() {
                       <thead>
                         <tr class="border-b border-slate-700">
                           <th class="text-left p-2 text-white">CPL</th>
-                          <For each={data().mataKuliah}>
+                          <For each={data.mataKuliah}>
                             {(mk) => <th class="text-center p-2 text-white min-w-[120px]">{mk.kode}</th>}
                           </For>
                         </tr>
                       </thead>
                       <tbody>
-                        <For each={data().matriks}>
+                        <For each={data.matriks}>
                           {(row) => (
                             <tr class="border-b border-slate-700/50">
                               <td class="p-2 text-white font-mono">{row.cpl.kode}</td>
@@ -158,7 +158,7 @@ export default function BobotPenilaianObe() {
                           isSelect
                           selectOptions={[
                             { value: '', label: 'Pilih CPL' },
-                            ...data().cpl.map((c) => ({
+                            ...data.cpl.map((c: { id: number; kode: string; deskripsi: string }) => ({
                               value: String(c.id),
                               label: `${c.kode} - ${c.deskripsi.substring(0, 50)}...`,
                             })),
@@ -176,7 +176,7 @@ export default function BobotPenilaianObe() {
                           isSelect
                           selectOptions={[
                             { value: '', label: 'Pilih MK' },
-                            ...data().mataKuliah.map((mk) => ({
+                            ...data.mataKuliah.map((mk: { id: number; kode: string; nama: string }) => ({
                               value: String(mk.id),
                               label: `${mk.kode} - ${mk.nama}`,
                             })),
@@ -229,7 +229,7 @@ function CpmkMkSection(props: { kurikulumId: number }) {
   const [cpmkList] = createResource(
     () => ({ kurikulumId: props.kurikulumId, mkId: mkFilter() }),
     async ({ kurikulumId, mkId }) => {
-      const res = await cpmkController.getAll(1, 100, '', kurikulumId, mkId);
+      const res = await cpmkController.getAll('', 1, 100, kurikulumId, mkId);
       return res.data;
     },
   );
@@ -256,10 +256,8 @@ function CpmkMkSection(props: { kurikulumId: number }) {
             { value: '', label: 'Semua MK' },
             ...(cpmkList()
               ? [...new Map(cpmkList()!.map((c) => [c.mataKuliah?.id, c.mataKuliah])).values()]
-                  .map((mk: { id: number; kode: string; nama: string }) =>
-                    mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null,
-                  )
-                  .filter(Boolean)
+                  .map((mk: any) => (mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null))
+                  .filter((item): item is { value: string; label: string } => item !== null)
               : []),
           ]}
         />

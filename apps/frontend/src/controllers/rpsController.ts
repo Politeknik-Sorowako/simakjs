@@ -1,5 +1,5 @@
 import { fetchApi } from '../utils/api';
-import { CPMK } from './khsController';
+import { CPMK } from './presensiController';
 
 export interface RpsTopik {
   id: number;
