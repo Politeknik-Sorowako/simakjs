@@ -3,12 +3,14 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CapaianCplController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByMahasiswa({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const mahasiswaId = parseInt(params.mahasiswaId);
     return await CapaianCplService.getByMahasiswa(mahasiswaId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRekap({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kurikulumId = query.kurikulumId ? parseInt(query.kurikulumId) : undefined;
@@ -16,6 +18,7 @@ export class CapaianCplController {
     return await CapaianCplService.getRekap(kurikulumId, periodeId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async hitungBatch({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {

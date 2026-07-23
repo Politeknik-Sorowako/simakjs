@@ -27,8 +27,7 @@ export default function LaporanAkademik() {
     { header: 'Total Mahasiswa', accessor: 'totalMahasiswa' },
     {
       header: 'Rata-rata IP',
-      accessor: (row: { prodiNama: string; totalMahasiswa: number; rataIP: number }) =>
-        row.rataIP > 0 ? row.rataIP.toFixed(2) : '-',
+      accessor: (row: Record<string, unknown>) => (Number(row.rataIP) > 0 ? Number(row.rataIP).toFixed(2) : '-'),
     },
   ];
 
@@ -46,9 +45,9 @@ export default function LaporanAkademik() {
             <ExportButtonGroup
               data={() => rekap()?.prodi || []}
               columns={columns}
-              filename={'Akademik_' + selectedPeriode()}
+              filename={`Akademik_${selectedPeriode()}`}
               title="Laporan Akademik per Prodi"
-              subtitle={'Periode: ' + selectedPeriode()}
+              subtitle={`Periode: ${selectedPeriode()}`}
             />
           </Show>
         </div>
@@ -72,15 +71,11 @@ export default function LaporanAkademik() {
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Rata-rata IP per Prodi</h3>
               <BarChart
-                labels={(rekap()?.prodi || []).map(
-                  (p: { prodiNama: string; totalMahasiswa: number; rataIP: number }) => p.prodiNama,
-                )}
+                labels={(rekap()?.prodi || []).map((p) => p.prodiNama)}
                 datasets={[
                   {
                     label: 'Rata-rata IP',
-                    data: (rekap()?.prodi || []).map(
-                      (p: { prodiNama: string; totalMahasiswa: number; rataIP: number }) => p.rataIP,
-                    ),
+                    data: (rekap()?.prodi || []).map((p) => p.rataIP),
                     backgroundColor: '#6366f1',
                   },
                 ]}
@@ -91,15 +86,11 @@ export default function LaporanAkademik() {
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Jumlah Mahasiswa per Prodi</h3>
               <BarChart
-                labels={(rekap()?.prodi || []).map(
-                  (p: { prodiNama: string; totalMahasiswa: number; rataIP: number }) => p.prodiNama,
-                )}
+                labels={(rekap()?.prodi || []).map((p) => p.prodiNama)}
                 datasets={[
                   {
                     label: 'Total Mahasiswa',
-                    data: (rekap()?.prodi || []).map(
-                      (p: { prodiNama: string; totalMahasiswa: number; rataIP: number }) => p.totalMahasiswa,
-                    ),
+                    data: (rekap()?.prodi || []).map((p) => p.totalMahasiswa),
                     backgroundColor: '#06b6d4',
                   },
                 ]}
@@ -125,7 +116,7 @@ export default function LaporanAkademik() {
               </thead>
               <tbody>
                 <For each={rekap()?.prodi || []}>
-                  {(p: { prodiNama: string; totalMahasiswa: number; rataIP: number }) => (
+                  {(p) => (
                     <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                       <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                       <td class="py-3 px-5 text-center">{p.totalMahasiswa}</td>

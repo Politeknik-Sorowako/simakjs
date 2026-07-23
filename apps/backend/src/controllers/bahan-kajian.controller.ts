@@ -3,12 +3,14 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class BahanKajianController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = query.prodiId ? parseInt(query.prodiId) : undefined;
     return await BahanKajianService.getAll(prodiId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const data = await BahanKajianService.getById(parseInt(params.id));
@@ -18,6 +20,7 @@ export class BahanKajianController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
@@ -29,6 +32,7 @@ export class BahanKajianController {
     return newData;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
@@ -43,6 +47,7 @@ export class BahanKajianController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -57,6 +62,7 @@ export class BahanKajianController {
     return { message: 'Bahan Kajian berhasil dihapus' };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
@@ -76,6 +82,7 @@ export class BahanKajianController {
     return result;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     set.headers['content-type'] = 'text/csv; charset=utf-8';

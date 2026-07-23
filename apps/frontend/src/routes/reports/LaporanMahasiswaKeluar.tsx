@@ -60,7 +60,7 @@ export default function LaporanMahasiswaKeluar() {
                   />
                   <StatCard
                     title="Drop Out (DO)"
-                    value={s.jenisBreakdown?.drop_out || 0}
+                    value={s.perStatus?.find((p) => p.status === 'drop_out')?.jumlah || 0}
                     color="rose"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -75,7 +75,7 @@ export default function LaporanMahasiswaKeluar() {
                   />
                   <StatCard
                     title="Mengundurkan Diri"
-                    value={s.jenisBreakdown?.mengundurkan_diri || 0}
+                    value={s.perStatus?.find((p) => p.status === 'mengundurkan_diri')?.jumlah || 0}
                     color="yellow"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -93,8 +93,8 @@ export default function LaporanMahasiswaKeluar() {
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
                     <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Jenis Mahasiswa Keluar</h3>
                     <PieChart
-                      labels={Object.keys(s.jenisBreakdown || {})}
-                      data={Object.values(s.jenisBreakdown || {})}
+                      labels={(s.perStatus || []).map((p) => p.status)}
+                      data={(s.perStatus || []).map((p) => p.jumlah)}
                       height={250}
                       donut
                     />
@@ -104,11 +104,11 @@ export default function LaporanMahasiswaKeluar() {
                       Mahasiswa Keluar per Prodi
                     </h3>
                     <BarChart
-                      labels={(s.perProdi || []).map((p: { prodiNama: string; total: number }) => p.prodiNama)}
+                      labels={(s.perProdi || []).map((p) => p.prodiNama)}
                       datasets={[
                         {
                           label: 'Jumlah',
-                          data: (s.perProdi || []).map((p: { prodiNama: string; total: number }) => p.total),
+                          data: (s.perProdi || []).map((p) => p.total),
                           backgroundColor: '#f43f5e',
                         },
                       ]}

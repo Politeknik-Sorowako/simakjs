@@ -78,8 +78,8 @@ export default function AdmisiDetail() {
               <h1 class="text-2xl font-bold">Detail Pendaftaran</h1>
               <p class="text-sm text-secondary-500 font-mono">{app()?.noPendaftar}</p>
             </div>
-            <span class={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[app()?.status] || ''}`}>
-              {statusLabels[app()?.status] || app()?.status}
+            <span class={`px-3 py-1 rounded-full text-xs font-semibold ${statusColors[app()?.status ?? ''] || ''}`}>
+              {statusLabels[app()?.status ?? ''] || app()?.status}
             </span>
           </div>
 
@@ -100,7 +100,7 @@ export default function AdmisiDetail() {
               <Show when={app()?.tanggalLahir}>
                 <div class="text-sm mb-1">
                   <span class="text-secondary-400">Tgl Lahir:</span>{' '}
-                  {new Date(app()?.tanggalLahir).toLocaleDateString('id-ID')}
+                  {new Date(app()?.tanggalLahir!).toLocaleDateString('id-ID')}
                 </div>
               </Show>
               <Show when={app()?.jenisKelamin}>
@@ -120,14 +120,14 @@ export default function AdmisiDetail() {
               <div class="text-sm mb-1">
                 <span class="text-secondary-400">Pilihan 1:</span>
                 {app()?.prodiPilihan1Data?.nama
-                  ? `${app().prodiPilihan1Data.nama} (${app().prodiPilihan1Data.jenjang || '-'})`
+                  ? `${app()!.prodiPilihan1Data!.nama} (${app()!.prodiPilihan1Data!.jenjang || '-'})`
                   : `Prodi #${app()?.prodiPilihan1}`}
               </div>
               <Show when={app()?.prodiPilihan2}>
                 <div class="text-sm mb-1">
                   <span class="text-secondary-400">Pilihan 2:</span>
                   {app()?.prodiPilihan2Data?.nama
-                    ? `${app().prodiPilihan2Data.nama} (${app().prodiPilihan2Data.jenjang || '-'})`
+                    ? `${app()!.prodiPilihan2Data!.nama} (${app()!.prodiPilihan2Data!.jenjang || '-'})`
                     : `Prodi #${app()?.prodiPilihan2}`}
                 </div>
               </Show>

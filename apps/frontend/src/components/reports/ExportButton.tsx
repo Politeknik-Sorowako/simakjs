@@ -3,8 +3,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { ExportColumn, exportToCSV, exportToExcel, exportToPDF } from '../../utils/export';
 
 export interface ExportButtonProps {
-  data?: () => any[];
-  onFetchAll?: () => Promise<any[]>;
+  data?: () => unknown[];
+  onFetchAll?: () => Promise<unknown[]>;
   columns: ExportColumn[];
   filename: string;
   title: string;
@@ -35,7 +35,7 @@ export function ExportButtonGroup(props: ExportButtonProps) {
     setOpen(false);
     setExporting(true);
     try {
-      let exportData: any[] = [];
+      let exportData: unknown[] = [];
       if (props.onFetchAll) {
         toast.showToast('Mengunduh data untuk ekspor...', 'info');
         exportData = await props.onFetchAll();

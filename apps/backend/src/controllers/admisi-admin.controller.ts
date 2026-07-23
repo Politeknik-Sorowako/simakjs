@@ -8,24 +8,26 @@ import { AuthContext } from '../utils/types';
 export class AdmisiAdminController {
   // ─── SESSIONS ────────────────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createSession({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const session = await AdmisiAdminService.createSession(body);
       set.status = 201;
       return { message: 'Sesi admisi berhasil dibuat', sessionId: session.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateSession({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.updateSession(Number(params.id), body);
       return { message: 'Sesi admisi berhasil diperbarui' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -34,6 +36,7 @@ export class AdmisiAdminController {
     return { data: sessions };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getSessionDetail({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const detail = await AdmisiAdminService.getSessionDetail(Number(params.id));
     return { data: detail };
@@ -41,18 +44,20 @@ export class AdmisiAdminController {
 
   // ─── SESSION PRODIS ──────────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async addProdiToSession({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.addProdiToSession(Number(params.id), body);
       set.status = 201;
       return { message: 'Program studi berhasil ditambahkan ke sesi' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
-  static async updateSesiProdi({ params, body, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateSesiProdi({ params, body, set }: AuthContext<any, any, { id: string; prodiId: string }>) {
     try {
       const { db } = await import('../utils/db');
       const { admissionSessionProdis } = await import('../models/schema');
@@ -67,74 +72,80 @@ export class AdmisiAdminController {
           ),
         );
       return { message: 'Prodi diperbarui' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   static async removeProdiFromSession({
     params,
     set,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     try {
       await AdmisiAdminService.removeProdiFromSession(Number(params.id), Number(params.prodiId));
       return { message: 'Program studi berhasil dihapus dari sesi' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   static async toggleProdiActive({
     params,
     set,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     try {
       const result = await AdmisiAdminService.toggleProdiActive(Number(params.id), Number(params.prodiId));
       return { message: result.isActive ? 'Prodi diaktifkan' : 'Prodi dinonaktifkan', isActive: result.isActive };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   // ─── DOCUMENT REQUIREMENTS ───────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createDocumentRequirement({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const req = await AdmisiAdminService.createDocumentRequirement(body);
       set.status = 201;
       return { message: 'Syarat dokumen berhasil dibuat', requirementId: req.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateDocumentRequirement({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.updateDocumentRequirement(Number(params.id), body);
       return { message: 'Syarat dokumen berhasil diperbarui' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteDocumentRequirement({ params, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.deleteDocumentRequirement(Number(params.id));
       return { message: 'Syarat dokumen berhasil dihapus' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   // ─── APPLICATIONS ────────────────────────────────────────────────
 
-  static async updateAppBiodata({ params, body, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateAppBiodata({ params, body, set }: AuthContext<any, any, { id: string }>) {
     try {
       const allowed = [
         'nik',
@@ -147,19 +158,21 @@ export class AdmisiAdminController {
         'telepon',
         'jalan',
       ];
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic update object built from allowed fields
       const data: Record<string, any> = {};
       for (const key of allowed) {
         if (body[key] !== undefined) data[key] = body[key];
       }
       await AdmisiAdminService.updateAppBiodata(Number(params.id), data);
       return { message: 'Biodata berhasil diperbarui' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
-  static async updateAppProdi({ params, body, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateAppProdi({ params, body, set }: AuthContext<any, any, { id: string }>) {
     try {
       const updated = await AdmisiAdminService.updateAppProdi(
         Number(params.id),
@@ -167,13 +180,14 @@ export class AdmisiAdminController {
         body.prodiPilihan2,
       );
       return { message: 'Pilihan prodi berhasil diubah', data: updated };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
-  static async getApplications({ query }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getApplications({ query }: AuthContext<any, any>) {
     const result = await AdmisiAdminService.getApplications({
       sessionId: query.sessionId ? Number(query.sessionId) : undefined,
       prodiId: query.prodiId ? Number(query.prodiId) : undefined,
@@ -185,7 +199,8 @@ export class AdmisiAdminController {
     return result;
   }
 
-  static async adminUploadDocument({ params, request, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async adminUploadDocument({ params, request, set }: AuthContext<any, any, { id: string }>) {
     try {
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
@@ -243,9 +258,9 @@ export class AdmisiAdminController {
 
       set.status = 201;
       return { message: `Dokumen berhasil diupload oleh admin`, documentId: doc.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -253,14 +268,15 @@ export class AdmisiAdminController {
     body,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<{ documentId: number; isVerified: boolean; rejectionNote?: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       await AdmisiAdminService.verifyDocument(body.documentId, user!.id, body.isVerified, body.rejectionNote);
       return { message: body.isVerified ? 'Dokumen berhasil diverifikasi' : 'Dokumen ditolak' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -268,6 +284,7 @@ export class AdmisiAdminController {
     params,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
@@ -276,20 +293,21 @@ export class AdmisiAdminController {
         message: `${result.verifiedCount} dokumen diverifikasi. Status: Terverifikasi`,
         verifiedCount: result.verifiedCount,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async markDocsVerified({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       const result = await AdmisiAdminService.markDocsVerified(Number(params.id), user!.id);
       return result;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -298,17 +316,19 @@ export class AdmisiAdminController {
     body,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<{ status: string; notes?: string }, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       await AdmisiAdminService.updateApplicationStatus(Number(params.id), body.status, user!.id, body.notes);
       return { message: `Status diubah ke ${body.status}` };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async reopenApplication({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
@@ -319,37 +339,40 @@ export class AdmisiAdminController {
         'Admin membuka akses untuk melengkapi berkas',
       );
       return { message: 'Akses dibuka, peserta dapat melengkapi berkas dan memperbaiki biodata' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   // ─── SELECTION COMPONENTS ────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createSelectionComponent({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const comp = await AdmisiAdminService.createSelectionComponent(body);
       set.status = 201;
       return { message: 'Komponen penilaian berhasil dibuat', componentId: comp.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getSelectionComponents({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const comps = await AdmisiAdminService.getSelectionComponents(Number(params.id));
     return { data: comps };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteSelectionComponent({ params, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       await AdmisiAdminService.deleteSelectionComponent(Number(params.id));
       return { message: 'Komponen penilaian berhasil dihapus' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -359,31 +382,34 @@ export class AdmisiAdminController {
     body,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<{ applicationId: number; componentId: number; score: number; notes?: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       await AdmisiAdminService.inputScore(body.applicationId, body.componentId, body.score, user!.id, body.notes);
       set.status = 201;
       return { message: 'Nilai berhasil disimpan' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   // ─── EXAM SCHEDULES ──────────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createExamSchedule({ body, set }: AuthContext<any>): Promise<any> {
     try {
       const schedule = await AdmisiAdminService.createExamSchedule(body);
       set.status = 201;
       return { message: 'Jadwal ujian berhasil dibuat', scheduleId: schedule.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getExamSchedules({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const schedules = await AdmisiAdminService.getExamSchedules(Number(params.id));
     return { data: schedules };
@@ -391,7 +417,8 @@ export class AdmisiAdminController {
 
   // ─── RE-REGISTRATION ─────────────────────────────────────────────
 
-  static async getPayments({ params }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getPayments({ params }: AuthContext<any, any>) {
     const appId = params?.applicationId ? Number(params.applicationId) : undefined;
     const payments = await AdmisiAdminService.getReRegistrationPayments(appId);
     return { data: payments };
@@ -401,6 +428,7 @@ export class AdmisiAdminController {
     body,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<{ paymentId: number; isVerified: boolean; rejectionNote?: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
@@ -423,19 +451,21 @@ export class AdmisiAdminController {
       }
 
       return { message: body.isVerified ? 'Pembayaran berhasil diverifikasi' : 'Pembayaran ditolak' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   // ─── NIM ─────────────────────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generateNIMBulk({ params }: AuthContext<any, any, { id: string; prodiId: string }>): Promise<any> {
     const results = await AdmisiAdminService.generateNIMBulk(Number(params.id), Number(params.prodiId));
     return { data: results };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async validateNIM({ query }: AuthContext<any, any>): Promise<any> {
     const available = await AdmisiAdminService.validateNIM(query.nim as string);
     return { available };
@@ -446,24 +476,26 @@ export class AdmisiAdminController {
     body,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<{ nim: string }, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       const result = await AdmisiAdminService.issueNIM(Number(params.id), body.nim, user!.id);
       return { message: 'NIM berhasil diterbitkan', nim: result.nim };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async editNIM({ params, body, set }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const result = await AdmisiAdminService.editNIM(Number(params.id), (body as { nim: string }).nim);
       return { message: 'NIM berhasil diedit', nim: result.nimDiterbitkan };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -474,34 +506,37 @@ export class AdmisiAdminController {
     return { data: banks };
   }
 
-  static async createVABank({ body, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async createVABank({ body, set }: AuthContext<any>) {
     try {
       const bank = await AdmisiAdminService.createVABank(body);
       set.status = 201;
       return { message: 'Bank VA ditambahkan', bankId: bank.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
-  static async updateVABank({ params, body, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateVABank({ params, body, set }: AuthContext<any, any, { id: string }>) {
     try {
       await AdmisiAdminService.updateVABank(Number(params.id), body);
       return { message: 'Bank VA diperbarui' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
-  static async deleteVABank({ params, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async deleteVABank({ params, set }: AuthContext<any, any, { id: string }>) {
     try {
       await AdmisiAdminService.deleteVABank(Number(params.id));
       return { message: 'Bank VA dihapus' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -512,30 +547,33 @@ export class AdmisiAdminController {
     return { data };
   }
 
-  static async verifyPaymentVA({ params, set, getCurrentUser }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async verifyPaymentVA({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>) {
     try {
       const user = await getCurrentUser();
       await AdmisiAdminService.verifyVAPayment(Number(params.id), user!.id);
       return { message: 'Pembayaran diverifikasi' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
   // ─── ANNOUNCEMENT ────────────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async announceResults({ params, set, getCurrentUser }: AuthContext<any, any, { id: string }>): Promise<any> {
     try {
       const user = await getCurrentUser();
       const result = await AdmisiAdminService.announceResults(Number(params.id), user!.id);
       return { message: `Pengumuman diterbitkan: ${result.passed} lulus, ${result.failed} tidak lulus` };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getPassedCandidates({ params }: AuthContext<any, any, { id: string }>): Promise<any> {
     const result = await AdmisiAdminService.getPassedCandidates(Number(params.id));
     return result;
@@ -550,6 +588,7 @@ export class AdmisiAdminController {
 
   static async exportApplications({
     query,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { sessionId?: string; prodiId?: string; status?: string }>): Promise<any> {
     const data = await AdmisiAdminService.exportApplications({
       sessionId: query.sessionId ? Number(query.sessionId) : undefined,
@@ -568,7 +607,8 @@ export class AdmisiAdminController {
 
   // ─── ANNOUNCEMENTS ───────────────────────────────────────────────
 
-  static async createAnnouncement({ request, getCurrentUser, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async createAnnouncement({ request, getCurrentUser, set }: AuthContext<any>) {
     try {
       const user = await getCurrentUser();
       if (!user) {
@@ -593,10 +633,10 @@ export class AdmisiAdminController {
           await Bun.write(filePath, file);
         }
       } else {
-        const body = await request.json();
-        judul = body.judul;
-        isi = body.isi;
-        isPinned = body.isPinned || false;
+        const body = (await request.json()) as Record<string, unknown>;
+        judul = body.judul as string;
+        isi = body.isi as string;
+        isPinned = (body.isPinned as boolean) || false;
       }
 
       if (!judul || !isi) {
@@ -614,18 +654,20 @@ export class AdmisiAdminController {
       });
       set.status = 201;
       return { message: 'Pengumuman berhasil dibuat', announcementId: a.id };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
-  static async getAnnouncements({ query }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getAnnouncements({ query }: AuthContext<any, any>) {
     const data = await AdmisiAdminService.getAnnouncements(query.sessionId ? Number(query.sessionId) : undefined);
     return { data };
   }
 
-  static async updateAnnouncement({ params, request, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateAnnouncement({ params, request, set }: AuthContext<any, any, { id: string }>) {
     try {
       const ct = request.headers.get('content-type') || '';
       let judul: string | undefined, isi: string | undefined, isPinned: boolean | undefined;
@@ -645,12 +687,13 @@ export class AdmisiAdminController {
           await Bun.write(filePath, file);
         }
       } else {
-        const body = typeof request.body === 'object' ? await request.json() : {};
-        judul = body.judul;
-        isi = body.isi;
-        isPinned = body.isPinned;
+        const body = typeof request.body === 'object' ? ((await request.json()) as Record<string, unknown>) : {};
+        judul = body.judul as string | undefined;
+        isi = body.isi as string | undefined;
+        isPinned = body.isPinned as boolean | undefined;
       }
 
+      // biome-ignore lint/suspicious/noExplicitAny: Dynamic update object built from optional fields
       const data: Record<string, any> = {};
       if (judul !== undefined) data.judul = judul;
       if (isi !== undefined) data.isi = isi;
@@ -662,19 +705,20 @@ export class AdmisiAdminController {
 
       await AdmisiAdminService.updateAnnouncement(Number(params.id), data);
       return { message: 'Pengumuman berhasil diperbarui' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
-  static async deleteAnnouncement({ params, set }: any) {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async deleteAnnouncement({ params, set }: AuthContext<any, any, { id: string }>) {
     try {
       await AdmisiAdminService.deleteAnnouncement(Number(params.id));
       return { message: 'Pengumuman berhasil dihapus' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 }

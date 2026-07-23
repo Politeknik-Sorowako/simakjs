@@ -655,7 +655,8 @@ export default function Krs() {
                   </tr>
                 }
               >
-                {(student: any) => {
+                {(rawStudent) => {
+                  const student = rawStudent as { id: number; nim: string; nama: string; email: string };
                   const isChecked = () => selectedMhsIds().includes(student.id);
                   const toggleCheck = () => {
                     if (isChecked()) {

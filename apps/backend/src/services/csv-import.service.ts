@@ -68,6 +68,7 @@ export class CsvImportService {
 
     const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
     // Caching prodi
@@ -78,6 +79,7 @@ export class CsvImportService {
       const row = rows[i];
       if (row.length < headers.length) continue;
 
+      // biome-ignore lint/suspicious/noExplicitAny: CSV record dynamic keys
       const record: any = {};
       headers.forEach((header, idx) => {
         record[header] = row[idx];
@@ -146,8 +148,11 @@ export class CsvImportService {
                 },
               });
             result.successCount++;
-          } catch (err: any) {
-            result.errors.push({ line: 0, error: `Gagal menyimpan data NIM ${item.nim}: ${err.message}` });
+          } catch (err: unknown) {
+            result.errors.push({
+              line: 0,
+              error: `Gagal menyimpan data NIM ${item.nim}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            });
           }
         }
       } else {
@@ -155,8 +160,11 @@ export class CsvImportService {
           // default is skip (ON CONFLICT DO NOTHING)
           await db.insert(mahasiswa).values(batchData).onConflictDoNothing({ target: mahasiswa.nim });
           result.successCount = batchData.length;
-        } catch (err: any) {
-          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
+        } catch (err: unknown) {
+          result.errors.push({
+            line: 0,
+            error: `Gagal menyimpan data batch: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          });
         }
       }
     }
@@ -172,6 +180,7 @@ export class CsvImportService {
 
     const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
     const prodis = await db.select().from(programStudi);
@@ -181,6 +190,7 @@ export class CsvImportService {
       const row = rows[i];
       if (row.length < headers.length) continue;
 
+      // biome-ignore lint/suspicious/noExplicitAny: CSV record dynamic keys
       const record: any = {};
       headers.forEach((header, idx) => {
         record[header] = row[idx];
@@ -232,16 +242,22 @@ export class CsvImportService {
                 },
               });
             result.successCount++;
-          } catch (err: any) {
-            result.errors.push({ line: 0, error: `Gagal menyimpan data Dosen NIP ${item.nip}: ${err.message}` });
+          } catch (err: unknown) {
+            result.errors.push({
+              line: 0,
+              error: `Gagal menyimpan data Dosen NIP ${item.nip}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            });
           }
         }
       } else {
         try {
           await db.insert(dosen).values(batchData).onConflictDoNothing({ target: dosen.nip });
           result.successCount = batchData.length;
-        } catch (err: any) {
-          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
+        } catch (err: unknown) {
+          result.errors.push({
+            line: 0,
+            error: `Gagal menyimpan data batch: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          });
         }
       }
     }
@@ -257,6 +273,7 @@ export class CsvImportService {
 
     const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
     const prodis = await db.select().from(programStudi);
@@ -266,6 +283,7 @@ export class CsvImportService {
       const row = rows[i];
       if (row.length < headers.length) continue;
 
+      // biome-ignore lint/suspicious/noExplicitAny: CSV record dynamic keys
       const record: any = {};
       headers.forEach((header, idx) => {
         record[header] = row[idx];
@@ -316,10 +334,10 @@ export class CsvImportService {
                 },
               });
             result.successCount++;
-          } catch (err: any) {
+          } catch (err: unknown) {
             result.errors.push({
               line: 0,
-              error: `Gagal menyimpan data Mata Kuliah Kode ${item.kode}: ${err.message}`,
+              error: `Gagal menyimpan data Mata Kuliah Kode ${item.kode}: ${err instanceof Error ? err.message : 'Unknown error'}`,
             });
           }
         }
@@ -327,8 +345,11 @@ export class CsvImportService {
         try {
           await db.insert(mataKuliah).values(batchData).onConflictDoNothing({ target: mataKuliah.kode });
           result.successCount = batchData.length;
-        } catch (err: any) {
-          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
+        } catch (err: unknown) {
+          result.errors.push({
+            line: 0,
+            error: `Gagal menyimpan data batch: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          });
         }
       }
     }
@@ -344,12 +365,14 @@ export class CsvImportService {
 
     const headers = rows[0].map((h) => h.toLowerCase());
     const result: ImportResult = { successCount: 0, errors: [] };
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       if (row.length < headers.length) continue;
 
+      // biome-ignore lint/suspicious/noExplicitAny: CSV record dynamic keys
       const record: any = {};
       headers.forEach((header, idx) => {
         record[header] = row[idx];
@@ -384,10 +407,10 @@ export class CsvImportService {
                 },
               });
             result.successCount++;
-          } catch (err: any) {
+          } catch (err: unknown) {
             result.errors.push({
               line: 0,
-              error: `Gagal menyimpan data Program Studi Kode ${item.kode}: ${err.message}`,
+              error: `Gagal menyimpan data Program Studi Kode ${item.kode}: ${err instanceof Error ? err.message : 'Unknown error'}`,
             });
           }
         }
@@ -395,8 +418,11 @@ export class CsvImportService {
         try {
           await db.insert(programStudi).values(batchData).onConflictDoNothing({ target: programStudi.kode });
           result.successCount = batchData.length;
-        } catch (err: any) {
-          result.errors.push({ line: 0, error: `Gagal menyimpan data batch: ${err.message}` });
+        } catch (err: unknown) {
+          result.errors.push({
+            line: 0,
+            error: `Gagal menyimpan data batch: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          });
         }
       }
     }
@@ -459,10 +485,10 @@ export class CsvImportService {
       try {
         await db.update(mahasiswa).set({ dosenPaId: dosenId }).where(eq(mahasiswa.id, mhs.id));
         result.successCount++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         result.errors.push({
           line: lineNum,
-          error: `Gagal memperbarui relasi Dosen PA untuk NIM "${nimVal}": ${err.message}`,
+          error: `Gagal memperbarui relasi Dosen PA untuk NIM "${nimVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
         });
       }
     }
@@ -527,7 +553,7 @@ export class CsvImportService {
           continue;
         }
 
-        const defaultPassword = crypto.randomUUID().replace(/-/g, '').slice(0, 12) + 'Aa1';
+        const defaultPassword = `${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}Aa1`;
         const finalPassword = passwordVal === emailVal ? defaultPassword : passwordVal;
 
         const hashedPassword = await Bun.password.hash(finalPassword, {
@@ -539,12 +565,16 @@ export class CsvImportService {
           email: emailVal,
           password: hashedPassword,
           nama: namaVal,
+          // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
           role: roleVal as any,
           isActive: false,
         });
         result.successCount++;
-      } catch (err: any) {
-        result.errors.push({ line: lineNum, error: err.message || 'Gagal menyimpan data.' });
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: err instanceof Error ? err.message : 'Gagal menyimpan data.',
+        });
       }
     }
 
@@ -727,8 +757,11 @@ export class CsvImportService {
         });
 
         result.successCount++;
-      } catch (err: any) {
-        result.errors.push({ line: lineNum, error: err.message });
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
       }
     }
 

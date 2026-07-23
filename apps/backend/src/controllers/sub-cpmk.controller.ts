@@ -2,12 +2,14 @@ import { SubCpmkService } from '../services/sub-cpmk.service';
 import { AuthContext } from '../utils/types';
 
 export class SubCpmkController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByCpmk({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const cpmkId = parseInt(query.cpmkId);
     return await SubCpmkService.getByCpmk(cpmkId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const data = await SubCpmkService.getById(parseInt(params.id));
@@ -17,6 +19,7 @@ export class SubCpmkController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
@@ -28,6 +31,7 @@ export class SubCpmkController {
     return newData;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
@@ -42,6 +46,7 @@ export class SubCpmkController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {

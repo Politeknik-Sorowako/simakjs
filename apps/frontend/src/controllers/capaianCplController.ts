@@ -34,7 +34,7 @@ export const capaianCplController = {
     if (params?.kurikulumId) qs.set('kurikulumId', String(params.kurikulumId));
     if (params?.periodeId) qs.set('periodeId', params.periodeId);
     const query = qs.toString();
-    return fetchApi<RekapCapaianCpl[]>(`/capaian-cpl/rekap${query ? '?' + query : ''}`);
+    return fetchApi<RekapCapaianCpl[]>(`/capaian-cpl/rekap${query ? `?${query}` : ''}`);
   },
 
   async hitungBatch(data: { kurikulumId: number; periodeId?: string }): Promise<{ message: string; count: number }> {

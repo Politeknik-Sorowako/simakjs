@@ -22,6 +22,7 @@ import { db } from '../utils/db';
 export class AdmisiAdminService {
   // ─── SESSION MANAGEMENT ──────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
   static async createSession(data: any) {
     const [session] = await db
       .insert(admissionSessions)
@@ -41,6 +42,7 @@ export class AdmisiAdminService {
     return session;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
   static async updateSession(sessionId: number, data: any) {
     const [updated] = await db
       .update(admissionSessions)
@@ -88,6 +90,7 @@ export class AdmisiAdminService {
 
   // ─── SESSION-PRODI MANAGEMENT ────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
   static async addProdiToSession(sessionId: number, data: any) {
     const [sp] = await db
       .insert(admissionSessionProdis)
@@ -129,6 +132,7 @@ export class AdmisiAdminService {
 
   // ─── DOCUMENT REQUIREMENTS ───────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
   static async createDocumentRequirement(data: any) {
     const [req] = await db
       .insert(documentRequirements)
@@ -147,6 +151,7 @@ export class AdmisiAdminService {
     return req;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic update type
   static async updateDocumentRequirement(reqId: number, data: any) {
     const [updated] = await db
       .update(documentRequirements)
@@ -185,6 +190,7 @@ export class AdmisiAdminService {
     return doc;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic update type
   static async updateAppBiodata(applicationId: number, data: Record<string, any>) {
     const [updated] = await db.update(applications).set(data).where(eq(applications.id, applicationId)).returning();
     return updated;
@@ -215,10 +221,11 @@ export class AdmisiAdminService {
 
     if (filters.sessionId) conditions.push(eq(applications.sessionId, filters.sessionId));
     if (filters.prodiId) conditions.push(eq(applications.prodiPilihan1, filters.prodiId));
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
     if (filters.status) conditions.push(eq(applications.status, filters.status as any));
     if (filters.search) {
       conditions.push(
-        sql`(${applications.namaLengkap} ILIKE ${'%' + filters.search + '%'} OR ${applications.noPendaftar} ILIKE ${'%' + filters.search + '%'} OR ${applications.nik} ILIKE ${'%' + filters.search + '%'})`,
+        sql`(${applications.namaLengkap} ILIKE ${`%${filters.search}%`} OR ${applications.noPendaftar} ILIKE ${`%${filters.search}%`} OR ${applications.nik} ILIKE ${`%${filters.search}%`})`,
       );
     }
 
@@ -347,13 +354,16 @@ export class AdmisiAdminService {
 
     const [updated] = await db
       .update(applications)
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
       .set({ status: status as any, notes: notes || null })
       .where(eq(applications.id, applicationId))
       .returning();
 
     await db.insert(applicationLogs).values({
       applicationId,
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
       statusFrom: app.status as any,
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
       statusTo: status as any,
       message: notes || `Status diubah dari ${app.status} ke ${status}`,
       createdBy: adminId,
@@ -364,6 +374,7 @@ export class AdmisiAdminService {
 
   // ─── SELECTION COMPONENTS ────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
   static async createSelectionComponent(data: any) {
     const [comp] = await db
       .insert(selectionComponents)
@@ -448,6 +459,7 @@ export class AdmisiAdminService {
 
   // ─── EXAM SCHEDULES ──────────────────────────────────────────────
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
   static async createExamSchedule(data: any) {
     const [schedule] = await db
       .insert(examSchedules)
@@ -665,7 +677,22 @@ export class AdmisiAdminService {
 
     const pgMap = new Map(prodis.map((p) => [p.prodiId, Number(p.passingGrade)]));
 
-    const result = { passed: [] as any[], failed: [] as any[] };
+    const result: {
+      passed: {
+        id: number;
+        noPendaftar: string | null;
+        namaLengkap: string | null;
+        finalScore: string | null;
+        prodiPilihan1: number | null;
+      }[];
+      failed: {
+        id: number;
+        noPendaftar: string | null;
+        namaLengkap: string | null;
+        finalScore: string | null;
+        prodiPilihan1: number | null;
+      }[];
+    } = { passed: [], failed: [] };
     for (const c of candidates) {
       const pg = pgMap.get(c.prodiPilihan1) || 0;
       if (c.finalScore && Number(c.finalScore) >= pg) {
@@ -729,6 +756,7 @@ export class AdmisiAdminService {
     const conditions = [];
     if (filters.sessionId) conditions.push(eq(applications.sessionId, filters.sessionId));
     if (filters.prodiId) conditions.push(eq(applications.prodiPilihan1, filters.prodiId));
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
     if (filters.status) conditions.push(eq(applications.status, filters.status as any));
 
     return db
@@ -801,6 +829,7 @@ export class AdmisiAdminService {
     return bank;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic update type
   static async updateVABank(id: number, data: any) {
     const [bank] = await db.update(vaBanks).set(data).where(eq(vaBanks.id, id)).returning();
     return bank;

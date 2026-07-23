@@ -228,13 +228,13 @@ export default function MataKuliah() {
   };
 
   const exportColumns: ExportColumn[] = [
-    { header: 'Kode MK', accessor: (row: IMataKuliah) => row.kode },
-    { header: 'Nama Mata Kuliah', accessor: (row: IMataKuliah) => row.nama },
-    { header: 'Program Studi', accessor: (row: IMataKuliah) => row.programStudi?.nama || '-' },
-    { header: 'SKS Total', accessor: (row: IMataKuliah) => row.sksTotal },
-    { header: 'SKS Tatap Muka', accessor: (row: IMataKuliah) => row.sksTatapMuka ?? '-' },
-    { header: 'SKS Praktikum', accessor: (row: IMataKuliah) => row.sksPraktek ?? '-' },
-    { header: 'ID PDDIKTI', accessor: (row: IMataKuliah) => row.idPddikti || '-' },
+    { header: 'Kode MK', accessor: 'kode' },
+    { header: 'Nama Mata Kuliah', accessor: 'nama' },
+    { header: 'Program Studi', accessor: 'programStudi.nama' },
+    { header: 'SKS Total', accessor: 'sksTotal' },
+    { header: 'SKS Tatap Muka', accessor: 'sksTatapMuka' },
+    { header: 'SKS Praktikum', accessor: 'sksPraktek' },
+    { header: 'ID PDDIKTI', accessor: 'idPddikti' },
   ];
 
   return (

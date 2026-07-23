@@ -3,6 +3,7 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CplMappingController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = query.prodiId ? parseInt(query.prodiId) : undefined;
@@ -11,6 +12,7 @@ export class CplMappingController {
     return await CplMappingService.getAll(prodiId, cplId, profilLulusanId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
@@ -22,6 +24,7 @@ export class CplMappingController {
     return newData;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdi(user)) {
@@ -36,6 +39,7 @@ export class CplMappingController {
     return { message: 'Mapping berhasil dihapus' };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMatriks({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const prodiId = parseInt(query.prodiId);

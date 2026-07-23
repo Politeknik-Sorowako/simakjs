@@ -97,7 +97,7 @@ export default function AdmisiPenilaian() {
             </thead>
             <tbody>
               <For each={apps()?.data || []}>
-                {(app: { id: number; noPendaftar: string; namaLengkap: string }) => (
+                {(app) => (
                   <tr class="border-b border-secondary-100 dark:border-secondary-800">
                     <td class="py-3 px-4 font-mono text-xs">{app.noPendaftar}</td>
                     <td class="py-3 px-4">{app.namaLengkap || '-'}</td>

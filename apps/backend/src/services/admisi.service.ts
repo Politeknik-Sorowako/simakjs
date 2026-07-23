@@ -91,7 +91,7 @@ export class AdmisiService {
     const [result] = await db
       .select({ count: sql<number>`count(*)` })
       .from(applications)
-      .where(sql`${applications.noPendaftar} LIKE ${prefix + '%'}`);
+      .where(sql`${applications.noPendaftar} LIKE ${`${prefix}%`}`);
 
     const nextNum = (result.count + 1).toString().padStart(4, '0');
     return `${prefix}${nextNum}`;

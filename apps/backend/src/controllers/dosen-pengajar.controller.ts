@@ -2,6 +2,7 @@ import { DosenPengajarService } from '../services/dosen-pengajar.service';
 import { AuthContext } from '../utils/types';
 
 export class DosenPengajarController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query }: AuthContext<any, any>): Promise<any> {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
@@ -10,6 +11,7 @@ export class DosenPengajarController {
     return await DosenPengajarService.getAll(page, limit, kelasKuliahId, dosenId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
@@ -20,12 +22,13 @@ export class DosenPengajarController {
       const newPlotting = await DosenPengajarService.create(body);
       set.status = 201;
       return newPlotting;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {

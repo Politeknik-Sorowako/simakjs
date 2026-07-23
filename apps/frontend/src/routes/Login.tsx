@@ -51,8 +51,7 @@ export default function Login() {
 
     const result = schema.safeParse(formData);
     if (!result.success) {
-      const firstError =
-        (result.error as any).issues?.[0]?.message || (result.error as any).errors?.[0]?.message || 'Input tidak valid';
+      const firstError = result.error.issues[0]?.message || 'Input tidak valid';
       setErrorMsg(firstError);
       toast.showToast(firstError, 'error');
       return;

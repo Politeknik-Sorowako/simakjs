@@ -42,9 +42,9 @@ export default function LaporanKRS() {
             <ExportButtonGroup
               data={() => stats()?.perProdi || []}
               columns={columns}
-              filename={'KRS_' + selectedPeriode()}
+              filename={`KRS_${selectedPeriode()}`}
               title="Laporan KRS"
-              subtitle={'Periode: ' + selectedPeriode()}
+              subtitle={`Periode: ${selectedPeriode()}`}
             />
           </Show>
         </div>

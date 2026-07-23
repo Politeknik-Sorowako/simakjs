@@ -1,4 +1,4 @@
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, type SQL } from 'drizzle-orm';
 import { dosen, dosenPengajarKelas, kelasKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -13,7 +13,7 @@ export class DosenPengajarService {
   static async getAll(page = 1, limit = 10, kelasKuliahId?: number, dosenId?: number) {
     const offset = (page - 1) * limit;
 
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (kelasKuliahId) {
       conditions.push(eq(dosenPengajarKelas.kelasKuliahId, kelasKuliahId));
     }
@@ -26,6 +26,7 @@ export class DosenPengajarService {
 
     const total = totalResult?.total || 0;
 
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle complex join query type inference
     const rows = await (db as any)
       .select({
         id: dosenPengajarKelas.id,

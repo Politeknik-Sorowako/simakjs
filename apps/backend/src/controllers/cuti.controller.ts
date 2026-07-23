@@ -15,6 +15,7 @@ export class CutiController {
     return dsn ? dsn.id : null;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'mahasiswa') {
@@ -36,12 +37,13 @@ export class CutiController {
       });
       set.status = 201;
       return data;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async inputByAdmin({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !['admin', 'prodi'].includes(user.role)) {
@@ -61,12 +63,13 @@ export class CutiController {
       });
       set.status = 201;
       return data;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -106,6 +109,7 @@ export class CutiController {
     });
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMahasiswaCuti({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -121,6 +125,7 @@ export class CutiController {
     return await CutiService.getMahasiswaCuti({ page, limit, search, periodeId });
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -151,6 +156,7 @@ export class CutiController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async approve({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || ['mahasiswa', 'guest'].includes(user.role)) {
@@ -175,12 +181,13 @@ export class CutiController {
         tanggalSuratIzin: body.tanggalSuratIzin,
       });
       return data;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async aktifKembali({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || ['mahasiswa', 'guest'].includes(user.role)) {
@@ -191,12 +198,13 @@ export class CutiController {
     try {
       const data = await CutiService.aktifKembali(parseInt(params.id));
       return { message: 'Mahasiswa berhasil diaktifkan kembali.', data };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
@@ -219,9 +227,9 @@ export class CutiController {
     try {
       const data = await CutiService.delete(parseInt(params.id), filterMhsId, isAdmin);
       return { message: 'Pengajuan cuti berhasil dihapus.', data };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 }

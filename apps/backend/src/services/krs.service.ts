@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
 import {
   angkatanKurikulum,
   dosen,
@@ -71,9 +71,10 @@ export class KrsService {
   static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number) {
     const offset = (page - 1) * limit;
 
-    const searchConditions: any[] = [];
+    const searchConditions: SQL<unknown>[] = [];
     if (search) {
-      searchConditions.push(or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`)));
+      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      if (orCondition) searchConditions.push(orCondition);
     }
     if (mahasiswaId !== undefined) {
       searchConditions.push(eq(krs.mahasiswaId, mahasiswaId));
@@ -209,6 +210,7 @@ export class KrsService {
       throw new Error('Mahasiswa sudah terdaftar di kelas kuliah ini (duplikat KRS tidak diperbolehkan).');
     }
 
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const insertData: any = {
       mahasiswaId: data.mahasiswaId,
       kelasKuliahId: data.kelasKuliahId,
@@ -262,6 +264,7 @@ export class KrsService {
   }
 
   static async update(id: number, data: Partial<CreateKrsDto>) {
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic update type
     const updateData: any = { ...data };
     if (data.nilaiAngka !== undefined) updateData.nilaiAngka = String(data.nilaiAngka);
     if (data.nilaiIndeks !== undefined) updateData.nilaiIndeks = String(data.nilaiIndeks);
@@ -390,13 +393,25 @@ export class KrsService {
         });
         return acc;
       },
-      {} as Record<number, any[]>,
+      {} as Record<
+        number,
+        {
+          id: number;
+          mataKuliahId: number;
+          kode: string;
+          nama: string;
+          sks: number;
+          isWajib: boolean;
+          status: string;
+          nilaiHuruf: string | null;
+        }[]
+      >,
     );
 
     const totalSksLulus = Object.values(rencanaPerSemester)
       .flat()
-      .filter((mk: any) => mk.status === 'lulus')
-      .reduce((sum: number, mk: any) => sum + mk.sks, 0);
+      .filter((mk) => mk.status === 'lulus')
+      .reduce((sum, mk) => sum + mk.sks, 0);
 
     // Tentukan current semester
     const sksPerSemester = 24; // asumsi maks SKS per semester
@@ -416,14 +431,14 @@ export class KrsService {
       rencanaPerSemester: Object.entries(rencanaPerSemester).map(([sem, mk]) => ({
         semester: parseInt(sem),
         mataKuliah: mk,
-        totalSks: mk.reduce((sum: number, m: any) => sum + m.sks, 0),
-        sksLulus: mk.filter((m: any) => m.status === 'lulus').reduce((sum: number, m: any) => sum + m.sks, 0),
+        totalSks: mk.reduce((sum, m) => sum + m.sks, 0),
+        sksLulus: mk.filter((m) => m.status === 'lulus').reduce((sum, m) => sum + m.sks, 0),
       })),
     };
   }
 
   static async getStats(periodeId?: string) {
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (periodeId) conditions.push(eq(kelasKuliah.periodeId, periodeId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -513,7 +528,7 @@ export class KrsService {
       let foundInRencana = false;
       let foundSemester = 0;
       for (const sem of rencana.rencanaPerSemester) {
-        const mk = sem.mataKuliah.find((m: any) => m.mataKuliahId === mkId);
+        const mk = sem.mataKuliah.find((m) => m.mataKuliahId === mkId);
         if (mk) {
           foundInRencana = true;
           foundSemester = sem.semester;
@@ -538,8 +553,8 @@ export class KrsService {
     const totalSksDiRencana = mkRencanaSemesterIni?.totalSks || 0;
     const mkWajibTerpenuhi = rencana.rencanaPerSemester
       .flatMap((s) => s.mataKuliah)
-      .filter((m: any) => m.isWajib && (m.status === 'diambil' || m.status === 'lulus')).length;
-    const mkWajibTotal = rencana.rencanaPerSemester.flatMap((s) => s.mataKuliah).filter((m: any) => m.isWajib).length;
+      .filter((m) => m.isWajib && (m.status === 'diambil' || m.status === 'lulus')).length;
+    const mkWajibTotal = rencana.rencanaPerSemester.flatMap((s) => s.mataKuliah).filter((m) => m.isWajib).length;
 
     return {
       isValid: warnings.length === 0,

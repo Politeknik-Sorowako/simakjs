@@ -10,6 +10,7 @@ export class TagihanController {
     return mhs ? mhs.id : null;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -36,6 +37,7 @@ export class TagihanController {
     return await TagihanService.getAll(page, limit, search, status, filterMhsId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -47,12 +49,13 @@ export class TagihanController {
       const count = await TagihanService.generateTagihanPeriode(body.periodeId, nominal);
       set.status = 201;
       return { message: 'Tagihan berhasil dibuat secara massal', count };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal generate tagihan' };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateNominal({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -67,12 +70,13 @@ export class TagihanController {
         message: 'Nominal tagihan berhasil diperbarui',
         tagihan: updated,
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal mengubah nominal tagihan' };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bayar({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -91,16 +95,18 @@ export class TagihanController {
           tanggalBayar: updated.tanggalBayar,
         },
       };
-    } catch (e: any) {
-      if (e.message === 'Tagihan tidak ditemukan') {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Gagal memproses permintaan';
+      if (msg === 'Tagihan tidak ditemukan') {
         set.status = 404;
       } else {
         set.status = 400;
       }
-      return { error: e.message || 'Gagal membayar tagihan' };
+      return { error: msg };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async voidTransaksi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -119,12 +125,13 @@ export class TagihanController {
           nominalTerbayar: updated.nominalTerbayar,
         },
       };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal membatalkan transaksi' };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRiwayat({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -135,12 +142,13 @@ export class TagihanController {
       const tagihanId = parseInt(params.id);
       const riwayat = await TagihanService.getRiwayatTransaksi(tagihanId);
       return { data: riwayat };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal mengambil riwayat transaksi' };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAllTarif({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -164,6 +172,7 @@ export class TagihanController {
     return { data: list };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createTarif({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -199,9 +208,9 @@ export class TagihanController {
           .returning();
         return { message: 'Tarif angkatan berhasil ditambahkan', data: created };
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal menyimpan tarif angkatan' };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
@@ -209,6 +218,7 @@ export class TagihanController {
     query,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { periodeId?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -220,6 +230,7 @@ export class TagihanController {
     return await TagihanService.getStats(periodeId, prodiId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteTarif({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
@@ -230,9 +241,9 @@ export class TagihanController {
       const id = parseInt(params.id);
       await db.delete(skemaTarif).where(eq(skemaTarif.id, id));
       return { message: 'Tarif angkatan berhasil dihapus' };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal menghapus tarif angkatan' };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 }

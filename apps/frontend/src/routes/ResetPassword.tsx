@@ -74,8 +74,7 @@ export default function ResetPassword() {
 
     const result = resetSchema.safeParse({ password: password(), confirmPassword: confirmPassword() });
     if (!result.success) {
-      const firstError =
-        (result.error as any).issues?.[0]?.message || (result.error as any).errors?.[0]?.message || 'Input tidak valid';
+      const firstError = result.error.issues[0]?.message || 'Input tidak valid';
       setErrorMsg(firstError);
       toast.showToast(firstError, 'error');
       return;

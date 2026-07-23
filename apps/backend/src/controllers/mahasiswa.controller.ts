@@ -3,6 +3,7 @@ import { MahasiswaService } from '../services/mahasiswa.service';
 import { AuthContext, PaginationQuery, parsePagination } from '../utils/types';
 
 export class MahasiswaController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -51,6 +52,7 @@ export class MahasiswaController {
     return await MahasiswaService.getAll(page, limit, search, undefined, programStudiId, filters);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -82,6 +84,7 @@ export class MahasiswaController {
     return mhs;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
@@ -93,6 +96,7 @@ export class MahasiswaController {
     return newMhs;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi' && user.role !== 'dosen')) {
@@ -122,6 +126,7 @@ export class MahasiswaController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
@@ -136,6 +141,7 @@ export class MahasiswaController {
     return { message: 'Mahasiswa berhasil dihapus' };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -160,6 +166,7 @@ export class MahasiswaController {
     query,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { angkatan?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
@@ -171,6 +178,7 @@ export class MahasiswaController {
     return await MahasiswaService.getStats(angkatan, prodiId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMahasiswaBaru({ query, set, getCurrentUser }: AuthContext<any, { angkatan?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
@@ -180,6 +188,7 @@ export class MahasiswaController {
     return await MahasiswaService.getMahasiswaBaru(query?.angkatan);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importPaCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {

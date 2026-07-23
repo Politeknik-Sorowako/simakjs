@@ -50,7 +50,7 @@ export default function PetaObe() {
   );
 
   function formatPersen(val: number): string {
-    return (val * 100).toFixed(1) + '%';
+    return `${(val * 100).toFixed(1)}%`;
   }
 
   function getBobotColor(val: number): string {

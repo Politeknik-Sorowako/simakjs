@@ -75,7 +75,7 @@ export function BarChart(props: BarChartProps) {
       chart.options.scales!.y!.ticks!.color = dark ? '#94a3b8' : '#64748b';
       chart.options.plugins!.legend!.labels!.color = dark ? '#94a3b8' : '#64748b';
       if (chart.options.plugins!.title) {
-        (chart.options.plugins!.title as any).color = dark ? '#94a3b8' : '#64748b';
+        (chart.options.plugins!.title as Record<string, unknown>).color = dark ? '#94a3b8' : '#64748b';
       }
       chart.update();
     });

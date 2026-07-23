@@ -29,13 +29,13 @@ export default function Mahasiswa() {
   const [bulkLoading, setBulkLoading] = createSignal(false);
 
   const exportColumns: ExportColumn[] = [
-    { header: 'NIM', accessor: (row: IMahasiswa) => row.nim },
-    { header: 'Nama Mahasiswa', accessor: (row: IMahasiswa) => row.nama },
-    { header: 'Email', accessor: (row: IMahasiswa) => row.email },
-    { header: 'Program Studi', accessor: (row: IMahasiswa) => row.programStudi?.nama || '-' },
-    { header: 'Dosen PA', accessor: (row: IMahasiswa) => row.dosenPa?.nama || '-' },
-    { header: 'Angkatan', accessor: (row: IMahasiswa) => (row as any).angkatan || '-' },
-    { header: 'Status', accessor: (row: IMahasiswa) => row.status || '-' },
+    { header: 'NIM', accessor: 'nim' },
+    { header: 'Nama Mahasiswa', accessor: 'nama' },
+    { header: 'Email', accessor: 'email' },
+    { header: 'Program Studi', accessor: 'programStudi.nama' },
+    { header: 'Dosen PA', accessor: 'dosenPa.nama' },
+    { header: 'Angkatan', accessor: 'angkatan' },
+    { header: 'Status', accessor: 'status' },
   ];
 
   const auth = useAuth();

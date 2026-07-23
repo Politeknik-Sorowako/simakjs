@@ -8,7 +8,11 @@ import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { Kurikulum as IKurikulum, kurikulumController } from '../controllers/kurikulumController';
+import {
+  Kurikulum as IKurikulum,
+  type KurikulumMataKuliah,
+  kurikulumController,
+} from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
@@ -293,7 +297,7 @@ export default function Kurikulum() {
   // Group MK by semester (memoized)
   const mkBySemester = createMemo(() => {
     const mks = kurikulumDetail()?.kurikulumMataKuliah || [];
-    const groups: { [sem: number]: any[] } = {};
+    const groups: { [sem: number]: KurikulumMataKuliah[] } = {};
     for (const mk of mks) {
       if (!groups[mk.semester]) groups[mk.semester] = [];
       groups[mk.semester].push(mk);
@@ -590,7 +594,7 @@ export default function Kurikulum() {
                         </thead>
                         <tbody>
                           <For each={group.items}>
-                            {(item: any) => (
+                            {(item) => (
                               <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
                                 <td class="px-4 py-2 font-mono text-secondary-600">{item.mataKuliah?.kode}</td>
                                 <td class="px-4 py-2 text-secondary-800 dark:text-secondary-200">

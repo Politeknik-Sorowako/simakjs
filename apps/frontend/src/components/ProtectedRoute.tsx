@@ -21,7 +21,9 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
     if (!auth.isAuthenticated()) return false;
     const userRole = auth.user()?.role;
     if (!props.allowedRoles) return true;
-    return props.allowedRoles.includes(userRole as any);
+    return props.allowedRoles.includes(
+      userRole as 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa',
+    );
   };
 
   return (

@@ -113,7 +113,7 @@ export default function AdmisiImportUjian() {
               </Show>
               <div class="space-y-1 max-h-96 overflow-y-auto">
                 <For each={candidates()?.data || []}>
-                  {(a: { id: number; noPendaftar: string; namaLengkap: string }) => (
+                  {(a) => (
                     <div class="flex items-center gap-2 py-1.5 text-sm border-b border-secondary-100 dark:border-secondary-800">
                       <input
                         type="checkbox"

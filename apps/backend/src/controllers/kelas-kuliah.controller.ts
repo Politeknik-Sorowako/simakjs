@@ -2,6 +2,7 @@ import { KelasKuliahService } from '../services/kelas-kuliah.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class KelasKuliahController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query }: AuthContext<any, PaginationQuery & { periodeId?: string }>): Promise<any> {
     const page = query?.page ? parseInt(String(query.page)) : 1;
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
@@ -10,6 +11,7 @@ export class KelasKuliahController {
     return await KelasKuliahService.getAll(page, limit, search, periodeId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByMk({ query, set }: AuthContext): Promise<any> {
     const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
     const periodeId = query?.periodeId;
@@ -20,6 +22,7 @@ export class KelasKuliahController {
     return await KelasKuliahService.getByMk(mkId, periodeId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set }: AuthContext): Promise<any> {
     const data = await KelasKuliahService.getById(parseInt(params.id));
     if (!data) {
@@ -29,6 +32,7 @@ export class KelasKuliahController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -40,6 +44,7 @@ export class KelasKuliahController {
     return newKelas;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -54,6 +59,7 @@ export class KelasKuliahController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -68,6 +74,7 @@ export class KelasKuliahController {
     return { message: 'Kelas Kuliah berhasil dihapus' };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -94,6 +101,7 @@ export class KelasKuliahController {
     return result;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     set.headers['content-type'] = 'text/csv; charset=utf-8';

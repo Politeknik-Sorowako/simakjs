@@ -7,6 +7,7 @@ export class DosenController {
     query,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -20,6 +21,7 @@ export class DosenController {
     return await DosenService.getAll(page, limit, search, programStudiId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -34,6 +36,7 @@ export class DosenController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -45,6 +48,7 @@ export class DosenController {
     return newDosen;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -59,6 +63,7 @@ export class DosenController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -73,6 +78,7 @@ export class DosenController {
     return { message: 'Dosen berhasil dihapus' };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
