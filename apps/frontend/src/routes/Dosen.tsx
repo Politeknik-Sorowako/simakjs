@@ -207,7 +207,10 @@ export default function Dosen() {
               </Button>
             </Show>
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await dosenController.getAll(search(), 1, 10000, workspace.activeProdiId() || undefined);
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Dosen_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Dosen"

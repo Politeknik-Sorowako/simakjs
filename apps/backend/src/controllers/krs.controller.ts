@@ -80,6 +80,21 @@ export class KrsController {
     }
   }
 
+  static async bulkCreate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || user.role === 'guest' || user.role === 'mahasiswa') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Pengisian KRS massal hanya untuk Admin/Dosen/Prodi.' };
+    }
+    try {
+      const { mahasiswaIds, kelasKuliahIds, isApproved } = body;
+      return await KrsService.bulkCreate(mahasiswaIds, kelasKuliahIds, isApproved ?? false);
+    } catch (e: any) {
+      set.status = 400;
+      return { error: e.message || 'Gagal membuat KRS massal' };
+    }
+  }
+
   static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {

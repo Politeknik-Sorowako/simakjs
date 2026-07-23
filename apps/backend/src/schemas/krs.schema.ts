@@ -9,6 +9,31 @@ export const krsBody = t.Object({
   idPddikti: t.Optional(t.String()),
 });
 
+export const bulkKrsBody = t.Object({
+  mahasiswaIds: t.Array(t.Integer(), { minItems: 1 }),
+  kelasKuliahIds: t.Array(t.Integer(), { minItems: 1 }),
+  isApproved: t.Optional(t.Boolean({ default: false })),
+});
+
+export const bulkKrsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Pembuatan KRS Massal',
+    description: 'Mendaftarkan banyak mahasiswa ke beberapa kelas kuliah sekaligus.',
+  },
+  body: bulkKrsBody,
+  response: {
+    200: t.Object({
+      createdCount: t.Integer(),
+      skippedCount: t.Integer(),
+      totalProcessed: t.Integer(),
+    }),
+    403: t.Object({
+      error: t.String(),
+    }),
+  },
+};
+
 export const updateKrsBody = t.Partial(
   t.Object({
     mahasiswaId: t.Integer(),

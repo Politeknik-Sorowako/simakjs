@@ -249,7 +249,10 @@ export default function MataKuliah() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await mataKuliahController.getAll(search(), 1, 10000, ws.activeProdiId() || undefined);
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Mata_Kuliah_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Mata Kuliah"

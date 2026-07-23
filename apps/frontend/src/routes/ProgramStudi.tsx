@@ -117,7 +117,10 @@ export default function ProgramStudi() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await prodiController.getAll(search(), 1, 10000);
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Program_Studi_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Program Studi"

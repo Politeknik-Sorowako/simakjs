@@ -105,7 +105,10 @@ export default function Pengguna() {
               />
             </div>
             <ExportButtonGroup
-              data={() => usersRes()?.data || []}
+              onFetchAll={async () => {
+                const res = await userController.getAll(1, 10000, search());
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Pengguna_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Pengguna"
