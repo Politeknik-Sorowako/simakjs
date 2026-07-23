@@ -141,7 +141,7 @@ export default function EvaluasiKurikulum() {
               isSelect
               selectOptions={[
                 { value: '', label: 'Semua Periode' },
-                ...(periodes()?.map((p) => ({ value: p.id, label: p.nama })) || []),
+                ...(periodes()?.data?.map((p) => ({ value: p.id, label: p.nama })) || []),
               ]}
             />
           </div>
@@ -198,86 +198,90 @@ export default function EvaluasiKurikulum() {
         </Show>
 
         <Show when={evaluasiList() && !evaluasiList.loading}>
-          {(data) => (
-            <Card variant="bordered" padding="lg">
-              <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-white">Daftar Evaluasi</h2>
-                <Badge variant="info">{data().meta.total} total</Badge>
-              </div>
+          {(() => {
+            const data = evaluasiList();
+            if (!data) return null;
+            return (
+              <Card variant="bordered" padding="lg">
+                <div class="flex items-center justify-between mb-4">
+                  <h2 class="text-lg font-semibold text-white">Daftar Evaluasi</h2>
+                  <Badge variant="info">{data.meta.total} total</Badge>
+                </div>
 
-              <Show when={data().data.length > 0}>
-                <div class="space-y-3">
-                  <For each={data().data}>
-                    {(item) => (
-                      <div class="border border-slate-700 rounded-lg p-4 bg-slate-800/50">
-                        <div class="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 class="text-white font-medium">{item.aspek}</h3>
-                            <p class="text-xs text-secondary-400">
-                              {item.periode?.nama || 'Semua Periode'} •{' '}
-                              {new Date(item.createdAt).toLocaleDateString('id-ID')}
-                            </p>
+                <Show when={data.data.length > 0}>
+                  <div class="space-y-3">
+                    <For each={data.data}>
+                      {(item) => (
+                        <div class="border border-slate-700 rounded-lg p-4 bg-slate-800/50">
+                          <div class="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 class="text-white font-medium">{item.aspek}</h3>
+                              <p class="text-xs text-secondary-400">
+                                {item.periode?.nama || 'Semua Periode'} •{' '}
+                                {new Date(item.createdAt).toLocaleDateString('id-ID')}
+                              </p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                              {getStatusBadge(item.status)}
+                              <select
+                                class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white text-sm"
+                                value={item.status}
+                                onChange={(e) => handleStatusChange(item.id, e.currentTarget.value)}
+                              >
+                                <option value="open">Open</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="closed">Closed</option>
+                              </select>
+                            </div>
                           </div>
-                          <div class="flex items-center gap-2">
-                            {getStatusBadge(item.status)}
-                            <select
-                              class="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-white text-sm"
-                              value={item.status}
-                              onChange={(e) => handleStatusChange(item.id, e.currentTarget.value)}
-                            >
-                              <option value="open">Open</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="closed">Closed</option>
-                            </select>
+                          <div class="space-y-2 text-sm">
+                            <div>
+                              <span class="text-secondary-400">Temuan: </span>
+                              <span class="text-white">{item.temuan}</span>
+                            </div>
+                            <Show when={item.rekomendasi}>
+                              <div>
+                                <span class="text-secondary-400">Rekomendasi: </span>
+                                <span class="text-emerald-400">{item.rekomendasi}</span>
+                              </div>
+                            </Show>
+                            <Show when={item.tindakLanjut}>
+                              <div>
+                                <span class="text-secondary-400">Tindak Lanjut: </span>
+                                <span class="text-blue-400">{item.tindakLanjut}</span>
+                              </div>
+                            </Show>
                           </div>
                         </div>
-                        <div class="space-y-2 text-sm">
-                          <div>
-                            <span class="text-secondary-400">Temuan: </span>
-                            <span class="text-white">{item.temuan}</span>
-                          </div>
-                          <Show when={item.rekomendasi}>
-                            <div>
-                              <span class="text-secondary-400">Rekomendasi: </span>
-                              <span class="text-emerald-400">{item.rekomendasi}</span>
-                            </div>
-                          </Show>
-                          <Show when={item.tindakLanjut}>
-                            <div>
-                              <span class="text-secondary-400">Tindak Lanjut: </span>
-                              <span class="text-blue-400">{item.tindakLanjut}</span>
-                            </div>
-                          </Show>
-                        </div>
-                      </div>
-                    )}
-                  </For>
-                </div>
-              </Show>
+                      )}
+                    </For>
+                  </div>
+                </Show>
 
-              <Show when={data().data.length === 0}>
-                <p class="text-secondary-400 text-center py-8">Belum ada evaluasi untuk kurikulum ini.</p>
-              </Show>
+                <Show when={data.data.length === 0}>
+                  <p class="text-secondary-400 text-center py-8">Belum ada evaluasi untuk kurikulum ini.</p>
+                </Show>
 
-              <Show when={data().meta.totalPages > 1}>
-                <div class="flex justify-center gap-2 mt-4">
-                  <Button variant="secondary" disabled={page() <= 1} onClick={() => setPage(page() - 1)}>
-                    Prev
-                  </Button>
-                  <span class="text-white px-4 py-2">
-                    {page()} / {data().meta.totalPages}
-                  </span>
-                  <Button
-                    variant="secondary"
-                    disabled={page() >= data().meta.totalPages}
-                    onClick={() => setPage(page() + 1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </Show>
-            </Card>
-          )}
+                <Show when={data.meta.totalPages > 1}>
+                  <div class="flex justify-center gap-2 mt-4">
+                    <Button variant="secondary" disabled={page() <= 1} onClick={() => setPage(page() - 1)}>
+                      Prev
+                    </Button>
+                    <span class="text-white px-4 py-2">
+                      {page()} / {data.meta.totalPages}
+                    </span>
+                    <Button
+                      variant="secondary"
+                      disabled={page() >= data.meta.totalPages}
+                      onClick={() => setPage(page() + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </Show>
+              </Card>
+            );
+          })()}
         </Show>
 
         <Show when={!kurikulumFilter()}>

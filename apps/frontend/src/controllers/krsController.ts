@@ -3,6 +3,20 @@ import { KelasKuliah } from './kelasKuliahController';
 import { Mahasiswa } from './mahasiswaController';
 import { PaginatedResponse } from './prodiController';
 
+export interface KrsProdiItem {
+  prodiNama: string;
+  total: number;
+  approved: number;
+  pending: number;
+}
+
+export interface KrsStatsResponse {
+  total: number;
+  approved: number;
+  pending: number;
+  perProdi: KrsProdiItem[];
+}
+
 export interface Krs {
   id: number;
   mahasiswaId: number;
@@ -14,6 +28,7 @@ export interface Krs {
   kelasKuliah?: KelasKuliah | null;
   idPddikti?: string | null;
   isSynced?: boolean;
+  isApproved?: boolean;
 }
 
 export const krsController = {
@@ -102,8 +117,8 @@ export const krsController = {
     return fetchApi(`/krs/validasi?mahasiswaId=${mahasiswaId}&periodeId=${periodeId}`);
   },
 
-  async getStats(periodeId?: string): Promise<Record<string, unknown>> {
+  async getStats(periodeId?: string): Promise<KrsStatsResponse> {
     const qs = periodeId ? `?periodeId=${periodeId}` : '';
-    return fetchApi<Record<string, unknown>>(`/krs/stats${qs}`);
+    return fetchApi<KrsStatsResponse>(`/krs/stats${qs}`);
   },
 };

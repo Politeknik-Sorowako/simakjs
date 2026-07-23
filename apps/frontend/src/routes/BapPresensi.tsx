@@ -161,7 +161,7 @@ export default function BapPresensi() {
     const cpmkId = selectedCpmkId();
     if (!kelasId) return;
     if (!cpmkId) {
-      toast.showToast('Silakan pilih materi CPMK terlebih dahulu', 'warning');
+      toast.showToast('Silakan pilih materi CPMK terlebih dahulu', 'error');
       return;
     }
 

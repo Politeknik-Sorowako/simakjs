@@ -34,7 +34,7 @@ export default function Mahasiswa() {
     { header: 'Email', accessor: (row: IMahasiswa) => row.email },
     { header: 'Program Studi', accessor: (row: IMahasiswa) => row.programStudi?.nama || '-' },
     { header: 'Dosen PA', accessor: (row: IMahasiswa) => row.dosenPa?.nama || '-' },
-    { header: 'Angkatan', accessor: (row: IMahasiswa) => row.angkatan || '-' },
+    { header: 'Angkatan', accessor: (row: IMahasiswa) => (row as any).angkatan || '-' },
     { header: 'Status', accessor: (row: IMahasiswa) => row.status || '-' },
   ];
 
@@ -216,10 +216,7 @@ export default function Mahasiswa() {
     try {
       const res = await userController.generateAccounts('mahasiswa', ids);
       if (res.errors && res.errors.length > 0) {
-        toast.showToast(
-          `Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`,
-          'warning',
-        );
+        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'info');
       } else {
         toast.showToast(`Berhasil membuat ${res.successCount} akun mahasiswa.`, 'success');
       }

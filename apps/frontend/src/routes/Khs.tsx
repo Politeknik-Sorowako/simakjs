@@ -534,7 +534,9 @@ export default function Khs() {
                       <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
                         IPK Kumulatif (Transcript)
                       </span>
-                      <span class="text-3xl font-extrabold text-brand-600">{transkripData()?.ipk?.toFixed(2)}</span>
+                      <span class="text-3xl font-extrabold text-brand-600">
+                        {Number(transkripData()?.ipk || 0).toFixed(2)}
+                      </span>
                     </div>
                     <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                       <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">

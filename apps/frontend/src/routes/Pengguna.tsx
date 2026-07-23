@@ -75,7 +75,7 @@ export default function Pengguna() {
   let debounceTimer: ReturnType<typeof setTimeout>;
   const handleSearchInput = (e: Event) => {
     clearTimeout(debounceTimer);
-    const val = e.currentTarget.value;
+    const val = (e.currentTarget as HTMLInputElement).value;
     debounceTimer = setTimeout(() => {
       resetPage();
       setSearch(val);

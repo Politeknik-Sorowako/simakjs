@@ -348,7 +348,7 @@ export default function KeuanganDashboard() {
         </div>
 
         {/* Summary Stats */}
-        <Show when={role() !== 'mahasiswa' && tagihanData()?.data?.length > 0}>
+        <Show when={role() !== 'mahasiswa' && (tagihanData()?.data?.length || 0) > 0}>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               title="Total Tagihan"

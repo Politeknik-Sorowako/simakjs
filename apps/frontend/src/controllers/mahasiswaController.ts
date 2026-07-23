@@ -1,6 +1,24 @@
 import { fetchApi } from '../utils/api';
 import { PaginatedResponse, Prodi } from './prodiController';
 
+export interface MahasiswaBaruProdiItem {
+  prodiNama: string;
+  total: number;
+  laki?: number;
+  perempuan?: number;
+}
+
+export interface MahasiswaBaruTrendItem {
+  angkatan: string;
+  total: number;
+}
+
+export interface MahasiswaBaruStatsResponse {
+  total: number;
+  perProdi: MahasiswaBaruProdiItem[];
+  trend: MahasiswaBaruTrendItem[];
+}
+
 export interface Mahasiswa {
   id: number;
   nim: string;
@@ -80,8 +98,8 @@ export const mahasiswaController = {
     return fetchApi<Record<string, unknown>>(`/mahasiswa/stats?${params.toString()}`);
   },
 
-  async getMahasiswaBaru(angkatan?: string): Promise<Record<string, unknown>> {
+  async getMahasiswaBaru(angkatan?: string): Promise<MahasiswaBaruStatsResponse> {
     const params = angkatan ? `?angkatan=${angkatan}` : '';
-    return fetchApi<Record<string, unknown>>(`/mahasiswa/baru${params}`);
+    return fetchApi<MahasiswaBaruStatsResponse>(`/mahasiswa/baru${params}`);
   },
 };

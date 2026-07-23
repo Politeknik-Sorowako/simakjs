@@ -71,7 +71,7 @@ export default function InputNilai() {
     },
   );
 
-  const isRulesMissing = () => selectedKelasId() && konversiRules() && konversiRules().length === 0;
+  const isRulesMissing = () => Boolean(selectedKelasId() && (konversiRules()?.length || 0) === 0);
 
   // 4. Load RPS Rencana Evaluasi for the selected class's Mata Kuliah
   const [rencanaEvals] = createResource(
@@ -192,7 +192,7 @@ export default function InputNilai() {
         'success',
       );
     } else {
-      toast.showToast('Tidak ada rencana evaluasi di RPS untuk mata kuliah ini.', 'warning');
+      toast.showToast('Tidak ada rencana evaluasi di RPS untuk mata kuliah ini.', 'info');
     }
   };
 
@@ -441,7 +441,7 @@ export default function InputNilai() {
                       >
                         ➕ Tambah Komponen
                       </button>
-                      <Show when={rencanaEvals() && rencanaEvals().length > 0}>
+                      <Show when={(rencanaEvals()?.length || 0) > 0}>
                         <button
                           onClick={handleImportFromRps}
                           class="text-accent-600 hover:text-accent-700 font-bold text-xs flex items-center gap-1 text-left"
@@ -472,7 +472,7 @@ export default function InputNilai() {
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
                 <div class="flex gap-2">
-                  <Show when={components() && components().length > 0}>
+                  <Show when={(components()?.length || 0) > 0}>
                     <Show
                       when={!isClassLocked()}
                       fallback={
@@ -509,7 +509,7 @@ export default function InputNilai() {
               </div>
 
               <Show
-                when={components() && components().length > 0}
+                when={(components()?.length || 0) > 0}
                 fallback={
                   <div class="text-center py-12 text-secondary-400 italic">
                     Harap tentukan dan simpan komponen bobot nilai (kiri) terlebih dahulu sebelum menginput nilai
@@ -536,7 +536,10 @@ export default function InputNilai() {
                       each={studentsGrades()}
                       fallback={
                         <tr>
-                          <td colspan={components().length + 2} class="p-4 text-center text-secondary-400 italic">
+                          <td
+                            colspan={(components()?.length || 0) + 2}
+                            class="p-4 text-center text-secondary-400 italic"
+                          >
                             Tidak ada mahasiswa terdaftar di kelas ini.
                           </td>
                         </tr>

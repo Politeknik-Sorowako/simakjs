@@ -47,7 +47,7 @@ export interface PresensiApelItem {
   mahasiswaId: number;
   mahasiswaNim: string;
   mahasiswaNama: string;
-  status: 'hadir' | 'terlambat' | 'unknown';
+  status: 'hadir' | 'terlambat' | 'sakit' | 'izin' | 'alpa' | 'unknown';
   menitTerlambat?: number;
   verifiedStatus?: string;
   verifiedAt?: string;

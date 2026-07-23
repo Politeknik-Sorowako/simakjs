@@ -15,10 +15,12 @@ export interface KhsResponse {
 
 export interface TranskripResponse {
   transkripList: any[];
-  summary: {
+  summary?: {
     totalSks: number;
     ipk: number;
   };
+  ipk?: number;
+  totalSksLulus?: number;
 }
 
 export interface PengajuanYudisium {

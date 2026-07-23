@@ -430,7 +430,7 @@ export default function Rps() {
               Kelas yang mengambil MK ini ({classes()?.length || 0})
             </h3>
             <Show
-              when={classes()?.length > 0}
+              when={(classes()?.length || 0) > 0}
               fallback={<p class="text-xs text-secondary-500">Belum ada kelas untuk MK ini di periode tersebut.</p>}
             >
               <div class="flex flex-wrap gap-2">

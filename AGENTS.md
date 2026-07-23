@@ -45,8 +45,9 @@ apps/
 # 1. Lint (Biome)
 bunx biome ci .
 
-# 2. Type check (backend only, strict mode)
+# 2. Type check (backend & frontend strict mode)
 cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
+cd apps/frontend && bunx tsc --noEmit
 
 # 3. Frontend build
 cd apps/frontend && bun run build
@@ -60,7 +61,8 @@ docker build -f apps/frontend/Dockerfile .
 
 ```bash
 bun run lint          # Auto-fix lint issues
-cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json  # Type check
+cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json  # Backend type check
+cd apps/frontend && bunx tsc --noEmit                       # Frontend type check
 ```
 
 ---

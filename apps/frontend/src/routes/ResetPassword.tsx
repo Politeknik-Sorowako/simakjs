@@ -1,5 +1,5 @@
 import { A, useNavigate, useSearchParams } from '@solidjs/router';
-import { createSignal, onMount, Show } from 'solid-js';
+import { createEffect, createSignal, onMount, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
@@ -74,7 +74,8 @@ export default function ResetPassword() {
 
     const result = resetSchema.safeParse({ password: password(), confirmPassword: confirmPassword() });
     if (!result.success) {
-      const firstError = result.error.errors[0]?.message || 'Input tidak valid';
+      const firstError =
+        (result.error as any).issues?.[0]?.message || (result.error as any).errors?.[0]?.message || 'Input tidak valid';
       setErrorMsg(firstError);
       toast.showToast(firstError, 'error');
       return;

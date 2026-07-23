@@ -34,11 +34,11 @@ export default function AdmisiVerifikasi() {
     (f) => admisiAdminController.getApplications(f),
   );
 
-  const loadDocs = async (app: { id: number; sessionId: number }) => {
+  const loadDocs = async (app: { id: number; sessionId?: number }) => {
     try {
       const [docsRes, reqsRes] = await Promise.all([
         admisiController.getDocuments(app.id),
-        admisiController.getDocumentRequirements(app.sessionId),
+        admisiController.getDocumentRequirements(app.sessionId || 0),
       ]);
       setAppDocs(docsRes.data);
       setRequirements(reqsRes.data);
@@ -48,7 +48,7 @@ export default function AdmisiVerifikasi() {
     }
   };
 
-  const handleSelectApp = async (app: { id: number }) => {
+  const handleSelectApp = async (app: { id: number; sessionId?: number }) => {
     if (selectedApp()?.id === app.id) {
       setSelectedApp(null);
       setAppDocs([]);
@@ -63,7 +63,7 @@ export default function AdmisiVerifikasi() {
     try {
       await admisiAdminController.verifyDocument(docId, verified, rejectionNote);
       toast.showToast(verified ? 'Dokumen diverifikasi' : 'Dokumen ditolak', 'success');
-      await loadDocs(selectedApp());
+      if (selectedApp()) await loadDocs(selectedApp() as any);
       refetch();
     } catch (err: unknown) {
       toast.showToast((err as Error).message, 'error');
@@ -75,7 +75,7 @@ export default function AdmisiVerifikasi() {
     const reqs = requirements();
     const docs = appDocs();
     return reqs.map((req) => {
-      const uploaded = docs.filter((d: { requirementId: number }) => d.requirementId === req.id);
+      const uploaded = (docs || []).filter((d) => (d as any).requirementId === req.id);
       const latest = uploaded[uploaded.length - 1] || null;
       return { req, uploaded, latest };
     });
@@ -448,7 +448,7 @@ export default function AdmisiVerifikasi() {
                                   try {
                                     await admisiAdminController.updateAppProdi(
                                       app.id,
-                                      newP1() ?? app.prodiPilihan1,
+                                      newP1() || app.prodiPilihan1 || 0,
                                       newP2(),
                                     );
                                     toast.showToast('Prodi diubah', 'success');
@@ -492,15 +492,7 @@ export default function AdmisiVerifikasi() {
                         <p class="text-xs text-secondary-400">Memuat data dokumen...</p>
                       </Show>
                       <For each={mergedDocs()}>
-                        {({
-                          req,
-                          uploaded,
-                          latest,
-                        }: {
-                          req: { id: number; namaDokumen: string; isWajib: boolean };
-                          uploaded: { requirementId: number }[];
-                          latest: { id: number; isVerified: boolean; rejectionNote?: string; fileLink?: string } | null;
-                        }) => {
+                        {({ req, uploaded, latest }: any) => {
                           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
                           const isMissing = !latest;
                           const isRejected = latest && !latest.isVerified && latest.rejectionNote;
