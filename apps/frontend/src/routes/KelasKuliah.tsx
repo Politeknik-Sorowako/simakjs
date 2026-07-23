@@ -1,6 +1,7 @@
 import { useNavigate } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
@@ -18,11 +19,36 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
+import { ExportColumn } from '../utils/export';
 
 export default function KelasKuliah() {
   const navigate = useNavigate();
   const toast = useToast();
   const auth = useAuth();
+
+  const exportColumns: ExportColumn[] = [
+    { header: 'Kode MK', accessor: (row: IKelas) => row.mataKuliah?.kode || '-' },
+    { header: 'Nama Mata Kuliah', accessor: (row: IKelas) => row.mataKuliah?.nama || '-' },
+    { header: 'Periode', accessor: (row: IKelas) => row.periodeId },
+    { header: 'Kelas', accessor: (row: IKelas) => row.namaKelas },
+    {
+      header: 'Dosen Pengajar',
+      accessor: (row: IKelas) =>
+        row.dosenPengajarKelas
+          ?.map((d) => d.dosen?.nama)
+          .filter(Boolean)
+          .join('; ') || '-',
+    },
+    {
+      header: 'SKS Mengajar',
+      accessor: (row: IKelas) =>
+        row.dosenPengajarKelas
+          ?.map((d) => d.sksBebanMengajar)
+          .filter((v) => v !== undefined)
+          .join('; ') || '-',
+    },
+    { header: 'ID PDDIKTI', accessor: (row: IKelas) => row.idPddikti || '-' },
+  ];
   const workspace = useWorkspace();
   const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
@@ -317,14 +343,21 @@ export default function KelasKuliah() {
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Kelas Kuliah</h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Kelola pembagian kelas mata kuliah untuk periode akademik tertentu.
             </p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <ExportButtonGroup
+              data={() => sortedData()}
+              columns={exportColumns}
+              filename={`Kelas_Kuliah_${new Date().toISOString().split('T')[0]}`}
+              title="Daftar Kelas Kuliah"
+              subtitle="Data Kelas Kuliah SIMAK Vokasi"
+            />
             <Button variant="secondary" onClick={() => setShowImportModal(true)}>
               📥 Impor CSV
             </Button>
