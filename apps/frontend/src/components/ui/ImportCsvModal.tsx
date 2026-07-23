@@ -9,6 +9,7 @@ interface ImportCsvModalProps {
   onClose: () => void;
   importUrl: string;
   templateHeaders: string[];
+  customTemplateCsv?: string;
   title: string;
   onSuccess: () => void;
   onImport?: (
@@ -53,14 +54,16 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
   };
 
   const handleDownloadTemplate = () => {
-    const csvContent = 'data:text/csv;charset=utf-8,' + props.templateHeaders.join(',') + '\n';
-    const encodedUri = encodeURI(csvContent);
+    const content = props.customTemplateCsv || `${props.templateHeaders.join(',')}\n`;
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `template_${props.title.toLowerCase().replace(/\s+/g, '_')}.csv`);
+    link.href = url;
+    link.download = `template_${props.title.toLowerCase().replace(/\s+/g, '_')}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleSubmit = async (e: Event) => {

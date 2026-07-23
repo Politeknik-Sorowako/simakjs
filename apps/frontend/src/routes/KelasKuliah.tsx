@@ -505,6 +505,7 @@ export default function KelasKuliah() {
           onClose={() => setShowImportModal(false)}
           importUrl="/kelas-kuliah/import"
           templateHeaders={[
+            'kode_prodi',
             'kode_mata_kuliah',
             'periode_id',
             'nama_kelas',
@@ -512,6 +513,7 @@ export default function KelasKuliah() {
             'sks_beban_mengajar',
             'id_pddikti',
           ]}
+          customTemplateCsv="kode_prodi,kode_mata_kuliah,periode_id,nama_kelas,nip_dosen,sks_beban_mengajar,id_pddikti\nTI,TI001,20241,1A,198501012010011001,3,\nTI,TI001,20241,1A,198705152015012002,2,\nTI,TI002,20241,2B,198501012010011001;198705152015012002,3;3,"
           title="Kelas Kuliah + Dosen Pengajar"
           onSuccess={() => refetch()}
         />
