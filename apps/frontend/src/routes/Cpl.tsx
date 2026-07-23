@@ -11,6 +11,7 @@ import { CplMapping, cplController, Cpl as ICpl, ImportCplResult } from '../cont
 import { prodiController } from '../controllers/prodiController';
 import { profilLulusanController } from '../controllers/profilLulusanController';
 import { usePagination } from '../hooks/usePagination';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpl() {

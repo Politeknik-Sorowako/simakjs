@@ -9,6 +9,7 @@ import { Table } from '../components/ui/Table';
 import { prodiController } from '../controllers/prodiController';
 import { ImportResult, profilLulusanController } from '../controllers/profilLulusanController';
 import { usePagination } from '../hooks/usePagination';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function ProfilLulusan() {

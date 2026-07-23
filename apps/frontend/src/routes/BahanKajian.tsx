@@ -16,6 +16,7 @@ import {
 import { cplController } from '../controllers/cplController';
 import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function BahanKajian() {

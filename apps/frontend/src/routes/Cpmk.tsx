@@ -15,6 +15,7 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
 import { SubCpmk, subCpmkController } from '../controllers/subCpmkController';
 import { usePagination } from '../hooks/usePagination';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 
 export default function Cpmk() {
