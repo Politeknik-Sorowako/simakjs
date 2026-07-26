@@ -46,9 +46,9 @@ export default function LaporanAkademik() {
             <ExportButtonGroup
               data={() => rekap()?.prodi || []}
               columns={columns}
-              filename={'Akademik_' + selectedPeriode()}
+              filename={`Akademik_${selectedPeriode()}`}
               title="Laporan Akademik per Prodi"
-              subtitle={'Periode: ' + selectedPeriode()}
+              subtitle={`Periode: ${selectedPeriode()}`}
             />
           </Show>
         </div>

@@ -30,7 +30,7 @@ export default function LaporanKeuangan() {
   ];
 
   function formatRupiah(num: number) {
-    return 'Rp ' + num.toLocaleString('id-ID');
+    return `Rp ${num.toLocaleString('id-ID')}`;
   }
 
   return (
@@ -47,9 +47,9 @@ export default function LaporanKeuangan() {
             <ExportButtonGroup
               data={() => stats()?.rekapPerProdi || []}
               columns={columns}
-              filename={'Keuangan_' + selectedPeriode()}
+              filename={`Keuangan_${selectedPeriode()}`}
               title="Laporan Keuangan"
-              subtitle={'Periode: ' + selectedPeriode()}
+              subtitle={`Periode: ${selectedPeriode()}`}
             />
           </Show>
         </div>
