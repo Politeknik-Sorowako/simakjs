@@ -37,6 +37,7 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
 
   const response = await fetch(`${API_URL}${endpoint}`, config);
 
+  // biome-ignore lint/suspicious/noExplicitAny: API response container before type assertion
   let data: any;
   const isJson = response.headers.get('content-type')?.includes('application/json');
 
