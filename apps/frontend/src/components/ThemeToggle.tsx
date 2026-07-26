@@ -58,6 +58,8 @@ export function ThemeToggle(props: { compact?: boolean }) {
         class="inline-flex items-center justify-center p-2.5 rounded-xl bg-secondary-100/80 dark:bg-secondary-800/80 border border-secondary-200/80 dark:border-secondary-700/80 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/30 active:scale-95 shadow-sm"
         title={`Tema saat ini: ${theme() === 'system' ? 'Sistem' : theme() === 'dark' ? 'Gelap' : 'Terang'}`}
         aria-label="Pilih Mode Tema"
+        aria-expanded={isOpen()}
+        aria-haspopup="true"
       >
         {effectiveTheme() === 'dark' ? (
           <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,8 +83,14 @@ export function ThemeToggle(props: { compact?: boolean }) {
       </button>
 
       <Show when={isOpen()}>
-        <div class="origin-top-right absolute right-0 mt-2 w-36 rounded-xl bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 shadow-lg ring-1 ring-black/5 z-50 overflow-hidden animate-scale-in py-1">
+        <div
+          class="origin-top-right absolute right-0 mt-2 w-36 rounded-xl bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 shadow-lg ring-1 ring-black/5 z-50 overflow-hidden animate-scale-in py-1"
+          role="menu"
+          aria-orientation="vertical"
+        >
           <button
+            type="button"
+            role="menuitem"
             onClick={() => handleSelect('light')}
             class={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2.5 transition-colors ${
               theme() === 'light'
@@ -101,6 +109,8 @@ export function ThemeToggle(props: { compact?: boolean }) {
             Terang
           </button>
           <button
+            type="button"
+            role="menuitem"
             onClick={() => handleSelect('dark')}
             class={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2.5 transition-colors ${
               theme() === 'dark'
@@ -119,6 +129,8 @@ export function ThemeToggle(props: { compact?: boolean }) {
             Gelap
           </button>
           <button
+            type="button"
+            role="menuitem"
             onClick={() => handleSelect('system')}
             class={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2.5 transition-colors ${
               theme() === 'system'
