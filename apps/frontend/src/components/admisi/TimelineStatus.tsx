@@ -88,11 +88,11 @@ export default function TimelineStatus(props: Props) {
   };
 
   return (
-    <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6">
-      <h2 class="font-semibold text-sm mb-4">Tahapan Seleksi</h2>
+    <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-6 mb-6 shadow-sm">
+      <h2 class="font-semibold text-sm mb-4 text-secondary-900 dark:text-white">Tahapan Seleksi</h2>
       <div class="relative">
         {/* Garis vertikal */}
-        <div class="absolute left-4 top-2 bottom-2 w-0.5 bg-secondary-200 dark:bg-secondary-600" />
+        <div class="absolute left-4 top-2 bottom-2 w-0.5 bg-secondary-200 dark:bg-secondary-700" />
 
         <div class="space-y-5 relative">
           <For each={mainStages}>
@@ -106,16 +106,14 @@ export default function TimelineStatus(props: Props) {
                 <div class="flex items-start gap-4 relative">
                   {/* Bullet */}
                   <div
-                    class={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 border-2 ${
+                    class={`relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm flex-shrink-0 border-2 transition-all ${
                       done
-                        ? 'bg-green-100 border-green-500 text-green-600'
+                        ? 'bg-success-50 border-success-500 text-success-600 dark:bg-success-900/30 dark:border-success-500 dark:text-success-400'
                         : current
-                          ? isRejected
-                            ? 'bg-red-100 border-red-500 text-red-600'
-                            : isFailed
-                              ? 'bg-red-100 border-red-500 text-red-600'
-                              : 'bg-brand-100 border-brand-500 text-brand-600'
-                          : 'bg-secondary-100 border-secondary-300 text-secondary-400 dark:bg-secondary-800 dark:border-secondary-600'
+                          ? isRejected || isFailed
+                            ? 'bg-danger-50 border-danger-500 text-danger-600 dark:bg-danger-900/30 dark:border-danger-500 dark:text-danger-400'
+                            : 'bg-primary-50 border-primary-600 text-primary-700 dark:bg-primary-900/40 dark:border-primary-500 dark:text-primary-300'
+                          : 'bg-secondary-100 border-secondary-300 text-secondary-400 dark:bg-secondary-800 dark:border-secondary-700 dark:text-secondary-500'
                     }`}
                   >
                     {done ? '✓' : current ? (isRejected || isFailed ? '✗' : '●') : '○'}
@@ -127,13 +125,11 @@ export default function TimelineStatus(props: Props) {
                       <span
                         class={`text-sm font-medium ${
                           done
-                            ? 'text-green-700 dark:text-green-400'
+                            ? 'text-success-700 dark:text-success-400'
                             : current
-                              ? isRejected
-                                ? 'text-red-700 dark:text-red-400'
-                                : isFailed
-                                  ? 'text-red-700 dark:text-red-400'
-                                  : 'text-brand-700 dark:text-brand-400'
+                              ? isRejected || isFailed
+                                ? 'text-danger-700 dark:text-danger-400'
+                                : 'text-primary-700 dark:text-primary-400'
                               : 'text-secondary-400 dark:text-secondary-500'
                         }`}
                       >
@@ -141,10 +137,10 @@ export default function TimelineStatus(props: Props) {
                       </span>
 
                       <Show when={done}>
-                        <span class="text-xs text-green-600 dark:text-green-400">✓</span>
+                        <span class="text-xs text-success-600 dark:text-success-400 font-semibold">✓</span>
                       </Show>
                       <Show when={isRejected || isFailed}>
-                        <span class="text-xs text-red-600 dark:text-red-400 font-semibold">Ditolak</span>
+                        <span class="text-xs text-danger-600 dark:text-danger-400 font-semibold">Ditolak</span>
                       </Show>
                     </div>
 
