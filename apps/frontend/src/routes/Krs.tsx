@@ -271,7 +271,6 @@ export default function Krs() {
     }
   };
 
-
   const handleApproveAll = async () => {
     if (!confirm('Apakah Anda yakin ingin menyetujui seluruh KRS pending untuk semua mahasiswa di periode ini?'))
       return;

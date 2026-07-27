@@ -19,6 +19,8 @@ import {
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
+  kelompokApel,
+  kelompokApelAnggota,
   kompensasiBayar,
   komponenNilai,
   konversiNilai,
@@ -35,12 +37,14 @@ import {
   pengajuanYudisium,
   periodeAkademik,
   presensi,
+  presensiApel,
   profilLulusan,
   programStudi,
   rencanaEvaluasi,
   rencanaEvaluasiSubCpmk,
   rps,
   rpsTopik,
+  sesiApel,
   sesiBimbingan,
   skalaPredikatKelulusan,
   skemaTarif,
@@ -120,6 +124,10 @@ export async function clearDatabase() {
   await db.delete(bimbinganThread);
   await db.delete(bimbingan);
   await db.delete(pelanggaran);
+  await db.delete(presensiApel);
+  await db.delete(sesiApel);
+  await db.delete(kelompokApelAnggota);
+  await db.delete(kelompokApel);
   await db.delete(kompensasiBayar);
   await db.delete(presensi);
   await db.delete(bap);
