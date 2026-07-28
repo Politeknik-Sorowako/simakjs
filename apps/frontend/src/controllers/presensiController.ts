@@ -37,6 +37,7 @@ export interface BAP {
   tanggal: string;
   pertemuanKe: number;
   materi: string;
+  catatan?: string | null;
   durasiMenit: number;
   cpmkId: number;
   dosenId: number;
@@ -48,6 +49,7 @@ export interface PresensiItem {
   mahasiswaId: number;
   status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa';
   durasiMangkir: number;
+  keterangan?: string | null;
 }
 
 export interface KompensasiLaporanItem {

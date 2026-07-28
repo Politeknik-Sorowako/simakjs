@@ -410,6 +410,7 @@ export const bap = pgTable('bap', {
   tanggal: date('tanggal').notNull(),
   pertemuanKe: integer('pertemuan_ke').notNull(),
   materi: text('materi').notNull(),
+  catatan: text('catatan'),
   durasiMenit: integer('durasi_menit').notNull(),
   cpmkId: integer('cpmk_id')
     .notNull()
@@ -436,6 +437,7 @@ export const presensi = pgTable(
       .references(() => mahasiswa.id, { onDelete: 'cascade' }),
     status: presensiStatusEnum('status').notNull(),
     durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
+    keterangan: text('keterangan'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()

@@ -354,5 +354,67 @@ describe('BAP, Presensi & Kompensasi API', () => {
       expect(updatedCompDetail.summary.totalDibayar).toBe(80);
       expect(updatedCompDetail.summary.sisaKompensasi).toBe(20);
     });
+
+    it('harus sukses menyimpan dan mengambil catatan BAP serta keterangan presensi mahasiswa', async () => {
+      // 1. Buat BAP dengan catatan
+      const bapRes = await app.handle(
+        new Request('http://localhost/bap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${dosenToken}`,
+          },
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            tanggal: '2023-09-02',
+            pertemuanKe: 2,
+            materi: 'Lanjutan CSS Grid & Flexbox',
+            catatan: 'Kuis singkat diadakan di 15 menit pertama',
+            durasiMenit: 100,
+            cpmkId: cpmkId,
+            dosenId: dosenId,
+          }),
+        }),
+      );
+      expect(bapRes.status).toBe(201);
+      const bapObj = await bapRes.json();
+      expect(bapObj.catatan).toBe('Kuis singkat diadakan di 15 menit pertama');
+
+      // 2. Simpan presensi dengan keterangan per mahasiswa
+      const presRes = await app.handle(
+        new Request('http://localhost/presensi/bulk', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${dosenToken}`,
+          },
+          body: JSON.stringify({
+            bapId: bapObj.id,
+            presensiList: [
+              {
+                mahasiswaId: mhsId,
+                status: 'izin',
+                keterangan: 'Izin dispensasi mengikuti kejuaraan sains',
+              },
+            ],
+          }),
+        }),
+      );
+      expect(presRes.status).toBe(200);
+
+      // 3. Ambil presensi berdasarkan ID BAP dan verifikasi keterangan
+      const getPresRes = await app.handle(
+        new Request(`http://localhost/presensi/bap/${bapObj.id}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${dosenToken}`,
+          },
+        }),
+      );
+      expect(getPresRes.status).toBe(200);
+      const presList = await getPresRes.json();
+      expect(presList.length).toBe(1);
+      expect(presList[0].keterangan).toBe('Izin dispensasi mengikuti kejuaraan sains');
+    });
   });
 });
