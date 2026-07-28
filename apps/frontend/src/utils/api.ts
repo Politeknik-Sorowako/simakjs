@@ -1,11 +1,11 @@
 export const API_URL = (() => {
-  if (import.meta.env.VITE_API_URL) {
+  if (import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== '') {
     return import.meta.env.VITE_API_URL;
   }
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
+    const { hostname } = window.location;
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      return `${protocol}//${hostname}:3000`;
+      return '/api';
     }
   }
   return 'http://localhost:3000';
