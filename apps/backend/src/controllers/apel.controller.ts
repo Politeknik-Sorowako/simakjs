@@ -60,22 +60,13 @@ export class ApelController {
         set.status = 401;
         return { error: 'Unauthorized' };
       }
-      let prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
       let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
 
-      if (user.role === 'prodi') {
-        const prodiUser = await ApelService.getDosenByEmail(user.email);
-        if (!prodiUser) {
-          set.status = 404;
-          return { error: 'Prodi user not found in dosen' };
-        }
-        if (!prodiId) prodiId = prodiUser.programStudiId || undefined;
-      } else if (user.role === 'dosen' && !dosenId) {
+      if (user.role === 'dosen' && !dosenId) {
         const dosenUser = await ApelService.getDosenByEmail(user.email);
         if (dosenUser) dosenId = dosenUser.id;
       }
-
-      return await ApelService.getKelompokByProdi(prodiId, dosenId);
+      return await ApelService.getKelompokByProdi(undefined, dosenId);
     } catch (e: any) {
       set.status = 400;
       return { error: e.message };

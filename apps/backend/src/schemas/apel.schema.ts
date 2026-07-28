@@ -17,7 +17,6 @@ const validShift = t.Union([t.Literal('pagi'), t.Literal('sore')], { error: 'Shi
 export const createKelompokSchema = {
   body: t.Object({
     namaKelompok: t.String({ minLength: 1, error: 'Nama kelompok harus diisi' }),
-    programStudiId: t.Optional(t.Nullable(t.Number({ error: 'Program studi tidak valid' }))),
     dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
     shift: t.Optional(t.String({ error: 'Shift tidak valid' })),
     keterangan: t.Optional(t.String({ error: 'Keterangan tidak valid' })),
@@ -27,7 +26,6 @@ export const createKelompokSchema = {
 export const updateKelompokSchema = {
   body: t.Object({
     namaKelompok: t.Optional(t.String({ minLength: 1, error: 'Nama kelompok tidak valid' })),
-    programStudiId: t.Optional(t.Nullable(t.Number({ error: 'Program studi tidak valid' }))),
     dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
     shift: t.Optional(t.String({ error: 'Shift tidak valid' })),
     keterangan: t.Optional(t.String({ error: 'Keterangan tidak valid' })),
@@ -46,7 +44,6 @@ export const deleteKelompokSchema = {
 
 export const getKelompokSchema = {
   query: t.Object({
-    prodiId: t.Optional(t.String({ error: 'Prodi ID tidak valid' })),
     dosenId: t.Optional(t.String({ error: 'Dosen ID tidak valid' })),
   }),
 };
