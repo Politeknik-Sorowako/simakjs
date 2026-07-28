@@ -9,6 +9,7 @@ export interface ExportButtonProps {
   filename: string;
   title: string;
   subtitle?: string;
+  variant?: 'primary' | 'secondary' | 'outline';
 }
 
 export function ExportButtonGroup(props: ExportButtonProps) {
