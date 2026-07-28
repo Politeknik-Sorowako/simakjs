@@ -31,7 +31,7 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://simak_user:simak_password@db:5432/simak_vokasi}
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGIN: "http://localhost:8080,http://localhost:3000"
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://simak.politekniksorowako.ac.id,http://simak.politekniksorowako.ac.id,http://localhost:8080,http://localhost:3000}
       NODE_ENV: development
       DOMAIN_NAME: localhost
       PGHOST: db
@@ -54,6 +54,8 @@ services:
     container_name: simak_frontend
     ports:
       - "${FRONTEND_PORT:-8080}:80"
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-https://simak.politekniksorowako.ac.id:3000}
     volumes:
       - ./apps/frontend:/app/apps/frontend
       - /app/apps/frontend/node_modules

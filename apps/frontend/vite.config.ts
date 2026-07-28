@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export default defineConfig({
   plugins: [solidPlugin()],
   server: {
@@ -13,11 +15,9 @@ export default defineConfig({
       '127.0.0.1',
     ],
     watch: {
-      usePolling: true,
+      usePolling: !isProd,
     },
-    hmr: {
-      clientPort: 8080,
-    },
+    hmr: isProd ? false : { clientPort: 8080 },
   },
   preview: {
     port: 3001,
