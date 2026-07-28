@@ -6,6 +6,7 @@ const loginRateLimit = new Map<string, { count: number; resetTime: number }>();
 const forgotRateLimit = new Map<string, { count: number; resetTime: number }>();
 
 export class AuthController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async register({ body, set }: AuthContext): Promise<any> {
     if (body.role === 'admin' || body.role === 'prodi' || body.role === 'keuangan') {
       set.status = 403;
@@ -24,6 +25,7 @@ export class AuthController {
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async login({ body, jwt, set, cookie }: AuthContext & { jwt: any }): Promise<any> {
     if (process.env.NODE_ENV !== 'test') {
       const now = Date.now();
@@ -87,6 +89,7 @@ export class AuthController {
     };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async forgotPassword({ body, set }: AuthContext): Promise<any> {
     try {
       const email = (body as { email?: string })?.email;
@@ -171,6 +174,7 @@ export class AuthController {
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async resetPassword({ body, set }: AuthContext): Promise<any> {
     try {
       const token = (body as { token?: string; password?: string })?.token;
@@ -247,6 +251,7 @@ export class AuthController {
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async validateResetToken({ body, set }: AuthContext): Promise<any> {
     try {
       const token = (body as { token?: string })?.token;

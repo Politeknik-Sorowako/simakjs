@@ -256,7 +256,7 @@ function CpmkMkSection(props: { kurikulumId: number }) {
             { value: '', label: 'Semua MK' },
             ...(cpmkList()
               ? [...new Map(cpmkList()!.map((c) => [c.mataKuliah?.id, c.mataKuliah])).values()]
-                  .map((mk: any) => (mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null))
+                  .map((mk) => (mk ? { value: String(mk.id), label: `${mk.kode} - ${mk.nama}` } : null))
                   .filter((item): item is { value: string; label: string } => item !== null)
               : []),
           ]}

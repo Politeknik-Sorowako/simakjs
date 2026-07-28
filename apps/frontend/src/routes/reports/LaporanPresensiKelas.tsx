@@ -44,7 +44,7 @@ export default function LaporanPresensiKelas() {
   ];
 
   const statusColumns: ExportColumn[] = [
-    { header: 'Status', accessor: (row: { status: string; jumlah: number }) => row.status },
+    { header: 'Status', accessor: 'status' },
     { header: 'Jumlah', accessor: 'jumlah' },
   ];
 

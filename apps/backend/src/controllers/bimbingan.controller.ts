@@ -20,6 +20,7 @@ export class BimbinganController {
     return dsn ? dsn.id : null;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByMhsId(ctx: AuthContext<any, any>): Promise<any> {
     const { params, query, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
@@ -57,13 +58,14 @@ export class BimbinganController {
     try {
       const targetPeriodeId = query?.periodeId || undefined;
       return await BimbinganService.getOrCreateBimbingan(targetMhsId, targetPeriodeId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal memproses bimbingan.' };
+      return { error: err instanceof Error ? err.message : 'Gagal memproses bimbingan.' };
     }
   }
 
   static async createThreadMessage(ctx: AuthContext) {
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser, server } = ctx as any;
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -121,12 +123,13 @@ export class BimbinganController {
 
       set.status = 201;
       return newMsg;
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal mengirim pesan.' };
+      return { error: err instanceof Error ? err.message : 'Gagal mengirim pesan.' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateBimbingan({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -163,12 +166,13 @@ export class BimbinganController {
       const bimbData = await BimbinganService.getOrCreateBimbingan(targetMhsId);
       const updated = await BimbinganService.updateBimbingan(bimbData.id, body);
       return updated;
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal memperbarui bimbingan.' };
+      return { error: err instanceof Error ? err.message : 'Gagal memperbarui bimbingan.' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMonitoring({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
@@ -185,6 +189,7 @@ export class BimbinganController {
     return await BimbinganService.getMonitoringBimbingan(dosenId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRekapBkd({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -207,12 +212,13 @@ export class BimbinganController {
       const periodeId = query?.periodeId || undefined;
       const data = await BimbinganService.getRekapBimbinganDosen(dosenId || undefined, periodeId);
       return { data };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal mengambil rekap BKD.' };
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil rekap BKD.' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAkademikSummary(ctx: AuthContext<any, any>) {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
@@ -269,13 +275,14 @@ export class BimbinganController {
         ipk,
         ipsSemesterLalu,
       };
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal memproses data akademik.' };
+      return { error: err instanceof Error ? err.message : 'Gagal memproses data akademik.' };
     }
   }
 
   static async addSesi(ctx: AuthContext) {
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -300,13 +307,14 @@ export class BimbinganController {
       });
       set.status = 201;
       return newSesi;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal membuat sesi bimbingan.' };
+      return { error: e instanceof Error ? e.message : 'Gagal membuat sesi bimbingan.' };
     }
   }
 
   static async updateSesi(ctx: AuthContext) {
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -321,7 +329,7 @@ export class BimbinganController {
     }
 
     try {
-      const data: any = {};
+      const data: Record<string, unknown> = {};
       if (body.pertemuanKe !== undefined) data.pertemuanKe = body.pertemuanKe;
       if (body.tanggalBimbingan !== undefined) data.tanggalBimbingan = new Date(body.tanggalBimbingan);
       if (body.permasalahan !== undefined) data.permasalahan = body.permasalahan;
@@ -330,9 +338,9 @@ export class BimbinganController {
 
       const updated = await BimbinganService.updateSesiBimbingan(sesiId, data);
       return updated;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal meng-update sesi bimbingan.' };
+      return { error: e instanceof Error ? e.message : 'Gagal meng-update sesi bimbingan.' };
     }
   }
 
@@ -353,9 +361,9 @@ export class BimbinganController {
     try {
       const deleted = await BimbinganService.deleteSesiBimbingan(sesiId);
       return deleted;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal menghapus sesi bimbingan.' };
+      return { error: e instanceof Error ? e.message : 'Gagal menghapus sesi bimbingan.' };
     }
   }
 
@@ -377,9 +385,9 @@ export class BimbinganController {
       const bimb = await BimbinganService.getOrCreateBimbingan(mhsId);
       const res = await BimbinganService.clearChatThread(bimb.id);
       return res;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message || 'Gagal mengosongkan chat thread.' };
+      return { error: e instanceof Error ? e.message : 'Gagal mengosongkan chat thread.' };
     }
   }
 }

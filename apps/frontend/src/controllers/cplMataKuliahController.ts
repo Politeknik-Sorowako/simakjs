@@ -21,7 +21,7 @@ export const cplMataKuliahController = {
     if (params?.mataKuliahId) qs.set('mataKuliahId', String(params.mataKuliahId));
     if (params?.kurikulumId) qs.set('kurikulumId', String(params.kurikulumId));
     const query = qs.toString();
-    return fetchApi<CplMataKuliah[]>(`/cpl-mata-kuliah${query ? '?' + query : ''}`);
+    return fetchApi<CplMataKuliah[]>(`/cpl-mata-kuliah${query ? `?${query}` : ''}`);
   },
 
   async create(data: { cplId: number; mataKuliahId: number; bobot?: number | null }): Promise<CplMataKuliah> {

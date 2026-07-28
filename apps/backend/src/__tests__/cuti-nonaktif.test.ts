@@ -83,7 +83,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
       );
 
       expect(response.status).toBe(201);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as Record<string, unknown>;
       expect(data.status).toBe('pending');
       expect(data.alasan).toBe('Ingin fokus magang mandiri');
     });
@@ -120,7 +120,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
       );
 
       expect(response2.status).toBe(400);
-      const data2 = (await response2.json()) as any;
+      const data2 = (await response2.json()) as Record<string, unknown>;
       expect(data2.error).toContain('sudah mengajukan cuti');
     });
 
@@ -139,7 +139,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
           }),
         }),
       );
-      const cuti = (await submitRes.json()) as any;
+      const cuti = (await submitRes.json()) as Record<string, unknown>;
       const cutiId = cuti.id;
 
       // 2. Approve oleh Dosen PA
@@ -157,7 +157,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
         }),
       );
       expect(paRes.status).toBe(200);
-      const paData = (await paRes.json()) as any;
+      const paData = (await paRes.json()) as Record<string, unknown>;
       expect(paData.status).toBe('disetujui_pa');
 
       // 3. Approve oleh Keuangan (menggunakan admin token karena role keuangan/admin memiliki akses staff)
@@ -195,7 +195,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
         }),
       );
       expect(finResReal.status).toBe(200);
-      const finData = (await finResReal.json()) as any;
+      const finData = (await finResReal.json()) as Record<string, unknown>;
       expect(finData.status).toBe('disetujui_keuangan');
 
       // 4. Approve Final oleh Admin/Prodi (dengan input SK Cuti)
@@ -215,7 +215,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
         }),
       );
       expect(finalRes.status).toBe(200);
-      const finalData = (await finalRes.json()) as any;
+      const finalData = (await finalRes.json()) as Record<string, unknown>;
       expect(finalData.status).toBe('disetujui_prodi');
 
       // 5. Cek status mahasiswa diperbarui
@@ -247,7 +247,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
       );
 
       expect(response.status).toBe(201);
-      const data = (await response.json()) as any;
+      const data = (await response.json()) as Record<string, unknown>;
       expect(data.statusBaru).toBe('drop_out');
 
       // Verifikasi status mahasiswa berubah
@@ -288,7 +288,7 @@ describe('Modul Cuti & Mahasiswa Keluar', () => {
           }),
         }),
       );
-      const record = (await recordRes.json()) as any;
+      const record = (await recordRes.json()) as Record<string, unknown>;
       const recordId = record.id;
 
       // 2. Batalkan status keluar

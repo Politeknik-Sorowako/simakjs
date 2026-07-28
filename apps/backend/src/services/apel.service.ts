@@ -182,6 +182,7 @@ export class ApelService {
         await db
           .update(presensiApel)
           .set({
+            // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
             status: item.status as any,
             menitTerlambat: menit,
           })
@@ -190,6 +191,7 @@ export class ApelService {
         await db.insert(presensiApel).values({
           sesiApelId: sesiId,
           mahasiswaId: item.mahasiswaId,
+          // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
           status: item.status as any,
           menitTerlambat: menit,
         });

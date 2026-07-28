@@ -28,17 +28,21 @@ export default function LaporanBKD() {
   const columns: ExportColumn[] = [
     {
       header: 'NIM',
-      accessor: (row: { mahasiswa?: { nim: string }; isApproved: boolean; statusBkd: boolean }) =>
-        row.mahasiswa?.nim || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const mhs = row.mahasiswa as { nim?: string } | undefined;
+        return mhs?.nim || '-';
+      },
     },
     {
       header: 'Mahasiswa',
-      accessor: (row: { mahasiswa?: { nama: string }; isApproved: boolean; statusBkd: boolean }) =>
-        row.mahasiswa?.nama || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const mhs = row.mahasiswa as { nama?: string } | undefined;
+        return mhs?.nama || '-';
+      },
     },
     { header: 'Ringkasan', accessor: 'ringkasan' },
-    { header: 'Status', accessor: (row: { isApproved: boolean }) => (row.isApproved ? 'Disetujui' : 'Pending') },
-    { header: 'BKD', accessor: (row: { statusBkd: boolean }) => (row.statusBkd ? 'Ya' : 'Tidak') },
+    { header: 'Status', accessor: (row: Record<string, unknown>) => (row.isApproved ? 'Disetujui' : 'Pending') },
+    { header: 'BKD', accessor: (row: Record<string, unknown>) => (row.statusBkd ? 'Ya' : 'Tidak') },
   ];
 
   return (

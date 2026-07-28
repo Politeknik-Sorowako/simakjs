@@ -1,10 +1,50 @@
 import { fetchApi } from '../utils/api';
 
+export interface KhsKrsItem {
+  id: number;
+  nilaiAngka: string | null;
+  nilaiHuruf: string | null;
+  nilaiIndeks: string | null;
+  isApproved: boolean;
+  kelasKuliah: { id: number; namaKelas: string };
+  mataKuliah: { id: number; kode: string; nama: string; sksTotal: number };
+}
+
+export interface TranskripItem {
+  id: number;
+  nilaiAngka: string | null;
+  nilaiHuruf: string | null;
+  nilaiIndeks: string | null;
+  periodeId: string;
+  semester?: number;
+  ips?: string | null;
+  mataKuliah: { kode: string; nama: string; sksTotal: number };
+}
+
+export interface KonversiNilai {
+  id?: number;
+  programStudiId: number | null;
+  programStudi?: { nama: string };
+  nilaiHuruf: string;
+  bobotIndeks: number;
+  nilaiMin: number;
+  nilaiMax: number;
+  predikat: string;
+}
+
+export interface PredikatKelulusan {
+  id: number;
+  predikat: string;
+  ipkMin: number;
+  ipkMax: number;
+  keterangan?: string;
+}
+
 export interface KhsResponse {
   blocked: boolean;
   reason?: string;
   detail?: string;
-  krsList?: any[];
+  krsList?: KhsKrsItem[];
   summary?: {
     totalSks: number;
     ipSemester: number;
@@ -14,7 +54,7 @@ export interface KhsResponse {
 }
 
 export interface TranskripResponse {
-  transkripList: any[];
+  transkripList: TranskripItem[];
   summary?: {
     totalSks: number;
     ipk: number;
@@ -68,6 +108,40 @@ export interface NilaiMahasiswa {
   }>;
 }
 
+export interface RekapPerProdi {
+  periode: { id: string } | null;
+  prodi: { prodiId: number; prodiNama: string; totalMahasiswa: number; rataIP: number }[];
+}
+
+export interface RekapNilai {
+  mahasiswa: { id: number; nim: string; nama: string; prodi: string };
+  periode: { id: string } | null;
+  mataKuliah: {
+    krsId: number;
+    mataKuliahId: number;
+    kodeMk: string;
+    namaMk: string;
+    sks: number;
+    nilaiAngka: string | null;
+    nilaiHuruf: string | null;
+    nilaiIndeks: string | null;
+    isApproved: boolean;
+  }[];
+  summary: { totalSks: number; ip: number; totalMk: number };
+}
+
+export interface YudisiumStats {
+  totalPengajuan: number;
+  statusBreakdown: Record<string, number>;
+  perProdi: { prodiId: number; prodiNama: string; total: number }[];
+}
+
+export interface MahasiswaKeluarStats {
+  total: number;
+  perStatus: { status: string; jumlah: number }[];
+  perProdi: { prodiId: number; prodiNama: string; total: number }[];
+}
+
 export const khsController = {
   async getByMhsIdAndPeriode(mhsId: number, periodeId: string): Promise<KhsResponse> {
     return fetchApi<KhsResponse>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}`);
@@ -80,8 +154,9 @@ export const khsController = {
   async getPengajuanYudisium(mhsId: number): Promise<PengajuanYudisium | null> {
     try {
       return await fetchApi<PengajuanYudisium | null>(`/yudisium/mahasiswa/${mhsId}`);
-    } catch (e: any) {
-      if (e.message && (e.message.includes('tidak ditemukan') || e.message.includes('Not Found'))) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      if (message.includes('tidak ditemukan') || message.includes('Not Found')) {
         return null;
       }
       throw e;
@@ -133,95 +208,122 @@ export const khsController = {
       krsId: number;
       nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }>;
     }>,
-  ): Promise<any> {
-    return fetchApi<any>('/yudisium/kelas/nilai', {
+  ): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>('/yudisium/kelas/nilai', {
       method: 'POST',
       body: JSON.stringify({ kelasKuliahId, nilaiList }),
     });
   },
 
-  async getExamEligibility(mhsId: number, periodeId: string): Promise<any> {
-    return fetchApi<any>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}/eligibility`);
+  async getExamEligibility(
+    mhsId: number,
+    periodeId: string,
+  ): Promise<{
+    bimbingan: { eligible: boolean };
+    classes: {
+      mataKuliahKode: string;
+      mataKuliahNama: string;
+      namaKelas: string;
+      attendanceRate: number;
+      presentMeetings: number;
+      totalMeetings: number;
+      eligible: boolean;
+    }[];
+  }> {
+    return fetchApi(`/khs/mahasiswa/${mhsId}/periode/${periodeId}/eligibility`);
   },
 
-  async lockKelas(kelasKuliahId: number): Promise<any> {
-    return fetchApi<any>(`/yudisium/kelas/${kelasKuliahId}/lock`, {
+  async lockKelas(kelasKuliahId: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/yudisium/kelas/${kelasKuliahId}/lock`, {
       method: 'POST',
     });
   },
 
-  async unlockKelas(kelasKuliahId: number): Promise<any> {
-    return fetchApi<any>(`/yudisium/kelas/${kelasKuliahId}/unlock`, {
+  async unlockKelas(kelasKuliahId: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/yudisium/kelas/${kelasKuliahId}/unlock`, {
       method: 'POST',
     });
   },
 
-  async getPddiktiStats(): Promise<any> {
-    return fetchApi<any>('/pddikti/stats');
+  async getPddiktiStats(): Promise<{
+    mahasiswa: { total: number; synced: number; unsynced: number };
+    kelasKuliah: { total: number; synced: number; unsynced: number };
+    krs: { total: number; synced: number; unsynced: number };
+  }> {
+    return fetchApi('/pddikti/stats');
   },
 
-  async syncPddikti(): Promise<any> {
-    return fetchApi<any>('/pddikti/sync', {
+  async syncPddikti(): Promise<{
+    message: string;
+    details: {
+      prodiSynced: number;
+      mataKuliahSynced: number;
+      mahasiswaSynced: number;
+      kelasSynced: number;
+      krsSynced: number;
+    };
+  }> {
+    return fetchApi('/pddikti/sync', {
       method: 'POST',
     });
   },
 
   // --- LAPORAN ---
-  async getRekapNilai(mahasiswaId: number, periodeId?: string): Promise<any> {
+  async getRekapNilai(mahasiswaId: number, periodeId?: string) {
     const url = periodeId
       ? `/khs/rekap-nilai/${mahasiswaId}?periodeId=${periodeId}`
       : `/khs/rekap-nilai/${mahasiswaId}`;
-    return fetchApi<any>(url);
+    return fetchApi<RekapNilai>(url);
   },
 
-  async getRekapPerProdi(periodeId?: string): Promise<any> {
+  async getRekapPerProdi(periodeId?: string) {
     const url = periodeId ? `/khs/rekap-per-prodi?periodeId=${periodeId}` : '/khs/rekap-per-prodi';
-    return fetchApi<any>(url);
+    return fetchApi<RekapPerProdi>(url);
   },
 
-  async getYudisiumStats(periodeId?: string): Promise<any> {
-    const qs = periodeId ? '?periodeId=' + periodeId : '';
-    return fetchApi<any>('/yudisium/stats' + qs);
+  async getYudisiumStats(periodeId?: string) {
+    const qs = periodeId ? `?periodeId=${periodeId}` : '';
+    return fetchApi<YudisiumStats>(`/yudisium/stats${qs}`);
   },
 
-  async getMahasiswaKeluarStats(periodeId?: string): Promise<any> {
-    const qs = periodeId ? '?periodeId=' + periodeId : '';
-    return fetchApi<any>('/mahasiswa-keluar/stats' + qs);
+  async getMahasiswaKeluarStats(periodeId?: string) {
+    const qs = periodeId ? `?periodeId=${periodeId}` : '';
+    return fetchApi<MahasiswaKeluarStats>(`/mahasiswa-keluar/stats${qs}`);
   },
 
   // --- KONVERSI NILAI ---
-  async getAllKonversi(programStudiId?: number): Promise<any[]> {
+  async getAllKonversi(programStudiId?: number): Promise<KonversiNilai[]> {
     const url = programStudiId ? `/khs/konversi?programStudiId=${programStudiId}` : '/khs/konversi';
-    return fetchApi<any[]>(url);
+    return fetchApi<KonversiNilai[]>(url);
   },
 
-  async saveKonversi(data: any): Promise<any> {
-    return fetchApi<any>('/khs/konversi', {
+  async saveKonversi(data: KonversiNilai): Promise<KonversiNilai> {
+    return fetchApi<KonversiNilai>('/khs/konversi', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  async deleteKonversi(id: number): Promise<any> {
-    return fetchApi<any>(`/khs/konversi/${id}`, {
+  async deleteKonversi(id: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/khs/konversi/${id}`, {
       method: 'DELETE',
     });
   },
 
   // --- SKALA PREDIKAT KELULUSAN ---
-  async getAllPredikat(): Promise<any[]> {
-    return fetchApi<any[]>('/khs/predikat');
+  async getAllPredikat(): Promise<PredikatKelulusan[]> {
+    return fetchApi<PredikatKelulusan[]>('/khs/predikat');
   },
 
-  async savePredikat(data: any): Promise<any> {
-    return fetchApi<any>('/khs/predikat', {
+  async savePredikat(data: PredikatKelulusan): Promise<PredikatKelulusan> {
+    return fetchApi<PredikatKelulusan>('/khs/predikat', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  async deletePredikat(id: number): Promise<Record<string, unknown>> {
-    return fetchApi<Record<string, unknown>>(`/khs/predikat/${id}`, {
+  async deletePredikat(id: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/khs/predikat/${id}`, {
       method: 'DELETE',
     });
   },

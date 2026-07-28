@@ -2,6 +2,7 @@ import { MahasiswaKeluarService } from '../services/mahasiswa-keluar.service';
 import { AuthContext } from '../utils/types';
 
 export class MahasiswaKeluarController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !['admin', 'prodi'].includes(user.role)) {
@@ -23,12 +24,13 @@ export class MahasiswaKeluarController {
       });
       set.status = 201;
       return data;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -49,6 +51,7 @@ export class MahasiswaKeluarController {
     });
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
@@ -58,6 +61,7 @@ export class MahasiswaKeluarController {
     return await MahasiswaKeluarService.getStats(query?.periodeId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !['admin', 'prodi'].includes(user.role)) {
@@ -68,9 +72,9 @@ export class MahasiswaKeluarController {
     try {
       const data = await MahasiswaKeluarService.delete(parseInt(params.id));
       return { message: 'Status keluar berhasil dibatalkan dan status mahasiswa kembali aktif.', data };
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 }

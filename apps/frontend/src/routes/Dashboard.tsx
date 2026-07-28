@@ -13,7 +13,6 @@ import { periodeAkademikController } from '../controllers/periodeAkademikControl
 import { presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
 import { tagihanController } from '../controllers/tagihanController';
-import { SafeAny } from '../utils/api';
 
 // ─── Helpers ────────────────────────────────────────────────────────
 function formatRupiah(num: number) {
@@ -189,7 +188,7 @@ function AdminWidgets() {
           >
             <div class="space-y-3">
               <For each={Object.entries(pddiktiStats() || {})}>
-                {([key, val]: [string, any]) => (
+                {([key, val]: [string, { total: number; unsynced: number }]) => (
                   <div class="flex items-center justify-between border-b border-secondary-100 dark:border-secondary-800 pb-2 last:border-0">
                     <span class="text-xs font-semibold text-secondary-600 dark:text-secondary-300 capitalize">
                       {key}
@@ -272,7 +271,7 @@ function DosenWidgets() {
   const dosenBimbingan = () => {
     const data = bimbingans();
     if (!dosenProfile()) return [];
-    return data.filter((b: any) => b.dosenPaId === dosenProfile()?.id);
+    return data.filter((b) => b.dosenPaId === dosenProfile()?.id);
   };
 
   return (
@@ -281,7 +280,7 @@ function DosenWidgets() {
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
           title="Kelas Diampu"
-          value={kelasDiampu.loading ? '...' : (kelasDiampu() as any)?.meta?.total || 0}
+          value={kelasDiampu.loading ? '...' : (kelasDiampu() as { meta?: { total: number } })?.meta?.total || 0}
           subtitle="Semester ini"
           icon={
             <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -314,7 +313,7 @@ function DosenWidgets() {
         />
         <StatCard
           title="Total SKS Mengajar"
-          value={kelasDiampu()?.data?.reduce((s: number, k: any) => s + (k.sksBebanMengajar || 0), 0) || '...'}
+          value={kelasDiampu()?.data?.reduce((s, k) => s + (Number(k.sksBebanMengajar) || 0), 0) || '...'}
           icon={
             <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -347,7 +346,7 @@ function DosenWidgets() {
           >
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <For each={kelasDiampu()?.data}>
-                {(item: any) => (
+                {(item) => (
                   <a
                     href={`/jurnal-presensi?kelas=${item.kelasKuliahId}`}
                     class="border border-secondary-100 dark:border-secondary-800 rounded-xl p-4 hover:shadow-md hover:border-brand-200 transition-all bg-secondary-50/40 dark:bg-secondary-800/40"
@@ -396,7 +395,7 @@ function DosenWidgets() {
               </thead>
               <tbody>
                 <For each={dosenBimbingan()}>
-                  {(m: any) => (
+                  {(m) => (
                     <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
                       <td class="py-3 font-mono text-secondary-600">{m.nim}</td>
                       <td class="py-3 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
@@ -470,12 +469,10 @@ function MahasiswaWidgets() {
   const ipsData = () => {
     const t = transkrip();
     if (!t?.transkripList) return { labels: [], data: [] };
-    const ipsList = t.transkripList
-      .filter((item: { ips: string | null; periodeId?: string; semester?: number }) => item.ips != null)
-      .slice(-8);
+    const ipsList = t.transkripList.filter((item) => item.ips != null).slice(-8);
     return {
       labels: ipsList.map((item) => item.periodeId || `Smt ${item.semester}`),
-      data: ipsList.map((item) => parseFloat(item.ips) || 0),
+      data: ipsList.map((item) => parseFloat(item.ips!) || 0),
     };
   };
 

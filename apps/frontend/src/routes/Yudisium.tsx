@@ -206,9 +206,9 @@ export default function Yudisium() {
     }
     try {
       await khsController.savePredikat({
-        id: predikatId() || undefined,
-        ipkMin: ipkMin(),
-        ipkMax: ipkMax(),
+        id: predikatId() || 0,
+        ipkMin: parseFloat(ipkMin()),
+        ipkMax: parseFloat(ipkMax()),
         predikat: predikatText(),
       });
       toast.showToast('Skala predikat kelulusan berhasil disimpan.', 'success');
@@ -583,15 +583,15 @@ export default function Yudisium() {
                   >
                     {(pred) => (
                       <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                        <td class="p-3 font-mono">{parseFloat(pred.ipkMin).toFixed(2)}</td>
-                        <td class="p-3 font-mono">{parseFloat(pred.ipkMax).toFixed(2)}</td>
+                        <td class="p-3 font-mono">{pred.ipkMin.toFixed(2)}</td>
+                        <td class="p-3 font-mono">{pred.ipkMax.toFixed(2)}</td>
                         <td class="p-3 font-bold text-secondary-800 dark:text-white">{pred.predikat}</td>
                         <td class="p-3 flex gap-2">
                           <button
                             onClick={() => {
                               setPredikatId(pred.id);
-                              setIpkMin(pred.ipkMin);
-                              setIpkMax(pred.ipkMax);
+                              setIpkMin(String(pred.ipkMin));
+                              setIpkMax(String(pred.ipkMax));
                               setPredikatText(pred.predikat);
                               setShowPredikatModal(true);
                             }}

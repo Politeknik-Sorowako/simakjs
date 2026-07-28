@@ -18,9 +18,9 @@ export default function ProgramStudi() {
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   const exportColumns: ExportColumn[] = [
-    { header: 'Kode Prodi', accessor: (row: Prodi) => row.kode },
-    { header: 'Nama Program Studi', accessor: (row: Prodi) => row.nama },
-    { header: 'Jenjang', accessor: (row: Prodi) => row.jenjang },
+    { header: 'Kode Prodi', accessor: 'kode' },
+    { header: 'Nama Program Studi', accessor: 'nama' },
+    { header: 'Jenjang', accessor: 'jenjang' },
   ];
 
   // Fetch data

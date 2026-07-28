@@ -123,7 +123,7 @@ export default function AdmisiDashboard() {
 
         <div class="grid gap-4">
           <For each={apps()?.data || []}>
-            {(app: { id: number; noPendaftar?: string; sessionId: number; status: string; createdAt: string }) => (
+            {(app) => (
               <A
                 href={`/admisi/pendaftaran/${app.id}`}
                 class="block bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 hover:shadow-md transition-shadow"
@@ -140,7 +140,7 @@ export default function AdmisiDashboard() {
                   </span>
                 </div>
                 <div class="mt-2 text-xs text-secondary-400">
-                  Dibuat: {new Date(app.createdAt).toLocaleDateString('id-ID')}
+                  Dibuat: {app.createdAt ? new Date(app.createdAt).toLocaleDateString('id-ID') : '-'}
                 </div>
               </A>
             )}

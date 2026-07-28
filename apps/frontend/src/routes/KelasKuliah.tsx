@@ -27,27 +27,35 @@ export default function KelasKuliah() {
   const auth = useAuth();
 
   const exportColumns: ExportColumn[] = [
-    { header: 'Kode MK', accessor: (row: IKelas) => row.mataKuliah?.kode || '-' },
-    { header: 'Nama Mata Kuliah', accessor: (row: IKelas) => row.mataKuliah?.nama || '-' },
-    { header: 'Periode', accessor: (row: IKelas) => row.periodeId },
-    { header: 'Kelas', accessor: (row: IKelas) => row.namaKelas },
+    { header: 'Kode MK', accessor: 'mataKuliah.kode' },
+    { header: 'Nama Mata Kuliah', accessor: 'mataKuliah.nama' },
+    { header: 'Periode', accessor: 'periodeId' },
+    { header: 'Kelas', accessor: 'namaKelas' },
     {
       header: 'Dosen Pengajar',
-      accessor: (row: IKelas) =>
-        row.dosenPengajarKelas
-          ?.map((d) => d.dosen?.nama)
-          .filter(Boolean)
-          .join('; ') || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const dosenList = row.dosenPengajarKelas as { dosen?: { nama?: string } }[] | undefined;
+        return (
+          dosenList
+            ?.map((d) => d.dosen?.nama)
+            .filter(Boolean)
+            .join('; ') || '-'
+        );
+      },
     },
     {
       header: 'SKS Mengajar',
-      accessor: (row: IKelas) =>
-        row.dosenPengajarKelas
-          ?.map((d) => d.sksBebanMengajar)
-          .filter((v) => v !== undefined)
-          .join('; ') || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const dosenList = row.dosenPengajarKelas as { sksBebanMengajar?: number | null }[] | undefined;
+        return (
+          dosenList
+            ?.map((d) => d.sksBebanMengajar)
+            .filter((v) => v !== undefined)
+            .join('; ') || '-'
+        );
+      },
     },
-    { header: 'ID PDDIKTI', accessor: (row: IKelas) => row.idPddikti || '-' },
+    { header: 'ID PDDIKTI', accessor: 'idPddikti' },
   ];
   const workspace = useWorkspace();
 

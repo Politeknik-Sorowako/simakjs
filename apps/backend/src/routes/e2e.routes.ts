@@ -237,6 +237,7 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
           cpmkId: cpmkItem.id,
         },
       };
+      // biome-ignore lint/suspicious/noExplicitAny: E2E test error handling
     } catch (error: any) {
       console.error('Failed to reset database:', error);
       set.status = 500;

@@ -228,7 +228,7 @@ describe('4. Dosen (/dosen)', () => {
     });
 
     it('harus gagal mengambil list dosen jika diakses oleh Guest (RBAC)', async () => {
-      const guestToken = await getAuthToken('guest-dosen@test.com', 'guest' as any);
+      const guestToken = await getAuthToken('guest-dosen@test.com', 'guest' as Parameters<typeof getAuthToken>[1]);
       const response = await app.handle(
         new Request('http://localhost/dosen', {
           method: 'GET',

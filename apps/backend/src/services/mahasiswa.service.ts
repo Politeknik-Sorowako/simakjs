@@ -2,6 +2,15 @@ import { and, asc, count, desc, eq, ilike, or, SQL, sql } from 'drizzle-orm';
 import { dosen, mahasiswa, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
+export interface MahasiswaFilters {
+  filterNim?: string;
+  filterNama?: string;
+  filterEmail?: string;
+  filterStatus?: string;
+  sortBy?: string;
+  sortOrder?: string;
+}
+
 export interface CreateMahasiswaDto {
   nim: string;
   nama: string;
@@ -17,7 +26,14 @@ export interface CreateMahasiswaDto {
 }
 
 export class MahasiswaService {
-  static async getAll(page = 1, limit = 10, search = '', dosenPaId?: number, programStudiId?: number, filters?: any) {
+  static async getAll(
+    page = 1,
+    limit = 10,
+    search = '',
+    dosenPaId?: number,
+    programStudiId?: number,
+    filters?: MahasiswaFilters,
+  ) {
     const offset = (page - 1) * limit;
 
     let conditions = [];
@@ -62,6 +78,7 @@ export class MahasiswaService {
     let orderByClause = undefined;
     if (filters?.sortBy) {
       // Map valid sortBy string to actual column
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle column type for dynamic sort
       const sortMap: Record<string, any> = {
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,

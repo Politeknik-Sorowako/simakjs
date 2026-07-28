@@ -135,7 +135,7 @@ export default function LaporanRekapNilai() {
                 </thead>
                 <tbody>
                   <For each={rekapProdi()?.prodi || []}>
-                    {(p: { prodiNama: string; totalMahasiswa: number; rataIP: number }) => (
+                    {(p) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                         <td class="py-3 px-5 text-center text-secondary-600">{p.totalMahasiswa}</td>
@@ -169,7 +169,7 @@ export default function LaporanRekapNilai() {
                 </thead>
                 <tbody>
                   <For each={mahasiswas()?.data || []}>
-                    {(m: { id: number; nim: string; nama: string; status: string }) => (
+                    {(m) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-mono text-secondary-600">{m.nim}</td>
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
@@ -213,11 +213,11 @@ export default function LaporanRekapNilai() {
                   <div class="flex items-center gap-4">
                     <div class="text-right">
                       <p class="text-[10px] text-secondary-400">Total SKS</p>
-                      <p class="text-sm font-bold text-secondary-800 dark:text-white">{data.totalSks}</p>
+                      <p class="text-sm font-bold text-secondary-800 dark:text-white">{data.summary.totalSks}</p>
                     </div>
                     <div class="text-right bg-brand-50 dark:bg-brand-900/30 px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800">
                       <p class="text-[10px] text-brand-600 dark:text-brand-400 font-bold">IPK</p>
-                      <p class="text-sm font-bold text-brand-700 dark:text-brand-300">{data.ipk}</p>
+                      <p class="text-sm font-bold text-brand-700 dark:text-brand-300">{data.summary.ip}</p>
                     </div>
                   </div>
                 </div>
@@ -235,15 +235,8 @@ export default function LaporanRekapNilai() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-100 dark:divide-secondary-800 text-secondary-600 dark:text-secondary-300">
-                      <For each={data.matakuliah}>
-                        {(mk: {
-                          kodeMk: string;
-                          namaMk: string;
-                          sks: number;
-                          nilaiAngka?: number;
-                          nilaiHuruf?: string;
-                          nilaiIndeks?: number;
-                        }) => (
+                      <For each={data.mataKuliah}>
+                        {(mk) => (
                           <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                             <td class="py-3 px-5 font-mono text-secondary-500">{mk.kodeMk}</td>
                             <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{mk.namaMk}</td>

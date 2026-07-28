@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   dosen,
@@ -211,9 +211,10 @@ export class PresensiService {
 
     const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0))`;
 
-    const conditions: any[] = [sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`];
+    const conditions: SQL<unknown>[] = [sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`];
     if (search) {
-      conditions.push(or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`)));
+      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      if (orCondition) conditions.push(orCondition);
     }
     if (prodiId) {
       conditions.push(eq(mahasiswa.programStudiId, prodiId));
@@ -498,7 +499,7 @@ export class PresensiService {
       with: { programStudi: true },
     });
 
-    const kelasConditions: any[] = [];
+    const kelasConditions: SQL<unknown>[] = [];
     if (periodeId) kelasConditions.push(eq(kelasKuliah.periodeId, periodeId));
     const kelasWhere = kelasConditions.length > 0 ? and(...kelasConditions) : undefined;
 

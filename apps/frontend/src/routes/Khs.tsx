@@ -331,14 +331,14 @@ export default function Khs() {
                         {konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}
                       </td>
                       <td class="p-3 font-bold text-brand-600">{konv.nilaiHuruf}</td>
-                      <td class="p-3 font-mono">{parseFloat(konv.bobotIndeks).toFixed(2)}</td>
-                      <td class="p-3 font-mono">{parseFloat(konv.nilaiMin).toFixed(2)}</td>
-                      <td class="p-3 font-mono">{parseFloat(konv.nilaiMax).toFixed(2)}</td>
+                      <td class="p-3 font-mono">{konv.bobotIndeks.toFixed(2)}</td>
+                      <td class="p-3 font-mono">{konv.nilaiMin.toFixed(2)}</td>
+                      <td class="p-3 font-mono">{konv.nilaiMax.toFixed(2)}</td>
                       <td class="p-3 font-medium text-secondary-800 dark:text-white">{konv.predikat}</td>
                       <td class="p-3 flex gap-2">
                         <button
                           onClick={() => {
-                            setKonversiId(konv.id);
+                            setKonversiId(konv.id || 0);
                             setKonversiProdiId(konv.programStudiId ? konv.programStudiId.toString() : '');
                             setNilaiHuruf(konv.nilaiHuruf);
                             setNilaiIndeks(konv.bobotIndeks.toString());
@@ -352,7 +352,7 @@ export default function Khs() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDeleteKonversi(konv.id)}
+                          onClick={() => konv.id && handleDeleteKonversi(konv.id)}
                           class="px-2.5 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg hover:bg-rose-100 transition-colors dark:bg-rose-900/30 dark:text-rose-400"
                         >
                           Hapus

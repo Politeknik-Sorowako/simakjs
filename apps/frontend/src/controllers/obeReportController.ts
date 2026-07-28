@@ -77,7 +77,7 @@ export const obeReportController = {
     if (params?.kurikulumId) qs.set('kurikulumId', String(params.kurikulumId));
     if (params?.periodeId) qs.set('periodeId', params.periodeId);
     const query = qs.toString();
-    return fetchApi<CplAchievement[]>(`/laporan-obe/cpl-achievement${query ? '?' + query : ''}`);
+    return fetchApi<CplAchievement[]>(`/laporan-obe/cpl-achievement${query ? `?${query}` : ''}`);
   },
 
   async getEvaluasiRekap(kurikulumId: number): Promise<EvaluasiRekap> {

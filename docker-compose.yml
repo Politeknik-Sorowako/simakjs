@@ -39,7 +39,8 @@ services:
       BACKUP_DIR: ./backups
       BACKUP_RETENTION: "10"
     volumes:
-      - ./apps/backend/src:/app/apps/backend/src
+      - ./apps/backend:/app/apps/backend
+      - /app/apps/backend/node_modules
       - backup_data:/app/apps/backend/backups
     depends_on:
       db:
@@ -54,7 +55,8 @@ services:
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     volumes:
-      - ./apps/frontend/src:/app/apps/frontend/src
+      - ./apps/frontend:/app/apps/frontend
+      - /app/apps/frontend/node_modules
     depends_on:
       - backend
 

@@ -3,6 +3,7 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class EvaluasiKurikulumController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const page = query.page ? parseInt(query.page) : 1;
@@ -13,6 +14,7 @@ export class EvaluasiKurikulumController {
     return await EvaluasiKurikulumService.getAll(page, limit, kurikulumId, periodeId, status);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const id = parseInt(params.id);
@@ -23,6 +25,7 @@ export class EvaluasiKurikulumController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
@@ -37,6 +40,7 @@ export class EvaluasiKurikulumController {
     return newData;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
@@ -51,6 +55,7 @@ export class EvaluasiKurikulumController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {

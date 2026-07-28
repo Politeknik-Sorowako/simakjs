@@ -18,9 +18,13 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 
 ## 2. TypeScript & Type System
 - **Strict Mode**: Mandatory across both backend and frontend (`"strict": true`).
-- **Framework Type Exceptions**: Retain `Promise<any>` return types on Elysia controller methods and `AuthContext<any>` generic parameters to preserve framework route inference.
+- **No `any` Type**: `noExplicitAny` is set to `"error"` in biome.json. NEVER use `any` type in new code. Use `unknown`, `SafeAny` (`Record<string, unknown>`), or proper type annotations instead.
+- **Framework Type Exceptions**: The only allowed `any` usages are:
+  - `Promise<any>` return types on Elysia controller methods (backend only)
+  - `AuthContext<any>` generic parameters (backend only)
+  - These must have `// biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement` comments
 - **Type Reuse**: Import and reuse exported controller/service types for state signals and component props instead of redefining inline object types.
-- **Error Handling**: Use explicit error typing/casting (`e instanceof Error ? e.message : 'Unknown error'`) in services and frontend code.
+- **Error Handling**: Use explicit error typing: `catch (e: unknown)` with `e instanceof Error ? e.message : 'Unknown error'`. Never use `catch (e: any)`.
 
 ---
 

@@ -26,10 +26,10 @@ export default function Dosen() {
   const [bulkLoading, setBulkLoading] = createSignal(false);
 
   const exportColumns: ExportColumn[] = [
-    { header: 'NIP', accessor: (row: IDosen) => row.nip },
-    { header: 'Nama Dosen', accessor: (row: IDosen) => row.nama },
-    { header: 'Email', accessor: (row: IDosen) => row.email },
-    { header: 'Program Studi', accessor: (row: IDosen) => row.programStudi?.nama || '-' },
+    { header: 'NIP', accessor: 'nip' },
+    { header: 'Nama Dosen', accessor: 'nama' },
+    { header: 'Email', accessor: 'email' },
+    { header: 'Program Studi', accessor: 'programStudi.nama' },
   ];
 
   const auth = useAuth();

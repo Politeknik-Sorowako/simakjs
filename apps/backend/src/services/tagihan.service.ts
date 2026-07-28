@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, or, sql, sum } from 'drizzle-orm';
+import { and, count, eq, ilike, or, type SQL, sql, sum } from 'drizzle-orm';
 import { mahasiswa, programStudi as ps, skemaTarif, tagihan, transaksiPembayaran, users } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -246,11 +246,13 @@ export class TagihanService {
   static async getAll(page = 1, limit = 10, search = '', statusFilter?: string, mahasiswaId?: number) {
     const offset = (page - 1) * limit;
 
-    const searchConditions: any[] = [];
+    const searchConditions: SQL<unknown>[] = [];
     if (search) {
-      searchConditions.push(or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`)));
+      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      if (orCondition) searchConditions.push(orCondition);
     }
     if (statusFilter) {
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
       searchConditions.push(eq(tagihan.status, statusFilter as any));
     }
     if (mahasiswaId !== undefined) {
@@ -334,7 +336,7 @@ export class TagihanService {
   }
 
   static async getStats(periodeId?: string, programStudiId?: number) {
-    const conditions: any[] = [];
+    const conditions: SQL<unknown>[] = [];
     if (periodeId) conditions.push(eq(tagihan.periodeId, periodeId));
     if (programStudiId) conditions.push(eq(mahasiswa.programStudiId, programStudiId));
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

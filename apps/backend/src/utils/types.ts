@@ -9,6 +9,7 @@ export interface UserPayload {
   role: UserRole;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: Elysia framework requires `any` for route inference
 export type AuthContext<TBody = any, TQuery = any, TParams = any> = Omit<
   Context,
   'body' | 'query' | 'params' | 'set' | 'status'
@@ -16,7 +17,9 @@ export type AuthContext<TBody = any, TQuery = any, TParams = any> = Omit<
   body: TBody;
   query: TQuery;
   params: TParams;
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia set.status and set.headers require any for framework compatibility
   set: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia status response type is complex and requires any
   status: any;
   getCurrentUser: () => Promise<UserPayload | null>;
 };

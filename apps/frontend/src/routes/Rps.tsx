@@ -440,11 +440,7 @@ export default function Rps() {
                       {kelas.namaKelas}
                       <Show when={kelas.dosenPengajarKelas?.length}>
                         <span class="text-secondary-500 font-normal ml-1">
-                          (
-                          {kelas.dosenPengajarKelas
-                            .map((dp: { dosen?: { nama: string } }) => dp.dosen?.nama)
-                            .join(', ')}
-                          )
+                          ({kelas.dosenPengajarKelas?.map((dp) => dp.dosen?.nama).join(', ')})
                         </span>
                       </Show>
                     </span>

@@ -15,7 +15,7 @@ async function main() {
   console.log('');
   console.log('========================================');
   console.log('    RESET DATABASE TO BASELINE');
-  console.log('    ' + ts());
+  console.log(`    ${ts()}`);
   console.log('========================================');
   console.log('');
 
@@ -95,9 +95,9 @@ async function main() {
     );
     console.log('[OK] Tables created:');
     for (const row of result.rows) {
-      console.log('  - ' + row.table_name);
+      console.log(`  - ${row.table_name}`);
     }
-    console.log('Total: ' + result.rows.length + ' tables');
+    console.log(`Total: ${result.rows.length} tables`);
     await verifyPool.end();
   } catch (err: unknown) {
     console.log('[WARN] Verification query failed:', (err as Error).message);
@@ -106,7 +106,7 @@ async function main() {
   console.log('');
   console.log('========================================');
   console.log('    DATABASE RESET COMPLETED');
-  console.log('    ' + ts());
+  console.log(`    ${ts()}`);
   console.log('========================================');
   console.log('');
 }

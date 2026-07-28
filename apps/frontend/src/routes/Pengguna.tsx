@@ -22,10 +22,10 @@ export default function Pengguna() {
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   const exportColumns: ExportColumn[] = [
-    { header: 'ID', accessor: (row: UserItem) => row.id },
-    { header: 'Nama', accessor: (row: UserItem) => row.nama },
-    { header: 'Email', accessor: (row: UserItem) => row.email },
-    { header: 'Role', accessor: (row: UserItem) => row.role },
+    { header: 'ID', accessor: 'id' },
+    { header: 'Nama', accessor: 'nama' },
+    { header: 'Email', accessor: 'email' },
+    { header: 'Role', accessor: 'role' },
   ];
 
   const [usersRes, { refetch }] = createResource(

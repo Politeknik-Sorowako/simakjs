@@ -64,6 +64,7 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .post('/applications/:id/upload-document', AdmisiAdminController.adminUploadDocument, {
     type: 'none',
     detail: { tags: ['Admisi - Admin'], summary: 'Admin upload dokumen untuk peserta' },
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia route schema type inference
   } as any)
   .put('/documents/verify', AdmisiAdminController.verifyDocument, verifyDocumentSchema)
   .post('/applications/:id/verify-all-docs', AdmisiAdminController.verifyAllDocuments, {
@@ -164,6 +165,7 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .post('/announcements', AdmisiAdminController.createAnnouncement, {
     type: 'none',
     detail: { tags: ['Admisi - Admin'], summary: 'Buat pengumuman (support file upload)' },
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia route schema type inference
   } as any)
   .get('/announcements', AdmisiAdminController.getAnnouncements, {
     detail: { tags: ['Admisi - Admin'], summary: 'Lihat pengumuman' },
@@ -171,6 +173,7 @@ export const admisiAdminRoutes = new Elysia({ prefix: '/admisi/admin' })
   .put('/announcements/:id', AdmisiAdminController.updateAnnouncement, {
     type: 'none',
     detail: { tags: ['Admisi - Admin'], summary: 'Edit pengumuman (support file upload)' },
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia route schema type inference
   } as any)
   .delete('/announcements/:id', AdmisiAdminController.deleteAnnouncement, {
     detail: { tags: ['Admisi - Admin'], summary: 'Hapus pengumuman' },

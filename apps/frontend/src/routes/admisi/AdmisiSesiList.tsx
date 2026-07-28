@@ -23,6 +23,7 @@ export default function AdmisiSesiList() {
         deskripsi: form().deskripsi || undefined,
         tanggalMulai: form().tanggalMulai,
         tanggalTutup: form().tanggalTutup,
+        tanggalAkhir: form().tanggalTutup,
         tanggalVerif: form().tanggalVerif || undefined,
         tanggalUjian: form().tanggalUjian || undefined,
         tanggalPengumuman: form().tanggalPengumuman || undefined,

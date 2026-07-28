@@ -38,6 +38,7 @@ export const admisiRoutes = new Elysia({ prefix: '/admisi' })
   .post('/applications/:id/documents', AdmisiController.uploadDocument, {
     type: 'none',
     detail: { tags: ['Admisi - Calon Mahasiswa'], summary: 'Upload file dokumen' },
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia route schema type inference
   } as any)
   .post('/applications/:id/documents/link', AdmisiController.submitDocumentLink, submitDocumentLinkSchema)
   .get('/applications/:id/documents', AdmisiController.getDocuments, {
