@@ -4,6 +4,7 @@ export const presensiItem = t.Object({
   mahasiswaId: t.Integer(),
   status: t.String({ default: 'hadir' }), // 'hadir', 'sakit', 'izin', 'telat', 'alpa'
   durasiMangkir: t.Optional(t.Integer({ default: 0 })),
+  keterangan: t.Optional(t.Nullable(t.String())),
 });
 
 export const bulkPresensiBody = t.Object({
@@ -124,6 +125,7 @@ export const getByBapSchema = {
         mahasiswaNama: t.String({ default: 'Andi Pratama' }),
         status: t.String({ default: 'hadir' }),
         durasiMangkir: t.Integer({ default: 0 }),
+        keterangan: t.Union([t.String(), t.Null()]),
       }),
     ),
   },

@@ -57,8 +57,8 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
     throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
   }
 
-  const errorObj = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : null;
-  const errorMessage = (errorObj?.error || errorObj?.message || response.statusText) as string;
+  const errObj = data as { error?: string; message?: string } | undefined;
+  const errorMessage = errObj?.error || errObj?.message || response.statusText;
 
   if (response.status === 403) {
     throw new Error(errorMessage);

@@ -82,11 +82,11 @@ export function ExportButtonGroup(props: ExportButtonProps) {
       </button>
 
       <Show when={open()}>
-        <div class="origin-top-right absolute right-0 mt-1.5 w-48 rounded-xl shadow-lg bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-fadeIn">
-          <div class="py-1" role="menu">
+        <div class="origin-top-right absolute right-0 mt-1.5 w-48 rounded-xl shadow-lg bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 ring-1 ring-black/5 z-50 overflow-hidden animate-scale-in py-1">
+          <div role="menu">
             <button
               onClick={() => handleExport('excel')}
-              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-green-50 dark:hover:bg-green-950/40 hover:text-green-700 dark:hover:text-green-400 flex items-center gap-2.5 transition-colors"
+              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-success-50 dark:hover:bg-success-900/30 hover:text-success-700 dark:hover:text-success-400 flex items-center gap-2.5 transition-colors"
               role="menuitem"
             >
               <span class="text-base">📊</span>
@@ -94,7 +94,7 @@ export function ExportButtonGroup(props: ExportButtonProps) {
             </button>
             <button
               onClick={() => handleExport('pdf')}
-              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-700 dark:hover:text-red-400 flex items-center gap-2.5 transition-colors"
+              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-danger-50 dark:hover:bg-danger-900/30 hover:text-danger-700 dark:hover:text-danger-400 flex items-center gap-2.5 transition-colors"
               role="menuitem"
             >
               <span class="text-base">📄</span>
@@ -102,7 +102,7 @@ export function ExportButtonGroup(props: ExportButtonProps) {
             </button>
             <button
               onClick={() => handleExport('csv')}
-              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-700 dark:hover:text-blue-400 flex items-center gap-2.5 transition-colors"
+              class="w-full text-left px-3.5 py-2 text-xs font-medium text-secondary-700 dark:text-secondary-200 hover:bg-info-50 dark:hover:bg-info-900/30 hover:text-info-700 dark:hover:text-info-400 flex items-center gap-2.5 transition-colors"
               role="menuitem"
             >
               <span class="text-base">📋</span>

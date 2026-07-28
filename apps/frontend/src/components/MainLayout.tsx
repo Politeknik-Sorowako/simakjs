@@ -6,12 +6,12 @@ export function MainLayout(props: { children: JSX.Element }) {
   const [isOpen, setIsOpen] = createSignal(false);
 
   return (
-    <div class="min-h-screen flex bg-secondary-50/50 dark:bg-secondary-950 text-secondary-800 dark:text-secondary-200 relative overflow-hidden transition-colors duration-200">
+    <div class="min-h-screen flex bg-secondary-50/70 dark:bg-secondary-950 text-secondary-900 dark:text-secondary-100 relative overflow-hidden transition-colors duration-200">
       {/* Mobile Sidebar Backdrop Overlay */}
       <Show when={isOpen()}>
         <div
           onClick={() => setIsOpen(false)}
-          class="fixed inset-0 bg-secondary-900/40 backdrop-blur-sm z-30 md:hidden"
+          class="fixed inset-0 bg-secondary-950/60 backdrop-blur-sm z-30 md:hidden"
         />
       </Show>
 
@@ -29,7 +29,7 @@ export function MainLayout(props: { children: JSX.Element }) {
 
       {/* DEV Environment Overlay */}
       <Show when={import.meta.env.VITE_APP_MODE === 'development'}>
-        <div class="fixed top-3 right-3 z-[100] px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full shadow-lg select-none pointer-events-none">
+        <div class="fixed top-3 right-3 z-[100] px-3 py-1 bg-warning-500 text-secondary-950 text-xs font-bold rounded-full shadow-lg select-none pointer-events-none">
           DEV
         </div>
       </Show>
