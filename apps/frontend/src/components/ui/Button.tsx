@@ -8,19 +8,19 @@ interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses = {
   primary:
-    'bg-gradient-to-r from-brand-800 to-brand-900 hover:from-brand-700 hover:to-brand-800 text-white shadow-md shadow-brand-900/20 focus:ring-brand-500/30',
+    'bg-primary-800 hover:bg-primary-700 text-white shadow-md shadow-primary-900/20 focus:ring-primary-500/30 dark:bg-primary-600 dark:hover:bg-primary-500',
   secondary:
-    'bg-secondary-100 hover:bg-secondary-200 text-secondary-800 border border-secondary-200 focus:ring-secondary-400/30 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-white dark:border-secondary-700',
+    'bg-secondary-100 hover:bg-secondary-200 text-secondary-800 border border-secondary-200 focus:ring-secondary-400/30 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-100 dark:border-secondary-700',
   danger:
-    'bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 text-white shadow-md shadow-red-500/20 focus:ring-red-500/30',
+    'bg-danger-600 hover:bg-danger-700 text-white shadow-md shadow-danger-600/20 focus:ring-danger-500/30 dark:bg-danger-600 dark:hover:bg-danger-500',
   success:
-    'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-md shadow-emerald-500/20 focus:ring-emerald-500/30',
+    'bg-success-600 hover:bg-success-700 text-white shadow-md shadow-success-600/20 focus:ring-success-500/30 dark:bg-success-600 dark:hover:bg-success-500',
   warning:
-    'bg-gradient-to-r from-accent-400 to-accent-500 hover:from-accent-500 hover:to-accent-600 text-brand-900 font-semibold shadow-md shadow-accent-400/20 focus:ring-accent-400/30',
+    'bg-warning-500 hover:bg-warning-600 text-secondary-950 font-semibold shadow-md shadow-warning-500/20 focus:ring-warning-400/30 dark:bg-warning-500 dark:hover:bg-warning-400',
   ghost:
-    'bg-transparent hover:bg-secondary-100 text-secondary-700 dark:hover:bg-secondary-800 dark:text-secondary-300 focus:ring-secondary-400/30',
+    'bg-transparent hover:bg-secondary-100/80 text-secondary-700 dark:hover:bg-secondary-800/80 dark:text-secondary-300 focus:ring-secondary-400/30',
   accent:
-    'bg-accent-400 hover:bg-accent-500 text-brand-900 font-semibold shadow-md shadow-accent-400/20 focus:ring-accent-400/30',
+    'bg-accent-500 hover:bg-accent-600 text-white font-semibold shadow-md shadow-accent-500/20 focus:ring-accent-400/30 dark:bg-accent-600 dark:hover:bg-accent-500',
 };
 
 const sizeClasses = {
