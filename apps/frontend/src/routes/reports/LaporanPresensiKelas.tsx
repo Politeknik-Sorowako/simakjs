@@ -159,7 +159,7 @@ export default function LaporanPresensiKelas() {
                   />
                   <StatCard
                     title="Rata-rata Kehadiran"
-                    value={rataHadir + '%'}
+                    value={`${rataHadir}%`}
                     color="green"
                     icon={
                       <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">

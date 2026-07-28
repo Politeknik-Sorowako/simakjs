@@ -43,15 +43,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
   }
 
-  // Reactively apply theme to document
-  createEffect(() => {
-    const activeTheme = user()?.theme || localTheme();
-    if (activeTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  });
+  // Theme is reactively handled by ThemeProvider
 
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);

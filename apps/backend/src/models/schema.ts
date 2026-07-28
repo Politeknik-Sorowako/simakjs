@@ -470,7 +470,6 @@ export const kompensasiBayar = pgTable('kompensasi_bayar', {
 export const kelompokApel = pgTable('kelompok_apel', {
   id: serial('id').primaryKey(),
   namaKelompok: varchar('nama_kelompok', { length: 100 }).notNull(),
-  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
   dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'restrict' }),
   shift: varchar('shift', { length: 10 }).notNull().default('pagi'),
   keterangan: text('keterangan'),
@@ -601,10 +600,6 @@ export const kompensasiBayarRelations = relations(kompensasiBayar, ({ one }) => 
 // --- APEL RELATIONS ---
 
 export const kelompokApelRelations = relations(kelompokApel, ({ one, many }) => ({
-  programStudi: one(programStudi, {
-    fields: [kelompokApel.programStudiId],
-    references: [programStudi.id],
-  }),
   dosen: one(dosen, {
     fields: [kelompokApel.dosenId],
     references: [dosen.id],

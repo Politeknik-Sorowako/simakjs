@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from '@solidjs/router';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
 import AdmisiDaftar from './routes/AdmisiDaftar';
@@ -639,12 +640,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <WorkspaceProvider>
-          <AppContent />
-        </WorkspaceProvider>
-      </AuthProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <WorkspaceProvider>
+            <AppContent />
+          </WorkspaceProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
