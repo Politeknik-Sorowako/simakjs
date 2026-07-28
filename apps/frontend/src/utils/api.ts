@@ -37,7 +37,7 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
 
   const response = await fetch(`${API_URL}${endpoint}`, config);
 
-  let data: any;
+  let data: unknown;
   const isJson = response.headers.get('content-type')?.includes('application/json');
 
   if (isJson) {
@@ -57,7 +57,8 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
     throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
   }
 
-  const errorMessage = data?.error || data?.message || response.statusText;
+  const errObj = data as { error?: string; message?: string } | undefined;
+  const errorMessage = errObj?.error || errObj?.message || response.statusText;
 
   if (response.status === 403) {
     throw new Error(errorMessage);

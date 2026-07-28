@@ -15,6 +15,7 @@ import { kurikulumController } from '../controllers/kurikulumController';
 import { MataKuliah as IMataKuliah, mataKuliahController } from '../controllers/mataKuliahController';
 import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
+import { fetchApi } from '../utils/api';
 import { ExportColumn } from '../utils/export';
 
 type SortField = 'nama' | 'kode' | 'sks' | 'semester' | 'programStudi' | 'kurikulum';
@@ -27,7 +28,7 @@ export default function MataKuliah() {
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
 
   // Filters
-  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(ws.selectedProdiId() ?? undefined);
+  const filterProdi = () => ws.activeProdiId() ?? undefined;
   const [filterKurikulum, setFilterKurikulum] = createSignal<number | undefined>(undefined);
   const [filterSemester, setFilterSemester] = createSignal<number | undefined>(undefined);
   const [sortBy, setSortBy] = createSignal<SortField>('nama');
@@ -92,7 +93,7 @@ export default function MataKuliah() {
   // Form State
   const [showModal, setShowModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
-  const [formProdiId, setFormProdiId] = createSignal<number>(ws.selectedProdiId() || 0);
+  const [formProdiId, setFormProdiId] = createSignal<number>(ws.activeProdiId() || 0);
   const [kode, setKode] = createSignal('');
   const [nama, setNama] = createSignal('');
   const [sksTotal, setSksTotal] = createSignal(3);
@@ -227,13 +228,13 @@ export default function MataKuliah() {
   };
 
   const exportColumns: ExportColumn[] = [
-    { header: 'Kode MK', accessor: (row: IMataKuliah) => row.kode },
-    { header: 'Nama Mata Kuliah', accessor: (row: IMataKuliah) => row.nama },
-    { header: 'Program Studi', accessor: (row: IMataKuliah) => row.programStudi?.nama || '-' },
-    { header: 'SKS Total', accessor: (row: IMataKuliah) => row.sksTotal },
-    { header: 'SKS Tatap Muka', accessor: (row: IMataKuliah) => row.sksTatapMuka ?? '-' },
-    { header: 'SKS Praktikum', accessor: (row: IMataKuliah) => row.sksPraktek ?? '-' },
-    { header: 'ID PDDIKTI', accessor: (row: IMataKuliah) => row.idPddikti || '-' },
+    { header: 'Kode MK', accessor: 'kode' },
+    { header: 'Nama Mata Kuliah', accessor: 'nama' },
+    { header: 'Program Studi', accessor: 'programStudi.nama' },
+    { header: 'SKS Total', accessor: 'sksTotal' },
+    { header: 'SKS Tatap Muka', accessor: 'sksTatapMuka' },
+    { header: 'SKS Praktikum', accessor: 'sksPraktek' },
+    { header: 'ID PDDIKTI', accessor: 'idPddikti' },
   ];
 
   return (
@@ -248,7 +249,10 @@ export default function MataKuliah() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await mataKuliahController.getAll(search(), 1, 10000, ws.activeProdiId() || undefined);
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Mata_Kuliah_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Mata Kuliah"
@@ -301,30 +305,7 @@ export default function MataKuliah() {
               }}
             />
           </div>
-          <div class="w-[200px]">
-            <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-200 mb-1">
-              Program Studi
-            </label>
-            <select
-              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-              value={filterProdi() || ''}
-              onChange={(e) => {
-                setFilterProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
-                setFilterKurikulum(undefined);
-                setFilterSemester(undefined);
-                resetPage();
-              }}
-            >
-              <option value="">Semua Prodi</option>
-              <For each={prodis()?.data}>
-                {(p) => (
-                  <option value={p.id}>
-                    {p.jenjang} - {p.nama}
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
+
           <div class="w-[220px]">
             <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-200 mb-1">Kurikulum</label>
             <select
@@ -586,7 +567,11 @@ export default function MataKuliah() {
                           <td class="py-2 text-white">{m.bahanKajian?.kode || '-'}</td>
                           <td class="py-2 text-secondary-200">{m.bahanKajian?.nama || '-'}</td>
                           <td class="py-2 text-right">
-                            <Button variant="danger" size="sm" onClick={() => handleDetachBk(m.bahanKajianId)}>
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => m.bahanKajian?.id && handleDetachBk(m.bahanKajian.id)}
+                            >
                               Hapus
                             </Button>
                           </td>

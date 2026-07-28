@@ -26,7 +26,7 @@ export default function ApelVerifikasi() {
       return apelController.getPresensiUnknown({
         page: params.page,
         limit: 20,
-        prodiId: params.prodiId,
+        prodiId: params.prodiId ?? undefined,
       });
     },
   );

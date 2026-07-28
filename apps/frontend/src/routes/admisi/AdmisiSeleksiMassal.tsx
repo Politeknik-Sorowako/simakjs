@@ -8,8 +8,8 @@ export default function AdmisiSeleksiMassal() {
   const toast = useToast();
   const [sessionId, setSessionId] = createSignal('');
   const [results, setResults] = createSignal<{
-    passed: { noPendaftar: string; namaLengkap: string; finalScore: number }[];
-    failed: { noPendaftar: string; namaLengkap: string; finalScore: number }[];
+    passed: { noPendaftar: string; namaLengkap?: string; finalScore?: number }[];
+    failed: { noPendaftar: string; namaLengkap?: string; finalScore?: number }[];
   } | null>(null);
   const [processing, setProcessing] = createSignal(false);
 
@@ -75,7 +75,7 @@ export default function AdmisiSeleksiMassal() {
               </h2>
               <div class="space-y-1 max-h-80 overflow-y-auto">
                 <For each={results()!.passed}>
-                  {(p: { noPendaftar: string; namaLengkap: string; finalScore: number }) => (
+                  {(p) => (
                     <div class="flex items-center justify-between py-1 text-sm border-b border-green-100 dark:border-green-900/30">
                       <span class="font-mono text-xs text-secondary-400">{p.noPendaftar}</span>
                       <span>{p.namaLengkap}</span>
@@ -96,7 +96,7 @@ export default function AdmisiSeleksiMassal() {
               </h2>
               <div class="space-y-1 max-h-80 overflow-y-auto">
                 <For each={results()!.failed}>
-                  {(f: { noPendaftar: string; namaLengkap: string; finalScore: number }) => (
+                  {(f) => (
                     <div class="flex items-center justify-between py-1 text-sm border-b border-red-100 dark:border-red-900/30">
                       <span class="font-mono text-xs text-secondary-400">{f.noPendaftar}</span>
                       <span>{f.namaLengkap}</span>

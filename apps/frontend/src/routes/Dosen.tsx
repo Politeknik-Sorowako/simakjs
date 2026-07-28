@@ -26,15 +26,14 @@ export default function Dosen() {
   const [bulkLoading, setBulkLoading] = createSignal(false);
 
   const exportColumns: ExportColumn[] = [
-    { header: 'NIP', accessor: (row: IDosen) => row.nip },
-    { header: 'Nama Dosen', accessor: (row: IDosen) => row.nama },
-    { header: 'Email', accessor: (row: IDosen) => row.email },
-    { header: 'Program Studi', accessor: (row: IDosen) => row.programStudi?.nama || '-' },
+    { header: 'NIP', accessor: 'nip' },
+    { header: 'Nama Dosen', accessor: 'nama' },
+    { header: 'Email', accessor: 'email' },
+    { header: 'Program Studi', accessor: 'programStudi.nama' },
   ];
 
   const auth = useAuth();
   const workspace = useWorkspace();
-  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   // Fetch Dosen Data
   const [dosens, { refetch }] = createResource(
@@ -42,7 +41,7 @@ export default function Dosen() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
+      prodiId: workspace.activeProdiId(),
     }),
     ({ search, page, limit, prodiId }) => dosenController.getAll(search, page, limit, prodiId || undefined),
   );
@@ -179,10 +178,7 @@ export default function Dosen() {
     try {
       const res = await userController.generateAccounts('dosen', ids);
       if (res.errors && res.errors.length > 0) {
-        toast.showToast(
-          `Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`,
-          'warning',
-        );
+        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'info');
       } else {
         toast.showToast(`Berhasil membuat ${res.successCount} akun dosen.`, 'success');
       }
@@ -211,7 +207,10 @@ export default function Dosen() {
               </Button>
             </Show>
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await dosenController.getAll(search(), 1, 10000, workspace.activeProdiId() || undefined);
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Dosen_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Dosen"

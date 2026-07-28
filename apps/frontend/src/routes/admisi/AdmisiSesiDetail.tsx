@@ -85,9 +85,9 @@ export default function AdmisiSesiDetail() {
       await admisiAdminController.createDocumentRequirement({
         sessionId: Number(params.id),
         namaDokumen: reqForm().namaDokumen,
-        deskripsi: reqForm().deskripsi || null,
+        deskripsi: reqForm().deskripsi || undefined,
         isWajib: reqForm().isWajib !== '0',
-        formatFile: reqForm().formatFile || null,
+        formatFile: reqForm().formatFile || undefined,
         maxSizeKb: Number(reqForm().maxSizeKb) || 2048,
         urutan: Number(reqForm().urutan) || 0,
       });
@@ -267,13 +267,7 @@ export default function AdmisiSesiDetail() {
 
               <div class="space-y-1">
                 <For each={session()?.prodis || []}>
-                  {(sp: {
-                    namaProdi: string;
-                    prodiId: number;
-                    jenjang: string;
-                    isActive: boolean;
-                    biayaDaftar?: number;
-                  }) => (
+                  {(sp) => (
                     <div class="flex items-center justify-between py-2 border-b border-secondary-100 dark:border-secondary-700 text-sm">
                       <div class="flex items-center gap-2">
                         <span class="font-medium">{sp.namaProdi || `Prodi #${sp.prodiId}`}</span>
@@ -304,13 +298,13 @@ export default function AdmisiSesiDetail() {
                         <Show when={editBiaya() === `${sp.prodiId}`}>
                           <input
                             type="number"
-                            defaultValue={sp.biayaDaftar || ''}
+                            value={sp.biayaDaftar || ''}
                             ref={(el: HTMLInputElement) => setTimeout(() => el?.focus(), 100)}
                             onBlur={async (e: FocusEvent) => {
                               const val = (e.currentTarget as HTMLInputElement).value;
                               try {
                                 await admisiAdminController.updateSesiProdi(Number(params.id), sp.prodiId, {
-                                  biayaDaftar: val ? Number(val) : null,
+                                  biayaDaftar: val ? Number(val) : undefined,
                                 });
                                 setEditBiaya('');
                                 refetch();

@@ -1,6 +1,24 @@
 import { fetchApi } from '../utils/api';
 import { PaginatedResponse, Prodi } from './prodiController';
 
+export interface MahasiswaBaruProdiItem {
+  prodiNama: string;
+  total: number;
+  laki?: number;
+  perempuan?: number;
+}
+
+export interface MahasiswaBaruTrendItem {
+  angkatan: string;
+  total: number;
+}
+
+export interface MahasiswaBaruStatsResponse {
+  total: number;
+  perProdi: MahasiswaBaruProdiItem[];
+  trend: MahasiswaBaruTrendItem[];
+}
+
 export interface Mahasiswa {
   id: number;
   nim: string;
@@ -25,12 +43,26 @@ export const mahasiswaController = {
     page?: number,
     limit?: number,
     programStudiId?: number,
+    filters?: {
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      filterNim?: string;
+      filterNama?: string;
+      filterEmail?: string;
+      filterStatus?: string;
+    },
   ): Promise<PaginatedResponse<Mahasiswa>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     if (programStudiId) params.append('programStudiId', String(programStudiId));
+    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+    if (filters?.filterNim) params.append('filterNim', filters.filterNim);
+    if (filters?.filterNama) params.append('filterNama', filters.filterNama);
+    if (filters?.filterEmail) params.append('filterEmail', filters.filterEmail);
+    if (filters?.filterStatus) params.append('filterStatus', filters.filterStatus);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Mahasiswa>>(`/mahasiswa${queryString}`);
   },
@@ -66,8 +98,8 @@ export const mahasiswaController = {
     return fetchApi<Record<string, unknown>>(`/mahasiswa/stats?${params.toString()}`);
   },
 
-  async getMahasiswaBaru(angkatan?: string): Promise<Record<string, unknown>> {
+  async getMahasiswaBaru(angkatan?: string): Promise<MahasiswaBaruStatsResponse> {
     const params = angkatan ? `?angkatan=${angkatan}` : '';
-    return fetchApi<Record<string, unknown>>(`/mahasiswa/baru${params}`);
+    return fetchApi<MahasiswaBaruStatsResponse>(`/mahasiswa/baru${params}`);
   },
 };

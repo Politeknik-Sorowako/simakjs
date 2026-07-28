@@ -119,7 +119,7 @@ export default function AdmisiSesi() {
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Ujian</span>
                             <p>
-                              {new Date(app.tanggalUjian).toLocaleDateString('id-ID', {
+                              {new Date(app.tanggalUjian!).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric',
@@ -131,7 +131,7 @@ export default function AdmisiSesi() {
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Pengumuman</span>
                             <p>
-                              {new Date(app.tanggalPengumuman).toLocaleDateString('id-ID', {
+                              {new Date(app.tanggalPengumuman!).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric',
@@ -199,7 +199,7 @@ export default function AdmisiSesi() {
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Ujian</span>
                             <p>
-                              {new Date(session.tanggalUjian).toLocaleDateString('id-ID', {
+                              {new Date(session.tanggalUjian!).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric',
@@ -211,7 +211,7 @@ export default function AdmisiSesi() {
                           <div>
                             <span class="font-semibold text-secondary-700 dark:text-secondary-200">Pengumuman</span>
                             <p>
-                              {new Date(session.tanggalPengumuman).toLocaleDateString('id-ID', {
+                              {new Date(session.tanggalPengumuman!).toLocaleDateString('id-ID', {
                                 day: 'numeric',
                                 month: 'long',
                                 year: 'numeric',

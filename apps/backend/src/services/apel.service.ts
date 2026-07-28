@@ -14,7 +14,6 @@ import { db } from '../utils/db';
 export class ApelService {
   static async createKelompok(data: {
     namaKelompok: string;
-    programStudiId?: number | null;
     dosenId?: number | null;
     shift?: string;
     keterangan?: string;
@@ -23,7 +22,6 @@ export class ApelService {
       .insert(kelompokApel)
       .values({
         namaKelompok: data.namaKelompok,
-        programStudiId: data.programStudiId || null,
         dosenId: data.dosenId || null,
         shift: data.shift || 'pagi',
         keterangan: data.keterangan,
@@ -47,11 +45,8 @@ export class ApelService {
     return { message: 'Kelompok apel berhasil dinonaktifkan' };
   }
 
-  static async getKelompokByProdi(prodiId?: number, dosenId?: number) {
+  static async getKelompokByProdi(_prodiId?: number, dosenId?: number) {
     const conditions = [eq(kelompokApel.isActive, true)];
-    if (prodiId) {
-      conditions.push(or(eq(kelompokApel.programStudiId, prodiId), isNull(kelompokApel.programStudiId))!);
-    }
     if (dosenId) {
       conditions.push(or(eq(kelompokApel.dosenId, dosenId), isNull(kelompokApel.dosenId))!);
     }
@@ -60,8 +55,6 @@ export class ApelService {
       .select({
         id: kelompokApel.id,
         namaKelompok: kelompokApel.namaKelompok,
-        programStudiId: kelompokApel.programStudiId,
-        prodiNama: programStudi.nama,
         dosenId: kelompokApel.dosenId,
         dosenNama: dosen.nama,
         shift: kelompokApel.shift,
@@ -70,7 +63,6 @@ export class ApelService {
         jumlahAnggota: sql<number>`(SELECT COUNT(*) FROM ${kelompokApelAnggota} WHERE ${kelompokApelAnggota.kelompokApelId} = ${kelompokApel.id})`,
       })
       .from(kelompokApel)
-      .leftJoin(programStudi, eq(kelompokApel.programStudiId, programStudi.id))
       .leftJoin(dosen, eq(kelompokApel.dosenId, dosen.id))
       .where(and(...conditions))
       .orderBy(kelompokApel.namaKelompok);
@@ -83,8 +75,6 @@ export class ApelService {
       .select({
         id: kelompokApel.id,
         namaKelompok: kelompokApel.namaKelompok,
-        programStudiId: kelompokApel.programStudiId,
-        prodiNama: programStudi.nama,
         dosenId: kelompokApel.dosenId,
         dosenNama: dosen.nama,
         shift: kelompokApel.shift,
@@ -92,7 +82,6 @@ export class ApelService {
         isActive: kelompokApel.isActive,
       })
       .from(kelompokApel)
-      .leftJoin(programStudi, eq(kelompokApel.programStudiId, programStudi.id))
       .leftJoin(dosen, eq(kelompokApel.dosenId, dosen.id))
       .where(eq(kelompokApel.id, id));
 
@@ -193,6 +182,7 @@ export class ApelService {
         await db
           .update(presensiApel)
           .set({
+            // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
             status: item.status as any,
             menitTerlambat: menit,
           })
@@ -201,6 +191,7 @@ export class ApelService {
         await db.insert(presensiApel).values({
           sesiApelId: sesiId,
           mahasiswaId: item.mahasiswaId,
+          // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
           status: item.status as any,
           menitTerlambat: menit,
         });

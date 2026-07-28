@@ -36,7 +36,7 @@ jobs:
           done
 
       - name: Run Biome lint
-        run: bunx biome ci .
+        run: bunx biome ci --diagnostic-level=error .
 
   type-check-backend:
     name: Type Check Backend

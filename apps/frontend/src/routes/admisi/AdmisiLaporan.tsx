@@ -25,13 +25,13 @@ export default function AdmisiLaporan() {
       }
       const headers = Object.keys(res.data[0]).join(',');
       const rows = res.data
-        .map((r: Record<string, unknown>) =>
+        .map((r) =>
           Object.values(r)
             .map((v) => `"${v || ''}"`)
             .join(','),
         )
         .join('\n');
-      const blob = new Blob([headers + '\n' + rows], { type: 'text/csv' });
+      const blob = new Blob([`${headers}\n${rows}`], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -57,24 +57,24 @@ export default function AdmisiLaporan() {
           <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
               <div class="text-xs text-secondary-500">Total Pendaftar</div>
-              <div class="text-2xl font-bold">{stats()?.totalPendaftar || 0}</div>
+              <div class="text-2xl font-bold">{stats()!.totalPendaftar}</div>
             </div>
             <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
               <div class="text-xs text-secondary-500">Hari Ini</div>
-              <div class="text-2xl font-bold text-green-600">{stats()?.todayPendaftar || 0}</div>
+              <div class="text-2xl font-bold text-green-600">{stats()!.todayPendaftar}</div>
             </div>
           </div>
 
           <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6">
             <h2 class="font-semibold mb-3">Status Pipeline</h2>
-            <For each={stats()?.statusCounts || []}>
-              {(s: { status: string; count: number }) => (
+            <For each={stats()!.statusCounts}>
+              {(s) => (
                 <div class="flex items-center gap-3 py-1">
                   <span class="text-sm w-40">{s.status}</span>
                   <div class="flex-1 bg-secondary-200 dark:bg-secondary-700 rounded-full h-2.5">
                     <div
                       class="bg-brand-500 h-2.5 rounded-full"
-                      style={{ width: `${stats()?.totalPendaftar ? (s.count / stats()?.totalPendaftar) * 100 : 0}%` }}
+                      style={{ width: `${stats()!.totalPendaftar ? (s.count / stats()!.totalPendaftar) * 100 : 0}%` }}
                     />
                   </div>
                   <span class="text-sm font-mono w-16 text-right">{s.count}</span>

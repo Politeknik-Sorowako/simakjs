@@ -3,6 +3,7 @@ import { isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CplMataKuliahController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const cplId = query.cplId ? parseInt(query.cplId) : undefined;
@@ -11,6 +12,7 @@ export class CplMataKuliahController {
     return await CplMataKuliahService.getAll(cplId, mataKuliahId, kurikulumId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
@@ -22,6 +24,7 @@ export class CplMataKuliahController {
     return newData;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
@@ -36,6 +39,7 @@ export class CplMataKuliahController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !isAdminOrProdi(user)) {
@@ -50,6 +54,7 @@ export class CplMataKuliahController {
     return { message: 'Mapping berhasil dihapus' };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMatriks({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const kurikulumId = parseInt(query.kurikulumId);
@@ -59,6 +64,7 @@ export class CplMataKuliahController {
     return await CplMataKuliahService.getMatriks(kurikulumId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async validateBobot({ query, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     const cplId = parseInt(query.cplId);

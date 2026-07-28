@@ -30,38 +30,26 @@ export default function ApelKelola() {
   // Modal Buat Kelompok State
   const [showCreateModal, setShowCreateModal] = createSignal(false);
   const [newNamaKelompok, setNewNamaKelompok] = createSignal('');
-  const [newProdiId, setNewProdiId] = createSignal<number | null>(null);
   const [newDosenId, setNewDosenId] = createSignal<number | null>(null);
   const [newShift, setNewShift] = createSignal('pagi');
   const [newKeterangan, setNewKeterangan] = createSignal('');
-
   // State Dosen PJ untuk Buka Sesi
   const [selectedDosenPJSesi, setSelectedDosenPJSesi] = createSignal<number | null>(null);
-
-  // Sinkronisasi state awal saat modal dibuat
-  createEffect(() => {
-    if (showCreateModal()) {
-      setNewProdiId(ws.selectedProdiId());
-    }
-  });
 
   // Modal Kelola Anggota State
   const [showAnggotaModal, setShowAnggotaModal] = createSignal(false);
   const [mhsSearch, setMhsSearch] = createSignal('');
   const [selectedMhsToAdd, setSelectedMhsToAdd] = createSignal<number[]>([]);
 
-  // Resource Data Kelompok
-  const [kelompokList, { refetch: refetchKelompok }] = createResource(
-    () => ws.selectedProdiId(),
-    async (prodiId) => {
-      const user = auth.user();
-      if (user?.role === 'dosen') {
-        const dosenId = user.id as unknown as number;
-        return apelController.getKelompokByProdi(prodiId || undefined, dosenId);
-      }
-      return apelController.getKelompokByProdi(prodiId || undefined);
-    },
-  );
+  // Resource Data Kelompok (Memuat seluruh kelompok apel kampus)
+  const [kelompokList, { refetch: refetchKelompok }] = createResource(async () => {
+    const user = auth.user();
+    if (user?.role === 'dosen') {
+      const dosenId = user.id as unknown as number;
+      return apelController.getKelompokByProdi(undefined, dosenId);
+    }
+    return apelController.getKelompokByProdi();
+  });
 
   // Resource Detail Kelompok (untuk anggota)
   const [kelompokDetail, { refetch: refetchKelompokDetail }] = createResource(
@@ -72,37 +60,27 @@ export default function ApelKelola() {
     },
   );
 
-  // Resource Daftar Prodi (jika admin tidak memilih prodi di header)
-  const [prodiList] = createResource(
-    () => showCreateModal(),
-    async (open) => {
-      if (!open) return [];
-      const res = await prodiController.getAll('', 1, 100);
-      return res.data;
-    },
-  );
-
-  // Resource Daftar Dosen (untuk Modal & Form Sesi)
+  // Resource Daftar Dosen (untuk Modal & Form Sesi - seluruh Dosen)
   const [allDosenList] = createResource(async () => {
     const res = await dosenController.getAll('', 1, 100);
     return res.data;
   });
 
   const [dosenList] = createResource(
-    () => ({ prodiId: newProdiId() || ws.selectedProdiId(), open: showCreateModal() }),
-    async ({ prodiId, open }) => {
+    () => showCreateModal(),
+    async (open) => {
       if (!open) return [];
-      const res = await dosenController.getAll('', 1, 100, prodiId || undefined);
+      const res = await dosenController.getAll('', 1, 100);
       return res.data;
     },
   );
 
-  // Resource Daftar Mahasiswa (untuk Modal Kelola Anggota)
+  // Resource Daftar Mahasiswa Lintas Prodi (untuk Modal Kelola Anggota)
   const [mhsList] = createResource(
-    () => ({ prodiId: ws.selectedProdiId(), search: mhsSearch(), open: showAnggotaModal() }),
-    async ({ prodiId, search, open }) => {
+    () => ({ search: mhsSearch(), open: showAnggotaModal() }),
+    async ({ search, open }) => {
       if (!open) return [];
-      const res = await mahasiswaController.getAll(search, 1, 50, prodiId || undefined);
+      const res = await mahasiswaController.getAll(search, 1, 50);
       return res.data;
     },
   );
@@ -130,7 +108,6 @@ export default function ApelKelola() {
   // Handle Buat Kelompok Baru
   const handleCreateKelompok = async (e: Event) => {
     e.preventDefault();
-    const prodiId = newProdiId() || ws.selectedProdiId();
     if (!newNamaKelompok()) {
       toast.showToast('Isi Nama Kelompok', 'error');
       return;
@@ -140,7 +117,6 @@ export default function ApelKelola() {
       setIsSubmitting(true);
       const created = await apelController.createKelompok({
         namaKelompok: newNamaKelompok(),
-        programStudiId: prodiId || undefined,
         dosenId: newDosenId() || undefined,
         shift: newShift(),
         keterangan: newKeterangan(),
@@ -610,20 +586,6 @@ export default function ApelKelola() {
               </div>
 
               <form onSubmit={handleCreateKelompok} class="space-y-4">
-                <Show when={!ws.selectedProdiId()}>
-                  <div>
-                    <label class="block text-sm font-medium mb-1">Program Studi (Opsional)</label>
-                    <select
-                      class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                      value={newProdiId() ?? ''}
-                      onChange={(e) => setNewProdiId(Number(e.currentTarget.value) || null)}
-                    >
-                      <option value="">-- Pilih Program Studi (Opsional) --</option>
-                      <For each={prodiList()}>{(p: Prodi) => <option value={p.id}>{p.nama}</option>}</For>
-                    </select>
-                  </div>
-                </Show>
-
                 <div>
                   <label class="block text-sm font-medium mb-1">Nama Kelompok *</label>
                   <input
@@ -705,9 +667,7 @@ export default function ApelKelola() {
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3 flex-shrink-0">
                 <div>
                   <h3 class="text-lg font-bold">Kelola Anggota Kelompok Apel</h3>
-                  <p class="text-xs text-gray-500">
-                    {kelompokDetail()?.namaKelompok} ({kelompokDetail()?.prodiNama})
-                  </p>
+                  <p class="text-xs text-gray-500">{kelompokDetail()?.namaKelompok}</p>
                 </div>
                 <button
                   class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"

@@ -10,6 +10,7 @@ export class PelanggaranController {
     return mhs ? mhs.id : null;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -25,12 +26,13 @@ export class PelanggaranController {
       const newViolation = await PelanggaranService.createPelanggaran(payload);
       set.status = 201;
       return newViolation;
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal mencatat pelanggaran.' };
+      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByMhsId({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role === 'guest') {
@@ -55,12 +57,13 @@ export class PelanggaranController {
 
     try {
       return await PelanggaranService.getPelanggaranByMahasiswa(targetMhsId);
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal memproses data.' };
+      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -75,6 +78,7 @@ export class PelanggaranController {
     query,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { periodeId?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
@@ -85,6 +89,7 @@ export class PelanggaranController {
     return await PelanggaranService.getRekap(query?.periodeId, prodiId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -99,9 +104,9 @@ export class PelanggaranController {
         return { error: 'Data pelanggaran tidak ditemukan' };
       }
       return updated;
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal mengubah pelanggaran.' };
+      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
     }
   }
 }

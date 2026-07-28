@@ -3,6 +3,7 @@ import { isAdminOrProdiOrDosen } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CpmkController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query }: AuthContext): Promise<any> {
     const page = query.page ? parseInt(query.page) : 1;
     const limit = query.limit ? parseInt(query.limit) : 10;
@@ -12,10 +13,12 @@ export class CpmkController {
     return await CpmkService.getAll(page, limit, search, kurikulumId, mataKuliahId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByMataKuliah({ params }: AuthContext): Promise<any> {
     return await CpmkService.getByMataKuliah(parseInt(params.mataKuliahId));
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set }: AuthContext): Promise<any> {
     const data = await CpmkService.getById(parseInt(params.id));
     if (!data) {
@@ -25,6 +28,7 @@ export class CpmkController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdiOrDosen(user)) {
@@ -35,12 +39,13 @@ export class CpmkController {
       const newCpmk = await CpmkService.create(body);
       set.status = 201;
       return newCpmk;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdiOrDosen(user)) {
@@ -54,12 +59,13 @@ export class CpmkController {
         return { error: 'Data tidak ditemukan' };
       }
       return updated;
-    } catch (e: any) {
+    } catch (e: unknown) {
       set.status = 400;
-      return { error: e.message };
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -74,6 +80,7 @@ export class CpmkController {
     return { message: 'CPMK berhasil dihapus' };
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!isAdminOrProdiOrDosen(user)) {
@@ -92,6 +99,7 @@ export class CpmkController {
     return result;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getTemplate({ set, getCurrentUser }: AuthContext): Promise<any> {
     await getCurrentUser();
     set.headers['content-type'] = 'text/csv; charset=utf-8';

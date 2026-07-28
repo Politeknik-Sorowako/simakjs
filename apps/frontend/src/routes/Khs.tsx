@@ -331,14 +331,14 @@ export default function Khs() {
                         {konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}
                       </td>
                       <td class="p-3 font-bold text-brand-600">{konv.nilaiHuruf}</td>
-                      <td class="p-3 font-mono">{parseFloat(konv.bobotIndeks).toFixed(2)}</td>
-                      <td class="p-3 font-mono">{parseFloat(konv.nilaiMin).toFixed(2)}</td>
-                      <td class="p-3 font-mono">{parseFloat(konv.nilaiMax).toFixed(2)}</td>
+                      <td class="p-3 font-mono">{konv.bobotIndeks.toFixed(2)}</td>
+                      <td class="p-3 font-mono">{konv.nilaiMin.toFixed(2)}</td>
+                      <td class="p-3 font-mono">{konv.nilaiMax.toFixed(2)}</td>
                       <td class="p-3 font-medium text-secondary-800 dark:text-white">{konv.predikat}</td>
                       <td class="p-3 flex gap-2">
                         <button
                           onClick={() => {
-                            setKonversiId(konv.id);
+                            setKonversiId(konv.id || 0);
                             setKonversiProdiId(konv.programStudiId ? konv.programStudiId.toString() : '');
                             setNilaiHuruf(konv.nilaiHuruf);
                             setNilaiIndeks(konv.bobotIndeks.toString());
@@ -352,7 +352,7 @@ export default function Khs() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDeleteKonversi(konv.id)}
+                          onClick={() => konv.id && handleDeleteKonversi(konv.id)}
                           class="px-2.5 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg hover:bg-rose-100 transition-colors dark:bg-rose-900/30 dark:text-rose-400"
                         >
                           Hapus
@@ -534,7 +534,9 @@ export default function Khs() {
                       <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
                         IPK Kumulatif (Transcript)
                       </span>
-                      <span class="text-3xl font-extrabold text-brand-600">{transkripData()?.ipk?.toFixed(2)}</span>
+                      <span class="text-3xl font-extrabold text-brand-600">
+                        {Number(transkripData()?.ipk || 0).toFixed(2)}
+                      </span>
                     </div>
                     <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                       <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
@@ -745,22 +747,18 @@ export default function Khs() {
                       <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nim || 'N/A'}</span>
                     </p>
                     <p>
-                      Nama:{' '}
-                      <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
+                      Nama: <span class="font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
                   </div>
                   <div class="text-right">
                     <p>
                       IP Semester:{' '}
-                      <span class="text-secondary-900 font-extrabold text-brand-600 dark:text-white">
+                      <span class="font-extrabold text-brand-600 dark:text-white">
                         {khsData()?.summary?.ipSemester?.toFixed(2)}
                       </span>
                     </p>
                     <p>
-                      SKS Terkontrak:{' '}
-                      <span class="text-secondary-900 font-bold dark:text-white">
-                        {khsData()?.summary?.totalSks} SKS
-                      </span>
+                      SKS Terkontrak: <span class="font-bold dark:text-white">{khsData()?.summary?.totalSks} SKS</span>
                     </p>
                   </div>
                 </div>
@@ -848,7 +846,7 @@ export default function Khs() {
                   <div class="text-right">
                     <p>
                       IPK Kumulatif:{' '}
-                      <span class="text-secondary-900 font-extrabold text-brand-600 dark:text-white">
+                      <span class="font-extrabold text-brand-600 dark:text-white">
                         {transkripData()?.ipk?.toFixed(2)}
                       </span>
                     </p>

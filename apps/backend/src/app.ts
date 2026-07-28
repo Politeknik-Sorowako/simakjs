@@ -142,6 +142,7 @@ app
       set.status = 422;
       return { success: false, error: 'Validasi gagal', message: error.message };
     }
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia error handling requires any for cause inspection
     const err = (error as any)?.cause || (error as any);
     if (err && err.code === '23505') {
       set.status = 409;

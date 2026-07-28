@@ -22,10 +22,10 @@ export default function Pengguna() {
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   const exportColumns: ExportColumn[] = [
-    { header: 'ID', accessor: (row: UserItem) => row.id },
-    { header: 'Nama', accessor: (row: UserItem) => row.nama },
-    { header: 'Email', accessor: (row: UserItem) => row.email },
-    { header: 'Role', accessor: (row: UserItem) => row.role },
+    { header: 'ID', accessor: 'id' },
+    { header: 'Nama', accessor: 'nama' },
+    { header: 'Email', accessor: 'email' },
+    { header: 'Role', accessor: 'role' },
   ];
 
   const [usersRes, { refetch }] = createResource(
@@ -75,7 +75,7 @@ export default function Pengguna() {
   let debounceTimer: ReturnType<typeof setTimeout>;
   const handleSearchInput = (e: Event) => {
     clearTimeout(debounceTimer);
-    const val = e.currentTarget.value;
+    const val = (e.currentTarget as HTMLInputElement).value;
     debounceTimer = setTimeout(() => {
       resetPage();
       setSearch(val);
@@ -105,7 +105,10 @@ export default function Pengguna() {
               />
             </div>
             <ExportButtonGroup
-              data={() => usersRes()?.data || []}
+              onFetchAll={async () => {
+                const res = await userController.getAll(1, 10000, search());
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Pengguna_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Pengguna"

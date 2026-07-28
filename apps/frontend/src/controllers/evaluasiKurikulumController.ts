@@ -38,7 +38,7 @@ export const evaluasiKurikulumController = {
     if (params?.periodeId) qs.set('periodeId', params.periodeId);
     if (params?.status) qs.set('status', params.status);
     const query = qs.toString();
-    return fetchApi<EvaluasiKurikulumList>(`/evaluasi-kurikulum${query ? '?' + query : ''}`);
+    return fetchApi<EvaluasiKurikulumList>(`/evaluasi-kurikulum${query ? `?${query}` : ''}`);
   },
 
   async getById(id: number): Promise<EvaluasiKurikulum> {

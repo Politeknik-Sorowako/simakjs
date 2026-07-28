@@ -42,9 +42,9 @@ export default function LaporanKRS() {
             <ExportButtonGroup
               data={() => stats()?.perProdi || []}
               columns={columns}
-              filename={'KRS_' + selectedPeriode()}
+              filename={`KRS_${selectedPeriode()}`}
               title="Laporan KRS"
-              subtitle={'Periode: ' + selectedPeriode()}
+              subtitle={`Periode: ${selectedPeriode()}`}
             />
           </Show>
         </div>
@@ -98,7 +98,7 @@ export default function LaporanKRS() {
             <StatCard
               title="Pending"
               value={stats()?.pending || 0}
-              color={stats()?.pending > 0 ? 'yellow' : 'green'}
+              color={(stats()?.pending || 0) > 0 ? 'yellow' : 'green'}
               icon={
                 <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path

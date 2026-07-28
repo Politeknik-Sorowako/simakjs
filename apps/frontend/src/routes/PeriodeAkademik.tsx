@@ -99,7 +99,7 @@ export default function PeriodeAkademik() {
     const formData = { id: id(), nama: nama(), aktif: aktif() };
     const result = periodeSchema.safeParse(formData);
     if (!result.success) {
-      const firstError = result.error.errors[0]?.message || 'Input tidak valid';
+      const firstError = result.error.issues?.[0]?.message || 'Input tidak valid';
       setErrorMsg(firstError);
       toast.showToast(firstError, 'error');
       return;
@@ -145,7 +145,10 @@ export default function PeriodeAkademik() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await periodeAkademikController.getAll(search(), 1, 10000);
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Periode_Akademik_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Periode Akademik"

@@ -4,8 +4,6 @@ import { PaginatedResponse } from './prodiController';
 export interface KelompokApel {
   id: number;
   namaKelompok: string;
-  programStudiId?: number | null;
-  prodiNama?: string | null;
   dosenId?: number | null;
   dosenNama?: string | null;
   shift: string;
@@ -47,7 +45,7 @@ export interface PresensiApelItem {
   mahasiswaId: number;
   mahasiswaNim: string;
   mahasiswaNama: string;
-  status: 'hadir' | 'terlambat' | 'unknown';
+  status: 'hadir' | 'terlambat' | 'sakit' | 'izin' | 'alpa' | 'unknown';
   menitTerlambat?: number;
   verifiedStatus?: string;
   verifiedAt?: string;
@@ -98,13 +96,8 @@ export interface MonitorResponse {
 }
 
 export const apelController = {
-  createKelompok: (data: {
-    namaKelompok: string;
-    programStudiId?: number | null;
-    dosenId?: number | null;
-    shift?: string;
-    keterangan?: string;
-  }) => fetchApi<KelompokApel>('/apel/kelompok', { method: 'POST', body: JSON.stringify(data) }),
+  createKelompok: (data: { namaKelompok: string; dosenId?: number | null; shift?: string; keterangan?: string }) =>
+    fetchApi<KelompokApel>('/apel/kelompok', { method: 'POST', body: JSON.stringify(data) }),
 
   updateKelompok: (
     id: number,
@@ -113,9 +106,8 @@ export const apelController = {
 
   deleteKelompok: (id: number) => fetchApi(`/apel/kelompok/${id}`, { method: 'DELETE' }),
 
-  getKelompokByProdi: (prodiId?: number, dosenId?: number) => {
+  getKelompokByProdi: (_prodiId?: number, dosenId?: number) => {
     const params = new URLSearchParams();
-    if (prodiId) params.set('prodiId', String(prodiId));
     if (dosenId) params.set('dosenId', String(dosenId));
     const qs = params.toString();
     return fetchApi<KelompokApel[]>(`/apel/kelompok${qs ? `?${qs}` : ''}`);

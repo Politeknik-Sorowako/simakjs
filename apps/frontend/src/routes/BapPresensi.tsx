@@ -27,6 +27,7 @@ export default function BapPresensi() {
   const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
   const [pertemuanKe, setPertemuanKe] = createSignal(1);
   const [materi, setMateri] = createSignal('');
+  const [catatan, setCatatan] = createSignal('');
   const [durasiMenit, setDurasiMenit] = createSignal(100);
   const [selectedCpmkId, setSelectedCpmkId] = createSignal<number | null>(null);
   const [editBapId, setEditBapId] = createSignal<number | null>(null);
@@ -35,10 +36,10 @@ export default function BapPresensi() {
   const [newCpmkKode, setNewCpmkKode] = createSignal('');
   const [newCpmkDeskripsi, setNewCpmkDeskripsi] = createSignal('');
 
-  // Attendance Sheet state (studentId -> { status, durasiMangkir })
-  const [attendanceSheet, setAttendanceSheet] = createSignal<Record<number, { status: string; durasiMangkir: number }>>(
-    {},
-  );
+  // Attendance Sheet state (studentId -> { status, durasiMangkir, keterangan })
+  const [attendanceSheet, setAttendanceSheet] = createSignal<
+    Record<number, { status: string; durasiMangkir: number; keterangan: string }>
+  >({});
 
   // 1. Fetch Classes
   const [kelasData] = createResource(() => kelasKuliahController.getAll(undefined, 1, 100));
@@ -112,7 +113,7 @@ export default function BapPresensi() {
     const listMhs = krsData() || [];
     const saved = savedPresensi() || [];
 
-    const initialSheet: Record<number, { status: string; durasiMangkir: number }> = {};
+    const initialSheet: Record<number, { status: string; durasiMangkir: number; keterangan: string }> = {};
 
     for (const k of listMhs) {
       const existing = saved.find((p) => p.mahasiswaId === k.mahasiswaId);
@@ -120,11 +121,13 @@ export default function BapPresensi() {
         initialSheet[k.mahasiswaId] = {
           status: existing.status,
           durasiMangkir: existing.durasiMangkir,
+          keterangan: existing.keterangan || '',
         };
       } else {
         initialSheet[k.mahasiswaId] = {
           status: 'hadir',
           durasiMangkir: 0,
+          keterangan: '',
         };
       }
     }
@@ -138,6 +141,7 @@ export default function BapPresensi() {
     setTanggal(new Date().toISOString().split('T')[0]);
     setPertemuanKe((bapData()?.length || 0) + 1);
     setMateri('');
+    setCatatan('');
     setDurasiMenit(100);
     setSelectedCpmkId(null);
     setShowBapModal(true);
@@ -150,6 +154,7 @@ export default function BapPresensi() {
     setTanggal(new Date(activeBap.tanggal).toISOString().split('T')[0]);
     setPertemuanKe(activeBap.pertemuanKe);
     setMateri(activeBap.materi);
+    setCatatan(activeBap.catatan || '');
     setDurasiMenit(activeBap.durasiMenit);
     setSelectedCpmkId(activeBap.cpmkId);
     setShowBapModal(true);
@@ -161,7 +166,7 @@ export default function BapPresensi() {
     const cpmkId = selectedCpmkId();
     if (!kelasId) return;
     if (!cpmkId) {
-      toast.showToast('Silakan pilih materi CPMK terlebih dahulu', 'warning');
+      toast.showToast('Silakan pilih materi CPMK terlebih dahulu', 'error');
       return;
     }
 
@@ -171,6 +176,7 @@ export default function BapPresensi() {
         tanggal: tanggal(),
         pertemuanKe: pertemuanKe(),
         materi: materi(),
+        catatan: catatan(),
         durasiMenit: durasiMenit(),
         cpmkId: cpmkId,
         dosenId: selectedKelas()?.dosenPengajarKelas?.[0]?.dosenId || 1,
@@ -239,6 +245,16 @@ export default function BapPresensi() {
     }));
   };
 
+  const handleKeteranganChange = (mhsId: number, ket: string) => {
+    setAttendanceSheet((prev) => ({
+      ...prev,
+      [mhsId]: {
+        ...prev[mhsId],
+        keterangan: ket,
+      },
+    }));
+  };
+
   const handleSaveAttendance = async () => {
     const bapId = selectedBapId();
     if (!bapId) return;
@@ -248,6 +264,7 @@ export default function BapPresensi() {
       mahasiswaId: parseInt(mhsId),
       status: data.status,
       durasiMangkir: data.durasiMangkir,
+      keterangan: data.keterangan,
     }));
 
     try {
@@ -359,10 +376,19 @@ export default function BapPresensi() {
 
               <div class="flex flex-col gap-1">
                 <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">
-                  Catatan / Detail Materi
+                  Materi Utama (RPS)
                 </span>
                 <span class="text-sm text-secondary-700 dark:text-secondary-200">
                   {bapData()?.find((b) => b.id === selectedBapId())?.materi || '-'}
+                </span>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">
+                  Catatan Pertemuan
+                </span>
+                <span class="text-sm text-secondary-700 dark:text-secondary-200">
+                  {bapData()?.find((b) => b.id === selectedBapId())?.catatan || '-'}
                 </span>
               </div>
 
@@ -402,12 +428,14 @@ export default function BapPresensi() {
                       <th class="py-3 px-4">NIM / Nama</th>
                       <th class="py-3 px-4">Status Kehadiran</th>
                       <th class="py-3 px-4">Durasi Keterlambatan</th>
+                      <th class="py-3 px-4">Keterangan</th>
                     </tr>
                   </thead>
                   <tbody>
                     <For each={krsData() || []}>
                       {(k) => {
-                        const state = () => attendanceSheet()[k.mahasiswaId] || { status: 'hadir', durasiMangkir: 0 };
+                        const state = () =>
+                          attendanceSheet()[k.mahasiswaId] || { status: 'hadir', durasiMangkir: 0, keterangan: '' };
                         return (
                           <tr class="border-b border-secondary-50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                             <td class="py-4 px-4">
@@ -459,6 +487,15 @@ export default function BapPresensi() {
                                   <span class="text-xs text-secondary-500 dark:text-secondary-200">Menit</span>
                                 </div>
                               </Show>
+                            </td>
+                            <td class="py-4 px-4">
+                              <input
+                                type="text"
+                                placeholder="Keterangan / Alasan..."
+                                value={state().keterangan || ''}
+                                onInput={(e) => handleKeteranganChange(k.mahasiswaId, e.currentTarget.value)}
+                                class="w-full min-w-[140px] bg-secondary-50 border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                              />
                             </td>
                           </tr>
                         );
@@ -571,6 +608,19 @@ export default function BapPresensi() {
                 )}
               </For>
             </select>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+              Catatan Pertemuan (Opsional)
+            </label>
+            <textarea
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              rows="3"
+              placeholder="Tambahkan catatan khusus mengenai pertemuan perkuliahan ini..."
+              value={catatan()}
+              onInput={(e) => setCatatan(e.currentTarget.value)}
+            />
           </div>
 
           <Input

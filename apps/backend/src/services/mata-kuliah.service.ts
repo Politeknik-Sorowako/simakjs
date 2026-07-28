@@ -88,6 +88,7 @@ export class MataKuliahService {
 
       const totalPages = Math.ceil(total / limit);
       return {
+        // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
         data: data.map((mk: any) => ({
           ...mk,
           semester: null,
@@ -135,6 +136,7 @@ export class MataKuliahService {
         kmkRows.map((r) => [r.mataKuliahId, { semester: r.semester, kode: r.kurikulumKode, nama: r.kurikulumNama }]),
       );
 
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
       allData = allData.map((mk: any) => {
         const info = kmkMap.get(mk.id);
         return {
@@ -147,6 +149,7 @@ export class MataKuliahService {
         };
       });
     } else {
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
       allData = allData.map((mk: any) => ({
         ...mk,
         semester: null,
@@ -158,10 +161,12 @@ export class MataKuliahService {
     }
 
     if (semester !== undefined) {
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
       allData = allData.filter((mk: any) => mk.semester === semester);
     }
 
     const orderDir = sortOrder === 'desc' ? -1 : 1;
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
     allData.sort((a: any, b: any) => {
       let cmp = 0;
       switch (sortBy) {

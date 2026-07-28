@@ -63,8 +63,8 @@ export default function AdmisiPembayaran() {
         <h1 class="text-2xl font-bold mb-2">Pembayaran Pendaftaran</h1>
         <p class="text-sm text-secondary-500 mb-6">Lakukan pembayaran untuk melanjutkan proses pendaftaran</p>
 
-        <Show when={existingVA()}>
-          {(va: { isPaid: boolean; vaNumber: string; nama?: string; vaBankId: number; nominal: number }) => (
+        <Show when={existingVA()} keyed>
+          {(va) => (
             <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-6 mb-6 text-center">
               <div class="text-3xl mb-2">{va.isPaid ? '✅' : '⏳'}</div>
               <h2 class="font-semibold text-lg mb-1">{va.isPaid ? 'Pembayaran Diterima' : 'Menunggu Pembayaran'}</h2>
@@ -89,7 +89,7 @@ export default function AdmisiPembayaran() {
             <h2 class="font-semibold mb-4">Pilih Metode Pembayaran</h2>
             <div class="grid gap-3">
               <For each={banks()?.data || []}>
-                {(bank: { id: number; nama: string; isMidtrans: boolean; kode: string }) => (
+                {(bank) => (
                   <div
                     onClick={() => setSelectedBank(bank.id)}
                     class={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${

@@ -6,6 +6,7 @@ export interface AngkatanKurikulumQuery {
 }
 
 export class AngkatanKurikulumController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query }: AuthContext<any, AngkatanKurikulumQuery>): Promise<any> {
     const prodiId = query?.programStudiId ? Number(query.programStudiId) : undefined;
     return await AngkatanKurikulumService.getAll(prodiId);
@@ -14,6 +15,7 @@ export class AngkatanKurikulumController {
   static async getAktif({
     query,
     set,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { programStudiId?: number; angkatan?: string }>): Promise<any> {
     if (!query?.programStudiId || !query?.angkatan) {
       set.status = 400;
@@ -27,6 +29,7 @@ export class AngkatanKurikulumController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -38,6 +41,7 @@ export class AngkatanKurikulumController {
     return newBinding;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -52,6 +56,7 @@ export class AngkatanKurikulumController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {

@@ -2,6 +2,7 @@ import { BapService } from '../services/bap.service';
 import { AuthContext } from '../utils/types';
 
 export class BapController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
@@ -11,6 +12,7 @@ export class BapController {
     return await BapService.getByKelas(parseInt(String(params.kelasKuliahId)));
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRpsTopik({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
@@ -20,6 +22,7 @@ export class BapController {
     return await BapService.getRpsTopikByKelas(parseInt(String(params.kelasKuliahId)));
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -61,6 +64,7 @@ export class BapController {
     return newBap;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {

@@ -39,21 +39,21 @@ export function Modal(props: ModalProps) {
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         {/* Overlay */}
         <div
-          class="absolute inset-0 bg-brand-900/40 backdrop-blur-sm animate-fade-in"
+          class="absolute inset-0 bg-secondary-950/60 backdrop-blur-sm animate-fade-in"
           onClick={() => props.onClose?.()}
         />
 
         {/* Modal Content */}
         <div
-          class={`relative w-full ${width()} bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl border border-secondary-100 dark:border-secondary-700 animate-scale-in`}
+          class={`relative w-full ${width()} bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl border border-secondary-200/80 dark:border-secondary-800 animate-scale-in`}
           role="dialog"
           aria-modal="true"
           aria-label={props.title || 'Dialog'}
         >
           {/* Header */}
           <Show when={props.title}>
-            <div class="flex items-center justify-between px-6 py-4 border-b border-secondary-100 dark:border-secondary-700">
-              <h3 class="text-lg font-heading font-semibold text-brand-900 dark:text-white">{props.title}</h3>
+            <div class="flex items-center justify-between px-6 py-4 border-b border-secondary-200/80 dark:border-secondary-800">
+              <h3 class="text-lg font-heading font-semibold text-secondary-900 dark:text-white">{props.title}</h3>
               <button
                 onClick={() => props.onClose?.()}
                 aria-label="Tutup dialog"

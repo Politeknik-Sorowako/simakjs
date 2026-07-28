@@ -52,6 +52,7 @@ export class BapService {
     tanggal: string;
     pertemuanKe: number;
     materi: string;
+    catatan?: string | null;
     durasiMenit: number;
     cpmkId: number;
     dosenId: number;
@@ -66,6 +67,7 @@ export class BapService {
       tanggal: string;
       pertemuanKe: number;
       materi: string;
+      catatan?: string | null;
       durasiMenit: number;
       cpmkId: number;
       dosenId: number;

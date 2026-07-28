@@ -6,6 +6,7 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
+import type { SafeAny } from '../utils/api';
 import { type ExportColumn, exportToExcel } from '../utils/export';
 
 const PER_PAGE = 20;
@@ -134,11 +135,14 @@ export default function LaporanKompensasi() {
       const cols: ExportColumn[] = [
         { header: 'NIM', accessor: 'nim' },
         { header: 'Nama Mahasiswa', accessor: 'nama' },
-        { header: 'Program Studi', accessor: (r) => r.prodiNama || '-' },
+        { header: 'Program Studi', accessor: 'prodiNama' },
         { header: 'Total Mangkir (Menit)', accessor: 'totalKompensasi' },
         { header: 'Kompensasi Dilunasi (Menit)', accessor: 'totalDibayar' },
         { header: 'Sisa Tanggungan (Menit)', accessor: 'sisaKompensasi' },
-        { header: 'Status Pelunasan', accessor: (r) => (r.sisaKompensasi > 0 ? 'Belum Lunas' : 'Lunas') },
+        {
+          header: 'Status Pelunasan',
+          accessor: (r: Record<string, unknown>) => (Number(r.sisaKompensasi) > 0 ? 'Belum Lunas' : 'Lunas'),
+        },
       ];
       exportToExcel(res.data, cols, `Laporan_Kompensasi_${new Date().toISOString().split('T')[0]}`);
       toast.showToast('Laporan kompensasi berhasil diunduh (.xlsx)', 'success');
@@ -433,7 +437,7 @@ export default function LaporanKompensasi() {
                         <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
                           <div class="flex flex-col gap-0.5">
                             <span class="font-bold text-secondary-700 dark:text-secondary-200">
-                              {log.sumber === 'apel'
+                              {(log as SafeAny).sumber === 'apel'
                                 ? 'Presensi Apel'
                                 : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
                             </span>

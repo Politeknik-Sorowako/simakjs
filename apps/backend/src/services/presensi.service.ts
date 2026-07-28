@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   dosen,
@@ -19,7 +19,7 @@ import { db } from '../utils/db';
 export class PresensiService {
   static async saveBulkPresensi(
     bapId: number,
-    presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number }>,
+    presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number; keterangan?: string | null }>,
   ) {
     const [foundBap] = await db.select().from(bap).where(eq(bap.id, bapId));
     if (!foundBap) {
@@ -43,6 +43,7 @@ export class PresensiService {
         mahasiswaId: item.mahasiswaId,
         status: status as 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown',
         durasiMangkir: durMangkir,
+        keterangan: item.keterangan || null,
       };
     });
 
@@ -65,6 +66,7 @@ export class PresensiService {
         mahasiswaNama: mahasiswa.nama,
         status: presensi.status,
         durasiMangkir: presensi.durasiMangkir,
+        keterangan: presensi.keterangan,
       })
       .from(presensi)
       .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
@@ -209,9 +211,10 @@ export class PresensiService {
 
     const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0))`;
 
-    const conditions: any[] = [sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`];
+    const conditions: SQL<unknown>[] = [sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`];
     if (search) {
-      conditions.push(or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`)));
+      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      if (orCondition) conditions.push(orCondition);
     }
     if (prodiId) {
       conditions.push(eq(mahasiswa.programStudiId, prodiId));
@@ -496,7 +499,7 @@ export class PresensiService {
       with: { programStudi: true },
     });
 
-    const kelasConditions: any[] = [];
+    const kelasConditions: SQL<unknown>[] = [];
     if (periodeId) kelasConditions.push(eq(kelasKuliah.periodeId, periodeId));
     const kelasWhere = kelasConditions.length > 0 ? and(...kelasConditions) : undefined;
 

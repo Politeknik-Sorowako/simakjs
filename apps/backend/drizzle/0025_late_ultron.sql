@@ -1,0 +1,1 @@
+ALTER TABLE "krs" ADD CONSTRAINT "krs_mahasiswa_kelas_unique" UNIQUE("mahasiswa_id","kelas_kuliah_id");

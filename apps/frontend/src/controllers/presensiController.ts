@@ -8,12 +8,36 @@ export interface CPMK {
   deskripsi: string;
 }
 
+export interface RekapKehadiranMahasiswaItem {
+  id?: number;
+  nim: string;
+  nama: string;
+  hadir: number;
+  sakit: number;
+  izin: number;
+  alpa: number;
+  telat: number;
+  persentaseHadir: number;
+}
+
+export interface RekapKehadiranKelasResponse {
+  kelas?: {
+    namaKelas?: string;
+    kodeMataKuliah?: string;
+    mataKuliah?: { nama: string };
+    periodeId?: string;
+  };
+  totalPertemuan: number;
+  mahasiswa: RekapKehadiranMahasiswaItem[];
+}
+
 export interface BAP {
   id: number;
   kelasKuliahId: number;
   tanggal: string;
   pertemuanKe: number;
   materi: string;
+  catatan?: string | null;
   durasiMenit: number;
   cpmkId: number;
   dosenId: number;
@@ -25,6 +49,7 @@ export interface PresensiItem {
   mahasiswaId: number;
   status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa';
   durasiMangkir: number;
+  keterangan?: string | null;
 }
 
 export interface KompensasiLaporanItem {
@@ -161,8 +186,8 @@ export const presensiController = {
   },
 
   // Rekap Kehadiran
-  async getRekapKehadiran(kelasKuliahId: number): Promise<Record<string, unknown>> {
-    return fetchApi<Record<string, unknown>>(`/presensi/rekap-kehadiran?kelasKuliahId=${kelasKuliahId}`);
+  async getRekapKehadiran(kelasKuliahId: number): Promise<RekapKehadiranKelasResponse> {
+    return fetchApi<RekapKehadiranKelasResponse>(`/presensi/rekap-kehadiran?kelasKuliahId=${kelasKuliahId}`);
   },
 
   async getRekapKehadiranMahasiswa(mahasiswaId: number, periodeId?: string): Promise<Record<string, unknown>> {

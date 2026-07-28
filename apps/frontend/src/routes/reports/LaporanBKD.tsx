@@ -28,17 +28,21 @@ export default function LaporanBKD() {
   const columns: ExportColumn[] = [
     {
       header: 'NIM',
-      accessor: (row: { mahasiswa?: { nim: string }; isApproved: boolean; statusBkd: boolean }) =>
-        row.mahasiswa?.nim || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const mhs = row.mahasiswa as { nim?: string } | undefined;
+        return mhs?.nim || '-';
+      },
     },
     {
       header: 'Mahasiswa',
-      accessor: (row: { mahasiswa?: { nama: string }; isApproved: boolean; statusBkd: boolean }) =>
-        row.mahasiswa?.nama || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const mhs = row.mahasiswa as { nama?: string } | undefined;
+        return mhs?.nama || '-';
+      },
     },
     { header: 'Ringkasan', accessor: 'ringkasan' },
-    { header: 'Status', accessor: (row: { isApproved: boolean }) => (row.isApproved ? 'Disetujui' : 'Pending') },
-    { header: 'BKD', accessor: (row: { statusBkd: boolean }) => (row.statusBkd ? 'Ya' : 'Tidak') },
+    { header: 'Status', accessor: (row: Record<string, unknown>) => (row.isApproved ? 'Disetujui' : 'Pending') },
+    { header: 'BKD', accessor: (row: Record<string, unknown>) => (row.statusBkd ? 'Ya' : 'Tidak') },
   ];
 
   return (
@@ -118,7 +122,7 @@ export default function LaporanBKD() {
           />
           <StatCard
             title="BKD Aktif"
-            value={rekap()?.data?.filter((r: { statusBkd: boolean }) => r.statusBkd).length || 0}
+            value={rekap()?.data?.filter((r) => r.sesi?.some((s) => s.statusBkd)).length || 0}
             color="accent"
             icon={
               <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,9 +164,9 @@ export default function LaporanBKD() {
                 >
                   {(r: {
                     mahasiswa?: { nama: string; nim: string };
-                    ringkasan: string;
+                    ringkasan: string | null;
                     isApproved: boolean;
-                    statusBkd: boolean;
+                    sesi?: { statusBkd: boolean }[];
                   }) => (
                     <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                       <td class="py-3 px-5">
@@ -184,10 +188,12 @@ export default function LaporanBKD() {
                         <span
                           class={
                             'px-2 py-0.5 rounded-full text-[10px] font-bold ' +
-                            (r.statusBkd ? 'bg-blue-50 text-blue-700' : 'bg-secondary-50 text-secondary-500')
+                            (r.sesi?.some((s) => s.statusBkd)
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'bg-secondary-50 text-secondary-500')
                           }
                         >
-                          {r.statusBkd ? 'Ya' : 'Tidak'}
+                          {r.sesi?.some((s) => s.statusBkd) ? 'Ya' : 'Tidak'}
                         </span>
                       </td>
                     </tr>

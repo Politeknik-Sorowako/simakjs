@@ -22,6 +22,12 @@
 - **DO NOT redefine** controller response types inline in SolidJS signals — use exported interfaces instead (e.g., `CplMapping`)
 - **ALWAYS structure** implementation plans (`implementation_plan.md`) step-by-step with explicit file paths, before/after code snippets, and exact CLI commands so they are easy to execute by junior developers or smaller models.
 - **ALWAYS verify** backend-frontend cross-consistency between Elysia schemas (`apps/backend/src/schemas/`) and frontend request payloads (`apps/frontend/src/`) in implementation plans to prevent HTTP 422 (Unprocessable Entity) validation errors.
+- **Berikan respon langsung** pada inti masalah tanpa salam atau basa-basi.
+- **Jangan pernah mencetak ulang seluruh isi file** jika hanya mengubah beberapa baris. Tunjukkan HANYA bagian kode yang diubah (diff / patched code).
+- **Buat penjelasan maksimal 2-3 kalimat** setelah kode.
+- **Gunakan tool pemindaian berkas secara spesifik**, jangan membaca direktori secara menyeluruh jika tidak diminta.
+- **Buat PR baru** ke arah branch `development` apabila ada kode yang diimplementasi pertama kali di setiap percakapan baru dengan agen AI.
+- **Wajib mengeksekusi `bun run lint`** dan memastikan kepatuhan Biome lint (`bunx biome ci .`) sebelum setiap commit/push agar CI/CD tidak gagal.
 
 ## CI/CD Pipeline
 

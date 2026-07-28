@@ -91,7 +91,7 @@ export function LineChart(props: LineChartProps) {
       chart.options.scales!.y!.ticks!.color = tc;
       chart.options.plugins!.legend!.labels!.color = tc;
       if (chart.options.plugins!.title) {
-        (chart.options.plugins!.title as any).color = tc;
+        (chart.options.plugins!.title as Record<string, unknown>).color = tc;
       }
       chart.options.scales!.x!.grid!.color = gc;
       chart.options.scales!.y!.grid!.color = gc;

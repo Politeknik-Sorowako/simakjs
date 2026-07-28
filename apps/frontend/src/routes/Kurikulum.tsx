@@ -7,7 +7,12 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
-import { Kurikulum as IKurikulum, kurikulumController } from '../controllers/kurikulumController';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import {
+  Kurikulum as IKurikulum,
+  type KurikulumMataKuliah,
+  kurikulumController,
+} from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
@@ -17,7 +22,8 @@ import { API_URL, fetchApi } from '../utils/api';
 export default function Kurikulum() {
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [search, setSearch] = createSignal('');
-  const [prodiFilter, setProdiFilter] = createSignal<number | undefined>(undefined);
+  const workspace = useWorkspace();
+  const prodiFilter = () => workspace.activeProdiId() ?? undefined;
 
   const [kurikulums, { refetch }] = createResource(
     () => ({ search: search(), page: page(), limit: limit(), prodiId: prodiFilter() }),
@@ -51,7 +57,7 @@ export default function Kurikulum() {
   const [editId, setEditId] = createSignal<number | null>(null);
   const [kode, setKode] = createSignal('');
   const [nama, setNama] = createSignal('');
-  const [prodiId, setProdiId] = createSignal<number>(0);
+  const [prodiId, setProdiId] = createSignal<number>(workspace.activeProdiId() || 0);
   const [semesterMulai, setSemesterMulai] = createSignal('');
   const [jumlahSksLulus, setJumlahSksLulus] = createSignal(144);
   const [jumlahSksWajib, setJumlahSksWajib] = createSignal(120);
@@ -291,7 +297,7 @@ export default function Kurikulum() {
   // Group MK by semester (memoized)
   const mkBySemester = createMemo(() => {
     const mks = kurikulumDetail()?.kurikulumMataKuliah || [];
-    const groups: { [sem: number]: Record<string, unknown>[] } = {};
+    const groups: { [sem: number]: KurikulumMataKuliah[] } = {};
     for (const mk of mks) {
       if (!groups[mk.semester]) groups[mk.semester] = [];
       groups[mk.semester].push(mk);
@@ -346,15 +352,6 @@ export default function Kurikulum() {
                 resetPage();
               }}
             />
-          </div>
-          <div class="w-[200px]">
-            <select
-              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-              onChange={(e) => setProdiFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
-            >
-              <option value="">Semua Program Studi</option>
-              <For each={prodis()?.data}>{(prodi) => <option value={prodi.id}>{prodi.nama}</option>}</For>
-            </select>
           </div>
         </div>
 
@@ -704,7 +701,7 @@ export default function Kurikulum() {
                       <div class="flex items-center gap-3">
                         <a
                           href={`${API_URL}/kurikulum/template-import-mk`}
-                          download
+                          download="template-import-mk.csv"
                           class="text-xs text-brand-600 hover:text-brand-800 font-semibold underline"
                         >
                           Download Template CSV

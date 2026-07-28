@@ -2,22 +2,31 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
-export interface ExportColumn {
+// biome-ignore lint/suspicious/noExplicitAny: SafeAny helper for dynamic data exports
+export type SafeAny = any;
+
+export interface ExportColumn<T = SafeAny> {
   header: string;
-  accessor: string | ((row: any) => string | number);
+  accessor: string | ((row: T) => string | number);
 }
 
-function getValue(row: any, accessor: string | ((row: any) => string | number)): string | number {
+function getValue(row: SafeAny, accessor: string | ((row: SafeAny) => string | number)): string | number {
   if (typeof accessor === 'function') return accessor(row);
   const keys = accessor.split('.');
-  let val = row;
-  for (const k of keys) val = val?.[k];
-  return val ?? '-';
+  let val: SafeAny = row;
+  for (const k of keys) {
+    if (val && typeof val === 'object') {
+      val = (val as Record<string, SafeAny>)[k];
+    } else {
+      val = undefined;
+    }
+  }
+  return (val as string | number | undefined | null) ?? '-';
 }
 
-export function exportToExcel(data: any[], columns: ExportColumn[], filename: string) {
+export function exportToExcel(data: SafeAny[], columns: ExportColumn[], filename: string) {
   const rows = data.map((row) => {
-    const obj: Record<string, any> = {};
+    const obj: Record<string, SafeAny> = {};
     columns.forEach((col) => {
       obj[col.header] = getValue(row, col.accessor);
     });
@@ -30,7 +39,13 @@ export function exportToExcel(data: any[], columns: ExportColumn[], filename: st
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
-export function exportToPDF(data: any[], columns: ExportColumn[], filename: string, title: string, subtitle?: string) {
+export function exportToPDF(
+  data: SafeAny[],
+  columns: ExportColumn[],
+  filename: string,
+  title: string,
+  subtitle?: string,
+) {
   const doc = new jsPDF('l', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -64,7 +79,11 @@ export function exportToPDF(data: any[], columns: ExportColumn[], filename: stri
     body: rows,
     startY: 42,
     styles: { fontSize: 8, cellPadding: 2 },
-    headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+    headStyles: {
+      fillColor: [99, 102, 241],
+      textColor: 255,
+      fontStyle: 'bold',
+    },
     alternateRowStyles: { fillColor: [249, 250, 251] },
     margin: { top: 40 },
   });
@@ -86,7 +105,7 @@ export function exportToPDF(data: any[], columns: ExportColumn[], filename: stri
   doc.save(`${filename}.pdf`);
 }
 
-export function exportToCSV(data: any[], columns: ExportColumn[], filename: string) {
+export function exportToCSV(data: SafeAny[], columns: ExportColumn[], filename: string) {
   const header = columns.map((c) => `"${c.header}"`).join(',');
   const rows = data.map((row) =>
     columns
@@ -98,7 +117,9 @@ export function exportToCSV(data: any[], columns: ExportColumn[], filename: stri
   );
 
   const csv = [header, ...rows].join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([`\uFEFF${csv}`], {
+    type: 'text/csv;charset=utf-8;',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

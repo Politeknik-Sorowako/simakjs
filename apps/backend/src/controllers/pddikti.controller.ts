@@ -2,6 +2,7 @@ import { PddiktiService } from '../services/pddikti.service';
 import { AuthContext } from '../utils/types';
 
 export class PddiktiController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getStats({ getCurrentUser, set }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
@@ -11,6 +12,7 @@ export class PddiktiController {
     return await PddiktiService.getStats();
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async syncAll({ getCurrentUser, set }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {

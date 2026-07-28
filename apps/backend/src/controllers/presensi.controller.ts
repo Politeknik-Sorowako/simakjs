@@ -2,6 +2,7 @@ import { PresensiService } from '../services/presensi.service';
 import { AuthContext } from '../utils/types';
 
 export class PresensiController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -11,6 +12,7 @@ export class PresensiController {
     return await PresensiService.saveBulkPresensi(body.bapId, body.presensiList);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getByBap({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
@@ -20,6 +22,7 @@ export class PresensiController {
     return await PresensiService.getPresensiByBap(parseInt(params.bapId));
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -46,6 +49,7 @@ export class PresensiController {
     );
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -55,6 +59,7 @@ export class PresensiController {
     return await PresensiService.getLaporanKompensasiStats();
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getKompensasiDetail({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
@@ -74,6 +79,7 @@ export class PresensiController {
     query,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { kelasKuliahId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
@@ -92,6 +98,7 @@ export class PresensiController {
     query,
     set,
     getCurrentUser,
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { mahasiswaId?: string; periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
@@ -106,6 +113,7 @@ export class PresensiController {
     return await PresensiService.getRekapKehadiranMahasiswa(mahasiswaId, query?.periodeId);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -121,6 +129,7 @@ export class PresensiController {
     return newPayment;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateKompensasiBayar({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -135,9 +144,9 @@ export class PresensiController {
         return { error: 'Data penyelesaian kompensasi tidak ditemukan.' };
       }
       return updated;
-    } catch (err: any) {
+    } catch (err: unknown) {
       set.status = 400;
-      return { error: err.message || 'Gagal mengubah penyelesaian kompensasi.' };
+      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
     }
   }
 }

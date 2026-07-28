@@ -253,7 +253,7 @@ export default function Bimbingan() {
     tanggalBimbingan: string;
     permasalahan: string;
     solusi: string;
-    statusBkd: string;
+    statusBkd: boolean;
   }) => {
     setEditingSesiId(sesi.id);
     setPertemuanKeInput(sesi.pertemuanKe);
@@ -1037,7 +1037,7 @@ export default function Bimbingan() {
                               {item.mahasiswa?.nim}
                             </td>
                             <td class="border border-secondary-300 p-2.5 text-center font-bold dark:border-secondary-700">
-                              {item.totalSesi || 0} Kali
+                              {item.sesi?.length || 0} Kali
                             </td>
                             <td class="border border-secondary-300 p-2 text-xs leading-relaxed dark:border-secondary-700">
                               <For each={item.sesi}>
@@ -1077,9 +1077,9 @@ export default function Bimbingan() {
                             </td>
                             <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
                               <span
-                                class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.statusBkd ? 'bg-accent-50 text-accent-700 border border-accent-100' : 'bg-secondary-100 text-secondary-500'}`}
+                                class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.sesi?.some((s) => s.statusBkd) ? 'bg-accent-50 text-accent-700 border border-accent-100' : 'bg-secondary-100 text-secondary-500'}`}
                               >
-                                {item.statusBkd ? 'YA' : 'TIDAK'}
+                                {item.sesi?.some((s) => s.statusBkd) ? 'YA' : 'TIDAK'}
                               </span>
                             </td>
                           </tr>

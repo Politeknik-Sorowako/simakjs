@@ -3,12 +3,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
-import { userController } from '../controllers/userController';
+import { ThemeToggle } from './ThemeToggle';
 
 export function Navbar(props: { onToggleSidebar: () => void }) {
   const auth = useAuth();
   const workspace = useWorkspace();
-  const currentTheme = () => auth.user()?.theme || 'light';
   const role = () => auth.user()?.role;
 
   // Load Prodis for admin global filter
@@ -37,42 +36,26 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
     },
   );
 
-  const toggleTheme = async () => {
-    const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
-    auth.setTheme(nextTheme);
-    try {
-      if (auth.user()) {
-        const res = await userController.updateProfile(auth.user()?.nama || '', undefined, nextTheme);
-        auth.login(localStorage.getItem('token') || '', {
-          ...auth.user()!,
-          theme: res.user.theme,
-        });
-      }
-    } catch (err) {
-      console.error('Gagal memperbarui tema di server:', err);
-    }
-  };
-
   return (
-    <header class="h-16 bg-white dark:bg-secondary-900 border-b border-secondary-100 dark:border-secondary-800 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
+    <header class="sticky top-0 z-40 h-16 backdrop-blur-md bg-white/80 dark:bg-secondary-900/80 border-b border-secondary-200/80 dark:border-secondary-800/80 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
       <div class="flex items-center gap-3">
         {/* Mobile Hamburger Toggle Button */}
         <button
           onClick={() => props.onToggleSidebar()}
           aria-label="Buka menu navigasi"
-          class="p-2 rounded-lg text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-800 focus:outline-none md:hidden"
+          class="p-2 rounded-xl text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-800 focus:outline-none md:hidden transition-colors"
         >
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
-        <h2 class="text-md font-bold text-secondary-800 dark:text-white hidden sm:block">Sistem Informasi Akademik</h2>
+        <h2 class="text-md font-bold text-secondary-900 dark:text-white hidden sm:block">Sistem Informasi Akademik</h2>
       </div>
 
       {/* Global Filter for Admin */}
       <Show when={role() === 'admin'}>
-        <div class="hidden md:flex items-center gap-3 bg-secondary-50 dark:bg-secondary-800/40 px-3 py-1.5 rounded-xl border border-secondary-200 dark:border-secondary-800">
+        <div class="hidden md:flex items-center gap-3 bg-secondary-100/60 dark:bg-secondary-800/40 px-3 py-1.5 rounded-xl border border-secondary-200/80 dark:border-secondary-700/80">
           <div class="flex items-center gap-1.5 text-xs">
             <span class="text-secondary-500 font-semibold dark:text-secondary-400">Prodi:</span>
             <select
@@ -80,7 +63,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
                 const val = e.currentTarget.value;
                 workspace.setSelectedProdiId(val ? parseInt(val) : null);
               }}
-              class="bg-transparent border-0 font-bold text-secondary-700 dark:text-secondary-200 focus:outline-none focus:ring-0 max-w-[150px] truncate"
+              class="bg-transparent border-0 font-bold text-secondary-800 dark:text-secondary-200 focus:outline-none focus:ring-0 max-w-[150px] truncate cursor-pointer"
             >
               <option value="" selected={workspace.selectedProdiId() === null}>
                 Semua Prodi
@@ -102,7 +85,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
                 const val = e.currentTarget.value;
                 workspace.setSelectedPeriodeId(val || null);
               }}
-              class="bg-transparent border-0 font-bold text-secondary-700 dark:text-secondary-200 focus:outline-none focus:ring-0 max-w-[150px] truncate"
+              class="bg-transparent border-0 font-bold text-secondary-800 dark:text-secondary-200 focus:outline-none focus:ring-0 max-w-[150px] truncate cursor-pointer"
             >
               <option value="" selected={workspace.selectedPeriodeId() === null}>
                 Semua Periode
@@ -120,32 +103,8 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
       </Show>
 
       <div class="flex items-center gap-4">
-        {/* Night Mode Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          class="p-2.5 rounded-xl bg-secondary-100 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 text-secondary-700 dark:text-white hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-all focus:outline-none shadow-sm"
-          title="Beralih Mode Gelap/Terang"
-        >
-          {auth.theme() === 'light' ? (
-            <svg class="w-5 h-5 text-secondary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-              />
-            </svg>
-          ) : (
-            <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m12.728 12.728l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z"
-              />
-            </svg>
-          )}
-        </button>
+        {/* Global Theme Mode Selector */}
+        <ThemeToggle />
       </div>
     </header>
   );

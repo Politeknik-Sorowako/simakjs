@@ -34,7 +34,7 @@ export function Pagination(props: PaginationProps) {
         <div class="flex items-center gap-1.5">
           <span>Baris:</span>
           <select
-            class="rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-xs px-2 py-1 text-secondary-700 dark:text-secondary-300 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            class="rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-xs px-2 py-1 text-secondary-700 dark:text-secondary-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
             value={props.limit}
             onChange={(e) => props.onLimitChange(Number(e.currentTarget.value))}
           >
@@ -68,7 +68,7 @@ export function Pagination(props: PaginationProps) {
                 if (e.key === 'Enter') handleJump();
               }}
               onBlur={handleJump}
-              class="w-14 text-center rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              class="w-14 text-center rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <span>/ {props.totalPages}</span>
           </div>

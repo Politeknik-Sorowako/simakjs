@@ -55,8 +55,8 @@ export const kelasKuliahController = {
     });
   },
 
-  async getByMk(mataKuliahId: number, periodeId: string): Promise<any[]> {
-    return fetchApi<any[]>(`/kelas-kuliah/by-mk?mataKuliahId=${mataKuliahId}&periodeId=${periodeId}`);
+  async getByMk(mataKuliahId: number, periodeId: string): Promise<KelasKuliah[]> {
+    return fetchApi<KelasKuliah[]>(`/kelas-kuliah/by-mk?mataKuliahId=${mataKuliahId}&periodeId=${periodeId}`);
   },
 
   async delete(id: number): Promise<{ message: string }> {

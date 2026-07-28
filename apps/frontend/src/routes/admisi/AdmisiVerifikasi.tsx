@@ -9,9 +9,37 @@ export default function AdmisiVerifikasi() {
   const toast = useToast();
   const [sessionFilter, setSessionFilter] = createSignal('');
   const [statusFilter, setStatusFilter] = createSignal('');
-  const [selectedApp, setSelectedApp] = createSignal<Record<string, unknown> | null>(null);
-  const [appDocs, setAppDocs] = createSignal<Record<string, unknown>[]>([]);
-  const [requirements, setRequirements] = createSignal<{ id: number; namaDokumen: string; isWajib: boolean }[]>([]);
+  const [selectedApp, setSelectedApp] = createSignal<{
+    id: number;
+    sessionId?: number;
+    noPendaftar?: string;
+    namaLengkap?: string;
+    status: string;
+  } | null>(null);
+  const [appDocs, setAppDocs] = createSignal<
+    {
+      id: number;
+      applicationId: number;
+      requirementId: number;
+      fileLink?: string;
+      filePath?: string;
+      originalName?: string;
+      isVerified: boolean;
+      rejectionNote?: string;
+      createdAt?: string;
+    }[]
+  >([]);
+  const [requirements, setRequirements] = createSignal<
+    {
+      id: number;
+      sessionId: number;
+      namaDokumen: string;
+      isWajib: boolean;
+      formatFile?: string;
+      maxSizeKb: number;
+      deskripsi?: string;
+    }[]
+  >([]);
   const [uploadingReq, setUploadingReq] = createSignal<number | null>(null);
   const [allProdis, setAllProdis] = createSignal<{ id: number; nama: string; jenjang: string }[]>([]);
   const [editProdi, setEditProdi] = createSignal<number | null>(null);
@@ -34,11 +62,11 @@ export default function AdmisiVerifikasi() {
     (f) => admisiAdminController.getApplications(f),
   );
 
-  const loadDocs = async (app: { id: number; sessionId: number }) => {
+  const loadDocs = async (app: { id: number; sessionId?: number }) => {
     try {
       const [docsRes, reqsRes] = await Promise.all([
         admisiController.getDocuments(app.id),
-        admisiController.getDocumentRequirements(app.sessionId),
+        admisiController.getDocumentRequirements(app.sessionId || 0),
       ]);
       setAppDocs(docsRes.data);
       setRequirements(reqsRes.data);
@@ -48,7 +76,13 @@ export default function AdmisiVerifikasi() {
     }
   };
 
-  const handleSelectApp = async (app: { id: number }) => {
+  const handleSelectApp = async (app: {
+    id: number;
+    sessionId?: number;
+    status: string;
+    noPendaftar?: string;
+    namaLengkap?: string;
+  }) => {
     if (selectedApp()?.id === app.id) {
       setSelectedApp(null);
       setAppDocs([]);
@@ -63,7 +97,7 @@ export default function AdmisiVerifikasi() {
     try {
       await admisiAdminController.verifyDocument(docId, verified, rejectionNote);
       toast.showToast(verified ? 'Dokumen diverifikasi' : 'Dokumen ditolak', 'success');
-      await loadDocs(selectedApp());
+      if (selectedApp()) await loadDocs(selectedApp()!);
       refetch();
     } catch (err: unknown) {
       toast.showToast((err as Error).message, 'error');
@@ -75,7 +109,7 @@ export default function AdmisiVerifikasi() {
     const reqs = requirements();
     const docs = appDocs();
     return reqs.map((req) => {
-      const uploaded = docs.filter((d: { requirementId: number }) => d.requirementId === req.id);
+      const uploaded = (docs || []).filter((d) => d.requirementId === req.id);
       const latest = uploaded[uploaded.length - 1] || null;
       return { req, uploaded, latest };
     });
@@ -134,29 +168,12 @@ export default function AdmisiVerifikasi() {
 
         <div class="grid gap-3">
           <For each={apps()?.data || []}>
-            {(app: {
-              id: number;
-              noPendaftar?: string;
-              namaLengkap?: string;
-              nama?: string;
-              status: string;
-              sessionId: number;
-              nik?: string;
-              tempatLahir?: string;
-              tanggalLahir?: string;
-              jenisKelamin?: string;
-              namaIbuKandung?: string;
-              asalSekolah?: string;
-              telepon?: string;
-              jalan?: string;
-              prodiPilihan1?: number;
-              prodiPilihan2?: number;
-            }) => (
+            {(app) => (
               <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
                 <div class="flex items-center justify-between mb-2">
                   <div>
                     <span class="font-mono text-xs text-secondary-400">{app.noPendaftar || '--'}</span>
-                    <span class="font-semibold ml-2">{app.namaLengkap || app.nama || '-'}</span>
+                    <span class="font-semibold ml-2">{app.namaLengkap || '-'}</span>
                   </div>
                   <span
                     class={`text-xs px-2 py-0.5 rounded-full ${
@@ -448,7 +465,7 @@ export default function AdmisiVerifikasi() {
                                   try {
                                     await admisiAdminController.updateAppProdi(
                                       app.id,
-                                      newP1() ?? app.prodiPilihan1,
+                                      newP1() || app.prodiPilihan1 || 0,
                                       newP2(),
                                     );
                                     toast.showToast('Prodi diubah', 'success');
@@ -498,8 +515,8 @@ export default function AdmisiVerifikasi() {
                           latest,
                         }: {
                           req: { id: number; namaDokumen: string; isWajib: boolean };
-                          uploaded: { requirementId: number }[];
-                          latest: { id: number; isVerified: boolean; rejectionNote?: string; fileLink?: string } | null;
+                          uploaded: Record<string, unknown>[];
+                          latest: { id: number; isVerified: boolean; fileLink?: string; rejectionNote?: string } | null;
                         }) => {
                           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
                           const isMissing = !latest;

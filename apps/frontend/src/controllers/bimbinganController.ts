@@ -148,14 +148,14 @@ export const bimbinganController = {
     });
   },
 
-  async deleteSesi(sesiId: number): Promise<any> {
-    return fetchApi<any>(`/bimbingan/sesi/${sesiId}`, {
+  async deleteSesi(sesiId: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/bimbingan/sesi/${sesiId}`, {
       method: 'DELETE',
     });
   },
 
-  async clearChatThread(mhsId: number): Promise<any> {
-    return fetchApi<any>(`/bimbingan/mahasiswa/${mhsId}/thread`, {
+  async clearChatThread(mhsId: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/bimbingan/mahasiswa/${mhsId}/thread`, {
       method: 'DELETE',
     });
   },

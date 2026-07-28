@@ -430,7 +430,7 @@ export default function Rps() {
               Kelas yang mengambil MK ini ({classes()?.length || 0})
             </h3>
             <Show
-              when={classes()?.length > 0}
+              when={(classes()?.length || 0) > 0}
               fallback={<p class="text-xs text-secondary-500">Belum ada kelas untuk MK ini di periode tersebut.</p>}
             >
               <div class="flex flex-wrap gap-2">
@@ -440,11 +440,7 @@ export default function Rps() {
                       {kelas.namaKelas}
                       <Show when={kelas.dosenPengajarKelas?.length}>
                         <span class="text-secondary-500 font-normal ml-1">
-                          (
-                          {kelas.dosenPengajarKelas
-                            .map((dp: { dosen?: { nama: string } }) => dp.dosen?.nama)
-                            .join(', ')}
-                          )
+                          ({kelas.dosenPengajarKelas?.map((dp) => dp.dosen?.nama).join(', ')})
                         </span>
                       </Show>
                     </span>

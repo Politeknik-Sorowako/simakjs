@@ -27,30 +27,37 @@ export default function KelasKuliah() {
   const auth = useAuth();
 
   const exportColumns: ExportColumn[] = [
-    { header: 'Kode MK', accessor: (row: IKelas) => row.mataKuliah?.kode || '-' },
-    { header: 'Nama Mata Kuliah', accessor: (row: IKelas) => row.mataKuliah?.nama || '-' },
-    { header: 'Periode', accessor: (row: IKelas) => row.periodeId },
-    { header: 'Kelas', accessor: (row: IKelas) => row.namaKelas },
+    { header: 'Kode MK', accessor: 'mataKuliah.kode' },
+    { header: 'Nama Mata Kuliah', accessor: 'mataKuliah.nama' },
+    { header: 'Periode', accessor: 'periodeId' },
+    { header: 'Kelas', accessor: 'namaKelas' },
     {
       header: 'Dosen Pengajar',
-      accessor: (row: IKelas) =>
-        row.dosenPengajarKelas
-          ?.map((d) => d.dosen?.nama)
-          .filter(Boolean)
-          .join('; ') || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const dosenList = row.dosenPengajarKelas as { dosen?: { nama?: string } }[] | undefined;
+        return (
+          dosenList
+            ?.map((d) => d.dosen?.nama)
+            .filter(Boolean)
+            .join('; ') || '-'
+        );
+      },
     },
     {
       header: 'SKS Mengajar',
-      accessor: (row: IKelas) =>
-        row.dosenPengajarKelas
-          ?.map((d) => d.sksBebanMengajar)
-          .filter((v) => v !== undefined)
-          .join('; ') || '-',
+      accessor: (row: Record<string, unknown>) => {
+        const dosenList = row.dosenPengajarKelas as { sksBebanMengajar?: number | null }[] | undefined;
+        return (
+          dosenList
+            ?.map((d) => d.sksBebanMengajar)
+            .filter((v) => v !== undefined)
+            .join('; ') || '-'
+        );
+      },
     },
-    { header: 'ID PDDIKTI', accessor: (row: IKelas) => row.idPddikti || '-' },
+    { header: 'ID PDDIKTI', accessor: 'idPddikti' },
   ];
   const workspace = useWorkspace();
-  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
 
   const [search, setSearch] = createSignal('');
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
@@ -61,8 +68,8 @@ export default function KelasKuliah() {
       search: search(),
       page: page(),
       limit: limit(),
-      prodiId: isGlobalFilterActive() ? workspace.selectedProdiId() : null,
-      periodeId: isGlobalFilterActive() ? workspace.selectedPeriodeId() : null,
+      prodiId: workspace.activeProdiId(),
+      periodeId: workspace.activePeriodeId(),
     }),
     ({ search, page, limit, prodiId, periodeId }) =>
       kelasKuliahController.getAll(search, page, limit, prodiId || undefined, periodeId || undefined),
@@ -70,7 +77,7 @@ export default function KelasKuliah() {
 
   // Fetch Dropdown Data
   const [matkuls] = createResource(
-    () => workspace.selectedProdiId(),
+    () => workspace.activeProdiId(),
     (prodiId) =>
       mataKuliahController.getAll(undefined, 1, 100, undefined, undefined, undefined, undefined, prodiId || undefined),
   );
@@ -345,7 +352,16 @@ export default function KelasKuliah() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ExportButtonGroup
-              data={() => sortedData()}
+              onFetchAll={async () => {
+                const res = await kelasKuliahController.getAll(
+                  search(),
+                  1,
+                  10000,
+                  workspace.activeProdiId() || undefined,
+                  workspace.activePeriodeId() || undefined,
+                );
+                return res.data;
+              }}
               columns={exportColumns}
               filename={`Kelas_Kuliah_${new Date().toISOString().split('T')[0]}`}
               title="Daftar Kelas Kuliah"

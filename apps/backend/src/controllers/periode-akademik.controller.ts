@@ -2,6 +2,7 @@ import { PeriodeAkademikService } from '../services/periode-akademik.service';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class PeriodeAkademikController {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query }: AuthContext<any, PaginationQuery>): Promise<any> {
     const page = query?.page ? parseInt(String(query.page)) : 1;
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
@@ -9,6 +10,7 @@ export class PeriodeAkademikController {
     return await PeriodeAkademikService.getAll(page, limit, search);
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set }: AuthContext): Promise<any> {
     const data = await PeriodeAkademikService.getById(params.id);
     if (!data) {
@@ -18,6 +20,7 @@ export class PeriodeAkademikController {
     return data;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -29,6 +32,7 @@ export class PeriodeAkademikController {
     return newPeriode;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
@@ -43,6 +47,7 @@ export class PeriodeAkademikController {
     return updated;
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || user.role !== 'admin') {
