@@ -166,4 +166,20 @@ MK-001,3,2,true`;
     }
     return { message: 'Mata Kuliah berhasil dihapus dari Kurikulum' };
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async removeBatchMataKuliah({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'admin') {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    const { mataKuliahIds } = body as { mataKuliahIds: number[] };
+    if (!mataKuliahIds || !Array.isArray(mataKuliahIds) || mataKuliahIds.length === 0) {
+      set.status = 400;
+      return { error: 'Daftar ID mata kuliah wajib diisi' };
+    }
+    const result = await KurikulumService.removeBatchMataKuliah(parseInt(params.id), mataKuliahIds);
+    return { message: `Berhasil menghapus ${result.count} mata kuliah dari Kurikulum`, deletedCount: result.count };
+  }
 }

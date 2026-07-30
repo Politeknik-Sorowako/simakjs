@@ -182,3 +182,17 @@ export const removeMataKuliahSchema = {
     mkId: t.Numeric(),
   }),
 };
+
+export const removeBatchMataKuliahSchema = {
+  detail: {
+    tags: ['Kurikulum'],
+    summary: 'Hapus Massal Mata Kuliah dari Kurikulum',
+    description: 'Menghapus beberapa mata kuliah dari kurikulum sekaligus (Hanya Admin).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    mataKuliahIds: t.Array(t.Integer()),
+  }),
+};

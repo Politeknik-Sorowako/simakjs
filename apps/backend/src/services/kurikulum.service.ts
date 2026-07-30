@@ -164,6 +164,19 @@ export class KurikulumService {
     return deletedKmk || null;
   }
 
+  static async removeBatchMataKuliah(kurikulumId: number, mataKuliahIds: number[]) {
+    if (!mataKuliahIds || mataKuliahIds.length === 0) {
+      return { count: 0 };
+    }
+    const deletedRows = await db
+      .delete(kurikulumMataKuliah)
+      .where(
+        and(eq(kurikulumMataKuliah.kurikulumId, kurikulumId), inArray(kurikulumMataKuliah.mataKuliahId, mataKuliahIds)),
+      )
+      .returning();
+    return { count: deletedRows.length };
+  }
+
   static async copyFromKurikulum(targetKurikulumId: number, sourceKurikulumId: number) {
     const source = await this.getById(sourceKurikulumId);
     if (!source) throw new Error('Kurikulum sumber tidak ditemukan');

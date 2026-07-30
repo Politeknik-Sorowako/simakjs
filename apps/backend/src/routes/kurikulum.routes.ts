@@ -11,6 +11,7 @@ import {
   getKurikulumByIdSchema,
   getKurikulumSchema,
   importMkCsvSchema,
+  removeBatchMataKuliahSchema,
   removeMataKuliahSchema,
   updateKurikulumSchema,
 } from '../schemas/kurikulum.schema';
@@ -27,4 +28,5 @@ export const kurikulumRoutes = new Elysia({ prefix: '/kurikulum' })
   .post('/:id/copy-from', KurikulumController.copyFromKurikulum, copyFromKurikulumSchema)
   .post('/:id/import-mk', KurikulumController.importMkCsv, importMkCsvSchema)
   .post('/:id/duplicate', KurikulumController.duplicate, duplicateKurikulumSchema)
+  .delete('/:id/mata-kuliah/batch', KurikulumController.removeBatchMataKuliah, removeBatchMataKuliahSchema)
   .delete('/:id/mata-kuliah/:mkId', KurikulumController.removeMataKuliah, removeMataKuliahSchema);

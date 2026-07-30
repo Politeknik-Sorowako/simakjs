@@ -73,6 +73,51 @@ export default function Kurikulum() {
     (id) => (id ? kurikulumController.getById(id) : null),
   );
 
+  // Batch selection state for MK inside Kurikulum manage modal
+  const [selectedMkIds, setSelectedMkIds] = createSignal<number[]>([]);
+  const [showBatchDeleteModal, setShowBatchDeleteModal] = createSignal(false);
+  const [batchDeleteLoading, setBatchDeleteLoading] = createSignal(false);
+
+  const toggleSelectRow = (mkId: number) => {
+    if (selectedMkIds().includes(mkId)) {
+      setSelectedMkIds(selectedMkIds().filter((id) => id !== mkId));
+    } else {
+      setSelectedMkIds([...selectedMkIds(), mkId]);
+    }
+  };
+
+  const toggleSelectSemester = (items: KurikulumMataKuliah[]) => {
+    const itemIds = items.map((i) => i.mataKuliahId);
+    const allSelected = itemIds.length > 0 && itemIds.every((id) => selectedMkIds().includes(id));
+    if (allSelected) {
+      setSelectedMkIds(selectedMkIds().filter((id) => !itemIds.includes(id)));
+    } else {
+      const merged = new Set([...selectedMkIds(), ...itemIds]);
+      setSelectedMkIds(Array.from(merged));
+    }
+  };
+
+  const isSemesterAllSelected = (items: KurikulumMataKuliah[]) => {
+    return items.length > 0 && items.every((i) => selectedMkIds().includes(i.mataKuliahId));
+  };
+
+  const handleConfirmBatchDelete = async () => {
+    const kurId = manageKurikulumId();
+    if (!kurId || selectedMkIds().length === 0) return;
+    setBatchDeleteLoading(true);
+    try {
+      const res = await kurikulumController.removeBatchMataKuliah(kurId, selectedMkIds());
+      setSelectedMkIds([]);
+      setShowBatchDeleteModal(false);
+      refetchDetail();
+      alert(res.message || `Berhasil menghapus ${res.deletedCount} mata kuliah`);
+    } catch (e: unknown) {
+      alert((e as Error).message || 'Gagal menghapus mata kuliah terpilih');
+    } finally {
+      setBatchDeleteLoading(false);
+    }
+  };
+
   // Form for adding MK to kurikulum
   const [addMkMataKuliahId, setAddMkMataKuliahId] = createSignal<number>(0);
   const [addMkSemester, setAddMkSemester] = createSignal(1);
@@ -81,6 +126,7 @@ export default function Kurikulum() {
   const [addMkPraktek, setAddMkPraktek] = createSignal(1);
   const [addMkIsWajib, setAddMkIsWajib] = createSignal(true);
   const [addMkError, setAddMkError] = createSignal('');
+
   // Copy from kurikulum state
   const [sourceKurikulumId, setSourceKurikulumId] = createSignal<number>(0);
   const [copyResult, setCopyResult] = createSignal<{
@@ -178,6 +224,7 @@ export default function Kurikulum() {
 
   const openManageModal = async (id: number) => {
     setManageKurikulumId(id);
+    setSelectedMkIds([]);
     setAddMkMataKuliahId(0);
     setAddMkSemester(1);
     setAddMkSks(3);
@@ -562,16 +609,37 @@ export default function Kurikulum() {
 
               {/* Daftar MK per Semester */}
               <div class="space-y-4">
-                <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200">Daftar Mata Kuliah</h3>
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                  <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200">Daftar Mata Kuliah</h3>
+                  <Show when={selectedMkIds().length > 0}>
+                    <Button variant="danger" size="sm" onClick={() => setShowBatchDeleteModal(true)}>
+                      🗑️ Hapus Terpilih ({selectedMkIds().length})
+                    </Button>
+                  </Show>
+                </div>
+
                 <For each={mkBySemester()}>
                   {(group) => (
                     <div class="border border-secondary-100 dark:border-secondary-800 rounded-lg">
-                      <div class="px-4 py-2 bg-brand-50 dark:bg-brand-900/30 font-semibold text-sm text-brand-700 dark:text-white">
-                        Semester {group.semester}
+                      <div class="px-4 py-2 bg-brand-50 dark:bg-brand-900/30 font-semibold text-sm text-brand-700 dark:text-white flex items-center justify-between">
+                        <span>Semester {group.semester}</span>
+                        <span class="text-xs font-normal text-secondary-500 dark:text-secondary-300">
+                          {group.items.filter((i) => selectedMkIds().includes(i.mataKuliahId)).length} /{' '}
+                          {group.items.length} terpilih
+                        </span>
                       </div>
                       <table class="w-full text-sm">
                         <thead>
                           <tr class="border-b border-secondary-100 dark:border-secondary-800">
+                            <th class="px-3 py-2 text-center w-10">
+                              <input
+                                type="checkbox"
+                                checked={isSemesterAllSelected(group.items)}
+                                onChange={() => toggleSelectSemester(group.items)}
+                                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                                title="Pilih semua di semester ini"
+                              />
+                            </th>
                             <th class="px-4 py-2 text-left text-xs font-semibold text-secondary-500 dark:text-secondary-200">
                               Kode
                             </th>
@@ -594,35 +662,48 @@ export default function Kurikulum() {
                         </thead>
                         <tbody>
                           <For each={group.items}>
-                            {(item) => (
-                              <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
-                                <td class="px-4 py-2 font-mono text-secondary-600">{item.mataKuliah?.kode}</td>
-                                <td class="px-4 py-2 text-secondary-800 dark:text-secondary-200">
-                                  {item.mataKuliah?.nama}
-                                </td>
-                                <td class="px-4 py-2 text-center text-secondary-700">{item.sksMataKuliah}</td>
-                                <td class="px-4 py-2 text-center">
-                                  <span
-                                    class={`px-2 py-0.5 rounded-full text-xs font-semibold ${item.isWajib ? 'bg-green-50 text-green-700' : 'bg-secondary-100 text-secondary-600'}`}
-                                  >
-                                    {item.isWajib ? 'Ya' : 'Tidak'}
-                                  </span>
-                                </td>
-                                <td class="px-4 py-2 text-center">
-                                  <Show when={bkMappings() && bkMappings()![item.mataKuliahId]}>
-                                    <Badge variant="info">{bkMappings()![item.mataKuliahId]?.length || 0} BK</Badge>
-                                  </Show>
-                                </td>
-                                <td class="px-4 py-2 text-center">
-                                  <button
-                                    onClick={() => handleRemoveMk(item.mataKuliahId)}
-                                    class="text-xs text-red-600 hover:text-red-800 font-semibold"
-                                  >
-                                    Hapus
-                                  </button>
-                                </td>
-                              </tr>
-                            )}
+                            {(item) => {
+                              const isSelected = () => selectedMkIds().includes(item.mataKuliahId);
+                              return (
+                                <tr
+                                  class={`border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30 transition-colors ${isSelected() ? 'bg-brand-50/40 dark:bg-brand-900/20' : ''}`}
+                                >
+                                  <td class="px-3 py-2 text-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected()}
+                                      onChange={() => toggleSelectRow(item.mataKuliahId)}
+                                      class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                                    />
+                                  </td>
+                                  <td class="px-4 py-2 font-mono text-secondary-600">{item.mataKuliah?.kode}</td>
+                                  <td class="px-4 py-2 text-secondary-800 dark:text-secondary-200">
+                                    {item.mataKuliah?.nama}
+                                  </td>
+                                  <td class="px-4 py-2 text-center text-secondary-700">{item.sksMataKuliah}</td>
+                                  <td class="px-4 py-2 text-center">
+                                    <span
+                                      class={`px-2 py-0.5 rounded-full text-xs font-semibold ${item.isWajib ? 'bg-green-50 text-green-700' : 'bg-secondary-100 text-secondary-600'}`}
+                                    >
+                                      {item.isWajib ? 'Ya' : 'Tidak'}
+                                    </span>
+                                  </td>
+                                  <td class="px-4 py-2 text-center">
+                                    <Show when={bkMappings() && bkMappings()![item.mataKuliahId]}>
+                                      <Badge variant="info">{bkMappings()![item.mataKuliahId]?.length || 0} BK</Badge>
+                                    </Show>
+                                  </td>
+                                  <td class="px-4 py-2 text-center">
+                                    <button
+                                      onClick={() => handleRemoveMk(item.mataKuliahId)}
+                                      class="text-xs text-red-600 hover:text-red-800 font-semibold"
+                                    >
+                                      Hapus
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            }}
                           </For>
                         </tbody>
                       </table>
@@ -833,6 +914,32 @@ export default function Kurikulum() {
               <Button type="submit">Duplikasi</Button>
             </div>
           </form>
+        </Modal>
+
+        {/* Modal Konfirmasi Batch Delete MK */}
+        <Modal
+          show={showBatchDeleteModal()}
+          onClose={() => setShowBatchDeleteModal(false)}
+          title="Konfirmasi Hapus Massal Mata Kuliah"
+        >
+          <div class="flex flex-col gap-4">
+            <p class="text-sm text-secondary-700 dark:text-secondary-200">
+              Apakah Anda yakin ingin menghapus <strong class="text-red-600 font-bold">{selectedMkIds().length}</strong>{' '}
+              mata kuliah terpilih dari kurikulum ini?
+            </p>
+            <p class="text-xs text-secondary-500">
+              Tindakan ini akan menghapus relasi mata kuliah terpilih dari kurikulum. Data master mata kuliah tidak akan
+              terhapus.
+            </p>
+            <div class="flex justify-end gap-2 mt-2">
+              <Button variant="secondary" onClick={() => setShowBatchDeleteModal(false)}>
+                Batal
+              </Button>
+              <Button variant="danger" disabled={batchDeleteLoading()} onClick={handleConfirmBatchDelete}>
+                {batchDeleteLoading() ? 'Menghapus...' : `Ya, Hapus (${selectedMkIds().length}) Mata Kuliah`}
+              </Button>
+            </div>
+          </div>
         </Modal>
       </div>
     </MainLayout>
