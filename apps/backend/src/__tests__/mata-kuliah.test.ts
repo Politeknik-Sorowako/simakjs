@@ -282,4 +282,95 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
       expect(response.status).toBe(404);
     });
   });
+
+  describe('POST /mata-kuliah/import', () => {
+    it('harus menyembunyikan query SQL mentah, memberikan nomor baris CSV yang tepat, dan pesan ramah pengguna ketika import gagal', async () => {
+      const adminToken = await getAuthToken('admin-mk-import@test.com', 'admin');
+
+      // First create a Mata Kuliah to cause duplicate error
+      await app.handle(
+        new Request('http://localhost/mata-kuliah', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            kode: 'MKIMP001',
+            nama: 'Algoritma & Pemrograman',
+            sksTotal: 3,
+            programStudiId: prodiId,
+          }),
+        }),
+      );
+
+      // Now import items with duplicates & invalid fields
+      // Row 1 (Index 0 in items) -> Header is Line 1, so this is Line 2 (Duplicate MKIMP001)
+      // Row 2 (Index 1 in items) -> Line 3 (Missing Kode/Nama)
+      // Row 3 (Index 2 in items) -> Line 4 (Invalid Prodi Kode)
+      const importPayload = {
+        items: [
+          {
+            kodeProdi: 'TI-MK-SETUP',
+            kode: 'MKIMP001',
+            nama: 'Algoritma & Pemrograman Duplikat',
+            sksTotal: 3,
+          },
+          {
+            kodeProdi: 'TI-MK-SETUP',
+            kode: '',
+            nama: '',
+            sksTotal: 3,
+          },
+          {
+            kodeProdi: 'PRODI_TIDAK_ADA',
+            kode: 'MKIMP002',
+            nama: 'Struktur Data Baru',
+            sksTotal: 3,
+          },
+        ],
+      };
+
+      const response = await app.handle(
+        new Request('http://localhost/mata-kuliah/import', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify(importPayload),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const resBody = (await response.json()) as {
+        success: number;
+        failed: number;
+        errors: { row: number; kode: string; error: string }[];
+      };
+
+      expect(resBody.failed).toBe(3);
+      expect(resBody.errors.length).toBe(3);
+
+      // Check row 2 error (Line 2 in CSV)
+      expect(resBody.errors[0].row).toBe(2);
+      expect(resBody.errors[0].error).toContain('sudah terdaftar');
+
+      // Check row 3 error (Line 3 in CSV)
+      expect(resBody.errors[1].row).toBe(3);
+      expect(resBody.errors[1].error).toContain('Kolom Kode dan Nama wajib diisi');
+
+      // Check row 4 error (Line 4 in CSV)
+      expect(resBody.errors[2].row).toBe(4);
+      expect(resBody.errors[2].error).toContain('tidak ditemukan');
+
+      // Check CWE-209 compliance: No raw SQL words exposed in error messages
+      const stringifiedErrors = JSON.stringify(resBody.errors);
+      expect(stringifiedErrors).not.toContain('INSERT');
+      expect(stringifiedErrors).not.toContain('SELECT');
+      expect(stringifiedErrors).not.toContain('mata_kuliah');
+      expect(stringifiedErrors).not.toContain('Failed query');
+      expect(stringifiedErrors).not.toContain('violates unique constraint');
+    });
+  });
 });
