@@ -238,11 +238,11 @@ export class MataKuliahService {
       existingKeySet = new Set(existingMks.map((mk) => `${mk.programStudiId}:${mk.kode}`));
     }
 
-    const validItems: CreateMataKuliahDto[] = [];
+    const validItems: { item: CreateMataKuliahDto; row: number }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
-      const urutan = i + 1;
+      const urutan = i + 2;
       const kode = item.kode?.trim();
       const nama = item.nama?.trim();
 
@@ -262,47 +262,61 @@ export class MataKuliahService {
         resolvedProdiId = found;
       } else {
         result.failed++;
-        result.errors.push({ row: urutan, kode: kode || '', error: 'kode_prodi wajib diisi' });
+        result.errors.push({ row: urutan, kode: kode || '', error: 'Kolom kode_prodi wajib diisi' });
         continue;
       }
 
       if (!kode || !nama) {
         result.failed++;
-        result.errors.push({ row: urutan, kode: kode || '', error: 'Kode dan nama wajib diisi' });
+        result.errors.push({ row: urutan, kode: kode || '', error: 'Kolom Kode dan Nama wajib diisi' });
         continue;
       }
 
       if (!item.sksTotal || item.sksTotal <= 0) {
         result.failed++;
-        result.errors.push({ row: urutan, kode, error: 'sksTotal wajib diisi dan lebih dari 0' });
+        result.errors.push({ row: urutan, kode, error: 'SKS Total wajib diisi dan lebih dari 0' });
         continue;
       }
 
       if (existingKeySet.has(`${resolvedProdiId}:${kode}`)) {
         result.failed++;
-        result.errors.push({ row: urutan, kode, error: 'Kode sudah ada untuk program studi ini' });
+        result.errors.push({ row: urutan, kode, error: 'Kode mata kuliah sudah terdaftar pada Program Studi ini' });
         continue;
       }
 
       validItems.push({
-        programStudiId: resolvedProdiId,
-        kode,
-        nama,
-        sksTotal: item.sksTotal,
-        sksTatapMuka: item.sksTatapMuka,
-        sksPraktek: item.sksPraktek,
-        idPddikti: item.idPddikti?.trim() || undefined,
+        item: {
+          programStudiId: resolvedProdiId,
+          kode,
+          nama,
+          sksTotal: item.sksTotal,
+          sksTatapMuka: item.sksTatapMuka,
+          sksPraktek: item.sksPraktek,
+          idPddikti: item.idPddikti?.trim() || undefined,
+        },
+        row: urutan,
       });
     }
 
-    for (const item of validItems) {
+    for (const { item, row } of validItems) {
       try {
         await db.insert(mataKuliah).values(item);
         result.success++;
       } catch (err: unknown) {
         result.failed++;
-        const msg = err instanceof Error ? err.message : 'Gagal menyimpan data ke database';
-        result.errors.push({ row: 0, kode: item.kode, error: msg });
+        console.error(`[MataKuliahService.import] Error inserting row ${row} (kode: ${item.kode}):`, err);
+        const rawMsg = err instanceof Error ? err.message : 'Unknown error';
+        let safeError = 'Gagal menyimpan data mata kuliah';
+        if (rawMsg.includes('unique constraint') || rawMsg.includes('duplicate key') || rawMsg.includes('23505')) {
+          safeError = 'Kode mata kuliah sudah terdaftar pada Program Studi ini';
+        } else if (
+          rawMsg.includes('foreign key') ||
+          rawMsg.includes('violates foreign key constraint') ||
+          rawMsg.includes('23503')
+        ) {
+          safeError = 'Program Studi tidak ditemukan atau referensi tidak valid';
+        }
+        result.errors.push({ row, kode: item.kode, error: safeError });
       }
     }
 

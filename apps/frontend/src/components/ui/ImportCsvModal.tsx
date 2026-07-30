@@ -244,19 +244,22 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
                       </thead>
                       <tbody class="divide-y divide-red-100 dark:divide-red-950/40 font-mono text-[11px]">
                         <For each={importReport()!.errors}>
-                          {(err) => (
-                            <tr class="hover:bg-red-50/50 dark:hover:bg-red-950/20">
-                              <td class="px-3 py-1.5 font-bold text-red-800 dark:text-red-300">
-                                {err.line > 0 ? `Baris ${err.line}` : 'Sistem'}
-                              </td>
-                              <td class="px-3 py-1.5">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
-                                  ❌ Gagal
-                                </span>
-                              </td>
-                              <td class="px-3 py-1.5 text-red-700 dark:text-red-300">{err.error}</td>
-                            </tr>
-                          )}
+                          {(err) => {
+                            const lineNum = err.line || (err as { row?: number }).row || 0;
+                            return (
+                              <tr class="hover:bg-red-50/50 dark:hover:bg-red-950/20">
+                                <td class="px-3 py-1.5 font-bold text-red-800 dark:text-red-300">
+                                  {lineNum > 0 ? `Baris ${lineNum}` : 'Sistem'}
+                                </td>
+                                <td class="px-3 py-1.5">
+                                  <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300">
+                                    ❌ Gagal
+                                  </span>
+                                </td>
+                                <td class="px-3 py-1.5 text-red-700 dark:text-red-300">{err.error}</td>
+                              </tr>
+                            );
+                          }}
                         </For>
                       </tbody>
                     </table>
