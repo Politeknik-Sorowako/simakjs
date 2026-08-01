@@ -22,7 +22,7 @@ export interface CreateMahasiswaDto {
   namaIbuKandung?: string | null;
   nik?: string | null;
   jenisKelamin: 'L' | 'P';
-  tanggalLahir: string;
+  tanggalLahir?: string | null;
 }
 
 export class MahasiswaService {

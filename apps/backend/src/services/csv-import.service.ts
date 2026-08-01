@@ -147,7 +147,7 @@ export class CsvImportService {
               .toUpperCase() === 'P'
               ? 'P'
               : 'L',
-          tanggalLahir: record.tanggallahir || new Date().toISOString().split('T')[0],
+          tanggalLahir: record.tanggallahir || null,
           tempatLahir: record.tempatlahir || null,
           idAgama: parsedIdAgama,
           jalan: record.jalan || null,
@@ -162,6 +162,7 @@ export class CsvImportService {
     if (batchData.length > 0) {
       const formatErrorMsg = (err: unknown, nim: string): string => {
         const raw = err instanceof Error ? `${err.message} ${(err as { cause?: unknown }).cause || ''}` : String(err);
+        console.error('CSV import error raw:', raw);
         if (
           raw.includes('mahasiswa_nim_unique') ||
           (raw.includes('duplicate key value violates unique constraint') && raw.includes('nim'))
