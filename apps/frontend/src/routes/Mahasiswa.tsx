@@ -187,8 +187,8 @@ export default function Mahasiswa() {
         programStudiId: Number(prodiId()),
         dosenPaId: dosenPaId() ? Number(dosenPaId()) : null,
         status: status(),
-        namaIbuKandung: namaIbu(),
-        nik: nik(),
+        namaIbuKandung: namaIbu() || null,
+        nik: nik() || null,
         jenisKelamin: gender(),
         tanggalLahir: birthdate(),
         tempatLahir: tempatLahir() || null,
@@ -548,17 +548,15 @@ export default function Mahasiswa() {
               />
               <Input
                 label="NIK (16 Digit)"
-                required
                 value={nik()}
                 onInput={(e) => setNik(e.currentTarget.value)}
-                placeholder="16 digit nomor induk kependudukan"
+                placeholder="16 digit nomor induk kependudukan (opsional)"
               />
               <Input
                 label="Nama Ibu Kandung"
-                required
                 value={namaIbu()}
                 onInput={(e) => setNamaIbu(e.currentTarget.value)}
-                placeholder="Nama lengkap ibu kandung"
+                placeholder="Nama lengkap ibu kandung (opsional)"
               />
               <Input
                 isSelect

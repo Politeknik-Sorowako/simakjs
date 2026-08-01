@@ -27,8 +27,8 @@ export interface Mahasiswa {
   programStudiId: number | null;
   dosenPaId?: number | null;
   status: string;
-  namaIbuKandung: string;
-  nik: string;
+  namaIbuKandung?: string | null;
+  nik?: string | null;
   jenisKelamin: 'L' | 'P';
   tanggalLahir: string;
   tempatLahir?: string | null;
