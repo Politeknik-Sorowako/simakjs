@@ -331,7 +331,12 @@ export class KhsService {
     if (programStudiId !== undefined) {
       whereClause = eq(konversiNilai.programStudiId, programStudiId);
     }
-    return await db.select().from(konversiNilai).where(whereClause);
+    return await db.query.konversiNilai.findMany({
+      where: whereClause,
+      with: {
+        programStudi: true,
+      },
+    });
   }
 
   static async saveKonversi(data: {

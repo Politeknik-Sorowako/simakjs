@@ -331,9 +331,9 @@ export default function Khs() {
                         {konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}
                       </td>
                       <td class="p-3 font-bold text-brand-600">{konv.nilaiHuruf}</td>
-                      <td class="p-3 font-mono">{konv.bobotIndeks.toFixed(2)}</td>
-                      <td class="p-3 font-mono">{konv.nilaiMin.toFixed(2)}</td>
-                      <td class="p-3 font-mono">{konv.nilaiMax.toFixed(2)}</td>
+                      <td class="p-3 font-mono">{Number(konv.bobotIndeks ?? 0).toFixed(2)}</td>
+                      <td class="p-3 font-mono">{Number(konv.nilaiMin ?? 0).toFixed(2)}</td>
+                      <td class="p-3 font-mono">{Number(konv.nilaiMax ?? 0).toFixed(2)}</td>
                       <td class="p-3 font-medium text-secondary-800 dark:text-white">{konv.predikat}</td>
                       <td class="p-3 flex gap-2">
                         <button
@@ -393,7 +393,7 @@ export default function Khs() {
                             IP Semester
                           </span>
                           <span class="text-3xl font-extrabold text-brand-600">
-                            {khsData()?.summary?.ipSemester?.toFixed(2)}
+                            {Number(khsData()?.summary?.ipSemester ?? 0).toFixed(2)}
                           </span>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
@@ -401,7 +401,7 @@ export default function Khs() {
                             IPK Kumulatif
                           </span>
                           <span class="text-3xl font-extrabold text-accent-600">
-                            {khsData()?.summary?.ipk?.toFixed(2)}
+                            {Number(khsData()?.summary?.ipk ?? 0).toFixed(2)}
                           </span>
                         </div>
                         <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
@@ -754,7 +754,7 @@ export default function Khs() {
                     <p>
                       IP Semester:{' '}
                       <span class="font-extrabold text-brand-600 dark:text-white">
-                        {khsData()?.summary?.ipSemester?.toFixed(2)}
+                        {Number(khsData()?.summary?.ipSemester ?? 0).toFixed(2)}
                       </span>
                     </p>
                     <p>
@@ -847,7 +847,7 @@ export default function Khs() {
                     <p>
                       IPK Kumulatif:{' '}
                       <span class="font-extrabold text-brand-600 dark:text-white">
-                        {transkripData()?.ipk?.toFixed(2)}
+                        {Number(transkripData()?.ipk ?? 0).toFixed(2)}
                       </span>
                     </p>
                     <p>
