@@ -147,7 +147,7 @@ export class CsvImportService {
               .toUpperCase() === 'P'
               ? 'P'
               : 'L',
-          tanggalLahir: record.tanggallahir || new Date().toISOString().split('T')[0],
+          tanggalLahir: record.tanggallahir || null,
           tempatLahir: record.tempatlahir || null,
           idAgama: parsedIdAgama,
           jalan: record.jalan || null,
