@@ -91,6 +91,16 @@ export const kurikulumController = {
     });
   },
 
+  async removeBatchMataKuliah(
+    kurikulumId: number,
+    mataKuliahIds: number[],
+  ): Promise<{ message: string; deletedCount: number }> {
+    return fetchApi<{ message: string; deletedCount: number }>(`/kurikulum/${kurikulumId}/mata-kuliah/batch`, {
+      method: 'DELETE',
+      body: JSON.stringify({ mataKuliahIds }),
+    });
+  },
+
   async copyFromKurikulum(
     kurikulumId: number,
     sourceKurikulumId: number,

@@ -26,9 +26,9 @@ export interface KonversiNilai {
   programStudiId: number | null;
   programStudi?: { nama: string };
   nilaiHuruf: string;
-  bobotIndeks: number;
-  nilaiMin: number;
-  nilaiMax: number;
+  bobotIndeks: number | string;
+  nilaiMin: number | string;
+  nilaiMax: number | string;
   predikat: string;
 }
 
