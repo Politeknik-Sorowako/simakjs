@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
 import {
   bap,
   bimbingan,
@@ -348,12 +348,35 @@ export class KhsService {
     nilaiMax: string | number;
     predikat: string;
   }) {
+    const nMin = parseFloat(String(data.nilaiMin));
+    const nMax = parseFloat(String(data.nilaiMax));
+
+    if (isNaN(nMin) || isNaN(nMax) || nMin >= nMax) {
+      throw new Error('Nilai minimum harus lebih kecil dari nilai maksimum.');
+    }
+
+    const prodiId = data.programStudiId || null;
+    const existingRules = await db.query.konversiNilai.findMany({
+      where: prodiId ? eq(konversiNilai.programStudiId, prodiId) : isNull(konversiNilai.programStudiId),
+    });
+
+    for (const rule of existingRules) {
+      if (data.id && rule.id === data.id) continue;
+      const rMin = parseFloat(String(rule.nilaiMin));
+      const rMax = parseFloat(String(rule.nilaiMax));
+      if (Math.max(nMin, rMin) <= Math.min(nMax, rMax)) {
+        throw new Error(
+          `Rentang nilai (${nMin} - ${nMax}) beririsan / bertabrakan titik batas dengan nilai ${rule.nilaiHuruf} (${rMin} - ${rMax}).`,
+        );
+      }
+    }
+
     const payload = {
-      programStudiId: data.programStudiId || null,
+      programStudiId: prodiId,
       nilaiHuruf: data.nilaiHuruf,
       bobotIndeks: String(data.bobotIndeks),
-      nilaiMin: String(data.nilaiMin),
-      nilaiMax: String(data.nilaiMax),
+      nilaiMin: String(nMin),
+      nilaiMax: String(nMax),
       predikat: data.predikat,
     };
 
