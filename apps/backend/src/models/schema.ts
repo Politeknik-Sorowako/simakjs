@@ -110,7 +110,7 @@ export const mahasiswa = pgTable('mahasiswa', {
   namaIbuKandung: varchar('nama_ibu_kandung', { length: 255 }),
   nik: varchar('nik', { length: 16 }).unique(),
   jenisKelamin: jenisKelaminEnum('jenis_kelamin').notNull(),
-  tanggalLahir: date('tanggal_lahir').notNull(),
+  tanggalLahir: date('tanggal_lahir'),
   tempatLahir: varchar('tempat_lahir', { length: 100 }),
   idAgama: integer('id_agama'),
   jalan: text('jalan'),

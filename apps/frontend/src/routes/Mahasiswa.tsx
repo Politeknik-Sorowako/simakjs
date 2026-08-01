@@ -190,7 +190,7 @@ export default function Mahasiswa() {
         namaIbuKandung: namaIbu() || null,
         nik: nik() || null,
         jenisKelamin: gender(),
-        tanggalLahir: birthdate(),
+        tanggalLahir: birthdate() || null,
         tempatLahir: tempatLahir() || null,
         idAgama: idAgama() ? Number(idAgama()) : null,
         jalan: jalan() || null,
@@ -256,6 +256,37 @@ export default function Mahasiswa() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    const ids = selectedIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin menghapus ${ids.length} data mahasiswa terpilih?`)) return;
+
+    setBulkLoading(true);
+    let successCount = 0;
+    const errors: string[] = [];
+
+    for (const id of ids) {
+      try {
+        await mahasiswaController.delete(id);
+        successCount++;
+      } catch (e: unknown) {
+        errors.push((e as Error).message || `ID ${id}`);
+      }
+    }
+
+    if (errors.length > 0) {
+      toast.showToast(
+        `Berhasil menghapus ${successCount} data mahasiswa. ${errors.length} gagal: ${errors.join(', ')}`,
+        'info',
+      );
+    } else {
+      toast.showToast(`Berhasil menghapus ${successCount} data mahasiswa terpilih.`, 'success');
+    }
+    setSelectedIds([]);
+    setBulkLoading(false);
+    refetch();
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('Apakah Anda yakin ingin menghapus Mahasiswa ini?')) return;
     try {
@@ -278,6 +309,9 @@ export default function Mahasiswa() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <Show when={selectedIds().length > 0}>
+              <Button variant="danger" disabled={bulkLoading()} onClick={handleBulkDelete}>
+                {bulkLoading() ? 'Memproses...' : `🗑️ Hapus Terpilih (${selectedIds().length})`}
+              </Button>
               <Button variant="success" disabled={bulkLoading()} onClick={handleBulkCreateAccount}>
                 {bulkLoading() ? 'Memproses...' : `🔑 Buat Akun (${selectedIds().length})`}
               </Button>
@@ -571,7 +605,6 @@ export default function Mahasiswa() {
               <Input
                 type="date"
                 label="Tanggal Lahir"
-                required
                 value={birthdate()}
                 onInput={(e) => setBirthdate(e.currentTarget.value)}
               />

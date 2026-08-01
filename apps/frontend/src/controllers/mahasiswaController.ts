@@ -30,7 +30,7 @@ export interface Mahasiswa {
   namaIbuKandung?: string | null;
   nik?: string | null;
   jenisKelamin: 'L' | 'P';
-  tanggalLahir: string;
+  tanggalLahir?: string | null;
   tempatLahir?: string | null;
   idAgama?: number | null;
   jalan?: string | null;
