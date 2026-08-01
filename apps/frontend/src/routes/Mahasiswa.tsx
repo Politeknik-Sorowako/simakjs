@@ -120,6 +120,13 @@ export default function Mahasiswa() {
   const [nik, setNik] = createSignal('');
   const [gender, setGender] = createSignal<'L' | 'P'>('L');
   const [birthdate, setBirthdate] = createSignal('');
+  const [tempatLahir, setTempatLahir] = createSignal('');
+  const [idAgama, setIdAgama] = createSignal<number | null>(null);
+  const [jalan, setJalan] = createSignal('');
+  const [rt, setRt] = createSignal('');
+  const [rw, setRw] = createSignal('');
+  const [kodePos, setKodePos] = createSignal('');
+  const [kewarganegaraan, setKewarganegaraan] = createSignal('ID');
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const openAddModal = () => {
@@ -135,6 +142,13 @@ export default function Mahasiswa() {
     setNik('');
     setGender('L');
     setBirthdate('');
+    setTempatLahir('');
+    setIdAgama(null);
+    setJalan('');
+    setRt('');
+    setRw('');
+    setKodePos('');
+    setKewarganegaraan('ID');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -151,6 +165,13 @@ export default function Mahasiswa() {
     setNik(item.nik || '');
     setGender(item.jenisKelamin);
     setBirthdate(item.tanggalLahir ? String(item.tanggalLahir).split('T')[0] : '');
+    setTempatLahir(item.tempatLahir || '');
+    setIdAgama(item.idAgama || null);
+    setJalan(item.jalan || '');
+    setRt(item.rt || '');
+    setRw(item.rw || '');
+    setKodePos(item.kodePos || '');
+    setKewarganegaraan(item.kewarganegaraan || 'ID');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -170,6 +191,13 @@ export default function Mahasiswa() {
         nik: nik(),
         jenisKelamin: gender(),
         tanggalLahir: birthdate(),
+        tempatLahir: tempatLahir() || null,
+        idAgama: idAgama() ? Number(idAgama()) : null,
+        jalan: jalan() || null,
+        rt: rt() || null,
+        rw: rw() || null,
+        kodePos: kodePos() || null,
+        kewarganegaraan: kewarganegaraan() || 'ID',
       };
 
       if (editId()) {
@@ -548,6 +576,49 @@ export default function Mahasiswa() {
                 required
                 value={birthdate()}
                 onInput={(e) => setBirthdate(e.currentTarget.value)}
+              />
+              <Input
+                label="Tempat Lahir"
+                value={tempatLahir()}
+                onInput={(e) => setTempatLahir(e.currentTarget.value)}
+                placeholder="Kota/Kabupaten kelahiran"
+              />
+              <Input
+                isSelect
+                label="Agama"
+                value={idAgama() !== null ? String(idAgama()) : ''}
+                onChange={(e) => setIdAgama(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
+                selectOptions={[
+                  { label: '-- Pilih Agama --', value: '' },
+                  { label: 'Islam', value: '1' },
+                  { label: 'Kristen / Protestan', value: '2' },
+                  { label: 'Katolik', value: '3' },
+                  { label: 'Hindu', value: '4' },
+                  { label: 'Buddha', value: '5' },
+                  { label: 'Khonghucu', value: '6' },
+                ]}
+              />
+              <Input
+                label="Alamat / Jalan"
+                value={jalan()}
+                onInput={(e) => setJalan(e.currentTarget.value)}
+                placeholder="Nama jalan / nomor rumah"
+              />
+              <div class="grid grid-cols-2 gap-2">
+                <Input label="RT" value={rt()} onInput={(e) => setRt(e.currentTarget.value)} placeholder="001" />
+                <Input label="RW" value={rw()} onInput={(e) => setRw(e.currentTarget.value)} placeholder="002" />
+              </div>
+              <Input
+                label="Kode Pos"
+                value={kodePos()}
+                onInput={(e) => setKodePos(e.currentTarget.value)}
+                placeholder="92984"
+              />
+              <Input
+                label="Kewarganegaraan"
+                value={kewarganegaraan()}
+                onInput={(e) => setKewarganegaraan(e.currentTarget.value)}
+                placeholder="ID"
               />
               <Input
                 isSelect

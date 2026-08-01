@@ -100,6 +100,30 @@ export class CsvImportService {
         continue;
       }
 
+      // Parse agama (integer ID or text string)
+      let parsedIdAgama: number | null = null;
+      if (record.idagama) {
+        const strAgama = String(record.idagama).trim().toLowerCase();
+        if (!isNaN(parseInt(strAgama))) {
+          parsedIdAgama = parseInt(strAgama);
+        } else if (strAgama.includes('islam')) {
+          parsedIdAgama = 1;
+        } else if (strAgama.includes('protestan') || strAgama.includes('kristen')) {
+          parsedIdAgama = 2;
+        } else if (strAgama.includes('katolik')) {
+          parsedIdAgama = 3;
+        } else if (strAgama.includes('hindu')) {
+          parsedIdAgama = 4;
+        } else if (strAgama.includes('buddha') || strAgama.includes('budha')) {
+          parsedIdAgama = 5;
+        } else if (strAgama.includes('khonghucu') || strAgama.includes('konghucu')) {
+          parsedIdAgama = 6;
+        }
+      }
+
+      const rawStatus = (record.status || 'aktif').trim().toLowerCase();
+      const validStatus = ['aktif', 'cuti', 'lulus', 'drop_out'].includes(rawStatus) ? rawStatus : 'aktif';
+
       batchData.push({
         line: lineNum,
         data: {
@@ -107,13 +131,18 @@ export class CsvImportService {
           nama: record.nama,
           email: record.email,
           programStudiId: prodiId,
-          status: record.status || 'aktif',
+          status: validStatus,
           namaIbuKandung: record.namaibukandung || null,
           nik: record.nik || null,
-          jenisKelamin: record.jeniskelamin === 'P' ? 'P' : 'L',
+          jenisKelamin:
+            String(record.jeniskelamin || '')
+              .trim()
+              .toUpperCase() === 'P'
+              ? 'P'
+              : 'L',
           tanggalLahir: record.tanggallahir || new Date().toISOString().split('T')[0],
           tempatLahir: record.tempatlahir || null,
-          idAgama: record.idagama && !isNaN(parseInt(record.idagama)) ? parseInt(record.idagama) : null,
+          idAgama: parsedIdAgama,
           jalan: record.jalan || null,
           rt: record.rt || null,
           rw: record.rw || null,

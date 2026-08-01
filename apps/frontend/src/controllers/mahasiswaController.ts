@@ -31,6 +31,13 @@ export interface Mahasiswa {
   nik: string;
   jenisKelamin: 'L' | 'P';
   tanggalLahir: string;
+  tempatLahir?: string | null;
+  idAgama?: number | null;
+  jalan?: string | null;
+  rt?: string | null;
+  rw?: string | null;
+  kodePos?: string | null;
+  kewarganegaraan?: string | null;
   programStudi?: Prodi | null;
   dosenPa?: { id: number; nama: string; nip: string; email: string } | null;
   idPddikti?: string | null;

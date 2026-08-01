@@ -12,6 +12,13 @@ export const mahasiswaBody = t.Object({
   nik: t.Optional(t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' })),
   jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' }),
   tanggalLahir: t.String({ default: '2000-01-01' }),
+  tempatLahir: t.Optional(t.Union([t.String(), t.Null()])),
+  idAgama: t.Optional(t.Union([t.Integer(), t.Null()])),
+  jalan: t.Optional(t.Union([t.String(), t.Null()])),
+  rt: t.Optional(t.Union([t.String(), t.Null()])),
+  rw: t.Optional(t.Union([t.String(), t.Null()])),
+  kodePos: t.Optional(t.Union([t.String(), t.Null()])),
+  kewarganegaraan: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const updateMahasiswaBody = t.Object({
@@ -26,6 +33,13 @@ export const updateMahasiswaBody = t.Object({
   nik: t.Optional(t.String({ minLength: 16, maxLength: 16 })),
   jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')])),
   tanggalLahir: t.Optional(t.String()),
+  tempatLahir: t.Optional(t.Union([t.String(), t.Null()])),
+  idAgama: t.Optional(t.Union([t.Integer(), t.Null()])),
+  jalan: t.Optional(t.Union([t.String(), t.Null()])),
+  rt: t.Optional(t.Union([t.String(), t.Null()])),
+  rw: t.Optional(t.Union([t.String(), t.Null()])),
+  kodePos: t.Optional(t.Union([t.String(), t.Null()])),
+  kewarganegaraan: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const getMahasiswaSchema = {
@@ -62,6 +76,13 @@ export const getMahasiswaSchema = {
           nik: t.Union([t.String(), t.Null()], { default: null }),
           jenisKelamin: t.String({ default: 'L' }),
           tanggalLahir: t.Any(),
+          tempatLahir: t.Union([t.String(), t.Null()], { default: null }),
+          idAgama: t.Union([t.Integer(), t.Null()], { default: null }),
+          jalan: t.Union([t.String(), t.Null()], { default: null }),
+          rt: t.Union([t.String(), t.Null()], { default: null }),
+          rw: t.Union([t.String(), t.Null()], { default: null }),
+          kodePos: t.Union([t.String(), t.Null()], { default: null }),
+          kewarganegaraan: t.Union([t.String(), t.Null()], { default: null }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
           lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
