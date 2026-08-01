@@ -124,6 +124,13 @@ export class CsvImportService {
       const rawStatus = (record.status || 'aktif').trim().toLowerCase();
       const validStatus = ['aktif', 'cuti', 'lulus', 'drop_out'].includes(rawStatus) ? rawStatus : 'aktif';
 
+      let kwg = record.kewarganegaraan ? String(record.kewarganegaraan).trim() : 'ID';
+      if (kwg.toLowerCase() === 'indonesia') {
+        kwg = 'ID';
+      } else if (kwg.length > 5) {
+        kwg = kwg.substring(0, 5).toUpperCase();
+      }
+
       batchData.push({
         line: lineNum,
         data: {
@@ -147,14 +154,14 @@ export class CsvImportService {
           rt: record.rt || null,
           rw: record.rw || null,
           kodePos: record.kodepos || null,
-          kewarganegaraan: record.kewarganegaraan || 'ID',
+          kewarganegaraan: kwg,
         },
       });
     }
 
     if (batchData.length > 0) {
       const formatErrorMsg = (err: unknown, nim: string): string => {
-        const raw = err instanceof Error ? err.message : String(err);
+        const raw = err instanceof Error ? `${err.message} ${(err as { cause?: unknown }).cause || ''}` : String(err);
         if (
           raw.includes('mahasiswa_nim_unique') ||
           (raw.includes('duplicate key value violates unique constraint') && raw.includes('nim'))
