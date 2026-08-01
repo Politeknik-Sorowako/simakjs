@@ -101,69 +101,89 @@ export class CsvImportService {
       }
 
       batchData.push({
-        nim: record.nim,
-        nama: record.nama,
-        email: record.email,
-        programStudiId: prodiId,
-        status: record.status || 'aktif',
-        namaIbuKandung: record.namaibukandung || null,
-        nik: record.nik || null,
-        jenisKelamin: record.jeniskelamin === 'P' ? 'P' : 'L',
-        tanggalLahir: record.tanggallahir || new Date().toISOString().split('T')[0],
-        tempatLahir: record.tempatlahir || null,
-        idAgama: record.idagama && !isNaN(parseInt(record.idagama)) ? parseInt(record.idagama) : null,
-        jalan: record.jalan || null,
-        rt: record.rt || null,
-        rw: record.rw || null,
-        kodePos: record.kodepos || null,
-        kewarganegaraan: record.kewarganegaraan || 'ID',
+        line: lineNum,
+        data: {
+          nim: record.nim,
+          nama: record.nama,
+          email: record.email,
+          programStudiId: prodiId,
+          status: record.status || 'aktif',
+          namaIbuKandung: record.namaibukandung || null,
+          nik: record.nik || null,
+          jenisKelamin: record.jeniskelamin === 'P' ? 'P' : 'L',
+          tanggalLahir: record.tanggallahir || new Date().toISOString().split('T')[0],
+          tempatLahir: record.tempatlahir || null,
+          idAgama: record.idagama && !isNaN(parseInt(record.idagama)) ? parseInt(record.idagama) : null,
+          jalan: record.jalan || null,
+          rt: record.rt || null,
+          rw: record.rw || null,
+          kodePos: record.kodepos || null,
+          kewarganegaraan: record.kewarganegaraan || 'ID',
+        },
       });
     }
 
     if (batchData.length > 0) {
-      if (mode === 'update') {
-        for (const item of batchData) {
-          try {
+      const formatErrorMsg = (err: unknown, nim: string): string => {
+        const raw = err instanceof Error ? err.message : String(err);
+        if (
+          raw.includes('mahasiswa_nim_unique') ||
+          (raw.includes('duplicate key value violates unique constraint') && raw.includes('nim'))
+        ) {
+          return `NIM "${nim}" sudah terdaftar di sistem.`;
+        }
+        if (
+          raw.includes('mahasiswa_email_unique') ||
+          (raw.includes('duplicate key value violates unique constraint') && raw.includes('email'))
+        ) {
+          return `Email pada NIM "${nim}" sudah digunakan oleh mahasiswa lain.`;
+        }
+        if (
+          raw.includes('mahasiswa_nik_unique') ||
+          (raw.includes('duplicate key value violates unique constraint') && raw.includes('nik'))
+        ) {
+          return `NIK pada NIM "${nim}" sudah terdaftar di sistem.`;
+        }
+        if (raw.includes('violates foreign key constraint')) {
+          return `Referensi Program Studi/Dosen PA untuk NIM "${nim}" tidak valid.`;
+        }
+        return `Gagal menyimpan data NIM "${nim}". Silakan periksa kembali format kolom data.`;
+      };
+
+      for (const item of batchData) {
+        try {
+          if (mode === 'update') {
             await db
               .insert(mahasiswa)
-              .values(item)
+              .values(item.data)
               .onConflictDoUpdate({
                 target: mahasiswa.nim,
                 set: {
-                  nama: item.nama,
-                  email: item.email,
-                  programStudiId: item.programStudiId,
-                  status: item.status,
-                  namaIbuKandung: item.namaIbuKandung,
-                  nik: item.nik,
-                  jenisKelamin: item.jenisKelamin,
-                  tanggalLahir: item.tanggalLahir,
-                  tempatLahir: item.tempatLahir,
-                  idAgama: item.idAgama,
-                  jalan: item.jalan,
-                  rt: item.rt,
-                  rw: item.rw,
-                  kodePos: item.kodePos,
-                  kewarganegaraan: item.kewarganegaraan,
+                  nama: item.data.nama,
+                  email: item.data.email,
+                  programStudiId: item.data.programStudiId,
+                  status: item.data.status,
+                  namaIbuKandung: item.data.namaIbuKandung,
+                  nik: item.data.nik,
+                  jenisKelamin: item.data.jenisKelamin,
+                  tanggalLahir: item.data.tanggalLahir,
+                  tempatLahir: item.data.tempatLahir,
+                  idAgama: item.data.idAgama,
+                  jalan: item.data.jalan,
+                  rt: item.data.rt,
+                  rw: item.data.rw,
+                  kodePos: item.data.kodePos,
+                  kewarganegaraan: item.data.kewarganegaraan,
                 },
               });
-            result.successCount++;
-          } catch (err: unknown) {
-            result.errors.push({
-              line: 0,
-              error: `Gagal menyimpan data NIM ${item.nim}: ${err instanceof Error ? err.message : 'Unknown error'}`,
-            });
+          } else {
+            await db.insert(mahasiswa).values(item.data).onConflictDoNothing({ target: mahasiswa.nim });
           }
-        }
-      } else {
-        try {
-          // default is skip (ON CONFLICT DO NOTHING)
-          await db.insert(mahasiswa).values(batchData).onConflictDoNothing({ target: mahasiswa.nim });
-          result.successCount = batchData.length;
+          result.successCount++;
         } catch (err: unknown) {
           result.errors.push({
-            line: 0,
-            error: `Gagal menyimpan data batch: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            line: item.line,
+            error: formatErrorMsg(err, item.data.nim),
           });
         }
       }

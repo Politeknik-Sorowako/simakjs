@@ -149,14 +149,43 @@ export default function Khs() {
       toast.showToast('Semua kolom wajib diisi.', 'error');
       return;
     }
+
+    const min = parseFloat(nilaiMin());
+    const max = parseFloat(nilaiMax());
+    if (isNaN(min) || isNaN(max) || min >= max) {
+      toast.showToast('Nilai Minimum harus lebih kecil dari Nilai Maksimum.', 'error');
+      return;
+    }
+
+    // Client-side overlap validation
+    const currentProdiId = konversiProdiId() ? parseInt(konversiProdiId()) : null;
+    const currentId = konversiId();
+    const existingList = konversis() || [];
+
+    const overlapRule = existingList.find((rule) => {
+      if (currentId && rule.id === currentId) return false;
+      if ((rule.programStudiId || null) !== currentProdiId) return false;
+      const rMin = parseFloat(String(rule.nilaiMin));
+      const rMax = parseFloat(String(rule.nilaiMax));
+      return Math.max(min, rMin) <= Math.min(max, rMax);
+    });
+
+    if (overlapRule) {
+      toast.showToast(
+        `Rentang Nilai (${min} - ${max}) beririsan / bertabrakan titik batas dengan aturan Nilai ${overlapRule.nilaiHuruf} (${overlapRule.nilaiMin} - ${overlapRule.nilaiMax}).`,
+        'error',
+      );
+      return;
+    }
+
     try {
       await khsController.saveKonversi({
         id: konversiId() || undefined,
-        programStudiId: konversiProdiId() ? parseInt(konversiProdiId()) : null,
+        programStudiId: currentProdiId,
         nilaiHuruf: nilaiHuruf().toUpperCase(),
         bobotIndeks: parseFloat(nilaiIndeks()),
-        nilaiMin: parseFloat(nilaiMin()),
-        nilaiMax: parseFloat(nilaiMax()),
+        nilaiMin: min,
+        nilaiMax: max,
         predikat: predikat(),
       });
       toast.showToast('Aturan konversi nilai berhasil disimpan.', 'success');
@@ -282,88 +311,151 @@ export default function Khs() {
 
         {/* Aturan Konversi Nilai View */}
         <Show when={activeTab() === 'konversi' && role() === 'admin'}>
-          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-secondary-100 shadow-sm mb-4 dark:bg-secondary-900/60 dark:border-secondary-800">
-            <h3 class="font-bold text-secondary-800 dark:text-white">Aturan Konversi Nilai Akademik</h3>
-            <button
-              onClick={() => {
-                setKonversiId(null);
-                setKonversiProdiId('');
-                setNilaiHuruf('');
-                setNilaiIndeks('');
-                setNilaiMin('');
-                setNilaiMax('');
-                setPredikat('');
-                setShowKonversiModal(true);
-              }}
-              class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
-            >
-              ➕ Tambah Aturan Konversi
-            </button>
-          </div>
-
-          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
-            <table class="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
-                  <th class="p-3">Program Studi</th>
-                  <th class="p-3">Nilai Huruf</th>
-                  <th class="p-3">Nilai Indeks</th>
-                  <th class="p-3">Nilai Minimum Angka</th>
-                  <th class="p-3">Nilai Maksimum Angka</th>
-                  <th class="p-3">Predikat</th>
-                  <th class="p-3">Aksi</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
-                <For
-                  each={konversis()}
-                  fallback={
-                    <tr>
-                      <td colspan="7" class="p-4 text-center text-secondary-400 italic">
-                        Belum ada aturan konversi nilai terdaftar.
-                      </td>
-                    </tr>
+          {(() => {
+            const list = konversis() || [];
+            const overlappingIds = new Set<number>();
+            for (let i = 0; i < list.length; i++) {
+              for (let j = i + 1; j < list.length; j++) {
+                const itemA = list[i];
+                const itemB = list[j];
+                if ((itemA.programStudiId || null) === (itemB.programStudiId || null)) {
+                  const minA = parseFloat(String(itemA.nilaiMin));
+                  const maxA = parseFloat(String(itemA.nilaiMax));
+                  const minB = parseFloat(String(itemB.nilaiMin));
+                  const maxB = parseFloat(String(itemB.nilaiMax));
+                  if (Math.max(minA, minB) <= Math.min(maxA, maxB)) {
+                    if (itemA.id) overlappingIds.add(itemA.id);
+                    if (itemB.id) overlappingIds.add(itemB.id);
                   }
-                >
-                  {(konv) => (
-                    <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                      <td class="p-3 font-semibold text-secondary-800 dark:text-white">
-                        {konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}
-                      </td>
-                      <td class="p-3 font-bold text-brand-600">{konv.nilaiHuruf}</td>
-                      <td class="p-3 font-mono">{Number(konv.bobotIndeks ?? 0).toFixed(2)}</td>
-                      <td class="p-3 font-mono">{Number(konv.nilaiMin ?? 0).toFixed(2)}</td>
-                      <td class="p-3 font-mono">{Number(konv.nilaiMax ?? 0).toFixed(2)}</td>
-                      <td class="p-3 font-medium text-secondary-800 dark:text-white">{konv.predikat}</td>
-                      <td class="p-3 flex gap-2">
-                        <button
-                          onClick={() => {
-                            setKonversiId(konv.id || 0);
-                            setKonversiProdiId(konv.programStudiId ? konv.programStudiId.toString() : '');
-                            setNilaiHuruf(konv.nilaiHuruf);
-                            setNilaiIndeks(konv.bobotIndeks.toString());
-                            setNilaiMin(konv.nilaiMin.toString());
-                            setNilaiMax(konv.nilaiMax.toString());
-                            setPredikat(konv.predikat);
-                            setShowKonversiModal(true);
-                          }}
-                          class="px-2.5 py-1 bg-secondary-100 text-secondary-700 font-semibold rounded-lg hover:bg-secondary-200 transition-colors"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => konv.id && handleDeleteKonversi(konv.id)}
-                          class="px-2.5 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg hover:bg-rose-100 transition-colors dark:bg-rose-900/30 dark:text-rose-400"
-                        >
-                          Hapus
-                        </button>
-                      </td>
-                    </tr>
-                  )}
-                </For>
-              </tbody>
-            </table>
-          </div>
+                }
+              }
+            }
+
+            return (
+              <>
+                <Show when={overlappingIds.size > 0}>
+                  <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl text-rose-800 shadow-sm flex items-center gap-3 mb-4 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
+                    <span class="text-xl">⚠️</span>
+                    <div>
+                      <h4 class="font-bold text-xs">Peringatan: Rentang Nilai Beririsan</h4>
+                      <p class="text-xs">
+                        Terdapat {overlappingIds.size} aturan konversi nilai yang memiliki rentang nilai beririsan dalam
+                        program studi yang sama. Mohon sesuaikan angka minimum dan maksimum agar tidak membingungkan
+                        sistem konversi.
+                      </p>
+                    </div>
+                  </div>
+                </Show>
+
+                <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-secondary-100 shadow-sm mb-4 dark:bg-secondary-900/60 dark:border-secondary-800">
+                  <h3 class="font-bold text-secondary-800 dark:text-white">Aturan Konversi Nilai Akademik</h3>
+                  <button
+                    onClick={() => {
+                      setKonversiId(null);
+                      setKonversiProdiId('');
+                      setNilaiHuruf('');
+                      setNilaiIndeks('');
+                      setNilaiMin('');
+                      setNilaiMax('');
+                      setPredikat('');
+                      setShowKonversiModal(true);
+                    }}
+                    class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
+                  >
+                    ➕ Tambah Aturan Konversi
+                  </button>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th class="p-3">Program Studi</th>
+                        <th class="p-3">Nilai Huruf</th>
+                        <th class="p-3">Nilai Indeks</th>
+                        <th class="p-3">Nilai Minimum Angka</th>
+                        <th class="p-3">Nilai Maksimum Angka</th>
+                        <th class="p-3">Predikat</th>
+                        <th class="p-3">Status Rentang</th>
+                        <th class="p-3">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
+                      <For
+                        each={konversis()}
+                        fallback={
+                          <tr>
+                            <td colspan="8" class="p-4 text-center text-secondary-400 italic">
+                              Belum ada aturan konversi nilai terdaftar.
+                            </td>
+                          </tr>
+                        }
+                      >
+                        {(konv) => {
+                          const isOverlap = konv.id ? overlappingIds.has(konv.id) : false;
+                          return (
+                            <tr
+                              class={`transition-colors ${
+                                isOverlap
+                                  ? 'bg-rose-50/60 hover:bg-rose-100/50 dark:bg-rose-950/30 dark:hover:bg-rose-900/40'
+                                  : 'hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20'
+                              }`}
+                            >
+                              <td class="p-3 font-semibold text-secondary-800 dark:text-white">
+                                {konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}
+                              </td>
+                              <td class="p-3 font-bold text-brand-600">{konv.nilaiHuruf}</td>
+                              <td class="p-3 font-mono">{Number(konv.bobotIndeks ?? 0).toFixed(2)}</td>
+                              <td class="p-3 font-mono">{Number(konv.nilaiMin ?? 0).toFixed(2)}</td>
+                              <td class="p-3 font-mono">{Number(konv.nilaiMax ?? 0).toFixed(2)}</td>
+                              <td class="p-3 font-medium text-secondary-800 dark:text-white">{konv.predikat}</td>
+                              <td class="p-3">
+                                <Show
+                                  when={isOverlap}
+                                  fallback={
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-accent-50 text-accent-700 border border-accent-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                                      ✓ Valid
+                                    </span>
+                                  }
+                                >
+                                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-700 inline-flex items-center gap-1">
+                                    ⚠️ Beririsan
+                                  </span>
+                                </Show>
+                              </td>
+                              <td class="p-3 flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setKonversiId(konv.id || 0);
+                                    setKonversiProdiId(konv.programStudiId ? konv.programStudiId.toString() : '');
+                                    setNilaiHuruf(konv.nilaiHuruf);
+                                    setNilaiIndeks(konv.bobotIndeks.toString());
+                                    setNilaiMin(konv.nilaiMin.toString());
+                                    setNilaiMax(konv.nilaiMax.toString());
+                                    setPredikat(konv.predikat);
+                                    setShowKonversiModal(true);
+                                  }}
+                                  class="px-2.5 py-1 bg-secondary-100 text-secondary-700 font-semibold rounded-lg hover:bg-secondary-200 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => konv.id && handleDeleteKonversi(konv.id)}
+                                  class="px-2.5 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg hover:bg-rose-100 transition-colors dark:bg-rose-900/30 dark:text-rose-400"
+                                >
+                                  Hapus
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        }}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            );
+          })()}
         </Show>
 
         {/* Content Area */}
