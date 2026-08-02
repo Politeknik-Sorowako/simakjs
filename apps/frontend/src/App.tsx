@@ -39,6 +39,7 @@ import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
 import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
+import ForceChangePassword from './routes/ForceChangePassword';
 import ForgotPassword from './routes/ForgotPassword';
 import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
@@ -86,6 +87,7 @@ function AppContent() {
       <Route path="/login" component={Login} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/ganti-password" component={ForceChangePassword} />
 
       {/* Protected Routes */}
       <Route

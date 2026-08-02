@@ -14,6 +14,10 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
   createEffect(() => {
     if (!auth.isAuthenticated()) {
       navigate('/login', { replace: true });
+      return;
+    }
+    if (auth.user()?.mustChangePassword) {
+      navigate('/ganti-password', { replace: true });
     }
   });
 
