@@ -271,6 +271,16 @@ export default function Krs() {
     }
   };
 
+  const handleApproveSingle = async (mhsId: number) => {
+    try {
+      await krsController.approve(mhsId, selectedPeriode() || '20252');
+      toast.showToast('KRS mahasiswa berhasil disetujui', 'success');
+      refetch();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyetujui KRS', 'error');
+    }
+  };
+
   const handleApproveAll = async () => {
     if (!confirm('Apakah Anda yakin ingin menyetujui seluruh KRS pending untuk semua mahasiswa di periode ini?'))
       return;
@@ -301,22 +311,15 @@ export default function Krs() {
       toast.showToast('Silakan pilih setidaknya satu mahasiswa.', 'error');
       return;
     }
-    const periodeId = selectedPeriode();
-    if (!periodeId) {
-      toast.showToast('Periode akademik tidak terpilih.', 'error');
-      return;
-    }
-
-    if (!confirm(`Apakah Anda yakin ingin menyetujui KRS untuk ${ids.length} mahasiswa terpilih?`)) return;
-
+    const periodeId = selectedPeriode() || '20252';
     try {
       await krsController.approveBatch(ids, periodeId);
-      toast.showToast('KRS untuk mahasiswa terpilih berhasil disetujui.', 'success');
+      toast.showToast('KRS mahasiswa terpilih berhasil disetujui', 'success');
       setSelectedMhsIds([]);
       refetchPending();
       refetch();
     } catch (e: unknown) {
-      toast.showToast((e as Error).message || 'Gagal menyetujui KRS secara massal.', 'error');
+      toast.showToast((e as Error).message || 'Gagal menyetujui KRS batch', 'error');
     }
   };
 
@@ -325,26 +328,24 @@ export default function Krs() {
       <div class="flex flex-col gap-6">
         <div class="flex justify-between items-center">
           <div>
-            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Kartu Rencana Studi (KRS)</h1>
+            <h1 class="text-2xl font-extrabold text-secondary-800 dark:text-white">Kontrak Rencana Studi (KRS)</h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
-              {role() === 'mahasiswa'
-                ? 'Daftar rencana studi semester aktif yang Anda kontrak.'
-                : 'Kelola pendaftaran dan persetujuan kontrak rencana studi mahasiswa.'}
+              Pengelolaan kelas kuliah yang dikontrak mahasiswa per semester.
             </p>
           </div>
-          <div class="flex gap-2">
-            <Show when={role() === 'admin' || role() === 'dosen' || role() === 'prodi'}>
-              <Button variant="secondary" onClick={() => setShowMassalModal(true)}>
-                ⚡ Buat KRS Massal
-              </Button>
-            </Show>
+          <div class="flex items-center gap-2">
             <Show when={role() === 'admin'}>
               <Button variant="secondary" onClick={() => setShowImportModal(true)}>
                 📥 Impor KRS
               </Button>
             </Show>
-            <Button disabled={role() === 'mahasiswa' && mahasiswaProfile()?.status !== 'aktif'} onClick={openAddModal}>
-              + Tambah Kontrak KRS
+            <Show when={role() !== 'mahasiswa'}>
+              <Button variant="secondary" onClick={() => setShowMassalModal(true)}>
+                ⚡ Buat KRS Massal
+              </Button>
+            </Show>
+            <Button variant="primary" onClick={openAddModal}>
+              + Kontrak KRS
             </Button>
           </div>
         </div>
@@ -363,10 +364,10 @@ export default function Krs() {
           </div>
         </Show>
 
-        {/* Dosen PA Batch Approval Banner */}
+        {/* Dosen / Admin / Prodi Batch Approval Banner */}
         <Show
           when={
-            (role() === 'dosen' || role() === 'admin') &&
+            (role() === 'dosen' || role() === 'admin' || role() === 'prodi' || role() === 'super_admin') &&
             krsData()?.data &&
             krsData()!.data.length > 0 &&
             krsData()!.data.some((k) => !k.isApproved)
@@ -477,8 +478,8 @@ export default function Krs() {
           </div>
         </Show>
 
-        {/* Tab Switcher (Only for admin and dosen) */}
-        <Show when={role() === 'admin' || role() === 'dosen'}>
+        {/* Tab Switcher (For non-mahasiswa) */}
+        <Show when={role() !== 'mahasiswa'}>
           <div class="flex gap-2 border-b border-secondary-100 pb-3 dark:border-secondary-800">
             <button
               onClick={() => setActiveTab('kelola')}
@@ -564,6 +565,15 @@ export default function Krs() {
                       </span>
                     </td>
                     <td class="px-6 py-4 flex gap-2">
+                      <Show when={!item.isApproved && role() !== 'mahasiswa'}>
+                        <Button
+                          variant="success"
+                          onClick={() => handleApproveSingle(item.mahasiswaId)}
+                          class="!py-1 !px-2.5 text-xs"
+                        >
+                          Setujui
+                        </Button>
+                      </Show>
                       <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
                         Batal
                       </Button>
@@ -759,15 +769,6 @@ export default function Krs() {
             </div>
           </form>
         </Modal>
-
-        <KrsMassalModal
-          show={showMassalModal()}
-          onClose={() => setShowMassalModal(false)}
-          onSuccess={() => {
-            refetch();
-            refetchPending();
-          }}
-        />
 
         <KrsMassalModal
           show={showMassalModal()}

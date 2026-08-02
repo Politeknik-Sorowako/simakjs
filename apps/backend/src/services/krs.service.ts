@@ -68,7 +68,7 @@ export class KrsService {
     });
   }
 
-  static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number) {
+  static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number, dosenPaId?: number) {
     const offset = (page - 1) * limit;
 
     const searchConditions: SQL<unknown>[] = [];
@@ -78,6 +78,9 @@ export class KrsService {
     }
     if (mahasiswaId !== undefined) {
       searchConditions.push(eq(krs.mahasiswaId, mahasiswaId));
+    }
+    if (dosenPaId !== undefined) {
+      searchConditions.push(eq(mahasiswa.dosenPaId, dosenPaId));
     }
 
     const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
@@ -162,28 +165,8 @@ export class KrsService {
         lastSyncAt: krs.lastSyncAt,
         createdAt: krs.createdAt,
         updatedAt: krs.updatedAt,
-        mahasiswa: {
-          id: mahasiswa.id,
-          nim: mahasiswa.nim,
-          nama: mahasiswa.nama,
-          email: mahasiswa.email,
-          status: mahasiswa.status,
-        },
-        kelasKuliah: {
-          id: kelasKuliah.id,
-          namaKelas: kelasKuliah.namaKelas,
-          periodeId: kelasKuliah.periodeId,
-        },
-        approvedBy: {
-          id: dosen.id,
-          nip: dosen.nip,
-          nama: dosen.nama,
-        },
       })
       .from(krs)
-      .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
-      .leftJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-      .leftJoin(dosen, eq(krs.approvedById, dosen.id))
       .where(eq(krs.id, id));
 
     return row || null;
@@ -195,7 +178,7 @@ export class KrsService {
     });
 
     if (!student) {
-      throw new Error('Mahasiswa tidak ditemukan');
+      throw new Error('Mahasiswa tidak ditemukan.');
     }
 
     if (student.status !== 'aktif') {
@@ -230,10 +213,6 @@ export class KrsService {
       where: eq(dosen.email, approvedByEmail),
     });
 
-    if (!dosenRecord) {
-      throw new Error('Email pengguna tidak terdaftar sebagai dosen. Approval ditolak.');
-    }
-
     const classes = await db
       .select({ id: kelasKuliah.id })
       .from(kelasKuliah)
@@ -254,7 +233,7 @@ export class KrsService {
       .update(krs)
       .set({
         isApproved: true,
-        approvedById: dosenRecord.id,
+        approvedById: dosenRecord ? dosenRecord.id : null,
         approvedAt: new Date(),
       })
       .where(and(...conditions))
@@ -278,7 +257,12 @@ export class KrsService {
     return deletedKrs || null;
   }
 
-  static async getPendingStudents(periodeId: string) {
+  static async getPendingStudents(periodeId: string, dosenPaId?: number) {
+    const conditions = [eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, false)];
+    if (dosenPaId !== undefined) {
+      conditions.push(eq(mahasiswa.dosenPaId, dosenPaId));
+    }
+
     return await db
       .selectDistinct({
         id: mahasiswa.id,
@@ -290,17 +274,13 @@ export class KrsService {
       .from(mahasiswa)
       .innerJoin(krs, eq(mahasiswa.id, krs.mahasiswaId))
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-      .where(and(eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, false)));
+      .where(and(...conditions));
   }
 
   static async approveBatchKrs(mahasiswaIds: number[], periodeId: string, approvedByEmail: string) {
     const dosenRecord = await db.query.dosen.findFirst({
       where: eq(dosen.email, approvedByEmail),
     });
-
-    if (!dosenRecord) {
-      throw new Error('Email pengguna tidak terdaftar sebagai dosen. Approval ditolak.');
-    }
 
     const classes = await db
       .select({ id: kelasKuliah.id })
@@ -317,7 +297,7 @@ export class KrsService {
       .update(krs)
       .set({
         isApproved: true,
-        approvedById: dosenRecord.id,
+        approvedById: dosenRecord ? dosenRecord.id : null,
         approvedAt: new Date(),
       })
       .where(and(inArray(krs.mahasiswaId, mahasiswaIds), inArray(krs.kelasKuliahId, classIds)))

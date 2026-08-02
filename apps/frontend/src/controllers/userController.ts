@@ -5,6 +5,7 @@ export interface UserItem {
   email: string;
   nama: string;
   role: string;
+  prodiIds?: number[];
   isActive: boolean;
   mustChangePassword?: boolean;
   createdAt: string;
@@ -25,6 +26,19 @@ export const userController = {
     return fetchApi<UserListResponse>(`/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
   },
 
+  async createUser(data: {
+    email: string;
+    nama: string;
+    password: string;
+    role?: string;
+    prodiIds?: number[];
+  }): Promise<UserItem> {
+    return fetchApi<UserItem>('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   async toggleActive(id: number): Promise<{ message: string; user: UserItem }> {
     return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/activate`, {
       method: 'PUT',
@@ -42,6 +56,13 @@ export const userController = {
     return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/role`, {
       method: 'PUT',
       body: JSON.stringify({ role }),
+    });
+  },
+
+  async updateProdiScope(id: number, prodiIds: number[]): Promise<{ message: string; user: UserItem }> {
+    return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/prodi-scope`, {
+      method: 'PUT',
+      body: JSON.stringify({ prodiIds }),
     });
   },
 
@@ -86,6 +107,16 @@ export const userController = {
     ids: number[],
   ): Promise<{ successCount: number; errors: string[] }> {
     return fetchApi<{ successCount: number; errors: string[] }>('/users/generate-accounts', {
+      method: 'POST',
+      body: JSON.stringify({ targetType, ids }),
+    });
+  },
+
+  async generateAccountsAsync(
+    targetType: 'mahasiswa' | 'dosen',
+    ids: number[],
+  ): Promise<{ status: string; message: string }> {
+    return fetchApi<{ status: string; message: string }>('/users/generate-accounts-async', {
       method: 'POST',
       body: JSON.stringify({ targetType, ids }),
     });

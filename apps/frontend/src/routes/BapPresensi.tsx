@@ -18,6 +18,7 @@ export default function BapPresensi() {
   // Selected state
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
   const [selectedBapId, setSelectedBapId] = createSignal<number | null>(null);
+  const [filterMkText, setFilterMkText] = createSignal('');
 
   // Modals
   const [showBapModal, setShowBapModal] = createSignal(false);
@@ -45,6 +46,16 @@ export default function BapPresensi() {
   const [kelasData] = createResource(() => kelasKuliahController.getAll(undefined, 1, 100));
 
   const activeKelasList = () => kelasData()?.data || [];
+  const filteredKelasList = () => {
+    const txt = filterMkText().toLowerCase().trim();
+    if (!txt) return activeKelasList();
+    return activeKelasList().filter((k) => {
+      const mkNama = k.mataKuliah?.nama?.toLowerCase() || '';
+      const mkKode = k.mataKuliah?.kode?.toLowerCase() || '';
+      const kelasNama = k.namaKelas?.toLowerCase() || '';
+      return mkNama.includes(txt) || mkKode.includes(txt) || kelasNama.includes(txt);
+    });
+  };
   const selectedKelas = () => activeKelasList().find((k) => k.id === selectedKelasId());
 
   // 2. Fetch BAPs for selected Class
@@ -298,24 +309,32 @@ export default function BapPresensi() {
             <label class="block text-sm font-semibold text-secondary-600 mb-2 dark:text-secondary-200">
               Pilih Kelas Kuliah
             </label>
-            <select
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-              value={selectedKelasId() || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedKelasId(val ? parseInt(val) : null);
-                setSelectedBapId(null);
-              }}
-            >
-              <option value="">-- Pilih Kelas --</option>
-              <For each={activeKelasList()}>
-                {(kelas) => (
-                  <option value={kelas.id}>
-                    {kelas.mataKuliah?.nama} (Kelas {kelas.namaKelas})
-                  </option>
-                )}
-              </For>
-            </select>
+            <div class="flex flex-col gap-2">
+              <Input
+                placeholder="Ketik kode atau nama mata kuliah..."
+                value={filterMkText()}
+                onInput={(e) => setFilterMkText(e.currentTarget.value)}
+              />
+              <select
+                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                value={selectedKelasId() || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedKelasId(val ? parseInt(val) : null);
+                  setSelectedBapId(null);
+                }}
+              >
+                <option value="">-- Pilih Kelas ({filteredKelasList().length}) --</option>
+                <For each={filteredKelasList()}>
+                  {(kelas) => (
+                    <option value={kelas.id}>
+                      {kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}
+                      {kelas.mataKuliah?.nama} (Kelas {kelas.namaKelas})
+                    </option>
+                  )}
+                </For>
+              </select>
+            </div>
           </div>
 
           <Show when={selectedKelasId()}>

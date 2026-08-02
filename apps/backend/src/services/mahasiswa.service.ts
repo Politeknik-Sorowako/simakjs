@@ -1,5 +1,5 @@
-import { and, asc, count, desc, eq, ilike, or, SQL, sql } from 'drizzle-orm';
-import { dosen, mahasiswa, programStudi } from '../models/schema';
+import { and, asc, count, desc, eq, ilike, notExists, or, SQL, sql } from 'drizzle-orm';
+import { dosen, mahasiswa, programStudi, users } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface MahasiswaFilters {
@@ -7,6 +7,7 @@ export interface MahasiswaFilters {
   filterNama?: string;
   filterEmail?: string;
   filterStatus?: string;
+  hasAccount?: boolean;
   sortBy?: string;
   sortOrder?: string;
 }
@@ -58,6 +59,14 @@ export class MahasiswaService {
     }
     if (filters?.filterNama) {
       conditions.push(ilike(mahasiswa.nama, `%${filters.filterNama}%`));
+    }
+    if (filters?.hasAccount !== undefined) {
+      const userSubquery = db.select({ id: users.id }).from(users).where(eq(users.email, mahasiswa.email));
+      if (filters.hasAccount) {
+        conditions.push(sql`EXISTS (${userSubquery})`);
+      } else {
+        conditions.push(notExists(userSubquery));
+      }
     }
     if (filters?.filterEmail) {
       conditions.push(ilike(mahasiswa.email, `%${filters.filterEmail}%`));

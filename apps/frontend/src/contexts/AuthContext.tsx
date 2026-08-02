@@ -4,7 +4,7 @@ export interface User {
   id: number;
   email: string;
   nama: string;
-  role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
+  role: 'super_admin' | 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
   mustChangePassword?: boolean;
   theme?: string;
   avatar?: string;

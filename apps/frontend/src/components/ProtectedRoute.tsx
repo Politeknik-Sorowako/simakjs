@@ -4,7 +4,16 @@ import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
-  allowedRoles?: ('admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa')[];
+  allowedRoles?: (
+    | 'super_admin'
+    | 'admin'
+    | 'dosen'
+    | 'mahasiswa'
+    | 'prodi'
+    | 'keuangan'
+    | 'guest'
+    | 'calon_mahasiswa'
+  )[];
 }
 
 export function ProtectedRoute(props: ProtectedRouteProps) {
@@ -24,9 +33,10 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
   const hasAccess = () => {
     if (!auth.isAuthenticated()) return false;
     const userRole = auth.user()?.role;
+    if (userRole === 'super_admin') return true;
     if (!props.allowedRoles) return true;
     return props.allowedRoles.includes(
-      userRole as 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa',
+      userRole as 'super_admin' | 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa',
     );
   };
 

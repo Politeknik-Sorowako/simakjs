@@ -9,9 +9,9 @@ export class UserController {
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || user.role !== 'admin') {
+      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
         set.status = 403;
-        return { error: 'Akses ditolak. Hanya Admin.' };
+        return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
       }
 
       const page = parseInt(((query as Record<string, unknown>)?.page as string) || '1');
@@ -35,6 +35,7 @@ export class UserController {
           email: users.email,
           nama: users.nama,
           role: users.role,
+          prodiIds: users.prodiIds,
           isActive: users.isActive,
           mustChangePassword: users.mustChangePassword,
           theme: users.theme,
@@ -62,12 +63,62 @@ export class UserController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async createUser({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+
+      // biome-ignore lint/suspicious/noExplicitAny: Elysia body type
+      const { email, password, nama, role, prodiIds } = body as any;
+      if (!email || !password || !nama) {
+        set.status = 400;
+        return { error: 'Email, password, dan nama wajib diisi' };
+      }
+
+      const targetRole = role || 'mahasiswa';
+      if (targetRole === 'super_admin' && currentUser.role !== 'super_admin') {
+        set.status = 403;
+        return { error: 'Hanya Super Admin yang dapat membuat akun dengan role Super Admin.' };
+      }
+
+      const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
+      if (existing) {
+        set.status = 400;
+        return { error: 'Email sudah terdaftar' };
+      }
+
+      const hashedPassword = await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 12 });
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email,
+          password: hashedPassword,
+          nama,
+          role: targetRole,
+          prodiIds: Array.isArray(prodiIds) ? prodiIds : [],
+          isActive: true,
+          mustChangePassword: true,
+        })
+        .returning();
+
+      set.status = 201;
+      return newUser;
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal menambahkan pengguna baru' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async toggleActive({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || currentUser.role !== 'admin') {
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
         set.status = 403;
-        return { error: 'Akses ditolak. Hanya Admin.' };
+        return { error: 'Akses ditolak.' };
       }
 
       const userId = parseInt(params.id);
@@ -114,9 +165,9 @@ export class UserController {
   static async updateRole({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || currentUser.role !== 'admin') {
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
         set.status = 403;
-        return { error: 'Akses ditolak. Hanya Admin.' };
+        return { error: 'Akses ditolak.' };
       }
 
       const userId = parseInt(params.id);
@@ -127,10 +178,24 @@ export class UserController {
 
       // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
       const newRole = (body as any)?.role;
-      const validRoles = ['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan', 'guest', 'calon_mahasiswa'];
+      const validRoles = [
+        'super_admin',
+        'admin',
+        'dosen',
+        'mahasiswa',
+        'prodi',
+        'keuangan',
+        'guest',
+        'calon_mahasiswa',
+      ];
       if (!newRole || !validRoles.includes(newRole)) {
         set.status = 400;
         return { error: 'Peran tidak valid' };
+      }
+
+      if (newRole === 'super_admin' && currentUser.role !== 'super_admin') {
+        set.status = 403;
+        return { error: 'Hanya Super Admin yang dapat menetapkan peran Super Admin.' };
       }
 
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -354,11 +419,54 @@ export class UserController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateProdiScope({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+
+      const userId = parseInt(params.id);
+      if (isNaN(userId)) {
+        set.status = 400;
+        return { error: 'ID pengguna tidak valid' };
+      }
+
+      // biome-ignore lint/suspicious/noExplicitAny: Elysia body type
+      const prodiIds = (body as any)?.prodiIds;
+      if (!Array.isArray(prodiIds)) {
+        set.status = 400;
+        return { error: 'prodiIds harus berupa array of number ID' };
+      }
+
+      const [updated] = await db.update(users).set({ prodiIds }).where(eq(users.id, userId)).returning();
+
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Pengguna tidak ditemukan' };
+      }
+
+      return {
+        message: 'Cakupan program studi pengguna berhasil diperbarui',
+        user: {
+          id: updated.id,
+          nama: updated.nama,
+          prodiIds: updated.prodiIds,
+        },
+      };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal memperbarui cakupan prodi' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generateAccounts({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin.' };
+      return { error: 'Akses ditolak.' };
     }
 
     // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
@@ -373,5 +481,50 @@ export class UserController {
 
     const result = await CsvImportService.generateAccounts(targetType, ids);
     return result;
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async generateAccountsAsync({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
+    const targetType = (body as any)?.targetType;
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
+    const ids = (body as any)?.ids;
+
+    if (!targetType || !ids || !Array.isArray(ids)) {
+      set.status = 400;
+      return { error: 'Parameter targetType dan ids (array) wajib diisi.' };
+    }
+
+    set.status = 202;
+    setTimeout(async () => {
+      try {
+        const res = await CsvImportService.generateAccounts(targetType, ids);
+        const { notifications } = await import('../models/schema');
+        await db.insert(notifications).values({
+          userId: user.id,
+          title: 'Pembuatan Akun Massal Selesai',
+          message: `Berhasil membuat ${res.successCount} akun. ${res.errors?.length ? `${res.errors.length} gagal.` : ''}`,
+        });
+      } catch (err: unknown) {
+        const { notifications } = await import('../models/schema');
+        await db.insert(notifications).values({
+          userId: user.id,
+          title: 'Gagal Membuat Akun Massal',
+          message: err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat membuat akun massal.',
+        });
+      }
+    }, 50);
+
+    return {
+      status: 'processing',
+      message:
+        'Proses pembuatan akun massal telah dimulai di latar belakang. Anda akan menerima notifikasi jika telah selesai.',
+    };
   }
 }

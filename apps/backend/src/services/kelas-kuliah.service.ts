@@ -26,15 +26,22 @@ export interface ImportKelasResult {
 }
 
 export class KelasKuliahService {
-  static async getAll(page = 1, limit = 10, search = '', periodeId?: string) {
+  static async getAll(page = 1, limit = 10, search = '', periodeId?: string, dosenId?: number) {
     const offset = (page - 1) * limit;
-    let conditions = [];
+    const conditions = [];
 
     if (search) {
       conditions.push(or(ilike(kelasKuliah.namaKelas, `%${search}%`), ilike(kelasKuliah.periodeId, `%${search}%`)));
     }
     if (periodeId) {
       conditions.push(eq(kelasKuliah.periodeId, periodeId));
+    }
+    if (dosenId !== undefined) {
+      const kelasSubquery = db
+        .select({ kelasKuliahId: dosenPengajarKelas.kelasKuliahId })
+        .from(dosenPengajarKelas)
+        .where(eq(dosenPengajarKelas.dosenId, dosenId));
+      conditions.push(inArray(kelasKuliah.id, kelasSubquery));
     }
 
     let whereClause = undefined;
