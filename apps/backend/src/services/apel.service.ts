@@ -191,7 +191,7 @@ export class ApelService {
             // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
             status: item.status as any,
             menitTerlambat: menit,
-            keterangan: item.keterangan || null,
+            keterangan: item.keterangan ?? null,
           })
           .where(eq(presensiApel.id, existing.id));
       } else {
@@ -201,7 +201,7 @@ export class ApelService {
           // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
           status: item.status as any,
           menitTerlambat: menit,
-          keterangan: item.keterangan || null,
+          keterangan: item.keterangan ?? null,
         });
       }
     }

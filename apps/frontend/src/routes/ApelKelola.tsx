@@ -478,6 +478,7 @@ export default function ApelKelola() {
                   <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
                   <textarea
                     rows="2"
+                    maxlength="1000"
                     placeholder="Keterangan / Catatan Sesi Apel..."
                     class="w-full border rounded-lg px-3 py-2 text-xs dark:bg-gray-700 dark:border-gray-600"
                     value={catatanSesi()}
@@ -716,6 +717,7 @@ export default function ApelKelola() {
                             <td class="px-4 py-3 text-left">
                               <input
                                 type="text"
+                                maxlength="1000"
                                 placeholder="Keterangan / Alasan..."
                                 class="w-full border rounded px-2.5 py-1 text-xs dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                 value={item.keterangan || ''}

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 
 export interface SelectOption {
   label: string;
@@ -19,14 +19,16 @@ interface SearchableSelectProps {
 export function SearchableSelect(props: SearchableSelectProps) {
   const [isOpen, setIsOpen] = createSignal(false);
   const [searchText, setSearchText] = createSignal('');
+  const [highlightIndex, setHighlightIndex] = createSignal(0);
   let containerRef: HTMLDivElement | undefined;
+  let searchInputRef: HTMLInputElement | undefined;
 
   const selectedOption = () => props.options.find((o) => String(o.value) === String(props.value));
 
   const filteredOptions = () => {
     const query = searchText().toLowerCase().trim();
-    if (!query) return props.options;
-    return props.options.filter((o) => o.label.toLowerCase().includes(query));
+    const list = query ? props.options.filter((o) => o.label.toLowerCase().includes(query)) : props.options;
+    return list.slice(0, 50); // Performance optimization: cap rendering at 50 options
   };
 
   const handleClickOutside = (e: MouseEvent) => {
@@ -35,13 +37,54 @@ export function SearchableSelect(props: SearchableSelectProps) {
     }
   };
 
-  createEffect(() => {
+  onMount(() => {
     document.addEventListener('click', handleClickOutside);
     onCleanup(() => document.removeEventListener('click', handleClickOutside));
   });
 
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const options = filteredOptions();
+    if (!isOpen()) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+        e.preventDefault();
+        setIsOpen(true);
+        setHighlightIndex(0);
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightIndex((prev) => (prev < options.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightIndex((prev) => (prev > 0 ? prev - 1 : options.length - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (options[highlightIndex()]) {
+        props.onChange(options[highlightIndex()].value);
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsOpen(false);
+    }
+  };
+
+  const toggleDropdown = () => {
+    if (!props.disabled) {
+      const nextOpen = !isOpen();
+      setIsOpen(nextOpen);
+      if (nextOpen) {
+        setSearchText('');
+        setHighlightIndex(0);
+        setTimeout(() => searchInputRef?.focus(), 50);
+      }
+    }
+  };
+
   return (
-    <div class={`flex flex-col gap-1.5 w-full ${props.class || ''}`} ref={containerRef}>
+    <div class={`flex flex-col gap-1.5 w-full ${props.class || ''}`} ref={containerRef} onKeyDown={handleKeyDown}>
       <Show when={props.label}>
         <label class="block text-xs font-semibold uppercase tracking-wider text-secondary-600 dark:text-secondary-200">
           {props.label}
@@ -53,13 +96,11 @@ export function SearchableSelect(props: SearchableSelectProps) {
         {/* Trigger Button */}
         <button
           type="button"
+          role="combobox"
+          aria-expanded={isOpen()}
+          aria-haspopup="listbox"
           disabled={props.disabled}
-          onClick={() => {
-            if (!props.disabled) {
-              setIsOpen(!isOpen());
-              if (!isOpen()) setSearchText('');
-            }
-          }}
+          onClick={toggleDropdown}
           class={`w-full flex items-center justify-between rounded-xl border px-3.5 py-2.5 text-sm transition-colors text-left focus:outline-none focus:ring-2 focus:ring-brand-500 ${
             props.disabled
               ? 'bg-secondary-100 dark:bg-secondary-800 text-secondary-400 cursor-not-allowed border-secondary-200 dark:border-secondary-700'
@@ -85,17 +126,24 @@ export function SearchableSelect(props: SearchableSelectProps) {
             {/* Search Input Box inside dropdown */}
             <div class="relative">
               <input
+                ref={searchInputRef}
                 type="text"
                 autofocus
                 placeholder="Ketik untuk mencari..."
                 value={searchText()}
-                onInput={(e) => setSearchText(e.currentTarget.value)}
+                onInput={(e) => {
+                  setSearchText(e.currentTarget.value);
+                  setHighlightIndex(0);
+                }}
                 class="w-full rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-1.5 text-xs text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
               />
               <Show when={searchText()}>
                 <button
                   type="button"
-                  onClick={() => setSearchText('')}
+                  onClick={() => {
+                    setSearchText('');
+                    setHighlightIndex(0);
+                  }}
                   class="absolute right-2 top-1.5 text-xs text-secondary-400 hover:text-secondary-600"
                 >
                   ✕
@@ -104,21 +152,28 @@ export function SearchableSelect(props: SearchableSelectProps) {
             </div>
 
             {/* Options List */}
-            <div class="max-h-56 overflow-y-auto flex flex-col gap-0.5">
+            <div class="max-h-56 overflow-y-auto flex flex-col gap-0.5" role="listbox">
               <For
                 each={filteredOptions()}
                 fallback={<p class="text-xs text-secondary-400 text-center py-3">Tidak ada pilihan yang cocok.</p>}
               >
-                {(opt) => {
+                {(opt, idx) => {
                   const isSelected = () => String(opt.value) === String(props.value);
+                  const isHighlighted = () => idx() === highlightIndex();
                   return (
                     <button
                       type="button"
+                      role="option"
+                      aria-selected={isSelected()}
                       onClick={() => {
                         props.onChange(opt.value);
                         setIsOpen(false);
                       }}
                       class={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors flex justify-between items-center ${
+                        isHighlighted()
+                          ? 'bg-brand-100 dark:bg-brand-800/40 text-brand-900 dark:text-brand-100 font-semibold'
+                          : ''
+                      } ${
                         isSelected()
                           ? 'bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-bold'
                           : 'text-secondary-700 dark:text-secondary-200 hover:bg-secondary-100 dark:hover:bg-secondary-800'

@@ -52,7 +52,8 @@ async function ensureEnums() {
     console.log(`[ENSURE ENUMS] Added ${fix.name}.${fix.value}`);
   }
 
-  // Ensure critical schema elements exist (idempotent self-healing)
+  // NOTE: Schema changes are primarily managed by Drizzle SQL migrations.
+  // The queries below serve as an idempotent self-healing safety fallback for production runtime environments (e.g. Docker startup).
   try {
     await pool.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false NOT NULL;`,
