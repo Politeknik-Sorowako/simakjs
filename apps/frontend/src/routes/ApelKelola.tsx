@@ -30,11 +30,16 @@ export default function ApelKelola() {
   // Modal Buat Kelompok State
   const [showCreateModal, setShowCreateModal] = createSignal(false);
   const [newNamaKelompok, setNewNamaKelompok] = createSignal('');
-  const [newDosenId, setNewDosenId] = createSignal<number | null>(null);
-  const [newShift, setNewShift] = createSignal('pagi');
   const [newKeterangan, setNewKeterangan] = createSignal('');
   // State Dosen PJ untuk Buka Sesi
   const [selectedDosenPJSesi, setSelectedDosenPJSesi] = createSignal<number | null>(null);
+
+  // Modal Edit Sesi State
+  const [showEditSesiModal, setShowEditSesiModal] = createSignal(false);
+  const [editTanggal, setEditTanggal] = createSignal('');
+  const [editShift, setEditShift] = createSignal('pagi');
+  const [editJamMulai, setEditJamMulai] = createSignal('');
+  const [editDosenId, setEditDosenId] = createSignal<number | null>(null);
 
   // Modal Kelola Anggota State
   const [showAnggotaModal, setShowAnggotaModal] = createSignal(false);
@@ -60,20 +65,11 @@ export default function ApelKelola() {
     },
   );
 
-  // Resource Daftar Dosen (untuk Modal & Form Sesi - seluruh Dosen)
+  // Resource Daftar Dosen (untuk Form Sesi - seluruh Dosen)
   const [allDosenList] = createResource(async () => {
     const res = await dosenController.getAll('', 1, 100);
     return res.data;
   });
-
-  const [dosenList] = createResource(
-    () => showCreateModal(),
-    async (open) => {
-      if (!open) return [];
-      const res = await dosenController.getAll('', 1, 100);
-      return res.data;
-    },
-  );
 
   // Resource Daftar Mahasiswa Lintas Prodi (untuk Modal Kelola Anggota)
   const [mhsList] = createResource(
@@ -95,7 +91,7 @@ export default function ApelKelola() {
   );
 
   // Resource Data Presensi Sesi
-  const [sesiPresensi] = createResource(
+  const [sesiPresensi, { refetch: refetchSesiPresensi }] = createResource(
     () => selectedSesi(),
     async (sesiId) => {
       if (!sesiId) return null;
@@ -117,14 +113,11 @@ export default function ApelKelola() {
       setIsSubmitting(true);
       const created = await apelController.createKelompok({
         namaKelompok: newNamaKelompok(),
-        dosenId: newDosenId() || undefined,
-        shift: newShift(),
         keterangan: newKeterangan(),
       });
       toast.showToast('Kelompok Apel berhasil dibuat', 'success');
       setShowCreateModal(false);
       setNewNamaKelompok('');
-      setNewDosenId(null);
       setNewKeterangan('');
       refetchKelompok();
       if (created && created.id) {
@@ -265,11 +258,87 @@ export default function ApelKelola() {
       setIsSubmitting(true);
       await apelController.tutupSesi(selectedSesi()!);
       toast.showToast('Sesi berhasil ditutup', 'success');
-      setSelectedSesi(null);
-      setPresensiData([]);
       refetchSesi();
+      refetchSesiPresensi();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal menutup sesi';
+      toast.showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleBukaKembaliSesi = async (targetSesiId?: number) => {
+    const sesiId = targetSesiId || selectedSesi();
+    if (!sesiId) return;
+    try {
+      setIsSubmitting(true);
+      await apelController.bukaKembaliSesi(sesiId);
+      toast.showToast('Sesi berhasil dibuka kembali', 'success');
+      refetchSesi();
+      if (selectedSesi() === sesiId) {
+        refetchSesiPresensi();
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Gagal membuka kembali sesi';
+      toast.showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSesi = async (targetSesiId?: number) => {
+    const sesiId = targetSesiId || selectedSesi();
+    if (!sesiId) return;
+    if (
+      !confirm('Apakah Anda yakin ingin menghapus sesi apel ini? Seluruh data presensi pada sesi ini akan terhapus.')
+    ) {
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await apelController.deleteSesi(sesiId);
+      toast.showToast('Sesi berhasil dihapus', 'success');
+      if (selectedSesi() === sesiId) {
+        setSelectedSesi(null);
+        setPresensiData([]);
+      }
+      refetchSesi();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Gagal menghapus sesi';
+      toast.showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditSesiModal = () => {
+    const sesi = sesiPresensi()?.sesi;
+    if (!sesi) return;
+    setEditTanggal(sesi.tanggal || '');
+    setEditShift(sesi.shift || 'pagi');
+    setEditJamMulai(sesi.jamMulai || '');
+    setEditDosenId(sesi.dosenId || null);
+    setShowEditSesiModal(true);
+  };
+
+  const handleUpdateSesi = async (e: Event) => {
+    e.preventDefault();
+    if (!selectedSesi()) return;
+    try {
+      setIsSubmitting(true);
+      await apelController.updateSesi(selectedSesi()!, {
+        tanggal: editTanggal(),
+        shift: editShift(),
+        jamMulai: editJamMulai(),
+        dosenId: editDosenId() || null,
+      });
+      toast.showToast('Sesi apel berhasil diperbarui', 'success');
+      setShowEditSesiModal(false);
+      refetchSesi();
+      refetchSesiPresensi();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal memperbarui sesi apel';
       toast.showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
@@ -329,8 +398,7 @@ export default function ApelKelola() {
                 <For each={kelompokList()}>
                   {(item: KelompokApel) => (
                     <option value={item.id}>
-                      {item.namaKelompok} ({item.shift}) {item.dosenNama ? `- ${item.dosenNama}` : ''} (
-                      {item.jumlahAnggota ?? 0} Mhs)
+                      {item.namaKelompok.replace(/\s*\((pagi|sore)\)/gi, '')} ({item.jumlahAnggota ?? 0} Mhs)
                     </option>
                   )}
                 </For>
@@ -376,13 +444,13 @@ export default function ApelKelola() {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional / Pelaksana)</label>
+                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional)</label>
                   <select
                     class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
                     value={selectedDosenPJSesi() ?? ''}
                     onChange={(e) => setSelectedDosenPJSesi(Number(e.target.value) || null)}
                   >
-                    <option value="">-- Gunakan Dosen PJ Default / Pilihkah PJ Sesi --</option>
+                    <option value="">-- Pilih Dosen PJ Sesi --</option>
                     <For each={allDosenList()}>
                       {(d: Dosen) => (
                         <option value={d.id}>
@@ -417,17 +485,41 @@ export default function ApelKelola() {
                 <div class="space-y-2 max-h-64 overflow-y-auto">
                   <For each={sesiList()}>
                     {(sesi: SesiApel) => (
-                      <button
-                        class={`w-full text-left p-2 rounded text-sm border ${sesi.id === selectedSesi() ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700'}`}
-                        onClick={() => loadSesiDetail(sesi.id)}
+                      <div
+                        class={`w-full flex items-center justify-between p-2 rounded text-sm border ${sesi.id === selectedSesi() ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700'}`}
                       >
-                        <div class="font-medium">{sesi.tanggal}</div>
-                        <div class="text-xs text-gray-500">
-                          {sesi.shift} | {sesi.jamMulai} | {sesi.isClosed ? 'Tertutup' : 'Aktif'}
-                          {sesi.hadirCount !== undefined &&
-                            ` | H:${sesi.hadirCount} T:${sesi.terlambatCount} ?:${sesi.unknownCount}`}
-                        </div>
-                      </button>
+                        <button class="flex-1 text-left" onClick={() => loadSesiDetail(sesi.id)}>
+                          <div class="font-medium flex items-center gap-2">
+                            <span>{sesi.tanggal}</span>
+                            <span
+                              class={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                                sesi.isClosed
+                                  ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                                  : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+                              }`}
+                            >
+                              {sesi.isClosed ? 'Tertutup' : 'Aktif'}
+                            </span>
+                          </div>
+                          <div class="text-xs text-gray-500">
+                            {sesi.shift} | {sesi.jamMulai}
+                            {sesi.hadirCount !== undefined &&
+                              ` | H:${sesi.hadirCount} T:${sesi.terlambatCount} ?:${sesi.unknownCount}`}
+                          </div>
+                        </button>
+                        <Show when={auth.user()?.role === 'admin'}>
+                          <button
+                            class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 text-xs font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSesi(sesi.id);
+                            }}
+                            title="Hapus Sesi"
+                          >
+                            ✕
+                          </button>
+                        </Show>
+                      </div>
                     )}
                   </For>
                 </div>
@@ -455,21 +547,66 @@ export default function ApelKelola() {
                       {sesiPresensi()?.sesi.jamMulai} | {sesiPresensi()?.sesi.dosenNama}
                     </p>
                   </div>
-                  <div class="flex gap-2">
+                  <div class="flex items-center gap-2">
                     <button
-                      class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                      class="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50"
                       onClick={handleSubmit}
                       disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                     >
                       Simpan
                     </button>
-                    <button
-                      class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
-                      onClick={handleTutupSesi}
-                      disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
+
+                    <Show
+                      when={sesiPresensi()?.sesi.isClosed}
+                      fallback={
+                        <button
+                          class="bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 text-sm font-medium disabled:opacity-50"
+                          onClick={handleTutupSesi}
+                          disabled={isSubmitting()}
+                        >
+                          Tutup Sesi
+                        </button>
+                      }
                     >
-                      Tutup Sesi
-                    </button>
+                      <Show
+                        when={['admin', 'dosen'].includes(auth.user()?.role || '')}
+                        fallback={
+                          <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded font-semibold">
+                            Sesi Tertutup
+                          </span>
+                        }
+                      >
+                        <button
+                          class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                          onClick={() => handleBukaKembaliSesi()}
+                          disabled={isSubmitting()}
+                        >
+                          Buka Sesi Kembali
+                        </button>
+                      </Show>
+                    </Show>
+
+                    <Show when={['admin', 'dosen'].includes(auth.user()?.role || '')}>
+                      <button
+                        class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50"
+                        onClick={openEditSesiModal}
+                        disabled={isSubmitting()}
+                        title="Edit Sesi Apel"
+                      >
+                        ✏ Edit Sesi
+                      </button>
+                    </Show>
+
+                    <Show when={auth.user()?.role === 'admin'}>
+                      <button
+                        class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 text-sm font-medium disabled:opacity-50"
+                        onClick={() => handleDeleteSesi()}
+                        disabled={isSubmitting()}
+                        title="Hapus Sesi Apel"
+                      >
+                        Hapus Sesi
+                      </button>
+                    </Show>
                   </div>
                 </div>
 
@@ -494,43 +631,49 @@ export default function ApelKelola() {
                             <td class="px-4 py-3 text-center">
                               <div class="flex items-center justify-center gap-1">
                                 <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'hadir' ? 'bg-green-600 text-white ring-2 ring-green-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'hadir' ? 'bg-green-600 text-white ring-2 ring-green-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'hadir')}
+                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                   title="Hadir"
                                 >
                                   H
                                 </button>
                                 <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'terlambat' ? 'bg-yellow-500 text-white ring-2 ring-yellow-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'terlambat' ? 'bg-yellow-500 text-white ring-2 ring-yellow-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'terlambat')}
+                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                   title="Terlambat"
                                 >
                                   T
                                 </button>
                                 <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'sakit' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'sakit' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'sakit')}
+                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                   title="Sakit"
                                 >
                                   S
                                 </button>
                                 <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'izin' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'izin' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'izin')}
+                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                   title="Izin"
                                 >
                                   I
                                 </button>
                                 <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'alpa' ? 'bg-red-600 text-white ring-2 ring-red-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'alpa' ? 'bg-red-600 text-white ring-2 ring-red-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'alpa')}
+                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                   title="Alpa"
                                 >
                                   A
                                 </button>
                                 <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'unknown' ? 'bg-gray-600 text-white ring-2 ring-gray-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
+                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'unknown' ? 'bg-gray-600 text-white ring-2 ring-gray-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
                                   onClick={() => handleStatusChange(item.mahasiswaId, 'unknown')}
+                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                   title="Unknown"
                                 >
                                   ?
@@ -543,8 +686,9 @@ export default function ApelKelola() {
                                   <input
                                     type="number"
                                     min={0}
-                                    class="w-20 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600"
+                                    class="w-20 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                     value={item.menitTerlambat ?? 0}
+                                    disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                     onInput={(e) =>
                                       handleMenitChange(item.mahasiswaId, parseInt(e.currentTarget.value) || 0)
                                     }
@@ -596,36 +740,6 @@ export default function ApelKelola() {
                     value={newNamaKelompok()}
                     onInput={(e) => setNewNamaKelompok(e.currentTarget.value)}
                   />
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium mb-1">Dosen Penanggung Jawab (PJ) (Opsional)</label>
-                  <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={newDosenId() ?? ''}
-                    onChange={(e) => setNewDosenId(Number(e.currentTarget.value) || null)}
-                  >
-                    <option value="">-- Pilih Dosen PJ (Opsional) --</option>
-                    <For each={dosenList()}>
-                      {(d: Dosen) => (
-                        <option value={d.id}>
-                          {d.nama} {d.nip ? `(${d.nip})` : ''}
-                        </option>
-                      )}
-                    </For>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium mb-1">Shift Apel</label>
-                  <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={newShift()}
-                    onChange={(e) => setNewShift(e.currentTarget.value)}
-                  >
-                    <option value="pagi">Pagi</option>
-                    <option value="sore">Sore</option>
-                  </select>
                 </div>
 
                 <div>
@@ -778,6 +892,94 @@ export default function ApelKelola() {
                   Selesai
                 </button>
               </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* MODAL 3: Edit Sesi Apel */}
+        <Show when={showEditSesiModal()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
+                <h3 class="text-lg font-bold">Edit Data Sesi Apel</h3>
+                <button
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setShowEditSesiModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSesi} class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">Tanggal *</label>
+                  <input
+                    type="date"
+                    required
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editTanggal()}
+                    onChange={(e) => setEditTanggal(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Shift</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editShift()}
+                    onChange={(e) => setEditShift(e.target.value)}
+                  >
+                    <option value="pagi">Pagi</option>
+                    <option value="sore">Sore</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional)</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editDosenId() ?? ''}
+                    onChange={(e) => setEditDosenId(Number(e.target.value) || null)}
+                  >
+                    <option value="">-- Pilih Dosen PJ Sesi --</option>
+                    <For each={allDosenList()}>
+                      {(d: Dosen) => (
+                        <option value={d.id}>
+                          {d.nama} {d.nip ? `(${d.nip})` : ''}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Jam Mulai *</label>
+                  <input
+                    type="time"
+                    required
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editJamMulai()}
+                    onChange={(e) => setEditJamMulai(e.target.value)}
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setShowEditSesiModal(false)}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting()}
+                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                  >
+                    {isSubmitting() ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </Show>

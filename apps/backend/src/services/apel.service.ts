@@ -306,6 +306,45 @@ export class ApelService {
     return updated;
   }
 
+  static async bukaKembaliSesi(sesiId: number) {
+    const [foundSesi] = await db.select().from(sesiApel).where(eq(sesiApel.id, sesiId));
+    if (!foundSesi) throw new Error('Sesi apel tidak ditemukan');
+    if (!foundSesi.isClosed) throw new Error('Sesi apel belum ditutup');
+
+    const [updated] = await db
+      .update(sesiApel)
+      .set({ isClosed: false, closedAt: null })
+      .where(eq(sesiApel.id, sesiId))
+      .returning();
+
+    return updated;
+  }
+
+  static async deleteSesi(sesiId: number) {
+    const [foundSesi] = await db.select().from(sesiApel).where(eq(sesiApel.id, sesiId));
+    if (!foundSesi) throw new Error('Sesi apel tidak ditemukan');
+
+    await db.delete(sesiApel).where(eq(sesiApel.id, sesiId));
+    return { message: 'Sesi apel berhasil dihapus' };
+  }
+
+  static async updateSesi(
+    sesiId: number,
+    data: { tanggal?: string; shift?: string; jamMulai?: string; dosenId?: number | null },
+  ) {
+    const [foundSesi] = await db.select().from(sesiApel).where(eq(sesiApel.id, sesiId));
+    if (!foundSesi) throw new Error('Sesi apel tidak ditemukan');
+
+    const updateData: Partial<typeof sesiApel.$inferInsert> = {};
+    if (data.tanggal !== undefined) updateData.tanggal = data.tanggal;
+    if (data.shift !== undefined) updateData.shift = data.shift;
+    if (data.jamMulai !== undefined) updateData.jamMulai = data.jamMulai;
+    if (data.dosenId !== undefined && data.dosenId !== null) updateData.dosenId = data.dosenId;
+
+    const [updated] = await db.update(sesiApel).set(updateData).where(eq(sesiApel.id, sesiId)).returning();
+    return updated;
+  }
+
   static async getPresensiUnknown(page = 1, limit = 20, prodiId?: number, kelompokId?: number, tanggal?: string) {
     const offset = (page - 1) * limit;
     const conditions = [eq(presensiApel.status, 'unknown'), isNull(presensiApel.verifiedStatus)];

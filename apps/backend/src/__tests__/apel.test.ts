@@ -151,4 +151,152 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
     const detail = await detailRes.json();
     expect(detail.anggota.length).toBe(2);
   });
+
+  it('harus sukses menutup dan membuka kembali sesi apel', async () => {
+    // 1. Buat kelompok
+    const createKelRes = await app.handle(
+      new Request('http://localhost/apel/kelompok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ namaKelompok: 'Kelompok Sesi Test', dosenId }),
+      }),
+    );
+    const kelompok = await createKelRes.json();
+
+    // 2. Buka sesi
+    const bukaRes = await app.handle(
+      new Request('http://localhost/apel/sesi/buka', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify({
+          kelompokApelId: kelompok.id,
+          tanggal: '2026-08-02',
+          shift: 'pagi',
+          jamMulai: '07:00',
+        }),
+      }),
+    );
+    expect(bukaRes.status).toBe(200);
+    const sesi = await bukaRes.json();
+
+    // 3. Tutup sesi
+    const tutupRes = await app.handle(
+      new Request(`http://localhost/apel/sesi/${sesi.id}/tutup`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(tutupRes.status).toBe(200);
+    const sesiTutup = await tutupRes.json();
+    expect(sesiTutup.isClosed).toBe(true);
+
+    // 4. Buka kembali sesi
+    const bukaKembaliRes = await app.handle(
+      new Request(`http://localhost/apel/sesi/${sesi.id}/buka-kembali`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(bukaKembaliRes.status).toBe(200);
+    const sesiReopened = await bukaKembaliRes.json();
+    expect(sesiReopened.isClosed).toBe(false);
+  });
+
+  it('harus sukses menghapus sesi apel oleh admin', async () => {
+    // 1. Buat kelompok & sesi
+    const createKelRes = await app.handle(
+      new Request('http://localhost/apel/kelompok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ namaKelompok: 'Kelompok Delete Test', dosenId }),
+      }),
+    );
+    const kelompok = await createKelRes.json();
+
+    const bukaRes = await app.handle(
+      new Request('http://localhost/apel/sesi/buka', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          kelompokApelId: kelompok.id,
+          tanggal: '2026-08-02',
+          shift: 'pagi',
+          jamMulai: '07:00',
+          dosenId,
+        }),
+      }),
+    );
+    const sesi = await bukaRes.json();
+
+    // 2. Non-admin gagal menghapus
+    const nonAdminDel = await app.handle(
+      new Request(`http://localhost/apel/sesi/${sesi.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(nonAdminDel.status).toBe(403);
+
+    // 3. Admin sukses menghapus
+    const adminDel = await app.handle(
+      new Request(`http://localhost/apel/sesi/${sesi.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(adminDel.status).toBe(200);
+
+    // 4. Verifikasi sesi tidak ditemukan lagi
+    const getRes = await app.handle(
+      new Request(`http://localhost/apel/sesi/${sesi.id}/presensi`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(getRes.status).toBe(400);
+  });
+
+  it('harus sukses mengedit data sesi apel', async () => {
+    const createKelRes = await app.handle(
+      new Request('http://localhost/apel/kelompok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ namaKelompok: 'Kelompok Update Test' }),
+      }),
+    );
+    const kelompok = await createKelRes.json();
+
+    const bukaRes = await app.handle(
+      new Request('http://localhost/apel/sesi/buka', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify({
+          kelompokApelId: kelompok.id,
+          tanggal: '2026-08-02',
+          shift: 'pagi',
+          jamMulai: '07:00',
+          dosenId,
+        }),
+      }),
+    );
+    const sesi = await bukaRes.json();
+
+    const updateRes = await app.handle(
+      new Request(`http://localhost/apel/sesi/${sesi.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify({
+          tanggal: '2026-08-03',
+          shift: 'sore',
+          jamMulai: '16:00',
+        }),
+      }),
+    );
+
+    expect(updateRes.status).toBe(200);
+    const updatedSesi = await updateRes.json();
+    expect(updatedSesi.tanggal).toBe('2026-08-03');
+    expect(updatedSesi.shift).toBe('sore');
+    expect(updatedSesi.jamMulai).toContain('16:00');
+  });
 });
