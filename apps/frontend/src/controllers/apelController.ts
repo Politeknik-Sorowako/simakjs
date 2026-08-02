@@ -30,6 +30,7 @@ export interface SesiApel {
   dosenId: number;
   dosenNama: string;
   jamMulai: string;
+  catatan?: string | null;
   isClosed: boolean;
   closedAt?: string;
   createdAt?: string;
@@ -47,6 +48,7 @@ export interface PresensiApelItem {
   mahasiswaNama: string;
   status: 'hadir' | 'terlambat' | 'sakit' | 'izin' | 'alpa' | 'unknown';
   menitTerlambat?: number;
+  keterangan?: string | null;
   verifiedStatus?: string;
   verifiedAt?: string;
   verificationNote?: string;
@@ -124,12 +126,19 @@ export const apelController = {
   removeAnggota: (kelompokId: number, mahasiswaId: number) =>
     fetchApi(`/apel/kelompok/${kelompokId}/anggota/${mahasiswaId}`, { method: 'DELETE' }),
 
-  bukaSesi: (data: { kelompokApelId: number; tanggal: string; shift: string; jamMulai: string; dosenId?: number }) =>
+  bukaSesi: (data: {
+    kelompokApelId: number;
+    tanggal: string;
+    shift: string;
+    jamMulai: string;
+    dosenId?: number;
+    catatan?: string;
+  }) =>
     fetchApi<SesiApel & { jumlahAnggota: number }>('/apel/sesi/buka', { method: 'POST', body: JSON.stringify(data) }),
 
   submitPresensi: (
     sesiId: number,
-    presensiList: Array<{ mahasiswaId: number; status: string; menitTerlambat?: number }>,
+    presensiList: Array<{ mahasiswaId: number; status: string; menitTerlambat?: number; keterangan?: string | null }>,
   ) => fetchApi(`/apel/sesi/${sesiId}/presensi`, { method: 'POST', body: JSON.stringify({ presensiList }) }),
 
   getSesiPresensi: (sesiId: number) => fetchApi<SesiPresensiResponse>(`/apel/sesi/${sesiId}/presensi`),

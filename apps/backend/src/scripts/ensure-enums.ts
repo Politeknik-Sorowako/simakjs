@@ -58,7 +58,9 @@ async function ensureEnums() {
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false NOT NULL;`,
     );
     await pool.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "prodi_ids" jsonb DEFAULT '[]'::jsonb NOT NULL;`);
-    console.log('[ENSURE ENUMS] Checked users columns (must_change_password, prodi_ids).');
+    await pool.query(`ALTER TABLE "sesi_apel" ADD COLUMN IF NOT EXISTS "catatan" text;`);
+    await pool.query(`ALTER TABLE "presensi_apel" ADD COLUMN IF NOT EXISTS "keterangan" text;`);
+    console.log('[ENSURE ENUMS] Checked users, sesi_apel, and presensi_apel columns.');
   } catch (colErr: unknown) {
     console.log(`[ENSURE ENUMS] Column check skipped: ${(colErr as Error).message || String(colErr)}`);
   }
