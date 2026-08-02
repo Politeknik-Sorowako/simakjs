@@ -77,6 +77,7 @@ export const bukaSesiSchema = {
     shift: validShift,
     jamMulai: t.String({ error: 'Jam mulai harus diisi' }),
     dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
+    catatan: t.Optional(t.Nullable(t.String({ error: 'Catatan sesi tidak valid' }))),
   }),
 };
 
@@ -90,6 +91,7 @@ export const submitPresensiSchema = {
         mahasiswaId: t.Number({ error: 'ID mahasiswa diperlukan' }),
         status: validStatus,
         menitTerlambat: t.Optional(t.Nullable(t.Number({ minimum: 0, error: 'Menit terlambat tidak valid' }))),
+        keterangan: t.Optional(t.Nullable(t.String({ error: 'Keterangan tidak valid' }))),
       }),
       { minItems: 1 },
     ),
@@ -135,6 +137,7 @@ export const updateSesiSchema = {
     shift: t.Optional(validShift),
     jamMulai: t.Optional(t.String({ error: 'Jam mulai tidak valid' })),
     dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
+    catatan: t.Optional(t.Nullable(t.String({ error: 'Catatan sesi tidak valid' }))),
   }),
 };
 

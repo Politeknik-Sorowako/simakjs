@@ -137,6 +137,7 @@ export class ApelService {
     shift: string;
     dosenId: number;
     jamMulai: string;
+    catatan?: string | null;
   }) {
     const [sesi] = await db.insert(sesiApel).values(data).returning();
 
@@ -159,7 +160,12 @@ export class ApelService {
 
   static async submitPresensi(
     sesiId: number,
-    presensiList: Array<{ mahasiswaId: number; status: string; menitTerlambat?: number | null }>,
+    presensiList: Array<{
+      mahasiswaId: number;
+      status: string;
+      menitTerlambat?: number | null;
+      keterangan?: string | null;
+    }>,
   ) {
     const [foundSesi] = await db.select().from(sesiApel).where(eq(sesiApel.id, sesiId));
     if (!foundSesi) throw new Error('Sesi apel tidak ditemukan');
@@ -185,6 +191,7 @@ export class ApelService {
             // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
             status: item.status as any,
             menitTerlambat: menit,
+            keterangan: item.keterangan || null,
           })
           .where(eq(presensiApel.id, existing.id));
       } else {
@@ -194,6 +201,7 @@ export class ApelService {
           // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
           status: item.status as any,
           menitTerlambat: menit,
+          keterangan: item.keterangan || null,
         });
       }
     }
@@ -212,6 +220,7 @@ export class ApelService {
         dosenId: sesiApel.dosenId,
         dosenNama: dosen.nama,
         jamMulai: sesiApel.jamMulai,
+        catatan: sesiApel.catatan,
         isClosed: sesiApel.isClosed,
       })
       .from(sesiApel)
@@ -230,6 +239,7 @@ export class ApelService {
         mahasiswaNama: mahasiswa.nama,
         status: presensiApel.status,
         menitTerlambat: presensiApel.menitTerlambat,
+        keterangan: presensiApel.keterangan,
         verifiedStatus: presensiApel.verifiedStatus,
         verifiedAt: presensiApel.verifiedAt,
         verificationNote: presensiApel.verificationNote,
@@ -330,7 +340,7 @@ export class ApelService {
 
   static async updateSesi(
     sesiId: number,
-    data: { tanggal?: string; shift?: string; jamMulai?: string; dosenId?: number | null },
+    data: { tanggal?: string; shift?: string; jamMulai?: string; dosenId?: number | null; catatan?: string | null },
   ) {
     const [foundSesi] = await db.select().from(sesiApel).where(eq(sesiApel.id, sesiId));
     if (!foundSesi) throw new Error('Sesi apel tidak ditemukan');
@@ -340,6 +350,7 @@ export class ApelService {
     if (data.shift !== undefined) updateData.shift = data.shift;
     if (data.jamMulai !== undefined) updateData.jamMulai = data.jamMulai;
     if (data.dosenId !== undefined && data.dosenId !== null) updateData.dosenId = data.dosenId;
+    if (data.catatan !== undefined) updateData.catatan = data.catatan;
 
     const [updated] = await db.update(sesiApel).set(updateData).where(eq(sesiApel.id, sesiId)).returning();
     return updated;

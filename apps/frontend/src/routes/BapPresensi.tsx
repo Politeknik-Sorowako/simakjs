@@ -3,6 +3,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -306,64 +307,35 @@ export default function BapPresensi() {
         {/* Selection bar */}
         <div class="bg-white border border-secondary-100 p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <div>
-            <label class="block text-sm font-semibold text-secondary-600 mb-2 dark:text-secondary-200">
-              Pilih Kelas Kuliah
-            </label>
-            <div class="flex flex-col gap-2">
-              <Input
-                placeholder="Ketik kode atau nama mata kuliah..."
-                value={filterMkText()}
-                onInput={(e) => setFilterMkText(e.currentTarget.value)}
-              />
-              <select
-                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-                value={selectedKelasId() || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedKelasId(val ? parseInt(val) : null);
-                  setSelectedBapId(null);
-                }}
-              >
-                <option value="">-- Pilih Kelas ({filteredKelasList().length}) --</option>
-                <For each={filteredKelasList()}>
-                  {(kelas) => (
-                    <option value={kelas.id}>
-                      {kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}
-                      {kelas.mataKuliah?.nama} (Kelas {kelas.namaKelas})
-                    </option>
-                  )}
-                </For>
-              </select>
-            </div>
+            <SearchableSelect
+              label="Pilih Kelas Kuliah"
+              placeholder="-- Cari & Pilih Kelas Kuliah --"
+              value={selectedKelasId()}
+              options={(activeKelasList() || []).map((kelas) => ({
+                label: `${kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}${kelas.mataKuliah?.nama} (Kelas ${kelas.namaKelas})`,
+                value: kelas.id,
+              }))}
+              onChange={(val) => {
+                setSelectedKelasId(val ? Number(val) : null);
+                setSelectedBapId(null);
+              }}
+            />
           </div>
 
           <Show when={selectedKelasId()}>
             <div>
-              <label class="block text-sm font-semibold text-secondary-600 mb-2 dark:text-secondary-200">
-                Pilih Pertemuan / BAP
-              </label>
-              <select
-                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-                value={selectedBapId() || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedBapId(val ? parseInt(val) : null);
+              <SearchableSelect
+                label="Pilih Pertemuan / BAP"
+                placeholder="-- Pilih Pertemuan --"
+                value={selectedBapId()}
+                options={(bapData() || []).map((bap) => ({
+                  label: `Pertemuan ${bap.pertemuanKe} (${bap.tanggal}) - ${bap.materi}`,
+                  value: bap.id,
+                }))}
+                onChange={(val) => {
+                  setSelectedBapId(val ? Number(val) : null);
                 }}
-              >
-                <option value="">-- Pilih Pertemuan --</option>
-                <For each={bapData() || []}>
-                  {(b) => (
-                    <option value={b.id}>
-                      Pertemuan {b.pertemuanKe} -{' '}
-                      {new Date(b.tanggal).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </option>
-                  )}
-                </For>
-              </select>
+              />
             </div>
           </Show>
         </div>
@@ -566,68 +538,35 @@ export default function BapPresensi() {
             />
           </div>
 
-          <div class="flex flex-col gap-1.5">
-            <div class="flex items-center justify-between">
-              <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
-                Pilih CPMK (OBE Target)
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowCpmkModal(true)}
-                class="text-xs text-brand-600 font-bold hover:underline"
-              >
-                + Tambah CPMK Baru
-              </button>
+          <SearchableSelect
+            label="Catatan / Topik Materi Kuliah (Dari RPS)"
+            placeholder="-- Pilih Topik Pembelajaran RPS --"
+            value={materi()}
+            options={(rpsTopics() || []).map((topic) => ({
+              label: `Pertemuan ${topic.pertemuanKe}: ${topic.topik}${topic.subTopik ? ` (${topic.subTopik})` : ''}`,
+              value: topic.topik,
+            }))}
+            onChange={(selectedVal) => {
+              setMateri(String(selectedVal));
+              const matchedTopic = rpsTopics()?.find((t) => t.topik === selectedVal);
+              if (matchedTopic && matchedTopic.cpmkId) {
+                setSelectedCpmkId(matchedTopic.cpmkId);
+              }
+            }}
+          />
+
+          <Show when={materi()}>
+            <div class="rounded-xl bg-brand-50/50 p-3 border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 text-xs">
+              <span class="font-bold text-brand-700 dark:text-brand-300">Target CPMK (Otomatis dari RPS): </span>
+              <span class="text-secondary-700 dark:text-secondary-200">
+                {(() => {
+                  const matchedTopic = rpsTopics()?.find((t) => t.topik === materi());
+                  const cpmkObj = cpmkData()?.find((c) => c.id === (matchedTopic?.cpmkId || selectedCpmkId()));
+                  return cpmkObj ? `[${cpmkObj.kode}] ${cpmkObj.deskripsi}` : 'Terkoneksi dengan CPMK umum mata kuliah';
+                })()}
+              </span>
             </div>
-            <select
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-              value={selectedCpmkId() || ''}
-              onChange={(e) => {
-                const val = e.target.value;
-                setSelectedCpmkId(val ? parseInt(val) : null);
-              }}
-              required
-            >
-              <option value="">-- Pilih Target Pembelajaran CPMK --</option>
-              <For each={cpmkData() || []}>
-                {(c) => (
-                  <option value={c.id}>
-                    [{c.kode}] {c.deskripsi}
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
-              Catatan / Topik Materi Kuliah (Dari RPS)
-            </label>
-            <select
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-              value={materi()}
-              onChange={(e) => {
-                const selectedVal = e.target.value;
-                setMateri(selectedVal);
-
-                // Automatically pre-fill CPMK if the selected topic maps to one
-                const matchedTopic = rpsTopics()?.find((t) => t.topik === selectedVal);
-                if (matchedTopic && matchedTopic.cpmkId) {
-                  setSelectedCpmkId(matchedTopic.cpmkId);
-                }
-              }}
-              required
-            >
-              <option value="">-- Pilih Topik Pembelajaran RPS --</option>
-              <For each={rpsTopics() || []}>
-                {(topic) => (
-                  <option value={topic.topik}>
-                    Pertemuan {topic.pertemuanKe}: {topic.topik} {topic.subTopik ? `(${topic.subTopik})` : ''}
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
+          </Show>
 
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
