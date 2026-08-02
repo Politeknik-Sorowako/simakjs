@@ -2,9 +2,11 @@ import { Elysia } from 'elysia';
 import { ApelController } from '../controllers/apel.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  bukaKembaliSesiSchema,
   bukaSesiSchema,
   createKelompokSchema,
   deleteKelompokSchema,
+  deleteSesiSchema,
   getKelompokDetailSchema,
   getKelompokSchema,
   getMonitorSchema,
@@ -37,6 +39,8 @@ export const apelRoutes = new Elysia({ prefix: '/apel' })
   .get('/sesi/:id/presensi', ApelController.getSesiPresensi, getSesiPresensiSchema)
   .get('/sesi/kelompok/:kelompokId', ApelController.getSesiByKelompok, getSesiByKelompokSchema)
   .post('/sesi/:id/tutup', ApelController.tutupSesi, tutupSesiSchema)
+  .post('/sesi/:id/buka-kembali', ApelController.bukaKembaliSesi, bukaKembaliSesiSchema)
+  .delete('/sesi/:id', ApelController.deleteSesi, deleteSesiSchema)
   .get('/sesi/aktif', ApelController.getSesiAktif, getSesiAktifSchema)
   // Monitoring & verifikasi
   .get('/monitor', ApelController.getMonitorRealtime, getMonitorSchema)

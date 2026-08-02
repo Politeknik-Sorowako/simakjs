@@ -114,6 +114,18 @@ export const tutupSesiSchema = {
   }),
 };
 
+export const bukaKembaliSesiSchema = {
+  params: t.Object({
+    id: t.String({ error: 'ID sesi diperlukan' }),
+  }),
+};
+
+export const deleteSesiSchema = {
+  params: t.Object({
+    id: t.String({ error: 'ID sesi diperlukan' }),
+  }),
+};
+
 export const getSesiAktifSchema = {
   query: t.Object({
     dosenId: t.Optional(t.String({ error: 'Dosen ID tidak valid' })),

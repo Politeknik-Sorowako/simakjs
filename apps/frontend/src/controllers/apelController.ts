@@ -6,7 +6,7 @@ export interface KelompokApel {
   namaKelompok: string;
   dosenId?: number | null;
   dosenNama?: string | null;
-  shift: string;
+  shift?: string;
   keterangan?: string;
   isActive: boolean;
   jumlahAnggota: number;
@@ -137,6 +137,10 @@ export const apelController = {
   getSesiByKelompok: (kelompokId: number) => fetchApi<SesiApel[]>(`/apel/sesi/kelompok/${kelompokId}`),
 
   tutupSesi: (sesiId: number) => fetchApi(`/apel/sesi/${sesiId}/tutup`, { method: 'POST' }),
+
+  bukaKembaliSesi: (sesiId: number) => fetchApi(`/apel/sesi/${sesiId}/buka-kembali`, { method: 'POST' }),
+
+  deleteSesi: (sesiId: number) => fetchApi(`/apel/sesi/${sesiId}`, { method: 'DELETE' }),
 
   getSesiAktif: (dosenId?: number) => {
     const qs = dosenId ? `?dosenId=${dosenId}` : '';
