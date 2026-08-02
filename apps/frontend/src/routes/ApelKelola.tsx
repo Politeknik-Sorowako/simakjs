@@ -30,7 +30,6 @@ export default function ApelKelola() {
   // Modal Buat Kelompok State
   const [showCreateModal, setShowCreateModal] = createSignal(false);
   const [newNamaKelompok, setNewNamaKelompok] = createSignal('');
-  const [newDosenId, setNewDosenId] = createSignal<number | null>(null);
   const [newKeterangan, setNewKeterangan] = createSignal('');
   // State Dosen PJ untuk Buka Sesi
   const [selectedDosenPJSesi, setSelectedDosenPJSesi] = createSignal<number | null>(null);
@@ -59,20 +58,11 @@ export default function ApelKelola() {
     },
   );
 
-  // Resource Daftar Dosen (untuk Modal & Form Sesi - seluruh Dosen)
+  // Resource Daftar Dosen (untuk Form Sesi - seluruh Dosen)
   const [allDosenList] = createResource(async () => {
     const res = await dosenController.getAll('', 1, 100);
     return res.data;
   });
-
-  const [dosenList] = createResource(
-    () => showCreateModal(),
-    async (open) => {
-      if (!open) return [];
-      const res = await dosenController.getAll('', 1, 100);
-      return res.data;
-    },
-  );
 
   // Resource Daftar Mahasiswa Lintas Prodi (untuk Modal Kelola Anggota)
   const [mhsList] = createResource(
@@ -116,13 +106,11 @@ export default function ApelKelola() {
       setIsSubmitting(true);
       const created = await apelController.createKelompok({
         namaKelompok: newNamaKelompok(),
-        dosenId: newDosenId() || undefined,
         keterangan: newKeterangan(),
       });
       toast.showToast('Kelompok Apel berhasil dibuat', 'success');
       setShowCreateModal(false);
       setNewNamaKelompok('');
-      setNewDosenId(null);
       setNewKeterangan('');
       refetchKelompok();
       if (created && created.id) {
@@ -416,13 +404,13 @@ export default function ApelKelola() {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional / Pelaksana)</label>
+                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional)</label>
                   <select
                     class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
                     value={selectedDosenPJSesi() ?? ''}
                     onChange={(e) => setSelectedDosenPJSesi(Number(e.target.value) || null)}
                   >
-                    <option value="">-- Gunakan Dosen PJ Default / Pilihkah PJ Sesi --</option>
+                    <option value="">-- Pilih Dosen PJ Sesi --</option>
                     <For each={allDosenList()}>
                       {(d: Dosen) => (
                         <option value={d.id}>
@@ -701,24 +689,6 @@ export default function ApelKelola() {
                     value={newNamaKelompok()}
                     onInput={(e) => setNewNamaKelompok(e.currentTarget.value)}
                   />
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium mb-1">Dosen Penanggung Jawab (PJ) (Opsional)</label>
-                  <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={newDosenId() ?? ''}
-                    onChange={(e) => setNewDosenId(Number(e.currentTarget.value) || null)}
-                  >
-                    <option value="">-- Pilih Dosen PJ (Opsional) --</option>
-                    <For each={dosenList()}>
-                      {(d: Dosen) => (
-                        <option value={d.id}>
-                          {d.nama} {d.nip ? `(${d.nip})` : ''}
-                        </option>
-                      )}
-                    </For>
-                  </select>
                 </div>
 
                 <div>
