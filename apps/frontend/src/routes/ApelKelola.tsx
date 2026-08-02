@@ -398,7 +398,7 @@ export default function ApelKelola() {
                 <For each={kelompokList()}>
                   {(item: KelompokApel) => (
                     <option value={item.id}>
-                      {item.namaKelompok} {item.dosenNama ? `- ${item.dosenNama}` : ''} ({item.jumlahAnggota ?? 0} Mhs)
+                      {item.namaKelompok.replace(/\s*\((pagi|sore)\)/gi, '')} ({item.jumlahAnggota ?? 0} Mhs)
                     </option>
                   )}
                 </For>
