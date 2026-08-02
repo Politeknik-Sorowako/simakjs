@@ -114,6 +114,30 @@ export const tutupSesiSchema = {
   }),
 };
 
+export const bukaKembaliSesiSchema = {
+  params: t.Object({
+    id: t.String({ error: 'ID sesi diperlukan' }),
+  }),
+};
+
+export const deleteSesiSchema = {
+  params: t.Object({
+    id: t.String({ error: 'ID sesi diperlukan' }),
+  }),
+};
+
+export const updateSesiSchema = {
+  params: t.Object({
+    id: t.String({ error: 'ID sesi diperlukan' }),
+  }),
+  body: t.Object({
+    tanggal: t.Optional(t.String({ minLength: 10, error: 'Tanggal tidak valid' })),
+    shift: t.Optional(validShift),
+    jamMulai: t.Optional(t.String({ error: 'Jam mulai tidak valid' })),
+    dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
+  }),
+};
+
 export const getSesiAktifSchema = {
   query: t.Object({
     dosenId: t.Optional(t.String({ error: 'Dosen ID tidak valid' })),
