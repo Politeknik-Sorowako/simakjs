@@ -1,6 +1,14 @@
 import { Context } from 'elysia';
 
-export type UserRole = 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
+export type UserRole =
+  | 'super_admin'
+  | 'admin'
+  | 'dosen'
+  | 'mahasiswa'
+  | 'prodi'
+  | 'keuangan'
+  | 'guest'
+  | 'calon_mahasiswa';
 
 export interface UserPayload {
   id: number;

@@ -11,6 +11,12 @@ export class KrsController {
     return mhs ? mhs.id : null;
   }
 
+  private static async getDosenIdByEmail(email: string): Promise<number | null> {
+    const { dosen } = await import('../models/schema');
+    const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, email)).limit(1);
+    return dsn ? dsn.id : null;
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>): Promise<any> {
     const user = await getCurrentUser();
@@ -23,6 +29,8 @@ export class KrsController {
     const search = query?.search || '';
 
     let filterMhsId: number | undefined = undefined;
+    let dosenPaId: number | undefined = undefined;
+
     if (user.role === 'mahasiswa') {
       const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
@@ -32,9 +40,14 @@ export class KrsController {
         };
       }
       filterMhsId = myMhsId;
+    } else if (user.role === 'dosen') {
+      const dsnId = await KrsController.getDosenIdByEmail(user.email);
+      if (dsnId) {
+        dosenPaId = dsnId;
+      }
     }
 
-    return await KrsService.getAll(page, limit, search, filterMhsId);
+    return await KrsService.getAll(page, limit, search, filterMhsId, dosenPaId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -172,7 +185,12 @@ export class KrsController {
       return { error: 'periodeId wajib disertakan.' };
     }
     try {
-      return await KrsService.getPendingStudents(periodeId);
+      let dosenPaId: number | undefined = undefined;
+      if (user.role === 'dosen') {
+        const dsnId = await KrsController.getDosenIdByEmail(user.email);
+        if (dsnId) dosenPaId = dsnId;
+      }
+      return await KrsService.getPendingStudents(periodeId, dosenPaId);
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };

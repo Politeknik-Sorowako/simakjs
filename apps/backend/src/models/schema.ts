@@ -18,6 +18,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const roleEnum = pgEnum('user_role', [
+  'super_admin',
   'admin',
   'dosen',
   'mahasiswa',
@@ -50,6 +51,7 @@ export const users = pgTable('users', {
   password: text('password').notNull(),
   nama: varchar('nama', { length: 255 }).notNull(),
   role: roleEnum('role').notNull().default('mahasiswa'),
+  prodiIds: jsonb('prodi_ids').$type<number[]>().default([]).notNull(),
   isActive: boolean('is_active').default(false).notNull(),
   mustChangePassword: boolean('must_change_password').default(false).notNull(),
   theme: varchar('theme', { length: 20 }).default('light').notNull(),
@@ -2189,6 +2191,30 @@ export const auditLogs = pgTable(
 export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   user: one(users, {
     fields: [auditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    title: varchar('title', { length: 255 }).notNull(),
+    message: text('message').notNull(),
+    isRead: boolean('is_read').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('idx_notifications_user_id').on(table.userId),
+  }),
+);
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
     references: [users.id],
   }),
 }));

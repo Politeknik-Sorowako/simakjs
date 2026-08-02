@@ -8,6 +8,7 @@ interface EnumFix {
 
 const ENUM_FIXES: EnumFix[] = [
   { name: 'tagihan_status', value: 'cicilan', before: 'lunas' },
+  { name: 'user_role', value: 'super_admin', before: 'admin' },
   { name: 'user_role', value: 'prodi', before: 'keuangan' },
   { name: 'user_role', value: 'keuangan', before: 'guest' },
   { name: 'user_role', value: 'guest' },
@@ -56,7 +57,8 @@ async function ensureEnums() {
     await pool.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false NOT NULL;`,
     );
-    console.log('[ENSURE ENUMS] Checked users.must_change_password column.');
+    await pool.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "prodi_ids" jsonb DEFAULT '[]'::jsonb NOT NULL;`);
+    console.log('[ENSURE ENUMS] Checked users columns (must_change_password, prodi_ids).');
   } catch (colErr: unknown) {
     console.log(`[ENSURE ENUMS] Column check skipped: ${(colErr as Error).message || String(colErr)}`);
   }

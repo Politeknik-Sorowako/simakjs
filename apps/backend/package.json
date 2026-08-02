@@ -16,6 +16,7 @@
     "db:restore": "bun run src/scripts/restore-db.ts",
     "db:safe-migrate": "bun run src/scripts/safe-migrate.ts",
     "db:reset-baseline": "bun run src/scripts/reset-baseline.ts",
+    "superadmin": "bun run src/scripts/manage-superadmin.ts",
     "test": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun run src/scripts/pre-test.ts && DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun test"
   },
   "dependencies": {
