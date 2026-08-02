@@ -149,7 +149,7 @@ async function checkIfTrackingTableExists(): Promise<boolean> {
     const result = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables
-        WHERE table_name = '__drizzle_migrations'
+        WHERE table_name = '__drizzle_migrations' AND table_schema IN ('drizzle', 'public')
       )
     `);
     await pool.end();
