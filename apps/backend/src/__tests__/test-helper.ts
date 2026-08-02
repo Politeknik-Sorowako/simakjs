@@ -6,6 +6,7 @@ import {
   angkatanKurikulum,
   announcements,
   applications,
+  auditLogs,
   bahanKajian,
   bahanKajianCpl,
   bap,
@@ -101,6 +102,7 @@ export interface MahasiswaSuccessResponse {
 // Helper function to clear all database tables to ensure test independence
 export async function clearDatabase() {
   tokenCache.clear();
+  await db.delete(auditLogs);
   await db.delete(announcements);
   await db.delete(applications);
   await db.delete(documentRequirements);

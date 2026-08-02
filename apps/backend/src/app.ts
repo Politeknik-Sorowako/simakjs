@@ -2,11 +2,13 @@ import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
 import { authMiddleware } from './middlewares/auth.middleware';
+import { auditPlugin } from './plugins/audit.plugin';
 import { jwtPlugin } from './plugins/jwt.plugin';
 import { admisiRoutes } from './routes/admisi.routes';
 import { admisiAdminRoutes } from './routes/admisi-admin.routes';
 import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
 import { apelRoutes } from './routes/apel.routes';
+import { auditRoutes } from './routes/audit.routes';
 import { authRoutes } from './routes/auth.routes';
 import { bahanKajianRoutes } from './routes/bahan-kajian.routes';
 import { bahanKajianCplMappingRoutes } from './routes/bahan-kajian-cpl-mapping.routes';
@@ -292,4 +294,6 @@ app
   .use(kurikulumRoutes)
   .use(rpsRoutes)
   .use(cutiRoutes)
-  .use(mahasiswaKeluarRoutes);
+  .use(mahasiswaKeluarRoutes)
+  .use(auditPlugin)
+  .use(auditRoutes);
