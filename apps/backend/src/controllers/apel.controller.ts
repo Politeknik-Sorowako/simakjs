@@ -73,8 +73,8 @@ export class ApelController {
       }
       return await ApelService.getKelompokByProdi(undefined, dosenId);
     } catch (e: unknown) {
-      set.status = 400;
-      return { error: e instanceof Error ? e.message : 'Unknown error' };
+      console.error('[ApelController] Error fetching kelompok apel:', e);
+      return [];
     }
   }
 

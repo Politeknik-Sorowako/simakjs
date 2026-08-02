@@ -373,15 +373,17 @@ export default function ApelKelola() {
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
-          <button
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            + Buat Kelompok Baru
-          </button>
+          <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
+            <button
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              + Buat Kelompok Baru
+            </button>
+          </Show>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
