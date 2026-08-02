@@ -2194,7 +2194,6 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
     references: [users.id],
   }),
 }));
-
 export const notifications = pgTable(
   'notifications',
   {
