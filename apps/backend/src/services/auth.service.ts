@@ -58,6 +58,7 @@ export class AuthService {
       nama: user.nama,
       role: user.role,
       isActive: user.isActive,
+      mustChangePassword: user.mustChangePassword,
       theme: user.theme,
       avatar: user.avatar,
     };

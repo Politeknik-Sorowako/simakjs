@@ -7,6 +7,7 @@ export interface UserPayload {
   email: string;
   nama: string;
   role: UserRole;
+  mustChangePassword?: boolean;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requires `any` for route inference

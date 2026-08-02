@@ -5,6 +5,7 @@ export interface User {
   email: string;
   nama: string;
   role: 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
+  mustChangePassword?: boolean;
   theme?: string;
   avatar?: string;
 }
@@ -15,6 +16,7 @@ interface AuthContextType {
   isAuthenticated: () => boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (updatedFields: Partial<User>) => void;
   theme: () => string;
   setTheme: (newTheme: string) => void;
 }
@@ -56,6 +58,15 @@ export function AuthProvider(props: { children: JSX.Element }) {
     }
   };
 
+  const updateUser = (updatedFields: Partial<User>) => {
+    const current = user();
+    if (current) {
+      const updated = { ...current, ...updatedFields };
+      setUser(updated);
+      localStorage.setItem('user', JSON.stringify(updated));
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -72,7 +83,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
   const isAuthenticated = () => !!token();
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout, theme, setTheme }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout, updateUser, theme, setTheme }}>
       {props.children}
     </AuthContext.Provider>
   );

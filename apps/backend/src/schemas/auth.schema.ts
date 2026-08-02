@@ -130,6 +130,7 @@ export const loginSchema = {
         email: t.String({ default: 'user@example.com' }),
         nama: t.String({ default: 'Nama Pengguna' }),
         role: t.String({ default: 'mahasiswa' }),
+        mustChangePassword: t.Optional(t.Boolean({ default: false })),
         theme: t.Optional(t.String()),
         avatar: t.Optional(t.String()),
       }),

@@ -6,6 +6,7 @@ export interface UserItem {
   nama: string;
   role: string;
   isActive: boolean;
+  mustChangePassword?: boolean;
   createdAt: string;
 }
 
@@ -30,6 +31,13 @@ export const userController = {
     });
   },
 
+  async forcePasswordChange(id: number, mustChangePassword = true): Promise<{ message: string; user: UserItem }> {
+    return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/force-password-change`, {
+      method: 'PUT',
+      body: JSON.stringify({ mustChangePassword }),
+    });
+  },
+
   async updateRole(id: number, role: string): Promise<{ message: string; user: UserItem }> {
     return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/role`, {
       method: 'PUT',
@@ -38,24 +46,29 @@ export const userController = {
   },
 
   async updateProfile(
-    nama: string,
+    namaOrOptions:
+      | string
+      | { nama?: string; password?: string; currentPassword?: string; theme?: string; avatar?: string },
     password?: string,
     currentPassword?: string,
     theme?: string,
     avatar?: string,
-  ): Promise<{ message: string; user: Record<string, unknown> }> {
-    const payload: Record<string, unknown> = { nama };
-    if (password) {
-      payload.password = password;
-      payload.currentPassword = currentPassword;
+  ): Promise<{ message: string; user: Record<string, unknown>; error?: string }> {
+    let payload: Record<string, unknown> = {};
+
+    if (typeof namaOrOptions === 'object' && namaOrOptions !== null) {
+      payload = { ...namaOrOptions };
+    } else {
+      if (namaOrOptions) payload.nama = namaOrOptions;
+      if (password) {
+        payload.password = password;
+        payload.currentPassword = currentPassword;
+      }
+      if (theme) payload.theme = theme;
+      if (avatar) payload.avatar = avatar;
     }
-    if (theme) {
-      payload.theme = theme;
-    }
-    if (avatar) {
-      payload.avatar = avatar;
-    }
-    return fetchApi<{ message: string; user: Record<string, unknown> }>('/users/profile', {
+
+    return fetchApi<{ message: string; user: Record<string, unknown>; error?: string }>('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(payload),
     });

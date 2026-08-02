@@ -51,6 +51,7 @@ export const users = pgTable('users', {
   nama: varchar('nama', { length: 255 }).notNull(),
   role: roleEnum('role').notNull().default('mahasiswa'),
   isActive: boolean('is_active').default(false).notNull(),
+  mustChangePassword: boolean('must_change_password').default(false).notNull(),
   theme: varchar('theme', { length: 20 }).default('light').notNull(),
   avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
