@@ -1,14 +1,31 @@
+import { eq } from 'drizzle-orm';
+import { dosen } from '../models/schema';
 import { KelasKuliahService } from '../services/kelas-kuliah.service';
+import { db } from '../utils/db';
 import { AuthContext, PaginationQuery } from '../utils/types';
+
+type KelasKuliahQuery = PaginationQuery & { periodeId?: string; dosenId?: string };
 
 export class KelasKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getAll({ query }: AuthContext<any, PaginationQuery & { periodeId?: string }>): Promise<any> {
+  static async getAll({ query, getCurrentUser }: AuthContext<any, KelasKuliahQuery>): Promise<any> {
     const page = query?.page ? parseInt(String(query.page)) : 1;
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
     const periodeId = query?.periodeId || undefined;
-    return await KelasKuliahService.getAll(page, limit, search, periodeId);
+    let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+
+    if (!dosenId && getCurrentUser) {
+      const user = await getCurrentUser();
+      if (user && user.role === 'dosen') {
+        const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email)).limit(1);
+        if (dsn) {
+          dosenId = dsn.id;
+        }
+      }
+    }
+
+    return await KelasKuliahService.getAll(page, limit, search, periodeId, dosenId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

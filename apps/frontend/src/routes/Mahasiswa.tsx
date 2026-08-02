@@ -46,6 +46,7 @@ export default function Mahasiswa() {
   const [filterNama, setFilterNama] = createSignal('');
   const [filterEmail, setFilterEmail] = createSignal('');
   const [filterStatus, setFilterStatus] = createSignal('');
+  const [filterHasAccount, setFilterHasAccount] = createSignal<boolean | undefined>(undefined);
 
   // Input fields state (for UI immediate update)
   const [inputNim, setInputNim] = createSignal('');
@@ -80,8 +81,21 @@ export default function Mahasiswa() {
       filterNama: filterNama(),
       filterEmail: filterEmail(),
       filterStatus: filterStatus(),
+      hasAccount: filterHasAccount(),
     }),
-    ({ search, page, limit, prodiId, sortBy, sortOrder, filterNim, filterNama, filterEmail, filterStatus }) =>
+    ({
+      search,
+      page,
+      limit,
+      prodiId,
+      sortBy,
+      sortOrder,
+      filterNim,
+      filterNama,
+      filterEmail,
+      filterStatus,
+      hasAccount,
+    }) =>
       mahasiswaController.getAll(search, page, limit, prodiId || undefined, {
         sortBy,
         sortOrder,
@@ -89,6 +103,7 @@ export default function Mahasiswa() {
         filterNama,
         filterEmail,
         filterStatus,
+        hasAccount,
       }),
   );
 
@@ -242,12 +257,8 @@ export default function Mahasiswa() {
 
     setBulkLoading(true);
     try {
-      const res = await userController.generateAccounts('mahasiswa', ids);
-      if (res.errors && res.errors.length > 0) {
-        toast.showToast(`Berhasil membuat ${res.successCount} akun. Beberapa gagal: ${res.errors.join(', ')}`, 'info');
-      } else {
-        toast.showToast(`Berhasil membuat ${res.successCount} akun mahasiswa.`, 'success');
-      }
+      const res = await userController.generateAccountsAsync('mahasiswa', ids);
+      toast.showToast(res.message, 'info');
       setSelectedIds([]);
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal membuat akun secara massal.', 'error');
@@ -384,15 +395,33 @@ export default function Mahasiswa() {
           onSuccess={() => refetch()}
         />
 
-        <div class="max-w-xs">
-          <Input
-            placeholder="Cari NIM atau nama..."
-            value={search()}
-            onInput={(e) => {
-              setSearch(e.currentTarget.value);
-              resetPage();
-            }}
-          />
+        <div class="flex items-center gap-3 flex-wrap max-w-lg">
+          <div class="w-64">
+            <Input
+              placeholder="Cari NIM atau nama..."
+              value={search()}
+              onInput={(e) => {
+                setSearch(e.currentTarget.value);
+                resetPage();
+              }}
+            />
+          </div>
+          <div class="w-48">
+            <select
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              value={filterHasAccount() === undefined ? '' : filterHasAccount() ? 'true' : 'false'}
+              onChange={(e) => {
+                const val = e.currentTarget.value;
+                if (val === '') setFilterHasAccount(undefined);
+                else setFilterHasAccount(val === 'true');
+                resetPage();
+              }}
+            >
+              <option value="">Status Akun: Semua</option>
+              <option value="false">❌ Belum Punya Akun</option>
+              <option value="true">✅ Sudah Punya Akun</option>
+            </select>
+          </div>
         </div>
 
         <Show

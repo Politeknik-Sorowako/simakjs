@@ -36,6 +36,8 @@ export class MahasiswaController {
       filterNama: query?.filterNama,
       filterEmail: query?.filterEmail,
       filterStatus: query?.filterStatus,
+      hasAccount:
+        query?.hasAccount !== undefined && query?.hasAccount !== '' ? String(query.hasAccount) === 'true' : undefined,
     };
 
     if (user.role === 'dosen') {

@@ -34,6 +34,7 @@ import { mahasiswaRoutes } from './routes/mahasiswa.routes';
 import { mahasiswaKeluarRoutes } from './routes/mahasiswa-keluar.routes';
 import { mataKuliahRoutes } from './routes/mata-kuliah.routes';
 import { mataKuliahBahanKajianRoutes } from './routes/mata-kuliah-bahan-kajian.routes';
+import { notificationRoutes } from './routes/notification.routes';
 import { obeReportRoutes } from './routes/obe-report.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
@@ -291,6 +292,7 @@ app
   .use(pddiktiRoutes)
   .use(e2eRoutes)
   .use(userRoutes)
+  .use(notificationRoutes)
   .use(kurikulumRoutes)
   .use(rpsRoutes)
   .use(cutiRoutes)
