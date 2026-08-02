@@ -142,6 +142,11 @@ export const apelController = {
 
   deleteSesi: (sesiId: number) => fetchApi(`/apel/sesi/${sesiId}`, { method: 'DELETE' }),
 
+  updateSesi: (
+    sesiId: number,
+    data: { tanggal?: string; shift?: string; jamMulai?: string; dosenId?: number | null },
+  ) => fetchApi<SesiApel>(`/apel/sesi/${sesiId}`, { method: 'PUT', body: JSON.stringify(data) }),
+
   getSesiAktif: (dosenId?: number) => {
     const qs = dosenId ? `?dosenId=${dosenId}` : '';
     return fetchApi<SesiApel[]>(`/apel/sesi/aktif${qs}`);

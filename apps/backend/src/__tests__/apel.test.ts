@@ -255,4 +255,48 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
     );
     expect(getRes.status).toBe(400);
   });
+
+  it('harus sukses mengedit data sesi apel', async () => {
+    const createKelRes = await app.handle(
+      new Request('http://localhost/apel/kelompok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ namaKelompok: 'Kelompok Update Test' }),
+      }),
+    );
+    const kelompok = await createKelRes.json();
+
+    const bukaRes = await app.handle(
+      new Request('http://localhost/apel/sesi/buka', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify({
+          kelompokApelId: kelompok.id,
+          tanggal: '2026-08-02',
+          shift: 'pagi',
+          jamMulai: '07:00',
+          dosenId,
+        }),
+      }),
+    );
+    const sesi = await bukaRes.json();
+
+    const updateRes = await app.handle(
+      new Request(`http://localhost/apel/sesi/${sesi.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify({
+          tanggal: '2026-08-03',
+          shift: 'sore',
+          jamMulai: '16:00',
+        }),
+      }),
+    );
+
+    expect(updateRes.status).toBe(200);
+    const updatedSesi = await updateRes.json();
+    expect(updatedSesi.tanggal).toBe('2026-08-03');
+    expect(updatedSesi.shift).toBe('sore');
+    expect(updatedSesi.jamMulai).toContain('16:00');
+  });
 });

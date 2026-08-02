@@ -238,6 +238,21 @@ export class ApelController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateSesi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'dosen'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await ApelService.updateSesi(parseInt(params.id), body);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getSesiAktif({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();

@@ -20,6 +20,7 @@ import {
   submitPresensiSchema,
   tutupSesiSchema,
   updateKelompokSchema,
+  updateSesiSchema,
   verifyPresensiSchema,
 } from '../schemas/apel.schema';
 
@@ -35,6 +36,7 @@ export const apelRoutes = new Elysia({ prefix: '/apel' })
   .delete('/kelompok/:id/anggota/:mhsId', ApelController.removeAnggota, removeAnggotaSchema)
   // Sesi management
   .post('/sesi/buka', ApelController.bukaSesi, bukaSesiSchema)
+  .put('/sesi/:id', ApelController.updateSesi, updateSesiSchema)
   .post('/sesi/:id/presensi', ApelController.submitPresensi, submitPresensiSchema)
   .get('/sesi/:id/presensi', ApelController.getSesiPresensi, getSesiPresensiSchema)
   .get('/sesi/kelompok/:kelompokId', ApelController.getSesiByKelompok, getSesiByKelompokSchema)

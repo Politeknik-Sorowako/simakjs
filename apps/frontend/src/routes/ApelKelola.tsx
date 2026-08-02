@@ -34,6 +34,13 @@ export default function ApelKelola() {
   // State Dosen PJ untuk Buka Sesi
   const [selectedDosenPJSesi, setSelectedDosenPJSesi] = createSignal<number | null>(null);
 
+  // Modal Edit Sesi State
+  const [showEditSesiModal, setShowEditSesiModal] = createSignal(false);
+  const [editTanggal, setEditTanggal] = createSignal('');
+  const [editShift, setEditShift] = createSignal('pagi');
+  const [editJamMulai, setEditJamMulai] = createSignal('');
+  const [editDosenId, setEditDosenId] = createSignal<number | null>(null);
+
   // Modal Kelola Anggota State
   const [showAnggotaModal, setShowAnggotaModal] = createSignal(false);
   const [mhsSearch, setMhsSearch] = createSignal('');
@@ -305,6 +312,39 @@ export default function ApelKelola() {
     }
   };
 
+  const openEditSesiModal = () => {
+    const sesi = sesiPresensi()?.sesi;
+    if (!sesi) return;
+    setEditTanggal(sesi.tanggal || '');
+    setEditShift(sesi.shift || 'pagi');
+    setEditJamMulai(sesi.jamMulai || '');
+    setEditDosenId(sesi.dosenId || null);
+    setShowEditSesiModal(true);
+  };
+
+  const handleUpdateSesi = async (e: Event) => {
+    e.preventDefault();
+    if (!selectedSesi()) return;
+    try {
+      setIsSubmitting(true);
+      await apelController.updateSesi(selectedSesi()!, {
+        tanggal: editTanggal(),
+        shift: editShift(),
+        jamMulai: editJamMulai(),
+        dosenId: editDosenId() || null,
+      });
+      toast.showToast('Sesi apel berhasil diperbarui', 'success');
+      setShowEditSesiModal(false);
+      refetchSesi();
+      refetchSesiPresensi();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Gagal memperbarui sesi apel';
+      toast.showToast(msg, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const loadSesiDetail = (sesiId: number) => {
     setSelectedSesi(sesiId);
   };
@@ -544,6 +584,17 @@ export default function ApelKelola() {
                           Buka Sesi Kembali
                         </button>
                       </Show>
+                    </Show>
+
+                    <Show when={['admin', 'dosen'].includes(auth.user()?.role || '')}>
+                      <button
+                        class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50"
+                        onClick={openEditSesiModal}
+                        disabled={isSubmitting()}
+                        title="Edit Sesi Apel"
+                      >
+                        ✏ Edit Sesi
+                      </button>
                     </Show>
 
                     <Show when={auth.user()?.role === 'admin'}>
@@ -841,6 +892,94 @@ export default function ApelKelola() {
                   Selesai
                 </button>
               </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* MODAL 3: Edit Sesi Apel */}
+        <Show when={showEditSesiModal()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
+                <h3 class="text-lg font-bold">Edit Data Sesi Apel</h3>
+                <button
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setShowEditSesiModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateSesi} class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">Tanggal *</label>
+                  <input
+                    type="date"
+                    required
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editTanggal()}
+                    onChange={(e) => setEditTanggal(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Shift</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editShift()}
+                    onChange={(e) => setEditShift(e.target.value)}
+                  >
+                    <option value="pagi">Pagi</option>
+                    <option value="sore">Sore</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional)</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editDosenId() ?? ''}
+                    onChange={(e) => setEditDosenId(Number(e.target.value) || null)}
+                  >
+                    <option value="">-- Pilih Dosen PJ Sesi --</option>
+                    <For each={allDosenList()}>
+                      {(d: Dosen) => (
+                        <option value={d.id}>
+                          {d.nama} {d.nip ? `(${d.nip})` : ''}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium mb-1">Jam Mulai *</label>
+                  <input
+                    type="time"
+                    required
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    value={editJamMulai()}
+                    onChange={(e) => setEditJamMulai(e.target.value)}
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setShowEditSesiModal(false)}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting()}
+                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                  >
+                    {isSubmitting() ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </Show>
