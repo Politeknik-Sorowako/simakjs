@@ -38,6 +38,7 @@ services:
       BACKUP_RETENTION: "10"
     volumes:
       - backup_data_staging:/app/apps/backend/backups
+      - app_logs_staging:/app/apps/backend/logs
     depends_on:
       db_staging:
         condition: service_healthy
@@ -59,3 +60,5 @@ services:
 volumes:
   pgdata_staging:
   backup_data_staging:
+  app_logs_staging:
+

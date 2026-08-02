@@ -4,6 +4,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -12,6 +13,7 @@ import {
   time,
   timestamp,
   unique,
+  uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
 
@@ -2157,6 +2159,35 @@ export const evaluasiKurikulumRelations = relations(evaluasiKurikulum, ({ one })
   }),
   createdByUser: one(users, {
     fields: [evaluasiKurikulum.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const auditLogs = pgTable(
+  'audit_logs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    timestamp: timestamp('timestamp', { withTimezone: true }).defaultNow().notNull(),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+    userRole: varchar('user_role', { length: 50 }),
+    ipAddress: varchar('ip_address', { length: 45 }),
+    userAgent: text('user_agent'),
+    actionType: varchar('action_type', { length: 20 }).notNull(),
+    module: varchar('module', { length: 50 }).notNull(),
+    entityId: varchar('entity_id', { length: 100 }),
+    description: text('description').notNull(),
+    metadata: jsonb('metadata'),
+  },
+  (table) => ({
+    timestampIdx: index('idx_audit_logs_timestamp').on(table.timestamp),
+    userModuleIdx: index('idx_audit_logs_user_module').on(table.userId, table.module),
+    actionModuleIdx: index('idx_audit_logs_action_module').on(table.actionType, table.module),
+  }),
+);
+
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [auditLogs.userId],
     references: [users.id],
   }),
 }));

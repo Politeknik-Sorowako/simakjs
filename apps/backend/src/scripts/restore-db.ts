@@ -2,7 +2,7 @@ import { spawnSync } from 'child_process';
 import { appendFileSync, existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'fs';
 import { join, resolve } from 'path';
 import * as readline from 'readline';
-import { gunzipSync } from 'zlib';
+import { gunzipSync, gzipSync } from 'zlib';
 
 function getDbConfig() {
   const url = new URL(process.env.DATABASE_URL || '');
@@ -185,6 +185,42 @@ async function main() {
   auditLog('Restoring database...');
 
   try {
+    // Create automatic safety backup before dropping/restoring database
+    auditLog('Creating pre-restore safety snapshot...');
+    const safetyTimestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const safetyFilename = `backup_pre_restore_${safetyTimestamp}.sql.gz`;
+    const safetyFilepath = join(backupDir, safetyFilename);
+
+    const safetyDump = spawnSync(
+      'pg_dump',
+      [
+        '-h',
+        config.host,
+        '-p',
+        config.port,
+        '-U',
+        config.user,
+        '-d',
+        config.db,
+        '--clean',
+        '--if-exists',
+        '--no-owner',
+        '--no-acl',
+      ],
+      {
+        env: { ...process.env, PGPASSWORD: config.password },
+        stdio: ['inherit', 'pipe', 'inherit'],
+        timeout: 300000,
+      },
+    );
+
+    if (safetyDump.status === 0 && safetyDump.stdout?.length) {
+      writeFileSync(safetyFilepath, gzipSync(safetyDump.stdout), { mode: 0o600 });
+      auditLog(`Pre-restore safety snapshot saved: ${safetyFilename}`);
+    } else {
+      auditLog('Warning: Could not create pre-restore safety snapshot (DB might be empty). Continuing restore...');
+    }
+
     const compressed = readFileSync(filepath);
     const decompressed = gunzipSync(compressed);
 

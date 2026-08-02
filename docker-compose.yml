@@ -42,6 +42,7 @@ services:
       - ./apps/backend:/app/apps/backend
       - /app/apps/backend/node_modules
       - backup_data:/app/apps/backend/backups
+      - app_logs:/app/apps/backend/logs
     depends_on:
       db:
         condition: service_healthy
@@ -63,4 +64,6 @@ services:
 volumes:
   pgdata:
   backup_data:
+  app_logs:
+
 
