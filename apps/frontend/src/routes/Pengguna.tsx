@@ -72,6 +72,20 @@ export default function Pengguna() {
     }
   };
 
+  const handleForcePasswordChange = async (user: UserItem) => {
+    const targetState = !user.mustChangePassword;
+    setActionLoading(user.id);
+    try {
+      const res = await userController.forcePasswordChange(user.id, targetState);
+      toast.showToast(res.message, 'success');
+      refetch();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengubah status wajib ganti password', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   let debounceTimer: ReturnType<typeof setTimeout>;
   const handleSearchInput = (e: Event) => {
     clearTimeout(debounceTimer);
@@ -186,43 +200,60 @@ export default function Pengguna() {
                       </select>
                     </td>
                     <td class="whitespace-nowrap px-6 py-4">
-                      <Show
-                        when={user.isActive}
-                        fallback={
-                          <span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 dark:bg-red-900/30 dark:text-red-400">
-                            Belum Aktif
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        <Show
+                          when={user.isActive}
+                          fallback={
+                            <span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 dark:bg-red-900/30 dark:text-red-400">
+                              Belum Aktif
+                            </span>
+                          }
+                        >
+                          <span class="inline-flex items-center rounded-md bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-accent-900/30 dark:text-accent-400">
+                            Aktif
                           </span>
-                        }
-                      >
-                        <span class="inline-flex items-center rounded-md bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-accent-900/30 dark:text-accent-400">
-                          Aktif
-                        </span>
-                      </Show>
+                        </Show>
+                        <Show when={user.mustChangePassword}>
+                          <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-400">
+                            Wajib Ganti PW
+                          </span>
+                        </Show>
+                      </div>
                     </td>
                     <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                      <Button
-                        variant={user.isActive ? 'danger' : 'success'}
-                        disabled={actionLoading() === user.id || user.id === currentUser()?.id}
-                        onClick={() => handleToggleActive(user)}
-                      >
-                        {actionLoading() === user.id ? 'Memproses...' : user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        disabled={user.id === currentUser()?.id}
-                        onClick={async () => {
-                          const newPw = prompt('Masukkan password baru (min 6 karakter):');
-                          if (!newPw || newPw.length < 6) return;
-                          try {
-                            const res = await userController.resetPassword(user.id, newPw);
-                            toast.showToast(res.message, 'success');
-                          } catch (err: unknown) {
-                            toast.showToast((err as Error).message, 'error');
-                          }
-                        }}
-                      >
-                        Reset Password
-                      </Button>
+                      <div class="flex items-center gap-2">
+                        <Button
+                          variant={user.isActive ? 'danger' : 'success'}
+                          disabled={actionLoading() === user.id || user.id === currentUser()?.id}
+                          onClick={() => handleToggleActive(user)}
+                        >
+                          {actionLoading() === user.id ? 'Memproses...' : user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={actionLoading() === user.id || user.id === currentUser()?.id}
+                          onClick={() => handleForcePasswordChange(user)}
+                        >
+                          {user.mustChangePassword ? 'Batalkan Wajib PW' : 'Wajibkan Ganti PW'}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={user.id === currentUser()?.id}
+                          onClick={async () => {
+                            const newPw = prompt('Masukkan password baru (min 6 karakter):');
+                            if (!newPw || newPw.length < 6) return;
+                            try {
+                              const res = await userController.resetPassword(user.id, newPw);
+                              toast.showToast(res.message, 'success');
+                              refetch();
+                            } catch (err: unknown) {
+                              toast.showToast((err as Error).message, 'error');
+                            }
+                          }}
+                        >
+                          Reset Password
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 )}

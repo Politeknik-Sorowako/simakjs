@@ -36,6 +36,7 @@ export class UserController {
           nama: users.nama,
           role: users.role,
           isActive: users.isActive,
+          mustChangePassword: users.mustChangePassword,
           theme: users.theme,
           avatar: users.avatar,
           createdAt: users.createdAt,
@@ -229,6 +230,7 @@ export class UserController {
           algorithm: 'bcrypt',
           cost: 12,
         });
+        updateData.mustChangePassword = false;
       }
 
       if (Object.keys(updateData).length === 0) {
@@ -245,6 +247,7 @@ export class UserController {
           email: updated.email,
           nama: updated.nama,
           role: updated.role,
+          mustChangePassword: updated.mustChangePassword,
           theme: updated.theme,
           avatar: updated.avatar,
         },
@@ -299,12 +302,54 @@ export class UserController {
 
       const hashed = await Bun.password.hash(newPassword, { algorithm: 'bcrypt', cost: 12 });
 
-      await db.update(users).set({ password: hashed }).where(eq(users.id, userId));
+      await db.update(users).set({ password: hashed, mustChangePassword: true }).where(eq(users.id, userId));
 
       return { message: 'Password berhasil direset' };
     } catch (error: unknown) {
       set.status = 500;
       return { error: 'Gagal mereset password' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async forcePasswordChange({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || currentUser.role !== 'admin') {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin.' };
+      }
+
+      const userId = parseInt(params.id);
+      if (isNaN(userId)) {
+        set.status = 400;
+        return { error: 'ID pengguna tidak valid' };
+      }
+
+      // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
+      const mustChangePassword = (body as any)?.mustChangePassword !== false;
+
+      const [updated] = await db.update(users).set({ mustChangePassword }).where(eq(users.id, userId)).returning();
+
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Pengguna tidak ditemukan' };
+      }
+
+      return {
+        message: mustChangePassword
+          ? 'Pengguna diwajibkan mengganti kata sandi pada login berikutnya'
+          : 'Kewajiban ganti kata sandi pengguna telah dibatalkan',
+        user: {
+          id: updated.id,
+          email: updated.email,
+          nama: updated.nama,
+          mustChangePassword: updated.mustChangePassword,
+        },
+      };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal memperbarui status wajib ganti password' };
     }
   }
 

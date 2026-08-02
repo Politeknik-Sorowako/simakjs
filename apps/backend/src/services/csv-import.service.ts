@@ -624,6 +624,7 @@ export class CsvImportService {
           // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
           role: roleVal as any,
           isActive: false,
+          mustChangePassword: true,
         });
         result.successCount++;
       } catch (err: unknown) {
@@ -697,6 +698,7 @@ export class CsvImportService {
           nama,
           role,
           isActive: true,
+          mustChangePassword: true,
         });
         successCount++;
       }

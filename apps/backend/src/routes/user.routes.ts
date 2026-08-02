@@ -19,5 +19,8 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   .put('/:id/reset-password', UserController.resetPassword, {
     detail: { tags: ['Pengguna'], summary: 'Reset password pengguna (Admin only)' },
   })
+  .put('/:id/force-password-change', UserController.forcePasswordChange, {
+    detail: { tags: ['Pengguna'], summary: 'Wajibkan/batalkan kewajiban ganti password pengguna (Admin only)' },
+  })
   .post('/import', UserController.importCsv, importUsersCsvSchema)
   .post('/generate-accounts', UserController.generateAccounts, generateAccountsSchema);
