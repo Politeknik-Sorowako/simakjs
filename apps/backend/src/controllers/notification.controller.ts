@@ -22,8 +22,8 @@ export class NotificationController {
 
       return list;
     } catch (error: unknown) {
-      set.status = 500;
-      return { error: 'Gagal mengambil notifikasi' };
+      console.error('[NotificationController] Error fetching notifications:', error);
+      return [];
     }
   }
 

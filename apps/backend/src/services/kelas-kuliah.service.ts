@@ -31,7 +31,18 @@ export class KelasKuliahService {
     const conditions = [];
 
     if (search) {
-      conditions.push(or(ilike(kelasKuliah.namaKelas, `%${search}%`), ilike(kelasKuliah.periodeId, `%${search}%`)));
+      const mkSubquery = db
+        .select({ id: mataKuliah.id })
+        .from(mataKuliah)
+        .where(or(ilike(mataKuliah.nama, `%${search}%`), ilike(mataKuliah.kode, `%${search}%`)));
+
+      conditions.push(
+        or(
+          ilike(kelasKuliah.namaKelas, `%${search}%`),
+          ilike(kelasKuliah.periodeId, `%${search}%`),
+          inArray(kelasKuliah.mataKuliahId, mkSubquery),
+        ),
+      );
     }
     if (periodeId) {
       conditions.push(eq(kelasKuliah.periodeId, periodeId));

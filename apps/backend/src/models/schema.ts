@@ -515,6 +515,7 @@ export const sesiApel = pgTable('sesi_apel', {
     .notNull()
     .references(() => dosen.id, { onDelete: 'restrict' }),
   jamMulai: time('jam_mulai').notNull(),
+  catatan: text('catatan'),
   isClosed: boolean('is_closed').default(false).notNull(),
   closedAt: timestamp('closed_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -536,6 +537,7 @@ export const presensiApel = pgTable(
       .references(() => mahasiswa.id, { onDelete: 'cascade' }),
     status: presensiStatusEnum('status').notNull().default('hadir'),
     menitTerlambat: integer('menit_terlambat'),
+    keterangan: text('keterangan'),
     verifiedStatus: presensiStatusEnum('verified_status'),
     verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
     verifiedAt: timestamp('verified_at'),

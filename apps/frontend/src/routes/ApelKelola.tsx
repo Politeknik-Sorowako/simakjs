@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -24,6 +25,7 @@ export default function ApelKelola() {
   const [tanggal, setTanggal] = createSignal(new Date().toISOString().slice(0, 10));
   const [shift, setShift] = createSignal('pagi');
   const [jamMulai, setJamMulai] = createSignal('');
+  const [catatanSesi, setCatatanSesi] = createSignal('');
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
 
@@ -187,6 +189,7 @@ export default function ApelKelola() {
         shift: shift(),
         jamMulai: jamMulai(),
         dosenId: selectedDosenPJSesi() || undefined,
+        catatan: catatanSesi() || undefined,
       });
       toast.showToast(`Sesi dibuka dengan ${result.jumlahAnggota} mahasiswa`, 'success');
       refetchSesi();
@@ -233,6 +236,17 @@ export default function ApelKelola() {
     );
   };
 
+  const handleKeteranganChange = (mahasiswaId: number, ket: string) => {
+    setPresensiData((prev) =>
+      prev.map((p) => {
+        if (p.mahasiswaId === mahasiswaId) {
+          return { ...p, keterangan: ket };
+        }
+        return p;
+      }),
+    );
+  };
+
   const handleSubmit = async () => {
     if (!selectedSesi()) return;
     try {
@@ -241,6 +255,7 @@ export default function ApelKelola() {
         mahasiswaId: p.mahasiswaId,
         status: p.status,
         menitTerlambat: p.menitTerlambat,
+        keterangan: p.keterangan || null,
       }));
       await apelController.submitPresensi(selectedSesi()!, list);
       toast.showToast('Presensi berhasil disimpan', 'success');
@@ -358,15 +373,17 @@ export default function ApelKelola() {
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
-          <button
-            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            + Buat Kelompok Baru
-          </button>
+          <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
+            <button
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              + Buat Kelompok Baru
+            </button>
+          </Show>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -385,24 +402,19 @@ export default function ApelKelola() {
                 </Show>
               </div>
 
-              <select
-                class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                value={selectedKelompok() ?? ''}
-                onChange={(e) => {
-                  setSelectedKelompok(Number(e.target.value) || null);
+              <SearchableSelect
+                placeholder="-- Pilih Kelompok --"
+                value={selectedKelompok()}
+                options={(kelompokList() || []).map((item: KelompokApel) => ({
+                  label: `${item.namaKelompok.replace(/\s*\((pagi|sore)\)/gi, '')} (${item.jumlahAnggota ?? 0} Mhs)`,
+                  value: item.id,
+                }))}
+                onChange={(val) => {
+                  setSelectedKelompok(val ? Number(val) : null);
                   setSelectedSesi(null);
                   setPresensiData([]);
                 }}
-              >
-                <option value="">-- Pilih Kelompok --</option>
-                <For each={kelompokList()}>
-                  {(item: KelompokApel) => (
-                    <option value={item.id}>
-                      {item.namaKelompok.replace(/\s*\((pagi|sore)\)/gi, '')} ({item.jumlahAnggota ?? 0} Mhs)
-                    </option>
-                  )}
-                </For>
-              </select>
+              />
 
               <Show when={kelompokList() && kelompokList()!.length === 0}>
                 <div class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-2 rounded border border-amber-200 dark:border-amber-800">
@@ -444,21 +456,16 @@ export default function ApelKelola() {
                   </select>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional)</label>
-                  <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
-                    value={selectedDosenPJSesi() ?? ''}
-                    onChange={(e) => setSelectedDosenPJSesi(Number(e.target.value) || null)}
-                  >
-                    <option value="">-- Pilih Dosen PJ Sesi --</option>
-                    <For each={allDosenList()}>
-                      {(d: Dosen) => (
-                        <option value={d.id}>
-                          {d.nama} {d.nip ? `(${d.nip})` : ''}
-                        </option>
-                      )}
-                    </For>
-                  </select>
+                  <SearchableSelect
+                    label="Dosen PJ Sesi (Opsional)"
+                    placeholder="-- Pilih Dosen PJ Sesi --"
+                    value={selectedDosenPJSesi()}
+                    options={(allDosenList() || []).map((d: Dosen) => ({
+                      label: `${d.nama} ${d.nip ? `(${d.nip})` : ''}`,
+                      value: d.id,
+                    }))}
+                    onChange={(val) => setSelectedDosenPJSesi(val ? Number(val) : null)}
+                  />
                 </div>
                 <div>
                   <label class="block text-sm font-medium mb-1">Jam Mulai</label>
@@ -467,6 +474,17 @@ export default function ApelKelola() {
                     class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
                     value={jamMulai()}
                     onChange={(e) => setJamMulai(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
+                  <textarea
+                    rows="2"
+                    maxlength="1000"
+                    placeholder="Keterangan / Catatan Sesi Apel..."
+                    class="w-full border rounded-lg px-3 py-2 text-xs dark:bg-gray-700 dark:border-gray-600"
+                    value={catatanSesi()}
+                    onInput={(e) => setCatatanSesi(e.currentTarget.value)}
                   />
                 </div>
                 <button
@@ -619,6 +637,7 @@ export default function ApelKelola() {
                         <th class="px-4 py-3 text-left text-xs font-medium uppercase">Nama</th>
                         <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status</th>
                         <th class="px-4 py-3 text-center text-xs font-medium uppercase">Durasi (Menit)</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium uppercase">Catatan / Alasan</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y dark:divide-gray-700">
@@ -697,12 +716,23 @@ export default function ApelKelola() {
                                 </div>
                               </Show>
                             </td>
+                            <td class="px-4 py-3 text-left">
+                              <input
+                                type="text"
+                                maxlength="1000"
+                                placeholder="Keterangan / Alasan..."
+                                class="w-full border rounded px-2.5 py-1 text-xs dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
+                                value={item.keterangan || ''}
+                                disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
+                                onInput={(e) => handleKeteranganChange(item.mahasiswaId, e.currentTarget.value)}
+                              />
+                            </td>
                           </tr>
                         )}
                       </For>
                       <Show when={presensiData().length === 0}>
                         <tr>
-                          <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                          <td colspan="6" class="px-4 py-8 text-center text-gray-500">
                             Belum ada data presensi
                           </td>
                         </tr>

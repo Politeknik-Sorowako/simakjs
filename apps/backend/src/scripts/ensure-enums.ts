@@ -52,13 +52,16 @@ async function ensureEnums() {
     console.log(`[ENSURE ENUMS] Added ${fix.name}.${fix.value}`);
   }
 
-  // Ensure critical schema elements exist (idempotent self-healing)
+  // NOTE: Schema changes are primarily managed by Drizzle SQL migrations.
+  // The queries below serve as an idempotent self-healing safety fallback for production runtime environments (e.g. Docker startup).
   try {
     await pool.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false NOT NULL;`,
     );
     await pool.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "prodi_ids" jsonb DEFAULT '[]'::jsonb NOT NULL;`);
-    console.log('[ENSURE ENUMS] Checked users columns (must_change_password, prodi_ids).');
+    await pool.query(`ALTER TABLE "sesi_apel" ADD COLUMN IF NOT EXISTS "catatan" text;`);
+    await pool.query(`ALTER TABLE "presensi_apel" ADD COLUMN IF NOT EXISTS "keterangan" text;`);
+    console.log('[ENSURE ENUMS] Checked users, sesi_apel, and presensi_apel columns.');
   } catch (colErr: unknown) {
     console.log(`[ENSURE ENUMS] Column check skipped: ${(colErr as Error).message || String(colErr)}`);
   }
@@ -79,7 +82,70 @@ async function ensureEnums() {
         "metadata" jsonb
       );
     `);
-    console.log('[ENSURE ENUMS] Checked audit_logs table.');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "notifications" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+        "title" varchar(255) NOT NULL,
+        "message" text NOT NULL,
+        "is_read" boolean DEFAULT false NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await pool.query(`CREATE INDEX IF NOT EXISTS "idx_notifications_user_id" ON "notifications" ("user_id");`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "kelompok_apel" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "nama_kelompok" varchar(100) NOT NULL,
+        "dosen_id" integer REFERENCES "dosen"("id") ON DELETE RESTRICT,
+        "shift" varchar(10) DEFAULT 'pagi' NOT NULL,
+        "keterangan" text,
+        "is_active" boolean DEFAULT true NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "kelompok_apel_anggota" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "kelompok_apel_id" integer NOT NULL REFERENCES "kelompok_apel"("id") ON DELETE CASCADE,
+        "mahasiswa_id" integer NOT NULL REFERENCES "mahasiswa"("id") ON DELETE CASCADE,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "sesi_apel" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "kelompok_apel_id" integer NOT NULL REFERENCES "kelompok_apel"("id") ON DELETE CASCADE,
+        "tanggal" date NOT NULL,
+        "shift" varchar(10) NOT NULL,
+        "dosen_id" integer NOT NULL REFERENCES "dosen"("id") ON DELETE RESTRICT,
+        "jam_mulai" time NOT NULL,
+        "catatan" text,
+        "is_closed" boolean DEFAULT false NOT NULL,
+        "closed_at" timestamp,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "presensi_apel" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "sesi_apel_id" integer NOT NULL REFERENCES "sesi_apel"("id") ON DELETE CASCADE,
+        "mahasiswa_id" integer NOT NULL REFERENCES "mahasiswa"("id") ON DELETE CASCADE,
+        "status" presensi_status DEFAULT 'hadir' NOT NULL,
+        "menit_terlambat" integer,
+        "keterangan" text,
+        "verified_status" presensi_status,
+        "verified_by" integer REFERENCES "users"("id") ON DELETE SET NULL,
+        "verified_at" timestamp,
+        "verification_note" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    console.log('[ENSURE ENUMS] Checked audit_logs, notifications, and apel tables.');
   } catch (tblErr: unknown) {
     console.log(`[ENSURE ENUMS] Table check skipped: ${(tblErr as Error).message || String(tblErr)}`);
   }
