@@ -36,7 +36,7 @@ export const getProdiSchema = {
           nama: t.String({ default: 'Teknik Informatika' }),
           jenjang: t.String({ default: 'D4' }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
-          isSynced: t.Boolean({ default: false }),
+          isSynced: t.Union([t.Boolean(), t.Null()], { default: false }),
           lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
           createdAt: t.Any(),
           updatedAt: t.Any(),
