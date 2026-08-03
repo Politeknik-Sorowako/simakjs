@@ -70,12 +70,25 @@ export class DosenService {
   }
 
   static async create(data: CreateDosenDto) {
-    const [newDosen] = await db.insert(dosen).values(data).returning();
+    const sanitized = {
+      ...data,
+      nik: data.nik?.trim() ? data.nik : null,
+      tanggalLahir: data.tanggalLahir?.trim() ? data.tanggalLahir : null,
+      nidn: data.nidn?.trim() ? data.nidn : null,
+      idPddikti: data.idPddikti?.trim() ? data.idPddikti : null,
+    };
+    const [newDosen] = await db.insert(dosen).values(sanitized).returning();
     return newDosen;
   }
 
   static async update(id: number, data: Partial<CreateDosenDto>) {
-    const [updatedDosen] = await db.update(dosen).set(data).where(eq(dosen.id, id)).returning();
+    const sanitized: Record<string, unknown> = { ...data };
+    if ('nik' in data) sanitized.nik = data.nik?.trim() ? data.nik : null;
+    if ('tanggalLahir' in data) sanitized.tanggalLahir = data.tanggalLahir?.trim() ? data.tanggalLahir : null;
+    if ('nidn' in data) sanitized.nidn = data.nidn?.trim() ? data.nidn : null;
+    if ('idPddikti' in data) sanitized.idPddikti = data.idPddikti?.trim() ? data.idPddikti : null;
+
+    const [updatedDosen] = await db.update(dosen).set(sanitized).where(eq(dosen.id, id)).returning();
     return updatedDosen || null;
   }
 

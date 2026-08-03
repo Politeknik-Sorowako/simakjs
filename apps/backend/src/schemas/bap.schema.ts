@@ -7,7 +7,8 @@ export const bapBody = t.Object({
   materi: t.String({ default: 'Pengenalan dan Dasar Pemrograman' }),
   catatan: t.Optional(t.Nullable(t.String())),
   durasiMenit: t.Integer({ default: 100 }),
-  cpmkId: t.Integer({ default: 1 }),
+  cpmkId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
+  topikIds: t.Optional(t.Array(t.Integer())),
   dosenId: t.Integer({ default: 1 }),
 });
 

@@ -39,7 +39,8 @@ export interface BAP {
   materi: string;
   catatan?: string | null;
   durasiMenit: number;
-  cpmkId: number;
+  cpmkId?: number | null;
+  topikIds?: number[];
   dosenId: number;
 }
 

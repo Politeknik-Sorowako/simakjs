@@ -6,7 +6,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 
 ## 1. Project Overview & CI/CD
 - **Stack**: Bun monorepo (`apps/backend`: Elysia + Drizzle ORM + Postgres, `apps/frontend`: SolidJS + Vite + Tailwind), Biome v2.5.2.
-- **CI/CD Workflow**: Primary deployment MUST go through GitHub Actions workflows. Never skip or bypass CI/CD.
+- **CI/CD & Deployment Workflow**: Primary deployment MUST go through GitHub Actions workflows. NEVER push directly to `development` (staging) or `main` (production) branches. All changes MUST be submitted via a Pull Request (PR) targeting `development` or `main`.
 - **Pre-commit Checks**: Always run linting and strict type checks before committing:
   ```bash
   bun run lint
@@ -44,7 +44,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 
 ## 5. Database, Git & Security
 - **Database**: Never alter existing migration files or execute `drizzle-kit push` in production. Generate and apply migrations via `bun run db:generate` and `bun run db:safe-migrate`. All migration SQL files MUST be idempotent to prevent deployment crashes (always use `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and safe constraint checks).
-- **Git Operations**: Follow conventional commits (`type(scope): description`). Always clear sandbox tokens using `env -u GITHUB_TOKEN git ...` before any remote git operation.
+- **Git & Deployment Operations**: Follow conventional commits (`type(scope): description`). ALWAYS create a Pull Request (PR) towards `development` (for staging) or `main` (for production) before deploying. Direct pushes to `development` or `main` are strictly prohibited. Always clear sandbox tokens using `env -u GITHUB_TOKEN git ...` before any remote git operation.
 - **Security**: Never commit `.env` or secrets. Enforce password hashing (bcrypt, cost 12), and use explicit CORS origin lists instead of wildcards.
 
 ---
@@ -53,5 +53,5 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 1. Provide direct answers focused on the core issue without pleasantries.
 2. Show patched diff code snippets instead of reprinting whole files. Keep explanations to 2–3 sentences.
 3. Target file inspection tools specifically to required paths.
-4. Create new PRs towards `development` branch when implementing features in new agent conversations.
-5. Ensure `bun run lint` and `bunx biome ci .` pass before committing or pushing.
+4. ALWAYS create a new Pull Request (PR) towards `development` (staging) or `main` (production) branch when implementing features or hotfixes. Never push directly to target deployment branches.
+5. Ensure `bun run lint` and `bunx biome ci .` pass before committing, pushing, or opening a PR.

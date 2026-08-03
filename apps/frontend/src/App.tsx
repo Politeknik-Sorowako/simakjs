@@ -39,6 +39,7 @@ import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
 import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
+import EvaluasiSistem from './routes/EvaluasiSistem';
 import ForceChangePassword from './routes/ForceChangePassword';
 import ForgotPassword from './routes/ForgotPassword';
 import InputNilai from './routes/InputNilai';
@@ -215,6 +216,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
             <Pelanggaran />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/evaluasi-sistem"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan']}>
+            <EvaluasiSistem />
           </ProtectedRoute>
         }
       />

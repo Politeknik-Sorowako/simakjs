@@ -12,7 +12,7 @@ export class ApelController {
   static async createKelompok({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'prodi'])) {
+      if (!allowed(user, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
