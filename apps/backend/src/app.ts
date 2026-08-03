@@ -26,6 +26,7 @@ import { dosenRoutes } from './routes/dosen.routes';
 import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
 import { e2eRoutes } from './routes/e2e.routes';
 import { evaluasiKurikulumRoutes } from './routes/evaluasi-kurikulum.routes';
+import { feedbackRoutes } from './routes/feedback.routes';
 import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { khsRoutes } from './routes/khs.routes';
 import { krsRoutes } from './routes/krs.routes';
@@ -42,6 +43,7 @@ import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { presensiRoutes } from './routes/presensi.routes';
 import { prodiRoutes } from './routes/prodi.routes';
 import { profilLulusanRoutes } from './routes/profil-lulusan.routes';
+import { rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
 import { rpsRoutes } from './routes/rps.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
@@ -296,6 +298,8 @@ app
   .use(kurikulumRoutes)
   .use(rpsRoutes)
   .use(cutiRoutes)
+  .use(feedbackRoutes)
+  .use(rombelPraktikumRoutes)
   .use(mahasiswaKeluarRoutes)
   .use(auditPlugin)
   .use(auditRoutes);

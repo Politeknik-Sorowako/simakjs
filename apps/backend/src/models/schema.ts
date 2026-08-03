@@ -418,9 +418,7 @@ export const bap = pgTable('bap', {
   materi: text('materi').notNull(),
   catatan: text('catatan'),
   durasiMenit: integer('durasi_menit').notNull(),
-  cpmkId: integer('cpmk_id')
-    .notNull()
-    .references(() => cpmk.id, { onDelete: 'restrict' }),
+  cpmkId: integer('cpmk_id').references(() => cpmk.id, { onDelete: 'restrict' }),
   dosenId: integer('dosen_id')
     .notNull()
     .references(() => dosen.id, { onDelete: 'restrict' }),
@@ -2216,6 +2214,167 @@ export const notifications = pgTable(
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
+    references: [users.id],
+  }),
+}));
+
+// --- MULTI TOPIK BAP ---
+export const bapTopik = pgTable('bap_topik', {
+  id: serial('id').primaryKey(),
+  bapId: integer('bap_id')
+    .notNull()
+    .references(() => bap.id, { onDelete: 'cascade' }),
+  topikId: integer('topik_id').references(() => rpsTopik.id, { onDelete: 'cascade' }),
+  cpmkId: integer('cpmk_id').references(() => cpmk.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const bapTopikRelations = relations(bapTopik, ({ one }) => ({
+  bap: one(bap, {
+    fields: [bapTopik.bapId],
+    references: [bap.id],
+  }),
+  topik: one(rpsTopik, {
+    fields: [bapTopik.topikId],
+    references: [rpsTopik.id],
+  }),
+  cpmk: one(cpmk, {
+    fields: [bapTopik.cpmkId],
+    references: [cpmk.id],
+  }),
+}));
+
+// --- KELAS PRAKTIKUM & ROMBEL ---
+export const rombelPraktikum = pgTable('rombel_praktikum', {
+  id: serial('id').primaryKey(),
+  kelasKuliahId: integer('kelas_kuliah_id')
+    .notNull()
+    .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
+  namaGroup: varchar('nama_group', { length: 255 }).notNull(),
+  instrukturId: integer('instrukturId').references(() => dosen.id, { onDelete: 'set null' }),
+  keterangan: text('keterangan'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const rombelPraktikumMahasiswa = pgTable('rombel_praktikum_mahasiswa', {
+  id: serial('id').primaryKey(),
+  rombelPraktikumId: integer('rombel_praktikum_id')
+    .notNull()
+    .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
+  mahasiswaId: integer('mahasiswa_id')
+    .notNull()
+    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const bapPraktikum = pgTable('bap_praktikum', {
+  id: serial('id').primaryKey(),
+  rombelPraktikumId: integer('rombel_praktikum_id')
+    .notNull()
+    .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
+  tanggal: date('tanggal').notNull(),
+  sesiKe: integer('sesi_ke').default(1).notNull(),
+  materi: text('materi').notNull(),
+  catatan: text('catatan'),
+  durasiMenit: integer('durasi_menit').default(100).notNull(),
+  instrukturId: integer('instruktur_id').references(() => dosen.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const presensiPraktikum = pgTable('presensi_praktikum', {
+  id: serial('id').primaryKey(),
+  bapPraktikumId: integer('bap_praktikum_id')
+    .notNull()
+    .references(() => bapPraktikum.id, { onDelete: 'cascade' }),
+  mahasiswaId: integer('mahasiswa_id')
+    .notNull()
+    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  status: presensiStatusEnum('status').notNull(),
+  durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
+  keterangan: text('keterangan'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const rombelPraktikumRelations = relations(rombelPraktikum, ({ one, many }) => ({
+  kelasKuliah: one(kelasKuliah, {
+    fields: [rombelPraktikum.kelasKuliahId],
+    references: [kelasKuliah.id],
+  }),
+  instruktur: one(dosen, {
+    fields: [rombelPraktikum.instrukturId],
+    references: [dosen.id],
+  }),
+  mahasiswaList: many(rombelPraktikumMahasiswa),
+  bapList: many(bapPraktikum),
+}));
+
+export const rombelPraktikumMahasiswaRelations = relations(rombelPraktikumMahasiswa, ({ one }) => ({
+  rombelPraktikum: one(rombelPraktikum, {
+    fields: [rombelPraktikumMahasiswa.rombelPraktikumId],
+    references: [rombelPraktikum.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [rombelPraktikumMahasiswa.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+}));
+
+export const bapPraktikumRelations = relations(bapPraktikum, ({ one, many }) => ({
+  rombelPraktikum: one(rombelPraktikum, {
+    fields: [bapPraktikum.rombelPraktikumId],
+    references: [rombelPraktikum.id],
+  }),
+  instruktur: one(dosen, {
+    fields: [bapPraktikum.instrukturId],
+    references: [dosen.id],
+  }),
+  presensiList: many(presensiPraktikum),
+}));
+
+export const presensiPraktikumRelations = relations(presensiPraktikum, ({ one }) => ({
+  bapPraktikum: one(bapPraktikum, {
+    fields: [presensiPraktikum.bapPraktikumId],
+    references: [bapPraktikum.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [presensiPraktikum.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+}));
+
+// --- SYSTEM FEEDBACK & EVALUASI ---
+export const systemFeedback = pgTable('system_feedback', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  kategori: varchar('kategori', { length: 50 }).notNull(),
+  judul: varchar('nama', { length: 255 }).notNull(),
+  pesan: text('pesan').notNull(),
+  rating: integer('rating'),
+  status: varchar('status', { length: 50 }).default('pending').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const systemFeedbackRelations = relations(systemFeedback, ({ one }) => ({
+  user: one(users, {
+    fields: [systemFeedback.userId],
     references: [users.id],
   }),
 }));

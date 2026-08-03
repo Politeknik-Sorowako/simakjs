@@ -5,11 +5,11 @@ export const dosenBody = t.Object({
   nama: t.String({ default: 'Dr. John Doe' }),
   email: t.String({ format: 'email', default: 'johndoe@test.com' }),
   programStudiId: t.Optional(t.Integer({ default: 1 })),
-  idPddikti: t.Optional(t.String()),
-  nidn: t.Optional(t.String({ default: '0001018701' })),
-  nik: t.Optional(t.String({ minLength: 16, maxLength: 16, default: '1234567890123456' })),
-  jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P')], { default: 'L' })),
-  tanggalLahir: t.Optional(t.String({ default: '1987-01-01' })),
+  idPddikti: t.Optional(t.Union([t.String(), t.Null()])),
+  nidn: t.Optional(t.Union([t.String(), t.Null()], { default: '0001018701' })),
+  nik: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
+  jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P'), t.Null()], { default: 'L' })),
+  tanggalLahir: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
 });
 
 export const updateDosenBody = t.Partial(
@@ -17,12 +17,12 @@ export const updateDosenBody = t.Partial(
     nip: t.String(),
     nama: t.String(),
     email: t.String({ format: 'email' }),
-    programStudiId: t.Integer(),
-    idPddikti: t.String(),
-    nidn: t.String(),
-    nik: t.String({ minLength: 16, maxLength: 16 }),
-    jenisKelamin: t.Union([t.Literal('L'), t.Literal('P')]),
-    tanggalLahir: t.String(),
+    programStudiId: t.Union([t.Integer(), t.Null()]),
+    idPddikti: t.Union([t.String(), t.Null()]),
+    nidn: t.Union([t.String(), t.Null()]),
+    nik: t.Union([t.String(), t.Null()]),
+    jenisKelamin: t.Union([t.Literal('L'), t.Literal('P'), t.Null()]),
+    tanggalLahir: t.Union([t.String(), t.Null()]),
   }),
 );
 

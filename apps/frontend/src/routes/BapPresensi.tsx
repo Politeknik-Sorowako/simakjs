@@ -7,9 +7,11 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { dosenController, Dosen as IDosen } from '../controllers/dosenController';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { krsController } from '../controllers/krsController';
 import { BAP, CPMK, PresensiItem, presensiController } from '../controllers/presensiController';
+import { BapPraktikum, RombelPraktikum, rombelPraktikumController } from '../controllers/rombelPraktikumController';
 
 export default function BapPresensi() {
   const auth = useAuth();
@@ -32,7 +34,21 @@ export default function BapPresensi() {
   const [catatan, setCatatan] = createSignal('');
   const [durasiMenit, setDurasiMenit] = createSignal(100);
   const [selectedCpmkId, setSelectedCpmkId] = createSignal<number | null>(null);
+  const [selectedTopikIds, setSelectedTopikIds] = createSignal<number[]>([]);
   const [editBapId, setEditBapId] = createSignal<number | null>(null);
+
+  // Mode Tab: 'teori' | 'praktikum'
+  const [activeTab, setActiveTab] = createSignal<'teori' | 'praktikum'>('teori');
+
+  // Dosen Profile lookup for scoping
+  const [dosenProfile] = createResource(
+    () => user()?.email,
+    async (email) => {
+      if (!email || user()?.role !== 'dosen') return null;
+      const res = await dosenController.getAll(email, 1, 1);
+      return res.data[0] || null;
+    },
+  );
 
   // New CPMK Form
   const [newCpmkKode, setNewCpmkKode] = createSignal('');
@@ -46,7 +62,16 @@ export default function BapPresensi() {
   // 1. Fetch Classes
   const [kelasData] = createResource(() => kelasKuliahController.getAll(undefined, 1, 100));
 
-  const activeKelasList = () => kelasData()?.data || [];
+  const activeKelasList = () => {
+    const all = kelasData()?.data || [];
+    if (user()?.role === 'dosen') {
+      const dId = dosenProfile()?.id;
+      if (!dId) return all;
+      return all.filter((k) => k.dosenPengajarKelas?.some((dp) => dp.dosenId === dId));
+    }
+    return all;
+  };
+
   const filteredKelasList = () => {
     const txt = filterMkText().toLowerCase().trim();
     if (!txt) return activeKelasList();
@@ -156,6 +181,7 @@ export default function BapPresensi() {
     setCatatan('');
     setDurasiMenit(100);
     setSelectedCpmkId(null);
+    setSelectedTopikIds([]);
     setShowBapModal(true);
   };
 
@@ -168,19 +194,15 @@ export default function BapPresensi() {
     setMateri(activeBap.materi);
     setCatatan(activeBap.catatan || '');
     setDurasiMenit(activeBap.durasiMenit);
-    setSelectedCpmkId(activeBap.cpmkId);
+    setSelectedCpmkId(activeBap.cpmkId || null);
+    setSelectedTopikIds(activeBap.topikIds || []);
     setShowBapModal(true);
   };
 
   const handleSaveBap = async (e: Event) => {
     e.preventDefault();
     const kelasId = selectedKelasId();
-    const cpmkId = selectedCpmkId();
     if (!kelasId) return;
-    if (!cpmkId) {
-      toast.showToast('Silakan pilih materi CPMK terlebih dahulu', 'error');
-      return;
-    }
 
     try {
       const payload = {
@@ -190,7 +212,8 @@ export default function BapPresensi() {
         materi: materi(),
         catatan: catatan(),
         durasiMenit: durasiMenit(),
-        cpmkId: cpmkId,
+        cpmkId: selectedCpmkId() || undefined,
+        topikIds: selectedTopikIds(),
         dosenId: selectedKelas()?.dosenPengajarKelas?.[0]?.dosenId || 1,
       };
 
@@ -539,7 +562,7 @@ export default function BapPresensi() {
           </div>
 
           <SearchableSelect
-            label="Catatan / Topik Materi Kuliah (Dari RPS)"
+            label="Materi Utama Kuliah (Dari RPS)"
             placeholder="-- Pilih Topik Pembelajaran RPS --"
             value={materi()}
             options={(rpsTopics() || []).map((topic) => ({
@@ -552,8 +575,45 @@ export default function BapPresensi() {
               if (matchedTopic && matchedTopic.cpmkId) {
                 setSelectedCpmkId(matchedTopic.cpmkId);
               }
+              if (matchedTopic && !selectedTopikIds().includes(matchedTopic.id)) {
+                setSelectedTopikIds((prev) => [...prev, matchedTopic.id]);
+              }
             }}
           />
+
+          <Show when={(rpsTopics() || []).length > 0}>
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+                Pilih Topik Terkait / Lanjutan (Multi-Topik Pertemuan)
+              </label>
+              <div class="max-h-36 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800 space-y-1">
+                <For each={rpsTopics() || []}>
+                  {(topic) => {
+                    const isChecked = () => selectedTopikIds().includes(topic.id);
+                    return (
+                      <label class="flex items-center gap-2 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-1.5 rounded-lg">
+                        <input
+                          type="checkbox"
+                          checked={isChecked()}
+                          onChange={(e) => {
+                            if (e.currentTarget.checked) {
+                              setSelectedTopikIds((prev) => [...prev, topic.id]);
+                              if (!materi()) setMateri(topic.topik);
+                            } else {
+                              setSelectedTopikIds((prev) => prev.filter((id) => id !== topic.id));
+                            }
+                          }}
+                          class="rounded text-brand-600 focus:ring-brand-500"
+                        />
+                        <span class="font-bold text-secondary-700 dark:text-white">P{topic.pertemuanKe}:</span>
+                        <span class="text-secondary-600 dark:text-secondary-200">{topic.topik}</span>
+                      </label>
+                    );
+                  }}
+                </For>
+              </div>
+            </div>
+          </Show>
 
           <Show when={materi()}>
             <div class="rounded-xl bg-brand-50/50 p-3 border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 text-xs">

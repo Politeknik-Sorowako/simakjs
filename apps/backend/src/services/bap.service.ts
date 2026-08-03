@@ -1,10 +1,23 @@
-import { eq } from 'drizzle-orm';
-import { bap, dosen, dosenPengajarKelas, kelasKuliah, rps, rpsTopik } from '../models/schema';
+import { eq, inArray } from 'drizzle-orm';
+import { bap, bapTopik, dosen, dosenPengajarKelas, kelasKuliah, rps, rpsTopik } from '../models/schema';
 import { db } from '../utils/db';
 
 export class BapService {
   static async getByKelas(kelasKuliahId: number) {
-    return await db.select().from(bap).where(eq(bap.kelasKuliahId, kelasKuliahId));
+    const list = await db.select().from(bap).where(eq(bap.kelasKuliahId, kelasKuliahId));
+    if (list.length === 0) return [];
+
+    const bapIds = list.map((b) => b.id);
+    const topiks = await db.select().from(bapTopik).where(inArray(bapTopik.bapId, bapIds));
+
+    return list.map((b) => ({
+      ...b,
+      topikIds: topiks
+        .filter((t) => t.bapId === b.id)
+        .map((t) => t.topikId || t.cpmkId)
+        .filter(Boolean),
+      topikList: topiks.filter((t) => t.bapId === b.id),
+    }));
   }
 
   static async getRpsTopikByKelas(kelasKuliahId: number) {
@@ -54,10 +67,22 @@ export class BapService {
     materi: string;
     catatan?: string | null;
     durasiMenit: number;
-    cpmkId: number;
+    cpmkId?: number | null;
+    topikIds?: number[];
     dosenId: number;
   }) {
-    const [newBap] = await db.insert(bap).values(data).returning();
+    const { topikIds, ...bapPayload } = data;
+    const [newBap] = await db.insert(bap).values(bapPayload).returning();
+
+    if (topikIds && topikIds.length > 0) {
+      await db.insert(bapTopik).values(
+        topikIds.map((topikId) => ({
+          bapId: newBap.id,
+          topikId,
+          cpmkId: data.cpmkId || null,
+        })),
+      );
+    }
     return newBap;
   }
 
@@ -69,11 +94,26 @@ export class BapService {
       materi: string;
       catatan?: string | null;
       durasiMenit: number;
-      cpmkId: number;
+      cpmkId?: number | null;
+      topikIds?: number[];
       dosenId: number;
     }>,
   ) {
-    const [updatedBap] = await db.update(bap).set(data).where(eq(bap.id, id)).returning();
+    const { topikIds, ...bapPayload } = data;
+    const [updatedBap] = await db.update(bap).set(bapPayload).where(eq(bap.id, id)).returning();
+
+    if (topikIds !== undefined) {
+      await db.delete(bapTopik).where(eq(bapTopik.bapId, id));
+      if (topikIds.length > 0) {
+        await db.insert(bapTopik).values(
+          topikIds.map((topikId) => ({
+            bapId: id,
+            topikId,
+            cpmkId: data.cpmkId || null,
+          })),
+        );
+      }
+    }
     return updatedBap || null;
   }
 }
