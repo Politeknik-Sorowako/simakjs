@@ -37,7 +37,7 @@ export const getProdiSchema = {
           jenjang: t.String({ default: 'D4' }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Union([t.Boolean(), t.Null()], { default: false }),
-          lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+          lastSyncAt: t.Any(),
           createdAt: t.Any(),
           updatedAt: t.Any(),
         }),

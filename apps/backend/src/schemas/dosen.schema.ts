@@ -50,7 +50,7 @@ export const getDosenSchema = {
           programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
-          lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+          lastSyncAt: t.Any(),
           nidn: t.Union([t.String(), t.Null()], { default: '0001018701' }),
           nik: t.Union([t.String(), t.Null()], { default: '1234567890123456' }),
           jenisKelamin: t.Union([t.String(), t.Null()], { default: 'L' }),

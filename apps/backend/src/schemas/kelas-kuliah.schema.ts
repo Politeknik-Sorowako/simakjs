@@ -41,7 +41,7 @@ export const getKelasSchema = {
           isLocked: t.Boolean({ default: false }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
-          lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+          lastSyncAt: t.Any(),
           createdAt: t.Any(),
           updatedAt: t.Any(),
           mataKuliah: t.Union([
