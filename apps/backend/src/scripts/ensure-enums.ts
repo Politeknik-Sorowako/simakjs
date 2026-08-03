@@ -61,7 +61,10 @@ async function ensureEnums() {
     await pool.query(`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "prodi_ids" jsonb DEFAULT '[]'::jsonb NOT NULL;`);
     await pool.query(`ALTER TABLE "sesi_apel" ADD COLUMN IF NOT EXISTS "catatan" text;`);
     await pool.query(`ALTER TABLE "presensi_apel" ADD COLUMN IF NOT EXISTS "keterangan" text;`);
-    console.log('[ENSURE ENUMS] Checked users, sesi_apel, and presensi_apel columns.');
+    await pool.query(`UPDATE "program_studi" SET "is_synced" = false WHERE "is_synced" IS NULL;`);
+    await pool.query(`UPDATE "mahasiswa" SET "is_synced" = false WHERE "is_synced" IS NULL;`);
+    await pool.query(`UPDATE "users" SET "must_change_password" = false WHERE "must_change_password" IS NULL;`);
+    console.log('[ENSURE ENUMS] Checked columns and normalized legacy null values.');
   } catch (colErr: unknown) {
     console.log(`[ENSURE ENUMS] Column check skipped: ${(colErr as Error).message || String(colErr)}`);
   }
