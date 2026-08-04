@@ -71,49 +71,82 @@ export class BapService {
     topikIds?: number[];
     dosenId: number;
   }) {
-    const { topikIds, ...bapPayload } = data;
+    const { topikIds, ...rawPayload } = data;
 
-    // Validate cpmkId existence
-    if (bapPayload.cpmkId) {
-      const existingCpmk = await db.query.cpmk.findFirst({ where: eq(cpmk.id, bapPayload.cpmkId) });
-      if (!existingCpmk) {
-        bapPayload.cpmkId = null;
-      }
-    } else {
-      bapPayload.cpmkId = null;
+    const kelasId = Number(rawPayload.kelasKuliahId);
+    const existingKelas = await db.query.kelasKuliah.findFirst({ where: eq(kelasKuliah.id, kelasId) });
+    if (!existingKelas) {
+      throw new Error(`Kelas Kuliah dengan ID ${kelasId} tidak ditemukan di sistem.`);
     }
 
-    // Validate dosenId existence
-    if (bapPayload.dosenId) {
-      const existingDosen = await db.query.dosen.findFirst({ where: eq(dosen.id, bapPayload.dosenId) });
-      if (!existingDosen) {
-        const teachingDosen = await this.getFirstTeachingDosen(bapPayload.kelasKuliahId);
-        if (teachingDosen) {
-          bapPayload.dosenId = teachingDosen.dosenId;
-        } else {
-          const anyD = await this.getAnyDosen();
-          if (anyD) {
-            bapPayload.dosenId = anyD.id;
-          }
+    // Sanitize cpmkId
+    let validCpmkId: number | null = null;
+    if (rawPayload.cpmkId) {
+      const cId = Number(rawPayload.cpmkId);
+      if (!isNaN(cId) && cId > 0) {
+        const existingCpmk = await db.query.cpmk.findFirst({ where: eq(cpmk.id, cId) });
+        if (existingCpmk) {
+          validCpmkId = existingCpmk.id;
         }
       }
     }
 
+    // Sanitize dosenId
+    let validDosenId: number | null = null;
+    if (rawPayload.dosenId) {
+      const dId = Number(rawPayload.dosenId);
+      if (!isNaN(dId) && dId > 0) {
+        const existingDosen = await db.query.dosen.findFirst({ where: eq(dosen.id, dId) });
+        if (existingDosen) {
+          validDosenId = existingDosen.id;
+        }
+      }
+    }
+
+    if (!validDosenId) {
+      const teachingDosen = await this.getFirstTeachingDosen(kelasId);
+      if (teachingDosen) {
+        validDosenId = teachingDosen.dosenId;
+      } else {
+        const anyD = await this.getAnyDosen();
+        if (anyD) {
+          validDosenId = anyD.id;
+        }
+      }
+    }
+
+    if (!validDosenId) {
+      throw new Error('Dosen pengajar atau profil dosen tidak ditemukan di sistem.');
+    }
+
+    const bapPayload = {
+      kelasKuliahId: kelasId,
+      tanggal: String(rawPayload.tanggal || new Date().toISOString().split('T')[0]),
+      pertemuanKe: Number(rawPayload.pertemuanKe) || 1,
+      materi: String(rawPayload.materi || '').trim() || 'Materi Perkuliahan RPS',
+      catatan: rawPayload.catatan && String(rawPayload.catatan).trim() !== '' ? String(rawPayload.catatan) : null,
+      durasiMenit: Number(rawPayload.durasiMenit) || 100,
+      cpmkId: validCpmkId,
+      dosenId: validDosenId,
+    };
+
     const [newBap] = await db.insert(bap).values(bapPayload).returning();
 
-    if (topikIds && topikIds.length > 0) {
-      // Validate topics existence before inserting junction records
-      const validRpsTopiks = await db.select().from(rpsTopik).where(inArray(rpsTopik.id, topikIds));
-      const validTopikIds = validRpsTopiks.map((t) => t.id);
+    if (topikIds && Array.isArray(topikIds) && topikIds.length > 0) {
+      const numericTopikIds = topikIds.map((id) => Number(id)).filter((id) => !isNaN(id) && id > 0);
+      if (numericTopikIds.length > 0) {
+        const validRpsTopiks = await db.select().from(rpsTopik).where(inArray(rpsTopik.id, numericTopikIds));
+        const validIds = validRpsTopiks.map((t) => t.id);
 
-      if (validTopikIds.length > 0) {
-        await db.insert(bapTopik).values(
-          validTopikIds.map((topikId) => ({
-            bapId: newBap.id,
-            topikId,
-            cpmkId: bapPayload.cpmkId || null,
-          })),
-        );
+        if (validIds.length > 0) {
+          await db.insert(bapTopik).values(
+            validIds.map((topikId) => ({
+              bapId: newBap.id,
+              topikId,
+              cpmkId: validCpmkId,
+            })),
+          );
+        }
       }
     }
     return newBap;
