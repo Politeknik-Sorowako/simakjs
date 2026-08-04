@@ -48,7 +48,7 @@ export interface PresensiItem {
   id?: number;
   bapId?: number;
   mahasiswaId: number;
-  status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa';
+  status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'unknown';
   durasiMangkir: number;
   keterangan?: string | null;
 }
@@ -61,6 +61,44 @@ export interface KompensasiLaporanItem {
   totalKompensasi: number;
   totalDibayar: number;
   sisaKompensasi: number;
+}
+
+export interface MonitoringRpsItem {
+  kelasKuliahId: number;
+  namaKelas: string;
+  mataKuliahKode: string;
+  mataKuliahNama: string;
+  prodiNama: string;
+  dosenPengajar: string;
+  totalTopikRps: number;
+  topikDiajarkanCount: number;
+  persentaseCapaian: number;
+  totalBapRecorded: number;
+  status: string;
+}
+
+export interface MonitoringRpsDetailMatrixItem {
+  topikId: number;
+  pertemuanRps: number;
+  topik: string;
+  subTopik: string | null;
+  diajarkan: boolean;
+  bapInfo: {
+    bapId: number;
+    tanggal: string;
+    pertemuanKe: number;
+    dosenNama: string;
+  } | null;
+}
+
+export interface MonitoringRpsDetailResponse {
+  kelasKuliahId: number;
+  namaKelas: string;
+  mataKuliahKode: string;
+  mataKuliahNama: string;
+  prodiNama: string;
+  dosenPengajar: string;
+  matrix: MonitoringRpsDetailMatrixItem[];
 }
 
 export interface KompensasiStatsResponse {
@@ -249,5 +287,17 @@ export const presensiController = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  async getMonitoringRps(periodeId?: number, prodiId?: number): Promise<MonitoringRpsItem[]> {
+    const params = new URLSearchParams();
+    if (periodeId) params.append('periodeId', String(periodeId));
+    if (prodiId) params.append('prodiId', String(prodiId));
+    const queryStr = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<MonitoringRpsItem[]>(`/bap/monitoring-rps${queryStr}`);
+  },
+
+  async getMonitoringRpsDetail(kelasKuliahId: number): Promise<MonitoringRpsDetailResponse> {
+    return fetchApi<MonitoringRpsDetailResponse>(`/bap/monitoring-rps/kelas/${kelasKuliahId}`);
   },
 };

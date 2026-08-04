@@ -107,4 +107,31 @@ export class BapController {
       return { error: `Gagal memperbarui BAP: ${causeMsg}` };
     }
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMonitoringRps({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Akses ditolak.' };
+    }
+    const periodeId = query?.periodeId ? parseInt(String(query.periodeId)) : undefined;
+    const prodiId = query?.prodiId ? parseInt(String(query.prodiId)) : undefined;
+    return await BapService.getMonitoringRps(periodeId, prodiId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMonitoringRpsDetail({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Akses ditolak.' };
+    }
+    const result = await BapService.getMonitoringRpsDetail(parseInt(String(params.kelasKuliahId)));
+    if (!result) {
+      set.status = 404;
+      return { error: 'Detail kelas tidak ditemukan' };
+    }
+    return result;
+  }
 }

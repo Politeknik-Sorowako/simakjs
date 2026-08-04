@@ -29,6 +29,7 @@ export const createBapSchema = {
       catatan: t.Optional(t.Nullable(t.String())),
       durasiMenit: t.Optional(t.Integer({ default: 100 })),
       cpmkId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
+      topikIds: t.Optional(t.Array(t.Integer())),
       dosenId: t.Optional(t.Integer({ default: 1 })),
     }),
   },
@@ -54,6 +55,7 @@ export const getBapByKelasSchema = {
         catatan: t.Optional(t.Nullable(t.String())),
         durasiMenit: t.Optional(t.Integer({ default: 100 })),
         cpmkId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
+        topikIds: t.Optional(t.Array(t.Integer())),
         dosenId: t.Optional(t.Integer({ default: 1 })),
       }),
     ),
@@ -100,7 +102,31 @@ export const updateBapSchema = {
       catatan: t.Optional(t.Nullable(t.String())),
       durasiMenit: t.Optional(t.Integer()),
       cpmkId: t.Optional(t.Integer()),
+      topikIds: t.Optional(t.Array(t.Integer())),
       dosenId: t.Optional(t.Integer()),
     }),
   ),
+};
+
+export const getMonitoringRpsSchema = {
+  detail: {
+    tags: ['BAP'],
+    summary: 'Monitoring Kesesuaian RPS',
+    description: 'Mengambil statistik rekap kesesuaian materi BAP terhadap RPS per kelas kuliah.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.Numeric()),
+    prodiId: t.Optional(t.Numeric()),
+  }),
+};
+
+export const getMonitoringRpsDetailSchema = {
+  detail: {
+    tags: ['BAP'],
+    summary: 'Detail Monitoring Kesesuaian RPS per Kelas',
+    description: 'Mengambil matriks rincian topik RPS vs realisasi BAP untuk satu kelas kuliah.',
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric(),
+  }),
 };

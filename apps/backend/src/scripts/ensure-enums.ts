@@ -55,6 +55,16 @@ async function ensureEnums() {
   // NOTE: Schema changes are primarily managed by Drizzle SQL migrations.
   // The queries below serve as an idempotent self-healing safety fallback for production runtime environments (e.g. Docker startup).
   try {
+    await pool.query(`ALTER TABLE "bap" ALTER COLUMN "cpmk_id" DROP NOT NULL;`).catch(() => {});
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "bap_topik" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "bap_id" integer NOT NULL REFERENCES "bap"("id") ON DELETE CASCADE,
+        "topik_id" integer REFERENCES "rps_topik"("id") ON DELETE CASCADE,
+        "cpmk_id" integer REFERENCES "cpmk"("id") ON DELETE CASCADE,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
     await pool.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false NOT NULL;`,
     );

@@ -666,7 +666,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
             <Show when={isPelaksanaanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <Show when={isAdmin() || isDosen()}>
+                <Show when={isAdmin() || isDosen() || isProdi()}>
                   <A
                     href="/jurnal-presensi"
                     onClick={() => props.onClose()}

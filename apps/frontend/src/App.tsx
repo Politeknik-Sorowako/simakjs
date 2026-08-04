@@ -166,7 +166,7 @@ function AppContent() {
       <Route
         path="/jurnal-presensi"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
             <BapPresensi />
           </ProtectedRoute>
         }
