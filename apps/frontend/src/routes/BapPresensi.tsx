@@ -214,7 +214,7 @@ export default function BapPresensi() {
         tanggal: tanggal(),
         pertemuanKe: pertemuanKe(),
         materi: finalMateri,
-        catatan: catatan(),
+        catatan: catatan() && catatan().trim() !== '' ? catatan().trim() : undefined,
         durasiMenit: durasiMenit(),
         cpmkId: selectedCpmkId() || selectedTopics[0]?.cpmkId || undefined,
         topikIds: selectedTopikIds(),

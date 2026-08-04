@@ -64,8 +64,11 @@ export class BapController {
       set.status = 201;
       return newBap;
     } catch (e: unknown) {
+      // biome-ignore lint/suspicious/noExplicitAny: Extracting Drizzle query cause
+      const errAny = e as any;
+      const causeMsg = errAny?.cause?.detail || errAny?.cause?.message || errAny?.message || 'Unknown error';
       set.status = 400;
-      return { error: `Gagal membuat BAP: ${e instanceof Error ? e.message : 'Unknown error'}` };
+      return { error: `Gagal membuat BAP: ${causeMsg}` };
     }
   }
 
@@ -97,8 +100,11 @@ export class BapController {
       }
       return updated;
     } catch (e: unknown) {
+      // biome-ignore lint/suspicious/noExplicitAny: Extracting Drizzle query cause
+      const errAny = e as any;
+      const causeMsg = errAny?.cause?.detail || errAny?.cause?.message || errAny?.message || 'Unknown error';
       set.status = 400;
-      return { error: `Gagal memperbarui BAP: ${e instanceof Error ? e.message : 'Unknown error'}` };
+      return { error: `Gagal memperbarui BAP: ${causeMsg}` };
     }
   }
 }

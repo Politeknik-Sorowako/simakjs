@@ -119,16 +119,31 @@ export class BapService {
       throw new Error('Dosen pengajar atau profil dosen tidak ditemukan di sistem.');
     }
 
-    const bapPayload = {
+    const bapPayload: {
+      kelasKuliahId: number;
+      tanggal: string;
+      pertemuanKe: number;
+      materi: string;
+      durasiMenit: number;
+      dosenId: number;
+      catatan?: string;
+      cpmkId?: number;
+    } = {
       kelasKuliahId: kelasId,
       tanggal: String(rawPayload.tanggal || new Date().toISOString().split('T')[0]),
       pertemuanKe: Number(rawPayload.pertemuanKe) || 1,
       materi: String(rawPayload.materi || '').trim() || 'Materi Perkuliahan RPS',
-      catatan: rawPayload.catatan && String(rawPayload.catatan).trim() !== '' ? String(rawPayload.catatan) : null,
       durasiMenit: Number(rawPayload.durasiMenit) || 100,
-      cpmkId: validCpmkId,
       dosenId: validDosenId,
     };
+
+    if (rawPayload.catatan && String(rawPayload.catatan).trim() !== '') {
+      bapPayload.catatan = String(rawPayload.catatan).trim();
+    }
+
+    if (validCpmkId) {
+      bapPayload.cpmkId = validCpmkId;
+    }
 
     const [newBap] = await db.insert(bap).values(bapPayload).returning();
 
