@@ -30,38 +30,43 @@ export class BapController {
       return { error: 'Akses ditolak.' };
     }
 
-    let dosenId = body.dosenId;
-    if (user.role === 'dosen') {
-      const dosenProfile = await BapService.getDosenByEmail(user.email);
-      if (!dosenProfile) {
-        set.status = 400;
-        return { error: 'Profil dosen tidak ditemukan.' };
-      }
-      dosenId = dosenProfile.id;
-    } else {
-      const dsnExists = await BapService.getDosenById(dosenId);
-      if (!dsnExists) {
-        const pengajar = await BapService.getFirstTeachingDosen(body.kelasKuliahId);
-        if (pengajar) {
-          dosenId = pengajar.dosenId;
-        } else {
-          const anyDosen = await BapService.getAnyDosen();
-          if (anyDosen) {
-            dosenId = anyDosen.id;
+    try {
+      let dosenId = body.dosenId;
+      if (user.role === 'dosen') {
+        const dosenProfile = await BapService.getDosenByEmail(user.email);
+        if (!dosenProfile) {
+          set.status = 400;
+          return { error: 'Profil dosen tidak ditemukan.' };
+        }
+        dosenId = dosenProfile.id;
+      } else {
+        const dsnExists = dosenId ? await BapService.getDosenById(dosenId) : null;
+        if (!dsnExists) {
+          const pengajar = await BapService.getFirstTeachingDosen(body.kelasKuliahId);
+          if (pengajar) {
+            dosenId = pengajar.dosenId;
           } else {
-            set.status = 400;
-            return { error: 'Tidak ada dosen terdaftar di sistem.' };
+            const anyDosen = await BapService.getAnyDosen();
+            if (anyDosen) {
+              dosenId = anyDosen.id;
+            } else {
+              set.status = 400;
+              return { error: 'Tidak ada dosen terdaftar di sistem.' };
+            }
           }
         }
       }
-    }
 
-    const newBap = await BapService.create({
-      ...body,
-      dosenId,
-    });
-    set.status = 201;
-    return newBap;
+      const newBap = await BapService.create({
+        ...body,
+        dosenId,
+      });
+      set.status = 201;
+      return newBap;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: `Gagal membuat BAP: ${e instanceof Error ? e.message : 'Unknown error'}` };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -72,23 +77,28 @@ export class BapController {
       return { error: 'Akses ditolak.' };
     }
 
-    let dosenId = body.dosenId;
-    if (user.role === 'dosen') {
-      const dosenProfile = await BapService.getDosenByEmail(user.email);
-      if (dosenProfile) {
-        dosenId = dosenProfile.id;
+    try {
+      let dosenId = body.dosenId;
+      if (user.role === 'dosen') {
+        const dosenProfile = await BapService.getDosenByEmail(user.email);
+        if (dosenProfile) {
+          dosenId = dosenProfile.id;
+        }
       }
-    }
 
-    const updated = await BapService.update(parseInt(params.id), {
-      ...body,
-      dosenId,
-    });
+      const updated = await BapService.update(parseInt(params.id), {
+        ...body,
+        dosenId,
+      });
 
-    if (!updated) {
-      set.status = 404;
-      return { error: 'BAP tidak ditemukan' };
+      if (!updated) {
+        set.status = 404;
+        return { error: 'BAP tidak ditemukan' };
+      }
+      return updated;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: `Gagal memperbarui BAP: ${e instanceof Error ? e.message : 'Unknown error'}` };
     }
-    return updated;
   }
 }
