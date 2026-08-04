@@ -65,6 +65,47 @@ async function ensureEnums() {
         "created_at" timestamp DEFAULT now() NOT NULL
       );
     `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "rombel_praktikum" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "kelas_kuliah_id" integer NOT NULL REFERENCES "kelas_kuliah"("id") ON DELETE CASCADE,
+        "nama_group" varchar(255) NOT NULL,
+        "instrukturId" integer REFERENCES "dosen"("id") ON DELETE SET NULL,
+        "keterangan" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS "rombel_praktikum_mahasiswa" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "rombel_praktikum_id" integer NOT NULL REFERENCES "rombel_praktikum"("id") ON DELETE CASCADE,
+        "mahasiswa_id" integer NOT NULL REFERENCES "mahasiswa"("id") ON DELETE CASCADE,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS "bap_praktikum" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "rombel_praktikum_id" integer NOT NULL REFERENCES "rombel_praktikum"("id") ON DELETE CASCADE,
+        "tanggal" date NOT NULL,
+        "sesi_ke" integer DEFAULT 1 NOT NULL,
+        "materi" text NOT NULL,
+        "catatan" text,
+        "durasi_menit" integer DEFAULT 100 NOT NULL,
+        "instrukturId" integer REFERENCES "dosen"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS "presensi_praktikum" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "bap_praktikum_id" integer NOT NULL REFERENCES "bap_praktikum"("id") ON DELETE CASCADE,
+        "mahasiswa_id" integer NOT NULL REFERENCES "mahasiswa"("id") ON DELETE CASCADE,
+        "status" presensi_status NOT NULL,
+        "durasi_mangkir" integer DEFAULT 0 NOT NULL,
+        "keterangan" text,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      );
+      ALTER TABLE "rombel_praktikum" ADD COLUMN IF NOT EXISTS "instruktur_id" integer REFERENCES "dosen"("id") ON DELETE SET NULL;
+      ALTER TABLE "bap_praktikum" ADD COLUMN IF NOT EXISTS "instruktur_id" integer REFERENCES "dosen"("id") ON DELETE SET NULL;
+    `);
     await pool.query(
       `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false NOT NULL;`,
     );

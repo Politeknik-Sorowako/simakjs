@@ -228,6 +228,9 @@ describe('8. KRS (/krs)', () => {
           },
         }),
       );
+      if (response.status !== 200) {
+        console.log('GET /krs/:id error:', await response.json());
+      }
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.mahasiswaId).toBe(mhsId);

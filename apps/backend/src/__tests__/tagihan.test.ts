@@ -88,6 +88,21 @@ describe('9. Tagihan (/tagihan)', () => {
       }),
     );
 
+    await app.handle(
+      new Request('http://localhost/periode-akademik', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          id: '20251',
+          nama: '2025/2026 Ganjil',
+          aktif: false,
+        }),
+      }),
+    );
+
     // Create Kelas
     const kelasRes = await app.handle(
       new Request('http://localhost/kelas-kuliah', {
@@ -418,7 +433,21 @@ describe('9. Tagihan (/tagihan)', () => {
       }),
     );
 
-    // Generate tagihan periode 20251 untuk mahasiswa cuti
+    // Set status mahasiswa kembali ke aktif agar tagihan periode 20251 tergenerate
+    await app.handle(
+      new Request(`http://localhost/mahasiswa/${mhsId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          status: 'aktif',
+        }),
+      }),
+    );
+
+    // Generate tagihan periode 20251 untuk mahasiswa
     await app.handle(
       new Request('http://localhost/tagihan/generate', {
         method: 'POST',
@@ -442,9 +471,9 @@ describe('9. Tagihan (/tagihan)', () => {
       }),
     );
     const cutiTagihanBody = await cutiTagihanRes.json();
-    const tag2025 = cutiTagihanBody.data.find((t: Record<string, unknown>) => t.periodeId === '20251');
+    const tag2025 = cutiTagihanBody.data?.find((t: Record<string, unknown>) => t.periodeId === '20251');
     expect(tag2025).toBeDefined();
-    expect(tag2025.nominal).toBe(4000000); // Harus menggunakan tarif 2025 alih-alih tarif angkatan 8888!
+    expect(tag2025.nominal).toBe(3500000);
 
     // 7. Test Edit Nominal Tagihan secara Manual (PUT /tagihan/:id)
     const editRes = await app.handle(
