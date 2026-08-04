@@ -1,5 +1,5 @@
 import { eq, inArray } from 'drizzle-orm';
-import { bap, bapTopik, dosen, dosenPengajarKelas, kelasKuliah, rps, rpsTopik } from '../models/schema';
+import { bap, bapTopik, cpmk, dosen, dosenPengajarKelas, kelasKuliah, rps, rpsTopik } from '../models/schema';
 import { db } from '../utils/db';
 
 export class BapService {
@@ -72,16 +72,49 @@ export class BapService {
     dosenId: number;
   }) {
     const { topikIds, ...bapPayload } = data;
+
+    // Validate cpmkId existence
+    if (bapPayload.cpmkId) {
+      const existingCpmk = await db.query.cpmk.findFirst({ where: eq(cpmk.id, bapPayload.cpmkId) });
+      if (!existingCpmk) {
+        bapPayload.cpmkId = null;
+      }
+    } else {
+      bapPayload.cpmkId = null;
+    }
+
+    // Validate dosenId existence
+    if (bapPayload.dosenId) {
+      const existingDosen = await db.query.dosen.findFirst({ where: eq(dosen.id, bapPayload.dosenId) });
+      if (!existingDosen) {
+        const teachingDosen = await this.getFirstTeachingDosen(bapPayload.kelasKuliahId);
+        if (teachingDosen) {
+          bapPayload.dosenId = teachingDosen.dosenId;
+        } else {
+          const anyD = await this.getAnyDosen();
+          if (anyD) {
+            bapPayload.dosenId = anyD.id;
+          }
+        }
+      }
+    }
+
     const [newBap] = await db.insert(bap).values(bapPayload).returning();
 
     if (topikIds && topikIds.length > 0) {
-      await db.insert(bapTopik).values(
-        topikIds.map((topikId) => ({
-          bapId: newBap.id,
-          topikId,
-          cpmkId: data.cpmkId || null,
-        })),
-      );
+      // Validate topics existence before inserting junction records
+      const validRpsTopiks = await db.select().from(rpsTopik).where(inArray(rpsTopik.id, topikIds));
+      const validTopikIds = validRpsTopiks.map((t) => t.id);
+
+      if (validTopikIds.length > 0) {
+        await db.insert(bapTopik).values(
+          validTopikIds.map((topikId) => ({
+            bapId: newBap.id,
+            topikId,
+            cpmkId: bapPayload.cpmkId || null,
+          })),
+        );
+      }
     }
     return newBap;
   }
@@ -100,18 +133,40 @@ export class BapService {
     }>,
   ) {
     const { topikIds, ...bapPayload } = data;
+
+    // Validate cpmkId existence if provided
+    if (bapPayload.cpmkId) {
+      const existingCpmk = await db.query.cpmk.findFirst({ where: eq(cpmk.id, bapPayload.cpmkId) });
+      if (!existingCpmk) {
+        bapPayload.cpmkId = null;
+      }
+    }
+
+    // Validate dosenId existence if provided
+    if (bapPayload.dosenId) {
+      const existingDosen = await db.query.dosen.findFirst({ where: eq(dosen.id, bapPayload.dosenId) });
+      if (!existingDosen) {
+        delete bapPayload.dosenId;
+      }
+    }
+
     const [updatedBap] = await db.update(bap).set(bapPayload).where(eq(bap.id, id)).returning();
 
-    if (topikIds !== undefined) {
+    if (topikIds !== undefined && updatedBap) {
       await db.delete(bapTopik).where(eq(bapTopik.bapId, id));
       if (topikIds.length > 0) {
-        await db.insert(bapTopik).values(
-          topikIds.map((topikId) => ({
-            bapId: id,
-            topikId,
-            cpmkId: data.cpmkId || null,
-          })),
-        );
+        const validRpsTopiks = await db.select().from(rpsTopik).where(inArray(rpsTopik.id, topikIds));
+        const validTopikIds = validRpsTopiks.map((t) => t.id);
+
+        if (validTopikIds.length > 0) {
+          await db.insert(bapTopik).values(
+            validTopikIds.map((topikId) => ({
+              bapId: id,
+              topikId,
+              cpmkId: updatedBap.cpmkId || null,
+            })),
+          );
+        }
       }
     }
     return updatedBap || null;

@@ -205,16 +205,20 @@ export default function BapPresensi() {
     if (!kelasId) return;
 
     try {
+      const selectedTopics = (rpsTopics() || []).filter((t) => selectedTopikIds().includes(t.id));
+      const autoMateri = selectedTopics.map((t) => `P${t.pertemuanKe}: ${t.topik}`).join(', ');
+      const finalMateri = materi() || autoMateri || 'Materi Perkuliahan RPS';
+
       const payload = {
         kelasKuliahId: kelasId,
         tanggal: tanggal(),
         pertemuanKe: pertemuanKe(),
-        materi: materi(),
+        materi: finalMateri,
         catatan: catatan(),
         durasiMenit: durasiMenit(),
-        cpmkId: selectedCpmkId() || undefined,
+        cpmkId: selectedCpmkId() || selectedTopics[0]?.cpmkId || undefined,
         topikIds: selectedTopikIds(),
-        dosenId: selectedKelas()?.dosenPengajarKelas?.[0]?.dosenId || 1,
+        dosenId: dosenProfile()?.id || selectedKelas()?.dosenPengajarKelas?.[0]?.dosenId || 1,
       };
 
       let activeBapId = editBapId();
@@ -561,52 +565,56 @@ export default function BapPresensi() {
             />
           </div>
 
-          <SearchableSelect
-            label="Materi Utama Kuliah (Dari RPS)"
-            placeholder="-- Pilih Topik Pembelajaran RPS --"
-            value={materi()}
-            options={(rpsTopics() || []).map((topic) => ({
-              label: `Pertemuan ${topic.pertemuanKe}: ${topic.topik}${topic.subTopik ? ` (${topic.subTopik})` : ''}`,
-              value: topic.topik,
-            }))}
-            onChange={(selectedVal) => {
-              setMateri(String(selectedVal));
-              const matchedTopic = rpsTopics()?.find((t) => t.topik === selectedVal);
-              if (matchedTopic && matchedTopic.cpmkId) {
-                setSelectedCpmkId(matchedTopic.cpmkId);
-              }
-              if (matchedTopic && !selectedTopikIds().includes(matchedTopic.id)) {
-                setSelectedTopikIds((prev) => [...prev, matchedTopic.id]);
-              }
-            }}
-          />
-
-          <Show when={(rpsTopics() || []).length > 0}>
+          <Show
+            when={(rpsTopics() || []).length > 0}
+            fallback={
+              <Input
+                type="text"
+                label="Materi Pertemuan"
+                placeholder="Misal: Pengenalan dan Dasar Perkuliahan"
+                value={materi()}
+                onInput={(e) => setMateri(e.currentTarget.value)}
+                required
+              />
+            }
+          >
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
-                Pilih Topik Terkait / Lanjutan (Multi-Topik Pertemuan)
+                Pilih Topik RPS (Dapat Memilih Lebih Dari Satu Topik)
               </label>
-              <div class="max-h-36 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800 space-y-1">
+              <div class="max-h-48 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800 space-y-1">
                 <For each={rpsTopics() || []}>
                   {(topic) => {
                     const isChecked = () => selectedTopikIds().includes(topic.id);
                     return (
-                      <label class="flex items-center gap-2 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-1.5 rounded-lg">
+                      <label class="flex items-center gap-2 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-2 rounded-lg transition-colors">
                         <input
                           type="checkbox"
                           checked={isChecked()}
                           onChange={(e) => {
+                            let nextIds: number[];
                             if (e.currentTarget.checked) {
-                              setSelectedTopikIds((prev) => [...prev, topic.id]);
-                              if (!materi()) setMateri(topic.topik);
+                              nextIds = [...selectedTopikIds(), topic.id];
                             } else {
-                              setSelectedTopikIds((prev) => prev.filter((id) => id !== topic.id));
+                              nextIds = selectedTopikIds().filter((id) => id !== topic.id);
+                            }
+                            setSelectedTopikIds(nextIds);
+
+                            const selectedTopics = (rpsTopics() || []).filter((t) => nextIds.includes(t.id));
+                            const derivedMateri = selectedTopics.map((t) => `P${t.pertemuanKe}: ${t.topik}`).join(', ');
+                            setMateri(derivedMateri);
+
+                            if (selectedTopics[0]?.cpmkId) {
+                              setSelectedCpmkId(selectedTopics[0].cpmkId);
                             }
                           }}
-                          class="rounded text-brand-600 focus:ring-brand-500"
+                          class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
                         />
-                        <span class="font-bold text-secondary-700 dark:text-white">P{topic.pertemuanKe}:</span>
-                        <span class="text-secondary-600 dark:text-secondary-200">{topic.topik}</span>
+                        <span class="font-bold text-brand-700 dark:text-brand-400">P{topic.pertemuanKe}:</span>
+                        <span class="text-secondary-700 dark:text-white font-medium">{topic.topik}</span>
+                        {topic.subTopik && (
+                          <span class="text-secondary-400 dark:text-secondary-300">({topic.subTopik})</span>
+                        )}
                       </label>
                     );
                   }}
