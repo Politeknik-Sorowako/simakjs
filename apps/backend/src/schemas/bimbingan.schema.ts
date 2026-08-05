@@ -16,6 +16,7 @@ export const bimbinganUpdateBody = t.Object({
   solusi: t.Optional(t.String()),
   tanggalBimbingan: t.Optional(t.Any()),
   statusBkd: t.Optional(t.Boolean({ default: false })),
+  kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
 });
 
 export const getBimbinganSchema = {
@@ -155,6 +156,7 @@ export const addSesiBody = t.Object({
   permasalahan: t.Optional(t.String()),
   solusi: t.Optional(t.String()),
   statusBkd: t.Optional(t.Boolean({ default: false })),
+  kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
 });
 
 export const addSesiSchema = {

@@ -1,5 +1,13 @@
 import { and, asc, desc, eq, inArray } from 'drizzle-orm';
-import { bimbingan, bimbinganThread, dosen, mahasiswa, periodeAkademik, sesiBimbingan } from '../models/schema';
+import {
+  bimbingan,
+  bimbinganThread,
+  dosen,
+  mahasiswa,
+  periodeAkademik,
+  programStudi,
+  sesiBimbingan,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export class BimbinganService {
@@ -158,13 +166,21 @@ export class BimbinganService {
 
   static async addSesiBimbingan(
     bimbinganId: number,
-    data: { pertemuanKe: number; tanggalBimbingan: Date; permasalahan: string; solusi: string; statusBkd: boolean },
+    data: {
+      pertemuanKe: number;
+      tanggalBimbingan: Date;
+      permasalahan: string;
+      solusi: string;
+      statusBkd: boolean;
+      kategoriId?: number | null;
+    },
   ) {
     const [newSesi] = await db
       .insert(sesiBimbingan)
       .values({
         bimbinganId,
         ...data,
+        kategoriId: data.kategoriId || null,
         tanggalBimbingan: data.tanggalBimbingan.toISOString().split('T')[0],
       })
       .returning();
@@ -179,12 +195,14 @@ export class BimbinganService {
       permasalahan?: string;
       solusi?: string;
       statusBkd?: boolean;
+      kategoriId?: number | null;
     },
   ) {
     const [updatedSesi] = await db
       .update(sesiBimbingan)
       .set({
         ...data,
+        kategoriId: data.kategoriId !== undefined ? data.kategoriId : undefined,
         tanggalBimbingan: data.tanggalBimbingan ? data.tanggalBimbingan.toISOString().split('T')[0] : undefined,
         updatedAt: new Date(),
       })
@@ -215,11 +233,15 @@ export class BimbinganService {
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        angkatan: mahasiswa.angkatan,
+        prodiId: mahasiswa.programStudiId,
+        prodiNama: programStudi.nama,
         dosenPaId: mahasiswa.dosenPaId,
         dosenPaNama: dosen.nama,
       })
       .from(mahasiswa)
-      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id));
+      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id));
 
     if (dosenId !== undefined) {
       queryBuilder.where(eq(mahasiswa.dosenPaId, dosenId));

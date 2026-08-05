@@ -654,12 +654,25 @@ export const presensiApelRelations = relations(presensiApel, ({ one }) => ({
 
 // --- END APEL RELATIONS ---
 
+export const kategoriBimbingan = pgTable('kategori_bimbingan', {
+  id: serial('id').primaryKey(),
+  nama: varchar('nama', { length: 100 }).notNull(),
+  deskripsi: text('deskripsi'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export const bimbingan = pgTable('bimbingan', {
   id: serial('id').primaryKey(),
   mahasiswaId: integer('mahasiswa_id')
     .notNull()
     .references(() => mahasiswa.id, { onDelete: 'cascade' }),
   dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'set null' }),
+  kategoriId: integer('kategori_id').references(() => kategoriBimbingan.id, { onDelete: 'set null' }),
   periodeId: varchar('periode_id', { length: 5 })
     .notNull()
     .references(() => periodeAkademik.id, { onDelete: 'restrict' }),
@@ -692,6 +705,7 @@ export const sesiBimbingan = pgTable('sesi_bimbingan', {
   bimbinganId: integer('bimbingan_id')
     .notNull()
     .references(() => bimbingan.id, { onDelete: 'cascade' }),
+  kategoriId: integer('kategori_id').references(() => kategoriBimbingan.id, { onDelete: 'set null' }),
   pertemuanKe: integer('pertemuan_ke').notNull(),
   tanggalBimbingan: date('tanggal_bimbingan').notNull(),
   permasalahan: text('permasalahan').notNull(),

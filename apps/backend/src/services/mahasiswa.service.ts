@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, notExists, or, SQL, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, notExists, or, SQL, sql } from 'drizzle-orm';
 import { dosen, mahasiswa, programStudi, users } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -241,5 +241,11 @@ export class MahasiswaService {
       })),
       trend: trend.map((t) => ({ angkatan: t.angkatan || '-', total: t.total })),
     };
+  }
+
+  static async bulkSetDosenPa(mahasiswaIds: number[], dosenPaId: number | null) {
+    if (mahasiswaIds.length === 0) return { updated: 0 };
+    await db.update(mahasiswa).set({ dosenPaId, updatedAt: new Date() }).where(inArray(mahasiswa.id, mahasiswaIds));
+    return { updated: mahasiswaIds.length };
   }
 }

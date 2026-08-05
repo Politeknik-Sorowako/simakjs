@@ -304,6 +304,7 @@ export class BimbinganController {
         permasalahan: body.permasalahan,
         solusi: body.solusi,
         statusBkd: body.statusBkd ?? true,
+        kategoriId: body.kategoriId ? Number(body.kategoriId) : null,
       });
       set.status = 201;
       return newSesi;
@@ -335,6 +336,7 @@ export class BimbinganController {
       if (body.permasalahan !== undefined) data.permasalahan = body.permasalahan;
       if (body.solusi !== undefined) data.solusi = body.solusi;
       if (body.statusBkd !== undefined) data.statusBkd = body.statusBkd;
+      if (body.kategoriId !== undefined) data.kategoriId = body.kategoriId ? Number(body.kategoriId) : null;
 
       const updated = await BimbinganService.updateSesiBimbingan(sesiId, data);
       return updated;
