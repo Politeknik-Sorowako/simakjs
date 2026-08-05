@@ -42,3 +42,7 @@ export const savePresensiPraktikumBody = t.Object({
     }),
   ),
 });
+
+export const syncBapPraktikumBody = t.Object({
+  bapPraktikumId: t.Integer(),
+});
