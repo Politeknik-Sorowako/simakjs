@@ -2,6 +2,10 @@ import { KategoriBimbinganService } from '../services/kategori-bimbingan.service
 import { AuthContext } from '../utils/types';
 
 export class KategoriBimbinganController {
+  private static isAuthorized(role?: string): boolean {
+    return ['admin', 'super_admin', 'prodi', 'dosen'].includes(role || '');
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll(ctx: AuthContext<any>): Promise<any> {
     const { set } = ctx;
@@ -19,9 +23,9 @@ export class KategoriBimbinganController {
     const { body, set, getCurrentUser } = ctx;
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'prodi')) {
+      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser.role)) {
         set.status = 403;
-        return { error: 'Hanya Admin atau Prodi yang dapat membuat kategori bimbingan' };
+        return { error: 'Akses ditolak. Anda tidak memiliki izin mengelola kategori bimbingan' };
       }
       const newCategory = await KategoriBimbinganService.create(body as { nama: string; deskripsi?: string });
       return { success: true, data: newCategory };
@@ -36,9 +40,9 @@ export class KategoriBimbinganController {
     const { params, body, set, getCurrentUser } = ctx;
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'prodi')) {
+      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser.role)) {
         set.status = 403;
-        return { error: 'Hanya Admin atau Prodi yang dapat memperbarui kategori bimbingan' };
+        return { error: 'Akses ditolak. Anda tidak memiliki izin mengelola kategori bimbingan' };
       }
       const updated = await KategoriBimbinganService.update(
         Number(params.id),
@@ -56,9 +60,9 @@ export class KategoriBimbinganController {
     const { params, set, getCurrentUser } = ctx;
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'prodi')) {
+      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser.role)) {
         set.status = 403;
-        return { error: 'Hanya Admin atau Prodi yang dapat menghapus kategori bimbingan' };
+        return { error: 'Akses ditolak. Anda tidak memiliki izin mengelola kategori bimbingan' };
       }
       await KategoriBimbinganService.delete(Number(params.id));
       return { success: true, message: 'Kategori bimbingan berhasil dihapus' };

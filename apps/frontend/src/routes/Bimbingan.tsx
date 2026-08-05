@@ -370,7 +370,13 @@ export default function Bimbingan() {
 
           {/* Status Kelayakan (Mahasiswa) & Dropdown Periode */}
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <Show when={user()?.role === 'dosen' || user()?.role === 'admin' || user()?.role === 'prodi'}>
+            <Show when={['admin', 'super_admin', 'prodi', 'dosen'].includes(user()?.role || '')}>
+              <button
+                onClick={() => setShowKategoriModal(true)}
+                class="px-3 py-1.5 border border-secondary-200 text-secondary-700 font-bold rounded-lg text-xs hover:bg-secondary-50 transition-colors flex items-center gap-1.5 dark:border-secondary-700 dark:text-white dark:hover:bg-secondary-800"
+              >
+                ⚙️ Kelola Kategori
+              </button>
               <button
                 onClick={() => window.open('/laporan/bkd', '_blank')}
                 class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-xs hover:bg-brand-700 transition-colors flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
@@ -887,7 +893,7 @@ export default function Bimbingan() {
                               <label class="text-xs font-bold text-secondary-600 dark:text-secondary-300">
                                 Jenis / Kategori Bimbingan
                               </label>
-                              <Show when={user()?.role === 'admin' || user()?.role === 'prodi'}>
+                              <Show when={['admin', 'super_admin', 'prodi', 'dosen'].includes(user()?.role || '')}>
                                 <button
                                   type="button"
                                   onClick={() => setShowKategoriModal(true)}
