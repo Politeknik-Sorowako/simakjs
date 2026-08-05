@@ -3,15 +3,25 @@ import { systemSettings } from '../models/schema';
 import { db } from '../utils/db';
 
 export class SettingsService {
-  static async get(key: string) {
-    const res = await db.query.systemSettings.findFirst({
-      where: eq(systemSettings.key, key),
-    });
-    return res?.value ?? null;
+  static async get(key: string): Promise<string | null> {
+    try {
+      const res = await db.query.systemSettings.findFirst({
+        where: eq(systemSettings.key, key),
+      });
+      return res?.value ?? null;
+    } catch (err: unknown) {
+      console.warn('[SettingsService] Failed to query system_settings:', err instanceof Error ? err.message : err);
+      return null;
+    }
   }
 
   static async getAll() {
-    return await db.query.systemSettings.findMany();
+    try {
+      return await db.query.systemSettings.findMany();
+    } catch (err: unknown) {
+      console.warn('[SettingsService] Failed to query all system_settings:', err instanceof Error ? err.message : err);
+      return [];
+    }
   }
 
   static async set(key: string, value: string, description?: string) {
@@ -27,7 +37,11 @@ export class SettingsService {
   }
 
   static async isFeedbackEnabled(): Promise<boolean> {
-    const val = await SettingsService.get('feature_feedback_enabled');
-    return val !== 'false';
+    try {
+      const val = await SettingsService.get('feature_feedback_enabled');
+      return val !== 'false';
+    } catch {
+      return true;
+    }
   }
 }

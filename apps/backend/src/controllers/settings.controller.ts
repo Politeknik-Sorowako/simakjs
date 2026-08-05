@@ -12,9 +12,12 @@ export class SettingsController {
           featureFeedbackEnabled: feedbackEnabled,
         },
       };
-    } catch (e: unknown) {
-      set.status = 400;
-      return { error: e instanceof Error ? e.message : 'Gagal mengambil pengaturan sistem' };
+    } catch {
+      return {
+        data: {
+          featureFeedbackEnabled: true,
+        },
+      };
     }
   }
 

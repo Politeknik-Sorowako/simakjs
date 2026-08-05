@@ -222,77 +222,91 @@ export class BimbinganService {
   }
 
   static async getMonitoringBimbingan(dosenId?: number) {
-    const activePeriode = await this.getActivePeriode();
-    if (!activePeriode) {
-      return [];
-    }
+    try {
+      const activePeriode = await this.getActivePeriode();
+      if (!activePeriode) {
+        return [];
+      }
 
-    // Ambil daftar mahasiswa
-    const queryBuilder = db
-      .select({
-        id: mahasiswa.id,
-        nim: mahasiswa.nim,
-        nama: mahasiswa.nama,
-        angkatan: mahasiswa.angkatan,
-        prodiId: mahasiswa.programStudiId,
-        prodiNama: programStudi.nama,
-        dosenPaId: mahasiswa.dosenPaId,
-        dosenPaNama: dosen.nama,
-      })
-      .from(mahasiswa)
-      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
-      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id));
+      // Ambil daftar mahasiswa
+      const queryBuilder = db
+        .select({
+          id: mahasiswa.id,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          angkatan: mahasiswa.angkatan,
+          prodiId: mahasiswa.programStudiId,
+          prodiNama: programStudi.nama,
+          dosenPaId: mahasiswa.dosenPaId,
+          dosenPaNama: dosen.nama,
+        })
+        .from(mahasiswa)
+        .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id));
 
-    if (dosenId !== undefined) {
-      queryBuilder.where(eq(mahasiswa.dosenPaId, dosenId));
-    }
+      if (dosenId !== undefined) {
+        queryBuilder.where(eq(mahasiswa.dosenPaId, dosenId));
+      }
 
-    const listMahasiswa = await queryBuilder;
+      const listMahasiswa = await queryBuilder;
 
-    // Ambil semua bimbingan untuk periode aktif
-    const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
+      // Ambil semua bimbingan untuk periode aktif
+      let listBimbingan: (typeof bimbingan.$inferSelect)[] = [];
+      try {
+        listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
+      } catch (e: unknown) {
+        console.warn('[BimbinganService] Error querying bimbingan for active periode:', e);
+      }
 
-    const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
-    const bimbinganIds: number[] = [];
-    for (const b of listBimbingan) {
-      mapBimbingan.set(b.mahasiswaId, b);
-      bimbinganIds.push(b.id);
-    }
+      const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
+      const bimbinganIds: number[] = [];
+      for (const b of listBimbingan) {
+        mapBimbingan.set(b.mahasiswaId, b);
+        bimbinganIds.push(b.id);
+      }
 
-    // Ambil rekap total sesi per bimbingan (hanya untuk bimbingan di periode aktif)
-    const allSesi =
-      bimbinganIds.length > 0
-        ? await db
+      // Ambil rekap total sesi per bimbingan (hanya untuk bimbingan di periode aktif)
+      let allSesi: { id: number; bimbinganId: number }[] = [];
+      if (bimbinganIds.length > 0) {
+        try {
+          allSesi = await db
             .select({
               id: sesiBimbingan.id,
               bimbinganId: sesiBimbingan.bimbinganId,
             })
             .from(sesiBimbingan)
-            .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds))
-        : [];
+            .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds));
+        } catch (e: unknown) {
+          console.warn('[BimbinganService] Error querying sesiBimbingan:', e);
+        }
+      }
 
-    const sesiCountMap = new Map<number, number>();
-    for (const s of allSesi) {
-      const currentVal = sesiCountMap.get(s.bimbinganId) || 0;
-      sesiCountMap.set(s.bimbinganId, currentVal + 1);
+      const sesiCountMap = new Map<number, number>();
+      for (const s of allSesi) {
+        const currentVal = sesiCountMap.get(s.bimbinganId) || 0;
+        sesiCountMap.set(s.bimbinganId, currentVal + 1);
+      }
+
+      return listMahasiswa.map((mhs) => {
+        const bimb = mapBimbingan.get(mhs.id);
+        const totalSesi = bimb ? sesiCountMap.get(bimb.id) || 0 : 0;
+        return {
+          ...mhs,
+          bimbinganId: bimb?.id || null,
+          ringkasan: bimb?.ringkasan || null,
+          isApproved: bimb?.isApproved || false,
+          totalSesi,
+          permasalahan: bimb?.permasalahan || null,
+          solusi: bimb?.solusi || null,
+          tanggalBimbingan: bimb?.tanggalBimbingan || null,
+          statusBkd: bimb?.statusBkd || false,
+          createdAt: bimb?.createdAt || null,
+        };
+      });
+    } catch (err: unknown) {
+      console.warn('[BimbinganService] Error in getMonitoringBimbingan:', err);
+      return [];
     }
-
-    return listMahasiswa.map((mhs) => {
-      const bimb = mapBimbingan.get(mhs.id);
-      const totalSesi = bimb ? sesiCountMap.get(bimb.id) || 0 : 0;
-      return {
-        ...mhs,
-        bimbinganId: bimb?.id || null,
-        ringkasan: bimb?.ringkasan || null,
-        isApproved: bimb?.isApproved || false,
-        totalSesi,
-        permasalahan: bimb?.permasalahan || null,
-        solusi: bimb?.solusi || null,
-        tanggalBimbingan: bimb?.tanggalBimbingan || null,
-        statusBkd: bimb?.statusBkd || false,
-        createdAt: bimb?.createdAt || null,
-      };
-    });
   }
 
   static async getRekapBimbinganDosen(dosenId?: number, periodeId?: string) {
