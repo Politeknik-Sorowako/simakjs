@@ -1,5 +1,15 @@
-import { eq, inArray } from 'drizzle-orm';
-import { bap, bapTopik, cpmk, dosen, dosenPengajarKelas, kelasKuliah, rps, rpsTopik } from '../models/schema';
+import { and, eq, inArray } from 'drizzle-orm';
+import {
+  bap,
+  bapTopik,
+  cpmk,
+  dosen,
+  dosenPengajarKelas,
+  kelasKuliah,
+  periodeAkademik,
+  rps,
+  rpsTopik,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export class BapService {
@@ -255,141 +265,261 @@ export class BapService {
     return updatedBap ? { ...updatedBap, topikIds: savedTopikIds } : null;
   }
 
-  static async getMonitoringRps(periodeId?: number, prodiId?: number) {
-    const kelasList = await db.query.kelasKuliah.findMany({
-      with: {
-        mataKuliah: {
-          with: {
-            programStudi: true,
+  static async getMonitoringRps(periodeId?: string | number, prodiId?: number) {
+    try {
+      let targetPeriodeId = periodeId ? String(periodeId) : undefined;
+
+      if (!targetPeriodeId) {
+        const [activePeriode] = await db.select().from(periodeAkademik).where(eq(periodeAkademik.aktif, true));
+        targetPeriodeId = activePeriode?.id;
+      }
+
+      const kelasList = await db.query.kelasKuliah.findMany({
+        where: targetPeriodeId ? eq(kelasKuliah.periodeId, targetPeriodeId) : undefined,
+        with: {
+          mataKuliah: {
+            with: {
+              programStudi: true,
+            },
+          },
+          dosenPengajarKelas: {
+            with: {
+              dosen: true,
+            },
           },
         },
-        dosenPengajarKelas: {
-          with: {
-            dosen: true,
-          },
-        },
-      },
-    });
-
-    const result = [];
-    for (const k of kelasList) {
-      if (periodeId && Number(k.periodeId) !== Number(periodeId)) continue;
-      if (prodiId && k.mataKuliah?.programStudiId !== prodiId) continue;
-
-      const matchedRps = await db.query.rps.findFirst({
-        where: (rpsTable, { and }) =>
-          and(eq(rpsTable.mataKuliahId, k.mataKuliahId), eq(rpsTable.periodeId, k.periodeId)),
       });
+
+      const filteredKelas = prodiId ? kelasList.filter((k) => k.mataKuliah?.programStudiId === prodiId) : kelasList;
+
+      if (filteredKelas.length === 0) {
+        return [];
+      }
+
+      const kelasIds = filteredKelas.map((k) => k.id);
+      const mataKuliahIds = Array.from(new Set(filteredKelas.map((k) => k.mataKuliahId)));
+
+      // 1. Prefetch all RPS for target mataKuliahIds & periodeId
+      let allRps: (typeof rps.$inferSelect)[] = [];
+      try {
+        if (mataKuliahIds.length > 0) {
+          allRps = await db
+            .select()
+            .from(rps)
+            .where(
+              targetPeriodeId
+                ? and(inArray(rps.mataKuliahId, mataKuliahIds), eq(rps.periodeId, targetPeriodeId))
+                : inArray(rps.mataKuliahId, mataKuliahIds),
+            );
+        }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query rps:', err);
+      }
+
+      const rpsMap = new Map<number, typeof rps.$inferSelect>();
+      for (const r of allRps) {
+        rpsMap.set(r.mataKuliahId, r);
+      }
+
+      const rpsIds = allRps.map((r) => r.id);
+
+      // 2. Prefetch all rpsTopik for target rpsIds
+      let allRpsTopiks: (typeof rpsTopik.$inferSelect)[] = [];
+      try {
+        if (rpsIds.length > 0) {
+          allRpsTopiks = await db.select().from(rpsTopik).where(inArray(rpsTopik.rpsId, rpsIds));
+        }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query rpsTopik:', err);
+      }
+
+      const rpsTopiksMap = new Map<number, (typeof rpsTopik.$inferSelect)[]>();
+      for (const t of allRpsTopiks) {
+        const current = rpsTopiksMap.get(t.rpsId) || [];
+        current.push(t);
+        rpsTopiksMap.set(t.rpsId, current);
+      }
+
+      // 3. Prefetch all BAP for target kelasIds
+      let allBap: (typeof bap.$inferSelect)[] = [];
+      try {
+        if (kelasIds.length > 0) {
+          allBap = await db.select().from(bap).where(inArray(bap.kelasKuliahId, kelasIds));
+        }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query bap:', err);
+      }
+
+      const bapMap = new Map<number, (typeof bap.$inferSelect)[]>();
+      for (const b of allBap) {
+        const current = bapMap.get(b.kelasKuliahId) || [];
+        current.push(b);
+        bapMap.set(b.kelasKuliahId, current);
+      }
+
+      const bapIds = allBap.map((b) => b.id);
+
+      // 4. Prefetch all bapTopik for target bapIds
+      let allBapTopiks: (typeof bapTopik.$inferSelect)[] = [];
+      try {
+        if (bapIds.length > 0) {
+          allBapTopiks = await db.select().from(bapTopik).where(inArray(bapTopik.bapId, bapIds));
+        }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query bapTopik:', err);
+      }
+
+      const bapToKelasMap = new Map<number, number>();
+      for (const b of allBap) {
+        bapToKelasMap.set(b.id, b.kelasKuliahId);
+      }
+
+      const coveredTopiksMap = new Map<number, Set<number>>();
+      for (const bt of allBapTopiks) {
+        if (!bt.topikId) continue;
+        const targetKelasId = bapToKelasMap.get(bt.bapId);
+        if (targetKelasId) {
+          const currentSet = coveredTopiksMap.get(targetKelasId) || new Set<number>();
+          currentSet.add(bt.topikId);
+          coveredTopiksMap.set(targetKelasId, currentSet);
+        }
+      }
+
+      // 5. Build output list cleanly with O(1) map lookups
+      return filteredKelas.map((k) => {
+        const matchedRps = rpsMap.get(k.mataKuliahId);
+        const rpsTopiks = matchedRps ? rpsTopiksMap.get(matchedRps.id) || [] : [];
+        const bapList = bapMap.get(k.id) || [];
+        const coveredTopikIds = coveredTopiksMap.get(k.id) || new Set<number>();
+
+        const totalTopikRps = rpsTopiks.length || 16;
+        const topikDiajarkanCount = coveredTopikIds.size;
+        const persentaseCapaian = Math.min(100, Math.round((topikDiajarkanCount / totalTopikRps) * 100));
+
+        let status = 'BELUM_ADA_BAP';
+        if (bapList.length > 0) {
+          status = persentaseCapaian >= 80 ? 'SESUAI_TARGET' : 'BERJALAN';
+        }
+
+        return {
+          kelasKuliahId: k.id,
+          namaKelas: k.namaKelas,
+          mataKuliahKode: k.mataKuliah?.kode || '-',
+          mataKuliahNama: k.mataKuliah?.nama || '-',
+          prodiNama: k.mataKuliah?.programStudi?.nama || '-',
+          dosenPengajar: k.dosenPengajarKelas?.[0]?.dosen?.nama || 'Belum di-plot',
+          totalTopikRps,
+          topikDiajarkanCount,
+          persentaseCapaian,
+          totalBapRecorded: bapList.length,
+          status,
+        };
+      });
+    } catch (err: unknown) {
+      console.error('[BapService] Error in getMonitoringRps:', {
+        periodeId,
+        prodiId,
+        error: err instanceof Error ? err.message : err,
+      });
+      return [];
+    }
+  }
+
+  static async getMonitoringRpsDetail(kelasKuliahId: number) {
+    try {
+      const k = await db.query.kelasKuliah.findFirst({
+        where: eq(kelasKuliah.id, kelasKuliahId),
+        with: {
+          mataKuliah: {
+            with: {
+              programStudi: true,
+            },
+          },
+          dosenPengajarKelas: {
+            with: {
+              dosen: true,
+            },
+          },
+        },
+      });
+
+      if (!k) return null;
+
+      let matchedRps: typeof rps.$inferSelect | undefined;
+      try {
+        matchedRps = await db.query.rps.findFirst({
+          where: (rpsTable, { and }) =>
+            and(eq(rpsTable.mataKuliahId, k.mataKuliahId), eq(rpsTable.periodeId, k.periodeId)),
+        });
+      } catch (err) {
+        console.warn('[BapService] Failed to query rps in detail:', err);
+      }
 
       let rpsTopiks: (typeof rpsTopik.$inferSelect)[] = [];
       if (matchedRps) {
-        rpsTopiks = await db.select().from(rpsTopik).where(eq(rpsTopik.rpsId, matchedRps.id));
+        try {
+          rpsTopiks = await db.select().from(rpsTopik).where(eq(rpsTopik.rpsId, matchedRps.id));
+        } catch (err) {
+          console.warn('[BapService] Failed to query rpsTopiks in detail:', err);
+        }
       }
 
-      const bapList = await db.select().from(bap).where(eq(bap.kelasKuliahId, k.id));
+      let bapList: (typeof bap.$inferSelect)[] = [];
+      try {
+        bapList = await db.select().from(bap).where(eq(bap.kelasKuliahId, k.id));
+      } catch (err) {
+        console.warn('[BapService] Failed to query bap list in detail:', err);
+      }
+
       const bapIds = bapList.map((b) => b.id);
-
-      let coveredTopikIds = new Set<number>();
+      let bapTopikList: (typeof bapTopik.$inferSelect)[] = [];
       if (bapIds.length > 0) {
-        const bapTopikList = await db.select().from(bapTopik).where(inArray(bapTopik.bapId, bapIds));
-        coveredTopikIds = new Set(bapTopikList.map((bt) => bt.topikId).filter(Boolean) as number[]);
+        try {
+          bapTopikList = await db.select().from(bapTopik).where(inArray(bapTopik.bapId, bapIds));
+        } catch (err) {
+          console.warn('[BapService] Failed to query bapTopikList in detail:', err);
+        }
       }
 
-      const totalTopikRps = rpsTopiks.length || 16;
-      const topikDiajarkanCount = coveredTopikIds.size;
-      const persentaseCapaian = Math.min(100, Math.round((topikDiajarkanCount / totalTopikRps) * 100));
+      const dosenList = await db.select().from(dosen);
+      const dosenMap = new Map(dosenList.map((d) => [d.id, d.nama]));
 
-      let status = 'BELUM_ADA_BAP';
-      if (bapList.length > 0) {
-        status = persentaseCapaian >= 80 ? 'SESUAI_TARGET' : 'BERJALAN';
-      }
+      const matrix = rpsTopiks.map((t) => {
+        const matchBapTopik = bapTopikList.find((bt) => bt.topikId === t.id);
+        const parentBap = matchBapTopik ? bapList.find((b) => b.id === matchBapTopik.bapId) : null;
 
-      result.push({
+        return {
+          topikId: t.id,
+          pertemuanRps: t.pertemuanKe,
+          topik: t.topik,
+          subTopik: t.subTopik || null,
+          diajarkan: !!matchBapTopik,
+          bapInfo: parentBap
+            ? {
+                bapId: parentBap.id,
+                tanggal: parentBap.tanggal,
+                pertemuanKe: parentBap.pertemuanKe,
+                dosenNama: dosenMap.get(parentBap.dosenId) || 'Dosen Pengampu',
+              }
+            : null,
+        };
+      });
+
+      return {
         kelasKuliahId: k.id,
         namaKelas: k.namaKelas,
         mataKuliahKode: k.mataKuliah?.kode || '-',
         mataKuliahNama: k.mataKuliah?.nama || '-',
         prodiNama: k.mataKuliah?.programStudi?.nama || '-',
         dosenPengajar: k.dosenPengajarKelas?.[0]?.dosen?.nama || 'Belum di-plot',
-        totalTopikRps,
-        topikDiajarkanCount,
-        persentaseCapaian,
-        totalBapRecorded: bapList.length,
-        status,
-      });
-    }
-
-    return result;
-  }
-
-  static async getMonitoringRpsDetail(kelasKuliahId: number) {
-    const k = await db.query.kelasKuliah.findFirst({
-      where: eq(kelasKuliah.id, kelasKuliahId),
-      with: {
-        mataKuliah: {
-          with: {
-            programStudi: true,
-          },
-        },
-        dosenPengajarKelas: {
-          with: {
-            dosen: true,
-          },
-        },
-      },
-    });
-
-    if (!k) return null;
-
-    const matchedRps = await db.query.rps.findFirst({
-      where: (rpsTable, { and }) => and(eq(rpsTable.mataKuliahId, k.mataKuliahId), eq(rpsTable.periodeId, k.periodeId)),
-    });
-
-    let rpsTopiks: (typeof rpsTopik.$inferSelect)[] = [];
-    if (matchedRps) {
-      rpsTopiks = await db.select().from(rpsTopik).where(eq(rpsTopik.rpsId, matchedRps.id));
-    }
-
-    const bapList = await db.select().from(bap).where(eq(bap.kelasKuliahId, k.id));
-    const bapIds = bapList.map((b) => b.id);
-
-    let bapTopikList: (typeof bapTopik.$inferSelect)[] = [];
-    if (bapIds.length > 0) {
-      bapTopikList = await db.select().from(bapTopik).where(inArray(bapTopik.bapId, bapIds));
-    }
-
-    const dosenList = await db.select().from(dosen);
-    const dosenMap = new Map(dosenList.map((d) => [d.id, d.nama]));
-
-    const matrix = rpsTopiks.map((t) => {
-      const matchBapTopik = bapTopikList.find((bt) => bt.topikId === t.id);
-      const parentBap = matchBapTopik ? bapList.find((b) => b.id === matchBapTopik.bapId) : null;
-
-      return {
-        topikId: t.id,
-        pertemuanRps: t.pertemuanKe,
-        topik: t.topik,
-        subTopik: t.subTopik || null,
-        diajarkan: !!matchBapTopik,
-        bapInfo: parentBap
-          ? {
-              bapId: parentBap.id,
-              tanggal: parentBap.tanggal,
-              pertemuanKe: parentBap.pertemuanKe,
-              dosenNama: dosenMap.get(parentBap.dosenId) || 'Dosen Pengampu',
-            }
-          : null,
+        matrix,
       };
-    });
-
-    return {
-      kelasKuliahId: k.id,
-      namaKelas: k.namaKelas,
-      mataKuliahKode: k.mataKuliah?.kode || '-',
-      mataKuliahNama: k.mataKuliah?.nama || '-',
-      prodiNama: k.mataKuliah?.programStudi?.nama || '-',
-      dosenPengajar: k.dosenPengajarKelas?.[0]?.dosen?.nama || 'Belum di-plot',
-      matrix,
-    };
+    } catch (err: unknown) {
+      console.error('[BapService] Error in getMonitoringRpsDetail:', {
+        kelasKuliahId,
+        error: err instanceof Error ? err.message : err,
+      });
+      return null;
+    }
   }
 }

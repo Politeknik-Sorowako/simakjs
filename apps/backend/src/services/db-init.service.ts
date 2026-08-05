@@ -68,6 +68,30 @@ export class DbInitService {
           "updated_at" timestamp DEFAULT now() NOT NULL
         );
       `);
+      // 5. Ensure rps_topik and bap_topik tables exist
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS "rps_topik" (
+          "id" serial PRIMARY KEY NOT NULL,
+          "rps_id" integer NOT NULL,
+          "pertemuan_ke" integer NOT NULL,
+          "topik" varchar(255) NOT NULL,
+          "sub_topik" text,
+          "metode" varchar(100),
+          "cpmk_id" integer,
+          "sub_cpmk_id" integer,
+          "id_pddikti" varchar(50)
+        );
+      `);
+
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS "bap_topik" (
+          "id" serial PRIMARY KEY NOT NULL,
+          "bap_id" integer NOT NULL REFERENCES "bap"("id") ON DELETE CASCADE,
+          "topik_id" integer REFERENCES "rps_topik"("id") ON DELETE CASCADE,
+          "cpmk_id" integer REFERENCES "cpmk"("id") ON DELETE CASCADE,
+          "created_at" timestamp DEFAULT now() NOT NULL
+        );
+      `);
     } catch (err: unknown) {
       console.warn('[DbInitService] Failed to auto-ensure DB tables:', err instanceof Error ? err.message : err);
     }
