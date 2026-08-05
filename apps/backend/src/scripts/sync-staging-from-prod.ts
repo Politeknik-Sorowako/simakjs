@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { db } from '../utils/db';
+import crypto from 'node:crypto';
+import { appendFileSync, chmodSync, existsSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
+import { join } from 'node:path';
 
 function ts(): string {
   return new Date().toISOString();
@@ -21,6 +21,14 @@ function auditLog(msg: string): void {
   }
 }
 
+function expandTildePath(filePath: string): string {
+  if (filePath.startsWith('~')) {
+    const homeDir = process.env.HOME || process.env.USERPROFILE || '/root';
+    return filePath.replace(/^~(?=$|\/|\\)/, homeDir);
+  }
+  return filePath;
+}
+
 function getStagingDbConfig() {
   const urlStr = process.env.DATABASE_URL || '';
   if (!urlStr) {
@@ -36,6 +44,17 @@ function getStagingDbConfig() {
   };
 }
 
+function validateEnv(isDryRun: boolean) {
+  const requiredVars = ['DATABASE_URL'];
+  if (!isDryRun) {
+    requiredVars.push('PROD_SSH_HOST');
+  }
+  const missing = requiredVars.filter((v) => !process.env[v]);
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variable(s): ${missing.join(', ')}`);
+  }
+}
+
 async function main() {
   auditLog('=== STARTING AUTOMATED STAGING DB SYNC ===');
 
@@ -44,38 +63,41 @@ async function main() {
     auditLog('Running in DRY-RUN mode. Actions will be logged but not executed on DB.');
   }
 
-  const prodSshHost = process.env.PROD_SSH_HOST;
+  validateEnv(isDryRun);
+
+  const prodSshHost = process.env.PROD_SSH_HOST || '';
   const prodSshUser = process.env.PROD_SSH_USER || 'deploy';
-  const prodSshKey = process.env.PROD_SSH_KEY || '~/.ssh/id_rsa_staging_pull';
+  const prodSshKeyRaw = process.env.PROD_SSH_KEY || '~/.ssh/id_rsa_staging_pull';
+  const prodSshKey = expandTildePath(prodSshKeyRaw);
   const prodDbName = process.env.PROD_DB_NAME || 'simak_vokasi';
   const prodDbUser = process.env.PROD_DB_USER || 'postgres';
 
-  const tempDumpPath = join(process.cwd(), 'backups', `temp_prod_dump_${Date.now()}.sql`);
+  const randomId = crypto.randomBytes(8).toString('hex');
+  const backupDir = join(process.cwd(), 'backups');
+  const tempDumpPath = join(backupDir, `temp_prod_dump_${randomId}.sql`);
   const sanitizeSqlPath = join(__dirname, 'sanitize-staging.sql');
 
   const config = getStagingDbConfig();
 
   try {
-    if (!existsSync(join(process.cwd(), 'backups'))) {
-      mkdirSync(join(process.cwd(), 'backups'), { recursive: true, mode: 0o700 });
+    if (!existsSync(backupDir)) {
+      mkdirSync(backupDir, { recursive: true, mode: 0o700 });
     }
 
     if (isDryRun) {
+      auditLog(`[DRY-RUN] Key Path: ${prodSshKey}`);
       auditLog(`[DRY-RUN] Would fetch dump from ${prodSshUser}@${prodSshHost || 'PROD_HOST'} -> ${tempDumpPath}`);
       auditLog(`[DRY-RUN] Would restore dump into local DB: ${config.db} at ${config.host}:${config.port}`);
+      auditLog(`[DRY-RUN] Would execute auto-migrations (safe-migrate)`);
       auditLog(`[DRY-RUN] Would execute sanitization script: ${sanitizeSqlPath}`);
       auditLog('[DRY-RUN] Staging DB Sync completed successfully (simulation).');
       return;
     }
 
-    if (!prodSshHost) {
-      throw new Error('PROD_SSH_HOST environment variable is missing.');
-    }
-
     auditLog(`Fetching dump from Production (${prodSshHost})...`);
 
     // 1. Pull dump from Prod using SSH & pg_dump
-    const sshDumpCmd = `ssh -i ${prodSshKey} -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl" > ${tempDumpPath}`;
+    const sshDumpCmd = `ssh -i "${prodSshKey}" -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl" > "${tempDumpPath}"`;
 
     const fetchResult = spawnSync('sh', ['-c', sshDumpCmd], {
       env: process.env,
@@ -88,7 +110,24 @@ async function main() {
       throw new Error(`Failed to fetch dump from Prod. Code: ${fetchResult.status}. Stderr: ${stderr}`);
     }
 
-    auditLog('Dump successfully retrieved. Restoring into Staging DB...');
+    // Set secure file mode 0o600
+    try {
+      chmodSync(tempDumpPath, 0o600);
+    } catch {
+      // Non-fatal if chmod not supported on OS
+    }
+
+    // Sanity check: verify file size (must be >= 10 KB)
+    const fileStats = statSync(tempDumpPath);
+    if (fileStats.size < 10240) {
+      throw new Error(
+        `Retrieved dump size is suspiciously small (${fileStats.size} bytes). Aborting restore to prevent corrupting Staging DB.`,
+      );
+    }
+
+    auditLog(
+      `Dump successfully retrieved (${(fileStats.size / 1024 / 1024).toFixed(2)} MB). Restoring into Staging DB...`,
+    );
 
     // 2. Restore into Staging DB
     const restoreResult = spawnSync(
