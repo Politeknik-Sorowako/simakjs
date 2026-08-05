@@ -43,11 +43,11 @@ import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
 import EvaluasiSistem from './routes/EvaluasiSistem';
 import ForceChangePassword from './routes/ForceChangePassword';
 import ForgotPassword from './routes/ForgotPassword';
-import InputKompensasiManual from './routes/InputKompensasiManual';
 import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
 import Khs from './routes/Khs';
+import KompensasiManual from './routes/KompensasiManual';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
@@ -183,13 +183,14 @@ function AppContent() {
         }
       />
       <Route
-        path="/input-kompensasi-manual"
+        path="/kompensasi-manual"
         element={
-          <ProtectedRoute allowedRoles={['admin']}>
-            <InputKompensasiManual />
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KompensasiManual />
           </ProtectedRoute>
         }
       />
+      <Route path="/input-kompensasi-manual" element={<Navigate href="/kompensasi-manual" />} />
       <Route
         path="/duplicate-risk-kompensasi"
         element={

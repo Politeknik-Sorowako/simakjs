@@ -4,6 +4,7 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   createKompensasiManualSchema,
   deleteKompensasiManualSchema,
+  getAllKompensasiManualSchema,
   getDuplicateRiskSchema,
   getKompensasiManualStatsSchema,
   getRiwayatKompensasiManualSchema,
@@ -12,6 +13,7 @@ import {
 
 export const kompensasiManualRoutes = new Elysia({ prefix: '/kompensasi-manual' })
   .use(authMiddleware)
+  .get('/', KompensasiManualController.getAll, getAllKompensasiManualSchema)
   .get('/riwayat/:mahasiswaId', KompensasiManualController.getRiwayat, getRiwayatKompensasiManualSchema)
   .get('/duplicate-risk', KompensasiManualController.getDuplicateRisk, getDuplicateRiskSchema)
   .get('/stats', KompensasiManualController.getStats, getKompensasiManualStatsSchema)

@@ -1024,7 +1024,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                 </Show>
                 <Show when={isAdmin()}>
                   <A
-                    href="/input-kompensasi-manual"
+                    href="/kompensasi-manual"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
@@ -1038,7 +1038,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
                       />
                     </svg>
-                    Input Kompensasi Manual
+                    Kompensasi Manual
                   </A>
                 </Show>
                 <Show when={isAdmin()}>

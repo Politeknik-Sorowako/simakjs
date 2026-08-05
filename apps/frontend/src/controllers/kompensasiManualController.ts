@@ -99,4 +99,35 @@ export const kompensasiManualController = {
   async getStats(): Promise<KompensasiManualStats> {
     return fetchApi<KompensasiManualStats>('/kompensasi-manual/stats');
   },
+
+  async getAll(params?: {
+    search?: string;
+    tanggal?: string;
+    jenisKompen?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    data: Array<
+      KompensasiManualRecord & {
+        mahasiswaNim: string;
+        mahasiswaNama: string;
+      }
+    >;
+    meta: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.tanggal) query.append('tanggal', params.tanggal);
+    if (params?.jenisKompen) query.append('jenisKompen', params.jenisKompen);
+    if (params?.page) query.append('page', String(params.page));
+    if (params?.limit) query.append('limit', String(params.limit));
+
+    const qStr = query.toString() ? `?${query.toString()}` : '';
+    return fetchApi(`/kompensasi-manual${qStr}`);
+  },
 };

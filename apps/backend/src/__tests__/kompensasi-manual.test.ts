@@ -81,4 +81,38 @@ describe('Kompensasi Manual API', () => {
     const data = await res.json();
     expect(data.durasiMenit).toBe(480);
   });
+
+  it('harus dapat mengambil daftar kompensasi manual dengan filter pencarian', async () => {
+    await app.handle(
+      new Request('http://localhost/kompensasi-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          mahasiswaId: mhsId,
+          tanggal: '2026-08-05',
+          jenisKompen: 'rusak',
+          durasiMenit: 40,
+        }),
+      }),
+    );
+
+    const res = await app.handle(
+      new Request('http://localhost/kompensasi-manual?search=20230001&jenisKompen=rusak', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].mahasiswaNim).toBe('20230001');
+    expect(body.meta.total).toBe(1);
+  });
 });

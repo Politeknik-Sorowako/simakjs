@@ -168,3 +168,46 @@ export const getKompensasiManualStatsSchema = {
     400: t.Object({ error: t.String() }),
   },
 };
+
+export const getAllKompensasiManualSchema = {
+  detail: {
+    tags: ['Kompensasi Manual'],
+    summary: 'Daftar Kompensasi Manual Mahasiswa',
+    description:
+      'Mengambil daftar seluruh kompensasi manual dengan filter pencarian, tanggal, jenis kompensasi, dan paginasi.',
+  },
+  query: t.Object({
+    search: t.Optional(t.String()),
+    tanggal: t.Optional(t.String()),
+    jenisKompen: t.Optional(t.String()),
+    page: t.Optional(t.Numeric()),
+    limit: t.Optional(t.Numeric()),
+  }),
+  response: {
+    200: t.Object({
+      data: t.Array(
+        t.Object({
+          id: t.Integer(),
+          mahasiswaId: t.Integer(),
+          mahasiswaNim: t.String(),
+          mahasiswaNama: t.String(),
+          tanggal: t.String(),
+          jenisKompen: t.String(),
+          durasiMenit: t.Integer(),
+          keterangan: t.Union([t.String(), t.Null()]),
+          createdBy: t.Union([t.Integer(), t.Null()]),
+          createdAt: t.Any(),
+          updatedAt: t.Any(),
+        }),
+      ),
+      meta: t.Object({
+        page: t.Integer(),
+        limit: t.Integer(),
+        total: t.Integer(),
+        totalPages: t.Integer(),
+      }),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};

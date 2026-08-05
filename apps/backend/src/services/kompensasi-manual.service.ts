@@ -219,54 +219,110 @@ export class KompensasiManualService {
   }
 
   static async getStats() {
-    const [totalRow] = await db
-      .select({
-        totalRecords: count(),
-        totalMenit: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)`,
-      })
+    const [totalRow] = await db.select({ count: count() }).from(kompensasiManual);
+    const [sumRow] = await db
+      .select({ totalMenit: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
       .from(kompensasiManual);
 
-    const duplicateCount = await db
-      .select({
-        total: sql<number>`COUNT(*)`,
-      })
-      .from(
-        sql`(
-          SELECT mahasiswa_id, tanggal
-          FROM kompensasi_manual
-          GROUP BY mahasiswa_id, tanggal
-          HAVING COUNT(*) > 1
-        ) AS dup`,
-      );
+    const duplicateRisks = await this.getDuplicateRisk();
 
-    const perJenisRows = await db
+    const perJenisRaw = await db
       .select({
-        jenis: kompensasiManual.jenisKompen,
-        count: count(),
-        totalMenit: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)`,
+        jenisKompen: kompensasiManual.jenisKompen,
+        cnt: count(),
+        totMenit: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)`,
       })
       .from(kompensasiManual)
       .groupBy(kompensasiManual.jenisKompen);
 
-    const perJenis = {
+    const perJenis: Record<JenisKompen, { count: number; totalMenit: number }> = {
       sakit: { count: 0, totalMenit: 0 },
       izin: { count: 0, totalMenit: 0 },
       alpa: { count: 0, totalMenit: 0 },
       terlambat: { count: 0, totalMenit: 0 },
       rusak: { count: 0, totalMenit: 0 },
     };
-    for (const row of perJenisRows) {
-      const key = row.jenis as keyof typeof perJenis;
-      if (perJenis[key]) {
-        perJenis[key] = { count: Number(row.count), totalMenit: Number(row.totalMenit) };
+
+    for (const r of perJenisRaw) {
+      if (r.jenisKompen && perJenis[r.jenisKompen as JenisKompen]) {
+        perJenis[r.jenisKompen as JenisKompen] = {
+          count: Number(r.cnt),
+          totalMenit: Number(r.totMenit),
+        };
       }
     }
 
     return {
-      totalRecords: Number(totalRow?.totalRecords || 0),
-      totalMenit: Number(totalRow?.totalMenit || 0),
-      duplicateRiskCount: Number(duplicateCount[0]?.total || 0),
+      totalRecords: Number(totalRow?.count || 0),
+      totalMenit: Number(sumRow?.totalMenit || 0),
+      duplicateRiskCount: duplicateRisks.length,
       perJenis,
+    };
+  }
+
+  static async getAll(options?: {
+    search?: string;
+    tanggal?: string;
+    jenisKompen?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = options?.page || 1;
+    const limit = options?.limit || 50;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (options?.search) {
+      const q = `%${options.search.toLowerCase()}%`;
+      conditions.push(sql`(LOWER(${mahasiswa.nim}) LIKE ${q} OR LOWER(${mahasiswa.nama}) LIKE ${q})`);
+    }
+    if (options?.tanggal) {
+      conditions.push(eq(kompensasiManual.tanggal, options.tanggal));
+    }
+    if (options?.jenisKompen) {
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type requirement
+      conditions.push(eq(kompensasiManual.jenisKompen, options.jenisKompen as any));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalRow] = await db
+      .select({ count: count() })
+      .from(kompensasiManual)
+      .innerJoin(mahasiswa, eq(kompensasiManual.mahasiswaId, mahasiswa.id))
+      .where(whereClause);
+
+    const total = Number(totalRow?.count || 0);
+
+    const rows = await db
+      .select({
+        id: kompensasiManual.id,
+        mahasiswaId: kompensasiManual.mahasiswaId,
+        mahasiswaNim: mahasiswa.nim,
+        mahasiswaNama: mahasiswa.nama,
+        tanggal: kompensasiManual.tanggal,
+        jenisKompen: kompensasiManual.jenisKompen,
+        durasiMenit: kompensasiManual.durasiMenit,
+        keterangan: kompensasiManual.keterangan,
+        createdBy: kompensasiManual.createdBy,
+        createdAt: kompensasiManual.createdAt,
+        updatedAt: kompensasiManual.updatedAt,
+      })
+      .from(kompensasiManual)
+      .innerJoin(mahasiswa, eq(kompensasiManual.mahasiswaId, mahasiswa.id))
+      .where(whereClause)
+      .orderBy(desc(kompensasiManual.tanggal), desc(kompensasiManual.id))
+      .limit(limit)
+      .offset(offset);
+
+    return {
+      data: rows,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
     };
   }
 }
