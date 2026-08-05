@@ -36,6 +36,10 @@ export default function BapPresensi() {
   // Modals
   const [showBapModal, setShowBapModal] = createSignal(false);
   const [showCpmkModal, setShowCpmkModal] = createSignal(false);
+  const [showRombelModal, setShowRombelModal] = createSignal(false);
+  const [namaGroupRombel, setNamaGroupRombel] = createSignal('');
+  const [keteranganRombel, setKeteranganRombel] = createSignal('');
+  const [isSubmittingRombel, setIsSubmittingRombel] = createSignal(false);
 
   // Form states
   const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
@@ -234,6 +238,37 @@ export default function BapPresensi() {
       toast.showToast(e instanceof Error ? e.message : 'Gagal sinkronisasi nilai', 'error');
     } finally {
       setSyncLoadingNilai(false);
+    }
+  };
+
+  const handleCreateRombel = async (e: Event) => {
+    e.preventDefault();
+    const kelasId = selectedKelasId();
+    if (!kelasId) {
+      toast.showToast('Pilih kelas kuliah terlebih dahulu', 'error');
+      return;
+    }
+    if (!namaGroupRombel().trim()) {
+      toast.showToast('Nama Rombel wajib diisi', 'error');
+      return;
+    }
+    setIsSubmittingRombel(true);
+    try {
+      const created = await rombelPraktikumController.createRombel({
+        kelasKuliahId: kelasId,
+        namaGroup: namaGroupRombel().trim(),
+        keterangan: keteranganRombel().trim() || null,
+      });
+      toast.showToast('Rombel Praktikum berhasil dibuat', 'success');
+      setShowRombelModal(false);
+      setNamaGroupRombel('');
+      setKeteranganRombel('');
+      await refetchRombel();
+      setSelectedRombelId(created.id);
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal membuat rombel', 'error');
+    } finally {
+      setIsSubmittingRombel(false);
     }
   };
 
@@ -680,20 +715,27 @@ export default function BapPresensi() {
                 />
               </div>
               <Show when={selectedKelasId()}>
-                <div>
-                  <SearchableSelect
-                    label="Pilih Rombel Praktikum"
-                    placeholder="-- Pilih Rombel --"
-                    value={selectedRombelId()}
-                    options={(rombelData() || []).map((r) => ({
-                      label: r.namaGroup,
-                      value: r.id,
-                    }))}
-                    onChange={(val) => {
-                      setSelectedRombelId(val ? Number(val) : null);
-                      setSelectedBapId(null);
-                    }}
-                  />
+                <div class="flex items-end gap-2">
+                  <div class="flex-1">
+                    <SearchableSelect
+                      label="Pilih Rombel Praktikum"
+                      placeholder="-- Pilih Rombel --"
+                      value={selectedRombelId()}
+                      options={(rombelData() || []).map((r) => ({
+                        label: r.namaGroup,
+                        value: r.id,
+                      }))}
+                      onChange={(val) => {
+                        setSelectedRombelId(val ? Number(val) : null);
+                        setSelectedBapId(null);
+                      }}
+                    />
+                  </div>
+                  <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
+                    <Button onClick={() => setShowRombelModal(true)} variant="secondary" class="shrink-0 mb-0.5">
+                      + Tambah Rombel
+                    </Button>
+                  </Show>
                 </div>
               </Show>
             </div>
@@ -1173,6 +1215,42 @@ export default function BapPresensi() {
             </Button>
             <Button type="submit" variant="primary">
               Simpan CPMK
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Tambah Rombel Praktikum */}
+      <Modal isOpen={showRombelModal()} onClose={() => setShowRombelModal(false)} title="Tambah Rombel Praktikum Baru">
+        <form onSubmit={handleCreateRombel} class="flex flex-col gap-4">
+          <Input
+            type="text"
+            label="Nama Group / Rombel"
+            placeholder="Contoh: Kelompok A / Kelompok 1"
+            required
+            value={namaGroupRombel()}
+            onInput={(e) => setNamaGroupRombel(e.currentTarget.value)}
+          />
+
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+              Keterangan (opsional)
+            </label>
+            <textarea
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              rows="3"
+              placeholder="Catatan opsional mengenai kelompok praktikum ini..."
+              value={keteranganRombel()}
+              onInput={(e) => setKeteranganRombel(e.currentTarget.value)}
+            />
+          </div>
+
+          <div class="flex justify-end gap-2 mt-4">
+            <Button type="button" onClick={() => setShowRombelModal(false)} variant="secondary">
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSubmittingRombel()}>
+              {isSubmittingRombel() ? 'Menyimpan...' : 'Simpan Rombel'}
             </Button>
           </div>
         </form>
