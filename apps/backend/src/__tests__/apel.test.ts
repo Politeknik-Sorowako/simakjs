@@ -299,4 +299,44 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
     expect(updatedSesi.shift).toBe('sore');
     expect(updatedSesi.jamMulai).toContain('16:00');
   });
+
+  it('harus menolak pembuatan sesi duplikat untuk kelompok-tanggal-shift yang sama', async () => {
+    const createKelRes = await app.handle(
+      new Request('http://localhost/apel/kelompok', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ namaKelompok: 'Kelompok Duplikat Test', dosenId }),
+      }),
+    );
+    const kelompok = await createKelRes.json();
+
+    const payload = {
+      kelompokApelId: kelompok.id,
+      tanggal: '2026-08-05',
+      shift: 'pagi',
+      jamMulai: '07:00',
+    };
+
+    // Sesi 1: Sukses
+    const bukaRes1 = await app.handle(
+      new Request('http://localhost/apel/sesi/buka', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(bukaRes1.status).toBe(200);
+
+    // Sesi 2 (Duplikat): Harus ditolak dengan error 400
+    const bukaRes2 = await app.handle(
+      new Request('http://localhost/apel/sesi/buka', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(bukaRes2.status).toBe(400);
+    const body2 = await bukaRes2.json();
+    expect(body2.error).toContain('sudah pernah dibuka');
+  });
 });
