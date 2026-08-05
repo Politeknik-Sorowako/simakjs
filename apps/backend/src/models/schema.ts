@@ -2376,6 +2376,78 @@ export const presensiPraktikumRelations = relations(presensiPraktikum, ({ one })
   }),
 }));
 
+// --- KOMPENSASI MANUAL ---
+export const kompensasiManual = pgTable(
+  'kompensasi_manual',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    tanggal: date('tanggal').notNull(),
+    jenisKompen: varchar('jenis_kompen', { length: 20 }).notNull(),
+    durasiMenit: integer('durasi_menit').notNull().default(0),
+    keterangan: text('keterangan'),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      mahasiswaTanggalIdx: index('idx_kompensasi_manual_mhs_tgl').on(table.mahasiswaId, table.tanggal),
+      jenisIdx: index('idx_kompensasi_manual_jenis').on(table.jenisKompen),
+    };
+  },
+);
+
+export const nilaiPraktik = pgTable('nilai_praktik', {
+  id: serial('id').primaryKey(),
+  rombelPraktikumId: integer('rombel_praktikum_id')
+    .notNull()
+    .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
+  mahasiswaId: integer('mahasiswa_id')
+    .notNull()
+    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+  komponenNilaiId: integer('komponen_nilai_id').references(() => komponenNilai.id, { onDelete: 'set null' }),
+  nilaiAngka: numeric('nilai_angka', { precision: 5, scale: 2 }).notNull(),
+  keterangan: text('keterangan'),
+  createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const kompensasiManualRelations = relations(kompensasiManual, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [kompensasiManual.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  createdByUser: one(users, {
+    fields: [kompensasiManual.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const nilaiPraktikRelations = relations(nilaiPraktik, ({ one }) => ({
+  rombelPraktikum: one(rombelPraktikum, {
+    fields: [nilaiPraktik.rombelPraktikumId],
+    references: [rombelPraktikum.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [nilaiPraktik.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  komponenNilai: one(komponenNilai, {
+    fields: [nilaiPraktik.komponenNilaiId],
+    references: [komponenNilai.id],
+  }),
+}));
+
 // --- SYSTEM FEEDBACK & EVALUASI ---
 export const systemFeedback = pgTable('system_feedback', {
   id: serial('id').primaryKey(),
