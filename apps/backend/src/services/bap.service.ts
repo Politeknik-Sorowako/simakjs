@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
   bap,
   bapTopik,
@@ -290,46 +290,107 @@ export class BapService {
         },
       });
 
-      const result = [];
-      for (const k of kelasList) {
-        if (prodiId && k.mataKuliah?.programStudiId !== prodiId) continue;
+      const filteredKelas = prodiId ? kelasList.filter((k) => k.mataKuliah?.programStudiId === prodiId) : kelasList;
 
-        let matchedRps: typeof rps.$inferSelect | undefined;
-        try {
-          matchedRps = await db.query.rps.findFirst({
-            where: (rpsTable, { and }) =>
-              and(eq(rpsTable.mataKuliahId, k.mataKuliahId), eq(rpsTable.periodeId, k.periodeId)),
-          });
-        } catch (err) {
-          console.warn('[BapService] Failed to query rps for class:', k.id, err);
+      if (filteredKelas.length === 0) {
+        return [];
+      }
+
+      const kelasIds = filteredKelas.map((k) => k.id);
+      const mataKuliahIds = Array.from(new Set(filteredKelas.map((k) => k.mataKuliahId)));
+
+      // 1. Prefetch all RPS for target mataKuliahIds & periodeId
+      let allRps: (typeof rps.$inferSelect)[] = [];
+      try {
+        if (mataKuliahIds.length > 0) {
+          allRps = await db
+            .select()
+            .from(rps)
+            .where(
+              targetPeriodeId
+                ? and(inArray(rps.mataKuliahId, mataKuliahIds), eq(rps.periodeId, targetPeriodeId))
+                : inArray(rps.mataKuliahId, mataKuliahIds),
+            );
         }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query rps:', err);
+      }
 
-        let rpsTopiks: (typeof rpsTopik.$inferSelect)[] = [];
-        if (matchedRps) {
-          try {
-            rpsTopiks = await db.select().from(rpsTopik).where(eq(rpsTopik.rpsId, matchedRps.id));
-          } catch (err) {
-            console.warn('[BapService] Failed to query rpsTopik:', err);
-          }
+      const rpsMap = new Map<number, typeof rps.$inferSelect>();
+      for (const r of allRps) {
+        rpsMap.set(r.mataKuliahId, r);
+      }
+
+      const rpsIds = allRps.map((r) => r.id);
+
+      // 2. Prefetch all rpsTopik for target rpsIds
+      let allRpsTopiks: (typeof rpsTopik.$inferSelect)[] = [];
+      try {
+        if (rpsIds.length > 0) {
+          allRpsTopiks = await db.select().from(rpsTopik).where(inArray(rpsTopik.rpsId, rpsIds));
         }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query rpsTopik:', err);
+      }
 
-        let bapList: (typeof bap.$inferSelect)[] = [];
-        try {
-          bapList = await db.select().from(bap).where(eq(bap.kelasKuliahId, k.id));
-        } catch (err) {
-          console.warn('[BapService] Failed to query bap list:', err);
+      const rpsTopiksMap = new Map<number, (typeof rpsTopik.$inferSelect)[]>();
+      for (const t of allRpsTopiks) {
+        const current = rpsTopiksMap.get(t.rpsId) || [];
+        current.push(t);
+        rpsTopiksMap.set(t.rpsId, current);
+      }
+
+      // 3. Prefetch all BAP for target kelasIds
+      let allBap: (typeof bap.$inferSelect)[] = [];
+      try {
+        if (kelasIds.length > 0) {
+          allBap = await db.select().from(bap).where(inArray(bap.kelasKuliahId, kelasIds));
         }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query bap:', err);
+      }
 
-        const bapIds = bapList.map((b) => b.id);
-        let coveredTopikIds = new Set<number>();
+      const bapMap = new Map<number, (typeof bap.$inferSelect)[]>();
+      for (const b of allBap) {
+        const current = bapMap.get(b.kelasKuliahId) || [];
+        current.push(b);
+        bapMap.set(b.kelasKuliahId, current);
+      }
+
+      const bapIds = allBap.map((b) => b.id);
+
+      // 4. Prefetch all bapTopik for target bapIds
+      let allBapTopiks: (typeof bapTopik.$inferSelect)[] = [];
+      try {
         if (bapIds.length > 0) {
-          try {
-            const bapTopikList = await db.select().from(bapTopik).where(inArray(bapTopik.bapId, bapIds));
-            coveredTopikIds = new Set(bapTopikList.map((bt) => bt.topikId).filter(Boolean) as number[]);
-          } catch (err) {
-            console.warn('[BapService] Failed to query bapTopik list:', err);
-          }
+          allBapTopiks = await db.select().from(bapTopik).where(inArray(bapTopik.bapId, bapIds));
         }
+      } catch (err) {
+        console.warn('[BapService] Failed bulk query bapTopik:', err);
+      }
+
+      const bapToKelasMap = new Map<number, number>();
+      for (const b of allBap) {
+        bapToKelasMap.set(b.id, b.kelasKuliahId);
+      }
+
+      const coveredTopiksMap = new Map<number, Set<number>>();
+      for (const bt of allBapTopiks) {
+        if (!bt.topikId) continue;
+        const targetKelasId = bapToKelasMap.get(bt.bapId);
+        if (targetKelasId) {
+          const currentSet = coveredTopiksMap.get(targetKelasId) || new Set<number>();
+          currentSet.add(bt.topikId);
+          coveredTopiksMap.set(targetKelasId, currentSet);
+        }
+      }
+
+      // 5. Build output list cleanly with O(1) map lookups
+      return filteredKelas.map((k) => {
+        const matchedRps = rpsMap.get(k.mataKuliahId);
+        const rpsTopiks = matchedRps ? rpsTopiksMap.get(matchedRps.id) || [] : [];
+        const bapList = bapMap.get(k.id) || [];
+        const coveredTopikIds = coveredTopiksMap.get(k.id) || new Set<number>();
 
         const totalTopikRps = rpsTopiks.length || 16;
         const topikDiajarkanCount = coveredTopikIds.size;
@@ -340,7 +401,7 @@ export class BapService {
           status = persentaseCapaian >= 80 ? 'SESUAI_TARGET' : 'BERJALAN';
         }
 
-        result.push({
+        return {
           kelasKuliahId: k.id,
           namaKelas: k.namaKelas,
           mataKuliahKode: k.mataKuliah?.kode || '-',
@@ -352,10 +413,8 @@ export class BapService {
           persentaseCapaian,
           totalBapRecorded: bapList.length,
           status,
-        });
-      }
-
-      return result;
+        };
+      });
     } catch (err: unknown) {
       console.error('[BapService] Error in getMonitoringRps:', {
         periodeId,

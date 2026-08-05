@@ -120,9 +120,9 @@ export class BapController {
       const prodiId = query?.prodiId ? parseInt(String(query.prodiId)) : undefined;
       return await BapService.getMonitoringRps(periodeId, prodiId);
     } catch (e: unknown) {
-      console.error('[BapController] Error in getMonitoringRps:', e instanceof Error ? e.message : e);
+      console.error('[BapController] Error in getMonitoringRps:', e instanceof Error ? e.stack || e.message : e);
       set.status = 500;
-      return { error: e instanceof Error ? e.message : 'Gagal mengambil data monitoring RPS' };
+      return { error: 'Gagal mengambil data monitoring RPS' };
     }
   }
 
@@ -141,9 +141,9 @@ export class BapController {
       }
       return result;
     } catch (e: unknown) {
-      console.error('[BapController] Error in getMonitoringRpsDetail:', e instanceof Error ? e.message : e);
+      console.error('[BapController] Error in getMonitoringRpsDetail:', e instanceof Error ? e.stack || e.message : e);
       set.status = 500;
-      return { error: e instanceof Error ? e.message : 'Gagal mengambil detail monitoring RPS' };
+      return { error: 'Gagal mengambil detail monitoring RPS' };
     }
   }
 }
