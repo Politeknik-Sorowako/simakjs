@@ -122,3 +122,13 @@ sudo systemctl status simak-db-sync.timer
 * File dump temporary dibuat dengan nama acak (`temp_prod_dump_<random>.sql`) dan hak akses `0o600` (hanya bisa dibaca oleh pemilik proses).
 * Dump file di bawah 10 KB akan otomatis dibatalkan (*Fail-Fast Guard*) untuk mencegah kerusakan DB Staging.
 * Data sensitif pengguna (email & password) otomatis disanitasi pasca-restore.
+
+---
+
+## ✅ Pre-Merge Checklist
+
+- [x] **Database connectivity tested in target staging environment:** Teruji menggunakan `DATABASE_URL` via Bun runtime & `psql` restore stream.
+- [x] **SSH key pair generation and placement completed:** Terkonfigurasi dengan pembatas wrapper script (`allow_pg_dump.sh`) & `authorized_keys`.
+- [x] **Systemd configuration reviewed and environment paths verified:** Unit service (`simak-db-sync.service`) & timer (`simak-db-sync.timer`) telah disesuaikan path lokasi runtime Bun & `.env`.
+- [x] **All required environment variables documented and validated:** Fungsi `validateEnv()` di `sync-staging-from-prod.ts` memvalidasi `DATABASE_URL` dan `PROD_SSH_HOST` sebelum eksekusi.
+
