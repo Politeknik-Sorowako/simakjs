@@ -115,4 +115,37 @@ describe('Kompensasi Manual API', () => {
     expect(body.data[0].mahasiswaNim).toBe('20230001');
     expect(body.meta.total).toBe(1);
   });
+
+  it('harus merekap kompensasi manual jenis rusak x 5 pada laporan kompensasi', async () => {
+    await app.handle(
+      new Request('http://localhost/kompensasi-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          mahasiswaId: mhsId,
+          tanggal: '2026-08-05',
+          jenisKompen: 'rusak',
+          durasiMenit: 40,
+        }),
+      }),
+    );
+
+    const res = await app.handle(
+      new Request('http://localhost/presensi/kompensasi/laporan?search=20230001', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBe(1);
+    expect(body.data[0].totalKompensasi).toBe(200); // 40 * 5 = 200
+  });
 });

@@ -159,7 +159,11 @@ export class PresensiService {
     const historyKompensasi = allPresensi
       .map((p) => {
         const poinKompensasi =
-          p.sumber === 'manual' ? p.durasiMangkir : this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
+          p.sumber === 'manual'
+            ? ['alpa', 'terlambat', 'rusak'].includes(p.status)
+              ? p.durasiMangkir * 5
+              : p.durasiMangkir
+            : this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
         return {
           ...p,
           poinKompensasi,
@@ -230,7 +234,10 @@ export class PresensiService {
       db
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
-          poin: sql<number>`SUM(${kompensasiManual.durasiMenit})`.as('poin'),
+          poin: sql<number>`SUM(CASE
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
+              ELSE durasi_menit END)`.as('poin'),
         })
         .from(kompensasiManual)
         .groupBy(kompensasiManual.mahasiswaId),
@@ -354,7 +361,10 @@ export class PresensiService {
       db
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
-          poin: sql<number>`SUM(${kompensasiManual.durasiMenit})`.as('poin'),
+          poin: sql<number>`SUM(CASE
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
+              ELSE durasi_menit END)`.as('poin'),
         })
         .from(kompensasiManual)
         .groupBy(kompensasiManual.mahasiswaId),
