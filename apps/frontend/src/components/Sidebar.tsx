@@ -1,13 +1,16 @@
 import { A, useLocation } from '@solidjs/router';
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
+import { settingsController } from '../controllers/settingsController';
 
 export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const auth = useAuth();
   const role = () => auth.user()?.role;
   const location = useLocation();
   const path = () => location.pathname;
+
+  const [publicSettings] = createResource(() => settingsController.getPublicSettings());
 
   const [isMasterOpen, setIsMasterOpen] = createSignal(false);
   const [isPerencanaanOpen, setIsPerencanaanOpen] = createSignal(false);
@@ -742,6 +745,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Bimbingan Akademik
                   </A>
                 </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/monitoring-bimbingan"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                    Monitoring Bimbingan
+                  </A>
+                </Show>
               </div>
             </Show>
           </div>
@@ -805,23 +827,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Evaluasi Yudisium
                   </A>
                 </Show>
-                <A
-                  href="/evaluasi-sistem"
-                  onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
-                  inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
-                >
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                    />
-                  </svg>
-                  Usulan & Evaluasi Sistem
-                </A>
+                <Show when={publicSettings()?.featureFeedbackEnabled}>
+                  <A
+                    href="/evaluasi-sistem"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                      />
+                    </svg>
+                    Usulan & Evaluasi Sistem
+                  </A>
+                </Show>
               </div>
             </Show>
           </div>

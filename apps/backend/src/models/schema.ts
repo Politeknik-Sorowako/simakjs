@@ -735,6 +735,10 @@ export const pelanggaran = pgTable('pelanggaran', {
     .$onUpdate(() => new Date()),
 });
 
+export const kategoriBimbinganRelations = relations(kategoriBimbingan, ({ many }) => ({
+  bimbinganList: many(bimbingan),
+}));
+
 export const bimbinganRelations = relations(bimbingan, ({ one, many }) => ({
   mahasiswa: one(mahasiswa, {
     fields: [bimbingan.mahasiswaId],
@@ -743,6 +747,10 @@ export const bimbinganRelations = relations(bimbingan, ({ one, many }) => ({
   dosen: one(dosen, {
     fields: [bimbingan.dosenId],
     references: [dosen.id],
+  }),
+  kategori: one(kategoriBimbingan, {
+    fields: [bimbingan.kategoriId],
+    references: [kategoriBimbingan.id],
   }),
   periodeAkademik: one(periodeAkademik, {
     fields: [bimbingan.periodeId],
@@ -2392,3 +2400,13 @@ export const systemFeedbackRelations = relations(systemFeedback, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const systemSettings = pgTable('system_settings', {
+  key: varchar('key', { length: 100 }).primaryKey(),
+  value: text('value').notNull(),
+  description: text('description'),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});

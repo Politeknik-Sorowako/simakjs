@@ -52,6 +52,21 @@ export interface BimbinganMonitoring {
   createdAt: string | null;
 }
 
+export interface MonitoringBimbinganLengkapItem {
+  mahasiswaId: number;
+  nim: string;
+  namaMahasiswa: string;
+  prodiId: number | null;
+  dosenPaId: number | null;
+  dosenPaNama: string;
+  periodeId: string;
+  bimbinganId: number | null;
+  totalSesi: number;
+  isApproved: boolean;
+  statusBkd: boolean;
+  sesiList: SesiBimbingan[];
+}
+
 export interface Pelanggaran {
   id: number;
   mahasiswaId: number;
@@ -192,5 +207,19 @@ export const bimbinganController = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  async getMonitoringLengkap(filter?: {
+    periodeId?: string;
+    prodiId?: number;
+    dosenPaId?: number;
+  }): Promise<MonitoringBimbinganLengkapItem[]> {
+    const params = new URLSearchParams();
+    if (filter?.periodeId) params.append('periodeId', filter.periodeId);
+    if (filter?.prodiId) params.append('prodiId', String(filter.prodiId));
+    if (filter?.dosenPaId) params.append('dosenPaId', String(filter.dosenPaId));
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetchApi<{ data: MonitoringBimbinganLengkapItem[] }>(`/bimbingan/monitoring-lengkap${query}`);
+    return res.data || [];
   },
 };

@@ -46,6 +46,7 @@ import { prodiRoutes } from './routes/prodi.routes';
 import { profilLulusanRoutes } from './routes/profil-lulusan.routes';
 import { rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
 import { rpsRoutes } from './routes/rps.routes';
+import { settingsRoutes } from './routes/settings.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
@@ -296,6 +297,7 @@ app
   .use(presensiRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
+  .use(settingsRoutes)
   .use(pelanggaranRoutes)
   .use(khsRoutes)
   .use(yudisiumRoutes)

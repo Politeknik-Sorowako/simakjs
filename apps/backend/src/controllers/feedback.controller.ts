@@ -1,10 +1,17 @@
 import { FeedbackService } from '../services/feedback.service';
+import { SettingsService } from '../services/settings.service';
 import type { AuthContext } from '../utils/types';
 
 export class FeedbackController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
+      const isEnabled = await SettingsService.isFeedbackEnabled();
+      if (!isEnabled) {
+        set.status = 403;
+        return { error: 'Modul Evaluasi dan Feedback Sistem sedang dinonaktifkan oleh administrator.' };
+      }
+
       const user = await getCurrentUser();
       if (!user) {
         set.status = 401;

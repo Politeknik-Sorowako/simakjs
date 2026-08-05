@@ -351,4 +351,78 @@ export class BimbinganService {
       };
     });
   }
+
+  static async getMonitoringBimbinganLengkap(filter?: { periodeId?: string; prodiId?: number; dosenPaId?: number }) {
+    const activePeriode = await this.getActivePeriode();
+    const targetPeriodeId = filter?.periodeId || activePeriode?.id;
+
+    if (!targetPeriodeId) {
+      return [];
+    }
+
+    const mhsQuery = db
+      .select({
+        id: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        prodiId: mahasiswa.programStudiId,
+        dosenPaId: mahasiswa.dosenPaId,
+        dosenPaNama: dosen.nama,
+      })
+      .from(mahasiswa)
+      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id));
+
+    const conditions = [];
+    if (filter?.dosenPaId) {
+      conditions.push(eq(mahasiswa.dosenPaId, filter.dosenPaId));
+    }
+    if (filter?.prodiId) {
+      conditions.push(eq(mahasiswa.programStudiId, filter.prodiId));
+    }
+
+    const listMahasiswa = conditions.length > 0 ? await mhsQuery.where(and(...conditions)) : await mhsQuery;
+
+    const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, targetPeriodeId));
+
+    const bimbinganMap = new Map<number, typeof bimbingan.$inferSelect>();
+    const bimbinganIds: number[] = [];
+    for (const b of listBimbingan) {
+      bimbinganMap.set(b.mahasiswaId, b);
+      bimbinganIds.push(b.id);
+    }
+
+    const sesiMap = new Map<number, (typeof sesiBimbingan.$inferSelect)[]>();
+    if (bimbinganIds.length > 0) {
+      const allSesi = await db
+        .select()
+        .from(sesiBimbingan)
+        .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds))
+        .orderBy(asc(sesiBimbingan.pertemuanKe));
+
+      for (const s of allSesi) {
+        const current = sesiMap.get(s.bimbinganId) || [];
+        current.push(s);
+        sesiMap.set(s.bimbinganId, current);
+      }
+    }
+
+    return listMahasiswa.map((mhs) => {
+      const bimb = bimbinganMap.get(mhs.id);
+      const sesiList = bimb ? sesiMap.get(bimb.id) || [] : [];
+      return {
+        mahasiswaId: mhs.id,
+        nim: mhs.nim,
+        namaMahasiswa: mhs.nama,
+        prodiId: mhs.prodiId,
+        dosenPaId: mhs.dosenPaId,
+        dosenPaNama: mhs.dosenPaNama || 'Belum Ditentukan',
+        periodeId: targetPeriodeId,
+        bimbinganId: bimb?.id || null,
+        totalSesi: sesiList.length,
+        isApproved: bimb?.isApproved || false,
+        statusBkd: bimb?.statusBkd || false,
+        sesiList,
+      };
+    });
+  }
 }
