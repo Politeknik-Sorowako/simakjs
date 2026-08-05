@@ -48,6 +48,27 @@ export default function ApelKelola() {
   const [mhsSearch, setMhsSearch] = createSignal('');
   const [selectedMhsToAdd, setSelectedMhsToAdd] = createSignal<number[]>([]);
 
+  // Modal Catatan / Alasan Presensi State
+  const [editingCatatanMhs, setEditingCatatanMhs] = createSignal<{ id: number; nama: string; text: string } | null>(
+    null,
+  );
+
+  const openCatatanModal = (item: PresensiApelItem) => {
+    setEditingCatatanMhs({
+      id: item.mahasiswaId,
+      nama: item.mahasiswaNama,
+      text: item.keterangan || '',
+    });
+  };
+
+  const handleSaveCatatanModal = (e: Event) => {
+    e.preventDefault();
+    const current = editingCatatanMhs();
+    if (!current) return;
+    handleKeteranganChange(current.id, current.text);
+    setEditingCatatanMhs(null);
+  };
+
   // Resource Data Kelompok (Memuat seluruh kelompok apel kampus)
   const [kelompokList, { refetch: refetchKelompok }] = createResource(async () => {
     const user = auth.user();
@@ -648,56 +669,42 @@ export default function ApelKelola() {
                             <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
                             <td class="px-4 py-3 text-sm">{item.mahasiswaNama}</td>
                             <td class="px-4 py-3 text-center">
-                              <div class="flex items-center justify-center gap-1">
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'hadir' ? 'bg-green-600 text-white ring-2 ring-green-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'hadir')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Hadir"
-                                >
-                                  H
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'terlambat' ? 'bg-yellow-500 text-white ring-2 ring-yellow-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'terlambat')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Terlambat"
-                                >
-                                  T
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'sakit' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'sakit')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Sakit"
-                                >
-                                  S
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'izin' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'izin')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Izin"
-                                >
-                                  I
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'alpa' ? 'bg-red-600 text-white ring-2 ring-red-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'alpa')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Alpa"
-                                >
-                                  A
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'unknown' ? 'bg-gray-600 text-white ring-2 ring-gray-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'unknown')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Unknown"
-                                >
-                                  ?
-                                </button>
-                              </div>
+                              <select
+                                class={`px-2 py-1 rounded text-xs font-bold border focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 ${
+                                  item.status === 'hadir'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300'
+                                    : item.status === 'terlambat'
+                                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300'
+                                      : item.status === 'sakit'
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-300'
+                                        : item.status === 'izin'
+                                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 border-indigo-300'
+                                          : item.status === 'alpa'
+                                            ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-300'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-300'
+                                }`}
+                                value={item.status}
+                                disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
+                                onChange={(e) =>
+                                  handleStatusChange(
+                                    item.mahasiswaId,
+                                    e.currentTarget.value as
+                                      | 'hadir'
+                                      | 'terlambat'
+                                      | 'unknown'
+                                      | 'sakit'
+                                      | 'izin'
+                                      | 'alpa',
+                                  )
+                                }
+                              >
+                                <option value="hadir">Hadir (H)</option>
+                                <option value="terlambat">Terlambat (T)</option>
+                                <option value="sakit">Sakit (S)</option>
+                                <option value="izin">Izin (I)</option>
+                                <option value="alpa">Alpa (A)</option>
+                                <option value="unknown">Unknown (?)</option>
+                              </select>
                             </td>
                             <td class="px-4 py-3 text-center">
                               <Show when={item.status !== 'hadir'}>
@@ -705,7 +712,7 @@ export default function ApelKelola() {
                                   <input
                                     type="number"
                                     min={0}
-                                    class="w-20 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
+                                    class="w-16 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                     value={item.menitTerlambat ?? 0}
                                     disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
                                     onInput={(e) =>
@@ -717,15 +724,18 @@ export default function ApelKelola() {
                               </Show>
                             </td>
                             <td class="px-4 py-3 text-left">
-                              <input
-                                type="text"
-                                maxlength="1000"
-                                placeholder="Keterangan / Alasan..."
-                                class="w-full border rounded px-2.5 py-1 text-xs dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
-                                value={item.keterangan || ''}
+                              <button
+                                type="button"
+                                onClick={() => openCatatanModal(item)}
                                 disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                onInput={(e) => handleKeteranganChange(item.mahasiswaId, e.currentTarget.value)}
-                              />
+                                class={`px-2.5 py-1 rounded text-xs transition-colors max-w-[130px] truncate text-left ${
+                                  item.keterangan
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 font-medium'
+                                    : 'border border-dashed border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600'
+                                }`}
+                              >
+                                {item.keterangan ? `📝 ${item.keterangan}` : '+ Catatan'}
+                              </button>
                             </td>
                           </tr>
                         )}
@@ -1007,6 +1017,57 @@ export default function ApelKelola() {
                     class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                   >
                     {isSubmitting() ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Show>
+        {/* MODAL 4: Catatan / Alasan Presensi */}
+        <Show when={editingCatatanMhs()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-sm w-full p-5 space-y-4 shadow-xl">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-2">
+                <h3 class="text-base font-bold text-gray-900 dark:text-white">Catatan — {editingCatatanMhs()?.nama}</h3>
+                <button
+                  type="button"
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setEditingCatatanMhs(null)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveCatatanModal} class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300">
+                    Keterangan / Alasan Ketidakhadiran
+                  </label>
+                  <textarea
+                    rows={3}
+                    maxlength="1000"
+                    placeholder="Tuliskan catatan atau alasan..."
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 text-xs dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editingCatatanMhs()?.text || ''}
+                    onInput={(e) =>
+                      setEditingCatatanMhs((prev) => (prev ? { ...prev, text: e.currentTarget.value } : null))
+                    }
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t dark:border-gray-700">
+                  <button
+                    type="button"
+                    class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setEditingCatatanMhs(null)}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  >
+                    Simpan Catatan
                   </button>
                 </div>
               </form>
