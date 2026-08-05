@@ -11,6 +11,7 @@ import { useToast } from '../contexts/ToastContext';
 import { dosenController, Dosen as IDosen } from '../controllers/dosenController';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { krsController } from '../controllers/krsController';
+import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { BAP, CPMK, MonitoringRpsItem, PresensiItem, presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
@@ -41,6 +42,13 @@ export default function BapPresensi() {
   const [keteranganRombel, setKeteranganRombel] = createSignal('');
   const [isSubmittingRombel, setIsSubmittingRombel] = createSignal(false);
 
+  // Assign Rombel Members state
+  const [showAssignMhsModal, setShowAssignMhsModal] = createSignal(false);
+  const [searchAssignMhsText, setSearchAssignMhsText] = createSignal('');
+  const [assignTab, setAssignTab] = createSignal<'krs' | 'all'>('krs');
+  const [assignedMhsSet, setAssignedMhsSet] = createSignal<Set<number>>(new Set());
+  const [isSavingMembers, setIsSavingMembers] = createSignal(false);
+
   // Form states
   const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
   const [pertemuanKe, setPertemuanKe] = createSignal(1);
@@ -54,6 +62,7 @@ export default function BapPresensi() {
   // Filter Resources
   const [periodeData] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
   const [prodiData] = createResource(() => prodiController.getAll(undefined, 1, 100));
+  const [allMhsData] = createResource(() => mahasiswaController.getAll(undefined, 1, 1000));
 
   // Monitoring Resource
   const [monitoringData, { refetch: refetchMonitoring }] = createResource(
@@ -269,6 +278,48 @@ export default function BapPresensi() {
       toast.showToast(err instanceof Error ? err.message : 'Gagal membuat rombel', 'error');
     } finally {
       setIsSubmittingRombel(false);
+    }
+  };
+
+  const currentRombel = () => (rombelData() || []).find((r) => r.id === selectedRombelId());
+
+  const openAssignModal = () => {
+    const r = currentRombel();
+    if (!r) return;
+    const initialSet = new Set<number>((r.mahasiswaList || []).map((m) => m.mahasiswaId));
+    setAssignedMhsSet(initialSet);
+    setSearchAssignMhsText('');
+    setAssignTab('krs');
+    setShowAssignMhsModal(true);
+  };
+
+  const toggleAssignMhs = (mhsId: number) => {
+    setAssignedMhsSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(mhsId)) {
+        next.delete(mhsId);
+      } else {
+        next.add(mhsId);
+      }
+      return next;
+    });
+  };
+
+  const handleSaveRombelMembers = async (e: Event) => {
+    e.preventDefault();
+    const rombelId = selectedRombelId();
+    if (!rombelId) return;
+    setIsSavingMembers(true);
+    try {
+      const ids = Array.from(assignedMhsSet());
+      await rombelPraktikumController.assignMahasiswa(rombelId, ids);
+      toast.showToast(`Berhasil menyimpan ${ids.length} anggota Rombel`, 'success');
+      setShowAssignMhsModal(false);
+      await refetchRombel();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal menyimpan anggota rombel', 'error');
+    } finally {
+      setIsSavingMembers(false);
     }
   };
 
@@ -750,13 +801,20 @@ export default function BapPresensi() {
                       teori tanggal yang sama; nilai dirata-ratakan per komponen.
                     </p>
                   </div>
-                  <Button
-                    onClick={() => handleSyncNilai(selectedRombelId()!)}
-                    loading={syncLoadingNilai()}
-                    variant="accent"
-                  >
-                    Sync Nilai ke Kelas Induk
-                  </Button>
+                  <div class="flex items-center gap-2">
+                    <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
+                      <Button onClick={openAssignModal} variant="secondary">
+                        Kelola Anggota Rombel ({currentRombel()?.mahasiswaList?.length || 0})
+                      </Button>
+                    </Show>
+                    <Button
+                      onClick={() => handleSyncNilai(selectedRombelId()!)}
+                      loading={syncLoadingNilai()}
+                      variant="accent"
+                    >
+                      Sync Nilai ke Kelas Induk
+                    </Button>
+                  </div>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -1251,6 +1309,136 @@ export default function BapPresensi() {
             </Button>
             <Button type="submit" variant="primary" disabled={isSubmittingRombel()}>
               {isSubmittingRombel() ? 'Menyimpan...' : 'Simpan Rombel'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Kelola Anggota Rombel (Lintas Kelas) */}
+      <Modal
+        isOpen={showAssignMhsModal()}
+        onClose={() => setShowAssignMhsModal(false)}
+        title={`Kelola Anggota Rombel — ${currentRombel()?.namaGroup || ''}`}
+      >
+        <form onSubmit={handleSaveRombelMembers} class="flex flex-col gap-4 max-h-[80vh]">
+          <p class="text-xs text-secondary-500 dark:text-secondary-400">
+            Pilih mahasiswa peserta praktikum. Mahasiswa dapat berasal dari kelas induk matakuliah ini maupun diambil
+            dari mahasiswa kelas lain (lintas kelas).
+          </p>
+
+          {/* Tab Selector & Filter */}
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-secondary-50 dark:bg-secondary-800 p-2 rounded-xl">
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setAssignTab('krs')}
+                class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  assignTab() === 'krs'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
+                }`}
+              >
+                Mahasiswa Kelas Induk ({krsData()?.length || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssignTab('all')}
+                class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  assignTab() === 'all'
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
+                }`}
+              >
+                Lintas Kelas (Semua Mhs)
+              </button>
+            </div>
+            <div class="text-xs font-bold text-brand-600 dark:text-brand-400 px-2">
+              {assignedMhsSet().size} Mahasiswa Terpilih
+            </div>
+          </div>
+
+          <Input
+            type="text"
+            placeholder="Cari NIM atau nama mahasiswa..."
+            value={searchAssignMhsText()}
+            onInput={(e) => setSearchAssignMhsText(e.currentTarget.value)}
+          />
+
+          {/* Student List with Checkboxes */}
+          <div class="overflow-y-auto max-h-[350px] border border-secondary-200 dark:border-secondary-700 rounded-xl divide-y divide-secondary-100 dark:divide-secondary-800">
+            {(() => {
+              const query = searchAssignMhsText().toLowerCase().trim();
+              let candidates: { id: number; nim: string; nama: string; prodiNama?: string }[] = [];
+
+              if (assignTab() === 'krs') {
+                candidates = (krsData() || [])
+                  .filter((k) => k.mahasiswa)
+                  .map((k) => ({
+                    id: k.mahasiswaId,
+                    nim: k.mahasiswa?.nim || '',
+                    nama: k.mahasiswa?.nama || '',
+                    prodiNama: k.mahasiswa?.programStudi?.nama || '',
+                  }));
+              } else {
+                candidates = (allMhsData()?.data || []).map((m: IMahasiswa) => ({
+                  id: m.id,
+                  nim: m.nim || '',
+                  nama: m.nama || '',
+                  prodiNama: m.programStudi?.nama || '',
+                }));
+              }
+
+              if (query) {
+                candidates = candidates.filter(
+                  (c) => c.nim.toLowerCase().includes(query) || c.nama.toLowerCase().includes(query),
+                );
+              }
+
+              if (candidates.length === 0) {
+                return (
+                  <div class="p-6 text-center text-xs text-secondary-500">
+                    Tidak ada mahasiswa yang sesuai kriteria pencarian.
+                  </div>
+                );
+              }
+
+              return candidates.map((m) => {
+                const checked = assignedMhsSet().has(m.id);
+                return (
+                  <label
+                    class={`flex items-center justify-between p-3 cursor-pointer text-xs transition-colors hover:bg-secondary-50 dark:hover:bg-secondary-800/60 ${
+                      checked ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''
+                    }`}
+                  >
+                    <div class="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAssignMhs(m.id)}
+                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:bg-secondary-900 dark:border-secondary-700"
+                      />
+                      <div>
+                        <div class="font-semibold text-secondary-800 dark:text-secondary-100">{m.nama}</div>
+                        <div class="text-[11px] text-secondary-500 dark:text-secondary-400">
+                          NIM: {m.nim} {m.prodiNama ? `• ${m.prodiNama}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <Show when={checked}>
+                      <Badge variant="success">Terdaftar</Badge>
+                    </Show>
+                  </label>
+                );
+              });
+            })()}
+          </div>
+
+          <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-secondary-100 dark:border-secondary-800">
+            <Button type="button" onClick={() => setShowAssignMhsModal(false)} variant="secondary">
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSavingMembers()}>
+              {isSavingMembers() ? 'Menyimpan...' : `Simpan Anggota (${assignedMhsSet().size})`}
             </Button>
           </div>
         </form>
