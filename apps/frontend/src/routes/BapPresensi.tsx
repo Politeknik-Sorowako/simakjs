@@ -12,6 +12,7 @@ import { dosenController, Dosen as IDosen } from '../controllers/dosenController
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { krsController } from '../controllers/krsController';
 import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { nilaiPraktikController } from '../controllers/nilaiPraktikController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { BAP, CPMK, MonitoringRpsItem, PresensiItem, presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
@@ -41,6 +42,30 @@ export default function BapPresensi() {
   const [namaGroupRombel, setNamaGroupRombel] = createSignal('');
   const [keteranganRombel, setKeteranganRombel] = createSignal('');
   const [isSubmittingRombel, setIsSubmittingRombel] = createSignal(false);
+
+  // BAP Praktikum Form state
+  const [showCreateBapPrakModal, setShowCreateBapPrakModal] = createSignal(false);
+  const [sesiKePrak, setSesiKePrak] = createSignal(1);
+  const [tanggalPrak, setTanggalPrak] = createSignal(new Date().toISOString().split('T')[0]);
+  const [materiPrak, setMateriPrak] = createSignal('');
+  const [durasiPrak, setDurasiPrak] = createSignal(100);
+  const [catatanPrak, setCatatanPrak] = createSignal('');
+  const [isSubmittingBapPrak, setIsSubmittingBapPrak] = createSignal(false);
+
+  // Presensi Praktikum Form state
+  const [showPresensiPrakModal, setShowPresensiPrakModal] = createSignal(false);
+  const [selectedBapPrak, setSelectedBapPrak] = createSignal<BapPraktikum | null>(null);
+  const [presensiPrakSheet, setPresensiPrakSheet] = createSignal<
+    Record<number, { status: string; durasiMangkir: number; keterangan: string }>
+  >({});
+  const [isSavingPresensiPrak, setIsSavingPresensiPrak] = createSignal(false);
+
+  // Nilai Praktikum Form state
+  const [showNilaiPrakModal, setShowNilaiPrakModal] = createSignal(false);
+  const [nilaiPrakSheet, setNilaiPrakSheet] = createSignal<Record<number, { nilaiAngka: number; keterangan: string }>>(
+    {},
+  );
+  const [isSavingNilaiPrak, setIsSavingNilaiPrak] = createSignal(false);
 
   // Assign Rombel Members state
   const [showAssignMhsModal, setShowAssignMhsModal] = createSignal(false);
@@ -320,6 +345,144 @@ export default function BapPresensi() {
       toast.showToast(err instanceof Error ? err.message : 'Gagal menyimpan anggota rombel', 'error');
     } finally {
       setIsSavingMembers(false);
+    }
+  };
+
+  const handleCreateBapPrak = async (e: Event) => {
+    e.preventDefault();
+    const rombelId = selectedRombelId();
+    if (!rombelId) {
+      toast.showToast('Pilih Rombel Praktikum terlebih dahulu', 'error');
+      return;
+    }
+    if (!materiPrak().trim()) {
+      toast.showToast('Materi praktikum wajib diisi', 'error');
+      return;
+    }
+    setIsSubmittingBapPrak(true);
+    try {
+      await rombelPraktikumController.createBap({
+        rombelPraktikumId: rombelId,
+        sesiKe: sesiKePrak(),
+        tanggal: tanggalPrak(),
+        materi: materiPrak().trim(),
+        durasiMenit: durasiPrak(),
+        catatan: catatanPrak().trim() || null,
+      });
+      toast.showToast('BAP Praktikum berhasil dibuat', 'success');
+      setShowCreateBapPrakModal(false);
+      setMateriPrak('');
+      setCatatanPrak('');
+      refetchBapPraktikum();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal membuat BAP Praktikum', 'error');
+    } finally {
+      setIsSubmittingBapPrak(false);
+    }
+  };
+
+  const openPresensiPrakModal = async (bapPrak: BapPraktikum) => {
+    setSelectedBapPrak(bapPrak);
+    try {
+      const saved = await rombelPraktikumController.getPresensiByBap(bapPrak.id);
+      const r = currentRombel();
+      const mhsList = r?.mahasiswaList || [];
+      const sheet: Record<number, { status: string; durasiMangkir: number; keterangan: string }> = {};
+
+      for (const item of mhsList) {
+        const existing = saved.find((p) => p.mahasiswaId === item.mahasiswaId);
+        sheet[item.mahasiswaId] = {
+          status: existing?.status || 'hadir',
+          durasiMangkir: existing?.durasiMangkir || 0,
+          keterangan: existing?.keterangan || '',
+        };
+      }
+      setPresensiPrakSheet(sheet);
+      setShowPresensiPrakModal(true);
+    } catch (err: unknown) {
+      toast.showToast('Gagal memuat presensi praktikum', 'error');
+    }
+  };
+
+  const handleSavePresensiPrak = async (e: Event) => {
+    e.preventDefault();
+    const bapPrak = selectedBapPrak();
+    if (!bapPrak) return;
+
+    setIsSavingPresensiPrak(true);
+    try {
+      const sheet = presensiPrakSheet();
+      const presensiList = Object.entries(sheet).map(([mhsIdStr, val]) => ({
+        mahasiswaId: parseInt(mhsIdStr),
+        status: val.status as 'hadir' | 'izin' | 'sakit' | 'alpa' | 'telat',
+        durasiMangkir: val.durasiMangkir,
+        keterangan: val.keterangan,
+      }));
+
+      await rombelPraktikumController.savePresensiBulk({
+        bapPraktikumId: bapPrak.id,
+        presensiList,
+      });
+
+      toast.showToast('Presensi praktikum berhasil disimpan', 'success');
+      setShowPresensiPrakModal(false);
+      refetchBapPraktikum();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal menyimpan presensi praktikum', 'error');
+    } finally {
+      setIsSavingPresensiPrak(false);
+    }
+  };
+
+  const openNilaiPrakModal = async () => {
+    const rombelId = selectedRombelId();
+    if (!rombelId) return;
+
+    try {
+      const saved = await nilaiPraktikController.getByRombel(rombelId);
+      const r = currentRombel();
+      const mhsList = r?.mahasiswaList || [];
+      const sheet: Record<number, { nilaiAngka: number; keterangan: string }> = {};
+
+      for (const item of mhsList) {
+        const existing = saved.find((n) => n.mahasiswaId === item.mahasiswaId);
+        sheet[item.mahasiswaId] = {
+          nilaiAngka: existing ? Number(existing.nilaiAngka) : 0,
+          keterangan: existing?.keterangan || '',
+        };
+      }
+      setNilaiPrakSheet(sheet);
+      setShowNilaiPrakModal(true);
+    } catch (err: unknown) {
+      toast.showToast('Gagal memuat nilai praktikum', 'error');
+    }
+  };
+
+  const handleSaveNilaiPrak = async (e: Event) => {
+    e.preventDefault();
+    const rombelId = selectedRombelId();
+    if (!rombelId) return;
+
+    setIsSavingNilaiPrak(true);
+    try {
+      const sheet = nilaiPrakSheet();
+      const nilaiList = Object.entries(sheet).map(([mhsIdStr, val]) => ({
+        mahasiswaId: parseInt(mhsIdStr),
+        nilaiAngka: val.nilaiAngka,
+        keterangan: val.keterangan,
+      }));
+
+      await nilaiPraktikController.saveBulk({
+        rombelPraktikumId: rombelId,
+        nilaiList,
+      });
+
+      toast.showToast('Nilai praktikum berhasil disimpan', 'success');
+      setShowNilaiPrakModal(false);
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal menyimpan nilai praktikum', 'error');
+    } finally {
+      setIsSavingNilaiPrak(false);
     }
   };
 
@@ -801,10 +964,16 @@ export default function BapPresensi() {
                       teori tanggal yang sama; nilai dirata-ratakan per komponen.
                     </p>
                   </div>
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
                     <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
                       <Button onClick={openAssignModal} variant="secondary">
-                        Kelola Anggota Rombel ({currentRombel()?.mahasiswaList?.length || 0})
+                        Kelola Anggota ({currentRombel()?.mahasiswaList?.length || 0})
+                      </Button>
+                      <Button onClick={() => setShowCreateBapPrakModal(true)} variant="primary">
+                        + Sesi BAP Praktikum
+                      </Button>
+                      <Button onClick={openNilaiPrakModal} variant="secondary">
+                        Input Nilai Praktikum
                       </Button>
                     </Show>
                     <Button
@@ -846,14 +1015,23 @@ export default function BapPresensi() {
                               </Show>
                             </td>
                             <td class="py-3 px-4 text-right">
-                              <Button
-                                onClick={() => handleSyncPresensi(selectedRombelId()!, bap.id)}
-                                loading={syncLoadingPresensiId() === bap.id}
-                                variant="secondary"
-                                class="text-xs py-1.5 px-3"
-                              >
-                                Sync Presensi
-                              </Button>
+                              <div class="flex items-center justify-end gap-2">
+                                <Button
+                                  onClick={() => openPresensiPrakModal(bap)}
+                                  variant="secondary"
+                                  class="text-xs py-1.5 px-3"
+                                >
+                                  Isi Presensi
+                                </Button>
+                                <Button
+                                  onClick={() => handleSyncPresensi(selectedRombelId()!, bap.id)}
+                                  loading={syncLoadingPresensiId() === bap.id}
+                                  variant="primary"
+                                  class="text-xs py-1.5 px-3"
+                                >
+                                  Sync Presensi
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         )}
@@ -1439,6 +1617,196 @@ export default function BapPresensi() {
             </Button>
             <Button type="submit" variant="primary" disabled={isSavingMembers()}>
               {isSavingMembers() ? 'Menyimpan...' : `Simpan Anggota (${assignedMhsSet().size})`}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Tambah BAP Praktikum */}
+      <Modal
+        isOpen={showCreateBapPrakModal()}
+        onClose={() => setShowCreateBapPrakModal(false)}
+        title="Tambah Sesi BAP Praktikum Baru"
+      >
+        <form onSubmit={handleCreateBapPrak} class="flex flex-col gap-4">
+          <div class="grid grid-cols-2 gap-4">
+            <Input
+              type="number"
+              min={1}
+              label="Sesi Ke"
+              value={sesiKePrak()}
+              onChange={(e: Event) => setSesiKePrak(parseInt((e.currentTarget as HTMLInputElement).value) || 1)}
+              required
+            />
+            <Input
+              type="date"
+              label="Tanggal Sesi"
+              value={tanggalPrak()}
+              onChange={(e: Event) => setTanggalPrak((e.currentTarget as HTMLInputElement).value)}
+              required
+            />
+          </div>
+          <Input
+            type="text"
+            label="Materi Praktikum"
+            placeholder="Misal: Modul 1 - Pengenalan Alat & Lab"
+            value={materiPrak()}
+            onInput={(e) => setMateriPrak(e.currentTarget.value)}
+            required
+          />
+          <Input
+            type="number"
+            min={15}
+            max={480}
+            label="Durasi (Menit)"
+            value={durasiPrak()}
+            onChange={(e: Event) => setDurasiPrak(parseInt((e.currentTarget as HTMLInputElement).value) || 100)}
+            required
+          />
+          <div class="flex flex-col gap-1">
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+              Catatan Sesi (opsional)
+            </label>
+            <textarea
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              rows="3"
+              placeholder="Catatan hasil pelaksanaan praktikum..."
+              value={catatanPrak()}
+              onInput={(e) => setCatatanPrak(e.currentTarget.value)}
+            />
+          </div>
+          <div class="flex justify-end gap-2 mt-2">
+            <Button type="button" onClick={() => setShowCreateBapPrakModal(false)} variant="secondary">
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSubmittingBapPrak()}>
+              {isSubmittingBapPrak() ? 'Menyimpan...' : 'Simpan BAP Praktikum'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Isi Presensi Praktikum */}
+      <Modal
+        isOpen={showPresensiPrakModal()}
+        onClose={() => setShowPresensiPrakModal(false)}
+        title={`Isi Presensi Praktikum — Sesi ${selectedBapPrak()?.sesiKe || ''}`}
+      >
+        <form onSubmit={handleSavePresensiPrak} class="flex flex-col gap-4 max-h-[80vh]">
+          <p class="text-xs text-secondary-500 dark:text-secondary-400">
+            Isi kehadiran peserta praktikum pada tanggal {selectedBapPrak()?.tanggal}.
+          </p>
+
+          <div class="overflow-y-auto max-h-[400px] border border-secondary-200 dark:border-secondary-700 rounded-xl divide-y divide-secondary-100 dark:divide-secondary-800">
+            <For each={currentRombel()?.mahasiswaList || []}>
+              {(mhsItem) => {
+                const sheet = () =>
+                  presensiPrakSheet()[mhsItem.mahasiswaId] || { status: 'hadir', durasiMangkir: 0, keterangan: '' };
+                return (
+                  <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div class="font-bold text-secondary-800 dark:text-white">{mhsItem.mahasiswa?.nama}</div>
+                      <div class="text-[11px] text-secondary-500">NIM: {mhsItem.mahasiswa?.nim}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <select
+                        class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        value={sheet().status}
+                        onChange={(e) => {
+                          const val = e.currentTarget.value;
+                          setPresensiPrakSheet((prev) => ({
+                            ...prev,
+                            [mhsItem.mahasiswaId]: { ...prev[mhsItem.mahasiswaId], status: val },
+                          }));
+                        }}
+                      >
+                        <option value="hadir">Hadir</option>
+                        <option value="izin">Izin</option>
+                        <option value="sakit">Sakit</option>
+                        <option value="alpa">Alpa</option>
+                        <option value="telat">Telat</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              }}
+            </For>
+            <Show when={(currentRombel()?.mahasiswaList || []).length === 0}>
+              <div class="p-6 text-center text-xs text-secondary-500">
+                Belum ada anggota mahasiswa pada Rombel Praktikum ini. Gunakan tombol 'Kelola Anggota' untuk menambah
+                mahasiswa.
+              </div>
+            </Show>
+          </div>
+
+          <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-secondary-100 dark:border-secondary-800">
+            <Button type="button" onClick={() => setShowPresensiPrakModal(false)} variant="secondary">
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSavingPresensiPrak()}>
+              {isSavingPresensiPrak() ? 'Menyimpan...' : 'Simpan Presensi Praktikum'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal Input Nilai Praktikum */}
+      <Modal
+        isOpen={showNilaiPrakModal()}
+        onClose={() => setShowNilaiPrakModal(false)}
+        title={`Input Nilai Praktikum — ${currentRombel()?.namaGroup || ''}`}
+      >
+        <form onSubmit={handleSaveNilaiPrak} class="flex flex-col gap-4 max-h-[80vh]">
+          <p class="text-xs text-secondary-500 dark:text-secondary-400">
+            Input nilai angka praktikum (skala 0 - 100) untuk seluruh peserta rombel.
+          </p>
+
+          <div class="overflow-y-auto max-h-[400px] border border-secondary-200 dark:border-secondary-700 rounded-xl divide-y divide-secondary-100 dark:divide-secondary-800">
+            <For each={currentRombel()?.mahasiswaList || []}>
+              {(mhsItem) => {
+                const sheet = () => nilaiPrakSheet()[mhsItem.mahasiswaId] || { nilaiAngka: 0, keterangan: '' };
+                return (
+                  <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div class="font-bold text-secondary-800 dark:text-white">{mhsItem.mahasiswa?.nama}</div>
+                      <div class="text-[11px] text-secondary-500">NIM: {mhsItem.mahasiswa?.nim}</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <label class="text-[11px] text-secondary-500">Nilai (0-100):</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        class="w-24 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 text-right font-bold text-brand-600"
+                        value={sheet().nilaiAngka}
+                        onInput={(e) => {
+                          const val = parseFloat(e.currentTarget.value) || 0;
+                          setNilaiPrakSheet((prev) => ({
+                            ...prev,
+                            [mhsItem.mahasiswaId]: { ...prev[mhsItem.mahasiswaId], nilaiAngka: val },
+                          }));
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              }}
+            </For>
+            <Show when={(currentRombel()?.mahasiswaList || []).length === 0}>
+              <div class="p-6 text-center text-xs text-secondary-500">
+                Belum ada anggota mahasiswa pada Rombel Praktikum ini. Gunakan tombol 'Kelola Anggota' untuk menambah
+                mahasiswa.
+              </div>
+            </Show>
+          </div>
+
+          <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-secondary-100 dark:border-secondary-800">
+            <Button type="button" onClick={() => setShowNilaiPrakModal(false)} variant="secondary">
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={isSavingNilaiPrak()}>
+              {isSavingNilaiPrak() ? 'Menyimpan...' : 'Simpan Nilai Praktikum'}
             </Button>
           </div>
         </form>
