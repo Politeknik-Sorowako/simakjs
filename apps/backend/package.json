@@ -15,6 +15,7 @@
     "db:backup": "bun run src/scripts/backup-db.ts",
     "db:restore": "bun run src/scripts/restore-db.ts",
     "db:safe-migrate": "bun run src/scripts/safe-migrate.ts",
+    "db:sync-staging": "bun run src/scripts/sync-staging-from-prod.ts",
     "db:reset-baseline": "bun run src/scripts/reset-baseline.ts",
     "test": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun run src/scripts/pre-test.ts && DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun test",
     "test:coverage": "DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun run src/scripts/pre-test.ts && DATABASE_URL=${DATABASE_URL_TEST:-postgresql://simak_user:simak_password@localhost:5433/simak_vokasi_test} bun test --coverage"
