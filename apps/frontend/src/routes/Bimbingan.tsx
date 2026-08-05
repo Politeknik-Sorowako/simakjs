@@ -82,16 +82,6 @@ export default function Bimbingan() {
     },
   );
 
-  // Rekap BKD Modal Signals
-  const [showRekapBkdModal, setShowRekapBkdModal] = createSignal(false);
-  const [rekapBkdData, { refetch: refetchRekapBkd }] = createResource(
-    () => ({ open: showRekapBkdModal(), pId: selectedPeriode(), dProfile: dosenProfile() }),
-    async ({ open, pId, dProfile }) => {
-      if (!open) return { data: [] };
-      return await bimbinganController.getRekapBkd(dProfile?.id || undefined, pId || undefined);
-    },
-  );
-
   // Load student's own bimbingan (active or selected period)
   const [studentBimbingan, { refetch: refetchStudentBimb }] = createResource(
     () => ({ id: mhsProfile()?.id, period: selectedPeriode() }),
@@ -313,7 +303,6 @@ export default function Bimbingan() {
       setShowSesiModal(false);
       refetchSelectedBimb();
       refetchMonitoring();
-      refetchRekapBkd();
       refetchAkademik();
       alert('Sesi bimbingan berhasil disimpan.');
     } catch (err: unknown) {
@@ -327,7 +316,6 @@ export default function Bimbingan() {
       await bimbinganController.deleteSesi(sesiId);
       refetchSelectedBimb();
       refetchMonitoring();
-      refetchRekapBkd();
       refetchAkademik();
       alert('Sesi bimbingan berhasil dihapus.');
     } catch (err: unknown) {
@@ -351,7 +339,7 @@ export default function Bimbingan() {
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <Show when={user()?.role === 'dosen' || user()?.role === 'admin' || user()?.role === 'prodi'}>
               <button
-                onClick={() => setShowRekapBkdModal(true)}
+                onClick={() => window.open('/laporan/bkd', '_blank')}
                 class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-xs hover:bg-brand-700 transition-colors flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
               >
                 🖨️ Cetak Laporan BKD
@@ -936,189 +924,6 @@ export default function Bimbingan() {
                   </Show>
                 </div>
               </Show>
-            </div>
-          </div>
-        </Show>
-
-        {/* --- MODAL PRATINJAU / CETAK REKAP BKD --- */}
-        <Show when={showRekapBkdModal()}>
-          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-4 print:shadow-none print:p-0 print:max-w-full dark:bg-secondary-900">
-              {/* Modal header (hidden in print) */}
-              <div class="flex justify-between items-center border-b pb-3 print:hidden">
-                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">
-                  Pratinjau Laporan BKD Bimbingan Akademik
-                </h3>
-                <div class="flex gap-2">
-                  <button
-                    onClick={() => window.print()}
-                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
-                  >
-                    🖨️ Cetak / Unduh PDF
-                  </button>
-                  <button
-                    onClick={() => setShowRekapBkdModal(false)}
-                    class="px-3.5 py-2 border border-secondary-200 hover:bg-secondary-50 text-secondary-600 font-bold rounded-xl text-xs dark:border-secondary-700"
-                  >
-                    Tutup
-                  </button>
-                </div>
-              </div>
-
-              {/* Printable Area */}
-              <div class="flex flex-col gap-4 font-serif" id="print-area-bkd">
-                {/* Kop Surat */}
-                <div class="flex flex-col items-center justify-center border-b-2 border-double border-secondary-800 pb-4 text-center">
-                  <h2 class="text-xl font-bold tracking-wider text-secondary-900 dark:text-white">
-                    POLITEKNIK SOROWAKO
-                  </h2>
-                  <p class="text-[10px] text-secondary-500 italic mt-0.5">
-                    Program Diploma Terapan / Sarjana Terapan Teknik Informatika
-                  </p>
-                  <p class="text-[9px] text-secondary-400 mt-0.5">
-                    Website: simak.politeknik-sorowako.ac.id | Telp: +62 475 321 000
-                  </p>
-                </div>
-
-                {/* Surat Title */}
-                <div class="text-center my-3">
-                  <h3 class="text-sm font-extrabold text-secondary-900 tracking-wide uppercase underline dark:text-white">
-                    REKAPITULASI CATATAN BIMBINGAN AKADEMIK DOSEN WALI
-                  </h3>
-                  <p class="text-xs text-secondary-600 mt-1">
-                    Periode Akademik:{' '}
-                    <span class="font-bold">{selectedPeriode() || currentBimbinganData()?.periodeId}</span>
-                  </p>
-                </div>
-
-                {/* Meta data */}
-                <div class="grid grid-cols-2 text-xs text-secondary-800 gap-2 border bg-secondary-50/50 p-4 rounded-xl print:border-none print:bg-transparent print:p-0 dark:text-white dark:bg-secondary-800">
-                  <p>
-                    Nama Dosen PA: <span class="font-bold">{dosenProfile()?.nama || 'Dosen Wali'}</span>
-                  </p>
-                  <p>
-                    NIP Dosen: <span class="font-bold">{dosenProfile()?.nip || '-'}</span>
-                  </p>
-                  <p>
-                    Tanggal Cetak:{' '}
-                    <span class="font-bold">{new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</span>
-                  </p>
-                </div>
-
-                {/* BKD Table */}
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse border border-secondary-300 text-[11px] text-left dark:border-secondary-700">
-                    <thead>
-                      <tr class="bg-secondary-100 dark:bg-secondary-800 text-secondary-800 font-bold dark:text-white">
-                        <th class="border border-secondary-300 p-2.5 w-8 text-center dark:border-secondary-700">No</th>
-                        <th class="border border-secondary-300 p-2.5 w-44 dark:border-secondary-700">Nama Mahasiswa</th>
-                        <th class="border border-secondary-300 p-2.5 w-24 text-center dark:border-secondary-700">
-                          NIM
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">
-                          Total Sesi
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">Permasalahan</th>
-                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">
-                          Solusi / Saran Masukan
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 w-28 text-center dark:border-secondary-700">
-                          Tanggal Sesi
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">
-                          Lapor BKD
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <For
-                        each={rekapBkdData()?.data}
-                        fallback={
-                          <tr>
-                            <td
-                              colspan="8"
-                              class="border border-secondary-300 p-6 text-center text-secondary-400 italic dark:border-secondary-700"
-                            >
-                              Tidak ada riwayat bimbingan resmi tercatat untuk periode ini.
-                            </td>
-                          </tr>
-                        }
-                      >
-                        {(item, idx) => (
-                          <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
-                              {idx() + 1}
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 font-bold dark:border-secondary-700">
-                              {item.mahasiswa?.nama}
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
-                              {item.mahasiswa?.nim}
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 text-center font-bold dark:border-secondary-700">
-                              {item.sesi?.length || 0} Kali
-                            </td>
-                            <td class="border border-secondary-300 p-2 text-xs leading-relaxed dark:border-secondary-700">
-                              <For each={item.sesi}>
-                                {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 dark:border-secondary-800">
-                                    <strong>P-{s.pertemuanKe}:</strong> {s.permasalahan}
-                                  </div>
-                                )}
-                              </For>
-                              <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-secondary-400 italic">-</span>
-                              </Show>
-                            </td>
-                            <td class="border border-secondary-300 p-2 text-xs leading-relaxed dark:border-secondary-700">
-                              <For each={item.sesi}>
-                                {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 dark:border-secondary-800">
-                                    <strong>P-{s.pertemuanKe}:</strong> {s.solusi}
-                                  </div>
-                                )}
-                              </For>
-                              <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-secondary-400 italic">-</span>
-                              </Show>
-                            </td>
-                            <td class="border border-secondary-300 p-2 text-center text-xs dark:border-secondary-700">
-                              <For each={item.sesi}>
-                                {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 font-mono dark:border-secondary-800">
-                                    {new Date(s.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'short' })}
-                                  </div>
-                                )}
-                              </For>
-                              <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-secondary-400 italic">-</span>
-                              </Show>
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
-                              <span
-                                class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.sesi?.some((s) => s.statusBkd) ? 'bg-accent-50 text-accent-700 border border-accent-100' : 'bg-secondary-100 text-secondary-500'}`}
-                              >
-                                {item.sesi?.some((s) => s.statusBkd) ? 'YA' : 'TIDAK'}
-                              </span>
-                            </td>
-                          </tr>
-                        )}
-                      </For>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Tanda Tangan */}
-                <div class="flex justify-end mt-12 print:mt-20">
-                  <div class="text-center text-xs text-secondary-800 flex flex-col gap-16 dark:text-white">
-                    <p>Dosen Penasehat Akademik,</p>
-                    <div>
-                      <p class="font-extrabold underline">{dosenProfile()?.nama}</p>
-                      <p class="text-[10px] text-secondary-500">NIP. {dosenProfile()?.nip || '-'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </Show>
