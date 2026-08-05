@@ -45,11 +45,13 @@ export default function BapPresensi() {
 
   // BAP Praktikum Form state
   const [showCreateBapPrakModal, setShowCreateBapPrakModal] = createSignal(false);
+  const [editBapPrakId, setEditBapPrakId] = createSignal<number | null>(null);
   const [sesiKePrak, setSesiKePrak] = createSignal(1);
   const [tanggalPrak, setTanggalPrak] = createSignal(new Date().toISOString().split('T')[0]);
   const [materiPrak, setMateriPrak] = createSignal('');
   const [durasiPrak, setDurasiPrak] = createSignal(100);
   const [catatanPrak, setCatatanPrak] = createSignal('');
+  const [instrukturIdPrak, setInstrukturIdPrak] = createSignal<number | null>(null);
   const [isSubmittingBapPrak, setIsSubmittingBapPrak] = createSignal(false);
 
   // Presensi Praktikum Form state
@@ -115,6 +117,18 @@ export default function BapPresensi() {
       if (!email || user()?.role !== 'dosen') return null;
       const res = await dosenController.getAll(email, 1, 1);
       return res.data[0] || null;
+    },
+  );
+
+  // Dosen list for instruktur selection (BAP praktikum)
+  const [dosenList] = createResource(
+    () => (user()?.role === 'dosen' ? `dosen:${dosenProfile()?.id}` : 'all'),
+    async (key) => {
+      if (key === 'all') {
+        const res = await dosenController.getAll(undefined, 1, 500);
+        return res.data;
+      }
+      return [dosenProfile()].filter((d): d is IDosen => !!d);
     },
   );
 
@@ -348,6 +362,29 @@ export default function BapPresensi() {
     }
   };
 
+  const openCreateBapPrakModal = () => {
+    setEditBapPrakId(null);
+    const maxSesi = (bapPraktikumData() || []).reduce((max, b) => Math.max(max, b.sesiKe || 0), 0);
+    setSesiKePrak(maxSesi + 1);
+    setTanggalPrak(new Date().toISOString().split('T')[0]);
+    setMateriPrak('');
+    setCatatanPrak('');
+    setDurasiPrak(100);
+    setInstrukturIdPrak(currentRombel()?.instrukturId ?? dosenProfile()?.id ?? null);
+    setShowCreateBapPrakModal(true);
+  };
+
+  const openEditBapPrakModal = (bapPrak: BapPraktikum) => {
+    setEditBapPrakId(bapPrak.id);
+    setSesiKePrak(bapPrak.sesiKe);
+    setTanggalPrak(bapPrak.tanggal);
+    setMateriPrak(bapPrak.materi);
+    setCatatanPrak(bapPrak.catatan || '');
+    setDurasiPrak(bapPrak.durasiMenit);
+    setInstrukturIdPrak(bapPrak.instrukturId ?? currentRombel()?.instrukturId ?? null);
+    setShowCreateBapPrakModal(true);
+  };
+
   const handleCreateBapPrak = async (e: Event) => {
     e.preventDefault();
     const rombelId = selectedRombelId();
@@ -361,21 +398,32 @@ export default function BapPresensi() {
     }
     setIsSubmittingBapPrak(true);
     try {
-      await rombelPraktikumController.createBap({
-        rombelPraktikumId: rombelId,
+      const common = {
         sesiKe: sesiKePrak(),
         tanggal: tanggalPrak(),
         materi: materiPrak().trim(),
         durasiMenit: durasiPrak(),
         catatan: catatanPrak().trim() || null,
-      });
-      toast.showToast('BAP Praktikum berhasil dibuat', 'success');
+        instrukturId: instrukturIdPrak() ?? null,
+      };
+      const editId = editBapPrakId();
+      if (editId) {
+        await rombelPraktikumController.updateBap(editId, common);
+        toast.showToast('BAP Praktikum berhasil diperbarui', 'success');
+      } else {
+        await rombelPraktikumController.createBap({
+          rombelPraktikumId: rombelId,
+          ...common,
+        });
+        toast.showToast('BAP Praktikum berhasil dibuat', 'success');
+      }
       setShowCreateBapPrakModal(false);
       setMateriPrak('');
       setCatatanPrak('');
+      setInstrukturIdPrak(null);
       refetchBapPraktikum();
     } catch (err: unknown) {
-      toast.showToast(err instanceof Error ? err.message : 'Gagal membuat BAP Praktikum', 'error');
+      toast.showToast(err instanceof Error ? err.message : 'Gagal menyimpan BAP Praktikum', 'error');
     } finally {
       setIsSubmittingBapPrak(false);
     }
@@ -969,7 +1017,7 @@ export default function BapPresensi() {
                       <Button onClick={openAssignModal} variant="secondary">
                         Kelola Anggota ({currentRombel()?.mahasiswaList?.length || 0})
                       </Button>
-                      <Button onClick={() => setShowCreateBapPrakModal(true)} variant="primary">
+                      <Button onClick={openCreateBapPrakModal} variant="primary">
                         + Sesi BAP Praktikum
                       </Button>
                       <Button onClick={openNilaiPrakModal} variant="secondary">
@@ -993,6 +1041,7 @@ export default function BapPresensi() {
                         <th class="py-3 px-4">Sesi</th>
                         <th class="py-3 px-4">Tanggal</th>
                         <th class="py-3 px-4">Materi</th>
+                        <th class="py-3 px-4">Instruktur</th>
                         <th class="py-3 px-4">Durasi</th>
                         <th class="py-3 px-4">Status Sync</th>
                         <th class="py-3 px-4 text-right">Aksi</th>
@@ -1005,6 +1054,14 @@ export default function BapPresensi() {
                             <td class="py-3 px-4 font-bold text-brand-600">Sesi {bap.sesiKe}</td>
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">{bap.tanggal}</td>
                             <td class="py-3 px-4 text-secondary-800 dark:text-white">{bap.materi}</td>
+                            <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">
+                              <Show
+                                when={bap.instruktur?.nama}
+                                fallback={<span class="italic text-secondary-400">Instruktur rombel</span>}
+                              >
+                                {bap.instruktur?.nama}
+                              </Show>
+                            </td>
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">{bap.durasiMenit} mnt</td>
                             <td class="py-3 px-4">
                               <Show
@@ -1016,6 +1073,13 @@ export default function BapPresensi() {
                             </td>
                             <td class="py-3 px-4 text-right">
                               <div class="flex items-center justify-end gap-2">
+                                <Button
+                                  onClick={() => openEditBapPrakModal(bap)}
+                                  variant="secondary"
+                                  class="text-xs py-1.5 px-3"
+                                >
+                                  Edit
+                                </Button>
                                 <Button
                                   onClick={() => openPresensiPrakModal(bap)}
                                   variant="secondary"
@@ -1622,11 +1686,11 @@ export default function BapPresensi() {
         </form>
       </Modal>
 
-      {/* Modal Tambah BAP Praktikum */}
+      {/* Modal Tambah/Edit BAP Praktikum */}
       <Modal
         isOpen={showCreateBapPrakModal()}
         onClose={() => setShowCreateBapPrakModal(false)}
-        title="Tambah Sesi BAP Praktikum Baru"
+        title={editBapPrakId() ? `Edit Sesi BAP Praktikum — Sesi ${sesiKePrak()}` : 'Tambah Sesi BAP Praktikum Baru'}
       >
         <form onSubmit={handleCreateBapPrak} class="flex flex-col gap-4">
           <div class="grid grid-cols-2 gap-4">
@@ -1654,6 +1718,21 @@ export default function BapPresensi() {
             onInput={(e) => setMateriPrak(e.currentTarget.value)}
             required
           />
+          <div>
+            <SearchableSelect
+              label="Instruktur / Dosen Pengampu Sesi (opsional)"
+              placeholder="-- Pilih Instruktur --"
+              value={instrukturIdPrak()}
+              options={(dosenList() || []).map((d) => ({
+                label: d.nama,
+                value: d.id,
+              }))}
+              onChange={(val) => setInstrukturIdPrak(val ? Number(val) : null)}
+            />
+            <p class="text-xs text-secondary-500 dark:text-secondary-300 mt-1">
+              Jika kosong, instruktur rombel yang dipakai saat sinkronisasi.
+            </p>
+          </div>
           <Input
             type="number"
             min={15}
@@ -1680,7 +1759,11 @@ export default function BapPresensi() {
               Batal
             </Button>
             <Button type="submit" variant="primary" disabled={isSubmittingBapPrak()}>
-              {isSubmittingBapPrak() ? 'Menyimpan...' : 'Simpan BAP Praktikum'}
+              {isSubmittingBapPrak()
+                ? 'Menyimpan...'
+                : editBapPrakId()
+                  ? 'Perbarui BAP Praktikum'
+                  : 'Simpan BAP Praktikum'}
             </Button>
           </div>
         </form>
