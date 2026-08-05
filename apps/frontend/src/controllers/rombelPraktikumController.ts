@@ -131,4 +131,23 @@ export const rombelPraktikumController = {
   async getPresensiByBap(bapPraktikumId: number): Promise<PresensiPraktikumItem[]> {
     return fetchApi<PresensiPraktikumItem[]>(`/rombel-praktikum/bap/${bapPraktikumId}/presensi`);
   },
+
+  async syncPresensiToKelas(rombelId: number, bapPraktikumId: number): Promise<SyncResult> {
+    return fetchApi<SyncResult>(`/rombel-praktikum/${rombelId}/sync-presensi`, {
+      method: 'POST',
+      body: JSON.stringify({ bapPraktikumId }),
+    });
+  },
+
+  async syncNilaiToKelas(rombelId: number): Promise<SyncResult> {
+    return fetchApi<SyncResult>(`/rombel-praktikum/${rombelId}/sync-nilai`, {
+      method: 'POST',
+    });
+  },
 };
+
+export interface SyncResult {
+  success: boolean;
+  syncedCount: number;
+  bapTeoriId?: number;
+}

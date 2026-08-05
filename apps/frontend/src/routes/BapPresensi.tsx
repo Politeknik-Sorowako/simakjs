@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
@@ -63,6 +64,11 @@ export default function BapPresensi() {
 
   // Mode Tab: 'teori' | 'praktikum'
   const [activeTab, setActiveTab] = createSignal<'teori' | 'praktikum'>('teori');
+
+  // Praktikum (Rombel) state
+  const [selectedRombelId, setSelectedRombelId] = createSignal<number | null>(null);
+  const [syncLoadingPresensiId, setSyncLoadingPresensiId] = createSignal<number | null>(null);
+  const [syncLoadingNilai, setSyncLoadingNilai] = createSignal(false);
 
   // Dosen Profile lookup for scoping
   const [dosenProfile] = createResource(
@@ -168,6 +174,68 @@ export default function BapPresensi() {
       return [];
     }
   });
+
+  // Praktikum resources
+  const [rombelData, { refetch: refetchRombel }] = createResource(
+    () => (mainTab() === 'praktikum' ? selectedKelasId() : null),
+    async (kelasId) => {
+      if (!kelasId) return [];
+      try {
+        return await rombelPraktikumController.getByKelas(kelasId);
+      } catch (e: unknown) {
+        toast.showToast('Gagal memuat rombel praktikum', 'error');
+        return [];
+      }
+    },
+  );
+
+  const [bapPraktikumData, { refetch: refetchBapPraktikum }] = createResource(
+    () => (mainTab() === 'praktikum' ? selectedRombelId() : null),
+    async (rombelId) => {
+      if (!rombelId) return [];
+      try {
+        return await rombelPraktikumController.getBapByRombel(rombelId);
+      } catch (e: unknown) {
+        toast.showToast('Gagal memuat BAP praktikum', 'error');
+        return [];
+      }
+    },
+  );
+
+  const syncedTanggalSet = () => {
+    const teoriList = bapData() || [];
+    return new Set(
+      teoriList.map((b) => {
+        const d = new Date(b.tanggal);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }),
+    );
+  };
+
+  const handleSyncPresensi = async (rombelId: number, bapPraktikumId: number) => {
+    setSyncLoadingPresensiId(bapPraktikumId);
+    try {
+      const res = await rombelPraktikumController.syncPresensiToKelas(rombelId, bapPraktikumId);
+      toast.showToast(`Presensi tersinkron ke kelas induk (${res.syncedCount} mahasiswa)`, 'success');
+      refetchBap();
+    } catch (e: unknown) {
+      toast.showToast(e instanceof Error ? e.message : 'Gagal sinkronisasi presensi', 'error');
+    } finally {
+      setSyncLoadingPresensiId(null);
+    }
+  };
+
+  const handleSyncNilai = async (rombelId: number) => {
+    setSyncLoadingNilai(true);
+    try {
+      const res = await rombelPraktikumController.syncNilaiToKelas(rombelId);
+      toast.showToast(`Nilai praktikum tersinkron ke kelas induk (${res.syncedCount} komponen)`, 'success');
+    } catch (e: unknown) {
+      toast.showToast(e instanceof Error ? e.message : 'Gagal sinkronisasi nilai', 'error');
+    } finally {
+      setSyncLoadingNilai(false);
+    }
+  };
 
   // Initialize attendance sheet when students or savedPresensi loads
   createEffect(() => {
@@ -590,6 +658,115 @@ export default function BapPresensi() {
               </div>
             </div>
           </Show>
+        </Show>
+
+        <Show when={mainTab() === 'praktikum'}>
+          <div class="flex flex-col gap-6">
+            <div class="bg-white border border-secondary-100 p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+              <div>
+                <SearchableSelect
+                  label="Pilih Kelas Kuliah"
+                  placeholder="-- Cari & Pilih Kelas Kuliah --"
+                  value={selectedKelasId()}
+                  options={(activeKelasList() || []).map((kelas) => ({
+                    label: `${kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}${kelas.mataKuliah?.nama} (Kelas ${kelas.namaKelas})`,
+                    value: kelas.id,
+                  }))}
+                  onChange={(val) => {
+                    setSelectedKelasId(val ? Number(val) : null);
+                    setSelectedRombelId(null);
+                    setSelectedBapId(null);
+                  }}
+                />
+              </div>
+              <Show when={selectedKelasId()}>
+                <div>
+                  <SearchableSelect
+                    label="Pilih Rombel Praktikum"
+                    placeholder="-- Pilih Rombel --"
+                    value={selectedRombelId()}
+                    options={(rombelData() || []).map((r) => ({
+                      label: r.namaGroup,
+                      value: r.id,
+                    }))}
+                    onChange={(val) => {
+                      setSelectedRombelId(val ? Number(val) : null);
+                      setSelectedBapId(null);
+                    }}
+                  />
+                </div>
+              </Show>
+            </div>
+
+            <Show when={selectedRombelId()}>
+              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-6 rounded-2xl shadow-sm flex flex-col gap-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h3 class="font-bold text-secondary-800 dark:text-white">BAP & Sinkronisasi Rombel Praktikum</h3>
+                    <p class="text-xs text-secondary-500 dark:text-secondary-300">
+                      Sinkronisasi presensi & nilai praktikum ke kelas induk (teori). Presensi ditulis ulang pada BAP
+                      teori tanggal yang sama; nilai dirata-ratakan per komponen.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => handleSyncNilai(selectedRombelId()!)}
+                    loading={syncLoadingNilai()}
+                    variant="accent"
+                  >
+                    Sync Nilai ke Kelas Induk
+                  </Button>
+                </div>
+
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold">
+                        <th class="py-3 px-4">Sesi</th>
+                        <th class="py-3 px-4">Tanggal</th>
+                        <th class="py-3 px-4">Materi</th>
+                        <th class="py-3 px-4">Durasi</th>
+                        <th class="py-3 px-4">Status Sync</th>
+                        <th class="py-3 px-4 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <For each={bapPraktikumData() || []}>
+                        {(bap) => (
+                          <tr class="border-b border-secondary-50 dark:border-secondary-800/60 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+                            <td class="py-3 px-4 font-bold text-brand-600">Sesi {bap.sesiKe}</td>
+                            <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">{bap.tanggal}</td>
+                            <td class="py-3 px-4 text-secondary-800 dark:text-white">{bap.materi}</td>
+                            <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">{bap.durasiMenit} mnt</td>
+                            <td class="py-3 px-4">
+                              <Show
+                                when={syncedTanggalSet().has(bap.tanggal)}
+                                fallback={<Badge variant="warning">Belum sync</Badge>}
+                              >
+                                <Badge variant="success">Sudah sync</Badge>
+                              </Show>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                              <Button
+                                onClick={() => handleSyncPresensi(selectedRombelId()!, bap.id)}
+                                loading={syncLoadingPresensiId() === bap.id}
+                                variant="secondary"
+                                class="text-xs py-1.5 px-3"
+                              >
+                                Sync Presensi
+                              </Button>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                  <Show when={(bapPraktikumData() || []).length === 0 && bapPraktikumData() !== undefined}>
+                    <p class="text-center text-sm text-secondary-500 py-6">Belum ada BAP praktikum untuk rombel ini.</p>
+                  </Show>
+                </div>
+              </div>
+            </Show>
+          </div>
         </Show>
 
         <Show when={mainTab() === 'monitoring'}>
