@@ -409,22 +409,6 @@ export default function ApelKelola() {
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
-          <div class="flex items-center gap-2">
-            <button
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium text-sm shadow-sm"
-              onClick={openBukaSesiModalWithCheck}
-            >
-              ➕ Tambah Sesi Baru
-            </button>
-            <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
-              <button
-                class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium text-sm"
-                onClick={() => setShowCreateModal(true)}
-              >
-                + Buat Kelompok
-              </button>
-            </Show>
-          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -433,12 +417,12 @@ export default function ApelKelola() {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
               <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold">Pilih Kelompok</h2>
-                <Show when={selectedKelompok()}>
+                <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
                   <button
-                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                    onClick={() => setShowAnggotaModal(true)}
+                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                    onClick={() => setShowCreateModal(true)}
                   >
-                    ⚙ Kelola Anggota
+                    + Buat Kelompok
                   </button>
                 </Show>
               </div>
@@ -464,25 +448,17 @@ export default function ApelKelola() {
               </Show>
 
               <Show when={selectedKelompok()}>
-                <div class="flex items-center gap-2 pt-1">
-                  <button
-                    class="flex-1 text-xs bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 font-medium shadow-sm"
-                    onClick={() => setShowBukaSesiModal(true)}
-                  >
-                    ➕ Buka Sesi Baru
-                  </button>
-                  <button
-                    class="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-lg flex items-center justify-center gap-1 font-medium"
-                    onClick={() => setShowAnggotaModal(true)}
-                    title="Kelola Anggota Mahasiswa"
-                  >
-                    👥 Anggota
-                  </button>
-                </div>
+                <button
+                  class="w-full text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-lg flex items-center justify-center gap-1 font-medium"
+                  onClick={() => setShowAnggotaModal(true)}
+                  title="Kelola Anggota Mahasiswa"
+                >
+                  👥 Kelola Anggota
+                </button>
               </Show>
             </div>
 
-            <Show when={selectedKelompok() && sesiList() && sesiList()!.length > 0}>
+            <Show when={selectedKelompok()}>
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
                 <div class="flex justify-between items-center">
                   <h2 class="text-sm font-bold text-gray-800 dark:text-white">Pilih Riwayat Sesi</h2>
@@ -504,20 +480,33 @@ export default function ApelKelola() {
                   </div>
                 </div>
 
-                <SearchableSelect
-                  placeholder="-- Cari / Pilih Riwayat Sesi --"
-                  value={selectedSesi()}
-                  options={(sesiList() || []).map((sesi: SesiApel) => ({
-                    label: `${sesi.tanggal} (${sesi.shift}) ${sesi.jamMulai || ''} - [${
-                      sesi.isClosed ? 'Tertutup' : 'Aktif'
-                    }] (H:${sesi.hadirCount ?? 0} T:${sesi.terlambatCount ?? 0} ?:${sesi.unknownCount ?? 0})`,
-                    value: sesi.id,
-                  }))}
-                  onChange={(val) => {
-                    if (val) loadSesiDetail(Number(val));
-                    else setSelectedSesi(null);
-                  }}
-                />
+                <Show
+                  when={sesiList() && sesiList()!.length > 0}
+                  fallback={
+                    <div class="text-xs text-gray-500 italic py-1">
+                      Belum ada sesi. Klik{' '}
+                      <button onClick={openBukaSesiModalWithCheck} class="text-blue-600 underline font-semibold">
+                        + Tambah Sesi
+                      </button>{' '}
+                      untuk membuka sesi baru.
+                    </div>
+                  }
+                >
+                  <SearchableSelect
+                    placeholder="-- Cari / Pilih Riwayat Sesi --"
+                    value={selectedSesi()}
+                    options={(sesiList() || []).map((sesi: SesiApel) => ({
+                      label: `${sesi.tanggal} (${sesi.shift}) ${sesi.jamMulai || ''} - [${
+                        sesi.isClosed ? 'Tertutup' : 'Aktif'
+                      }] (H:${sesi.hadirCount ?? 0} T:${sesi.terlambatCount ?? 0} ?:${sesi.unknownCount ?? 0})`,
+                      value: sesi.id,
+                    }))}
+                    onChange={(val) => {
+                      if (val) loadSesiDetail(Number(val));
+                      else setSelectedSesi(null);
+                    }}
+                  />
+                </Show>
               </div>
             </Show>
           </div>
