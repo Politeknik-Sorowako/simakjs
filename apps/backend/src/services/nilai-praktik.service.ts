@@ -1,0 +1,70 @@
+import { asc, eq, sql } from 'drizzle-orm';
+import { komponenNilai, mahasiswa, nilaiPraktik, rombelPraktikum } from '../models/schema';
+import { db } from '../utils/db';
+
+export class NilaiPraktikService {
+  static async saveNilaiBulk(data: {
+    rombelPraktikumId: number;
+    nilaiList: Array<{
+      mahasiswaId: number;
+      komponenNilaiId?: number | null;
+      nilaiAngka: number;
+      keterangan?: string | null;
+    }>;
+    createdBy: number;
+  }) {
+    const [rombel] = await db
+      .select({ id: rombelPraktikum.id })
+      .from(rombelPraktikum)
+      .where(eq(rombelPraktikum.id, data.rombelPraktikumId));
+    if (!rombel) {
+      throw new Error('Rombel praktikum tidak ditemukan');
+    }
+
+    for (const item of data.nilaiList) {
+      if (item.nilaiAngka < 0 || item.nilaiAngka > 100) {
+        throw new Error(`Nilai mahasiswa ${item.mahasiswaId} harus berada di rentang 0-100`);
+      }
+    }
+
+    const itemsToInsert = data.nilaiList.map((item) => ({
+      rombelPraktikumId: data.rombelPraktikumId,
+      mahasiswaId: item.mahasiswaId,
+      komponenNilaiId: item.komponenNilaiId ?? null,
+      nilaiAngka: String(item.nilaiAngka),
+      keterangan: item.keterangan || null,
+      createdBy: data.createdBy,
+    }));
+
+    await db.transaction(async (tx) => {
+      await tx.delete(nilaiPraktik).where(eq(nilaiPraktik.rombelPraktikumId, data.rombelPraktikumId));
+      if (itemsToInsert.length > 0) {
+        await tx.insert(nilaiPraktik).values(itemsToInsert);
+      }
+    });
+
+    return { success: true, syncedCount: itemsToInsert.length };
+  }
+
+  static async getNilaiByRombel(rombelPraktikumId: number) {
+    const rows = await db
+      .select({
+        id: nilaiPraktik.id,
+        rombelPraktikumId: nilaiPraktik.rombelPraktikumId,
+        mahasiswaId: nilaiPraktik.mahasiswaId,
+        mahasiswaNim: mahasiswa.nim,
+        mahasiswaNama: mahasiswa.nama,
+        komponenNilaiId: nilaiPraktik.komponenNilaiId,
+        komponenNama: komponenNilai.nama,
+        nilaiAngka: sql<string>`CAST(${nilaiPraktik.nilaiAngka} AS TEXT)`,
+        keterangan: nilaiPraktik.keterangan,
+        createdAt: nilaiPraktik.createdAt,
+      })
+      .from(nilaiPraktik)
+      .innerJoin(mahasiswa, eq(nilaiPraktik.mahasiswaId, mahasiswa.id))
+      .leftJoin(komponenNilai, eq(nilaiPraktik.komponenNilaiId, komponenNilai.id))
+      .where(eq(nilaiPraktik.rombelPraktikumId, rombelPraktikumId))
+      .orderBy(asc(mahasiswa.nama));
+    return rows;
+  }
+}
