@@ -115,7 +115,7 @@ export const getMonitoringRpsSchema = {
     description: 'Mengambil statistik rekap kesesuaian materi BAP terhadap RPS per kelas kuliah.',
   },
   query: t.Object({
-    periodeId: t.Optional(t.Numeric()),
+    periodeId: t.Optional(t.Union([t.String({ minLength: 1, maxLength: 10 }), t.Numeric()])),
     prodiId: t.Optional(t.Numeric()),
   }),
 };
