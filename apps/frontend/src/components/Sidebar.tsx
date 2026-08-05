@@ -827,7 +827,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Evaluasi Yudisium
                   </A>
                 </Show>
-                <Show when={publicSettings()?.featureFeedbackEnabled}>
+                <Show when={publicSettings.loading ? true : (publicSettings()?.featureFeedbackEnabled ?? true)}>
                   <A
                     href="/evaluasi-sistem"
                     onClick={() => props.onClose()}
