@@ -38,10 +38,12 @@ import Cpmk from './routes/Cpmk';
 import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
+import DuplicateRiskKompensasi from './routes/DuplicateRiskKompensasi';
 import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
 import EvaluasiSistem from './routes/EvaluasiSistem';
 import ForceChangePassword from './routes/ForceChangePassword';
 import ForgotPassword from './routes/ForgotPassword';
+import InputKompensasiManual from './routes/InputKompensasiManual';
 import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
@@ -177,6 +179,22 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <LaporanKompensasi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/input-kompensasi-manual"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <InputKompensasiManual />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/duplicate-risk-kompensasi"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <DuplicateRiskKompensasi />
           </ProtectedRoute>
         }
       />
