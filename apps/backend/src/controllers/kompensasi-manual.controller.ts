@@ -27,8 +27,10 @@ export class KompensasiManualController {
       set.status = 201;
       return result;
     } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      console.error('[kompensasi-manual] create error:', msg);
       set.status = 400;
-      return { error: e instanceof Error ? e.message : 'Unknown error' };
+      return { error: msg };
     }
   }
 

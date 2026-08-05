@@ -1,5 +1,5 @@
 import { asc, eq, sql } from 'drizzle-orm';
-import { komponenNilai, mahasiswa, nilaiPraktik, rombelPraktikum } from '../models/schema';
+import { komponenNilai, mahasiswa, nilaiPraktik, rombelPraktikum, users } from '../models/schema';
 import { db } from '../utils/db';
 
 export class NilaiPraktikService {
@@ -27,13 +27,19 @@ export class NilaiPraktikService {
       }
     }
 
+    let creatorId: number | null = data.createdBy;
+    if (creatorId) {
+      const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, creatorId));
+      if (!u) creatorId = null;
+    }
+
     const itemsToInsert = data.nilaiList.map((item) => ({
       rombelPraktikumId: data.rombelPraktikumId,
       mahasiswaId: item.mahasiswaId,
       komponenNilaiId: item.komponenNilaiId ?? null,
       nilaiAngka: String(item.nilaiAngka),
       keterangan: item.keterangan || null,
-      createdBy: data.createdBy,
+      createdBy: creatorId,
     }));
 
     await db.transaction(async (tx) => {

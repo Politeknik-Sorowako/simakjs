@@ -1,5 +1,5 @@
 import { and, count, desc, eq, sql } from 'drizzle-orm';
-import { kompensasiManual, mahasiswa } from '../models/schema';
+import { kompensasiManual, mahasiswa, users } from '../models/schema';
 import { db } from '../utils/db';
 
 export const JENIS_KOMPEN = ['sakit', 'izin', 'alpa', 'terlambat', 'rusak'] as const;
@@ -74,6 +74,12 @@ export class KompensasiManualService {
 
     const isDuplicateRisk = await this.checkDuplicateRisk(data.mahasiswaId, data.tanggal);
 
+    let creatorId: number | null = data.createdBy;
+    if (creatorId) {
+      const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, creatorId));
+      if (!u) creatorId = null;
+    }
+
     const [record] = await db
       .insert(kompensasiManual)
       .values({
@@ -82,7 +88,7 @@ export class KompensasiManualService {
         jenisKompen: data.jenisKompen,
         durasiMenit,
         keterangan: data.keterangan || null,
-        createdBy: data.createdBy,
+        createdBy: creatorId,
       })
       .returning();
 
