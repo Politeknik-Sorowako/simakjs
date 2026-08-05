@@ -44,9 +44,14 @@ export default function Bimbingan() {
   const [statusBkdInput, setStatusBkdInput] = createSignal(true);
   const [kategoriInput, setKategoriInput] = createSignal<number | null>(null);
 
+  // Kategori Management Signals
+  const [showKategoriModal, setShowKategoriModal] = createSignal(false);
+  const [newKatNama, setNewKatNama] = createSignal('');
+  const [newKatDeskripsi, setNewKatDeskripsi] = createSignal('');
+
   // Fetch Program Studi & Kategori List
   const [prodisList] = createResource(() => prodiController.getAll(undefined, 1, 100));
-  const [kategoriList] = createResource(() => kategoriBimbinganController.getAll());
+  const [kategoriList, { refetch: refetchKategori }] = createResource(() => kategoriBimbinganController.getAll());
 
   // Load Akademik Summary Resource
   const [akademikSummary, { refetch: refetchAkademik }] = createResource(
@@ -320,6 +325,34 @@ export default function Bimbingan() {
       alert('Sesi bimbingan berhasil dihapus.');
     } catch (err: unknown) {
       alert((err as Error).message || 'Gagal menghapus sesi bimbingan.');
+    }
+  };
+
+  const handleAddKategori = async (e: Event) => {
+    e.preventDefault();
+    if (!newKatNama().trim()) return;
+    try {
+      await kategoriBimbinganController.create({
+        nama: newKatNama().trim(),
+        deskripsi: newKatDeskripsi().trim(),
+      });
+      setNewKatNama('');
+      setNewKatDeskripsi('');
+      refetchKategori();
+      alert('Kategori bimbingan baru berhasil ditambahkan!');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menambahkan kategori bimbingan.');
+    }
+  };
+
+  const handleDeleteKategori = async (katId: number) => {
+    if (!confirm('Apakah Anda yakin ingin menonaktifkan kategori bimbingan ini?')) return;
+    try {
+      await kategoriBimbinganController.delete(katId);
+      refetchKategori();
+      alert('Kategori bimbingan berhasil dinonaktifkan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus kategori bimbingan.');
     }
   };
 
@@ -850,9 +883,20 @@ export default function Bimbingan() {
                           </div>
 
                           <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-secondary-600 dark:text-secondary-300">
-                              Jenis / Kategori Bimbingan
-                            </label>
+                            <div class="flex items-center justify-between">
+                              <label class="text-xs font-bold text-secondary-600 dark:text-secondary-300">
+                                Jenis / Kategori Bimbingan
+                              </label>
+                              <Show when={user()?.role === 'admin' || user()?.role === 'prodi'}>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowKategoriModal(true)}
+                                  class="text-[10px] font-bold text-brand-600 hover:underline dark:text-brand-400"
+                                >
+                                  + Kelola Kategori
+                                </button>
+                              </Show>
+                            </div>
                             <select
                               value={kategoriInput() || ''}
                               onChange={(e) =>
@@ -924,6 +968,88 @@ export default function Bimbingan() {
                   </Show>
                 </div>
               </Show>
+            </div>
+          </div>
+        </Show>
+        {/* --- MODAL KELOLA KATEGORI BIMBINGAN --- */}
+        <Show when={showKategoriModal()}>
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-5 dark:bg-secondary-900">
+              <div class="flex items-center justify-between border-b pb-3 dark:border-secondary-800">
+                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">⚙️ Kelola Kategori Bimbingan</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowKategoriModal(false)}
+                  class="text-secondary-400 hover:text-secondary-600 font-bold text-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Form Tambah Kategori Baru */}
+              <form
+                onSubmit={handleAddKategori}
+                class="p-4 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-3 dark:bg-secondary-800 dark:border-secondary-700"
+              >
+                <h4 class="font-bold text-xs text-secondary-800 dark:text-white">+ Tambah Kategori Baru</h4>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[11px] font-semibold text-secondary-600 dark:text-secondary-300">
+                    Nama Kategori
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Skripsi, Tugas Akhir, PKL..."
+                    value={newKatNama()}
+                    onInput={(e) => setNewKatNama(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                    required
+                  />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[11px] font-semibold text-secondary-600 dark:text-secondary-300">
+                    Deskripsi (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Penjelasan singkat kategori..."
+                    value={newKatDeskripsi()}
+                    onInput={(e) => setNewKatDeskripsi(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  class="self-end px-3.5 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-xs hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
+                >
+                  Simpan Kategori
+                </button>
+              </form>
+
+              {/* Daftar Kategori Saat Ini */}
+              <div class="flex flex-col gap-2">
+                <h4 class="font-bold text-xs text-secondary-700 dark:text-white">Daftar Kategori Aktif</h4>
+                <div class="max-h-48 overflow-y-auto divide-y divide-secondary-100 border rounded-xl dark:border-secondary-800 dark:divide-secondary-800">
+                  <For each={kategoriList()?.data || []}>
+                    {(kat) => (
+                      <div class="p-3 flex items-center justify-between bg-white dark:bg-secondary-900">
+                        <div class="flex flex-col">
+                          <span class="font-bold text-xs text-secondary-800 dark:text-white">{kat.nama}</span>
+                          <Show when={kat.deskripsi}>
+                            <span class="text-[10px] text-secondary-400">{kat.deskripsi}</span>
+                          </Show>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteKategori(kat.id)}
+                          class="text-rose-500 hover:text-rose-700 text-xs font-bold px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          Nonaktifkan
+                        </button>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
             </div>
           </div>
         </Show>

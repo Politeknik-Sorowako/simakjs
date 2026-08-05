@@ -24,12 +24,24 @@ export class DbInitService {
       await db.execute(`
         CREATE TABLE IF NOT EXISTS "kategori_bimbingan" (
           "id" serial PRIMARY KEY NOT NULL,
-          "nama" varchar(100) NOT NULL,
+          "nama" varchar(100) NOT NULL UNIQUE,
           "deskripsi" text,
           "is_active" boolean DEFAULT true NOT NULL,
           "created_at" timestamp DEFAULT now() NOT NULL,
           "updated_at" timestamp DEFAULT now() NOT NULL
         );
+      `);
+
+      // Seed default categories if table is empty
+      await db.execute(`
+        INSERT INTO "kategori_bimbingan" ("nama", "deskripsi")
+        VALUES 
+          ('Bimbingan Akademik / Wali', 'Konsultasi KRS, KHS, IPK, dan perkembangan akademik umum'),
+          ('Asistensi / Tugas', 'Asistensi tugas kuliah dan praktikum'),
+          ('Tugas Akhir', 'Bimbingan penyusunan Tugas Akhir (TA)'),
+          ('Skripsi', 'Bimbingan penelitian dan penulisan skripsi'),
+          ('Praktik Kerja Lapangan (PKL)', 'Bimbingan magang dan laporan PKL')
+        ON CONFLICT ("nama") DO NOTHING;
       `);
 
       // 3. Ensure bimbingan & sesi_bimbingan tables have kategori_id column
