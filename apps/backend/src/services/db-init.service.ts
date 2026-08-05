@@ -2,6 +2,10 @@ import { db } from '../utils/db';
 
 export class DbInitService {
   static async ensureTablesExist(): Promise<void> {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[DbInitService] Skipping auto-init in production. Use migrations instead.');
+      return;
+    }
     try {
       // 1. Ensure system_settings table exists
       await db.execute(`
@@ -36,11 +40,9 @@ export class DbInitService {
       await db.execute(`
         INSERT INTO "kategori_bimbingan" ("nama", "deskripsi")
         VALUES 
-          ('Bimbingan Akademik / Wali', 'Konsultasi KRS, KHS, IPK, dan perkembangan akademik umum'),
-          ('Asistensi / Tugas', 'Asistensi tugas kuliah dan praktikum'),
-          ('Tugas Akhir', 'Bimbingan penyusunan Tugas Akhir (TA)'),
-          ('Skripsi', 'Bimbingan penelitian dan penulisan skripsi'),
-          ('Praktik Kerja Lapangan (PKL)', 'Bimbingan magang dan laporan PKL')
+          ('Bimbingan PA / Akademik', 'Pembimbingan akademik dan perwalian mahasiswa oleh Dosen Pembimbing Akademik'),
+          ('Tugas Akhir / Skripsi', 'Pembimbingan penulisan Tugas Akhir atau Skripsi'),
+          ('Asistensi & Praktikum', 'Pembimbingan asistensi perkuliahan atau laboratorium')
         ON CONFLICT ("nama") DO NOTHING;
       `);
 

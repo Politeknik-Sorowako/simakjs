@@ -392,4 +392,30 @@ export class BimbinganController {
       return { error: e instanceof Error ? e.message : 'Gagal mengosongkan chat thread.' };
     }
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMonitoringLengkap(ctx: AuthContext<any, any>): Promise<any> {
+    const { query, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (
+      !user ||
+      (user.role !== 'admin' && user.role !== 'prodi' && user.role !== 'dosen' && user.role !== 'super_admin')
+    ) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const filter = {
+        periodeId: query?.periodeId || undefined,
+        prodiId: query?.prodiId ? parseInt(query.prodiId) : undefined,
+        dosenPaId: query?.dosenPaId ? parseInt(query.dosenPaId) : undefined,
+      };
+      const data = await BimbinganService.getMonitoringBimbinganLengkap(filter);
+      return { data };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil data monitoring bimbingan.' };
+    }
+  }
 }

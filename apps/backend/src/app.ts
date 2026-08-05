@@ -46,19 +46,14 @@ import { prodiRoutes } from './routes/prodi.routes';
 import { profilLulusanRoutes } from './routes/profil-lulusan.routes';
 import { rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
 import { rpsRoutes } from './routes/rps.routes';
+import { settingsRoutes } from './routes/settings.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
-import { DbInitService } from './services/db-init.service';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
-
-// Ensure system & bimbingan tables exist on boot
-DbInitService.ensureTablesExist().catch((err) => {
-  console.warn('[app.ts] Failed to initialize DB tables:', err);
-});
 
 export const app = new Elysia();
 
@@ -296,6 +291,7 @@ app
   .use(presensiRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
+  .use(settingsRoutes)
   .use(pelanggaranRoutes)
   .use(khsRoutes)
   .use(yudisiumRoutes)

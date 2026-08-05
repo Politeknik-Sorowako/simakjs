@@ -56,6 +56,7 @@ import Mahasiswa from './routes/Mahasiswa';
 import MahasiswaKeluar from './routes/MahasiswaKeluar';
 import ManajemenCuti from './routes/ManajemenCuti';
 import MataKuliah from './routes/MataKuliah';
+import MonitoringBimbingan from './routes/MonitoringBimbingan';
 import { PddiktiSync } from './routes/PddiktiSync';
 import Pelanggaran from './routes/Pelanggaran';
 import Pengguna from './routes/Pengguna';
@@ -208,6 +209,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
             <Bimbingan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/monitoring-bimbingan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+            <MonitoringBimbingan />
           </ProtectedRoute>
         }
       />

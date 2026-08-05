@@ -17,6 +17,7 @@ import {
 export const bimbinganRoutes = new Elysia({ prefix: '/bimbingan' })
   .use(authMiddleware)
   .get('/monitoring', BimbinganController.getMonitoring, getBimbinganMonitoringSchema)
+  .get('/monitoring-lengkap', BimbinganController.getMonitoringLengkap)
   .get('/rekap-bkd', BimbinganController.getRekapBkd, getRekapBkdSchema)
   .get('/mahasiswa/:mhsId', BimbinganController.getByMhsId, getBimbinganSchema)
   .get('/mahasiswa/:mhsId/akademik-summary', BimbinganController.getAkademikSummary, getAkademikSummarySchema)
