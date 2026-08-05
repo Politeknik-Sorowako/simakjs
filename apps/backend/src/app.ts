@@ -30,6 +30,7 @@ import { feedbackRoutes } from './routes/feedback.routes';
 import { kategoriBimbinganRoutes } from './routes/kategori-bimbingan.routes';
 import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { khsRoutes } from './routes/khs.routes';
+import { kompensasiManualRoutes } from './routes/kompensasi-manual.routes';
 import { krsRoutes } from './routes/krs.routes';
 import { kurikulumRoutes } from './routes/kurikulum.routes';
 import { mahasiswaRoutes } from './routes/mahasiswa.routes';
@@ -289,6 +290,7 @@ app
   .use(capaianCplRoutes)
   .use(evaluasiKurikulumRoutes)
   .use(presensiRoutes)
+  .use(kompensasiManualRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
   .use(settingsRoutes)
