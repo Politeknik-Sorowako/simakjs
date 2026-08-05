@@ -1,5 +1,4 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
-import { KategoriBimbinganModal } from '../components/KategoriBimbinganModal';
 import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { BimbinganThread, bimbinganController, SesiBimbingan } from '../controllers/bimbinganController';
@@ -1060,8 +1059,6 @@ export default function Bimbingan() {
             </div>
           </div>
         </Show>
-
-        <KategoriBimbinganModal isOpen={showKategoriModal()} onClose={() => setShowKategoriModal(false)} />
       </div>
     </MainLayout>
   );

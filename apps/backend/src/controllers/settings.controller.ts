@@ -3,8 +3,9 @@ import type { AuthContext } from '../utils/types';
 
 export class SettingsController {
   // Public setting status (no auth needed)
-  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
-  static async getPublicSettings({ set }: { set: any }): Promise<any> {
+  static async getPublicSettings({ set }: { set: { status?: number | string } }): Promise<{
+    data: { featureFeedbackEnabled: boolean };
+  }> {
     try {
       const feedbackEnabled = await SettingsService.isFeedbackEnabled();
       return {
