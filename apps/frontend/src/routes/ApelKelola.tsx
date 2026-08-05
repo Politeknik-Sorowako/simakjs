@@ -28,6 +28,7 @@ export default function ApelKelola() {
   const [catatanSesi, setCatatanSesi] = createSignal('');
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
+  const [isBukaSesiExpanded, setIsBukaSesiExpanded] = createSignal(false);
 
   // Modal Buat Kelompok State
   const [showCreateModal, setShowCreateModal] = createSignal(false);
@@ -215,6 +216,7 @@ export default function ApelKelola() {
       toast.showToast(`Sesi dibuka dengan ${result.jumlahAnggota} mahasiswa`, 'success');
       refetchSesi();
       setSelectedSesi(result.id);
+      setIsBukaSesiExpanded(false);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal membuka sesi';
       toast.showToast(msg, 'error');
@@ -455,66 +457,84 @@ export default function ApelKelola() {
 
             <Show when={selectedKelompok()}>
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
-                <h2 class="text-lg font-semibold">Buka Sesi Baru</h2>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Tanggal</label>
-                  <input
-                    type="date"
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={tanggal()}
-                    onChange={(e) => setTanggal(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Shift</label>
-                  <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={shift()}
-                    onChange={(e) => setShift(e.target.value)}
-                  >
-                    <option value="pagi">Pagi</option>
-                    <option value="sore">Sore</option>
-                  </select>
-                </div>
-                <div>
-                  <SearchableSelect
-                    label="Dosen PJ Sesi (Opsional)"
-                    placeholder="-- Pilih Dosen PJ Sesi --"
-                    value={selectedDosenPJSesi()}
-                    options={(allDosenList() || []).map((d: Dosen) => ({
-                      label: `${d.nama} ${d.nip ? `(${d.nip})` : ''}`,
-                      value: d.id,
-                    }))}
-                    onChange={(val) => setSelectedDosenPJSesi(val ? Number(val) : null)}
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Jam Mulai</label>
-                  <input
-                    type="time"
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={jamMulai()}
-                    onChange={(e) => setJamMulai(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
-                  <textarea
-                    rows="2"
-                    maxlength="1000"
-                    placeholder="Keterangan / Catatan Sesi Apel..."
-                    class="w-full border rounded-lg px-3 py-2 text-xs dark:bg-gray-700 dark:border-gray-600"
-                    value={catatanSesi()}
-                    onInput={(e) => setCatatanSesi(e.currentTarget.value)}
-                  />
-                </div>
-                <button
-                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
-                  onClick={handleBukaSesi}
-                  disabled={isSubmitting()}
+                <div
+                  class="flex justify-between items-center cursor-pointer select-none"
+                  onClick={() => setIsBukaSesiExpanded((prev) => !prev)}
                 >
-                  {isSubmitting() ? 'Memproses...' : 'Buka Sesi'}
-                </button>
+                  <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <span>➕ Buka Sesi Baru</span>
+                  </h2>
+                  <button
+                    type="button"
+                    class="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-2.5 py-1 rounded-md font-semibold text-gray-700 dark:text-gray-300 transition-colors"
+                  >
+                    {isBukaSesiExpanded() ? '▲ Sembunyikan' : '▼ Tampilkan Form'}
+                  </button>
+                </div>
+
+                <Show when={isBukaSesiExpanded()}>
+                  <div class="space-y-3 pt-2 border-t dark:border-gray-700">
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Tanggal</label>
+                      <input
+                        type="date"
+                        class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                        value={tanggal()}
+                        onChange={(e) => setTanggal(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Shift</label>
+                      <select
+                        class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                        value={shift()}
+                        onChange={(e) => setShift(e.target.value)}
+                      >
+                        <option value="pagi">Pagi</option>
+                        <option value="sore">Sore</option>
+                      </select>
+                    </div>
+                    <div>
+                      <SearchableSelect
+                        label="Dosen PJ Sesi (Opsional)"
+                        placeholder="-- Pilih Dosen PJ Sesi --"
+                        value={selectedDosenPJSesi()}
+                        options={(allDosenList() || []).map((d: Dosen) => ({
+                          label: `${d.nama} ${d.nip ? `(${d.nip})` : ''}`,
+                          value: d.id,
+                        }))}
+                        onChange={(val) => setSelectedDosenPJSesi(val ? Number(val) : null)}
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Jam Mulai</label>
+                      <input
+                        type="time"
+                        class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+                        value={jamMulai()}
+                        onChange={(e) => setJamMulai(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
+                      <textarea
+                        rows="2"
+                        maxlength="1000"
+                        placeholder="Keterangan / Catatan Sesi Apel..."
+                        class="w-full border rounded-lg px-3 py-2 text-xs dark:bg-gray-700 dark:border-gray-600"
+                        value={catatanSesi()}
+                        onInput={(e) => setCatatanSesi(e.currentTarget.value)}
+                      />
+                    </div>
+                    <button
+                      class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                      onClick={handleBukaSesi}
+                      disabled={isSubmitting()}
+                    >
+                      {isSubmitting() ? 'Memproses...' : 'Buka Sesi'}
+                    </button>
+                  </div>
+                </Show>
               </div>
             </Show>
 
@@ -715,9 +735,14 @@ export default function ApelKelola() {
                                     class="w-16 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                     value={item.menitTerlambat ?? 0}
                                     disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                    onInput={(e) =>
-                                      handleMenitChange(item.mahasiswaId, parseInt(e.currentTarget.value) || 0)
-                                    }
+                                    onInput={(e) => {
+                                      const val = parseInt(e.currentTarget.value) || 0;
+                                      item.menitTerlambat = val;
+                                    }}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.currentTarget.value) || 0;
+                                      handleMenitChange(item.mahasiswaId, val);
+                                    }}
                                   />
                                   <span class="text-xs text-gray-500">mnt</span>
                                 </div>
