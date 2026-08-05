@@ -106,9 +106,25 @@ async function main() {
       throw new Error(`Failed to restore dump into Staging DB. Code: ${restoreResult.status}. Stderr: ${stderr}`);
     }
 
-    auditLog('Restore completed. Running data sanitization script...');
+    auditLog('Restore completed. Running auto-migrations (safe-migrate)...');
 
-    // 3. Run Data Sanitization SQL
+    // 3. Apply Staging Migrations (Catch up DB schema if Prod lags behind Staging)
+    const migrateResult = spawnSync('bun', ['run', 'src/scripts/safe-migrate.ts'], {
+      env: process.env,
+      stdio: ['inherit', 'pipe', 'pipe'],
+      timeout: 120000,
+    });
+
+    if (migrateResult.error || migrateResult.status !== 0) {
+      const stderr = migrateResult.stderr ? migrateResult.stderr.toString() : '';
+      auditLog(`Warning: Auto-migration after restore encountered issue: ${stderr}`);
+    } else {
+      auditLog('Auto-migration (safe-migrate) executed successfully.');
+    }
+
+    auditLog('Running data sanitization script...');
+
+    // 4. Run Data Sanitization SQL
     if (existsSync(sanitizeSqlPath)) {
       const sanitizeResult = spawnSync(
         'psql',
