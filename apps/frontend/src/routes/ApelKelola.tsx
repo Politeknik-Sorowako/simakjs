@@ -70,6 +70,19 @@ export default function ApelKelola() {
     setEditingCatatanMhs(null);
   };
 
+  const openBukaSesiModalWithCheck = () => {
+    if (!selectedKelompok()) {
+      if ((kelompokList() || []).length > 0) {
+        setSelectedKelompok(kelompokList()![0].id);
+        setShowBukaSesiModal(true);
+      } else {
+        toast.showToast('Pilih atau buat kelompok apel terlebih dahulu', 'error');
+      }
+      return;
+    }
+    setShowBukaSesiModal(true);
+  };
+
   // Resource Data Kelompok (Memuat seluruh kelompok apel kampus)
   const [kelompokList, { refetch: refetchKelompok }] = createResource(async () => {
     const user = auth.user();
@@ -396,17 +409,22 @@ export default function ApelKelola() {
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
-          <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
+          <div class="flex items-center gap-2">
             <button
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
-              onClick={() => setShowCreateModal(true)}
+              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium text-sm shadow-sm"
+              onClick={openBukaSesiModalWithCheck}
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              + Buat Kelompok Baru
+              ➕ Tambah Sesi Baru
             </button>
-          </Show>
+            <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
+              <button
+                class="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 font-medium text-sm"
+                onClick={() => setShowCreateModal(true)}
+              >
+                + Buat Kelompok
+              </button>
+            </Show>
+          </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -468,14 +486,22 @@ export default function ApelKelola() {
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
                 <div class="flex justify-between items-center">
                   <h2 class="text-sm font-bold text-gray-800 dark:text-white">Pilih Riwayat Sesi</h2>
-                  <Show when={selectedSesi() && auth.user()?.role === 'admin'}>
+                  <div class="flex items-center gap-2">
                     <button
-                      class="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold"
-                      onClick={() => handleDeleteSesi(selectedSesi()!)}
+                      class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                      onClick={openBukaSesiModalWithCheck}
                     >
-                      🗑 Hapus Sesi
+                      + Tambah Sesi
                     </button>
-                  </Show>
+                    <Show when={selectedSesi() && auth.user()?.role === 'admin'}>
+                      <button
+                        class="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold"
+                        onClick={() => handleDeleteSesi(selectedSesi()!)}
+                      >
+                        🗑 Hapus Sesi
+                      </button>
+                    </Show>
+                  </div>
                 </div>
 
                 <SearchableSelect
