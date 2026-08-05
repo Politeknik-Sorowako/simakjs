@@ -255,7 +255,10 @@ export class BimbinganService {
       try {
         listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
       } catch (e: unknown) {
-        console.warn('[BimbinganService] Error querying bimbingan for active periode:', e);
+        console.error('[BimbinganService] Error querying bimbingan for active periode:', {
+          periodeId: activePeriode.id,
+          error: e instanceof Error ? e.message : e,
+        });
       }
 
       const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
@@ -277,7 +280,10 @@ export class BimbinganService {
             .from(sesiBimbingan)
             .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds));
         } catch (e: unknown) {
-          console.warn('[BimbinganService] Error querying sesiBimbingan:', e);
+          console.error('[BimbinganService] Error querying sesiBimbingan:', {
+            bimbinganCount: bimbinganIds.length,
+            error: e instanceof Error ? e.message : e,
+          });
         }
       }
 
@@ -304,7 +310,10 @@ export class BimbinganService {
         };
       });
     } catch (err: unknown) {
-      console.warn('[BimbinganService] Error in getMonitoringBimbingan:', err);
+      console.error('[BimbinganService] Error in getMonitoringBimbingan:', {
+        dosenId,
+        error: err instanceof Error ? err.message : err,
+      });
       return [];
     }
   }

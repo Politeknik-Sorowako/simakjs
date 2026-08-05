@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS "kategori_bimbingan" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"nama" varchar(100) NOT NULL,
+	CONSTRAINT "kategori_bimbingan_nama_unique" UNIQUE ("nama"),
 	"deskripsi" text,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,

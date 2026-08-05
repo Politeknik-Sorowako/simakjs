@@ -656,7 +656,7 @@ export const presensiApelRelations = relations(presensiApel, ({ one }) => ({
 
 export const kategoriBimbingan = pgTable('kategori_bimbingan', {
   id: serial('id').primaryKey(),
-  nama: varchar('nama', { length: 100 }).notNull(),
+  nama: varchar('nama', { length: 100 }).notNull().unique(),
   deskripsi: text('deskripsi'),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),

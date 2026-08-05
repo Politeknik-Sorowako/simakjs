@@ -52,14 +52,8 @@ import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
-import { DbInitService } from './services/db-init.service';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
-
-// Ensure system & bimbingan tables exist on boot
-DbInitService.ensureTablesExist().catch((err) => {
-  console.warn('[app.ts] Failed to initialize DB tables:', err);
-});
 
 export const app = new Elysia();
 

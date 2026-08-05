@@ -3,7 +3,7 @@ import { AuthContext } from '../utils/types';
 
 export class KategoriBimbinganController {
   private static isAuthorized(role?: string): boolean {
-    return ['admin', 'super_admin', 'prodi', 'dosen'].includes(role || '');
+    return ['admin', 'super_admin', 'prodi'].includes(role || '');
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -14,7 +14,7 @@ export class KategoriBimbinganController {
       return { success: true, data };
     } catch (err: unknown) {
       set.status = 500;
-      return { error: (err as Error).message || 'Gagal mengambil data kategori bimbingan' };
+      return { error: err instanceof Error ? err.message : 'Gagal mengambil data kategori bimbingan' };
     }
   }
 
@@ -31,7 +31,7 @@ export class KategoriBimbinganController {
       return { success: true, data: newCategory };
     } catch (err: unknown) {
       set.status = 500;
-      return { error: (err as Error).message || 'Gagal membuat kategori bimbingan' };
+      return { error: err instanceof Error ? err.message : 'Gagal membuat kategori bimbingan' };
     }
   }
 
@@ -51,7 +51,7 @@ export class KategoriBimbinganController {
       return { success: true, data: updated };
     } catch (err: unknown) {
       set.status = 500;
-      return { error: (err as Error).message || 'Gagal memperbarui kategori bimbingan' };
+      return { error: err instanceof Error ? err.message : 'Gagal memperbarui kategori bimbingan' };
     }
   }
 
@@ -65,10 +65,10 @@ export class KategoriBimbinganController {
         return { error: 'Akses ditolak. Anda tidak memiliki izin mengelola kategori bimbingan' };
       }
       await KategoriBimbinganService.delete(Number(params.id));
-      return { success: true, message: 'Kategori bimbingan berhasil dihapus' };
+      return { success: true, message: 'Kategori bimbingan berhasil dinonaktifkan' };
     } catch (err: unknown) {
       set.status = 500;
-      return { error: (err as Error).message || 'Gagal menghapus kategori bimbingan' };
+      return { error: err instanceof Error ? err.message : 'Gagal menghapus kategori bimbingan' };
     }
   }
 }
