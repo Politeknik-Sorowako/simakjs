@@ -1,9 +1,11 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
-import { BimbinganThread, bimbinganController } from '../controllers/bimbinganController';
+import { BimbinganThread, bimbinganController, SesiBimbingan } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
+import { kategoriBimbinganController } from '../controllers/kategoriBimbinganController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
+import { prodiController } from '../controllers/prodiController';
 
 export default function Bimbingan() {
   const auth = useAuth();
@@ -12,6 +14,11 @@ export default function Bimbingan() {
   // Selected student for Dosen/Admin view
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
   const [selectedMhsNama, setSelectedMhsNama] = createSignal<string>('');
+
+  // Search & Filter for Dosen/Admin monitoring list
+  const [searchFilter, setSearchFilter] = createSignal('');
+  const [angkatanFilter, setAngkatanFilter] = createSignal('');
+  const [prodiFilter, setProdiFilter] = createSignal<number | null>(null);
 
   // Selected Academic Period (for History)
   const [selectedPeriode, setSelectedPeriode] = createSignal<string>('');
@@ -35,6 +42,16 @@ export default function Bimbingan() {
   const [permasalahanInput, setPermasalahanInput] = createSignal('');
   const [solusiInput, setSolusiInput] = createSignal('');
   const [statusBkdInput, setStatusBkdInput] = createSignal(true);
+  const [kategoriInput, setKategoriInput] = createSignal<number | null>(null);
+
+  // Kategori Management Signals
+  const [showKategoriModal, setShowKategoriModal] = createSignal(false);
+  const [newKatNama, setNewKatNama] = createSignal('');
+  const [newKatDeskripsi, setNewKatDeskripsi] = createSignal('');
+
+  // Fetch Program Studi & Kategori List
+  const [prodisList] = createResource(() => prodiController.getAll(undefined, 1, 100));
+  const [kategoriList, { refetch: refetchKategori }] = createResource(() => kategoriBimbinganController.getAll());
 
   // Load Akademik Summary Resource
   const [akademikSummary, { refetch: refetchAkademik }] = createResource(
@@ -70,16 +87,6 @@ export default function Bimbingan() {
     },
   );
 
-  // Rekap BKD Modal Signals
-  const [showRekapBkdModal, setShowRekapBkdModal] = createSignal(false);
-  const [rekapBkdData, { refetch: refetchRekapBkd }] = createResource(
-    () => ({ open: showRekapBkdModal(), pId: selectedPeriode(), dProfile: dosenProfile() }),
-    async ({ open, pId, dProfile }) => {
-      if (!open) return { data: [] };
-      return await bimbinganController.getRekapBkd(dProfile?.id || undefined, pId || undefined);
-    },
-  );
-
   // Load student's own bimbingan (active or selected period)
   const [studentBimbingan, { refetch: refetchStudentBimb }] = createResource(
     () => ({ id: mhsProfile()?.id, period: selectedPeriode() }),
@@ -100,13 +107,23 @@ export default function Bimbingan() {
     },
   );
 
-  // Filtered monitoring list for Dosen (only their wargi/wali)
+  // Filtered monitoring list for Dosen/Admin with search, angkatan, and prodi filter
   const filteredMonitoring = () => {
-    const list = monitoringList() || [];
+    let list = monitoringList() || [];
     if (user()?.role === 'dosen') {
       const dId = dosenProfile()?.id;
       if (!dId) return [];
-      return list.filter((item) => item.dosenPaId === dId);
+      list = list.filter((item) => item.dosenPaId === dId);
+    }
+    if (searchFilter().trim()) {
+      const q = searchFilter().toLowerCase();
+      list = list.filter((item) => item.nama.toLowerCase().includes(q) || item.nim.toLowerCase().includes(q));
+    }
+    if (angkatanFilter()) {
+      list = list.filter((item) => item.angkatan === angkatanFilter());
+    }
+    if (prodiFilter()) {
+      list = list.filter((item) => item.prodiId === prodiFilter());
     }
     return list;
   };
@@ -244,6 +261,7 @@ export default function Bimbingan() {
     setPermasalahanInput('');
     setSolusiInput('');
     setStatusBkdInput(true);
+    setKategoriInput(null);
     setShowSesiModal(true);
   };
 
@@ -254,6 +272,7 @@ export default function Bimbingan() {
     permasalahan: string;
     solusi: string;
     statusBkd: boolean;
+    kategoriId?: number | null;
   }) => {
     setEditingSesiId(sesi.id);
     setPertemuanKeInput(sesi.pertemuanKe);
@@ -261,6 +280,7 @@ export default function Bimbingan() {
     setPermasalahanInput(sesi.permasalahan);
     setSolusiInput(sesi.solusi);
     setStatusBkdInput(sesi.statusBkd);
+    setKategoriInput(sesi.kategoriId || null);
     setShowSesiModal(true);
   };
 
@@ -276,6 +296,7 @@ export default function Bimbingan() {
         permasalahan: permasalahanInput(),
         solusi: solusiInput(),
         statusBkd: statusBkdInput(),
+        kategoriId: kategoriInput() || null,
       };
 
       if (editingSesiId()) {
@@ -287,7 +308,6 @@ export default function Bimbingan() {
       setShowSesiModal(false);
       refetchSelectedBimb();
       refetchMonitoring();
-      refetchRekapBkd();
       refetchAkademik();
       alert('Sesi bimbingan berhasil disimpan.');
     } catch (err: unknown) {
@@ -301,11 +321,38 @@ export default function Bimbingan() {
       await bimbinganController.deleteSesi(sesiId);
       refetchSelectedBimb();
       refetchMonitoring();
-      refetchRekapBkd();
       refetchAkademik();
       alert('Sesi bimbingan berhasil dihapus.');
     } catch (err: unknown) {
       alert((err as Error).message || 'Gagal menghapus sesi bimbingan.');
+    }
+  };
+
+  const handleAddKategori = async (e: Event) => {
+    e.preventDefault();
+    if (!newKatNama().trim()) return;
+    try {
+      await kategoriBimbinganController.create({
+        nama: newKatNama().trim(),
+        deskripsi: newKatDeskripsi().trim(),
+      });
+      setNewKatNama('');
+      setNewKatDeskripsi('');
+      refetchKategori();
+      alert('Kategori bimbingan baru berhasil ditambahkan!');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menambahkan kategori bimbingan.');
+    }
+  };
+
+  const handleDeleteKategori = async (katId: number) => {
+    if (!confirm('Apakah Anda yakin ingin menonaktifkan kategori bimbingan ini?')) return;
+    try {
+      await kategoriBimbinganController.delete(katId);
+      refetchKategori();
+      alert('Kategori bimbingan berhasil dinonaktifkan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menghapus kategori bimbingan.');
     }
   };
 
@@ -323,9 +370,15 @@ export default function Bimbingan() {
 
           {/* Status Kelayakan (Mahasiswa) & Dropdown Periode */}
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <Show when={user()?.role === 'dosen' || user()?.role === 'admin' || user()?.role === 'prodi'}>
+            <Show when={['admin', 'super_admin', 'prodi', 'dosen'].includes(user()?.role || '')}>
               <button
-                onClick={() => setShowRekapBkdModal(true)}
+                onClick={() => setShowKategoriModal(true)}
+                class="px-3 py-1.5 border border-secondary-200 text-secondary-700 font-bold rounded-lg text-xs hover:bg-secondary-50 transition-colors flex items-center gap-1.5 dark:border-secondary-700 dark:text-white dark:hover:bg-secondary-800"
+              >
+                ⚙️ Kelola Kategori
+              </button>
+              <button
+                onClick={() => window.open('/laporan/bkd', '_blank')}
                 class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-xs hover:bg-brand-700 transition-colors flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
               >
                 🖨️ Cetak Laporan BKD
@@ -520,10 +573,45 @@ export default function Bimbingan() {
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* List Mahasiswa */}
             <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm overflow-hidden h-[600px] flex flex-col dark:bg-secondary-900 dark:border-secondary-800">
-              <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 dark:bg-secondary-800">
-                <h3 class="font-bold text-secondary-800 dark:text-white">
-                  {user()?.role === 'dosen' ? 'Mahasiswa Bimbingan Anda' : 'Seluruh Progres Bimbingan'}
-                </h3>
+              <div class="p-3 border-b border-secondary-50 bg-secondary-50/50 flex flex-col gap-2 dark:bg-secondary-800 dark:border-secondary-700">
+                <div class="flex items-center justify-between">
+                  <h3 class="font-bold text-secondary-800 text-sm dark:text-white">
+                    {user()?.role === 'dosen' ? 'Mahasiswa Bimbingan' : 'Seluruh Bimbingan'}
+                  </h3>
+                  <span class="text-[10px] font-bold text-secondary-400">{filteredMonitoring().length} Mahasiswa</span>
+                </div>
+                {/* Search & Filters */}
+                <input
+                  type="text"
+                  placeholder="Cari Nama / NIM..."
+                  value={searchFilter()}
+                  onInput={(e) => setSearchFilter(e.currentTarget.value)}
+                  class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                />
+                <div class="grid grid-cols-2 gap-1.5">
+                  <select
+                    value={angkatanFilter()}
+                    onChange={(e) => setAngkatanFilter(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-brand-500 text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                  >
+                    <option value="">Semua Angkatan</option>
+                    <option value="2026">2026</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                    <option value="2023">2023</option>
+                    <option value="2022">2022</option>
+                    <option value="2021">2021</option>
+                    <option value="2020">2020</option>
+                  </select>
+                  <select
+                    value={prodiFilter() || ''}
+                    onChange={(e) => setProdiFilter(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
+                    class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-brand-500 text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                  >
+                    <option value="">Semua Prodi</option>
+                    <For each={prodisList()?.data || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                  </select>
+                </div>
               </div>
               <div class="flex-1 overflow-y-auto">
                 <Show
@@ -587,101 +675,113 @@ export default function Bimbingan() {
                 }
               >
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-[600px]">
-                  {/* Chat Panel */}
+                  {/* Panel Riwayat & Pengelolaan Sesi Bimbingan */}
                   <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
-                    <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800">
+                    <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800 dark:border-secondary-700">
                       <div class="flex flex-col">
-                        <h3 class="font-bold text-secondary-800 text-sm dark:text-white">Chat: {selectedMhsNama()}</h3>
-                        <button
-                          type="button"
-                          onClick={handleClearChat}
-                          class="text-[10px] text-red-500 hover:text-red-700 font-bold mt-0.5 text-left"
-                        >
-                          🗑️ Kosongkan Chat
-                        </button>
-                      </div>
-                      <div class="flex items-center gap-1.5">
-                        <span class="px-1.5 py-0.5 bg-brand-50 text-brand-700 text-[9px] font-bold rounded dark:bg-brand-900/30 dark:text-white">
-                          UTS: {utsCount()}/1
-                        </span>
-                        <span class="px-1.5 py-0.5 bg-accent-50 text-accent-700 text-[9px] font-bold rounded dark:bg-accent-900/30 dark:text-accent-400">
-                          UAS: {uasCount()}/3
+                        <h3 class="font-bold text-secondary-800 text-sm dark:text-white">
+                          📋 Sesi Bimbingan: {selectedMhsNama()}
+                        </h3>
+                        <span class="text-[10px] text-secondary-400">
+                          Riwayat asistensi, tugas akhir, skripsi & konsultasi akademik
                         </span>
                       </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenAddSesi}
+                        class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                      >
+                        + Tambah Sesi
+                      </button>
                     </div>
 
-                    <div class="flex-1 p-4 overflow-y-auto flex flex-col-reverse gap-4 bg-secondary-50/30 dark:bg-secondary-800">
+                    <div class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-secondary-50/30 dark:bg-secondary-800/50">
                       <Show
-                        when={messages().length > 0}
+                        when={selectedBimbingan()?.sesi && selectedBimbingan()!.sesi.length > 0}
                         fallback={
                           <div class="flex-1 flex flex-col items-center justify-center text-center p-6">
-                            <span class="text-3xl mb-2">💬</span>
-                            <p class="text-secondary-400 text-xs">Belum ada obrolan.</p>
+                            <span class="text-4xl mb-2">📝</span>
+                            <h4 class="font-bold text-secondary-700 text-sm dark:text-white">
+                              Belum Ada Sesi Bimbingan
+                            </h4>
+                            <p class="text-secondary-400 text-xs mt-1 max-w-xs">
+                              Klik tombol "+ Tambah Sesi" di atas untuk mencatat sesi asistensi/bimbingan mahasiswa.
+                            </p>
                           </div>
                         }
                       >
-                        <For each={messages()}>
-                          {(msg) => (
-                            <div
-                              class={`flex flex-col max-w-[85%] ${msg.senderRole === 'dosen' || msg.senderRole === 'admin' ? 'self-end items-end' : 'self-start items-start'}`}
-                            >
-                              <div
-                                class={`p-3 rounded-2xl text-xs ${msg.senderRole === 'dosen' || msg.senderRole === 'admin' ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-white text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm'}`}
-                              >
-                                {msg.pesan}
+                        <For each={selectedBimbingan()?.sesi}>
+                          {(sesi: SesiBimbingan) => {
+                            const katObj = (kategoriList()?.data || []).find((k) => k.id === sesi.kategoriId);
+                            return (
+                              <div class="p-4 bg-white border border-secondary-100 rounded-2xl shadow-sm flex flex-col gap-2 relative dark:bg-secondary-900 dark:border-secondary-800">
+                                <div class="flex items-center justify-between border-b border-secondary-100 pb-2 dark:border-secondary-800">
+                                  <div class="flex items-center gap-2">
+                                    <span class="font-black text-xs text-brand-700 bg-brand-50 px-2 py-0.5 rounded-lg dark:bg-brand-900/30 dark:text-brand-300">
+                                      Pertemuan Ke-{sesi.pertemuanKe}
+                                    </span>
+                                    <Show when={katObj}>
+                                      {(kat) => (
+                                        <span class="px-2 py-0.5 bg-accent-50 text-accent-700 border border-accent-100 rounded-lg text-[10px] font-bold dark:bg-accent-900/30 dark:text-accent-300 dark:border-accent-800">
+                                          {kat().nama}
+                                        </span>
+                                      )}
+                                    </Show>
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenEditSesi(sesi)}
+                                      class="text-xs text-brand-600 hover:text-brand-800 font-bold dark:text-brand-400"
+                                    >
+                                      ✏️ Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteSesi(sesi.id)}
+                                      class="text-xs text-rose-500 hover:text-rose-700 font-bold"
+                                    >
+                                      🗑️ Hapus
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div class="flex items-center justify-between text-[11px] text-secondary-400">
+                                  <span>
+                                    📅{' '}
+                                    {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'full' })}
+                                  </span>
+                                  <span
+                                    class={`font-bold px-2 py-0.5 rounded text-[9px] ${sesi.statusBkd ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300' : 'bg-secondary-100 text-secondary-500'}`}
+                                  >
+                                    BKD: {sesi.statusBkd ? 'YA' : 'TIDAK'}
+                                  </span>
+                                </div>
+
+                                <div class="flex flex-col gap-1.5 mt-1 text-xs">
+                                  <div class="p-2.5 bg-rose-50/50 border border-rose-100/60 rounded-xl dark:bg-rose-950/20 dark:border-rose-900/40">
+                                    <span class="text-[9px] font-bold text-rose-600 uppercase tracking-wider block mb-0.5">
+                                      Permasalahan / Topik:
+                                    </span>
+                                    <p class="text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
+                                      {sesi.permasalahan}
+                                    </p>
+                                  </div>
+                                  <div class="p-2.5 bg-accent-50/50 border border-accent-100/60 rounded-xl dark:bg-accent-950/20 dark:border-accent-900/40">
+                                    <span class="text-[9px] font-bold text-accent-600 uppercase tracking-wider block mb-0.5">
+                                      Solusi & Catatan Dosen PA:
+                                    </span>
+                                    <p class="text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
+                                      {sesi.solusi}
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
-                              <span class="text-[9px] text-secondary-400 mt-1 uppercase tracking-wider font-semibold">
-                                {msg.senderRole} • {msg.tipe.toUpperCase()} •{' '}
-                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          )}
+                            );
+                          }}
                         </For>
                       </Show>
                     </div>
-
-                    <form
-                      onSubmit={handleSendMessage}
-                      class="p-3 border-t border-secondary-100 bg-white flex flex-col gap-2 dark:border-secondary-800 dark:bg-secondary-900"
-                    >
-                      <div class="flex items-center gap-3 text-[10px] font-semibold text-secondary-400">
-                        <span>Kategori Pesan:</span>
-                        <label class="flex items-center gap-1 cursor-pointer text-secondary-900 dark:text-white">
-                          <input
-                            type="radio"
-                            name="lecturerChatType"
-                            checked={chatType() === 'uts'}
-                            onChange={() => setChatType('uts')}
-                          />
-                          UTS
-                        </label>
-                        <label class="flex items-center gap-1 cursor-pointer text-secondary-900 dark:text-white">
-                          <input
-                            type="radio"
-                            name="lecturerChatType"
-                            checked={chatType() === 'uas'}
-                            onChange={() => setChatType('uas')}
-                          />
-                          UAS
-                        </label>
-                      </div>
-
-                      <div class="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Balas konsultasi..."
-                          value={messageText()}
-                          onInput={(e) => setMessageText(e.currentTarget.value)}
-                          class="flex-1 border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
-                        />
-                        <button
-                          type="submit"
-                          class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
-                        >
-                          Kirim
-                        </button>
-                      </div>
-                    </form>
                   </div>
 
                   {/* Form Approval, Resume Akademik, & Timeline Sesi */}
@@ -714,77 +814,6 @@ export default function Bimbingan() {
                             {akademikSummary()?.ipsSemesterLalu || '0.00'}
                           </span>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Timeline Sesi Bimbingan */}
-                    <div class="flex flex-col gap-3">
-                      <div class="flex justify-between items-center border-b pb-2">
-                        <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">📅 Sesi Bimbingan</h3>
-                        <button
-                          type="button"
-                          onClick={handleOpenAddSesi}
-                          class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-[10px] hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
-                        >
-                          + Tambah Sesi
-                        </button>
-                      </div>
-
-                      <div class="flex flex-col gap-2.5 max-h-[220px] overflow-y-auto">
-                        <Show
-                          when={selectedBimbingan()?.sesi && selectedBimbingan()!.sesi.length > 0}
-                          fallback={
-                            <p class="text-xs text-secondary-400 italic">
-                              Belum ada sesi bimbingan. Minimal 3 kali per semester.
-                            </p>
-                          }
-                        >
-                          <For each={selectedBimbingan()?.sesi}>
-                            {(sesi) => (
-                              <div class="p-3 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-1.5 relative dark:bg-secondary-800 dark:border-secondary-800">
-                                <div class="flex items-center justify-between border-b border-secondary-200 pb-1 dark:border-secondary-700">
-                                  <span class="font-bold text-xs text-secondary-700">Sesi Ke-{sesi.pertemuanKe}</span>
-                                  <div class="flex items-center gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenEditSesi(sesi)}
-                                      class="text-[10px] text-brand-600 font-bold"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteSesi(sesi.id)}
-                                      class="text-[10px] text-red-500 font-bold"
-                                    >
-                                      Hapus
-                                    </button>
-                                  </div>
-                                </div>
-                                <p class="text-[10px] text-secondary-400">
-                                  Tanggal:{' '}
-                                  {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
-                                </p>
-                                <p class="text-xs text-secondary-800 dark:text-white">
-                                  <strong class="text-rose-600 text-[10px] block uppercase">Permasalahan:</strong>{' '}
-                                  {sesi.permasalahan}
-                                </p>
-                                <p class="text-xs text-secondary-800 dark:text-white">
-                                  <strong class="text-accent-600 text-[10px] block uppercase">Solusi:</strong>{' '}
-                                  {sesi.solusi}
-                                </p>
-                                <div class="mt-1 flex items-center justify-between text-[10px]">
-                                  <span class="text-secondary-400 font-semibold">Lapor BKD:</span>
-                                  <span
-                                    class={`font-bold px-1.5 py-0.5 rounded text-[9px] ${sesi.statusBkd ? 'bg-accent-100 text-accent-700' : 'bg-secondary-100 text-secondary-500'}`}
-                                  >
-                                    {sesi.statusBkd ? 'YA' : 'TIDAK'}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                          </For>
-                        </Show>
                       </div>
                     </div>
 
@@ -860,6 +889,34 @@ export default function Bimbingan() {
                           </div>
 
                           <div class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between">
+                              <label class="text-xs font-bold text-secondary-600 dark:text-secondary-300">
+                                Jenis / Kategori Bimbingan
+                              </label>
+                              <Show when={['admin', 'super_admin', 'prodi', 'dosen'].includes(user()?.role || '')}>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowKategoriModal(true)}
+                                  class="text-[10px] font-bold text-brand-600 hover:underline dark:text-brand-400"
+                                >
+                                  + Kelola Kategori
+                                </button>
+                              </Show>
+                            </div>
+                            <select
+                              value={kategoriInput() || ''}
+                              onChange={(e) =>
+                                setKategoriInput(e.currentTarget.value ? Number(e.currentTarget.value) : null)
+                              }
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                            >
+                              <option value="">-- Pilih Jenis Bimbingan (Opsional) --</option>
+                              <For each={kategoriList()?.data || []}>
+                                {(kat) => <option value={kat.id}>{kat.nama}</option>}
+                              </For>
+                            </select>
+                          </div>
+                          <div class="flex flex-col gap-1">
                             <label class="text-xs font-bold text-secondary-600">Permasalahan</label>
                             <textarea
                               rows="3"
@@ -920,184 +977,83 @@ export default function Bimbingan() {
             </div>
           </div>
         </Show>
-
-        {/* --- MODAL PRATINJAU / CETAK REKAP BKD --- */}
-        <Show when={showRekapBkdModal()}>
-          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl p-8 flex flex-col gap-4 print:shadow-none print:p-0 print:max-w-full dark:bg-secondary-900">
-              {/* Modal header (hidden in print) */}
-              <div class="flex justify-between items-center border-b pb-3 print:hidden">
-                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">
-                  Pratinjau Laporan BKD Bimbingan Akademik
-                </h3>
-                <div class="flex gap-2">
-                  <button
-                    onClick={() => window.print()}
-                    class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
-                  >
-                    🖨️ Cetak / Unduh PDF
-                  </button>
-                  <button
-                    onClick={() => setShowRekapBkdModal(false)}
-                    class="px-3.5 py-2 border border-secondary-200 hover:bg-secondary-50 text-secondary-600 font-bold rounded-xl text-xs dark:border-secondary-700"
-                  >
-                    Tutup
-                  </button>
-                </div>
+        {/* --- MODAL KELOLA KATEGORI BIMBINGAN --- */}
+        <Show when={showKategoriModal()}>
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-5 dark:bg-secondary-900">
+              <div class="flex items-center justify-between border-b pb-3 dark:border-secondary-800">
+                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">⚙️ Kelola Kategori Bimbingan</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowKategoriModal(false)}
+                  class="text-secondary-400 hover:text-secondary-600 font-bold text-lg"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Printable Area */}
-              <div class="flex flex-col gap-4 font-serif" id="print-area-bkd">
-                {/* Kop Surat */}
-                <div class="flex flex-col items-center justify-center border-b-2 border-double border-secondary-800 pb-4 text-center">
-                  <h2 class="text-xl font-bold tracking-wider text-secondary-900 dark:text-white">
-                    POLITEKNIK SOROWAKO
-                  </h2>
-                  <p class="text-[10px] text-secondary-500 italic mt-0.5">
-                    Program Diploma Terapan / Sarjana Terapan Teknik Informatika
-                  </p>
-                  <p class="text-[9px] text-secondary-400 mt-0.5">
-                    Website: simak.politeknik-sorowako.ac.id | Telp: +62 475 321 000
-                  </p>
+              {/* Form Tambah Kategori Baru */}
+              <form
+                onSubmit={handleAddKategori}
+                class="p-4 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-3 dark:bg-secondary-800 dark:border-secondary-700"
+              >
+                <h4 class="font-bold text-xs text-secondary-800 dark:text-white">+ Tambah Kategori Baru</h4>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[11px] font-semibold text-secondary-600 dark:text-secondary-300">
+                    Nama Kategori
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Skripsi, Tugas Akhir, PKL..."
+                    value={newKatNama()}
+                    onInput={(e) => setNewKatNama(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                    required
+                  />
                 </div>
-
-                {/* Surat Title */}
-                <div class="text-center my-3">
-                  <h3 class="text-sm font-extrabold text-secondary-900 tracking-wide uppercase underline dark:text-white">
-                    REKAPITULASI CATATAN BIMBINGAN AKADEMIK DOSEN WALI
-                  </h3>
-                  <p class="text-xs text-secondary-600 mt-1">
-                    Periode Akademik:{' '}
-                    <span class="font-bold">{selectedPeriode() || currentBimbinganData()?.periodeId}</span>
-                  </p>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[11px] font-semibold text-secondary-600 dark:text-secondary-300">
+                    Deskripsi (Opsional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Penjelasan singkat kategori..."
+                    value={newKatDeskripsi()}
+                    onInput={(e) => setNewKatDeskripsi(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                  />
                 </div>
+                <button
+                  type="submit"
+                  class="self-end px-3.5 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-xs hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
+                >
+                  Simpan Kategori
+                </button>
+              </form>
 
-                {/* Meta data */}
-                <div class="grid grid-cols-2 text-xs text-secondary-800 gap-2 border bg-secondary-50/50 p-4 rounded-xl print:border-none print:bg-transparent print:p-0 dark:text-white dark:bg-secondary-800">
-                  <p>
-                    Nama Dosen PA: <span class="font-bold">{dosenProfile()?.nama || 'Dosen Wali'}</span>
-                  </p>
-                  <p>
-                    NIP Dosen: <span class="font-bold">{dosenProfile()?.nip || '-'}</span>
-                  </p>
-                  <p>
-                    Tanggal Cetak:{' '}
-                    <span class="font-bold">{new Date().toLocaleDateString('id-ID', { dateStyle: 'long' })}</span>
-                  </p>
-                </div>
-
-                {/* BKD Table */}
-                <div class="overflow-x-auto">
-                  <table class="w-full border-collapse border border-secondary-300 text-[11px] text-left dark:border-secondary-700">
-                    <thead>
-                      <tr class="bg-secondary-100 dark:bg-secondary-800 text-secondary-800 font-bold dark:text-white">
-                        <th class="border border-secondary-300 p-2.5 w-8 text-center dark:border-secondary-700">No</th>
-                        <th class="border border-secondary-300 p-2.5 w-44 dark:border-secondary-700">Nama Mahasiswa</th>
-                        <th class="border border-secondary-300 p-2.5 w-24 text-center dark:border-secondary-700">
-                          NIM
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">
-                          Total Sesi
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">Permasalahan</th>
-                        <th class="border border-secondary-300 p-2.5 dark:border-secondary-700">
-                          Solusi / Saran Masukan
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 w-28 text-center dark:border-secondary-700">
-                          Tanggal Sesi
-                        </th>
-                        <th class="border border-secondary-300 p-2.5 w-20 text-center dark:border-secondary-700">
-                          Lapor BKD
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <For
-                        each={rekapBkdData()?.data}
-                        fallback={
-                          <tr>
-                            <td
-                              colspan="8"
-                              class="border border-secondary-300 p-6 text-center text-secondary-400 italic dark:border-secondary-700"
-                            >
-                              Tidak ada riwayat bimbingan resmi tercatat untuk periode ini.
-                            </td>
-                          </tr>
-                        }
-                      >
-                        {(item, idx) => (
-                          <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
-                              {idx() + 1}
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 font-bold dark:border-secondary-700">
-                              {item.mahasiswa?.nama}
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
-                              {item.mahasiswa?.nim}
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 text-center font-bold dark:border-secondary-700">
-                              {item.sesi?.length || 0} Kali
-                            </td>
-                            <td class="border border-secondary-300 p-2 text-xs leading-relaxed dark:border-secondary-700">
-                              <For each={item.sesi}>
-                                {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 dark:border-secondary-800">
-                                    <strong>P-{s.pertemuanKe}:</strong> {s.permasalahan}
-                                  </div>
-                                )}
-                              </For>
-                              <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-secondary-400 italic">-</span>
-                              </Show>
-                            </td>
-                            <td class="border border-secondary-300 p-2 text-xs leading-relaxed dark:border-secondary-700">
-                              <For each={item.sesi}>
-                                {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 dark:border-secondary-800">
-                                    <strong>P-{s.pertemuanKe}:</strong> {s.solusi}
-                                  </div>
-                                )}
-                              </For>
-                              <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-secondary-400 italic">-</span>
-                              </Show>
-                            </td>
-                            <td class="border border-secondary-300 p-2 text-center text-xs dark:border-secondary-700">
-                              <For each={item.sesi}>
-                                {(s) => (
-                                  <div class="mb-1.5 pb-1.5 border-b border-secondary-100 last:border-0 last:mb-0 last:pb-0 font-mono dark:border-secondary-800">
-                                    {new Date(s.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'short' })}
-                                  </div>
-                                )}
-                              </For>
-                              <Show when={!item.sesi || item.sesi.length === 0}>
-                                <span class="text-secondary-400 italic">-</span>
-                              </Show>
-                            </td>
-                            <td class="border border-secondary-300 p-2.5 text-center dark:border-secondary-700">
-                              <span
-                                class={`px-2 py-0.5 rounded font-extrabold text-[9px] ${item.sesi?.some((s) => s.statusBkd) ? 'bg-accent-50 text-accent-700 border border-accent-100' : 'bg-secondary-100 text-secondary-500'}`}
-                              >
-                                {item.sesi?.some((s) => s.statusBkd) ? 'YA' : 'TIDAK'}
-                              </span>
-                            </td>
-                          </tr>
-                        )}
-                      </For>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Tanda Tangan */}
-                <div class="flex justify-end mt-12 print:mt-20">
-                  <div class="text-center text-xs text-secondary-800 flex flex-col gap-16 dark:text-white">
-                    <p>Dosen Penasehat Akademik,</p>
-                    <div>
-                      <p class="font-extrabold underline">{dosenProfile()?.nama}</p>
-                      <p class="text-[10px] text-secondary-500">NIP. {dosenProfile()?.nip || '-'}</p>
-                    </div>
-                  </div>
+              {/* Daftar Kategori Saat Ini */}
+              <div class="flex flex-col gap-2">
+                <h4 class="font-bold text-xs text-secondary-700 dark:text-white">Daftar Kategori Aktif</h4>
+                <div class="max-h-48 overflow-y-auto divide-y divide-secondary-100 border rounded-xl dark:border-secondary-800 dark:divide-secondary-800">
+                  <For each={kategoriList()?.data || []}>
+                    {(kat) => (
+                      <div class="p-3 flex items-center justify-between bg-white dark:bg-secondary-900">
+                        <div class="flex flex-col">
+                          <span class="font-bold text-xs text-secondary-800 dark:text-white">{kat.nama}</span>
+                          <Show when={kat.deskripsi}>
+                            <span class="text-[10px] text-secondary-400">{kat.deskripsi}</span>
+                          </Show>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteKategori(kat.id)}
+                          class="text-rose-500 hover:text-rose-700 text-xs font-bold px-2 py-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          Nonaktifkan
+                        </button>
+                      </div>
+                    )}
+                  </For>
                 </div>
               </div>
             </div>

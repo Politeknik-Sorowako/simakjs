@@ -17,6 +17,7 @@ export interface SesiBimbingan {
   permasalahan: string;
   solusi: string;
   statusBkd: boolean;
+  kategoriId?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +40,9 @@ export interface BimbinganMonitoring {
   id: number;
   nim: string;
   nama: string;
+  angkatan?: string;
+  prodiId?: number;
+  prodiNama?: string;
   dosenPaId: number | null;
   dosenPaNama: string | null;
   bimbinganId: number | null;
@@ -124,7 +128,14 @@ export const bimbinganController = {
 
   async addSesi(
     mhsId: number,
-    data: { pertemuanKe: number; tanggalBimbingan: string; permasalahan: string; solusi: string; statusBkd?: boolean },
+    data: {
+      pertemuanKe: number;
+      tanggalBimbingan: string;
+      permasalahan: string;
+      solusi: string;
+      statusBkd?: boolean;
+      kategoriId?: number | null;
+    },
   ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/mahasiswa/${mhsId}/sesi`, {
       method: 'POST',
@@ -140,6 +151,7 @@ export const bimbinganController = {
       permasalahan?: string;
       solusi?: string;
       statusBkd?: boolean;
+      kategoriId?: number | null;
     },
   ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/sesi/${sesiId}`, {

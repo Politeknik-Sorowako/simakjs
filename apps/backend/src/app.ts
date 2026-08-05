@@ -27,6 +27,7 @@ import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
 import { e2eRoutes } from './routes/e2e.routes';
 import { evaluasiKurikulumRoutes } from './routes/evaluasi-kurikulum.routes';
 import { feedbackRoutes } from './routes/feedback.routes';
+import { kategoriBimbinganRoutes } from './routes/kategori-bimbingan.routes';
 import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { khsRoutes } from './routes/khs.routes';
 import { krsRoutes } from './routes/krs.routes';
@@ -50,8 +51,14 @@ import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
+import { DbInitService } from './services/db-init.service';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Ensure system & bimbingan tables exist on boot
+DbInitService.ensureTablesExist().catch((err) => {
+  console.warn('[app.ts] Failed to initialize DB tables:', err);
+});
 
 export const app = new Elysia();
 
@@ -288,6 +295,7 @@ app
   .use(evaluasiKurikulumRoutes)
   .use(presensiRoutes)
   .use(bimbinganRoutes)
+  .use(kategoriBimbinganRoutes)
   .use(pelanggaranRoutes)
   .use(khsRoutes)
   .use(yudisiumRoutes)

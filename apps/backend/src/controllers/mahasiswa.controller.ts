@@ -209,4 +209,22 @@ export class MahasiswaController {
     const result = await CsvImportService.importDosenPaMapping(text);
     return result;
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bulkSetDosenPa({ body, set, getCurrentUser }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin dan Kaprodi yang dapat mengubah Dosen PA secara massal.' };
+    }
+
+    const { mahasiswaIds, dosenPaId } = body as { mahasiswaIds: number[]; dosenPaId: number | null };
+    if (!Array.isArray(mahasiswaIds) || mahasiswaIds.length === 0) {
+      set.status = 400;
+      return { error: 'Daftar ID Mahasiswa tidak boleh kosong.' };
+    }
+
+    const result = await MahasiswaService.bulkSetDosenPa(mahasiswaIds, dosenPaId);
+    return { message: `Berhasil menetapkan Dosen PA untuk ${result.updated} mahasiswa.`, data: result };
+  }
 }

@@ -111,4 +111,11 @@ export const mahasiswaController = {
     const params = angkatan ? `?angkatan=${angkatan}` : '';
     return fetchApi<MahasiswaBaruStatsResponse>(`/mahasiswa/baru${params}`);
   },
+
+  async bulkSetDosenPa(mahasiswaIds: number[], dosenPaId: number | null): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>('/mahasiswa/bulk-set-dosen-pa', {
+      method: 'PUT',
+      body: JSON.stringify({ mahasiswaIds, dosenPaId }),
+    });
+  },
 };
