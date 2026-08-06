@@ -239,43 +239,48 @@ export class RombelPraktikumService {
 
     let syncedCount = 0;
 
-    for (const [key, agg] of nilaiPerKomponen) {
-      const [mhsIdStr, komponenIdStr] = key.split(':');
-      const mhsId = parseInt(mhsIdStr);
-      const krsRecord = krsMap.get(mhsId);
-      if (!krsRecord) continue;
+    await db.transaction(async (tx) => {
+      for (const [key, agg] of nilaiPerKomponen) {
+        const [mhsIdStr, komponenIdStr] = key.split(':');
+        const mhsId = parseInt(mhsIdStr);
+        const krsRecord = krsMap.get(mhsId);
+        if (!krsRecord) continue;
 
-      const komponenId = komponenIdStr === 'x' ? null : parseInt(komponenIdStr);
-      const nilaiRata = agg.nilai / agg.count;
+        const komponenId = komponenIdStr === 'x' ? null : parseInt(komponenIdStr);
+        const nilaiRata = agg.nilai / agg.count;
 
-      if (komponenId !== null) {
-        const existing = await db
-          .select({ id: nilaiKomponenMahasiswa.id })
-          .from(nilaiKomponenMahasiswa)
-          .where(
-            and(eq(nilaiKomponenMahasiswa.krsId, krsRecord.id), eq(nilaiKomponenMahasiswa.komponenNilaiId, komponenId)),
-          );
-        if (existing.length > 0) {
-          await db
-            .update(nilaiKomponenMahasiswa)
-            .set({ nilai: String(nilaiRata.toFixed(2)) })
-            .where(eq(nilaiKomponenMahasiswa.id, existing[0].id));
+        if (komponenId !== null) {
+          const existing = await tx
+            .select({ id: nilaiKomponenMahasiswa.id })
+            .from(nilaiKomponenMahasiswa)
+            .where(
+              and(
+                eq(nilaiKomponenMahasiswa.krsId, krsRecord.id),
+                eq(nilaiKomponenMahasiswa.komponenNilaiId, komponenId),
+              ),
+            );
+          if (existing.length > 0) {
+            await tx
+              .update(nilaiKomponenMahasiswa)
+              .set({ nilai: String(nilaiRata.toFixed(2)) })
+              .where(eq(nilaiKomponenMahasiswa.id, existing[0].id));
+          } else {
+            await tx.insert(nilaiKomponenMahasiswa).values({
+              krsId: krsRecord.id,
+              komponenNilaiId: komponenId,
+              nilai: String(nilaiRata.toFixed(2)),
+            });
+          }
+          syncedCount++;
         } else {
-          await db.insert(nilaiKomponenMahasiswa).values({
-            krsId: krsRecord.id,
-            komponenNilaiId: komponenId,
-            nilai: String(nilaiRata.toFixed(2)),
-          });
+          await tx
+            .update(krs)
+            .set({ nilaiAngka: String(nilaiRata.toFixed(2)) })
+            .where(eq(krs.id, krsRecord.id));
+          syncedCount++;
         }
-        syncedCount++;
-      } else {
-        await db
-          .update(krs)
-          .set({ nilaiAngka: String(nilaiRata.toFixed(2)) })
-          .where(eq(krs.id, krsRecord.id));
-        syncedCount++;
       }
-    }
+    });
 
     return { success: true, syncedCount };
   }

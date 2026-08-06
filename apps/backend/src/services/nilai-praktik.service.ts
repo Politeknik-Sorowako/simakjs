@@ -45,14 +45,17 @@ export class NilaiPraktikService {
       createdBy: creatorId,
     }));
 
-    await db.transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
+      const lockKey = `nilai_praktik_${data.rombelPraktikumId}`;
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
+
       await tx.delete(nilaiPraktik).where(eq(nilaiPraktik.rombelPraktikumId, data.rombelPraktikumId));
       if (itemsToInsert.length > 0) {
         await tx.insert(nilaiPraktik).values(itemsToInsert);
       }
-    });
 
-    return { success: true, syncedCount: itemsToInsert.length };
+      return { success: true, syncedCount: itemsToInsert.length };
+    });
   }
 
   static async getNilaiByRombel(rombelPraktikumId: number) {
