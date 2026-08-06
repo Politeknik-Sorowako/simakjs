@@ -52,6 +52,11 @@ trap cleanup EXIT
 COMPOSE_FILE="docker-compose.staging.yml"
 BRANCH="${1:-development}"
 
+# Database backup config (from .env)
+STAGING_BACKUP_DIR="${STAGING_BACKUP_DIR:-apps/backend/backups}"
+STAGING_BACKUP_RETENTION="${BACKUP_RETENTION:-5}"
+DB_CONTAINER="simak_db_staging"
+
 echo ""
 echo "============================================="
 echo "    SIMAK Vokasi - Staging Deployment"
@@ -98,8 +103,32 @@ if [ -z "$JWT_SECRET" ]; then
 fi
 ok "JWT_SECRET configured"
 
-# Step 3: Build and deploy
-log "Step 3: Building and deploying..."
+# Step 3: Backup database before deploy
+log "Step 3: Backing up staging database..."
+mkdir -p "$STAGING_BACKUP_DIR"
+
+if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_DB" ]; then
+  warn "POSTGRES_USER/POSTGRES_DB not set in .env, skipping backup"
+elif docker ps --filter "name=$DB_CONTAINER" --format "{{.Names}}" | grep -q "$DB_CONTAINER"; then
+  STAGING_BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S).sql"
+  STAGING_BACKUP_PATH="$STAGING_BACKUP_DIR/$STAGING_BACKUP_FILE"
+
+  docker exec "$DB_CONTAINER" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" > "$STAGING_BACKUP_PATH" 2>/dev/null && {
+    gzip "$STAGING_BACKUP_PATH"
+    STAGING_BACKUP_SIZE=$(du -h "${STAGING_BACKUP_PATH}.gz" | cut -f1)
+    ok "Backup created: ${STAGING_BACKUP_FILE}.gz ($STAGING_BACKUP_SIZE)"
+
+    # Clean old backups
+    ls -t "$STAGING_BACKUP_DIR"/backup-*.sql.gz 2>/dev/null | tail -n +$((STAGING_BACKUP_RETENTION + 1)) | xargs -r rm -f
+  } || {
+    warn "Database backup failed (container may be restarting)"
+  }
+else
+  warn "Database container not running, skipping backup"
+fi
+
+# Step 4: Build and deploy
+log "Step 4: Building and deploying..."
 docker compose -f "$COMPOSE_FILE" build 2>&1 | tee -a "$LOG_FILE" || {
   fail "Docker build failed"
   exit 1
@@ -112,8 +141,8 @@ docker compose -f "$COMPOSE_FILE" up -d 2>&1 | tee -a "$LOG_FILE" || {
 }
 ok "Containers started"
 
-# Step 4: Verify deployment
-log "Step 4: Verifying deployment..."
+# Step 5: Verify deployment
+log "Step 5: Verifying deployment..."
 MAX_WAIT=60
 WAITED=0
 HEALTHY=false
@@ -139,8 +168,8 @@ if [ "$HEALTHY" != "true" ]; then
   exit 1
 fi
 
-# Step 5: Send notification
-log "Step 5: Sending notification..."
+# Step 6: Send notification
+log "Step 6: Sending notification..."
 commit=$(git log --oneline -1 2>/dev/null || echo "unknown")
 duration=$(($(date +%s) - DEPLOY_START))
 send_telegram "✅ *Staging Deployment Successful* - $PROJECT_NAME%0A%0A*Branch:* $BRANCH%0A*Commit:* $commit%0A*Duration:* ${duration}s%0A*URL:* https://staging-simak.politekniksorowako.ac.id" || true
