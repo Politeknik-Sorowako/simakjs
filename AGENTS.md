@@ -43,7 +43,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 ---
 
 ## 5. Database, Git & Security
-- **Database**: Never alter existing migration files or execute `drizzle-kit push` in production. Generate and apply migrations via `bun run db:generate` and `bun run db:safe-migrate`. All migration SQL files MUST be idempotent to prevent deployment crashes (always use `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and safe constraint checks).
+- **Database**: Never alter existing migration files or execute `drizzle-kit push` in production. Generate and apply migrations via `bun run db:generate` and `bun run db:safe-migrate`. All migration SQL files MUST be idempotent to prevent deployment crashes (always use `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and safe constraint checks). **ALWAYS perform a full database backup (`pg_dump` / automated snapshot) before deploying to staging or production environments.**
 - **Git & Deployment Operations**: Follow conventional commits (`type(scope): description`). ALWAYS create a Pull Request (PR) towards `development` (for staging) or `main` (for production) before deploying. Direct pushes to `development` or `main` are strictly prohibited. Always clear sandbox tokens using `env -u GITHUB_TOKEN git ...` before any remote git operation.
 - **Security**: Never commit `.env` or secrets. Enforce password hashing (bcrypt, cost 12), and use explicit CORS origin lists instead of wildcards.
 

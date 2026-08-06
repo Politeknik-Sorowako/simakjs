@@ -57,7 +57,7 @@ export class RombelPraktikumController {
   static async deleteRombel({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen'])) {
+      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -154,6 +154,36 @@ export class RombelPraktikumController {
         return { error: 'Unauthorized' };
       }
       return await RombelPraktikumService.getPresensiByBap(parseInt(params.bapPraktikumId));
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async syncPresensi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await RombelPraktikumService.syncPresensiPraktikumToKelas(body.bapPraktikumId);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async syncNilai({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await RombelPraktikumService.syncNilaiPraktikumToKelas(parseInt(params.id));
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

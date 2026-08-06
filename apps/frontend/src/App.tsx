@@ -38,6 +38,7 @@ import Cpmk from './routes/Cpmk';
 import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
+import DuplicateRiskKompensasi from './routes/DuplicateRiskKompensasi';
 import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
 import EvaluasiSistem from './routes/EvaluasiSistem';
 import ForceChangePassword from './routes/ForceChangePassword';
@@ -46,6 +47,7 @@ import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
 import Khs from './routes/Khs';
+import KompensasiManual from './routes/KompensasiManual';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
@@ -177,6 +179,23 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <LaporanKompensasi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kompensasi-manual"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KompensasiManual />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/input-kompensasi-manual" element={<Navigate href="/kompensasi-manual" />} />
+      <Route
+        path="/duplicate-risk-kompensasi"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <DuplicateRiskKompensasi />
           </ProtectedRoute>
         }
       />

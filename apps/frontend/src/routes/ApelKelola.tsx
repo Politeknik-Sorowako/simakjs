@@ -28,6 +28,7 @@ export default function ApelKelola() {
   const [catatanSesi, setCatatanSesi] = createSignal('');
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
+  const [showBukaSesiModal, setShowBukaSesiModal] = createSignal(false);
 
   // Modal Buat Kelompok State
   const [showCreateModal, setShowCreateModal] = createSignal(false);
@@ -47,6 +48,40 @@ export default function ApelKelola() {
   const [showAnggotaModal, setShowAnggotaModal] = createSignal(false);
   const [mhsSearch, setMhsSearch] = createSignal('');
   const [selectedMhsToAdd, setSelectedMhsToAdd] = createSignal<number[]>([]);
+
+  // Modal Catatan / Alasan Presensi State
+  const [editingCatatanMhs, setEditingCatatanMhs] = createSignal<{ id: number; nama: string; text: string } | null>(
+    null,
+  );
+
+  const openCatatanModal = (item: PresensiApelItem) => {
+    setEditingCatatanMhs({
+      id: item.mahasiswaId,
+      nama: item.mahasiswaNama,
+      text: item.keterangan || '',
+    });
+  };
+
+  const handleSaveCatatanModal = (e: Event) => {
+    e.preventDefault();
+    const current = editingCatatanMhs();
+    if (!current) return;
+    handleKeteranganChange(current.id, current.text);
+    setEditingCatatanMhs(null);
+  };
+
+  const openBukaSesiModalWithCheck = () => {
+    if (!selectedKelompok()) {
+      if ((kelompokList() || []).length > 0) {
+        setSelectedKelompok(kelompokList()![0].id);
+        setShowBukaSesiModal(true);
+      } else {
+        toast.showToast('Pilih atau buat kelompok apel terlebih dahulu', 'error');
+      }
+      return;
+    }
+    setShowBukaSesiModal(true);
+  };
 
   // Resource Data Kelompok (Memuat seluruh kelompok apel kampus)
   const [kelompokList, { refetch: refetchKelompok }] = createResource(async () => {
@@ -194,6 +229,7 @@ export default function ApelKelola() {
       toast.showToast(`Sesi dibuka dengan ${result.jumlahAnggota} mahasiswa`, 'success');
       refetchSesi();
       setSelectedSesi(result.id);
+      setShowBukaSesiModal(false);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal membuka sesi';
       toast.showToast(msg, 'error');
@@ -373,17 +409,6 @@ export default function ApelKelola() {
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
-          <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
-            <button
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 font-medium"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-              </svg>
-              + Buat Kelompok Baru
-            </button>
-          </Show>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -392,12 +417,12 @@ export default function ApelKelola() {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
               <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold">Pilih Kelompok</h2>
-                <Show when={selectedKelompok()}>
+                <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
                   <button
-                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                    onClick={() => setShowAnggotaModal(true)}
+                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                    onClick={() => setShowCreateModal(true)}
                   >
-                    ⚙ Kelola Anggota
+                    + Buat Kelompok
                   </button>
                 </Show>
               </div>
@@ -424,123 +449,64 @@ export default function ApelKelola() {
 
               <Show when={selectedKelompok()}>
                 <button
-                  class="w-full text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-800 dark:text-gray-200 py-1.5 px-3 rounded flex items-center justify-center gap-1 font-medium"
+                  class="w-full text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-lg flex items-center justify-center gap-1 font-medium"
                   onClick={() => setShowAnggotaModal(true)}
+                  title="Kelola Anggota Mahasiswa"
                 >
-                  👥 Kelola Anggota Mahasiswa
+                  👥 Kelola Anggota
                 </button>
               </Show>
             </div>
 
             <Show when={selectedKelompok()}>
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
-                <h2 class="text-lg font-semibold">Buka Sesi Baru</h2>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Tanggal</label>
-                  <input
-                    type="date"
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={tanggal()}
-                    onChange={(e) => setTanggal(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Shift</label>
-                  <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={shift()}
-                    onChange={(e) => setShift(e.target.value)}
-                  >
-                    <option value="pagi">Pagi</option>
-                    <option value="sore">Sore</option>
-                  </select>
-                </div>
-                <div>
-                  <SearchableSelect
-                    label="Dosen PJ Sesi (Opsional)"
-                    placeholder="-- Pilih Dosen PJ Sesi --"
-                    value={selectedDosenPJSesi()}
-                    options={(allDosenList() || []).map((d: Dosen) => ({
-                      label: `${d.nama} ${d.nip ? `(${d.nip})` : ''}`,
-                      value: d.id,
-                    }))}
-                    onChange={(val) => setSelectedDosenPJSesi(val ? Number(val) : null)}
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Jam Mulai</label>
-                  <input
-                    type="time"
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
-                    value={jamMulai()}
-                    onChange={(e) => setJamMulai(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
-                  <textarea
-                    rows="2"
-                    maxlength="1000"
-                    placeholder="Keterangan / Catatan Sesi Apel..."
-                    class="w-full border rounded-lg px-3 py-2 text-xs dark:bg-gray-700 dark:border-gray-600"
-                    value={catatanSesi()}
-                    onInput={(e) => setCatatanSesi(e.currentTarget.value)}
-                  />
-                </div>
-                <button
-                  class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
-                  onClick={handleBukaSesi}
-                  disabled={isSubmitting()}
-                >
-                  {isSubmitting() ? 'Memproses...' : 'Buka Sesi'}
-                </button>
-              </div>
-            </Show>
-
-            <Show when={selectedKelompok() && sesiList() && sesiList()!.length > 0}>
-              <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <h2 class="text-lg font-semibold mb-3">Riwayat Sesi</h2>
-                <div class="space-y-2 max-h-64 overflow-y-auto">
-                  <For each={sesiList()}>
-                    {(sesi: SesiApel) => (
-                      <div
-                        class={`w-full flex items-center justify-between p-2 rounded text-sm border ${sesi.id === selectedSesi() ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700'}`}
+                <div class="flex justify-between items-center">
+                  <h2 class="text-sm font-bold text-gray-800 dark:text-white">Pilih Riwayat Sesi</h2>
+                  <div class="flex items-center gap-2">
+                    <button
+                      class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                      onClick={openBukaSesiModalWithCheck}
+                    >
+                      + Tambah Sesi
+                    </button>
+                    <Show when={selectedSesi() && auth.user()?.role === 'admin'}>
+                      <button
+                        class="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold"
+                        onClick={() => handleDeleteSesi(selectedSesi()!)}
                       >
-                        <button class="flex-1 text-left" onClick={() => loadSesiDetail(sesi.id)}>
-                          <div class="font-medium flex items-center gap-2">
-                            <span>{sesi.tanggal}</span>
-                            <span
-                              class={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
-                                sesi.isClosed
-                                  ? 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                                  : 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
-                              }`}
-                            >
-                              {sesi.isClosed ? 'Tertutup' : 'Aktif'}
-                            </span>
-                          </div>
-                          <div class="text-xs text-gray-500">
-                            {sesi.shift} | {sesi.jamMulai}
-                            {sesi.hadirCount !== undefined &&
-                              ` | H:${sesi.hadirCount} T:${sesi.terlambatCount} ?:${sesi.unknownCount}`}
-                          </div>
-                        </button>
-                        <Show when={auth.user()?.role === 'admin'}>
-                          <button
-                            class="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 text-xs font-semibold"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSesi(sesi.id);
-                            }}
-                            title="Hapus Sesi"
-                          >
-                            ✕
-                          </button>
-                        </Show>
-                      </div>
-                    )}
-                  </For>
+                        🗑 Hapus Sesi
+                      </button>
+                    </Show>
+                  </div>
                 </div>
+
+                <Show
+                  when={sesiList() && sesiList()!.length > 0}
+                  fallback={
+                    <div class="text-xs text-gray-500 italic py-1">
+                      Belum ada sesi. Klik{' '}
+                      <button onClick={openBukaSesiModalWithCheck} class="text-blue-600 underline font-semibold">
+                        + Tambah Sesi
+                      </button>{' '}
+                      untuk membuka sesi baru.
+                    </div>
+                  }
+                >
+                  <SearchableSelect
+                    placeholder="-- Cari / Pilih Riwayat Sesi --"
+                    value={selectedSesi()}
+                    options={(sesiList() || []).map((sesi: SesiApel) => ({
+                      label: `${sesi.tanggal} (${sesi.shift}) ${sesi.jamMulai || ''} - [${
+                        sesi.isClosed ? 'Tertutup' : 'Aktif'
+                      }] (H:${sesi.hadirCount ?? 0} T:${sesi.terlambatCount ?? 0} ?:${sesi.unknownCount ?? 0})`,
+                      value: sesi.id,
+                    }))}
+                    onChange={(val) => {
+                      if (val) loadSesiDetail(Number(val));
+                      else setSelectedSesi(null);
+                    }}
+                  />
+                </Show>
               </div>
             </Show>
           </div>
@@ -648,56 +614,42 @@ export default function ApelKelola() {
                             <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
                             <td class="px-4 py-3 text-sm">{item.mahasiswaNama}</td>
                             <td class="px-4 py-3 text-center">
-                              <div class="flex items-center justify-center gap-1">
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'hadir' ? 'bg-green-600 text-white ring-2 ring-green-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'hadir')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Hadir"
-                                >
-                                  H
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'terlambat' ? 'bg-yellow-500 text-white ring-2 ring-yellow-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'terlambat')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Terlambat"
-                                >
-                                  T
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'sakit' ? 'bg-blue-600 text-white ring-2 ring-blue-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'sakit')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Sakit"
-                                >
-                                  S
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'izin' ? 'bg-indigo-600 text-white ring-2 ring-indigo-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'izin')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Izin"
-                                >
-                                  I
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'alpa' ? 'bg-red-600 text-white ring-2 ring-red-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'alpa')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Alpa"
-                                >
-                                  A
-                                </button>
-                                <button
-                                  class={`px-2 py-1 rounded text-xs font-medium ${item.status === 'unknown' ? 'bg-gray-600 text-white ring-2 ring-gray-400' : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'} disabled:opacity-50`}
-                                  onClick={() => handleStatusChange(item.mahasiswaId, 'unknown')}
-                                  disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                  title="Unknown"
-                                >
-                                  ?
-                                </button>
-                              </div>
+                              <select
+                                class={`px-2 py-1 rounded text-xs font-bold border focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 ${
+                                  item.status === 'hadir'
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300'
+                                    : item.status === 'terlambat'
+                                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300'
+                                      : item.status === 'sakit'
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-300'
+                                        : item.status === 'izin'
+                                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 border-indigo-300'
+                                          : item.status === 'alpa'
+                                            ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-300'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-300'
+                                }`}
+                                value={item.status}
+                                disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
+                                onChange={(e) =>
+                                  handleStatusChange(
+                                    item.mahasiswaId,
+                                    e.currentTarget.value as
+                                      | 'hadir'
+                                      | 'terlambat'
+                                      | 'unknown'
+                                      | 'sakit'
+                                      | 'izin'
+                                      | 'alpa',
+                                  )
+                                }
+                              >
+                                <option value="hadir">Hadir (H)</option>
+                                <option value="terlambat">Terlambat (T)</option>
+                                <option value="sakit">Sakit (S)</option>
+                                <option value="izin">Izin (I)</option>
+                                <option value="alpa">Alpa (A)</option>
+                                <option value="unknown">Unknown (?)</option>
+                              </select>
                             </td>
                             <td class="px-4 py-3 text-center">
                               <Show when={item.status !== 'hadir'}>
@@ -705,27 +657,35 @@ export default function ApelKelola() {
                                   <input
                                     type="number"
                                     min={0}
-                                    class="w-20 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
+                                    class="w-16 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                     value={item.menitTerlambat ?? 0}
                                     disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                    onInput={(e) =>
-                                      handleMenitChange(item.mahasiswaId, parseInt(e.currentTarget.value) || 0)
-                                    }
+                                    onInput={(e) => {
+                                      const val = parseInt(e.currentTarget.value) || 0;
+                                      item.menitTerlambat = val;
+                                    }}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.currentTarget.value) || 0;
+                                      handleMenitChange(item.mahasiswaId, val);
+                                    }}
                                   />
                                   <span class="text-xs text-gray-500">mnt</span>
                                 </div>
                               </Show>
                             </td>
                             <td class="px-4 py-3 text-left">
-                              <input
-                                type="text"
-                                maxlength="1000"
-                                placeholder="Keterangan / Alasan..."
-                                class="w-full border rounded px-2.5 py-1 text-xs dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
-                                value={item.keterangan || ''}
+                              <button
+                                type="button"
+                                onClick={() => openCatatanModal(item)}
                                 disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                onInput={(e) => handleKeteranganChange(item.mahasiswaId, e.currentTarget.value)}
-                              />
+                                class={`px-2.5 py-1 rounded text-xs transition-colors max-w-[130px] truncate text-left ${
+                                  item.keterangan
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 font-medium'
+                                    : 'border border-dashed border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600'
+                                }`}
+                              >
+                                {item.keterangan ? `📝 ${item.keterangan}` : '+ Catatan'}
+                              </button>
                             </td>
                           </tr>
                         )}
@@ -1007,6 +967,155 @@ export default function ApelKelola() {
                     class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                   >
                     {isSubmitting() ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Show>
+        {/* MODAL 4: Catatan / Alasan Presensi */}
+        <Show when={editingCatatanMhs()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-sm w-full p-5 space-y-4 shadow-xl">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-2">
+                <h3 class="text-base font-bold text-gray-900 dark:text-white">Catatan — {editingCatatanMhs()?.nama}</h3>
+                <button
+                  type="button"
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setEditingCatatanMhs(null)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveCatatanModal} class="space-y-4">
+                <div>
+                  <label class="block text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300">
+                    Keterangan / Alasan Ketidakhadiran
+                  </label>
+                  <textarea
+                    rows={3}
+                    maxlength="1000"
+                    placeholder="Tuliskan catatan atau alasan..."
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 text-xs dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={editingCatatanMhs()?.text || ''}
+                    onInput={(e) =>
+                      setEditingCatatanMhs((prev) => (prev ? { ...prev, text: e.currentTarget.value } : null))
+                    }
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t dark:border-gray-700">
+                  <button
+                    type="button"
+                    class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setEditingCatatanMhs(null)}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  >
+                    Simpan Catatan
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Show>
+
+        {/* MODAL 5: Buka Sesi Apel Baru */}
+        <Show when={showBukaSesiModal()}>
+          <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
+              <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Buka Sesi Apel Baru</h3>
+                <button
+                  type="button"
+                  class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  onClick={() => setShowBukaSesiModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleBukaSesi();
+                }}
+                class="space-y-4"
+              >
+                <div>
+                  <label class="block text-sm font-medium mb-1">Tanggal *</label>
+                  <input
+                    type="date"
+                    required
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    value={tanggal()}
+                    onChange={(e) => setTanggal(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Shift *</label>
+                  <select
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    value={shift()}
+                    onChange={(e) => setShift(e.target.value)}
+                  >
+                    <option value="pagi">Pagi</option>
+                    <option value="sore">Sore</option>
+                  </select>
+                </div>
+                <div>
+                  <SearchableSelect
+                    label="Dosen PJ Sesi (Opsional)"
+                    placeholder="-- Pilih Dosen PJ Sesi --"
+                    value={selectedDosenPJSesi()}
+                    options={(allDosenList() || []).map((d: Dosen) => ({
+                      label: `${d.nama} ${d.nip ? `(${d.nip})` : ''}`,
+                      value: d.id,
+                    }))}
+                    onChange={(val) => setSelectedDosenPJSesi(val ? Number(val) : null)}
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Jam Mulai *</label>
+                  <input
+                    type="time"
+                    required
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    value={jamMulai()}
+                    onChange={(e) => setJamMulai(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
+                  <textarea
+                    rows="2"
+                    maxlength="1000"
+                    placeholder="Keterangan / Catatan Sesi Apel..."
+                    class="w-full border rounded-lg px-3 py-2 text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    value={catatanSesi()}
+                    onInput={(e) => setCatatanSesi(e.currentTarget.value)}
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t dark:border-gray-700">
+                  <button
+                    type="button"
+                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    onClick={() => setShowBukaSesiModal(false)}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting()}
+                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                  >
+                    {isSubmitting() ? 'Memproses...' : 'Buka Sesi'}
                   </button>
                 </div>
               </form>

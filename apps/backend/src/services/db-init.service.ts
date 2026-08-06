@@ -92,6 +92,38 @@ export class DbInitService {
           "created_at" timestamp DEFAULT now() NOT NULL
         );
       `);
+
+      // 6. Ensure kompensasi_manual table exists
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS "kompensasi_manual" (
+          "id" serial PRIMARY KEY NOT NULL,
+          "mahasiswa_id" integer NOT NULL REFERENCES "mahasiswa"("id") ON DELETE CASCADE,
+          "tanggal" date NOT NULL,
+          "jenis_kompen" varchar(20) NOT NULL,
+          "durasi_menit" integer DEFAULT 0 NOT NULL,
+          "keterangan" text,
+          "created_by" integer REFERENCES "users"("id") ON DELETE SET NULL,
+          "created_at" timestamp DEFAULT now() NOT NULL,
+          "updated_at" timestamp DEFAULT now() NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS "idx_kompensasi_manual_mhs_tgl" ON "kompensasi_manual" ("mahasiswa_id", "tanggal");
+        CREATE INDEX IF NOT EXISTS "idx_kompensasi_manual_jenis" ON "kompensasi_manual" ("jenis_kompen");
+      `);
+
+      // 7. Ensure nilai_praktik table exists
+      await db.execute(`
+        CREATE TABLE IF NOT EXISTS "nilai_praktik" (
+          "id" serial PRIMARY KEY NOT NULL,
+          "rombel_praktikum_id" integer NOT NULL REFERENCES "rombel_praktikum"("id") ON DELETE CASCADE,
+          "mahasiswa_id" integer NOT NULL REFERENCES "mahasiswa"("id") ON DELETE CASCADE,
+          "komponen_nilai_id" integer REFERENCES "komponen_nilai"("id") ON DELETE SET NULL,
+          "nilai_angka" numeric(5, 2) NOT NULL,
+          "keterangan" text,
+          "created_by" integer REFERENCES "users"("id") ON DELETE SET NULL,
+          "created_at" timestamp DEFAULT now() NOT NULL,
+          "updated_at" timestamp DEFAULT now() NOT NULL
+        );
+      `);
     } catch (err: unknown) {
       console.warn('[DbInitService] Failed to auto-ensure DB tables:', err instanceof Error ? err.message : err);
     }
