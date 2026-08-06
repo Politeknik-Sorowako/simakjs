@@ -22,8 +22,8 @@ export const nilaiPraktikController = {
       nilaiAngka: number;
       keterangan?: string;
     }[];
-  }): Promise<{ success: boolean; savedCount: number }> {
-    return fetchApi<{ success: boolean; savedCount: number }>('/nilai-praktik/bulk', {
+  }): Promise<{ success: boolean; syncedCount: number }> {
+    return fetchApi<{ success: boolean; syncedCount: number }>('/nilai-praktik/bulk', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

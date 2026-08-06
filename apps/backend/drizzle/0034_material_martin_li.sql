@@ -76,6 +76,15 @@ BEGIN
   END IF;
 END $$;
 --> statement-breakpoint
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'nilai_praktik_rombel_mhs_komponen_unique'
+  ) THEN
+    ALTER TABLE "nilai_praktik" ADD CONSTRAINT "nilai_praktik_rombel_mhs_komponen_unique" UNIQUE ("rombel_praktikum_id","mahasiswa_id","komponen_nilai_id");
+  END IF;
+END $$;
+--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_kompensasi_manual_mhs_tgl" ON "kompensasi_manual" USING btree ("mahasiswa_id","tanggal");
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_kompensasi_manual_jenis" ON "kompensasi_manual" USING btree ("jenis_kompen");

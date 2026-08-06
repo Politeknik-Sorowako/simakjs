@@ -30,7 +30,10 @@ export class NilaiPraktikService {
     let creatorId: number | null = data.createdBy;
     if (creatorId) {
       const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, creatorId));
-      if (!u) creatorId = null;
+      if (!u) {
+        console.warn(`[nilai-praktik] User with ID ${creatorId} not found in users table. Setting createdBy to null.`);
+        creatorId = null;
+      }
     }
 
     const itemsToInsert = data.nilaiList.map((item) => ({

@@ -10,6 +10,8 @@ export const JENIS_DURASI_MANUAL: JenisKompen[] = ['terlambat', 'rusak'];
 
 export const MAKS_DURASI_HARIAN = 480;
 
+type KompensasiExecutor = { select: typeof db.select };
+
 export class KompensasiManualService {
   static resolveDurasiMenit(jenisKompen: JenisKompen, durasiMenit?: number): number {
     if (JENIS_FULL_DAY.includes(jenisKompen)) {
@@ -26,8 +28,7 @@ export class KompensasiManualService {
     mahasiswaId: number,
     tanggal: string,
     excludeId?: number,
-    // biome-ignore lint/suspicious/noExplicitAny: Drizzle transaction or db instance
-    executor: any = db,
+    executor: KompensasiExecutor = db,
   ): Promise<number> {
     const conditions = [eq(kompensasiManual.mahasiswaId, mahasiswaId), eq(kompensasiManual.tanggal, tanggal)];
     if (excludeId !== undefined) {
@@ -44,8 +45,7 @@ export class KompensasiManualService {
     mahasiswaId: number,
     tanggal: string,
     excludeId?: number,
-    // biome-ignore lint/suspicious/noExplicitAny: Drizzle transaction or db instance
-    executor: any = db,
+    executor: KompensasiExecutor = db,
   ): Promise<boolean> {
     const conditions = [eq(kompensasiManual.mahasiswaId, mahasiswaId), eq(kompensasiManual.tanggal, tanggal)];
     if (excludeId !== undefined) {
@@ -222,6 +222,14 @@ export class KompensasiManualService {
       )
       .orderBy(kompensasiManual.tanggal);
 
+    const rowsByKey = new Map<string, Array<(typeof rows)[number]>>();
+    for (const r of rows) {
+      const key = `${r.mahasiswaId}:${r.tanggal}`;
+      const bucket = rowsByKey.get(key) || [];
+      bucket.push(r);
+      rowsByKey.set(key, bucket);
+    }
+
     return grouped.map((g) => ({
       mahasiswaId: g.mahasiswaId,
       nim: mhsMap.get(g.mahasiswaId)?.nim || '',
@@ -229,15 +237,13 @@ export class KompensasiManualService {
       tanggal: g.tanggal,
       count: Number(g.total),
       totalMenit: Number(g.totalMenit),
-      records: rows
-        .filter((r) => r.mahasiswaId === g.mahasiswaId && r.tanggal === g.tanggal)
-        .map((r) => ({
-          id: r.id,
-          jenisKompen: r.jenisKompen,
-          durasiMenit: r.durasiMenit,
-          keterangan: r.keterangan,
-          createdAt: r.createdAt,
-        })),
+      records: (rowsByKey.get(`${g.mahasiswaId}:${g.tanggal}`) || []).map((r) => ({
+        id: r.id,
+        jenisKompen: r.jenisKompen,
+        durasiMenit: r.durasiMenit,
+        keterangan: r.keterangan,
+        createdAt: r.createdAt,
+      })),
     }));
   }
 
@@ -275,10 +281,17 @@ export class KompensasiManualService {
       }
     }
 
+    const duplicateRiskCount = duplicateRisks.length;
+    if (duplicateRiskCount > 0) {
+      console.warn(
+        `[MONITORING-ALERT] Detected ${duplicateRiskCount} potential duplicate kompensasi entries (multiple records per student on same date).`,
+      );
+    }
+
     return {
       totalRecords: Number(totalRow?.count || 0),
       totalMenit: Number(sumRow?.totalMenit || 0),
-      duplicateRiskCount: duplicateRisks.length,
+      duplicateRiskCount,
       perJenis,
     };
   }

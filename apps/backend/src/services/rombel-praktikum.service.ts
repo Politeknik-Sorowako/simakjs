@@ -229,20 +229,12 @@ export class RombelPraktikumService {
 
     const krsMap = new Map(krsList.map((k) => [k.mahasiswaId, k]));
 
-    // Rata-rata nilai praktikum per mahasiswa (jika tanpa komponen) dan per komponen
-    const avgPerMhs = new Map<number, number>();
+    // Rata-rata nilai praktikum per mahasiswa per komponen
     const nilaiPerKomponen = new Map<string, { nilai: number; count: number }>();
     for (const n of nilaiList) {
       const key = `${n.mahasiswaId}:${n.komponenNilaiId ?? 'x'}`;
       const cur = nilaiPerKomponen.get(key) || { nilai: 0, count: 0 };
       nilaiPerKomponen.set(key, { nilai: cur.nilai + Number(n.nilaiAngka), count: cur.count + 1 });
-
-      const curAvg = avgPerMhs.get(n.mahasiswaId) || 0;
-      avgPerMhs.set(n.mahasiswaId, curAvg + Number(n.nilaiAngka));
-    }
-    for (const [mhsId, total] of avgPerMhs) {
-      const count = nilaiList.filter((n) => n.mahasiswaId === mhsId).length;
-      avgPerMhs.set(mhsId, total / count);
     }
 
     let syncedCount = 0;

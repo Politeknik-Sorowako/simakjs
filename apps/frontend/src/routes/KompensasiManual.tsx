@@ -28,6 +28,9 @@ export default function KompensasiManual() {
   const toast = useToast();
   const user = () => auth.user();
 
+  const isAdminRole = () => ['admin', 'super_admin'].includes(user()?.role || '');
+  const tableColumnCount = () => (isAdminRole() ? 8 : 7);
+
   // Filters state
   const [filterSearch, setFilterSearch] = createSignal('');
   const [filterTanggal, setFilterTanggal] = createSignal('');
@@ -308,7 +311,7 @@ export default function KompensasiManual() {
         {/* Data Table */}
         <Table
           headers={
-            ['admin', 'super_admin'].includes(user()?.role || '')
+            isAdminRole()
               ? ['No', 'NIM', 'Nama Mahasiswa', 'Tanggal', 'Jenis', 'Durasi', 'Keterangan', 'Aksi']
               : ['No', 'NIM', 'Nama Mahasiswa', 'Tanggal', 'Jenis', 'Durasi', 'Keterangan']
           }
@@ -331,7 +334,7 @@ export default function KompensasiManual() {
                 <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300 max-w-xs truncate">
                   {rec.keterangan || '-'}
                 </td>
-                <Show when={['admin', 'super_admin'].includes(user()?.role || '')}>
+                <Show when={isAdminRole()}>
                   <td class="py-3 px-4 text-right">
                     <div class="flex items-center justify-end gap-2">
                       <Button onClick={() => openEditModal(rec)} variant="secondary" class="text-xs py-1 px-2.5">
@@ -348,7 +351,10 @@ export default function KompensasiManual() {
           </For>
           <Show when={(kompensasiList()?.data || []).length === 0}>
             <tr>
-              <td colSpan={8} class="py-12 text-center text-xs text-secondary-500 dark:text-secondary-400">
+              <td
+                colSpan={tableColumnCount()}
+                class="py-12 text-center text-xs text-secondary-500 dark:text-secondary-400"
+              >
                 Tidak ada data kompensasi manual yang ditemukan.
               </td>
             </tr>

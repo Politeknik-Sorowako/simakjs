@@ -2403,24 +2403,36 @@ export const kompensasiManual = pgTable(
   },
 );
 
-export const nilaiPraktik = pgTable('nilai_praktik', {
-  id: serial('id').primaryKey(),
-  rombelPraktikumId: integer('rombel_praktikum_id')
-    .notNull()
-    .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
-  mahasiswaId: integer('mahasiswa_id')
-    .notNull()
-    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  komponenNilaiId: integer('komponen_nilai_id').references(() => komponenNilai.id, { onDelete: 'set null' }),
-  nilaiAngka: numeric('nilai_angka', { precision: 5, scale: 2 }).notNull(),
-  keterangan: text('keterangan'),
-  createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const nilaiPraktik = pgTable(
+  'nilai_praktik',
+  {
+    id: serial('id').primaryKey(),
+    rombelPraktikumId: integer('rombel_praktikum_id')
+      .notNull()
+      .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    komponenNilaiId: integer('komponen_nilai_id').references(() => komponenNilai.id, { onDelete: 'set null' }),
+    nilaiAngka: numeric('nilai_angka', { precision: 5, scale: 2 }).notNull(),
+    keterangan: text('keterangan'),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      rombelMahasiswaKomponenUnique: unique('nilai_praktik_rombel_mhs_komponen_unique').on(
+        table.rombelPraktikumId,
+        table.mahasiswaId,
+        table.komponenNilaiId,
+      ),
+    };
+  },
+);
 
 export const kompensasiManualRelations = relations(kompensasiManual, ({ one }) => ({
   mahasiswa: one(mahasiswa, {

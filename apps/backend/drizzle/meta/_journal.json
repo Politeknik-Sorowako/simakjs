@@ -246,13 +246,6 @@
       "when": 1785939610972,
       "tag": "0034_material_martin_li",
       "breakpoints": true
-    },
-    {
-      "idx": 35,
-      "version": "7",
-      "when": 1785939694949,
-      "tag": "0035_perpetual_dragon_lord",
-      "breakpoints": true
     }
   ]
 }

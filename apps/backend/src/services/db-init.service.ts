@@ -123,6 +123,8 @@ export class DbInitService {
           "created_at" timestamp DEFAULT now() NOT NULL,
           "updated_at" timestamp DEFAULT now() NOT NULL
         );
+        CREATE UNIQUE INDEX IF NOT EXISTS "nilai_praktik_rombel_mhs_komponen_unique"
+          ON "nilai_praktik" ("rombel_praktikum_id", "mahasiswa_id", "komponen_nilai_id");
       `);
     } catch (err: unknown) {
       console.warn('[DbInitService] Failed to auto-ensure DB tables:', err instanceof Error ? err.message : err);
