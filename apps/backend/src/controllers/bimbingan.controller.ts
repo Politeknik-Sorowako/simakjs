@@ -407,7 +407,7 @@ export class BimbinganController {
 
     try {
       const filter = {
-        periodeId: query?.periodeId || undefined,
+        periodeId: query?.periodeId ? String(query.periodeId) : undefined,
         prodiId: query?.prodiId ? parseInt(query.prodiId) : undefined,
         dosenPaId: query?.dosenPaId ? parseInt(query.dosenPaId) : undefined,
       };
