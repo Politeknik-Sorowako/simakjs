@@ -39,6 +39,10 @@ services:
     volumes:
       - backup_data_staging:/app/apps/backend/backups
       - app_logs_staging:/app/apps/backend/logs
+    networks:
+      default:
+        aliases:
+          - backend
     depends_on:
       db_staging:
         condition: service_healthy
