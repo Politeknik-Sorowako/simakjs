@@ -406,7 +406,8 @@ export class BimbinganService {
         dosenPaNama: dosen.nama,
       })
       .from(mahasiswa)
-      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id));
+      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+      .orderBy(asc(mahasiswa.id));
 
     const conditions = [];
     if (filter?.dosenPaId) {
@@ -433,7 +434,6 @@ export class BimbinganService {
     const totalPages = Math.ceil(total / limit);
 
     const listMahasiswa = await mhsQuery.where(whereClause).limit(limit).offset(offset);
-
     const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, targetPeriodeId));
 
     const bimbinganMap = new Map<number, typeof bimbingan.$inferSelect>();

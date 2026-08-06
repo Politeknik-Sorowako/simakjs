@@ -12,6 +12,7 @@ import { usePagination } from '../hooks/usePagination';
 export default function MonitoringBimbingan() {
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedDosenPa, setSelectedDosenPa] = createSignal<number | null>(null);
+  const [printData, setPrintData] = createSignal<MonitoringBimbinganLengkapItem[]>([]);
   const { page, limit, setPage, setLimit, search, setSearch, resetPage } = usePagination(10);
 
   // Load Periode Akademik
@@ -75,7 +76,15 @@ export default function MonitoringBimbingan() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const printRes = await bimbinganController.getMonitoringLengkap({
+      periodeId: selectedPeriode() || undefined,
+      dosenPaId: selectedDosenPa() || undefined,
+      search: search() || undefined,
+      page: 1,
+      limit: 10000,
+    });
+    setPrintData(printRes.data || []);
     window.print();
   };
 
@@ -164,7 +173,7 @@ export default function MonitoringBimbingan() {
         </div>
 
         {/* Table */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm print:hidden">
           <Show
             when={!monitoringData.loading}
             fallback={<p class="text-center text-xs text-secondary-400 py-8">Memuat data monitoring bimbingan...</p>}
@@ -218,6 +227,25 @@ export default function MonitoringBimbingan() {
               />
             </Show>
           </Show>
+        </div>
+
+        {/* Print-Only Table (renders all filtered rows) */}
+        <div class="hidden print:block">
+          <Table headers={['No', 'NIM', 'Nama Mahasiswa', 'Dosen PA', 'Periode', 'Jumlah Sesi', 'Status Approval']}>
+            <For each={printData()}>
+              {(item: MonitoringBimbinganLengkapItem, index: () => number) => (
+                <tr>
+                  <td class="px-3 py-2 text-xs">{index() + 1}</td>
+                  <td class="px-3 py-2 text-xs">{item.nim}</td>
+                  <td class="px-3 py-2 text-xs">{item.namaMahasiswa}</td>
+                  <td class="px-3 py-2 text-xs">{item.dosenPaNama}</td>
+                  <td class="px-3 py-2 text-xs">{item.periodeId}</td>
+                  <td class="px-3 py-2 text-xs">{item.totalSesi}</td>
+                  <td class="px-3 py-2 text-xs">{item.isApproved ? 'Disetujui' : 'Belum Disetujui'}</td>
+                </tr>
+              )}
+            </For>
+          </Table>
         </div>
       </div>
     </MainLayout>
