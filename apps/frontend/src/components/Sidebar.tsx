@@ -60,7 +60,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (isMatch(['/krs', '/keuangan'])) {
       setIsRegistrasiOpen(true);
     }
-    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan'])) {
+    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan', '/monitoring-bimbingan'])) {
       setIsPelaksanaanOpen(true);
     }
     if (isMatch(['/khs', '/yudisium', '/evaluasi-sistem'])) {
@@ -74,6 +74,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         '/obe/evaluasi-kurikulum',
         '/apel/verifikasi',
         '/apel/monitor',
+        '/kompensasi-manual',
+        '/duplicate-risk-kompensasi',
       ])
     ) {
       setIsLaporanOpen(true);
