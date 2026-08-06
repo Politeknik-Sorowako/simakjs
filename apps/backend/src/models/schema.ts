@@ -2273,7 +2273,7 @@ export const rombelPraktikum = pgTable('rombel_praktikum', {
     .notNull()
     .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
   namaGroup: varchar('nama_group', { length: 255 }).notNull(),
-  instrukturId: integer('instrukturId').references(() => dosen.id, { onDelete: 'set null' }),
+  instrukturId: integer('instruktur_id').references(() => dosen.id, { onDelete: 'set null' }),
   keterangan: text('keterangan'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')

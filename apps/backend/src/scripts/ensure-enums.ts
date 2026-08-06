@@ -75,7 +75,7 @@ async function ensureEnums() {
         "id" serial PRIMARY KEY NOT NULL,
         "kelas_kuliah_id" integer NOT NULL REFERENCES "kelas_kuliah"("id") ON DELETE CASCADE,
         "nama_group" varchar(255) NOT NULL,
-        "instrukturId" integer REFERENCES "dosen"("id") ON DELETE SET NULL,
+        "instruktur_id" integer REFERENCES "dosen"("id") ON DELETE SET NULL,
         "keterangan" text,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "updated_at" timestamp DEFAULT now() NOT NULL
@@ -94,7 +94,7 @@ async function ensureEnums() {
         "materi" text NOT NULL,
         "catatan" text,
         "durasi_menit" integer DEFAULT 100 NOT NULL,
-        "instrukturId" integer REFERENCES "dosen"("id") ON DELETE SET NULL,
+        "instruktur_id" integer REFERENCES "dosen"("id") ON DELETE SET NULL,
         "created_at" timestamp DEFAULT now() NOT NULL,
         "updated_at" timestamp DEFAULT now() NOT NULL
       );
