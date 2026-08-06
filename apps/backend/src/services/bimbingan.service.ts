@@ -377,7 +377,8 @@ export class BimbinganService {
 
   static async getMonitoringBimbinganLengkap(filter?: { periodeId?: string; prodiId?: number; dosenPaId?: number }) {
     const activePeriode = await this.getActivePeriode();
-    const targetPeriodeId = filter?.periodeId || activePeriode?.id;
+    const rawPeriodeId = filter?.periodeId || activePeriode?.id;
+    const targetPeriodeId = rawPeriodeId ? String(rawPeriodeId) : undefined;
 
     if (!targetPeriodeId) {
       return [];
