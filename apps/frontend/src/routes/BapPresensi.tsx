@@ -52,6 +52,7 @@ export default function BapPresensi() {
   const [durasiPrak, setDurasiPrak] = createSignal(100);
   const [catatanPrak, setCatatanPrak] = createSignal('');
   const [instrukturIdPrak, setInstrukturIdPrak] = createSignal<number | null>(null);
+  const [selectedTopikPrakIds, setSelectedTopikPrakIds] = createSignal<number[]>([]);
   const [isSubmittingBapPrak, setIsSubmittingBapPrak] = createSignal(false);
 
   // Presensi Praktikum Form state
@@ -371,6 +372,7 @@ export default function BapPresensi() {
     setCatatanPrak('');
     setDurasiPrak(100);
     setInstrukturIdPrak(currentRombel()?.instrukturId ?? dosenProfile()?.id ?? null);
+    setSelectedTopikPrakIds([]);
     setShowCreateBapPrakModal(true);
   };
 
@@ -382,6 +384,7 @@ export default function BapPresensi() {
     setCatatanPrak(bapPrak.catatan || '');
     setDurasiPrak(bapPrak.durasiMenit);
     setInstrukturIdPrak(bapPrak.instrukturId ?? currentRombel()?.instrukturId ?? null);
+    setSelectedTopikPrakIds([]);
     setShowCreateBapPrakModal(true);
   };
 
@@ -1710,6 +1713,56 @@ export default function BapPresensi() {
               required
             />
           </div>
+          <Show when={(rpsTopics() || []).length > 0}>
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+                Pilih Topik Rencana Pembelajaran SAP / RPS (Opsional)
+              </label>
+              <div class="max-h-48 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800 space-y-1">
+                <For each={rpsTopics() || []}>
+                  {(topic) => {
+                    const isChecked = () => selectedTopikPrakIds().includes(topic.id);
+                    const toggleTopic = () => {
+                      if (isChecked()) {
+                        const newSelected = selectedTopikPrakIds().filter((id) => id !== topic.id);
+                        setSelectedTopikPrakIds(newSelected);
+                        const selectedTopics = (rpsTopics() || []).filter((t) => newSelected.includes(t.id));
+                        setMateriPrak(selectedTopics.map((t) => `P${t.pertemuanKe}: ${t.topik}`).join(', '));
+                      } else {
+                        const newSelected = [...selectedTopikPrakIds(), topic.id];
+                        setSelectedTopikPrakIds(newSelected);
+                        const selectedTopics = (rpsTopics() || []).filter((t) => newSelected.includes(t.id));
+                        setMateriPrak(selectedTopics.map((t) => `P${t.pertemuanKe}: ${t.topik}`).join(', '));
+                      }
+                    };
+                    return (
+                      <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white dark:hover:bg-secondary-700/60 cursor-pointer transition-colors text-xs">
+                        <input
+                          type="checkbox"
+                          checked={isChecked()}
+                          onChange={toggleTopic}
+                          class="mt-0.5 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:bg-secondary-900 dark:border-secondary-700"
+                        />
+                        <div class="flex-1">
+                          <span class="font-bold text-brand-600 dark:text-brand-400 mr-1.5">P{topic.pertemuanKe}</span>
+                          <span class="font-medium text-secondary-800 dark:text-secondary-100">{topic.topik}</span>
+                          {topic.subTopik && (
+                            <span class="text-secondary-500 dark:text-secondary-400 block text-[11px]">
+                              {topic.subTopik}
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  }}
+                </For>
+              </div>
+              <p class="text-[11px] text-secondary-500 dark:text-secondary-400">
+                Memilih topik SAP/RPS otomatis mengisi ringkasan materi praktikum di bawah.
+              </p>
+            </div>
+          </Show>
+
           <Input
             type="text"
             label="Materi Praktikum"
