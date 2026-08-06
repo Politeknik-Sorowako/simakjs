@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { PaginatedResponse } from './prodiController';
 
 export interface BimbinganThread {
   id: number;
@@ -213,13 +214,21 @@ export const bimbinganController = {
     periodeId?: string;
     prodiId?: number;
     dosenPaId?: number;
-  }): Promise<MonitoringBimbinganLengkapItem[]> {
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<MonitoringBimbinganLengkapItem>> {
     const params = new URLSearchParams();
     if (filter?.periodeId) params.append('periodeId', filter.periodeId);
     if (filter?.prodiId) params.append('prodiId', String(filter.prodiId));
     if (filter?.dosenPaId) params.append('dosenPaId', String(filter.dosenPaId));
+    if (filter?.search) params.append('search', filter.search);
+    if (filter?.page) params.append('page', String(filter.page));
+    if (filter?.limit) params.append('limit', String(filter.limit));
     const query = params.toString() ? `?${params.toString()}` : '';
-    const res = await fetchApi<{ data: MonitoringBimbinganLengkapItem[] }>(`/bimbingan/monitoring-lengkap${query}`);
-    return res.data || [];
+    const res = await fetchApi<PaginatedResponse<MonitoringBimbinganLengkapItem>>(
+      `/bimbingan/monitoring-lengkap${query}`,
+    );
+    return res;
   },
 };
