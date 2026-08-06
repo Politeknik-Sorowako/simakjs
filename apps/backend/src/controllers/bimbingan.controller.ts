@@ -410,9 +410,12 @@ export class BimbinganController {
         periodeId: query?.periodeId ? String(query.periodeId) : undefined,
         prodiId: query?.prodiId ? parseInt(query.prodiId) : undefined,
         dosenPaId: query?.dosenPaId ? parseInt(query.dosenPaId) : undefined,
+        search: query?.search ? String(query.search) : undefined,
+        page: query?.page ? parseInt(query.page) : 1,
+        limit: query?.limit ? parseInt(query.limit) : 10,
       };
-      const data = await BimbinganService.getMonitoringBimbinganLengkap(filter);
-      return { data };
+      const result = await BimbinganService.getMonitoringBimbinganLengkap(filter);
+      return result;
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal mengambil data monitoring bimbingan.' };

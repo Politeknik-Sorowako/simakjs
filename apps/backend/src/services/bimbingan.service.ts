@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
 import {
   bimbingan,
   bimbinganThread,
@@ -375,14 +375,26 @@ export class BimbinganService {
     });
   }
 
-  static async getMonitoringBimbinganLengkap(filter?: { periodeId?: string; prodiId?: number; dosenPaId?: number }) {
+  static async getMonitoringBimbinganLengkap(filter?: {
+    periodeId?: string;
+    prodiId?: number;
+    dosenPaId?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const activePeriode = await this.getActivePeriode();
     const rawPeriodeId = filter?.periodeId || activePeriode?.id;
     const targetPeriodeId = rawPeriodeId ? String(rawPeriodeId) : undefined;
 
     if (!targetPeriodeId) {
-      return [];
+      return { data: [], meta: { total: 0, page: 1, limit: filter?.limit || 10, totalPages: 0 } };
     }
+
+    const page = Math.max(1, filter?.page || 1);
+    const limit = Math.min(10000, Math.max(1, filter?.limit || 10));
+    const offset = (page - 1) * limit;
+    const search = filter?.search?.trim();
 
     const mhsQuery = db
       .select({
@@ -403,8 +415,24 @@ export class BimbinganService {
     if (filter?.prodiId) {
       conditions.push(eq(mahasiswa.programStudiId, filter.prodiId));
     }
+    if (search) {
+      conditions.push(
+        or(ilike(mahasiswa.nim, `%${search}%`), ilike(mahasiswa.nama, `%${search}%`), ilike(dosen.nama, `%${search}%`)),
+      );
+    }
 
-    const listMahasiswa = conditions.length > 0 ? await mhsQuery.where(and(...conditions)) : await mhsQuery;
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalResult] = await db
+      .select({ total: count() })
+      .from(mahasiswa)
+      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+      .where(whereClause);
+
+    const total = totalResult?.total || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    const listMahasiswa = await mhsQuery.where(whereClause).limit(limit).offset(offset);
 
     const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, targetPeriodeId));
 
@@ -430,7 +458,7 @@ export class BimbinganService {
       }
     }
 
-    return listMahasiswa.map((mhs) => {
+    const data = listMahasiswa.map((mhs) => {
       const bimb = bimbinganMap.get(mhs.id);
       const sesiList = bimb ? sesiMap.get(bimb.id) || [] : [];
       return {
@@ -448,5 +476,7 @@ export class BimbinganService {
         sesiList,
       };
     });
+
+    return { data, meta: { total, page, limit, totalPages } };
   }
 }

@@ -2,15 +2,17 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Pagination } from '../components/ui/Pagination';
 import { Table } from '../components/ui/Table';
 import { bimbinganController, MonitoringBimbinganLengkapItem } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { usePagination } from '../hooks/usePagination';
 
 export default function MonitoringBimbingan() {
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedDosenPa, setSelectedDosenPa] = createSignal<number | null>(null);
-  const [searchQuery, setSearchQuery] = createSignal('');
+  const { page, limit, setPage, setLimit, search, setSearch, resetPage } = usePagination(10);
 
   // Load Periode Akademik
   const [periodes] = createResource(() => periodeAkademikController.getAll());
@@ -20,34 +22,40 @@ export default function MonitoringBimbingan() {
 
   // Load Monitoring Data
   const [monitoringData] = createResource(
-    () => ({ periodeId: selectedPeriode(), dosenPaId: selectedDosenPa() }),
-    async ({ periodeId, dosenPaId }) => {
+    () => ({
+      periodeId: selectedPeriode(),
+      dosenPaId: selectedDosenPa(),
+      search: search(),
+      page: page(),
+      limit: limit(),
+    }),
+    async ({ periodeId, dosenPaId, search, page, limit }) => {
       return await bimbinganController.getMonitoringLengkap({
         periodeId: periodeId || undefined,
         dosenPaId: dosenPaId || undefined,
+        search: search || undefined,
+        page,
+        limit,
       });
     },
   );
 
-  const filteredData = () => {
-    const list = monitoringData() || [];
-    const q = searchQuery().toLowerCase().trim();
-    if (!q) return list;
-    return list.filter(
-      (item) =>
-        item.namaMahasiswa.toLowerCase().includes(q) ||
-        item.nim.toLowerCase().includes(q) ||
-        item.dosenPaNama.toLowerCase().includes(q),
-    );
-  };
+  const data = () => monitoringData()?.data || [];
 
-  const handleExportCSV = () => {
-    const data = filteredData();
-    if (data.length === 0) return;
+  const handleExportCSV = async () => {
+    const exportRes = await bimbinganController.getMonitoringLengkap({
+      periodeId: selectedPeriode() || undefined,
+      dosenPaId: selectedDosenPa() || undefined,
+      search: search() || undefined,
+      page: 1,
+      limit: 10000,
+    });
+    const exportData = exportRes.data || [];
+    if (exportData.length === 0) return;
 
     const safeStr = (val: unknown) => `"${String(val ?? '').replace(/"/g, '""')}"`;
     const headers = ['NIM', 'Nama Mahasiswa', 'Dosen PA', 'Periode', 'Jumlah Sesi Bimbingan', 'Status Persetujuan'];
-    const rows = data.map((item) => [
+    const rows = exportData.map((item) => [
       safeStr(item.nim),
       safeStr(item.namaMahasiswa),
       safeStr(item.dosenPaNama),
@@ -107,7 +115,10 @@ export default function MonitoringBimbingan() {
               <select
                 class="text-xs p-2 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-800 dark:text-white"
                 value={selectedPeriode()}
-                onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
+                onChange={(e) => {
+                  setSelectedPeriode(e.currentTarget.value);
+                  resetPage();
+                }}
               >
                 <option value="">-- Periode Aktif --</option>
                 <For each={periodes()?.data || []}>
@@ -127,7 +138,10 @@ export default function MonitoringBimbingan() {
               <select
                 class="text-xs p-2 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-800 dark:text-white"
                 value={selectedDosenPa() || ''}
-                onChange={(e) => setSelectedDosenPa(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
+                onChange={(e) => {
+                  setSelectedDosenPa(e.currentTarget.value ? Number(e.currentTarget.value) : null);
+                  resetPage();
+                }}
               >
                 <option value="">-- Semua Dosen PA --</option>
                 <For each={(dosenList()?.data as { id: number; nama: string }[]) || []}>
@@ -140,8 +154,11 @@ export default function MonitoringBimbingan() {
           <div class="w-64">
             <Input
               placeholder="Cari NIM, Mahasiswa, Dosen..."
-              value={searchQuery()}
-              onInput={(e) => setSearchQuery(e.currentTarget.value)}
+              value={search()}
+              onInput={(e) => {
+                setSearch(e.currentTarget.value);
+                resetPage();
+              }}
             />
           </div>
         </div>
@@ -153,14 +170,16 @@ export default function MonitoringBimbingan() {
             fallback={<p class="text-center text-xs text-secondary-400 py-8">Memuat data monitoring bimbingan...</p>}
           >
             <Show
-              when={filteredData().length > 0}
+              when={data().length > 0}
               fallback={<p class="text-center text-xs text-secondary-400 py-8">Tidak ada data bimbingan ditemukan.</p>}
             >
               <Table headers={['No', 'NIM', 'Nama Mahasiswa', 'Dosen PA', 'Periode', 'Jumlah Sesi', 'Status Approval']}>
-                <For each={filteredData()}>
+                <For each={data()}>
                   {(item: MonitoringBimbinganLengkapItem, index: () => number) => (
                     <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40 transition-colors">
-                      <td class="px-6 py-4 text-xs font-medium text-secondary-500">{index() + 1}</td>
+                      <td class="px-6 py-4 text-xs font-medium text-secondary-500">
+                        {(page() - 1) * limit() + index() + 1}
+                      </td>
                       <td class="px-6 py-4 text-xs font-mono font-medium text-secondary-900 dark:text-white">
                         {item.nim}
                       </td>
@@ -189,6 +208,14 @@ export default function MonitoringBimbingan() {
                   )}
                 </For>
               </Table>
+              <Pagination
+                currentPage={page()}
+                totalPages={Math.ceil((monitoringData()?.meta?.total || 0) / limit())}
+                total={monitoringData()?.meta?.total || 0}
+                limit={limit()}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+              />
             </Show>
           </Show>
         </div>
