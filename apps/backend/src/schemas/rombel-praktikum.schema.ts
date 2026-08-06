@@ -21,6 +21,7 @@ export const createBapPraktikumBody = t.Object({
   catatan: t.Optional(t.Nullable(t.String())),
   durasiMenit: t.Integer({ default: 100 }),
   instrukturId: t.Optional(t.Nullable(t.Integer())),
+  topikIds: t.Optional(t.Array(t.Integer())),
 });
 
 export const updateBapPraktikumBody = t.Partial(createBapPraktikumBody);

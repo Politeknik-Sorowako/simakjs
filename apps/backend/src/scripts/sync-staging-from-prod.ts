@@ -67,6 +67,7 @@ async function main() {
 
   const prodSshHost = process.env.PROD_SSH_HOST || '';
   const prodSshUser = process.env.PROD_SSH_USER || 'deploy';
+  const prodSshPort = process.env.PROD_SSH_PORT || '22';
   const prodSshKeyRaw = process.env.PROD_SSH_KEY || '~/.ssh/id_rsa_staging_pull';
   const prodSshKey = expandTildePath(prodSshKeyRaw);
   const prodDbName = process.env.PROD_DB_NAME || 'simak_vokasi';
@@ -86,7 +87,9 @@ async function main() {
 
     if (isDryRun) {
       auditLog(`[DRY-RUN] Key Path: ${prodSshKey}`);
-      auditLog(`[DRY-RUN] Would fetch dump from ${prodSshUser}@${prodSshHost || 'PROD_HOST'} -> ${tempDumpPath}`);
+      auditLog(
+        `[DRY-RUN] Would fetch dump from ${prodSshUser}@${prodSshHost || 'PROD_HOST'}:${prodSshPort} -> ${tempDumpPath}`,
+      );
       auditLog(`[DRY-RUN] Would restore dump into local DB: ${config.db} at ${config.host}:${config.port}`);
       auditLog(`[DRY-RUN] Would execute auto-migrations (safe-migrate)`);
       auditLog(`[DRY-RUN] Would execute sanitization script: ${sanitizeSqlPath}`);
@@ -94,10 +97,10 @@ async function main() {
       return;
     }
 
-    auditLog(`Fetching dump from Production (${prodSshHost})...`);
+    auditLog(`Fetching dump from Production (${prodSshHost}:${prodSshPort})...`);
 
     // 1. Pull dump from Prod using SSH & pg_dump
-    const sshDumpCmd = `ssh -i "${prodSshKey}" -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl" > "${tempDumpPath}"`;
+    const sshDumpCmd = `ssh -p ${prodSshPort} -i "${prodSshKey}" -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl" > "${tempDumpPath}"`;
 
     const fetchResult = spawnSync('sh', ['-c', sshDumpCmd], {
       env: process.env,
