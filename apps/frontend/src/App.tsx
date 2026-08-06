@@ -38,13 +38,16 @@ import Cpmk from './routes/Cpmk';
 import CutiMahasiswa from './routes/CutiMahasiswa';
 import Dashboard from './routes/Dashboard';
 import Dosen from './routes/Dosen';
+import DuplicateRiskKompensasi from './routes/DuplicateRiskKompensasi';
 import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
+import EvaluasiSistem from './routes/EvaluasiSistem';
 import ForceChangePassword from './routes/ForceChangePassword';
 import ForgotPassword from './routes/ForgotPassword';
 import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
 import Khs from './routes/Khs';
+import KompensasiManual from './routes/KompensasiManual';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
@@ -55,6 +58,7 @@ import Mahasiswa from './routes/Mahasiswa';
 import MahasiswaKeluar from './routes/MahasiswaKeluar';
 import ManajemenCuti from './routes/ManajemenCuti';
 import MataKuliah from './routes/MataKuliah';
+import MonitoringBimbingan from './routes/MonitoringBimbingan';
 import { PddiktiSync } from './routes/PddiktiSync';
 import Pelanggaran from './routes/Pelanggaran';
 import Pengguna from './routes/Pengguna';
@@ -165,7 +169,7 @@ function AppContent() {
       <Route
         path="/jurnal-presensi"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
             <BapPresensi />
           </ProtectedRoute>
         }
@@ -175,6 +179,23 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <LaporanKompensasi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/kompensasi-manual"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KompensasiManual />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/input-kompensasi-manual" element={<Navigate href="/kompensasi-manual" />} />
+      <Route
+        path="/duplicate-risk-kompensasi"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <DuplicateRiskKompensasi />
           </ProtectedRoute>
         }
       />
@@ -211,10 +232,26 @@ function AppContent() {
         }
       />
       <Route
+        path="/monitoring-bimbingan"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+            <MonitoringBimbingan />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/pelanggaran"
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
             <Pelanggaran />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/evaluasi-sistem"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan']}>
+            <EvaluasiSistem />
           </ProtectedRoute>
         }
       />

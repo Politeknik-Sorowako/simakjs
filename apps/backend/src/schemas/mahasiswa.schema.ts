@@ -322,3 +322,15 @@ export const deleteMahasiswaSchema = {
     }),
   },
 };
+
+export const bulkSetDosenPaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Set Dosen PA Massal',
+    description: 'Menetapkan Dosen Pembimbing Akademik (PA) untuk beberapa mahasiswa secara massal.',
+  },
+  body: t.Object({
+    mahasiswaIds: t.Array(t.Integer()),
+    dosenPaId: t.Nullable(t.Integer()),
+  }),
+};

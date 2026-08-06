@@ -1,5 +1,13 @@
-import { and, asc, desc, eq, inArray } from 'drizzle-orm';
-import { bimbingan, bimbinganThread, dosen, mahasiswa, periodeAkademik, sesiBimbingan } from '../models/schema';
+import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
+import {
+  bimbingan,
+  bimbinganThread,
+  dosen,
+  mahasiswa,
+  periodeAkademik,
+  programStudi,
+  sesiBimbingan,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export class BimbinganService {
@@ -158,13 +166,21 @@ export class BimbinganService {
 
   static async addSesiBimbingan(
     bimbinganId: number,
-    data: { pertemuanKe: number; tanggalBimbingan: Date; permasalahan: string; solusi: string; statusBkd: boolean },
+    data: {
+      pertemuanKe: number;
+      tanggalBimbingan: Date;
+      permasalahan: string;
+      solusi: string;
+      statusBkd: boolean;
+      kategoriId?: number | null;
+    },
   ) {
     const [newSesi] = await db
       .insert(sesiBimbingan)
       .values({
         bimbinganId,
         ...data,
+        kategoriId: data.kategoriId || null,
         tanggalBimbingan: data.tanggalBimbingan.toISOString().split('T')[0],
       })
       .returning();
@@ -179,12 +195,14 @@ export class BimbinganService {
       permasalahan?: string;
       solusi?: string;
       statusBkd?: boolean;
+      kategoriId?: number | null;
     },
   ) {
     const [updatedSesi] = await db
       .update(sesiBimbingan)
       .set({
         ...data,
+        kategoriId: data.kategoriId !== undefined ? data.kategoriId : undefined,
         tanggalBimbingan: data.tanggalBimbingan ? data.tanggalBimbingan.toISOString().split('T')[0] : undefined,
         updatedAt: new Date(),
       })
@@ -204,73 +222,100 @@ export class BimbinganService {
   }
 
   static async getMonitoringBimbingan(dosenId?: number) {
-    const activePeriode = await this.getActivePeriode();
-    if (!activePeriode) {
-      return [];
-    }
+    try {
+      const activePeriode = await this.getActivePeriode();
+      if (!activePeriode) {
+        return [];
+      }
 
-    // Ambil daftar mahasiswa
-    const queryBuilder = db
-      .select({
-        id: mahasiswa.id,
-        nim: mahasiswa.nim,
-        nama: mahasiswa.nama,
-        dosenPaId: mahasiswa.dosenPaId,
-        dosenPaNama: dosen.nama,
-      })
-      .from(mahasiswa)
-      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id));
+      // Ambil daftar mahasiswa
+      const queryBuilder = db
+        .select({
+          id: mahasiswa.id,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          angkatan: mahasiswa.angkatan,
+          prodiId: mahasiswa.programStudiId,
+          prodiNama: programStudi.nama,
+          dosenPaId: mahasiswa.dosenPaId,
+          dosenPaNama: dosen.nama,
+        })
+        .from(mahasiswa)
+        .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id));
 
-    if (dosenId !== undefined) {
-      queryBuilder.where(eq(mahasiswa.dosenPaId, dosenId));
-    }
+      if (dosenId !== undefined) {
+        queryBuilder.where(eq(mahasiswa.dosenPaId, dosenId));
+      }
 
-    const listMahasiswa = await queryBuilder;
+      const listMahasiswa = await queryBuilder;
 
-    // Ambil semua bimbingan untuk periode aktif
-    const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
+      // Ambil semua bimbingan untuk periode aktif
+      let listBimbingan: (typeof bimbingan.$inferSelect)[] = [];
+      try {
+        listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
+      } catch (e: unknown) {
+        console.error('[BimbinganService] Error querying bimbingan for active periode:', {
+          periodeId: activePeriode.id,
+          error: e instanceof Error ? e.message : e,
+        });
+      }
 
-    const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
-    const bimbinganIds: number[] = [];
-    for (const b of listBimbingan) {
-      mapBimbingan.set(b.mahasiswaId, b);
-      bimbinganIds.push(b.id);
-    }
+      const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
+      const bimbinganIds: number[] = [];
+      for (const b of listBimbingan) {
+        mapBimbingan.set(b.mahasiswaId, b);
+        bimbinganIds.push(b.id);
+      }
 
-    // Ambil rekap total sesi per bimbingan (hanya untuk bimbingan di periode aktif)
-    const allSesi =
-      bimbinganIds.length > 0
-        ? await db
+      // Ambil rekap total sesi per bimbingan (hanya untuk bimbingan di periode aktif)
+      let allSesi: { id: number; bimbinganId: number }[] = [];
+      if (bimbinganIds.length > 0) {
+        try {
+          allSesi = await db
             .select({
               id: sesiBimbingan.id,
               bimbinganId: sesiBimbingan.bimbinganId,
             })
             .from(sesiBimbingan)
-            .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds))
-        : [];
+            .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds));
+        } catch (e: unknown) {
+          console.error('[BimbinganService] Error querying sesiBimbingan:', {
+            bimbinganCount: bimbinganIds.length,
+            error: e instanceof Error ? e.message : e,
+          });
+        }
+      }
 
-    const sesiCountMap = new Map<number, number>();
-    for (const s of allSesi) {
-      const currentVal = sesiCountMap.get(s.bimbinganId) || 0;
-      sesiCountMap.set(s.bimbinganId, currentVal + 1);
+      const sesiCountMap = new Map<number, number>();
+      for (const s of allSesi) {
+        const currentVal = sesiCountMap.get(s.bimbinganId) || 0;
+        sesiCountMap.set(s.bimbinganId, currentVal + 1);
+      }
+
+      return listMahasiswa.map((mhs) => {
+        const bimb = mapBimbingan.get(mhs.id);
+        const totalSesi = bimb ? sesiCountMap.get(bimb.id) || 0 : 0;
+        return {
+          ...mhs,
+          bimbinganId: bimb?.id || null,
+          ringkasan: bimb?.ringkasan || null,
+          isApproved: bimb?.isApproved || false,
+          totalSesi,
+          permasalahan: bimb?.permasalahan || null,
+          solusi: bimb?.solusi || null,
+          tanggalBimbingan: bimb?.tanggalBimbingan || null,
+          statusBkd: bimb?.statusBkd || false,
+          createdAt: bimb?.createdAt || null,
+        };
+      });
+    } catch (err: unknown) {
+      console.error('[BimbinganService] Error in getMonitoringBimbingan:', {
+        dosenId,
+        error: err instanceof Error ? err.message : err,
+      });
+      return [];
     }
-
-    return listMahasiswa.map((mhs) => {
-      const bimb = mapBimbingan.get(mhs.id);
-      const totalSesi = bimb ? sesiCountMap.get(bimb.id) || 0 : 0;
-      return {
-        ...mhs,
-        bimbinganId: bimb?.id || null,
-        ringkasan: bimb?.ringkasan || null,
-        isApproved: bimb?.isApproved || false,
-        totalSesi,
-        permasalahan: bimb?.permasalahan || null,
-        solusi: bimb?.solusi || null,
-        tanggalBimbingan: bimb?.tanggalBimbingan || null,
-        statusBkd: bimb?.statusBkd || false,
-        createdAt: bimb?.createdAt || null,
-      };
-    });
   }
 
   static async getRekapBimbinganDosen(dosenId?: number, periodeId?: string) {
@@ -328,5 +373,117 @@ export class BimbinganService {
         statusBkd: sesi.some((s) => s.statusBkd),
       };
     });
+  }
+
+  static async getMonitoringBimbinganLengkap(filter?: {
+    periodeId?: string;
+    prodiId?: number;
+    dosenPaId?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const activePeriode = await this.getActivePeriode();
+    const rawPeriodeId = filter?.periodeId || activePeriode?.id;
+    const targetPeriodeId = rawPeriodeId ? String(rawPeriodeId) : undefined;
+
+    if (!targetPeriodeId) {
+      return { data: [], meta: { total: 0, page: 1, limit: filter?.limit || 10, totalPages: 0 } };
+    }
+
+    const page = Math.max(1, filter?.page || 1);
+    const limit = Math.min(10000, Math.max(1, filter?.limit || 10));
+    const offset = (page - 1) * limit;
+    const search = filter?.search?.trim();
+
+    const mhsQuery = db
+      .select({
+        id: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        prodiId: mahasiswa.programStudiId,
+        dosenPaId: mahasiswa.dosenPaId,
+        dosenPaNama: dosen.nama,
+      })
+      .from(mahasiswa)
+      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+      .orderBy(asc(mahasiswa.id));
+
+    const conditions = [];
+    if (filter?.dosenPaId) {
+      conditions.push(eq(mahasiswa.dosenPaId, filter.dosenPaId));
+    }
+    if (filter?.prodiId) {
+      conditions.push(eq(mahasiswa.programStudiId, filter.prodiId));
+    }
+    if (search) {
+      conditions.push(
+        or(ilike(mahasiswa.nim, `%${search}%`), ilike(mahasiswa.nama, `%${search}%`), ilike(dosen.nama, `%${search}%`)),
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [totalResult] = await db
+      .select({ total: count() })
+      .from(mahasiswa)
+      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+      .where(whereClause);
+
+    const total = totalResult?.total || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    const listMahasiswa = await mhsQuery.where(whereClause).limit(limit).offset(offset);
+    const pageMahasiswaIds = listMahasiswa.map((m) => m.id);
+    const listBimbingan =
+      pageMahasiswaIds.length > 0
+        ? await db
+            .select()
+            .from(bimbingan)
+            .where(and(eq(bimbingan.periodeId, targetPeriodeId), inArray(bimbingan.mahasiswaId, pageMahasiswaIds)))
+        : [];
+
+    const bimbinganMap = new Map<number, typeof bimbingan.$inferSelect>();
+    const bimbinganIds: number[] = [];
+    for (const b of listBimbingan) {
+      bimbinganMap.set(b.mahasiswaId, b);
+      bimbinganIds.push(b.id);
+    }
+
+    const sesiMap = new Map<number, (typeof sesiBimbingan.$inferSelect)[]>();
+    if (bimbinganIds.length > 0) {
+      const allSesi = await db
+        .select()
+        .from(sesiBimbingan)
+        .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds))
+        .orderBy(asc(sesiBimbingan.pertemuanKe));
+
+      for (const s of allSesi) {
+        const current = sesiMap.get(s.bimbinganId) || [];
+        current.push(s);
+        sesiMap.set(s.bimbinganId, current);
+      }
+    }
+
+    const data = listMahasiswa.map((mhs) => {
+      const bimb = bimbinganMap.get(mhs.id);
+      const sesiList = bimb ? sesiMap.get(bimb.id) || [] : [];
+      return {
+        mahasiswaId: mhs.id,
+        nim: mhs.nim,
+        namaMahasiswa: mhs.nama,
+        prodiId: mhs.prodiId,
+        dosenPaId: mhs.dosenPaId,
+        dosenPaNama: mhs.dosenPaNama || 'Belum Ditentukan',
+        periodeId: targetPeriodeId,
+        bimbinganId: bimb?.id || null,
+        totalSesi: sesiList.length,
+        isApproved: bimb?.isApproved || false,
+        statusBkd: bimb?.statusBkd || false,
+        sesiList,
+      };
+    });
+
+    return { data, meta: { total, page, limit, totalPages } };
   }
 }

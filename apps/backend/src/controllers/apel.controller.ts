@@ -1,18 +1,12 @@
 import { ApelService } from '../services/apel.service';
-import type { AuthContext } from '../utils/types';
-
-// biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
-function allowed(user: any, roles: string[]) {
-  if (!user) return false;
-  return roles.includes(user.role);
-}
+import { type AuthContext, allowed } from '../utils/types';
 
 export class ApelController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createKelompok({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'prodi'])) {
+      if (!allowed(user, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }

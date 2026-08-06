@@ -18,6 +18,11 @@ export interface UserPayload {
   mustChangePassword?: boolean;
 }
 
+export function allowed(user: UserPayload | null | undefined, roles: UserRole[]): boolean {
+  if (!user) return false;
+  return roles.includes(user.role);
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requires `any` for route inference
 export type AuthContext<TBody = any, TQuery = any, TParams = any> = Omit<
   Context,

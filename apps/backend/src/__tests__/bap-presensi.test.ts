@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
-import { dosen, kelasKuliah, mahasiswa, mataKuliah, periodeAkademik, programStudi } from '../models/schema';
+import {
+  dosen,
+  kelasKuliah,
+  mahasiswa,
+  mataKuliah,
+  periodeAkademik,
+  programStudi,
+  rps,
+  rpsTopik,
+} from '../models/schema';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -415,6 +424,108 @@ describe('BAP, Presensi & Kompensasi API', () => {
       const presList = await getPresRes.json();
       expect(presList.length).toBe(1);
       expect(presList[0].keterangan).toBe('Izin dispensasi mengikuti kejuaraan sains');
+    });
+
+    it('harus sukses menambah BAP dengan multi-topik RPS dari form tanpa CPMK khusus (seperti di screenshot)', async () => {
+      // 1. Buat RPS dan Topik RPS
+      const [rpsEntry] = await db
+        .insert(rps)
+        .values({
+          mataKuliahId: matkulId,
+          periodeId: periodeId,
+          revisiKe: 1,
+          pengembang: 'Dosen Test',
+        })
+        .returning();
+
+      const [topik1] = await db
+        .insert(rpsTopik)
+        .values({
+          rpsId: rpsEntry.id,
+          pertemuanKe: 1,
+          topik: 'topik 1',
+        })
+        .returning();
+
+      const [topik2] = await db
+        .insert(rpsTopik)
+        .values({
+          rpsId: rpsEntry.id,
+          pertemuanKe: 2,
+          topik: 'topik 1',
+          subTopik: 'sub topik 2',
+        })
+        .returning();
+
+      const [topik3] = await db
+        .insert(rpsTopik)
+        .values({
+          rpsId: rpsEntry.id,
+          pertemuanKe: 3,
+          topik: 'topik 2',
+        })
+        .returning();
+
+      // 2. Submit BAP dengan topik1 dan topik3 tercentang
+      const bapRes = await app.handle(
+        new Request('http://localhost/bap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${dosenToken}`,
+          },
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            tanggal: '2026-04-08',
+            pertemuanKe: 1,
+            materi: 'P1: topik 1, P3: topik 2',
+            durasiMenit: 100,
+            topikIds: [topik1.id, topik3.id],
+            dosenId: dosenId,
+          }),
+        }),
+      );
+
+      const resJson = await bapRes.json();
+      expect(bapRes.status).toBe(201);
+      expect(resJson.id).toBeDefined();
+      expect(resJson.topikIds).toEqual([topik1.id, topik3.id]);
+
+      // 3. Test menyimpan presensi mahasiswa dengan status 'unknown'
+      const presUnknownRes = await app.handle(
+        new Request('http://localhost/presensi/bulk', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${dosenToken}`,
+          },
+          body: JSON.stringify({
+            bapId: resJson.id,
+            presensiList: [
+              {
+                mahasiswaId: mhsId,
+                status: 'unknown',
+                keterangan: 'Mahasiswa tidak hadir tanpa keterangan',
+              },
+            ],
+          }),
+        }),
+      );
+      expect(presUnknownRes.status).toBe(200);
+
+      // Verifikasi data presensi 'unknown' tersimpan di DB
+      const getUnknownRes = await app.handle(
+        new Request(`http://localhost/presensi/bap/${resJson.id}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${dosenToken}`,
+          },
+        }),
+      );
+      expect(getUnknownRes.status).toBe(200);
+      const listUnknown = await getUnknownRes.json();
+      expect(listUnknown.length).toBe(1);
+      expect(listUnknown[0].status).toBe('unknown');
     });
   });
 });

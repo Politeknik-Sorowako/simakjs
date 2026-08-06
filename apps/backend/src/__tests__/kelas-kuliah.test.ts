@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
+import { dosen } from '../models/schema';
+import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
 describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
@@ -313,7 +315,7 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
     it('harus mengembalikan template CSV dengan kolom kode_prodi', async () => {
       const adminToken = await getAuthToken('admin-kelas@test.com', 'admin');
       const response = await app.handle(
-        new Request('http://localhost/kelas-kuliah/template', {
+        new Request('http://localhost/kelas-kuliah/template/csv', {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${adminToken}`,
@@ -331,36 +333,21 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
     it('harus sukses mengimpor kelas kuliah dengan kodeProdi dan tim dosen (multi-dosen)', async () => {
       const adminToken = await getAuthToken('admin-kelas@test.com', 'admin');
 
-      // Create a dosen for testing
-      await app.handle(
-        new Request('http://localhost/dosen', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${adminToken}`,
-          },
-          body: JSON.stringify({
-            nip: '199001012020011001',
-            nama: 'Dosen Pengampu A',
-            email: 'dosenA@test.com',
-          }),
-        }),
-      );
-
-      await app.handle(
-        new Request('http://localhost/dosen', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${adminToken}`,
-          },
-          body: JSON.stringify({
-            nip: '199001012020011002',
-            nama: 'Dosen Pengampu B',
-            email: 'dosenB@test.com',
-          }),
-        }),
-      );
+      // Create dosen for testing
+      await db.insert(dosen).values([
+        {
+          nip: '199001012020011001',
+          nama: 'Dosen Pengampu A',
+          email: 'dosenA@test.com',
+          programStudiId: prodiId,
+        },
+        {
+          nip: '199001012020011002',
+          nama: 'Dosen Pengampu B',
+          email: 'dosenB@test.com',
+          programStudiId: prodiId,
+        },
+      ]);
 
       const importResponse = await app.handle(
         new Request('http://localhost/kelas-kuliah/import', {
@@ -386,6 +373,9 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
 
       expect(importResponse.status).toBe(200);
       const result = await importResponse.json();
+      if (result.failed > 0) {
+        console.log('importResult details:', JSON.stringify(result));
+      }
       expect(result.success).toBe(1);
       expect(result.failed).toBe(0);
     });

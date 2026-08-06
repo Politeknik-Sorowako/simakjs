@@ -139,6 +139,23 @@ export class ApelService {
     jamMulai: string;
     catatan?: string | null;
   }) {
+    const [existing] = await db
+      .select({ id: sesiApel.id })
+      .from(sesiApel)
+      .where(
+        and(
+          eq(sesiApel.kelompokApelId, data.kelompokApelId),
+          eq(sesiApel.tanggal, data.tanggal),
+          eq(sesiApel.shift, data.shift),
+        ),
+      );
+
+    if (existing) {
+      throw new Error(
+        `Sesi apel kelompok ini untuk tanggal ${data.tanggal} shift '${data.shift}' sudah pernah dibuka.`,
+      );
+    }
+
     const [sesi] = await db.insert(sesiApel).values(data).returning();
 
     const anggota = await db

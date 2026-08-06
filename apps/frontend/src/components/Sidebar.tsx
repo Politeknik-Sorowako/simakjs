@@ -1,13 +1,16 @@
 import { A, useLocation } from '@solidjs/router';
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
+import { settingsController } from '../controllers/settingsController';
 
 export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const auth = useAuth();
   const role = () => auth.user()?.role;
   const location = useLocation();
   const path = () => location.pathname;
+
+  const [publicSettings] = createResource(() => settingsController.getPublicSettings());
 
   const [isMasterOpen, setIsMasterOpen] = createSignal(false);
   const [isPerencanaanOpen, setIsPerencanaanOpen] = createSignal(false);
@@ -22,6 +25,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   createEffect(() => {
     const currentPath = path();
     const isMatch = (routes: string[]) => routes.some((r) => currentPath === r || currentPath.startsWith(`${r}/`));
+
+    // Reset all menus first, then open only the matching one
+    setIsMasterOpen(false);
+    setIsPerencanaanOpen(false);
+    setIsRegistrasiOpen(false);
+    setIsPelaksanaanOpen(false);
+    setIsEvaluasiOpen(false);
+    setIsLaporanOpen(false);
+    setIsLayananOpen(false);
+    setIsIntegrasiOpen(false);
+    setIsAdmisiOpen(false);
 
     if (isMatch(['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'])) {
       setIsMasterOpen(true);
@@ -46,10 +60,10 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (isMatch(['/krs', '/keuangan'])) {
       setIsRegistrasiOpen(true);
     }
-    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan'])) {
+    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan', '/monitoring-bimbingan'])) {
       setIsPelaksanaanOpen(true);
     }
-    if (isMatch(['/khs', '/yudisium'])) {
+    if (isMatch(['/khs', '/yudisium', '/evaluasi-sistem'])) {
       setIsEvaluasiOpen(true);
     }
     if (
@@ -60,6 +74,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         '/obe/evaluasi-kurikulum',
         '/apel/verifikasi',
         '/apel/monitor',
+        '/kompensasi-manual',
+        '/duplicate-risk-kompensasi',
       ])
     ) {
       setIsLaporanOpen(true);
@@ -666,7 +682,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
             <Show when={isPelaksanaanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <Show when={isAdmin() || isDosen()}>
+                <Show when={isAdmin() || isDosen() || isProdi()}>
                   <A
                     href="/jurnal-presensi"
                     onClick={() => props.onClose()}
@@ -742,6 +758,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Bimbingan Akademik
                   </A>
                 </Show>
+                <Show when={isAdmin() || isProdi()}>
+                  <A
+                    href="/monitoring-bimbingan"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                      />
+                    </svg>
+                    Monitoring Bimbingan
+                  </A>
+                </Show>
               </div>
             </Show>
           </div>
@@ -803,6 +838,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       />
                     </svg>
                     Evaluasi Yudisium
+                  </A>
+                </Show>
+                <Show when={publicSettings.loading ? true : (publicSettings()?.featureFeedbackEnabled ?? true)}>
+                  <A
+                    href="/evaluasi-sistem"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                      />
+                    </svg>
+                    Usulan & Evaluasi Sistem
                   </A>
                 </Show>
               </div>
@@ -979,6 +1033,44 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       />
                     </svg>
                     Jam Kompensasi
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/kompensasi-manual"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                    Kompensasi Manual
+                  </A>
+                </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/duplicate-risk-kompensasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Audit Kompensasi Ganda
                   </A>
                 </Show>
                 <Show when={isAdmin() || isProdi()}>

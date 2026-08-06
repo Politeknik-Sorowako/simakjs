@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { PaginatedResponse } from './prodiController';
 
 export interface BimbinganThread {
   id: number;
@@ -17,6 +18,7 @@ export interface SesiBimbingan {
   permasalahan: string;
   solusi: string;
   statusBkd: boolean;
+  kategoriId?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,6 +41,9 @@ export interface BimbinganMonitoring {
   id: number;
   nim: string;
   nama: string;
+  angkatan?: string;
+  prodiId?: number;
+  prodiNama?: string;
   dosenPaId: number | null;
   dosenPaNama: string | null;
   bimbinganId: number | null;
@@ -46,6 +51,21 @@ export interface BimbinganMonitoring {
   isApproved: boolean;
   totalSesi?: number;
   createdAt: string | null;
+}
+
+export interface MonitoringBimbinganLengkapItem {
+  mahasiswaId: number;
+  nim: string;
+  namaMahasiswa: string;
+  prodiId: number | null;
+  dosenPaId: number | null;
+  dosenPaNama: string;
+  periodeId: string;
+  bimbinganId: number | null;
+  totalSesi: number;
+  isApproved: boolean;
+  statusBkd: boolean;
+  sesiList: SesiBimbingan[];
 }
 
 export interface Pelanggaran {
@@ -124,7 +144,14 @@ export const bimbinganController = {
 
   async addSesi(
     mhsId: number,
-    data: { pertemuanKe: number; tanggalBimbingan: string; permasalahan: string; solusi: string; statusBkd?: boolean },
+    data: {
+      pertemuanKe: number;
+      tanggalBimbingan: string;
+      permasalahan: string;
+      solusi: string;
+      statusBkd?: boolean;
+      kategoriId?: number | null;
+    },
   ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/mahasiswa/${mhsId}/sesi`, {
       method: 'POST',
@@ -140,6 +167,7 @@ export const bimbinganController = {
       permasalahan?: string;
       solusi?: string;
       statusBkd?: boolean;
+      kategoriId?: number | null;
     },
   ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/sesi/${sesiId}`, {
@@ -180,5 +208,27 @@ export const bimbinganController = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  async getMonitoringLengkap(filter?: {
+    periodeId?: string;
+    prodiId?: number;
+    dosenPaId?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<PaginatedResponse<MonitoringBimbinganLengkapItem>> {
+    const params = new URLSearchParams();
+    if (filter?.periodeId) params.append('periodeId', filter.periodeId);
+    if (filter?.prodiId) params.append('prodiId', String(filter.prodiId));
+    if (filter?.dosenPaId) params.append('dosenPaId', String(filter.dosenPaId));
+    if (filter?.search) params.append('search', filter.search);
+    if (filter?.page) params.append('page', String(filter.page));
+    if (filter?.limit) params.append('limit', String(filter.limit));
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetchApi<PaginatedResponse<MonitoringBimbinganLengkapItem>>(
+      `/bimbingan/monitoring-lengkap${query}`,
+    );
+    return res;
   },
 };

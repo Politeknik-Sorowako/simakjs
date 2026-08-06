@@ -16,6 +16,7 @@ export const bimbinganUpdateBody = t.Object({
   solusi: t.Optional(t.String()),
   tanggalBimbingan: t.Optional(t.Any()),
   statusBkd: t.Optional(t.Boolean({ default: false })),
+  kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
 });
 
 export const getBimbinganSchema = {
@@ -155,6 +156,7 @@ export const addSesiBody = t.Object({
   permasalahan: t.Optional(t.String()),
   solusi: t.Optional(t.String()),
   statusBkd: t.Optional(t.Boolean({ default: false })),
+  kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
 });
 
 export const addSesiSchema = {
@@ -197,25 +199,5 @@ export const getBimbinganMonitoringSchema = {
     tags: ['Bimbingan'],
     summary: 'Monitoring Progres Bimbingan Akademik',
     description: 'Admin atau Kaprodi memantau seluruh status bimbingan mahasiswa pada periode aktif.',
-  },
-  response: {
-    200: t.Array(
-      t.Object({
-        id: t.Optional(t.Integer({ default: 1 })),
-        nim: t.Optional(t.String({ default: '202301001' })),
-        nama: t.Optional(t.String({ default: 'Andi Pratama' })),
-        dosenPaId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
-        dosenPaNama: t.Optional(t.Union([t.String(), t.Null()], { default: 'Dr. Budi Utomo' })),
-        isApproved: t.Optional(t.Boolean({ default: true })),
-        bimbinganId: t.Optional(t.Union([t.Integer(), t.Null()])),
-        ringkasan: t.Optional(t.Union([t.String(), t.Null()])),
-        permasalahan: t.Optional(t.Union([t.String(), t.Null()])),
-        solusi: t.Optional(t.Union([t.String(), t.Null()])),
-        tanggalBimbingan: t.Optional(t.Any()),
-        statusBkd: t.Optional(t.Boolean({ default: false })),
-        createdAt: t.Optional(t.Any()),
-        updatedAt: t.Optional(t.Any()),
-      }),
-    ),
   },
 };

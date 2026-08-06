@@ -24,29 +24,37 @@ export class PresensiController {
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
-    const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
-      set.status = 403;
-      return { error: 'Akses ditolak.' };
+    try {
+      const user = await getCurrentUser();
+      if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      const page = query?.page ? parseInt(query.page) : 1;
+      const limit = query?.limit ? parseInt(query.limit) : 20;
+      const search = query?.search;
+      const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+      const sortBy = query?.sortBy || 'sisa';
+      const sortOrder = query?.sortOrder || 'desc';
+      const statusLunas = query?.statusLunas;
+      const exportAll = query?.exportAll === 'true';
+      return await PresensiService.getLaporanKompensasi(
+        page,
+        limit,
+        search,
+        prodiId,
+        sortBy,
+        sortOrder,
+        statusLunas,
+        exportAll,
+      );
+    } catch (e: unknown) {
+      console.error('[PresensiController.getLaporanKompensasi]', {
+        error: e instanceof Error ? e.message : e,
+      });
+      set.status = 500;
+      return { error: 'Gagal memuat laporan kompensasi. Silakan coba lagi.' };
     }
-    const page = query?.page ? parseInt(query.page) : 1;
-    const limit = query?.limit ? parseInt(query.limit) : 20;
-    const search = query?.search;
-    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
-    const sortBy = query?.sortBy || 'sisa';
-    const sortOrder = query?.sortOrder || 'desc';
-    const statusLunas = query?.statusLunas;
-    const exportAll = query?.exportAll === 'true';
-    return await PresensiService.getLaporanKompensasi(
-      page,
-      limit,
-      search,
-      prodiId,
-      sortBy,
-      sortOrder,
-      statusLunas,
-      exportAll,
-    );
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

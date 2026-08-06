@@ -304,6 +304,7 @@ export class BimbinganController {
         permasalahan: body.permasalahan,
         solusi: body.solusi,
         statusBkd: body.statusBkd ?? true,
+        kategoriId: body.kategoriId ? Number(body.kategoriId) : null,
       });
       set.status = 201;
       return newSesi;
@@ -335,6 +336,7 @@ export class BimbinganController {
       if (body.permasalahan !== undefined) data.permasalahan = body.permasalahan;
       if (body.solusi !== undefined) data.solusi = body.solusi;
       if (body.statusBkd !== undefined) data.statusBkd = body.statusBkd;
+      if (body.kategoriId !== undefined) data.kategoriId = body.kategoriId ? Number(body.kategoriId) : null;
 
       const updated = await BimbinganService.updateSesiBimbingan(sesiId, data);
       return updated;
@@ -388,6 +390,35 @@ export class BimbinganController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal mengosongkan chat thread.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMonitoringLengkap(ctx: AuthContext<any, any>): Promise<any> {
+    const { query, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (
+      !user ||
+      (user.role !== 'admin' && user.role !== 'prodi' && user.role !== 'dosen' && user.role !== 'super_admin')
+    ) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const filter = {
+        periodeId: query?.periodeId ? String(query.periodeId) : undefined,
+        prodiId: query?.prodiId ? parseInt(query.prodiId) : undefined,
+        dosenPaId: query?.dosenPaId ? parseInt(query.dosenPaId) : undefined,
+        search: query?.search ? String(query.search) : undefined,
+        page: query?.page ? parseInt(query.page) : 1,
+        limit: query?.limit ? parseInt(query.limit) : 10,
+      };
+      const result = await BimbinganService.getMonitoringBimbinganLengkap(filter);
+      return result;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil data monitoring bimbingan.' };
     }
   }
 }

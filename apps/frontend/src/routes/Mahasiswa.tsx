@@ -25,6 +25,8 @@ export default function Mahasiswa() {
   const [search, setSearch] = createSignal('');
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [showImportPaModal, setShowImportPaModal] = createSignal(false);
+  const [showBulkPaModal, setShowBulkPaModal] = createSignal(false);
+  const [selectedBulkDosenPaId, setSelectedBulkDosenPaId] = createSignal<number | null>(null);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
   const [bulkLoading, setBulkLoading] = createSignal(false);
 
@@ -298,6 +300,24 @@ export default function Mahasiswa() {
     refetch();
   };
 
+  const handleSaveBulkDosenPa = async (e: Event) => {
+    e.preventDefault();
+    const ids = selectedIds();
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await mahasiswaController.bulkSetDosenPa(ids, selectedBulkDosenPaId());
+      toast.showToast(res.message, 'success');
+      setShowBulkPaModal(false);
+      setSelectedIds([]);
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal menetapkan Dosen PA massal.', 'error');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('Apakah Anda yakin ingin menghapus Mahasiswa ini?')) return;
     try {
@@ -320,6 +340,9 @@ export default function Mahasiswa() {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <Show when={selectedIds().length > 0}>
+              <Button variant="secondary" disabled={bulkLoading()} onClick={() => setShowBulkPaModal(true)}>
+                👨‍🏫 Set Dosen PA ({selectedIds().length})
+              </Button>
               <Button variant="danger" disabled={bulkLoading()} onClick={handleBulkDelete}>
                 {bulkLoading() ? 'Memproses...' : `🗑️ Hapus Terpilih (${selectedIds().length})`}
               </Button>
@@ -394,6 +417,39 @@ export default function Mahasiswa() {
           title="Relasi Pembimbing Akademik"
           onSuccess={() => refetch()}
         />
+
+        <Modal
+          show={showBulkPaModal()}
+          onClose={() => setShowBulkPaModal(false)}
+          title={`Tetapkan Dosen PA untuk ${selectedIds().length} Mahasiswa Terpilih`}
+        >
+          <form onSubmit={handleSaveBulkDosenPa} class="flex flex-col gap-4">
+            <p class="text-xs text-secondary-600 dark:text-secondary-300">
+              Pilih Dosen Pembimbing Akademik (PA) yang akan ditetapkan untuk {selectedIds().length} mahasiswa yang
+              sedang dicentang.
+            </p>
+
+            <SearchableSelect
+              label="Dosen Pembimbing Akademik (PA)"
+              options={(dosens()?.data || []).map((d) => ({
+                value: d.id,
+                label: `${d.nama} (${d.nip || '-'})`,
+              }))}
+              value={selectedBulkDosenPaId()}
+              onChange={(val) => setSelectedBulkDosenPaId(val ? Number(val) : null)}
+              placeholder="Pilih Dosen PA (Bisa dikosongkan untuk menghapus PA)..."
+            />
+
+            <div class="flex justify-end gap-2 mt-4">
+              <Button type="button" variant="secondary" onClick={() => setShowBulkPaModal(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={bulkLoading()}>
+                {bulkLoading() ? 'Menyimpan...' : 'Tetapkan Dosen PA'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         <div class="flex items-center gap-3 flex-wrap max-w-lg">
           <div class="w-64">

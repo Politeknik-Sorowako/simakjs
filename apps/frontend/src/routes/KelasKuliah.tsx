@@ -7,6 +7,7 @@ import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
@@ -533,12 +534,12 @@ export default function KelasKuliah() {
                 {errorMsg()}
               </div>
             </Show>
-            <Input
-              isSelect
-              label="Dosen"
+            <SearchableSelect
+              label="Dosen Pengampu"
               value={plotDosenId()}
-              onChange={(e) => setPlotDosenId(Number(e.currentTarget.value))}
-              selectOptions={dosens()?.data.map((d) => ({ label: `${d.nip} - ${d.nama}`, value: d.id })) || []}
+              onChange={(val) => setPlotDosenId(Number(val))}
+              options={dosens()?.data.map((d) => ({ label: `${d.nip} - ${d.nama}`, value: d.id })) || []}
+              placeholder="Cari Dosen..."
             />
             <Input
               type="number"

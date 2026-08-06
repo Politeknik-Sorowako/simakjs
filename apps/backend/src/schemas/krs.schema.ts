@@ -147,28 +147,34 @@ export const getKrsByIdSchema = {
       nilaiHuruf: t.Union([t.String(), t.Null()], { default: null }),
       nilaiIndeks: t.Union([t.String(), t.Null()], { default: null }),
       isApproved: t.Boolean({ default: false }),
+      approvedById: t.Optional(t.Nullable(t.Integer())),
+      approvedAt: t.Optional(t.Nullable(t.Any())),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
       createdAt: t.Any(),
       updatedAt: t.Any(),
-      mahasiswa: t.Union([
-        t.Object({
-          id: t.Integer(),
-          nim: t.String(),
-          nama: t.String(),
-          email: t.String(),
-        }),
-        t.Null(),
-      ]),
-      kelasKuliah: t.Union([
-        t.Object({
-          id: t.Integer(),
-          namaKelas: t.String(),
-          periodeId: t.String(),
-        }),
-        t.Null(),
-      ]),
+      mahasiswa: t.Optional(
+        t.Union([
+          t.Object({
+            id: t.Integer(),
+            nim: t.String(),
+            nama: t.String(),
+            email: t.String(),
+          }),
+          t.Null(),
+        ]),
+      ),
+      kelasKuliah: t.Optional(
+        t.Union([
+          t.Object({
+            id: t.Integer(),
+            namaKelas: t.String(),
+            periodeId: t.String(),
+          }),
+          t.Null(),
+        ]),
+      ),
     }),
     404: t.Object({
       error: t.String({ default: 'Data tidak ditemukan' }),

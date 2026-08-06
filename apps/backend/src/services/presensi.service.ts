@@ -7,6 +7,7 @@ import {
   kelompokApel,
   kelompokApelAnggota,
   kompensasiBayar,
+  kompensasiManual,
   mahasiswa,
   mataKuliah,
   presensi,
@@ -138,11 +139,31 @@ export class PresensiService {
       .innerJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))
       .where(eq(presensiApel.mahasiswaId, mahasiswaId));
 
-    const allPresensi = [...presensiList, ...apelList];
+    const manualList = await db
+      .select({
+        id: kompensasiManual.id,
+        bapId: sql<number>`NULL`,
+        status: sql<string>`${kompensasiManual.jenisKompen}`,
+        durasiMangkir: kompensasiManual.durasiMenit,
+        createdAt: kompensasiManual.createdAt,
+        bapPertemuan: sql<number>`NULL`,
+        bapMateri: sql<string>`'Kompensasi Manual'`,
+        bapTanggal: kompensasiManual.tanggal,
+        sumber: sql<'perkuliahan' | 'apel' | 'manual'>`'manual'`,
+      })
+      .from(kompensasiManual)
+      .where(eq(kompensasiManual.mahasiswaId, mahasiswaId));
+
+    const allPresensi = [...presensiList, ...apelList, ...manualList];
 
     const historyKompensasi = allPresensi
       .map((p) => {
-        const poinKompensasi = this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
+        const poinKompensasi =
+          p.sumber === 'manual'
+            ? ['alpa', 'terlambat', 'rusak'].includes(p.status)
+              ? p.durasiMangkir * 5
+              : p.durasiMangkir
+            : this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
         return {
           ...p,
           poinKompensasi,
@@ -186,12 +207,12 @@ export class PresensiService {
         .select({
           mahasiswaId: presensi.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN status IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * 5
-              WHEN status IN ('sakit', 'izin') THEN durasi_mangkir
+              WHEN status::text IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * 5
+              WHEN status::text IN ('sakit', 'izin') THEN durasi_mangkir
               ELSE 0 END)`.as('poin'),
         })
         .from(presensi)
-        .where(inArray(presensi.status, ['alpa', 'telat', 'terlambat', 'unknown', 'sakit', 'izin']))
+        .where(sql`status::text IN ('alpa', 'telat', 'terlambat', 'unknown', 'sakit', 'izin')`)
         .groupBy(presensi.mahasiswaId),
     );
 
@@ -200,18 +221,43 @@ export class PresensiService {
         .select({
           mahasiswaId: presensiApel.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * 5
-              WHEN COALESCE(verified_status, status) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
+              WHEN COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * 5
+              WHEN COALESCE(verified_status::text, status::text) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
               ELSE 0 END)`.as('poin'),
         })
         .from(presensiApel)
-        .where(sql`COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown', 'sakit', 'izin')`)
+        .where(sql`COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown', 'sakit', 'izin')`)
         .groupBy(presensiApel.mahasiswaId),
     );
 
-    const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0))`;
+    const manualAggSubquery = db.$with('manual_mangkir').as(
+      db
+        .select({
+          mahasiswaId: kompensasiManual.mahasiswaId,
+          poin: sql<number>`SUM(CASE
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
+              ELSE durasi_menit END)`.as('poin'),
+        })
+        .from(kompensasiManual)
+        .groupBy(kompensasiManual.mahasiswaId),
+    );
 
-    const conditions: SQL<unknown>[] = [sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`];
+    const bayarAggSubquery = db.$with('bayar_mangkir').as(
+      db
+        .select({
+          mahasiswaId: kompensasiBayar.mahasiswaId,
+          totalDibayar: sql<number>`COALESCE(SUM(${kompensasiBayar.jumlahMenit}), 0)`.as('total_dibayar'),
+        })
+        .from(kompensasiBayar)
+        .groupBy(kompensasiBayar.mahasiswaId),
+    );
+
+    const totalKompensasiSql = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0))`;
+    const totalDibayarSql = sql<number>`COALESCE(bayar_mangkir.total_dibayar, 0)`;
+    const sisaKompensasiSql = sql<number>`GREATEST(0, (COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0)) - COALESCE(bayar_mangkir.total_dibayar, 0))`;
+
+    const conditions: SQL<unknown>[] = [sql`${totalKompensasiSql} > 0`];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
@@ -219,72 +265,77 @@ export class PresensiService {
     if (prodiId) {
       conditions.push(eq(mahasiswa.programStudiId, prodiId));
     }
+    if (statusLunas === 'belum_lunas') {
+      conditions.push(sql`${sisaKompensasiSql} > 0`);
+    } else if (statusLunas === 'lunas') {
+      conditions.push(sql`${sisaKompensasiSql} <= 0`);
+    }
     const whereClause = and(...conditions);
 
-    let orderClause = sql`${totalKompensasiExpr} DESC`;
+    let orderClause = sql`${sisaKompensasiSql} DESC`;
     if (sortBy === 'total') {
-      orderClause = sortOrder === 'asc' ? sql`${totalKompensasiExpr} ASC` : sql`${totalKompensasiExpr} DESC`;
+      orderClause = sortOrder === 'asc' ? sql`${totalKompensasiSql} ASC` : sql`${totalKompensasiSql} DESC`;
     } else if (sortBy === 'nama') {
       orderClause = sortOrder === 'desc' ? sql`${mahasiswa.nama} DESC` : sql`${mahasiswa.nama} ASC`;
     } else if (sortBy === 'nim') {
       orderClause = sortOrder === 'desc' ? sql`${mahasiswa.nim} DESC` : sql`${mahasiswa.nim} ASC`;
+    } else if (sortBy === 'sisa') {
+      orderClause = sortOrder === 'asc' ? sql`${sisaKompensasiSql} ASC` : sql`${sisaKompensasiSql} DESC`;
     }
 
     const baseQuery = db
-      .with(presensiAggSubquery, apelAggSubquery)
+      .with(presensiAggSubquery, apelAggSubquery, manualAggSubquery, bayarAggSubquery)
       .select({
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
-        prodiNama: programStudi.nama,
-        totalKompensasi: totalKompensasiExpr,
+        prodiNama: sql<string>`${programStudi.nama}`.as('nama_prodi'),
+        totalKompensasi: totalKompensasiSql.as('total_kompensasi'),
+        totalDibayar: totalDibayarSql.as('total_dibayar'),
+        sisaKompensasi: sisaKompensasiSql.as('sisa_kompensasi'),
       })
       .from(mahasiswa)
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
       .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
+      .leftJoin(manualAggSubquery, eq(sql`manual_mangkir.mahasiswa_id`, mahasiswa.id))
+      .leftJoin(bayarAggSubquery, eq(sql`bayar_mangkir.mahasiswa_id`, mahasiswa.id))
       .where(whereClause)
       .orderBy(orderClause);
 
-    const listMahasiswa = exportAll ? await baseQuery : await baseQuery.limit(limit).offset(offset);
+    let listMahasiswa: Awaited<typeof baseQuery>;
+    let total = 0;
+    try {
+      listMahasiswa = exportAll ? await baseQuery : await baseQuery.limit(limit).offset(offset);
 
-    const paymentsAgg = await db
-      .select({
-        mahasiswaId: kompensasiBayar.mahasiswaId,
-        totalDibayar: sql<number>`COALESCE(SUM(${kompensasiBayar.jumlahMenit}), 0)`,
-      })
-      .from(kompensasiBayar)
-      .groupBy(kompensasiBayar.mahasiswaId);
-
-    const mapPayments = new Map<number, number>(paymentsAgg.map((p) => [p.mahasiswaId, Number(p.totalDibayar)]));
-
-    const [totalResult] = await db
-      .with(presensiAggSubquery, apelAggSubquery)
-      .select({ total: sql<number>`count(*)` })
-      .from(mahasiswa)
-      .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
-      .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
-      .where(whereClause);
-
-    let data = listMahasiswa.map((mhs) => {
-      const tk = Number(mhs.totalKompensasi);
-      const td = mapPayments.get(mhs.id) || 0;
-      return { ...mhs, totalKompensasi: tk, totalDibayar: td, sisaKompensasi: Math.max(0, tk - td) };
-    });
-
-    if (statusLunas === 'belum_lunas') {
-      data = data.filter((d) => d.sisaKompensasi > 0);
-    } else if (statusLunas === 'lunas') {
-      data = data.filter((d) => d.sisaKompensasi <= 0);
+      const [totalResult] = await db
+        .with(presensiAggSubquery, apelAggSubquery, manualAggSubquery, bayarAggSubquery)
+        .select({ total: sql<number>`count(*)` })
+        .from(mahasiswa)
+        .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
+        .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
+        .leftJoin(manualAggSubquery, eq(sql`manual_mangkir.mahasiswa_id`, mahasiswa.id))
+        .leftJoin(bayarAggSubquery, eq(sql`bayar_mangkir.mahasiswa_id`, mahasiswa.id))
+        .where(whereClause);
+      total = Number(totalResult?.total || 0);
+    } catch (e: unknown) {
+      const cause = (e as Error & { cause?: unknown }).cause;
+      const causeMsg = cause instanceof Error && cause.message ? cause.message.split('\n')[0] : 'Unknown error';
+      console.error('[PresensiService.getLaporanKompensasi] Query failed', {
+        filter: { page, limit, search, prodiId, sortBy, sortOrder, statusLunas, exportAll },
+        dbError: causeMsg,
+        error: e,
+      });
+      throw new Error('Gagal memuat laporan kompensasi.');
     }
 
-    if (sortBy === 'sisa') {
-      data.sort((a, b) =>
-        sortOrder === 'asc' ? a.sisaKompensasi - b.sisaKompensasi : b.sisaKompensasi - a.sisaKompensasi,
-      );
-    }
+    const data = listMahasiswa.map((mhs) => ({
+      ...mhs,
+      totalKompensasi: Number(mhs.totalKompensasi),
+      totalDibayar: Number(mhs.totalDibayar),
+      sisaKompensasi: Number(mhs.sisaKompensasi),
+    }));
 
-    const total = exportAll ? data.length : Number(totalResult?.total || 0);
     const totalPages = Math.ceil(total / limit);
 
     return { data, meta: { total, page, limit: exportAll ? total : limit, totalPages } };
@@ -319,10 +370,23 @@ export class PresensiService {
         .groupBy(presensiApel.mahasiswaId),
     );
 
-    const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0))`;
+    const manualAggSubquery = db.$with('manual_mangkir').as(
+      db
+        .select({
+          mahasiswaId: kompensasiManual.mahasiswaId,
+          poin: sql<number>`SUM(CASE
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
+              ELSE durasi_menit END)`.as('poin'),
+        })
+        .from(kompensasiManual)
+        .groupBy(kompensasiManual.mahasiswaId),
+    );
+
+    const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0))`;
 
     const perMhs = await db
-      .with(presensiAggSubquery, apelAggSubquery)
+      .with(presensiAggSubquery, apelAggSubquery, manualAggSubquery)
       .select({
         id: mahasiswa.id,
         nama: mahasiswa.nama,
@@ -334,7 +398,10 @@ export class PresensiService {
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
       .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
-      .where(sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0)) > 0`);
+      .leftJoin(manualAggSubquery, eq(sql`manual_mangkir.mahasiswa_id`, mahasiswa.id))
+      .where(
+        sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0)) > 0`,
+      );
 
     const paymentsAgg = await db
       .select({
