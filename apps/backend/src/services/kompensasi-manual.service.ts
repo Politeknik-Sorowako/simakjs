@@ -22,24 +22,36 @@ export class KompensasiManualService {
     return Math.min(durasi, MAKS_DURASI_HARIAN);
   }
 
-  static async hitungTotalHariIni(mahasiswaId: number, tanggal: string, excludeId?: number): Promise<number> {
+  static async hitungTotalHariIni(
+    mahasiswaId: number,
+    tanggal: string,
+    excludeId?: number,
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle transaction or db instance
+    executor: any = db,
+  ): Promise<number> {
     const conditions = [eq(kompensasiManual.mahasiswaId, mahasiswaId), eq(kompensasiManual.tanggal, tanggal)];
     if (excludeId !== undefined) {
       conditions.push(sql`${kompensasiManual.id} != ${excludeId}`);
     }
-    const [row] = await db
+    const [row] = await executor
       .select({ total: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
       .from(kompensasiManual)
       .where(and(...conditions));
     return Number(row?.total || 0);
   }
 
-  static async checkDuplicateRisk(mahasiswaId: number, tanggal: string, excludeId?: number): Promise<boolean> {
+  static async checkDuplicateRisk(
+    mahasiswaId: number,
+    tanggal: string,
+    excludeId?: number,
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle transaction or db instance
+    executor: any = db,
+  ): Promise<boolean> {
     const conditions = [eq(kompensasiManual.mahasiswaId, mahasiswaId), eq(kompensasiManual.tanggal, tanggal)];
     if (excludeId !== undefined) {
       conditions.push(sql`${kompensasiManual.id} != ${excludeId}`);
     }
-    const [row] = await db
+    const [row] = await executor
       .select({ total: sql<number>`COUNT(*)` })
       .from(kompensasiManual)
       .where(and(...conditions));
@@ -54,45 +66,50 @@ export class KompensasiManualService {
     keterangan?: string | null;
     createdBy: number;
   }) {
-    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.id, data.mahasiswaId));
-    if (!mhs) {
-      throw new Error('Mahasiswa tidak ditemukan');
-    }
-    if (!JENIS_KOMPEN.includes(data.jenisKompen)) {
-      throw new Error('Jenis kompensasi tidak valid');
-    }
+    return await db.transaction(async (tx) => {
+      const lockKey = `kompen_${data.mahasiswaId}_${data.tanggal}`;
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
 
-    const durasiMenit = this.resolveDurasiMenit(data.jenisKompen, data.durasiMenit);
-    const totalHariIni = await this.hitungTotalHariIni(data.mahasiswaId, data.tanggal);
+      const [mhs] = await tx.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.id, data.mahasiswaId));
+      if (!mhs) {
+        throw new Error('Mahasiswa tidak ditemukan');
+      }
+      if (!JENIS_KOMPEN.includes(data.jenisKompen)) {
+        throw new Error('Jenis kompensasi tidak valid');
+      }
 
-    if (totalHariIni + durasiMenit > MAKS_DURASI_HARIAN) {
-      throw new Error(
-        `Total durasi kompensasi pada tanggal ${data.tanggal} sudah mencapai ${totalHariIni} menit. ` +
-          `Tidak dapat menambah ${durasiMenit} menit (maks ${MAKS_DURASI_HARIAN} menit/hari).`,
-      );
-    }
+      const durasiMenit = this.resolveDurasiMenit(data.jenisKompen, data.durasiMenit);
+      const totalHariIni = await this.hitungTotalHariIni(data.mahasiswaId, data.tanggal, undefined, tx);
 
-    const isDuplicateRisk = await this.checkDuplicateRisk(data.mahasiswaId, data.tanggal);
+      if (totalHariIni + durasiMenit > MAKS_DURASI_HARIAN) {
+        throw new Error(
+          `Total durasi kompensasi pada tanggal ${data.tanggal} sudah mencapai ${totalHariIni} menit. ` +
+            `Tidak dapat menambah ${durasiMenit} menit (maks ${MAKS_DURASI_HARIAN} menit/hari).`,
+        );
+      }
 
-    let creatorId: number | null = data.createdBy;
-    if (creatorId) {
-      const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, creatorId));
-      if (!u) creatorId = null;
-    }
+      const isDuplicateRisk = await this.checkDuplicateRisk(data.mahasiswaId, data.tanggal, undefined, tx);
 
-    const [record] = await db
-      .insert(kompensasiManual)
-      .values({
-        mahasiswaId: data.mahasiswaId,
-        tanggal: data.tanggal,
-        jenisKompen: data.jenisKompen,
-        durasiMenit,
-        keterangan: data.keterangan || null,
-        createdBy: creatorId,
-      })
-      .returning();
+      let creatorId: number | null = data.createdBy;
+      if (creatorId) {
+        const [u] = await tx.select({ id: users.id }).from(users).where(eq(users.id, creatorId));
+        if (!u) creatorId = null;
+      }
 
-    return { ...record, isDuplicateRisk };
+      const [record] = await tx
+        .insert(kompensasiManual)
+        .values({
+          mahasiswaId: data.mahasiswaId,
+          tanggal: data.tanggal,
+          jenisKompen: data.jenisKompen,
+          durasiMenit,
+          keterangan: data.keterangan || null,
+          createdBy: creatorId,
+        })
+        .returning();
+
+      return { ...record, isDuplicateRisk };
+    });
   }
 
   static async updateKompensasi(
@@ -105,41 +122,47 @@ export class KompensasiManualService {
       keterangan?: string | null;
     }>,
   ) {
-    const [existing] = await db.select().from(kompensasiManual).where(eq(kompensasiManual.id, id));
-    if (!existing) {
-      return null;
-    }
+    return await db.transaction(async (tx) => {
+      const [existing] = await tx.select().from(kompensasiManual).where(eq(kompensasiManual.id, id));
+      if (!existing) {
+        return null;
+      }
 
-    const mahasiswaId = data.mahasiswaId ?? existing.mahasiswaId;
-    const tanggal = data.tanggal ?? existing.tanggal;
-    const jenisKompen = (data.jenisKompen ?? existing.jenisKompen) as JenisKompen;
+      const mahasiswaId = data.mahasiswaId ?? existing.mahasiswaId;
+      const tanggal = data.tanggal ?? existing.tanggal;
 
-    if (!JENIS_KOMPEN.includes(jenisKompen)) {
-      throw new Error('Jenis kompensasi tidak valid');
-    }
+      const lockKey = `kompen_${mahasiswaId}_${tanggal}`;
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
 
-    const durasiMenit = this.resolveDurasiMenit(jenisKompen, data.durasiMenit ?? existing.durasiMenit);
-    const totalHariIni = await this.hitungTotalHariIni(mahasiswaId, tanggal, id);
+      const jenisKompen = (data.jenisKompen ?? existing.jenisKompen) as JenisKompen;
 
-    if (totalHariIni + durasiMenit > MAKS_DURASI_HARIAN) {
-      throw new Error(
-        `Total durasi kompensasi pada tanggal ${tanggal} akan melebihi batas ${MAKS_DURASI_HARIAN} menit/hari.`,
-      );
-    }
+      if (!JENIS_KOMPEN.includes(jenisKompen)) {
+        throw new Error('Jenis kompensasi tidak valid');
+      }
 
-    const [updated] = await db
-      .update(kompensasiManual)
-      .set({
-        mahasiswaId,
-        tanggal,
-        jenisKompen,
-        durasiMenit,
-        keterangan: data.keterangan ?? existing.keterangan,
-      })
-      .where(eq(kompensasiManual.id, id))
-      .returning();
+      const durasiMenit = this.resolveDurasiMenit(jenisKompen, data.durasiMenit ?? existing.durasiMenit);
+      const totalHariIni = await this.hitungTotalHariIni(mahasiswaId, tanggal, id, tx);
 
-    return updated || null;
+      if (totalHariIni + durasiMenit > MAKS_DURASI_HARIAN) {
+        throw new Error(
+          `Total durasi kompensasi pada tanggal ${tanggal} akan melebihi batas ${MAKS_DURASI_HARIAN} menit/hari.`,
+        );
+      }
+
+      const [updated] = await tx
+        .update(kompensasiManual)
+        .set({
+          mahasiswaId,
+          tanggal,
+          jenisKompen,
+          durasiMenit,
+          keterangan: data.keterangan ?? existing.keterangan,
+        })
+        .where(eq(kompensasiManual.id, id))
+        .returning();
+
+      return updated || null;
+    });
   }
 
   static async deleteKompensasi(id: number) {
