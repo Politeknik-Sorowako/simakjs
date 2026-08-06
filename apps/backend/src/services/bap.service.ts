@@ -108,16 +108,10 @@ export class BapService {
       });
       if (defaultCpmk) {
         validCpmkId = defaultCpmk.id;
-      } else {
-        const [newCpmk] = await db
-          .insert(cpmk)
-          .values({
-            mataKuliahId: existingKelas.mataKuliahId,
-            kode: 'CPMK-1',
-            deskripsi: 'CPMK Umum Mata Kuliah',
-          })
-          .returning();
-        validCpmkId = newCpmk.id;
+      } else if (!rawPayload.cpmkId) {
+        throw new Error(
+          `CPMK untuk mata kuliah "${existingKelas.mataKuliahId}" belum tersedia. Silakan buat CPMK terlebih dahulu.`,
+        );
       }
     }
 

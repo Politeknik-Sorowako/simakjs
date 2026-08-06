@@ -1,5 +1,19 @@
 import { BapService } from '../services/bap.service';
-import { AuthContext } from '../utils/types';
+import type { AuthContext } from '../utils/types';
+
+interface DrizzleErrorCause {
+  detail?: string;
+  message?: string;
+}
+
+function extractErrorMessage(e: unknown): string {
+  if (e instanceof Error) {
+    const cause = (e as Error & { cause?: DrizzleErrorCause }).cause;
+    return cause?.detail || cause?.message || e.message;
+  }
+  const cause = (e as { cause?: DrizzleErrorCause; message?: string }).cause;
+  return cause?.detail || cause?.message || (e as { message?: string }).message || 'Unknown error';
+}
 
 export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -64,9 +78,7 @@ export class BapController {
       set.status = 201;
       return newBap;
     } catch (e: unknown) {
-      // biome-ignore lint/suspicious/noExplicitAny: Extracting Drizzle query cause
-      const errAny = e as any;
-      const causeMsg = errAny?.cause?.detail || errAny?.cause?.message || errAny?.message || 'Unknown error';
+      const causeMsg = extractErrorMessage(e);
       set.status = 400;
       return { error: `Gagal membuat BAP: ${causeMsg}` };
     }
@@ -100,9 +112,7 @@ export class BapController {
       }
       return updated;
     } catch (e: unknown) {
-      // biome-ignore lint/suspicious/noExplicitAny: Extracting Drizzle query cause
-      const errAny = e as any;
-      const causeMsg = errAny?.cause?.detail || errAny?.cause?.message || errAny?.message || 'Unknown error';
+      const causeMsg = extractErrorMessage(e);
       set.status = 400;
       return { error: `Gagal memperbarui BAP: ${causeMsg}` };
     }

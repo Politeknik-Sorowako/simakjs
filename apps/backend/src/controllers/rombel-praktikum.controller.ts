@@ -1,11 +1,5 @@
 import { RombelPraktikumService } from '../services/rombel-praktikum.service';
-import type { AuthContext } from '../utils/types';
-
-// biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
-function allowed(user: any, roles: string[]) {
-  if (!user) return false;
-  return roles.includes(user.role);
-}
+import { type AuthContext, allowed } from '../utils/types';
 
 export class RombelPraktikumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
