@@ -56,6 +56,7 @@ BRANCH="${1:-development}"
 STAGING_BACKUP_DIR="${STAGING_BACKUP_DIR:-apps/backend/backups}"
 STAGING_BACKUP_RETENTION="${BACKUP_RETENTION:-5}"
 DB_CONTAINER="simak_db_staging"
+BACKEND_CONTAINER="simak_backend_staging"
 
 echo ""
 echo "============================================="
@@ -140,6 +141,14 @@ docker compose -f "$COMPOSE_FILE" up -d 2>&1 | tee -a "$LOG_FILE" || {
   exit 1
 }
 ok "Containers started"
+
+# Step 4b: Ensure database schema is up-to-date (idempotent)
+log "Step 4b: Running database migration..."
+if docker exec "$BACKEND_CONTAINER" sh -c 'cd /app/apps/backend && bun run db:safe-migrate'; then
+  ok "Database migration completed"
+else
+  warn "Database migration reported an issue; backend will attempt again on startup"
+fi
 
 # Step 5: Verify deployment
 log "Step 5: Verifying deployment..."

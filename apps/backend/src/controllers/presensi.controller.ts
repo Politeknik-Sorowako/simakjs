@@ -49,8 +49,11 @@ export class PresensiController {
         exportAll,
       );
     } catch (e: unknown) {
+      console.error('[PresensiController.getLaporanKompensasi]', {
+        error: e instanceof Error ? e.message : e,
+      });
       set.status = 500;
-      return { error: e instanceof Error ? e.message : 'Terjadi kesalahan internal server' };
+      return { error: 'Gagal memuat laporan kompensasi. Silakan coba lagi.' };
     }
   }
 
