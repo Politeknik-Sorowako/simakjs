@@ -1,6 +1,12 @@
 import { db } from '../utils/db';
 
 export class DbInitService {
+  /**
+   * Dev-only convenience: bootstraps tables/seeds for local development.
+   * Migrations (drizzle/meta) remain the single source of truth for the schema;
+   * this file is never run in production (see NODE_ENV guard below) and must be
+   * kept manually in sync with the latest migration when new tables/columns land.
+   */
   static async ensureTablesExist(): Promise<void> {
     if (process.env.NODE_ENV === 'production') {
       console.warn('[DbInitService] Skipping auto-init in production. Use migrations instead.');
@@ -60,7 +66,7 @@ export class DbInitService {
           "id" serial PRIMARY KEY NOT NULL,
           "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
           "kategori" varchar(50) NOT NULL,
-          "nama" varchar(255) NOT NULL,
+          "judul" varchar(255) NOT NULL,
           "pesan" text NOT NULL,
           "rating" integer,
           "status" varchar(50) DEFAULT 'pending' NOT NULL,

@@ -260,6 +260,27 @@
       "when": 1785940100000,
       "tag": "0036_cleanup_legacy_and_fk_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1785941000000,
+      "tag": "0037_rename_system_feedback_nama_to_judul",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1786030000000,
+      "tag": "0038_ensure_kategori_bimbingan_idempotent",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1786031000000,
+      "tag": "0039_ensure_kompensasi_manual_nilai_praktik_idempotent",
+      "breakpoints": true
     }
   ]
 }

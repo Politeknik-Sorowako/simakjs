@@ -2467,7 +2467,7 @@ export const systemFeedback = pgTable('system_feedback', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   kategori: varchar('kategori', { length: 50 }).notNull(),
-  judul: varchar('nama', { length: 255 }).notNull(),
+  judul: varchar('judul', { length: 255 }).notNull(),
   pesan: text('pesan').notNull(),
   rating: integer('rating'),
   status: varchar('status', { length: 50 }).default('pending').notNull(),

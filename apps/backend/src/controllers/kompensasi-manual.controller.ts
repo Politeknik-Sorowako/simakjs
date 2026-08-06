@@ -1,11 +1,5 @@
 import { type JenisKompen, KompensasiManualService } from '../services/kompensasi-manual.service';
-import type { AuthContext } from '../utils/types';
-
-// biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
-function allowed(user: any, roles: string[]) {
-  if (!user) return false;
-  return roles.includes(user.role);
-}
+import { type AuthContext, allowed } from '../utils/types';
 
 export class KompensasiManualController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement

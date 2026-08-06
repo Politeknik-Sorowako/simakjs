@@ -434,7 +434,14 @@ export class BimbinganService {
     const totalPages = Math.ceil(total / limit);
 
     const listMahasiswa = await mhsQuery.where(whereClause).limit(limit).offset(offset);
-    const listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, targetPeriodeId));
+    const pageMahasiswaIds = listMahasiswa.map((m) => m.id);
+    const listBimbingan =
+      pageMahasiswaIds.length > 0
+        ? await db
+            .select()
+            .from(bimbingan)
+            .where(and(eq(bimbingan.periodeId, targetPeriodeId), inArray(bimbingan.mahasiswaId, pageMahasiswaIds)))
+        : [];
 
     const bimbinganMap = new Map<number, typeof bimbingan.$inferSelect>();
     const bimbinganIds: number[] = [];

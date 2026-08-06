@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq, or, sql } from 'drizzle-orm';
 import { kompensasiManual, mahasiswa, users } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -131,8 +131,13 @@ export class KompensasiManualService {
       const mahasiswaId = data.mahasiswaId ?? existing.mahasiswaId;
       const tanggal = data.tanggal ?? existing.tanggal;
 
-      const lockKey = `kompen_${mahasiswaId}_${tanggal}`;
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
+      const lockKeys = new Set([
+        `kompen_${existing.mahasiswaId}_${existing.tanggal}`,
+        `kompen_${mahasiswaId}_${tanggal}`,
+      ]);
+      for (const lockKey of lockKeys) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
+      }
 
       const jenisKompen = (data.jenisKompen ?? existing.jenisKompen) as JenisKompen;
 
@@ -215,10 +220,11 @@ export class KompensasiManualService {
       .select()
       .from(kompensasiManual)
       .where(
-        sql`(${kompensasiManual.mahasiswaId}, ${kompensasiManual.tanggal}) IN (${sql.join(
-          grouped.map((g) => sql`(${g.mahasiswaId}, ${g.tanggal})`),
-          sql`, `,
-        )})`,
+        or(
+          ...grouped.map((g) =>
+            and(eq(kompensasiManual.mahasiswaId, g.mahasiswaId), eq(kompensasiManual.tanggal, g.tanggal)),
+          ),
+        ),
       )
       .orderBy(kompensasiManual.tanggal);
 
