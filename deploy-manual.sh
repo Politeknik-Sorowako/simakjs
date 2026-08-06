@@ -9,6 +9,7 @@ set -e
 #   ./deploy-manual.sh develop          # Deploy specific branch
 #   ./deploy-manual.sh --skip-tests     # Deploy without tests
 #   ./deploy-manual.sh --skip-backup    # Deploy without backup
+#   ./deploy-manual.sh --backup-only    # Database backup only (no deploy)
 #   ./deploy-manual.sh --rollback       # Rollback to previous version
 #   ./deploy-manual.sh --health         # Run health check only
 #   ./deploy-manual.sh --dashboard      # Show monitoring dashboard
@@ -39,6 +40,7 @@ show_help() {
   echo "Options:"
   echo "  --skip-tests     Skip pre and post deployment tests"
   echo "  --skip-backup    Skip database backup"
+  echo "  --backup-only    Database backup only (no deploy)"
   echo "  --skip-pull      Skip git pull"
   echo "  --no-force       Don't force remove containers"
   echo "  --rollback       Rollback to previous backup"
@@ -51,6 +53,7 @@ show_help() {
   echo "  ./deploy-manual.sh                       # Deploy main branch"
   echo "  ./deploy-manual.sh develop               # Deploy develop branch"
   echo "  ./deploy-manual.sh --skip-tests          # Quick deploy"
+  echo "  ./deploy-manual.sh --backup-only         # Backup only"
   echo "  ./deploy-manual.sh --rollback            # Rollback"
   echo "  ./deploy-manual.sh --health              # Health check"
   echo ""
@@ -64,11 +67,13 @@ SKIP_TESTS=false
 SKIP_BACKUP=false
 SKIP_PULL=false
 FORCE_CLEANUP=true
+BACKUP_ONLY=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --skip-tests) SKIP_TESTS=true; shift ;;
     --skip-backup) SKIP_BACKUP=true; shift ;;
+    --backup-only) BACKUP_ONLY=true; shift ;;
     --skip-pull) SKIP_PULL=true; shift ;;
     --no-force) FORCE_CLEANUP=false; shift ;;
     --rollback)
@@ -130,19 +135,18 @@ if [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ]; then
 fi
 
 # Step 3: Backup
-if [ "$SKIP_BACKUP" = "false" ]; then
-  log "Step 3/7: Backing up database..."
+backup_database() {
   mkdir -p "$BACKUP_DIR"
-  
+
   if docker ps --filter "name=$DB_CONTAINER" --format "{{.Names}}" | grep -q "$DB_CONTAINER"; then
     BACKUP_FILE="backup-$(date +%Y%m%d-%H%M%S).sql"
     BACKUP_PATH="$BACKUP_DIR/$BACKUP_FILE"
-    
+
     docker exec "$DB_CONTAINER" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" > "$BACKUP_PATH" 2>/dev/null && {
       gzip "$BACKUP_PATH"
       BACKUP_SIZE=$(du -h "${BACKUP_PATH}.gz" | cut -f1)
       ok "Backup created: ${BACKUP_FILE}.gz ($BACKUP_SIZE)"
-      
+
       # Clean old backups
       ls -t "$BACKUP_DIR"/backup-*.sql.gz 2>/dev/null | tail -n +$((BACKUP_RETENTION + 1)) | xargs -r rm -f
     } || {
@@ -151,6 +155,19 @@ if [ "$SKIP_BACKUP" = "false" ]; then
   else
     warn "Database container not running, skipping backup"
   fi
+}
+
+# Backup-only mode: run backup then exit without deploying
+if [ "$BACKUP_ONLY" = "true" ]; then
+  log "Backup-only mode"
+  backup_database
+  log "Backup complete. Skipping deployment."
+  exit 0
+fi
+
+if [ "$SKIP_BACKUP" = "false" ]; then
+  log "Step 3/7: Backing up database..."
+  backup_database
 else
   log "Step 3/7: Skipping backup"
 fi

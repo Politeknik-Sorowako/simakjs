@@ -20,19 +20,37 @@ BACKUP_RETENTION=5
 BACKUP_COMPRESS=true
 BACKUP_DIR="$PROJECT_DIR/apps/backend/backups"
 
+# Environment detection (auto or via APP_ENV override)
+# Both environments run on the same VPS but in different directories:
+#   /var/www/simakjs            -> production
+#   /var/www/simakjs-staging    -> staging
+if [ -z "${DEPLOY_ENV:-}" ]; then
+  case "$PROJECT_DIR" in
+    *-staging* | *staging*) DEPLOY_ENV="staging" ;;
+    *) DEPLOY_ENV="production" ;;
+  esac
+fi
+
 # Docker settings
-DOCKER_COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
-DOCKER_NETWORK="simakjs_default"
-
-# Container names
-BACKEND_CONTAINER="simak_backend"
-FRONTEND_CONTAINER="simak_frontend"
-DB_CONTAINER="simak_db"
-
-# Service ports
-BACKEND_PORT="${BACKEND_PORT:-3000}"
-FRONTEND_PORT="${FRONTEND_PORT:-80}"
-DB_PORT="${DB_PORT:-5433}"
+if [ "$DEPLOY_ENV" = "staging" ]; then
+  DOCKER_COMPOSE_FILE="$PROJECT_DIR/docker-compose.staging.yml"
+  DOCKER_NETWORK="simakjs-staging_default"
+  BACKEND_CONTAINER="simak_backend_staging"
+  FRONTEND_CONTAINER="simak_frontend_staging"
+  DB_CONTAINER="simak_db_staging"
+  BACKEND_PORT="${BACKEND_PORT:-3001}"
+  FRONTEND_PORT="${FRONTEND_PORT:-8081}"
+  DB_PORT="${DB_PORT:-5434}"
+else
+  DOCKER_COMPOSE_FILE="$PROJECT_DIR/docker-compose.yml"
+  DOCKER_NETWORK="simakjs_default"
+  BACKEND_CONTAINER="simak_backend"
+  FRONTEND_CONTAINER="simak_frontend"
+  DB_CONTAINER="simak_db"
+  BACKEND_PORT="${BACKEND_PORT:-3000}"
+  FRONTEND_PORT="${FRONTEND_PORT:-80}"
+  DB_PORT="${DB_PORT:-5433}"
+fi
 
 # Health check settings
 HEALTH_URL="http://localhost:$BACKEND_PORT/health"
