@@ -253,13 +253,11 @@ export class PresensiService {
         .groupBy(kompensasiBayar.mahasiswaId),
     );
 
-    const totalKompensasiExpr = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0))`;
-    const totalDibayarExpr = sql<number>`COALESCE(bayar_mangkir.total_dibayar, 0)`;
-    const sisaKompensasiExpr = sql<number>`GREATEST(0, (COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0)) - COALESCE(bayar_mangkir.total_dibayar, 0))`;
+    const totalKompensasiSql = sql<number>`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0))`;
+    const totalDibayarSql = sql<number>`COALESCE(bayar_mangkir.total_dibayar, 0)`;
+    const sisaKompensasiSql = sql<number>`GREATEST(0, (COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0)) - COALESCE(bayar_mangkir.total_dibayar, 0))`;
 
-    const conditions: SQL<unknown>[] = [
-      sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(apel_mangkir.poin, 0) + COALESCE(manual_mangkir.poin, 0)) > 0`,
-    ];
+    const conditions: SQL<unknown>[] = [sql`${totalKompensasiSql} > 0`];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
@@ -268,21 +266,21 @@ export class PresensiService {
       conditions.push(eq(mahasiswa.programStudiId, prodiId));
     }
     if (statusLunas === 'belum_lunas') {
-      conditions.push(sql`${sisaKompensasiExpr} > 0`);
+      conditions.push(sql`${sisaKompensasiSql} > 0`);
     } else if (statusLunas === 'lunas') {
-      conditions.push(sql`${sisaKompensasiExpr} <= 0`);
+      conditions.push(sql`${sisaKompensasiSql} <= 0`);
     }
     const whereClause = and(...conditions);
 
-    let orderClause = sql`${sisaKompensasiExpr} DESC`;
+    let orderClause = sql`${sisaKompensasiSql} DESC`;
     if (sortBy === 'total') {
-      orderClause = sortOrder === 'asc' ? sql`${totalKompensasiExpr} ASC` : sql`${totalKompensasiExpr} DESC`;
+      orderClause = sortOrder === 'asc' ? sql`${totalKompensasiSql} ASC` : sql`${totalKompensasiSql} DESC`;
     } else if (sortBy === 'nama') {
       orderClause = sortOrder === 'desc' ? sql`${mahasiswa.nama} DESC` : sql`${mahasiswa.nama} ASC`;
     } else if (sortBy === 'nim') {
       orderClause = sortOrder === 'desc' ? sql`${mahasiswa.nim} DESC` : sql`${mahasiswa.nim} ASC`;
     } else if (sortBy === 'sisa') {
-      orderClause = sortOrder === 'asc' ? sql`${sisaKompensasiExpr} ASC` : sql`${sisaKompensasiExpr} DESC`;
+      orderClause = sortOrder === 'asc' ? sql`${sisaKompensasiSql} ASC` : sql`${sisaKompensasiSql} DESC`;
     }
 
     const baseQuery = db
@@ -292,9 +290,9 @@ export class PresensiService {
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
         prodiNama: programStudi.nama,
-        totalKompensasi: totalKompensasiExpr,
-        totalDibayar: totalDibayarExpr,
-        sisaKompensasi: sisaKompensasiExpr,
+        totalKompensasi: totalKompensasiSql.as('total_kompensasi'),
+        totalDibayar: totalDibayarSql.as('total_dibayar'),
+        sisaKompensasi: sisaKompensasiSql.as('sisa_kompensasi'),
       })
       .from(mahasiswa)
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
