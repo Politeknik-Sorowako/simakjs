@@ -303,17 +303,30 @@ export class PresensiService {
       .where(whereClause)
       .orderBy(orderClause);
 
-    const listMahasiswa = exportAll ? await baseQuery : await baseQuery.limit(limit).offset(offset);
+    let listMahasiswa: Awaited<typeof baseQuery>;
+    let total = 0;
+    try {
+      listMahasiswa = exportAll ? await baseQuery : await baseQuery.limit(limit).offset(offset);
 
-    const [totalResult] = await db
-      .with(presensiAggSubquery, apelAggSubquery, manualAggSubquery, bayarAggSubquery)
-      .select({ total: sql<number>`count(*)` })
-      .from(mahasiswa)
-      .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
-      .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
-      .leftJoin(manualAggSubquery, eq(sql`manual_mangkir.mahasiswa_id`, mahasiswa.id))
-      .leftJoin(bayarAggSubquery, eq(sql`bayar_mangkir.mahasiswa_id`, mahasiswa.id))
-      .where(whereClause);
+      const [totalResult] = await db
+        .with(presensiAggSubquery, apelAggSubquery, manualAggSubquery, bayarAggSubquery)
+        .select({ total: sql<number>`count(*)` })
+        .from(mahasiswa)
+        .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
+        .leftJoin(apelAggSubquery, eq(sql`apel_mangkir.mahasiswa_id`, mahasiswa.id))
+        .leftJoin(manualAggSubquery, eq(sql`manual_mangkir.mahasiswa_id`, mahasiswa.id))
+        .leftJoin(bayarAggSubquery, eq(sql`bayar_mangkir.mahasiswa_id`, mahasiswa.id))
+        .where(whereClause);
+      total = Number(totalResult?.total || 0);
+    } catch (e: unknown) {
+      console.error('[PresensiService.getLaporanKompensasi] Query failed', {
+        filter: { page, limit, search, prodiId, sortBy, sortOrder, statusLunas, exportAll },
+        error: e,
+      });
+      throw new Error(
+        `Gagal memuat laporan kompensasi: ${e instanceof Error && e.message ? e.message : 'Unknown error'}`,
+      );
+    }
 
     const data = listMahasiswa.map((mhs) => ({
       ...mhs,
@@ -322,7 +335,6 @@ export class PresensiService {
       sisaKompensasi: Number(mhs.sisaKompensasi),
     }));
 
-    const total = Number(totalResult?.total || 0);
     const totalPages = Math.ceil(total / limit);
 
     return { data, meta: { total, page, limit: exportAll ? total : limit, totalPages } };

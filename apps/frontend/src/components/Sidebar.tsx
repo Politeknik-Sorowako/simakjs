@@ -26,6 +26,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     const currentPath = path();
     const isMatch = (routes: string[]) => routes.some((r) => currentPath === r || currentPath.startsWith(`${r}/`));
 
+    // Reset all menus first, then open only the matching one
+    setIsMasterOpen(false);
+    setIsPerencanaanOpen(false);
+    setIsRegistrasiOpen(false);
+    setIsPelaksanaanOpen(false);
+    setIsEvaluasiOpen(false);
+    setIsLaporanOpen(false);
+    setIsLayananOpen(false);
+    setIsIntegrasiOpen(false);
+    setIsAdmisiOpen(false);
+
     if (isMatch(['/program-studi', '/mahasiswa', '/dosen', '/pengguna', '/periode-akademik'])) {
       setIsMasterOpen(true);
     }
@@ -52,7 +63,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
     if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan'])) {
       setIsPelaksanaanOpen(true);
     }
-    if (isMatch(['/khs', '/yudisium'])) {
+    if (isMatch(['/khs', '/yudisium', '/evaluasi-sistem'])) {
       setIsEvaluasiOpen(true);
     }
     if (
