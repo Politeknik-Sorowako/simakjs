@@ -80,6 +80,8 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint WHERE conname = 'nilai_praktik_rombel_mhs_komponen_unique'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM pg_class WHERE relname = 'nilai_praktik_rombel_mhs_komponen_unique'
   ) THEN
     ALTER TABLE "nilai_praktik" ADD CONSTRAINT "nilai_praktik_rombel_mhs_komponen_unique" UNIQUE ("rombel_praktikum_id","mahasiswa_id","komponen_nilai_id");
   END IF;
