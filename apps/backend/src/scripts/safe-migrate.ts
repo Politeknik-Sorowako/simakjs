@@ -165,6 +165,39 @@ async function checkIfTrackingTableExists(): Promise<boolean> {
   }
 }
 
+async function reconcileTrackingTable(): Promise<boolean> {
+  try {
+    const journalPath = join(process.cwd(), 'drizzle/meta/_journal.json');
+    const journal = JSON.parse(await (await import('node:fs/promises')).readFile(journalPath, 'utf8')) as {
+      entries: Array<{ when: number }>;
+    };
+    if (!journal?.entries?.length) {
+      log('[WARN] Journal kosong atau tidak valid saat rekonsiliasi.');
+      return false;
+    }
+    const maxWhen = Math.max(...journal.entries.map((e) => e.when));
+    // 1ms di atas timestamp terakhir journal agar semua migrasi yang sudah ada dianggap ter-apply.
+    const targetCreatedAt = maxWhen + 1;
+
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
+    const tables = await pool.query(`
+      SELECT table_schema, table_name FROM information_schema.tables
+      WHERE table_name = '__drizzle_migrations' AND table_schema IN ('drizzle', 'public')
+    `);
+    for (const t of tables.rows as Array<{ table_schema: string; table_name: string }>) {
+      await pool.query(`UPDATE ${t.table_schema}.${t.table_name} SET created_at = $1 WHERE created_at < $1`, [
+        targetCreatedAt,
+      ]);
+      log(`  -> Tracking table ${t.table_schema}.${t.table_name} disinkronkan ke created_at=${targetCreatedAt}.`);
+    }
+    await pool.end();
+    return true;
+  } catch (err: unknown) {
+    log(`[ERROR] Rekonsiliasi tracking table gagal: ${err instanceof Error ? err.message : String(err)}`);
+    return false;
+  }
+}
+
 async function main() {
   console.log('');
   console.log('========================================');
@@ -272,9 +305,26 @@ async function main() {
         migrationOk = true;
       } catch (err: unknown) {
         const errMsg = ((err as Error).message || String(err)).split('\n')[0];
-        log(`[WARN] drizzle-kit migrate warning/error: ${errMsg}`);
-        log('[WARN] Proceeding with application startup as database schema is managed.');
-        migrationOk = true;
+        log(`[WARN] drizzle-kit migrate gagal: ${errMsg}`);
+        log('>>> Mencoba merekonsiliasi tracking table migration terhadap journal...');
+
+        const reconciled = await reconcileTrackingTable();
+        if (reconciled) {
+          try {
+            execSync('bunx drizzle-kit migrate', { stdio: 'inherit', timeout: 120000, cwd: process.cwd() });
+            log('[OK] Migration completed setelah rekonsiliasi tracking table (migrate).');
+            migrationOk = true;
+          } catch (retryErr: unknown) {
+            const retryMsg = ((retryErr as Error).message || String(retryErr)).split('\n')[0];
+            log(`[CRITICAL] drizzle-kit migrate tetap gagal setelah rekonsiliasi: ${retryMsg}`);
+            log('[CRITICAL] Tidak melanjutkan startup agar kesalahan schema tidak disembunyikan.');
+            migrationOk = false;
+          }
+        } else {
+          log('[CRITICAL] Gagal merekonsiliasi tracking table migration.');
+          log('[CRITICAL] Tidak melanjutkan startup agar kesalahan schema tidak disembunyikan.');
+          migrationOk = false;
+        }
       }
     }
   }
