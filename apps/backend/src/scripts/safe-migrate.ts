@@ -179,16 +179,38 @@ async function reconcileTrackingTable(): Promise<boolean> {
     // 1ms di atas timestamp terakhir journal agar semua migrasi yang sudah ada dianggap ter-apply.
     const targetCreatedAt = maxWhen + 1;
 
+    // Jangan pernah merekonsiliasi dari belakang (backdate) — hanya majukan timestamp
+    // tracking yang benar-benar STALE (dibuat via push) ke batas yang sudah terekam,
+    // bukan melompati migrasi baru yang belum pernah dijalankan di database ini.
     const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5000 });
     const tables = await pool.query(`
       SELECT table_schema, table_name FROM information_schema.tables
       WHERE table_name = '__drizzle_migrations' AND table_schema IN ('drizzle', 'public')
     `);
     for (const t of tables.rows as Array<{ table_schema: string; table_name: string }>) {
-      await pool.query(`UPDATE ${t.table_schema}.${t.table_name} SET created_at = $1 WHERE created_at < $1`, [
-        targetCreatedAt,
-      ]);
-      log(`  -> Tracking table ${t.table_schema}.${t.table_name} disinkronkan ke created_at=${targetCreatedAt}.`);
+      const currentMax = await pool.query(
+        `SELECT COALESCE(MAX(created_at), 0) AS max_ts FROM ${t.table_schema}.${t.table_name}`,
+      );
+      const existingMax = Number(currentMax.rows[0]?.max_ts || 0);
+      // Hanya naikkan ke targetCreatedAt jika seluruh migrasi journal memang sudah nyata
+      // dibuktikan nyata di database (tracking tidak lebih rendah daripada journal terakhir).
+      // Jika existingMax < maksimum journal (migrasi tertinggal belum dijalankan), kita TIDAK
+      // menandai semuanya selesai karena itu justru menyembunyikan migrasi yang belum berjalan.
+      if (existingMax >= (journal.entries[journal.entries.length - 1]?.when || 0)) {
+        await pool.query(
+          `UPDATE ${t.table_schema}.${t.table_name} SET created_at = $1 WHERE created_at < $1 AND created_at IS NOT NULL`,
+          [targetCreatedAt],
+        );
+        log(
+          `  → Tracking table ${t.table_schema}.${t.table_name} disinkronkan ke created_at=${targetCreatedAt} (aman).`,
+        );
+      } else {
+        log(
+          `  → Tracking table ${t.table_schema}.${t.table_name} TIDAK direkonsiliasi otomatis. ` +
+            `Migrasi tertinggal terdeteksi (existingMax=${existingMax} < journalMax=${journal.entries[journal.entries.length - 1]?.when}). ` +
+            `Bun/drizzle-kit migrate akan menjalankan migrasi yang belum sempat ter-apply.`,
+        );
+      }
     }
     await pool.end();
     return true;
