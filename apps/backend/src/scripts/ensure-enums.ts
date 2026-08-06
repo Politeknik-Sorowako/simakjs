@@ -55,6 +55,11 @@ async function ensureEnums() {
   // NOTE: Schema changes are primarily managed by Drizzle SQL migrations.
   // The queries below serve as an idempotent self-healing safety fallback for production runtime environments (e.g. Docker startup).
   try {
+    await pool
+      .query(
+        `DELETE FROM "dosen_pengajar_kelas" WHERE "dosen_id" IS NOT NULL AND "dosen_id" NOT IN (SELECT "id" FROM "dosen");`,
+      )
+      .catch(() => {});
     await pool.query(`ALTER TABLE "bap" ALTER COLUMN "cpmk_id" DROP NOT NULL;`).catch(() => {});
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "bap_topik" (

@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS "periode_akademik" (
 	"id_pddikti" varchar(50)
 );
 --> statement-breakpoint
+DELETE FROM "dosen_pengajar_kelas" WHERE "dosen_id" IS NOT NULL AND "dosen_id" NOT IN (SELECT "id" FROM "dosen");
 DO $$ BEGIN
  ALTER TABLE "dosen_pengajar_kelas" ADD CONSTRAINT "dosen_pengajar_kelas_dosen_id_dosen_id_fk" FOREIGN KEY ("dosen_id") REFERENCES "public"."dosen"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
