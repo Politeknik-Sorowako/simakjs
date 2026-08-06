@@ -138,19 +138,35 @@ async function main() {
       `Dump successfully retrieved (${(fileStats.size / 1024 / 1024).toFixed(2)} MB). Restoring into Staging DB...`,
     );
 
-    // 2. Restore into Staging DB
-    const restoreResult = spawnSync(
-      'psql',
-      ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '-f', tempDumpPath],
-      {
-        env: { ...process.env, PGPASSWORD: config.password },
+    const stagingDbContainer = process.env.STAGING_DB_CONTAINER || 'simak_db_staging';
+
+    // 2. Restore into Staging DB (via Docker container or direct psql)
+    let restoreResult;
+    if (stagingDbContainer && stagingDbContainer !== 'none') {
+      const restoreCmd = `docker exec -i ${stagingDbContainer} psql -U ${config.user} -d ${config.db} < "${tempDumpPath}"`;
+      restoreResult = spawnSync('sh', ['-c', restoreCmd], {
+        env: process.env,
         stdio: ['inherit', 'pipe', 'pipe'],
         timeout: 600000,
-      },
-    );
+      });
+    } else {
+      restoreResult = spawnSync(
+        'psql',
+        ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '-f', tempDumpPath],
+        {
+          env: { ...process.env, PGPASSWORD: config.password },
+          stdio: ['inherit', 'pipe', 'pipe'],
+          timeout: 600000,
+        },
+      );
+    }
 
     if (restoreResult.error || restoreResult.status !== 0) {
-      const stderr = restoreResult.stderr ? restoreResult.stderr.toString() : '';
+      const stderr = restoreResult.stderr
+        ? restoreResult.stderr.toString()
+        : restoreResult.error
+          ? restoreResult.error.message
+          : '';
       throw new Error(`Failed to restore dump into Staging DB. Code: ${restoreResult.status}. Stderr: ${stderr}`);
     }
 
@@ -164,7 +180,11 @@ async function main() {
     });
 
     if (migrateResult.error || migrateResult.status !== 0) {
-      const stderr = migrateResult.stderr ? migrateResult.stderr.toString() : '';
+      const stderr = migrateResult.stderr
+        ? migrateResult.stderr.toString()
+        : migrateResult.error
+          ? migrateResult.error.message
+          : '';
       auditLog(`Warning: Auto-migration after restore encountered issue: ${stderr}`);
     } else {
       auditLog('Auto-migration (safe-migrate) executed successfully.');
@@ -174,18 +194,32 @@ async function main() {
 
     // 4. Run Data Sanitization SQL
     if (existsSync(sanitizeSqlPath)) {
-      const sanitizeResult = spawnSync(
-        'psql',
-        ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '-f', sanitizeSqlPath],
-        {
-          env: { ...process.env, PGPASSWORD: config.password },
+      let sanitizeResult;
+      if (stagingDbContainer && stagingDbContainer !== 'none') {
+        const sanitizeCmd = `docker exec -i ${stagingDbContainer} psql -U ${config.user} -d ${config.db} < "${sanitizeSqlPath}"`;
+        sanitizeResult = spawnSync('sh', ['-c', sanitizeCmd], {
+          env: process.env,
           stdio: ['inherit', 'pipe', 'pipe'],
           timeout: 60000,
-        },
-      );
+        });
+      } else {
+        sanitizeResult = spawnSync(
+          'psql',
+          ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '-f', sanitizeSqlPath],
+          {
+            env: { ...process.env, PGPASSWORD: config.password },
+            stdio: ['inherit', 'pipe', 'pipe'],
+            timeout: 60000,
+          },
+        );
+      }
 
       if (sanitizeResult.error || sanitizeResult.status !== 0) {
-        const stderr = sanitizeResult.stderr ? sanitizeResult.stderr.toString() : '';
+        const stderr = sanitizeResult.stderr
+          ? sanitizeResult.stderr.toString()
+          : sanitizeResult.error
+            ? sanitizeResult.error.message
+            : '';
         auditLog(`Warning: Data sanitization returned error: ${stderr}`);
       } else {
         auditLog('Data sanitization executed successfully.');
