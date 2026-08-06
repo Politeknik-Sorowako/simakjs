@@ -71,7 +71,8 @@ async function main() {
   const prodSshKeyRaw = process.env.PROD_SSH_KEY || '~/.ssh/id_rsa_staging_pull';
   const prodSshKey = expandTildePath(prodSshKeyRaw);
   const prodDbName = process.env.PROD_DB_NAME || 'simak_vokasi';
-  const prodDbUser = process.env.PROD_DB_USER || 'postgres';
+  const prodDbUser = process.env.PROD_DB_USER || 'simak_user';
+  const prodDbContainer = process.env.PROD_DB_CONTAINER || 'simak_db';
 
   const randomId = crypto.randomBytes(8).toString('hex');
   const backupDir = join(process.cwd(), 'backups');
@@ -99,8 +100,13 @@ async function main() {
 
     auditLog(`Fetching dump from Production (${prodSshHost}:${prodSshPort})...`);
 
-    // 1. Pull dump from Prod using SSH & pg_dump
-    const sshDumpCmd = `ssh -p ${prodSshPort} -i "${prodSshKey}" -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl" > "${tempDumpPath}"`;
+    // 1. Pull dump from Prod using SSH & pg_dump (exec in Docker container if configured)
+    const remoteDumpCmd =
+      prodDbContainer && prodDbContainer !== 'none'
+        ? `docker exec ${prodDbContainer} pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl`
+        : `pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl`;
+
+    const sshDumpCmd = `ssh -p ${prodSshPort} -i "${prodSshKey}" -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "${remoteDumpCmd}" > "${tempDumpPath}"`;
 
     const fetchResult = spawnSync('sh', ['-c', sshDumpCmd], {
       env: process.env,
