@@ -289,7 +289,7 @@ export class PresensiService {
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
-        prodiNama: programStudi.nama,
+        prodiNama: sql<string>`${programStudi.nama}`.as('nama_prodi'),
         totalKompensasi: totalKompensasiSql.as('total_kompensasi'),
         totalDibayar: totalDibayarSql.as('total_dibayar'),
         sisaKompensasi: sisaKompensasiSql.as('sisa_kompensasi'),
@@ -319,13 +319,14 @@ export class PresensiService {
         .where(whereClause);
       total = Number(totalResult?.total || 0);
     } catch (e: unknown) {
+      const cause = (e as Error & { cause?: unknown }).cause;
+      const causeMsg = cause instanceof Error && cause.message ? cause.message.split('\n')[0] : 'Unknown error';
       console.error('[PresensiService.getLaporanKompensasi] Query failed', {
         filter: { page, limit, search, prodiId, sortBy, sortOrder, statusLunas, exportAll },
+        dbError: causeMsg,
         error: e,
       });
-      throw new Error(
-        `Gagal memuat laporan kompensasi: ${e instanceof Error && e.message ? e.message : 'Unknown error'}`,
-      );
+      throw new Error('Gagal memuat laporan kompensasi.');
     }
 
     const data = listMahasiswa.map((mhs) => ({
