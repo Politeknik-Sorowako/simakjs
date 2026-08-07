@@ -281,6 +281,13 @@
       "when": 1786031000000,
       "tag": "0039_ensure_kompensasi_manual_nilai_praktik_idempotent",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1786031500000,
+      "tag": "0040_add_konfigurasi_sistem",
+      "breakpoints": true
     }
   ]
 }

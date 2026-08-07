@@ -20,12 +20,15 @@ import {
 export const roleEnum = pgEnum('user_role', [
   'super_admin',
   'admin',
+  'kaprodi',
   'dosen',
   'mahasiswa',
   'prodi',
   'keuangan',
   'guest',
   'calon_mahasiswa',
+  'plp',
+  'instruktur',
 ]);
 
 export const applicationStatusEnum = pgEnum('application_status', [
@@ -53,6 +56,7 @@ export const users = pgTable('users', {
   role: roleEnum('role').notNull().default('mahasiswa'),
   prodiIds: jsonb('prodi_ids').$type<number[]>().default([]).notNull(),
   isActive: boolean('is_active').default(false).notNull(),
+  isGlobalScope: boolean('is_global_scope').default(false).notNull(),
   mustChangePassword: boolean('must_change_password').default(false).notNull(),
   theme: varchar('theme', { length: 20 }).default('light').notNull(),
   avatar: text('avatar'),
@@ -2488,9 +2492,98 @@ export const systemFeedbackRelations = relations(systemFeedback, ({ one }) => ({
 export const systemSettings = pgTable('system_settings', {
   key: varchar('key', { length: 100 }).primaryKey(),
   value: text('value').notNull(),
+  paramType: varchar('param_type', { length: 20 }).default('string').notNull(),
   description: text('description'),
+  updatedBy: integer('updated_by'),
   updatedAt: timestamp('updated_at')
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export const roleGroups = pgTable('role_groups', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  description: text('description'),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const permissions = pgTable('permissions', {
+  id: serial('id').primaryKey(),
+  module: varchar('module', { length: 100 }).notNull(),
+  action: varchar('action', { length: 50 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const roleGroupPermissions = pgTable(
+  'role_group_permissions',
+  {
+    id: serial('id').primaryKey(),
+    roleGroupId: integer('role_group_id')
+      .notNull()
+      .references(() => roleGroups.id, { onDelete: 'cascade' }),
+    permissionId: integer('permission_id')
+      .notNull()
+      .references(() => permissions.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [unique('role_group_permissions_group_permission_unique').on(table.roleGroupId, table.permissionId)],
+);
+
+export const userProdiScopes = pgTable(
+  'user_prodi_scopes',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [unique('user_prodi_scopes_user_prodi_unique').on(table.userId, table.programStudiId)],
+);
+
+export const roleGroupsRelations = relations(roleGroups, ({ many }) => ({
+  permissions: many(roleGroupPermissions),
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  roleGroups: many(roleGroupPermissions),
+}));
+
+export const roleGroupPermissionsRelations = relations(roleGroupPermissions, ({ one }) => ({
+  roleGroup: one(roleGroups, {
+    fields: [roleGroupPermissions.roleGroupId],
+    references: [roleGroups.id],
+  }),
+  permission: one(permissions, {
+    fields: [roleGroupPermissions.permissionId],
+    references: [permissions.id],
+  }),
+}));
+
+export const userProdiScopesRelations = relations(userProdiScopes, ({ one }) => ({
+  user: one(users, {
+    fields: [userProdiScopes.userId],
+    references: [users.id],
+  }),
+  programStudi: one(programStudi, {
+    fields: [userProdiScopes.programStudiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
+  updatedByUser: one(users, {
+    fields: [systemSettings.updatedBy],
+    references: [users.id],
+  }),
+}));

@@ -61,6 +61,7 @@ export class AuthController {
       nama: user.nama,
       role: user.role,
       mustChangePassword: user.mustChangePassword,
+      isGlobalScope: user.isGlobalScope ?? false,
     });
 
     if (cookie?.access_token) {

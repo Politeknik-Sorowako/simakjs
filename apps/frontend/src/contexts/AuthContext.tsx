@@ -4,7 +4,18 @@ export interface User {
   id: number;
   email: string;
   nama: string;
-  role: 'super_admin' | 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa';
+  role:
+    | 'super_admin'
+    | 'admin'
+    | 'kaprodi'
+    | 'dosen'
+    | 'mahasiswa'
+    | 'prodi'
+    | 'keuangan'
+    | 'guest'
+    | 'calon_mahasiswa'
+    | 'plp'
+    | 'instruktur';
   mustChangePassword?: boolean;
   theme?: string;
   avatar?: string;

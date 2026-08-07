@@ -1,6 +1,7 @@
 import { and, count, desc, eq, or, sql } from 'drizzle-orm';
 import { kompensasiManual, mahasiswa, users } from '../models/schema';
 import { db } from '../utils/db';
+import { SystemParameterService } from './system-parameter.service';
 
 export const JENIS_KOMPEN = ['sakit', 'izin', 'alpa', 'terlambat', 'rusak'] as const;
 export type JenisKompen = (typeof JENIS_KOMPEN)[number];
@@ -8,20 +9,19 @@ export type JenisKompen = (typeof JENIS_KOMPEN)[number];
 export const JENIS_FULL_DAY: JenisKompen[] = ['sakit', 'izin', 'alpa'];
 export const JENIS_DURASI_MANUAL: JenisKompen[] = ['terlambat', 'rusak'];
 
-export const MAKS_DURASI_HARIAN = 480;
-
 type KompensasiExecutor = { select: typeof db.select };
 
 export class KompensasiManualService {
-  static resolveDurasiMenit(jenisKompen: JenisKompen, durasiMenit?: number): number {
+  static async resolveDurasiMenit(jenisKompen: JenisKompen, durasiMenit?: number): Promise<number> {
+    const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
     if (JENIS_FULL_DAY.includes(jenisKompen)) {
-      return MAKS_DURASI_HARIAN;
+      return maksHarian;
     }
     const durasi = durasiMenit || 0;
     if (durasi <= 0) {
       throw new Error('Durasi menit wajib diisi untuk jenis kompensasi terlambat/rusak');
     }
-    return Math.min(durasi, MAKS_DURASI_HARIAN);
+    return Math.min(durasi, maksHarian);
   }
 
   static async hitungTotalHariIni(
@@ -78,13 +78,14 @@ export class KompensasiManualService {
         throw new Error('Jenis kompensasi tidak valid');
       }
 
-      const durasiMenit = this.resolveDurasiMenit(data.jenisKompen, data.durasiMenit);
+      const durasiMenit = await this.resolveDurasiMenit(data.jenisKompen, data.durasiMenit);
       const totalHariIni = await this.hitungTotalHariIni(data.mahasiswaId, data.tanggal, undefined, tx);
+      const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
 
-      if (totalHariIni + durasiMenit > MAKS_DURASI_HARIAN) {
+      if (totalHariIni + durasiMenit > maksHarian) {
         throw new Error(
           `Total durasi kompensasi pada tanggal ${data.tanggal} sudah mencapai ${totalHariIni} menit. ` +
-            `Tidak dapat menambah ${durasiMenit} menit (maks ${MAKS_DURASI_HARIAN} menit/hari).`,
+            `Tidak dapat menambah ${durasiMenit} menit (maks ${maksHarian} menit/hari).`,
         );
       }
 
@@ -145,12 +146,13 @@ export class KompensasiManualService {
         throw new Error('Jenis kompensasi tidak valid');
       }
 
-      const durasiMenit = this.resolveDurasiMenit(jenisKompen, data.durasiMenit ?? existing.durasiMenit);
+      const durasiMenit = await this.resolveDurasiMenit(jenisKompen, data.durasiMenit ?? existing.durasiMenit);
       const totalHariIni = await this.hitungTotalHariIni(mahasiswaId, tanggal, id, tx);
+      const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
 
-      if (totalHariIni + durasiMenit > MAKS_DURASI_HARIAN) {
+      if (totalHariIni + durasiMenit > maksHarian) {
         throw new Error(
-          `Total durasi kompensasi pada tanggal ${tanggal} akan melebihi batas ${MAKS_DURASI_HARIAN} menit/hari.`,
+          `Total durasi kompensasi pada tanggal ${tanggal} akan melebihi batas ${maksHarian} menit/hari.`,
         );
       }
 

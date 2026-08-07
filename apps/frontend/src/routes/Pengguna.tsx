@@ -260,8 +260,11 @@ export default function Pengguna() {
                           <option value="super_admin">Super Admin</option>
                         </Show>
                         <option value="admin">Admin</option>
-                        <option value="prodi">Prodi</option>
+                        <option value="kaprodi">Kaprodi</option>
+                        <option value="prodi">Admin Prodi</option>
                         <option value="dosen">Dosen</option>
+                        <option value="plp">PLP / Teknisi Lab</option>
+                        <option value="instruktur">Instruktur</option>
                         <option value="mahasiswa">Mahasiswa</option>
                         <option value="keuangan">Keuangan</option>
                         <option value="calon_mahasiswa">Calon Mahasiswa</option>
@@ -415,8 +418,11 @@ export default function Pengguna() {
                 <option value="super_admin">Super Admin</option>
               </Show>
               <option value="admin">Admin</option>
-              <option value="prodi">Prodi</option>
+              <option value="kaprodi">Kaprodi</option>
+              <option value="prodi">Admin Prodi</option>
               <option value="dosen">Dosen</option>
+              <option value="plp">PLP / Teknisi Lab</option>
+              <option value="instruktur">Instruktur</option>
               <option value="mahasiswa">Mahasiswa</option>
               <option value="keuangan">Keuangan</option>
               <option value="calon_mahasiswa">Calon Mahasiswa</option>

@@ -6,12 +6,15 @@ export const userBody = t.Object({
   role: t.Union(
     [
       t.Literal('admin'),
+      t.Literal('kaprodi'),
       t.Literal('dosen'),
       t.Literal('mahasiswa'),
       t.Literal('prodi'),
       t.Literal('keuangan'),
       t.Literal('guest'),
       t.Literal('calon_mahasiswa'),
+      t.Literal('plp'),
+      t.Literal('instruktur'),
     ],
     { default: 'mahasiswa' },
   ),
@@ -122,12 +125,15 @@ export const updateRoleSchema = {
     role: t.Union(
       [
         t.Literal('admin'),
+        t.Literal('kaprodi'),
         t.Literal('dosen'),
         t.Literal('mahasiswa'),
         t.Literal('prodi'),
         t.Literal('keuangan'),
         t.Literal('guest'),
         t.Literal('calon_mahasiswa'),
+        t.Literal('plp'),
+        t.Literal('instruktur'),
       ],
       { default: 'mahasiswa' },
     ),

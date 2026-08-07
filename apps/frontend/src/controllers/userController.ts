@@ -7,6 +7,7 @@ export interface UserItem {
   role: string;
   prodiIds?: number[];
   isActive: boolean;
+  isGlobalScope?: boolean;
   mustChangePassword?: boolean;
   createdAt: string;
 }

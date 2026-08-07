@@ -16,6 +16,7 @@ import {
   sesiApel,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { SystemParameterService } from './system-parameter.service';
 
 export class PresensiService {
   static async saveBulkPresensi(
@@ -75,16 +76,20 @@ export class PresensiService {
     return rows;
   }
 
-  static calculateKompensasiMinutes(status: string, durasiMangkir: number): number {
+  static async calculateKompensasiMinutes(status: string, durasiMangkir: number): Promise<number> {
     switch (status) {
       case 'alpa':
       case 'telat':
       case 'terlambat':
-      case 'unknown':
-        return durasiMangkir * 5;
+      case 'unknown': {
+        const pengali = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
+        return durasiMangkir * pengali;
+      }
       case 'sakit':
-      case 'izin':
-        return durasiMangkir * 1;
+      case 'izin': {
+        const pengali = await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
+        return durasiMangkir * pengali;
+      }
       case 'hadir':
       default:
         return 0;
@@ -156,20 +161,22 @@ export class PresensiService {
 
     const allPresensi = [...presensiList, ...apelList, ...manualList];
 
-    const historyKompensasi = allPresensi
-      .map((p) => {
-        const poinKompensasi =
-          p.sumber === 'manual'
-            ? ['alpa', 'terlambat', 'rusak'].includes(p.status)
-              ? p.durasiMangkir * 5
-              : p.durasiMangkir
-            : this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
-        return {
-          ...p,
-          poinKompensasi,
-        };
-      })
-      .filter((p) => p.poinKompensasi > 0);
+    const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
+    const mapped = await Promise.all(
+      allPresensi.map(async (p) => {
+        let poinKompensasi: number;
+        if (p.sumber === 'manual') {
+          const pengali = ['alpa', 'terlambat', 'rusak'].includes(p.status)
+            ? pengaliMangkir
+            : await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
+          poinKompensasi = p.durasiMangkir * pengali;
+        } else {
+          poinKompensasi = await this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
+        }
+        return { ...p, poinKompensasi };
+      }),
+    );
+    const historyKompensasi = mapped.filter((p) => p.poinKompensasi > 0);
 
     const totalKompensasi = historyKompensasi.reduce((sum, item) => sum + item.poinKompensasi, 0);
 
@@ -201,13 +208,14 @@ export class PresensiService {
     exportAll = false,
   ) {
     const offset = (page - 1) * limit;
+    const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
 
     const presensiAggSubquery = db.$with('presensi_mangkir').as(
       db
         .select({
           mahasiswaId: presensi.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN status::text IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * 5
+              WHEN status::text IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * ${pengaliMangkir}
               WHEN status::text IN ('sakit', 'izin') THEN durasi_mangkir
               ELSE 0 END)`.as('poin'),
         })
@@ -221,7 +229,7 @@ export class PresensiService {
         .select({
           mahasiswaId: presensiApel.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * 5
+              WHEN COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
               WHEN COALESCE(verified_status::text, status::text) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
               ELSE 0 END)`.as('poin'),
         })
@@ -235,7 +243,7 @@ export class PresensiService {
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * ${pengaliMangkir}
               WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
               ELSE durasi_menit END)`.as('poin'),
         })
@@ -342,12 +350,13 @@ export class PresensiService {
   }
 
   static async getLaporanKompensasiStats() {
+    const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
     const presensiAggSubquery = db.$with('presensi_mangkir').as(
       db
         .select({
           mahasiswaId: presensi.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN status IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * 5
+              WHEN status IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * ${pengaliMangkir}
               WHEN status IN ('sakit', 'izin') THEN durasi_mangkir
               ELSE 0 END)`.as('poin'),
         })
@@ -361,7 +370,7 @@ export class PresensiService {
         .select({
           mahasiswaId: presensiApel.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * 5
+              WHEN COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
               WHEN COALESCE(verified_status, status) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
               ELSE 0 END)`.as('poin'),
         })
@@ -375,7 +384,7 @@ export class PresensiService {
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * ${pengaliMangkir}
               WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
               ELSE durasi_menit END)`.as('poin'),
         })

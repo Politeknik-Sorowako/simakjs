@@ -37,6 +37,7 @@ export class UserController {
           role: users.role,
           prodiIds: users.prodiIds,
           isActive: users.isActive,
+          isGlobalScope: users.isGlobalScope,
           mustChangePassword: users.mustChangePassword,
           theme: users.theme,
           avatar: users.avatar,

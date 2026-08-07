@@ -45,11 +45,14 @@ import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { presensiRoutes } from './routes/presensi.routes';
 import { prodiRoutes } from './routes/prodi.routes';
+import { prodiScopeRoutes } from './routes/prodi-scope.routes';
 import { profilLulusanRoutes } from './routes/profil-lulusan.routes';
+import { rbacRoutes } from './routes/rbac.routes';
 import { rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
 import { rpsRoutes } from './routes/rps.routes';
 import { settingsRoutes } from './routes/settings.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
+import { systemRoutes } from './routes/system.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
@@ -307,6 +310,9 @@ app
   .use(rpsRoutes)
   .use(cutiRoutes)
   .use(feedbackRoutes)
+  .use(systemRoutes)
+  .use(rbacRoutes)
+  .use(prodiScopeRoutes)
   .use(rombelPraktikumRoutes)
   .use(mahasiswaKeluarRoutes)
   .use(auditPlugin)

@@ -3,12 +3,15 @@ import { Context } from 'elysia';
 export type UserRole =
   | 'super_admin'
   | 'admin'
+  | 'kaprodi'
   | 'dosen'
   | 'mahasiswa'
   | 'prodi'
   | 'keuangan'
   | 'guest'
-  | 'calon_mahasiswa';
+  | 'calon_mahasiswa'
+  | 'plp'
+  | 'instruktur';
 
 export interface UserPayload {
   id: number;
@@ -16,6 +19,7 @@ export interface UserPayload {
   nama: string;
   role: UserRole;
   mustChangePassword?: boolean;
+  isGlobalScope?: boolean;
 }
 
 export function allowed(user: UserPayload | null | undefined, roles: UserRole[]): boolean {
