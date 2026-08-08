@@ -21,6 +21,10 @@ function readPackageVersion(): string {
 }
 
 function readGitHash(): string | null {
+  const injected = process.env.GIT_COMMIT;
+  if (injected && injected !== 'unknown' && injected.trim() !== '') {
+    return injected.trim();
+  }
   try {
     return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
       .toString()
