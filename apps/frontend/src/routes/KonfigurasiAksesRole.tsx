@@ -1,3 +1,4 @@
+import type { JSX } from 'solid-js';
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -33,15 +34,44 @@ export default function KonfigurasiAksesRole() {
   const [saving, setSaving] = createSignal(false);
   const [notice, setNotice] = createSignal('');
 
-  const toggleCell = (module: string, level: keyof LevelState) => {
+  const [dragValue, setDragValue] = createSignal<boolean | null>(null);
+
+  const applyCell = (module: string, level: keyof LevelState, value: boolean) => {
     const cur = editMatrix();
     if (!cur) return;
     const current: LevelState = cur.values[module] || { view: false, edit: false, manage: false };
     setEditMatrix({
       ...cur,
-      values: { ...cur.values, [module]: { ...current, [level]: !current[level] } },
+      values: { ...cur.values, [module]: { ...current, [level]: value } },
     });
   };
+
+  const toggleCell = (module: string, level: keyof LevelState) => {
+    const cur = editMatrix();
+    if (!cur) return;
+    applyCell(module, level, !(cur.values[module]?.[level] || false));
+  };
+
+  const cellMouseDown: JSX.EventHandler<HTMLElement, MouseEvent> = (e) => {
+    e.preventDefault();
+    const module = e.currentTarget.dataset.module as string;
+    const level = e.currentTarget.dataset.level as keyof LevelState;
+    const cur = editMatrix();
+    if (!cur) return;
+    const value = !(cur.values[module]?.[level] || false);
+    setDragValue(value);
+    applyCell(module, level, value);
+  };
+
+  const cellMouseEnter: JSX.EventHandler<HTMLElement, MouseEvent> = (e) => {
+    const value = dragValue();
+    if (value === null) return;
+    const module = e.currentTarget.dataset.module as string;
+    const level = e.currentTarget.dataset.level as keyof LevelState;
+    applyCell(module, level, value);
+  };
+
+  const endDrag = () => setDragValue(null);
 
   const openMatrix = async (group: { id: number; name: string; isActive: boolean }) => {
     setNotice('');
@@ -261,19 +291,25 @@ export default function KonfigurasiAksesRole() {
                   </For>
                 </tr>
               </thead>
-              <tbody>
+              <tbody onMouseUp={endDrag} onMouseLeave={endDrag}>
                 <For each={modules()}>
                   {(m) => (
                     <tr class="border-b border-secondary-100 dark:border-secondary-800">
                       <td class="py-2 pr-4 text-secondary-700 dark:text-secondary-300 capitalize">{m}</td>
                       <For each={SYSTEM_ACTIONS}>
                         {(level) => (
-                          <td class="px-2 py-2 text-center">
+                          <td
+                            class="px-2 py-2 text-center cursor-pointer select-none"
+                            data-module={m}
+                            data-level={level}
+                            onMouseDown={cellMouseDown}
+                            onMouseEnter={cellMouseEnter}
+                          >
                             <input
                               type="checkbox"
                               checked={editMatrix()?.values[m]?.[level] || false}
                               onChange={() => toggleCell(m, level)}
-                              class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500/30"
+                              class="pointer-events-none h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500/30"
                             />
                           </td>
                         )}
@@ -284,6 +320,10 @@ export default function KonfigurasiAksesRole() {
               </tbody>
             </table>
           </div>
+          <p class="mt-2 text-xs text-secondary-500 dark:text-secondary-400">
+            Tips: klik untuk mencentang satu sel, atau tekan &amp; seret (drag) mouse melintasi sel untuk mencentang
+            sekaligus.
+          </p>
           <p class="mt-3 text-xs text-secondary-500 dark:text-secondary-400">
             Lihat = akses baca. Edit = buat & ubah data. Kelola = hapus, ekspor & setujui.
           </p>
