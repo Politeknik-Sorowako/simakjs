@@ -148,7 +148,7 @@ export const getKrsByIdSchema = {
       nilaiIndeks: t.Union([t.String(), t.Null()], { default: null }),
       isApproved: t.Boolean({ default: false }),
       approvedById: t.Optional(t.Nullable(t.Integer())),
-      approvedAt: t.Optional(t.Nullable(t.Union([t.Date(), t.Null()]))),
+      approvedAt: t.Union([t.Date(), t.Null()], { default: null }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
