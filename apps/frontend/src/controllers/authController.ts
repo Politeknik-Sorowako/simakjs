@@ -1,49 +1,37 @@
 import { User } from '../contexts/AuthContext';
-import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 
 interface AuthResponse {
   token: string;
   user: User;
 }
 
+type AuthEden = Promise<{ data?: AuthResponse; error?: unknown }>;
+
 export const authController = {
   async login(email: string, password: string): Promise<AuthResponse> {
-    return fetchApi<AuthResponse>('/auth/login', {
-      method: 'POST',
-      requireAuth: false,
-      body: JSON.stringify({ email, password }),
-    });
+    return unwrap<AuthResponse>(eden.auth.login.post({ email, password }) as unknown as AuthEden);
   },
 
   async register(email: string, password: string, nama: string, role: string): Promise<AuthResponse> {
-    return fetchApi<AuthResponse>('/auth/register', {
-      method: 'POST',
-      requireAuth: false,
-      body: JSON.stringify({ email, password, nama, role }),
-    });
+    const bodyRole = (['dosen', 'mahasiswa', 'guest'].includes(role) ? role : 'mahasiswa') as
+      | 'dosen'
+      | 'mahasiswa'
+      | 'guest';
+    return unwrap<AuthResponse>(
+      eden.auth.register.post({ nama, email, password, role: bodyRole }) as unknown as AuthEden,
+    );
   },
 
   async forgotPassword(email: string): Promise<{ message: string; token?: string }> {
-    return fetchApi<{ message: string; token?: string }>('/auth/forgot-password', {
-      method: 'POST',
-      requireAuth: false,
-      body: JSON.stringify({ email }),
-    });
+    return unwrap<{ message: string; token?: string }>(eden.auth['forgot-password'].post({ email }));
   },
 
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
-    return fetchApi<{ message: string }>('/auth/reset-password', {
-      method: 'POST',
-      requireAuth: false,
-      body: JSON.stringify({ token, password }),
-    });
+    return unwrap<{ message: string }>(eden.auth['reset-password'].post({ token, password }));
   },
 
   async validateResetToken(token: string): Promise<{ email: string }> {
-    return fetchApi<{ email: string }>('/auth/reset-password/validate', {
-      method: 'POST',
-      requireAuth: false,
-      body: JSON.stringify({ token }),
-    });
+    return unwrap<{ email: string }>(eden.auth['reset-password']['validate'].post({ token }));
   },
 };

@@ -58,8 +58,8 @@ export default function KonfigurasiAbout() {
               <p class="text-xs text-secondary-500">Status koneksi database dan layanan</p>
             </div>
             <HealthRow label="Status" value={health()?.status || 'loading'} />
-            <HealthRow label="Database" value={health()?.database || 'loading'} />
-            <HealthRow label="Cache" value={health()?.cache || 'loading'} />
+            <HealthRow label="Database" value={health()?.database || '-'} />
+            <HealthRow label="Uptime" value={health()?.uptime != null ? `${health()?.uptime}s` : '-'} />
           </Card>
         </div>
 
