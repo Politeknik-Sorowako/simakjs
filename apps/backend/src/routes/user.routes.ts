@@ -8,6 +8,7 @@ import {
   toggleActiveSchema,
   updateProfileSchema,
   updateRoleSchema,
+  updateUserRolesSchema,
 } from '../schemas/user.schema';
 
 export const userRoutes = new Elysia({ prefix: '/users' })
@@ -19,9 +20,7 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   .put('/profile', UserController.updateProfile, updateProfileSchema)
   .put('/:id/activate', UserController.toggleActive, toggleActiveSchema)
   .put('/:id/role', UserController.updateRole, updateRoleSchema)
-  .put('/:id/roles', UserController.updateUserRoles, {
-    detail: { tags: ['Pengguna'], summary: 'Perbarui banyak peran (roles) pengguna (Admin/Super Admin)' },
-  })
+  .put('/:id/roles', UserController.updateUserRoles, updateUserRolesSchema)
   .put('/:id/prodi-scope', UserController.updateProdiScope, {
     detail: { tags: ['Pengguna'], summary: 'Perbarui cakupan program studi pengguna' },
   })

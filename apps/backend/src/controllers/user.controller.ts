@@ -335,9 +335,11 @@ export class UserController {
         }
       }
 
-      await db.delete(userRoles).where(eq(userRoles.userId, userId));
-      await db.insert(userRoles).values(rolesSet.map((role) => ({ userId, role })));
-      await db.update(users).set({ role: rolesSet[0] }).where(eq(users.id, userId));
+      await db.transaction(async (tx) => {
+        await tx.delete(userRoles).where(eq(userRoles.userId, userId));
+        await tx.insert(userRoles).values(rolesSet.map((role) => ({ userId, role })));
+        await tx.update(users).set({ role: rolesSet[0] }).where(eq(users.id, userId));
+      });
 
       return {
         message: 'Peran pengguna berhasil diperbarui',

@@ -2521,6 +2521,9 @@ export const roleGroups = pgTable('role_groups', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 100 }).notNull().unique(),
   description: text('description'),
+  roleType: varchar('role_type', { length: 20 }).default('rbac_group').notNull(),
+  roleValue: varchar('role_value', { length: 50 }),
+  isSystem: boolean('is_system').default(false).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')

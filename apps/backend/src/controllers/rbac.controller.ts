@@ -96,4 +96,66 @@ export class RbacController {
     const byModule = await RbacService.getRoleGroupMatrix(roleGroupId);
     return { roleGroupId, byModule };
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getRoleTypes({ set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !isSuperAdminOrAdmin(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
+    }
+    return { data: await RbacService.getUserRoleTypes() };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async toggleRoleType({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !isSuperAdminOrAdmin(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const id = parseInt((params as Record<string, unknown>)?.id as string);
+    const isActive = (body as { isActive?: boolean })?.isActive ?? true;
+    const row = await RbacService.toggleUserRoleType(id, isActive);
+    if (!row) {
+      set.status = 404;
+      return { error: 'Role type tidak ditemukan' };
+    }
+    return row;
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMatrixByLevel({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !isSuperAdminOrAdmin(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
+    }
+    const roleGroupId = parseInt((params as Record<string, unknown>)?.id as string);
+    const byModule = await RbacService.getRoleGroupMatrixByLevel(roleGroupId);
+    return { roleGroupId, byModule };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async assignPermissionsByLevel({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !isSuperAdminOrAdmin(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const roleGroupId = parseInt((params as Record<string, unknown>)?.id as string);
+    const levelsByModule =
+      (body as { levelsByModule?: Record<string, { view?: boolean; edit?: boolean; manage?: boolean }> })
+        ?.levelsByModule ?? {};
+    if (typeof levelsByModule !== 'object' || Array.isArray(levelsByModule)) {
+      set.status = 400;
+      return { error: 'levelsByModule harus berupa object module -> level.' };
+    }
+    const normalized: Record<string, { view: boolean; edit: boolean; manage: boolean }> = {};
+    for (const [module, l] of Object.entries(levelsByModule as Record<string, Record<string, boolean>>)) {
+      normalized[module] = { view: !!l.view, edit: !!l.edit, manage: !!l.manage };
+    }
+    const result = await RbacService.assignPermissionsByLevel(roleGroupId, normalized);
+    return result;
+  }
 }

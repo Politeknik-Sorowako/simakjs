@@ -11,12 +11,12 @@ import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { prodiController } from '../controllers/prodiController';
+import { rbacController, UserRoleType } from '../controllers/rbacController';
 import { UserItem, userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
 
-const roleOptions: { value: string; label: string }[] = [
-  { value: 'super_admin', label: 'Super Admin' },
+const fallbackRoleOptions: { value: string; label: string }[] = [
   { value: 'admin', label: 'Admin' },
   { value: 'kaprodi', label: 'Kaprodi' },
   { value: 'prodi', label: 'Admin Prodi' },
@@ -70,6 +70,26 @@ export default function Pengguna() {
       return [];
     }
   });
+
+  // Fetch configurable role types (SuperAdmin excluded from config)
+  const [roleTypes] = createResource(async () => {
+    try {
+      const res = await rbacController.getRoleTypes();
+      return res.data;
+    } catch {
+      return null;
+    }
+  });
+
+  const roleOptions = (): { value: string; label: string }[] => {
+    const configured = roleTypes();
+    if (configured && configured.length > 0) {
+      return configured
+        .filter((r: UserRoleType) => r.isActive && r.roleValue !== 'super_admin')
+        .map((r: UserRoleType) => ({ value: r.roleValue, label: r.name }));
+    }
+    return fallbackRoleOptions;
+  };
 
   const exportColumns: ExportColumn[] = [
     { header: 'ID', accessor: 'id' },
@@ -453,16 +473,7 @@ export default function Pengguna() {
               <Show when={auth.hasRole(['super_admin'])}>
                 <option value="super_admin">Super Admin</option>
               </Show>
-              <option value="admin">Admin</option>
-              <option value="kaprodi">Kaprodi</option>
-              <option value="prodi">Admin Prodi</option>
-              <option value="dosen">Dosen</option>
-              <option value="plp">Instruktur</option>
-              <option value="instruktur">Instruktur</option>
-              <option value="mahasiswa">Mahasiswa</option>
-              <option value="keuangan">Keuangan</option>
-              <option value="calon_mahasiswa">Calon Mahasiswa</option>
-              <option value="guest">Guest</option>
+              <For each={roleOptions()}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
             </select>
           </div>
 
@@ -563,7 +574,7 @@ export default function Pengguna() {
             lain.
           </p>
           <div class="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto border p-3 rounded-lg dark:border-secondary-700">
-            <For each={roleOptions}>
+            <For each={roleOptions()}>
               {(r) => (
                 <label class="flex items-center gap-2.5 text-sm text-secondary-800 dark:text-secondary-200 cursor-pointer p-1.5 hover:bg-secondary-50 rounded dark:hover:bg-secondary-800">
                   <input

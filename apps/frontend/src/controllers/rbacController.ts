@@ -1,6 +1,15 @@
 import { fetchApi } from '../utils/api';
 
-export const SYSTEM_ACTIONS = ['view', 'create', 'update', 'delete', 'export', 'approve'];
+export type Level = 'view' | 'edit' | 'manage';
+export type LevelState = Record<Level, boolean>;
+
+export const SYSTEM_ACTIONS = ['view', 'edit', 'manage'] as const;
+
+export const LEVEL_LABELS: Record<Level, string> = {
+  view: 'Lihat',
+  edit: 'Edit',
+  manage: 'Kelola',
+};
 
 export interface RoleGroup {
   id: number;
@@ -8,6 +17,15 @@ export interface RoleGroup {
   description?: string | null;
   isActive: boolean;
   actionsByModule: Record<string, string[]>;
+}
+
+export interface UserRoleType {
+  id: number;
+  name: string;
+  description?: string | null;
+  roleValue: string;
+  isActive: boolean;
+  isSystem: boolean;
 }
 
 export interface PermissionItem {
@@ -49,6 +67,33 @@ export const rbacController = {
     return fetchApi<{ permissionCount: number }>(`/rbac/role-groups/${id}/permissions`, {
       method: 'PUT',
       body: JSON.stringify({ permissionIds }),
+    });
+  },
+
+  async getRoleTypes(): Promise<{ data: UserRoleType[] }> {
+    return fetchApi<{ data: UserRoleType[] }>('/rbac/role-types');
+  },
+
+  async toggleRoleType(id: number, isActive: boolean): Promise<UserRoleType> {
+    return fetchApi<UserRoleType>(`/rbac/role-types/${id}/toggle`, {
+      method: 'PUT',
+      body: JSON.stringify({ isActive }),
+    });
+  },
+
+  async getMatrixByLevel(id: number): Promise<{ roleGroupId: number; byModule: Record<string, LevelState> }> {
+    return fetchApi<{ roleGroupId: number; byModule: Record<string, LevelState> }>(
+      `/rbac/role-groups/${id}/matrix-level`,
+    );
+  },
+
+  async assignPermissionsByLevel(
+    id: number,
+    levelsByModule: Record<string, LevelState>,
+  ): Promise<{ permissionCount: number }> {
+    return fetchApi<{ permissionCount: number }>(`/rbac/role-groups/${id}/permissions-level`, {
+      method: 'PUT',
+      body: JSON.stringify({ levelsByModule }),
     });
   },
 };
