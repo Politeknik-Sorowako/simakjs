@@ -6,12 +6,15 @@ export const userBody = t.Object({
   role: t.Union(
     [
       t.Literal('admin'),
+      t.Literal('kaprodi'),
       t.Literal('dosen'),
       t.Literal('mahasiswa'),
       t.Literal('prodi'),
       t.Literal('keuangan'),
       t.Literal('guest'),
       t.Literal('calon_mahasiswa'),
+      t.Literal('plp'),
+      t.Literal('instruktur'),
     ],
     { default: 'mahasiswa' },
   ),
@@ -32,6 +35,8 @@ export const getAllUsersSchema = {
           email: t.String({ default: 'user@example.com' }),
           nama: t.String({ default: 'Nama Pengguna' }),
           role: t.String({ default: 'mahasiswa' }),
+          roles: t.Array(t.String({ default: 'mahasiswa' })),
+          prodiIds: t.Array(t.Number({ default: 0 })),
           isActive: t.Boolean({ default: true }),
           mustChangePassword: t.Optional(t.Boolean({ default: false })),
           theme: t.String({ default: 'light' }),
@@ -122,12 +127,15 @@ export const updateRoleSchema = {
     role: t.Union(
       [
         t.Literal('admin'),
+        t.Literal('kaprodi'),
         t.Literal('dosen'),
         t.Literal('mahasiswa'),
         t.Literal('prodi'),
         t.Literal('keuangan'),
         t.Literal('guest'),
         t.Literal('calon_mahasiswa'),
+        t.Literal('plp'),
+        t.Literal('instruktur'),
       ],
       { default: 'mahasiswa' },
     ),
@@ -135,6 +143,50 @@ export const updateRoleSchema = {
   response: {
     200: t.Object({
       message: t.String({ default: 'Role pengguna berhasil diubah' }),
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak.' }),
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Pengguna tidak ditemukan' }),
+    }),
+  },
+};
+
+export const updateUserRolesSchema = {
+  detail: {
+    tags: ['Pengguna'],
+    summary: 'Perbarui banyak peran (multi-role) pengguna',
+    description:
+      'Mengatur satu atau beberapa peran pengguna secara bersamaan. Role Mahasiswa/Guest/Calon Mahasiswa/Super Admin bersifat eksklusif dan tidak dapat dikombinasikan dengan role lain.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    roles: t.Array(
+      t.Union([
+        t.Literal('admin'),
+        t.Literal('kaprodi'),
+        t.Literal('dosen'),
+        t.Literal('mahasiswa'),
+        t.Literal('prodi'),
+        t.Literal('keuangan'),
+        t.Literal('guest'),
+        t.Literal('calon_mahasiswa'),
+        t.Literal('plp'),
+        t.Literal('instruktur'),
+        t.Literal('super_admin'),
+      ]),
+    ),
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Peran pengguna berhasil diperbarui' }),
+      roles: t.Array(t.String({ default: 'mahasiswa' })),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'Field roles harus berupa array non-kosong' }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak.' }),

@@ -60,7 +60,9 @@ export class AuthController {
       email: user.email,
       nama: user.nama,
       role: user.role,
+      roles: user.roles,
       mustChangePassword: user.mustChangePassword,
+      isGlobalScope: user.isGlobalScope ?? false,
     });
 
     if (cookie?.access_token) {
@@ -80,6 +82,7 @@ export class AuthController {
       email: user.email,
       nama: user.nama,
       role: user.role,
+      roles: user.roles,
       mustChangePassword: user.mustChangePassword,
     };
     if (user.theme) userResponse.theme = user.theme;

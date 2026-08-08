@@ -48,6 +48,10 @@ import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
 import Khs from './routes/Khs';
 import KompensasiManual from './routes/KompensasiManual';
+import KonfigurasiAbout from './routes/KonfigurasiAbout';
+import KonfigurasiAksesRole from './routes/KonfigurasiAksesRole';
+import KonfigurasiParameter from './routes/KonfigurasiParameter';
+import KonfigurasiScopeProdi from './routes/KonfigurasiScopeProdi';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
@@ -292,6 +296,38 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Pengguna />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/akses-role"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KonfigurasiAksesRole />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/scope-prodi"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KonfigurasiScopeProdi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/parameter"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KonfigurasiParameter />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/about"
+        element={
+          <ProtectedRoute>
+            <KonfigurasiAbout />
           </ProtectedRoute>
         }
       />

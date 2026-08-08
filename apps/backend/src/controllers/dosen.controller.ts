@@ -1,5 +1,6 @@
 import { CsvImportService } from '../services/csv-import.service';
 import { DosenService } from '../services/dosen.service';
+import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class DosenController {
@@ -10,7 +11,7 @@ export class DosenController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data dosen.' };
     }
@@ -24,7 +25,7 @@ export class DosenController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data dosen.' };
     }
@@ -39,7 +40,7 @@ export class DosenController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -51,7 +52,7 @@ export class DosenController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -66,7 +67,7 @@ export class DosenController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -81,7 +82,7 @@ export class DosenController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }

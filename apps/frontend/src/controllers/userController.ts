@@ -5,8 +5,10 @@ export interface UserItem {
   email: string;
   nama: string;
   role: string;
+  roles?: string[];
   prodiIds?: number[];
   isActive: boolean;
+  isGlobalScope?: boolean;
   mustChangePassword?: boolean;
   createdAt: string;
 }
@@ -31,6 +33,7 @@ export const userController = {
     nama: string;
     password: string;
     role?: string;
+    roles?: string[];
     prodiIds?: number[];
   }): Promise<UserItem> {
     return fetchApi<UserItem>('/users', {
@@ -56,6 +59,13 @@ export const userController = {
     return fetchApi<{ message: string; user: UserItem }>(`/users/${id}/role`, {
       method: 'PUT',
       body: JSON.stringify({ role }),
+    });
+  },
+
+  async updateRoles(id: number, roles: string[]): Promise<{ message: string; roles: string[] }> {
+    return fetchApi<{ message: string; roles: string[] }>(`/users/${id}/roles`, {
+      method: 'PUT',
+      body: JSON.stringify({ roles }),
     });
   },
 

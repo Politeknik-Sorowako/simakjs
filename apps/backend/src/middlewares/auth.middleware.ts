@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia';
 import { jwtPlugin } from '../plugins/jwt.plugin';
-import type { UserPayload } from '../utils/types';
+import type { UserPayload, UserRole } from '../utils/types';
 
 export const authMiddleware = new Elysia({ name: 'auth-middleware' }).use(jwtPlugin).derive({ as: 'global' }, (ctx) => {
   return {
@@ -11,7 +11,9 @@ export const authMiddleware = new Elysia({ name: 'auth-middleware' }).use(jwtPlu
       if (typeof token !== 'string') return null;
       const payload = await ctx.jwt.verify(token);
       if (!payload) return null;
-      return payload as unknown as UserPayload;
+      const base = payload as unknown as { role: UserRole; roles?: unknown };
+      const roles: UserRole[] = Array.isArray(base.roles) && base.roles.length > 0 ? base.roles : [base.role];
+      return { ...(payload as unknown as UserPayload), roles };
     },
   };
 });

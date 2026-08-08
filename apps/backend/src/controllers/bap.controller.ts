@@ -1,4 +1,5 @@
 import { BapService } from '../services/bap.service';
+import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
 interface DrizzleErrorCause {
@@ -39,14 +40,14 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
 
     try {
       let dosenId = body.dosenId;
-      if (user.role === 'dosen') {
+      if (hasRole(user, ['dosen'])) {
         const dosenProfile = await BapService.getDosenByEmail(user.email);
         if (!dosenProfile) {
           set.status = 400;
@@ -87,14 +88,14 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
 
     try {
       let dosenId = body.dosenId;
-      if (user.role === 'dosen') {
+      if (hasRole(user, ['dosen'])) {
         const dosenProfile = await BapService.getDosenByEmail(user.email);
         if (dosenProfile) {
           dosenId = dosenProfile.id;

@@ -1,5 +1,6 @@
 import { KhsService } from '../services/khs.service';
 import { MahasiswaService } from '../services/mahasiswa.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class KhsController {
@@ -20,7 +21,7 @@ export class KhsController {
     const targetPeriodeId = params.periodeId;
 
     // RBAC Check
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
@@ -65,7 +66,7 @@ export class KhsController {
     }
 
     // RBAC Check
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
@@ -98,7 +99,7 @@ export class KhsController {
     const targetPeriodeId = params.periodeId;
 
     // RBAC Check
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
@@ -132,7 +133,7 @@ export class KhsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveKonversi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin dan Prodi.' };
     }
@@ -148,7 +149,7 @@ export class KhsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteKonversi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -176,7 +177,7 @@ export class KhsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async savePredikat({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -192,7 +193,7 @@ export class KhsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deletePredikat({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }

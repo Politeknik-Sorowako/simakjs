@@ -3,6 +3,7 @@ import { mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { KrsService } from '../services/krs.service';
 import { db } from '../utils/db';
+import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class KrsController {
@@ -20,7 +21,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data KRS.' };
     }
@@ -31,7 +32,7 @@ export class KrsController {
     let filterMhsId: number | undefined = undefined;
     let dosenPaId: number | undefined = undefined;
 
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
         return {
@@ -40,7 +41,7 @@ export class KrsController {
         };
       }
       filterMhsId = myMhsId;
-    } else if (user.role === 'dosen') {
+    } else if (hasRole(user, ['dosen'])) {
       const dsnId = await KrsController.getDosenIdByEmail(user.email);
       if (dsnId) {
         dosenPaId = dsnId;
@@ -53,7 +54,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data KRS.' };
     }
@@ -62,7 +63,7 @@ export class KrsController {
       set.status = 404;
       return { error: 'Data tidak ditemukan' };
     }
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== data.mahasiswaId) {
         set.status = 403;
@@ -79,7 +80,7 @@ export class KrsController {
       set.status = 403;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== body.mahasiswaId) {
         set.status = 403;
@@ -99,7 +100,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bulkCreate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest' || user.role === 'mahasiswa') {
+    if (!user || hasRole(user, ['guest']) || hasRole(user, ['mahasiswa'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Pengisian KRS massal hanya untuk Admin/Dosen/Prodi.' };
     }
@@ -115,7 +116,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -125,7 +126,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async approve({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['dosen', 'admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Dosen Pembimbing Akademik, Prodi, atau Admin yang dapat menyetujui KRS.' };
     }
@@ -145,7 +146,7 @@ export class KrsController {
       set.status = 403;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    if (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi') {
+    if (!hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin, Dosen, atau Prodi yang dapat mengubah KRS.' };
     }
@@ -175,7 +176,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getPendingStudents({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['dosen', 'admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -186,7 +187,7 @@ export class KrsController {
     }
     try {
       let dosenPaId: number | undefined = undefined;
-      if (user.role === 'dosen') {
+      if (hasRole(user, ['dosen'])) {
         const dsnId = await KrsController.getDosenIdByEmail(user.email);
         if (dsnId) dosenPaId = dsnId;
       }
@@ -200,7 +201,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async approveBatch({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'dosen' && user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['dosen', 'admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -247,7 +248,7 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }

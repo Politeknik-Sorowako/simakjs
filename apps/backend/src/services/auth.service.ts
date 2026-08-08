@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { passwordResets, users } from '../models/schema';
+import { passwordResets, userRoles, users } from '../models/schema';
 import { db } from '../utils/db';
+import type { UserRole } from '../utils/types';
 
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -11,6 +12,15 @@ async function hashToken(token: string): Promise<string> {
 }
 
 export class AuthService {
+  static async getRolesForUser(userId: number): Promise<UserRole[]> {
+    const rows = await db.select({ role: userRoles.role }).from(userRoles).where(eq(userRoles.userId, userId));
+    if (rows.length > 0) {
+      return rows.map((r) => r.role);
+    }
+    const [legacy] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId)).limit(1);
+    return legacy ? [legacy.role] : [];
+  }
+
   static async register(
     email: string,
     password: string,
@@ -22,22 +32,27 @@ export class AuthService {
       cost: 12,
     });
 
+    const effectiveRole = role || 'mahasiswa';
+
     const [newUser] = await db
       .insert(users)
       .values({
         email,
         password: hashedPassword,
         nama,
-        role: role || 'mahasiswa',
+        role: effectiveRole,
         isActive: false, // Default is false, requires admin approval
       })
       .returning();
+
+    await db.insert(userRoles).values({ userId: newUser.id, role: effectiveRole });
 
     return {
       id: newUser.id,
       email: newUser.email,
       nama: newUser.nama,
       role: newUser.role,
+      roles: [newUser.role as UserRole],
     };
   }
 
@@ -52,12 +67,16 @@ export class AuthService {
       return null;
     }
 
+    const roles = await AuthService.getRolesForUser(user.id);
+
     return {
       id: user.id,
       email: user.email,
       nama: user.nama,
       role: user.role,
+      roles,
       isActive: user.isActive,
+      isGlobalScope: user.isGlobalScope,
       mustChangePassword: user.mustChangePassword,
       theme: user.theme,
       avatar: user.avatar,

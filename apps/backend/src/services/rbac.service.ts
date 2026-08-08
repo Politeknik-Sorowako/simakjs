@@ -1,0 +1,206 @@
+import { eq } from 'drizzle-orm';
+import { permissions, roleGroupPermissions, roleGroups } from '../models/schema';
+import { db } from '../utils/db';
+
+export type PermissionAction = 'view' | 'create' | 'update' | 'delete' | 'export' | 'approve';
+
+/** Granular actions aggregated into a single 3-level access matrix. */
+export const PERMISSION_LEVELS: Record<'view' | 'edit' | 'manage', PermissionAction[]> = {
+  view: ['view'],
+  edit: ['create', 'update'],
+  manage: ['delete', 'export', 'approve'],
+};
+
+export type Level = 'view' | 'edit' | 'manage';
+export type LevelState = Record<Level, boolean>;
+
+export const DEFAULT_MODULES = [
+  'dashboard',
+  'mahasiswa',
+  'dosen',
+  'krs',
+  'presensi',
+  'kompensasi',
+  'nilai',
+  'laporan',
+  'feedback',
+  'konfigurasi',
+];
+
+const ROLE_TO_GROUP: Record<string, string> = {
+  super_admin: 'Superadmin',
+  admin: 'Administrator',
+  kaprodi: 'Kaprodi',
+  prodi: 'Kaprodi',
+  dosen: 'Dosen Pengampu',
+  mahasiswa: 'Mahasiswa',
+  plp: 'Instruktur',
+  instruktur: 'Instruktur',
+  keuangan: 'Admin Akademik (BAAK)',
+};
+
+const ROLE_GROUP_PROFILE: Record<string, string[]> = {
+  Superadmin: ['view', 'create', 'update', 'delete', 'export', 'approve'],
+  Administrator: ['view', 'create', 'update', 'delete', 'export', 'approve'],
+  'Admin Akademik (BAAK)': ['view', 'create', 'update', 'delete', 'export', 'approve'],
+  Kaprodi: ['view', 'create', 'update', 'export', 'approve'],
+  'Dosen Pengampu': ['view', 'create', 'update', 'export'],
+  'Pembimbing Akademik (PA)': ['view', 'export'],
+  Instruktur: ['view', 'create', 'update', 'approve'],
+  Mahasiswa: ['view'],
+};
+
+export class RbacService {
+  static async getAllRoleGroups() {
+    const groupRows = await db.select().from(roleGroups).orderBy(roleGroups.id, roleGroups.name);
+    const joinRows = await db.select().from(roleGroupPermissions);
+    const permRows = await db.select().from(permissions);
+
+    const permMap = new Map(permRows.map((p) => [p.id, p]));
+
+    return groupRows.map((g) => {
+      const actionsByModule: Record<string, string[]> = {};
+      for (const j of joinRows) {
+        if (j.roleGroupId !== g.id) continue;
+        const p = permMap.get(j.permissionId);
+        if (!p) continue;
+        actionsByModule[p.module] = actionsByModule[p.module] || [];
+        if (!actionsByModule[p.module].includes(p.action)) actionsByModule[p.module].push(p.action);
+      }
+      return { ...g, actionsByModule };
+    });
+  }
+
+  static async createRoleGroup(data: { name: string; description?: string; isActive?: boolean }) {
+    const [row] = await db
+      .insert(roleGroups)
+      .values({ name: data.name, description: data.description ?? null, isActive: data.isActive ?? true })
+      .returning();
+    return row;
+  }
+
+  static async updateRoleGroup(id: number, data: { name?: string; description?: string; isActive?: boolean }) {
+    const [row] = await db
+      .update(roleGroups)
+      .set({ name: data.name, description: data.description, isActive: data.isActive })
+      .where(eq(roleGroups.id, id))
+      .returning();
+    return row || null;
+  }
+
+  static async deleteRoleGroup(id: number) {
+    const [row] = await db.delete(roleGroups).where(eq(roleGroups.id, id)).returning();
+    return row || null;
+  }
+
+  static async getAllPermissions() {
+    return await db.select().from(permissions).orderBy(permissions.module, permissions.action);
+  }
+
+  static async assignPermissions(roleGroupId: number, permissionIds: number[]) {
+    return await db.transaction(async (tx) => {
+      await tx.delete(roleGroupPermissions).where(eq(roleGroupPermissions.roleGroupId, roleGroupId));
+      if (permissionIds.length > 0) {
+        await tx
+          .insert(roleGroupPermissions)
+          .values(permissionIds.map((permissionId) => ({ roleGroupId, permissionId })));
+      }
+      return { roleGroupId, permissionCount: permissionIds.length };
+    });
+  }
+
+  static async getRoleGroupMatrix(roleGroupId: number) {
+    const groupJoin = await db
+      .select()
+      .from(roleGroupPermissions)
+      .innerJoin(permissions, eq(roleGroupPermissions.permissionId, permissions.id))
+      .where(eq(roleGroupPermissions.roleGroupId, roleGroupId));
+    const byModule: Record<string, string[]> = {};
+    for (const row of groupJoin) {
+      const p = row.permissions;
+      byModule[p.module] = byModule[p.module] || [];
+      if (!byModule[p.module].includes(p.action)) byModule[p.module].push(p.action);
+    }
+    return byModule;
+  }
+
+  static async getUserRoleTypes() {
+    const rows = await db
+      .select()
+      .from(roleGroups)
+      .where(eq(roleGroups.roleType, 'user_role'))
+      .orderBy(roleGroups.name);
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      description: r.description,
+      roleValue: r.roleValue,
+      isActive: r.isActive,
+      isSystem: r.isSystem,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+    }));
+  }
+
+  static async toggleUserRoleType(id: number, isActive: boolean) {
+    const [row] = await db.update(roleGroups).set({ isActive }).where(eq(roleGroups.id, id)).returning();
+    return row || null;
+  }
+
+  static async getRoleGroupMatrixByLevel(roleGroupId: number) {
+    const groupJoin = await db
+      .select()
+      .from(roleGroupPermissions)
+      .innerJoin(permissions, eq(roleGroupPermissions.permissionId, permissions.id))
+      .where(eq(roleGroupPermissions.roleGroupId, roleGroupId));
+    const byModule: Record<string, LevelState> = {};
+    for (const row of groupJoin) {
+      const action = row.permissions.action as PermissionAction;
+      let level: Level | null = null;
+      for (const lvl of Object.keys(PERMISSION_LEVELS) as Level[]) {
+        if (PERMISSION_LEVELS[lvl].includes(action)) {
+          level = lvl;
+          break;
+        }
+      }
+      if (!level) continue;
+      byModule[row.permissions.module] = byModule[row.permissions.module] || {
+        view: false,
+        edit: false,
+        manage: false,
+      };
+      byModule[row.permissions.module][level] = true;
+    }
+    return byModule;
+  }
+
+  static async assignPermissionsByLevel(roleGroupId: number, levelsByModule: Record<string, LevelState>) {
+    return await db.transaction(async (tx) => {
+      const allPermissions = await tx.select().from(permissions);
+      const targetIds: number[] = [];
+      for (const [module, levels] of Object.entries(levelsByModule)) {
+        for (const lvl of Object.keys(PERMISSION_LEVELS) as Level[]) {
+          if (!levels[lvl]) continue;
+          for (const action of PERMISSION_LEVELS[lvl]) {
+            const match = allPermissions.find((p) => p.module === module && p.action === action);
+            if (match) targetIds.push(match.id);
+          }
+        }
+      }
+      await tx.delete(roleGroupPermissions).where(eq(roleGroupPermissions.roleGroupId, roleGroupId));
+      const unique = [...new Set(targetIds)];
+      if (unique.length > 0) {
+        await tx.insert(roleGroupPermissions).values(unique.map((permissionId) => ({ roleGroupId, permissionId })));
+      }
+      return { roleGroupId, permissionCount: unique.length };
+    });
+  }
+
+  static async hasRolePermission(role: string, module: string, action: string): Promise<boolean> {
+    if (role === 'super_admin' || role === 'admin') return true;
+    const group = ROLE_TO_GROUP[role];
+    const profile = group ? ROLE_GROUP_PROFILE[group] : undefined;
+    if (profile && profile.includes(action)) return true;
+    return false;
+  }
+}

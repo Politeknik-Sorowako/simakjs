@@ -1,5 +1,5 @@
 import { CpmkService } from '../services/cpmk.service';
-import { isAdminOrProdiOrDosen } from '../utils/role';
+import { hasRole, isAdminOrProdiOrDosen } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CpmkController {
@@ -68,7 +68,7 @@ export class CpmkController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }

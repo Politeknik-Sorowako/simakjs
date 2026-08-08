@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { mahasiswa, programStudi, skemaTarif } from '../models/schema';
 import { TagihanService } from '../services/tagihan.service';
 import { db } from '../utils/db';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class TagihanController {
@@ -13,7 +14,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data tagihan.' };
     }
@@ -23,7 +24,7 @@ export class TagihanController {
     const status = query?.status || undefined;
 
     let filterMhsId: number | undefined = undefined;
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await TagihanController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
         return {
@@ -40,7 +41,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -58,7 +59,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateNominal({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -79,7 +80,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bayar({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -109,7 +110,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async voidTransaksi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -134,7 +135,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRiwayat({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -151,7 +152,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAllTarif({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -175,7 +176,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createTarif({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -221,7 +222,7 @@ export class TagihanController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { periodeId?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -233,7 +234,7 @@ export class TagihanController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteTarif({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'keuangan')) {
+    if (!user || !hasRole(user, ['admin', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

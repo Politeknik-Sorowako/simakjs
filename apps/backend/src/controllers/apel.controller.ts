@@ -1,4 +1,5 @@
 import { ApelService } from '../services/apel.service';
+import { hasRole } from '../utils/role';
 import { type AuthContext, allowed } from '../utils/types';
 
 export class ApelController {
@@ -61,7 +62,7 @@ export class ApelController {
       }
       let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
 
-      if (user.role === 'dosen' && !dosenId) {
+      if (hasRole(user, ['dosen']) && !dosenId) {
         const dosenUser = await ApelService.getDosenByEmail(user.email);
         if (dosenUser) dosenId = dosenUser.id;
       }
@@ -126,7 +127,7 @@ export class ApelController {
         return { error: 'Akses ditolak.' };
       }
       let dosenId = body?.dosenId;
-      if (!dosenId && user.role === 'dosen') {
+      if (!dosenId && hasRole(user, ['dosen'])) {
         const dosenUser = await ApelService.getDosenByEmail(user.email);
         if (dosenUser) dosenId = dosenUser.id;
       }
@@ -255,7 +256,7 @@ export class ApelController {
         return { error: 'Unauthorized' };
       }
       let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
-      if (user.role === 'dosen' && !dosenId) {
+      if (hasRole(user, ['dosen']) && !dosenId) {
         const dosenUser = await ApelService.getDosenByEmail(user.email);
         if (dosenUser) dosenId = dosenUser.id;
       }
@@ -277,7 +278,7 @@ export class ApelController {
       const u = user!;
       let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
       const tanggal = query?.tanggal || undefined;
-      if (u.role === 'dosen' && !dosenId) {
+      if (hasRole(u, ['dosen']) && !dosenId) {
         const dosenUser = await ApelService.getDosenByEmail(u.email);
         if (dosenUser) dosenId = dosenUser.id;
       }

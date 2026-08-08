@@ -94,7 +94,7 @@ export default function EvaluasiSistem() {
                       <th class="pb-3">Judul & Pesan</th>
                       <th class="pb-3">Rating</th>
                       <th class="pb-3">Status</th>
-                      <Show when={user()?.role === 'admin' || user()?.role === 'super_admin'}>
+                      <Show when={auth.hasRole(['admin', 'super_admin'])}>
                         <th class="pb-3">Aksi Admin</th>
                       </Show>
                     </tr>
@@ -145,7 +145,7 @@ export default function EvaluasiSistem() {
                                   : 'Pending'}
                             </span>
                           </td>
-                          <Show when={user()?.role === 'admin' || user()?.role === 'super_admin'}>
+                          <Show when={auth.hasRole(['admin', 'super_admin'])}>
                             <td class="py-3">
                               <select
                                 class="text-[10px] bg-secondary-50 border border-secondary-200 rounded px-2 py-1 dark:bg-secondary-800 dark:text-white"
