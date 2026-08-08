@@ -7,9 +7,9 @@ const programStudiFields = {
   jenjang: t.String({ default: 'D4' }),
   idPddikti: t.Union([t.String(), t.Null()], { default: null }),
   isSynced: t.Union([t.Boolean(), t.Null()], { default: false }),
-  lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-  createdAt: t.Union([t.String(), t.Null()], { default: null }),
-  updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+  lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
+  createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+  updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
 };
 
 const cplFields = {
@@ -18,8 +18,8 @@ const cplFields = {
   kode: t.String({ default: 'CPL-1' }),
   deskripsi: t.String({ default: 'Deskripsi CPL' }),
   urutan: t.Integer({ default: 0 }),
-  createdAt: t.Union([t.String(), t.Null()], { default: null }),
-  updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+  createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+  updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
 };
 
 const programStudiObj = t.Object({ ...programStudiFields });
@@ -30,8 +30,8 @@ const profilLulusanObj = t.Object({
   kode: t.String({ default: 'PL-1' }),
   deskripsi: t.String({ default: 'Deskripsi Profil Lulusan' }),
   urutan: t.Integer({ default: 0 }),
-  createdAt: t.Union([t.String(), t.Null()], { default: null }),
-  updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+  createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+  updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
 });
 
 const mataKuliahObj = t.Object({
@@ -85,8 +85,8 @@ export const getCplByIdSchema = {
           cplId: t.Integer({ default: 1 }),
           profilLulusanId: t.Integer({ default: 1 }),
           bobot: t.Union([t.String(), t.Null()], { default: null }),
-          createdAt: t.Union([t.String(), t.Null()], { default: null }),
-          updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+          createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+          updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
           profilLulusan: t.Optional(profilLulusanObj),
         }),
       ),
@@ -96,8 +96,8 @@ export const getCplByIdSchema = {
           cpmkId: t.Integer({ default: 1 }),
           cplId: t.Integer({ default: 1 }),
           bobot: t.Union([t.String(), t.Null()], { default: null }),
-          createdAt: t.Union([t.String(), t.Null()], { default: null }),
-          updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+          createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+          updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
           cpmk: t.Optional(
             t.Object({
               id: t.Integer({ default: 1 }),
@@ -106,8 +106,8 @@ export const getCplByIdSchema = {
               kode: t.String({ default: 'CPMK-1' }),
               deskripsi: t.String({ default: 'Deskripsi CPMK' }),
               bobotMk: t.Union([t.String(), t.Null()], { default: null }),
-              createdAt: t.Union([t.String(), t.Null()], { default: null }),
-              updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+              createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+              updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
               mataKuliah: t.Optional(mataKuliahObj),
             }),
           ),
