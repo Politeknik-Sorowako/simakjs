@@ -32,7 +32,8 @@ function readGitHash(): string | null {
 
 function nowStamp(): string {
   const d = new Date();
-  return `${String(d.getFullYear())}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.${pad(d.getHours())}${pad(d.getMinutes())}`;
 }
 
 export class VersionService {

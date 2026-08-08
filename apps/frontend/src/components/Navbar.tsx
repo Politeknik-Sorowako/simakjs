@@ -68,14 +68,14 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
   const prodis = createEdenQuery<{ data: SafeProdi[]; meta?: object }>(() => ({
     queryKey: ['prodi', { page: 1, limit: 100 }],
     queryFn: () => eden.prodi.get({ $query: { page: 1, limit: 100 } }),
-    enabled: role() === 'admin',
+    enabled: () => role() === 'admin',
   }));
 
   // Load Periodes for admin global filter
   const periodes = createEdenQuery<{ data: SafePeriode[]; meta?: object }>(() => ({
     queryKey: ['periode-akademik', { page: 1, limit: 100 }],
     queryFn: () => eden['periode-akademik'].get({ $query: { page: 1, limit: 100 } }),
-    enabled: role() === 'admin',
+    enabled: () => role() === 'admin',
   }));
 
   return (
