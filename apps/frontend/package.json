@@ -9,8 +9,11 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@elysiajs/eden": "^1.4.3",
     "@solidjs/router": "^0.8.2",
+    "@tanstack/solid-query": "^5.40.0",
     "chart.js": "^4.5.1",
+    "elysia": "^1.0.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "solid-js": "^1.8.0",

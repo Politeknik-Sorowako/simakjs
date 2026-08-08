@@ -70,9 +70,9 @@ export const getKrsSchema = {
           isApproved: t.Boolean({ default: false }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
-          lastSyncAt: t.Any(),
-          createdAt: t.Any(),
-          updatedAt: t.Any(),
+          lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+          createdAt: t.Union([t.String(), t.Null()], { default: null }),
+          updatedAt: t.Union([t.String(), t.Null()], { default: null }),
           mahasiswa: t.Union([
             t.Object({
               id: t.Integer(),
@@ -120,8 +120,8 @@ export const createKrsSchema = {
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      createdAt: t.Union([t.String(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.String(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak.' }),
@@ -148,12 +148,12 @@ export const getKrsByIdSchema = {
       nilaiIndeks: t.Union([t.String(), t.Null()], { default: null }),
       isApproved: t.Boolean({ default: false }),
       approvedById: t.Optional(t.Nullable(t.Integer())),
-      approvedAt: t.Optional(t.Nullable(t.Any())),
+      approvedAt: t.Optional(t.Nullable(t.Union([t.String(), t.Null()]))),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      createdAt: t.Union([t.String(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.String(), t.Null()], { default: null }),
       mahasiswa: t.Optional(
         t.Union([
           t.Object({
@@ -204,8 +204,8 @@ export const updateKrsSchema = {
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      createdAt: t.Union([t.String(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.String(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak.' }),

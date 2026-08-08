@@ -12,9 +12,9 @@ export const tagihanResponseObject = t.Object({
   nominal: t.Numeric({ default: 5000000 }),
   nominalTerbayar: t.Numeric({ default: 0 }),
   status: t.String({ default: 'belum_bayar' }),
-  tanggalBayar: t.Any(),
-  createdAt: t.Any(),
-  updatedAt: t.Any(),
+  tanggalBayar: t.Union([t.String(), t.Null()], { default: null }),
+  createdAt: t.Union([t.String(), t.Null()], { default: null }),
+  updatedAt: t.Union([t.String(), t.Null()], { default: null }),
   mahasiswa: t.Union([
     t.Object({
       id: t.Integer(),
@@ -170,7 +170,7 @@ export const bayarTagihanSchema = {
       tagihan: t.Object({
         id: t.Integer(),
         status: t.String(),
-        tanggalBayar: t.Any(),
+        tanggalBayar: t.Union([t.String(), t.Null()], { default: null }),
       }),
     }),
     400: t.Object({
