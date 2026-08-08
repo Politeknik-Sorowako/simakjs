@@ -1,4 +1,3 @@
-import type { JSX } from 'solid-js';
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -34,7 +33,9 @@ export default function KonfigurasiAksesRole() {
   const [saving, setSaving] = createSignal(false);
   const [notice, setNotice] = createSignal('');
 
-  const [dragValue, setDragValue] = createSignal<boolean | null>(null);
+  const [dragStart, setDragStart] = createSignal<{ row: number; col: number; value: boolean } | null>(null);
+
+  const moduleList = () => modules();
 
   const applyCell = (module: string, level: keyof LevelState, value: boolean) => {
     const cur = editMatrix();
@@ -52,26 +53,36 @@ export default function KonfigurasiAksesRole() {
     applyCell(module, level, !(cur.values[module]?.[level] || false));
   };
 
-  const cellMouseDown: JSX.EventHandler<HTMLElement, MouseEvent> = (e) => {
+  const fillRect = (startRow: number, endRow: number, startCol: number, endCol: number, value: boolean) => {
+    const rowMin = Math.min(startRow, endRow);
+    const rowMax = Math.max(startRow, endRow);
+    const colMin = Math.min(startCol, endCol);
+    const colMax = Math.max(startCol, endCol);
+    for (let r = rowMin; r <= rowMax; r++) {
+      for (let c = colMin; c <= colMax; c++) {
+        applyCell(moduleList()[r], SYSTEM_ACTIONS[c], value);
+      }
+    }
+  };
+
+  const cellMouseDown = (e: { preventDefault: () => void }, row: number, col: number) => {
     e.preventDefault();
-    const module = e.currentTarget.dataset.module as string;
-    const level = e.currentTarget.dataset.level as keyof LevelState;
     const cur = editMatrix();
     if (!cur) return;
+    const module = moduleList()[row];
+    const level = SYSTEM_ACTIONS[col];
     const value = !(cur.values[module]?.[level] || false);
-    setDragValue(value);
+    setDragStart({ row, col, value });
     applyCell(module, level, value);
   };
 
-  const cellMouseEnter: JSX.EventHandler<HTMLElement, MouseEvent> = (e) => {
-    const value = dragValue();
-    if (value === null) return;
-    const module = e.currentTarget.dataset.module as string;
-    const level = e.currentTarget.dataset.level as keyof LevelState;
-    applyCell(module, level, value);
+  const cellMouseEnter = (row: number, col: number) => {
+    const start = dragStart();
+    if (!start) return;
+    fillRect(start.row, row, start.col, col, start.value);
   };
 
-  const endDrag = () => setDragValue(null);
+  const endDrag = () => setDragStart(null);
 
   const openMatrix = async (group: { id: number; name: string; isActive: boolean }) => {
     setNotice('');
@@ -293,17 +304,15 @@ export default function KonfigurasiAksesRole() {
               </thead>
               <tbody onMouseUp={endDrag} onMouseLeave={endDrag}>
                 <For each={modules()}>
-                  {(m) => (
+                  {(m, row) => (
                     <tr class="border-b border-secondary-100 dark:border-secondary-800">
                       <td class="py-2 pr-4 text-secondary-700 dark:text-secondary-300 capitalize">{m}</td>
                       <For each={SYSTEM_ACTIONS}>
-                        {(level) => (
+                        {(level, col) => (
                           <td
                             class="px-2 py-2 text-center cursor-pointer select-none"
-                            data-module={m}
-                            data-level={level}
-                            onMouseDown={cellMouseDown}
-                            onMouseEnter={cellMouseEnter}
+                            onMouseDown={(e) => cellMouseDown(e, row(), col())}
+                            onMouseEnter={() => cellMouseEnter(row(), col())}
                           >
                             <input
                               type="checkbox"
@@ -321,8 +330,8 @@ export default function KonfigurasiAksesRole() {
             </table>
           </div>
           <p class="mt-2 text-xs text-secondary-500 dark:text-secondary-400">
-            Tips: klik untuk mencentang satu sel, atau tekan &amp; seret (drag) mouse melintasi sel untuk mencentang
-            sekaligus.
+            Tips: klik untuk mencentang satu sel, atau tekan &amp; seret (drag) mouse untuk mencentang sekaligus area
+            persegi.
           </p>
           <p class="mt-3 text-xs text-secondary-500 dark:text-secondary-400">
             Lihat = akses baca. Edit = buat & ubah data. Kelola = hapus, ekspor & setujui.
