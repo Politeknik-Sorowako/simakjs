@@ -4,7 +4,7 @@ import { API_URL } from './api';
 
 // Eden Treaty returns { data, error }. This unwraps the response and throws
 // on error so TanStack Solid Query treats failures uniformly.
-export async function unwrap<TData>(promise: Promise<{ data?: TData; error?: unknown }>): Promise<TData> {
+export async function unwrap<TData>(promise: Promise<{ data?: TData | null; error?: unknown }>): Promise<TData> {
   const res = await promise;
   if (res.error) {
     throw res.error;
