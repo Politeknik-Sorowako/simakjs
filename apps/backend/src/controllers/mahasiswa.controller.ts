@@ -1,12 +1,13 @@
 import { CsvImportService } from '../services/csv-import.service';
 import { MahasiswaService } from '../services/mahasiswa.service';
+import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery, parsePagination } from '../utils/types';
 
 export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext<any, any>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data mahasiswa.' };
     }
@@ -14,7 +15,7 @@ export class MahasiswaController {
     const search = query?.search || '';
     const programStudiId = query?.programStudiId ? Number(query.programStudiId) : undefined;
 
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
         return {
@@ -40,7 +41,7 @@ export class MahasiswaController {
         query?.hasAccount !== undefined && query?.hasAccount !== '' ? String(query.hasAccount) === 'true' : undefined,
     };
 
-    if (user.role === 'dosen') {
+    if (hasRole(user, ['dosen'])) {
       const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
       if (!dsnId) {
         return {
@@ -57,12 +58,12 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data mahasiswa.' };
     }
     const targetId = parseInt(params.id);
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetId) {
         set.status = 403;
@@ -75,7 +76,7 @@ export class MahasiswaController {
       return { error: 'Data tidak ditemukan' };
     }
 
-    if (user.role === 'dosen') {
+    if (hasRole(user, ['dosen'])) {
       const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
       if (!dsnId || mhs.dosenPaId !== dsnId) {
         set.status = 403;
@@ -89,7 +90,7 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin dan Kaprodi yang dapat menambahkan data mahasiswa baru.' };
     }
@@ -101,7 +102,7 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -112,7 +113,7 @@ export class MahasiswaController {
       return { error: 'Data tidak ditemukan' };
     }
 
-    if (user.role === 'dosen') {
+    if (hasRole(user, ['dosen'])) {
       const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
       if (!dsnId || mhs.dosenPaId !== dsnId) {
         set.status = 403;
@@ -131,7 +132,7 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin dan Kaprodi yang dapat menghapus data mahasiswa.' };
     }
@@ -146,7 +147,7 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -171,7 +172,7 @@ export class MahasiswaController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { angkatan?: string; programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -183,7 +184,7 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMahasiswaBaru({ query, set, getCurrentUser }: AuthContext<any, { angkatan?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -193,7 +194,7 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importPaCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin dan Kaprodi.' };
     }
@@ -213,7 +214,7 @@ export class MahasiswaController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bulkSetDosenPa({ body, set, getCurrentUser }: AuthContext<any>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin dan Kaprodi yang dapat mengubah Dosen PA secara massal.' };
     }

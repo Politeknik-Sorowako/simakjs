@@ -1,4 +1,5 @@
 import { KurikulumService } from '../services/kurikulum.service';
+import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export interface KurikulumQuery extends PaginationQuery {
@@ -28,7 +29,7 @@ export class KurikulumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -40,7 +41,7 @@ export class KurikulumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -55,7 +56,7 @@ export class KurikulumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -70,7 +71,7 @@ export class KurikulumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async addMataKuliah({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -87,7 +88,7 @@ export class KurikulumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async copyFromKurikulum({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -115,7 +116,7 @@ MK-001,3,2,true`;
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importMkCsv({ params, request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -138,7 +139,7 @@ MK-001,3,2,true`;
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async duplicate({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -155,7 +156,7 @@ MK-001,3,2,true`;
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async removeMataKuliah({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -170,7 +171,7 @@ MK-001,3,2,true`;
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async removeBatchMataKuliah({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }

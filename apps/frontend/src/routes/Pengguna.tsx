@@ -11,14 +11,33 @@ import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { prodiController } from '../controllers/prodiController';
+import { rbacController, UserRoleType } from '../controllers/rbacController';
 import { UserItem, userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
+
+const fallbackRoleOptions: { value: string; label: string }[] = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'kaprodi', label: 'Kaprodi' },
+  { value: 'prodi', label: 'Admin Prodi' },
+  { value: 'dosen', label: 'Dosen' },
+  { value: 'plp', label: 'PLP / Teknisi Lab' },
+  { value: 'instruktur', label: 'Instruktur' },
+  { value: 'keuangan', label: 'Keuangan' },
+  { value: 'mahasiswa', label: 'Mahasiswa' },
+  { value: 'calon_mahasiswa', label: 'Calon Mahasiswa' },
+  { value: 'guest', label: 'Guest' },
+];
 
 export default function Pengguna() {
   const toast = useToast();
   const auth = useAuth();
   const currentUser = () => auth.user();
+
+  const hasScopeRoles = (role: string, roles?: string[]) => {
+    const list = roles && roles.length > 0 ? roles : [role];
+    return list.some((r) => r === 'admin' || r === 'prodi' || r === 'super_admin');
+  };
 
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
   const [actionLoading, setActionLoading] = createSignal<number | null>(null);
@@ -31,6 +50,11 @@ export default function Pengguna() {
   const [newPassword, setNewPassword] = createSignal('');
   const [newRole, setNewRole] = createSignal('mahasiswa');
   const [newProdiIds, setNewProdiIds] = createSignal<number[]>([]);
+
+  // Roles Modal State
+  const [showRolesModal, setShowRolesModal] = createSignal(false);
+  const [targetRolesUser, setTargetRolesUser] = createSignal<UserItem | null>(null);
+  const [selectedRoles, setSelectedRoles] = createSignal<string[]>([]);
 
   // Scope Prodi Modal State
   const [showScopeModal, setShowScopeModal] = createSignal(false);
@@ -46,6 +70,26 @@ export default function Pengguna() {
       return [];
     }
   });
+
+  // Fetch configurable role types (SuperAdmin excluded from config)
+  const [roleTypes] = createResource(async () => {
+    try {
+      const res = await rbacController.getRoleTypes();
+      return res.data;
+    } catch {
+      return null;
+    }
+  });
+
+  const roleOptions = (): { value: string; label: string }[] => {
+    const configured = roleTypes();
+    if (configured && configured.length > 0) {
+      return configured
+        .filter((r: UserRoleType) => r.isActive && r.roleValue !== 'super_admin')
+        .map((r: UserRoleType) => ({ value: r.roleValue, label: r.name }));
+    }
+    return fallbackRoleOptions;
+  };
 
   const exportColumns: ExportColumn[] = [
     { header: 'ID', accessor: 'id' },
@@ -88,6 +132,7 @@ export default function Pengguna() {
         nama: newNama(),
         password: newPassword(),
         role: newRole(),
+        roles: [newRole()],
         prodiIds: newProdiIds(),
       });
       toast.showToast('Pengguna baru berhasil ditambahkan', 'success');
@@ -113,6 +158,22 @@ export default function Pengguna() {
       refetch();
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal memperbarui cakupan prodi', 'error');
+    }
+  };
+
+  const handleSaveRoles = async () => {
+    const user = targetRolesUser();
+    if (!user) return;
+    setActionLoading(user.id);
+    try {
+      const res = await userController.updateRoles(user.id, selectedRoles());
+      toast.showToast(res.message, 'success');
+      setShowRolesModal(false);
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal memperbarui peran', 'error');
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -240,37 +301,35 @@ export default function Pengguna() {
                     </td>
                     <td class="whitespace-nowrap px-6 py-4 text-secondary-500 dark:text-secondary-200">{user.email}</td>
                     <td class="whitespace-nowrap px-6 py-4 text-secondary-600 dark:text-secondary-200">
-                      <select
-                        class="rounded-md border border-secondary-300 bg-white px-2 py-1 text-xs font-medium text-secondary-700 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-                        value={user.role}
-                        onChange={async (e) => {
-                          const newRole = e.currentTarget.value;
-                          try {
-                            await userController.updateRole(user.id, newRole);
-                            toast.showToast('Peran pengguna berhasil diperbarui', 'success');
-                            refetch();
-                          } catch (err: unknown) {
-                            toast.showToast((err as Error).message || 'Gagal memperbarui peran', 'error');
-                            e.currentTarget.value = user.role;
-                          }
-                        }}
-                        disabled={user.id === currentUser()?.id}
-                      >
-                        <Show when={currentUser()?.role === 'super_admin'}>
-                          <option value="super_admin">Super Admin</option>
-                        </Show>
-                        <option value="admin">Admin</option>
-                        <option value="prodi">Prodi</option>
-                        <option value="dosen">Dosen</option>
-                        <option value="mahasiswa">Mahasiswa</option>
-                        <option value="keuangan">Keuangan</option>
-                        <option value="calon_mahasiswa">Calon Mahasiswa</option>
-                        <option value="guest">Guest</option>
-                      </select>
+                      <div class="flex items-center gap-1.5 flex-wrap max-w-[240px]">
+                        <For each={user.roles || [user.role]}>
+                          {(r) => (
+                            <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
+                              {r === 'super_admin'
+                                ? 'Super Admin'
+                                : r === 'prodi'
+                                  ? 'Admin Prodi'
+                                  : r.charAt(0).toUpperCase() + r.slice(1).replace('_', ' ')}
+                            </span>
+                          )}
+                        </For>
+                        <Button
+                          variant="secondary"
+                          class="!py-0.5 !px-1.5 !text-[10px]"
+                          disabled={user.id === currentUser()?.id}
+                          onClick={() => {
+                            setTargetRolesUser(user);
+                            setSelectedRoles(user.roles || [user.role]);
+                            setShowRolesModal(true);
+                          }}
+                        >
+                          ✎ Edit
+                        </Button>
+                      </div>
                     </td>
                     <td class="whitespace-nowrap px-6 py-4 text-xs">
                       <Show
-                        when={user.role === 'admin' || user.role === 'prodi' || user.role === 'super_admin'}
+                        when={hasScopeRoles(user.role, user.roles)}
                         fallback={<span class="text-secondary-400 font-mono">-</span>}
                       >
                         <div class="flex items-center gap-1 flex-wrap max-w-xs">
@@ -411,16 +470,10 @@ export default function Pengguna() {
               value={newRole()}
               onChange={(e) => setNewRole(e.currentTarget.value)}
             >
-              <Show when={currentUser()?.role === 'super_admin'}>
+              <Show when={auth.hasRole(['super_admin'])}>
                 <option value="super_admin">Super Admin</option>
               </Show>
-              <option value="admin">Admin</option>
-              <option value="prodi">Prodi</option>
-              <option value="dosen">Dosen</option>
-              <option value="mahasiswa">Mahasiswa</option>
-              <option value="keuangan">Keuangan</option>
-              <option value="calon_mahasiswa">Calon Mahasiswa</option>
-              <option value="guest">Guest</option>
+              <For each={roleOptions()}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
             </select>
           </div>
 
@@ -504,6 +557,49 @@ export default function Pengguna() {
             </Button>
             <Button variant="primary" onClick={handleSaveScope}>
               Simpan Scope
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal Atur Multi Peran */}
+      <Modal
+        title={`Atur Peran — ${targetRolesUser()?.nama || ''}`}
+        show={showRolesModal()}
+        onClose={() => setShowRolesModal(false)}
+      >
+        <div class="flex flex-col gap-3">
+          <p class="text-xs text-secondary-500 dark:text-secondary-200">
+            Pilih satu atau beberapa peran. Role Mahasiswa/Guest/Calon Mahasiswa tidak dapat dikombinasikan dengan role
+            lain.
+          </p>
+          <div class="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto border p-3 rounded-lg dark:border-secondary-700">
+            <For each={roleOptions()}>
+              {(r) => (
+                <label class="flex items-center gap-2.5 text-sm text-secondary-800 dark:text-secondary-200 cursor-pointer p-1.5 hover:bg-secondary-50 rounded dark:hover:bg-secondary-800">
+                  <input
+                    type="checkbox"
+                    checked={selectedRoles().includes(r.value)}
+                    onChange={(e) => {
+                      if (e.currentTarget.checked) {
+                        setSelectedRoles([...selectedRoles(), r.value]);
+                      } else {
+                        setSelectedRoles(selectedRoles().filter((x) => x !== r.value));
+                      }
+                    }}
+                    class="rounded text-brand-600 focus:ring-brand-500 h-4 w-4"
+                  />
+                  <span>{r.label}</span>
+                </label>
+              )}
+            </For>
+          </div>
+          <div class="flex justify-end gap-3 mt-2">
+            <Button variant="secondary" onClick={() => setShowRolesModal(false)}>
+              Batal
+            </Button>
+            <Button variant="primary" onClick={handleSaveRoles} disabled={selectedRoles().length === 0}>
+              Simpan Peran
             </Button>
           </div>
         </div>

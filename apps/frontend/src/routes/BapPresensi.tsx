@@ -115,7 +115,7 @@ export default function BapPresensi() {
   const [dosenProfile] = createResource(
     () => user()?.email,
     async (email) => {
-      if (!email || user()?.role !== 'dosen') return null;
+      if (!email || !auth.hasRole(['dosen'])) return null;
       const res = await dosenController.getAll(email, 1, 1);
       return res.data[0] || null;
     },
@@ -123,7 +123,7 @@ export default function BapPresensi() {
 
   // Dosen list for instruktur selection (BAP praktikum)
   const [dosenList] = createResource(
-    () => (user()?.role === 'dosen' ? `dosen:${dosenProfile()?.id}` : 'all'),
+    () => (auth.hasRole(['dosen']) ? `dosen:${dosenProfile()?.id}` : 'all'),
     async (key) => {
       if (key === 'all') {
         const res = await dosenController.getAll(undefined, 1, 500);
@@ -147,7 +147,7 @@ export default function BapPresensi() {
 
   const activeKelasList = () => {
     const all = kelasData()?.data || [];
-    if (user()?.role === 'dosen') {
+    if (auth.hasRole(['dosen'])) {
       const dId = dosenProfile()?.id;
       if (!dId) return all;
       return all.filter((k) => k.dosenPengajarKelas?.some((dp) => dp.dosenId === dId));
@@ -996,7 +996,7 @@ export default function BapPresensi() {
                       }}
                     />
                   </div>
-                  <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
+                  <Show when={auth.hasRole(['admin', 'super_admin', 'dosen', 'prodi'])}>
                     <Button onClick={() => setShowRombelModal(true)} variant="secondary" class="shrink-0 mb-0.5">
                       + Tambah Rombel
                     </Button>
@@ -1016,7 +1016,7 @@ export default function BapPresensi() {
                     </p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
-                    <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
+                    <Show when={auth.hasRole(['admin', 'super_admin', 'dosen', 'prodi'])}>
                       <Button onClick={openAssignModal} variant="secondary">
                         Kelola Anggota ({currentRombel()?.mahasiswaList?.length || 0})
                       </Button>

@@ -1,11 +1,12 @@
 import { MahasiswaKeluarService } from '../services/mahasiswa-keluar.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class MahasiswaKeluarController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !['admin', 'prodi'].includes(user.role)) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Program Studi yang dapat menonaktifkan mahasiswa.' };
     }
@@ -33,7 +34,7 @@ export class MahasiswaKeluarController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -54,7 +55,7 @@ export class MahasiswaKeluarController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -64,7 +65,7 @@ export class MahasiswaKeluarController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !['admin', 'prodi'].includes(user.role)) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Program Studi yang dapat membatalkan status keluar.' };
     }

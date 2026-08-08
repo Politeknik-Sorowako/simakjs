@@ -42,7 +42,7 @@ export function WorkspaceProvider(props: { children: JSX.Element }) {
   };
 
   const auth = useAuth();
-  const isGlobalFilterActive = () => auth.user()?.role === 'admin';
+  const isGlobalFilterActive = () => auth.hasRole(['admin']);
   const activeProdiId = () => (isGlobalFilterActive() ? selectedProdiId() : null);
   const activePeriodeId = () => (isGlobalFilterActive() ? selectedPeriodeId() : null);
 

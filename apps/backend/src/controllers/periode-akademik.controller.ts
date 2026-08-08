@@ -1,4 +1,5 @@
 import { PeriodeAkademikService } from '../services/periode-akademik.service';
+import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class PeriodeAkademikController {
@@ -23,7 +24,7 @@ export class PeriodeAkademikController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -35,7 +36,7 @@ export class PeriodeAkademikController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -50,7 +51,7 @@ export class PeriodeAkademikController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }

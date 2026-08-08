@@ -55,7 +55,7 @@ export default function Bimbingan() {
 
   // Load Akademik Summary Resource
   const [akademikSummary, { refetch: refetchAkademik }] = createResource(
-    () => (user()?.role === 'mahasiswa' ? mhsProfile()?.id : selectedMhsId()),
+    () => (auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId()),
     async (id) => {
       if (!id) return null;
       return await bimbinganController.getAkademikSummary(id);
@@ -65,7 +65,7 @@ export default function Bimbingan() {
   // Load profiles
   const [mhsProfile] = createResource(
     () => {
-      if (user()?.role === 'mahasiswa') return user()?.email;
+      if (auth.hasRole(['mahasiswa'])) return user()?.email;
       return null;
     },
     async (email) => {
@@ -77,7 +77,7 @@ export default function Bimbingan() {
 
   const [dosenProfile] = createResource(
     () => {
-      if (user()?.role === 'dosen') return user()?.email;
+      if (auth.hasRole(['dosen'])) return user()?.email;
       return null;
     },
     async (email) => {
@@ -99,7 +99,7 @@ export default function Bimbingan() {
   // Load Dosen/Admin monitoring data
   const [monitoringList, { refetch: refetchMonitoring }] = createResource(
     () => {
-      if (user()?.role === 'admin' || user()?.role === 'dosen') return true;
+      if (auth.hasRole(['admin', 'dosen'])) return true;
       return null;
     },
     async () => {
@@ -110,7 +110,7 @@ export default function Bimbingan() {
   // Filtered monitoring list for Dosen/Admin with search, angkatan, and prodi filter
   const filteredMonitoring = () => {
     let list = monitoringList() || [];
-    if (user()?.role === 'dosen') {
+    if (auth.hasRole(['dosen'])) {
       const dId = dosenProfile()?.id;
       if (!dId) return [];
       list = list.filter((item) => item.dosenPaId === dId);
@@ -142,7 +142,7 @@ export default function Bimbingan() {
 
   // Sync messages from resource to local signal
   createEffect(() => {
-    const activeBimb = user()?.role === 'mahasiswa' ? studentBimbingan() : selectedBimbingan();
+    const activeBimb = auth.hasRole(['mahasiswa']) ? studentBimbingan() : selectedBimbingan();
     if (activeBimb) {
       if (activeBimb.thread) {
         setMessages(activeBimb.thread);
@@ -161,7 +161,7 @@ export default function Bimbingan() {
   // Real-time WebSocket connection
   let ws: WebSocket | null = null;
   createEffect(() => {
-    const activeBimb = user()?.role === 'mahasiswa' ? studentBimbingan() : selectedBimbingan();
+    const activeBimb = auth.hasRole(['mahasiswa']) ? studentBimbingan() : selectedBimbingan();
     if (ws) {
       ws.close();
       ws = null;
@@ -199,7 +199,7 @@ export default function Bimbingan() {
   const uasCount = () => messages().filter((m) => m.tipe === 'uas').length;
 
   const currentBimbinganData = () => {
-    return user()?.role === 'mahasiswa' ? studentBimbingan() : selectedBimbingan();
+    return auth.hasRole(['mahasiswa']) ? studentBimbingan() : selectedBimbingan();
   };
 
   const handleSendMessage = async (e: Event) => {
@@ -207,7 +207,7 @@ export default function Bimbingan() {
     const text = messageText().trim();
     if (!text) return;
 
-    const targetId = user()?.role === 'mahasiswa' ? mhsProfile()?.id : selectedMhsId();
+    const targetId = auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId();
     if (!targetId) return;
 
     try {
@@ -239,7 +239,7 @@ export default function Bimbingan() {
   };
 
   const handleClearChat = async () => {
-    const targetId = user()?.role === 'mahasiswa' ? mhsProfile()?.id : selectedMhsId();
+    const targetId = auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId();
     if (!targetId) return;
     if (!confirm('Apakah Anda yakin ingin mengosongkan seluruh pesan obrolan di thread ini?')) return;
 
@@ -370,7 +370,7 @@ export default function Bimbingan() {
 
           {/* Status Kelayakan (Mahasiswa) & Dropdown Periode */}
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <Show when={['admin', 'super_admin', 'prodi', 'dosen'].includes(user()?.role || '')}>
+            <Show when={auth.hasRole(['admin', 'super_admin', 'prodi', 'dosen'])}>
               <button
                 onClick={() => setShowKategoriModal(true)}
                 class="px-3 py-1.5 border border-secondary-200 text-secondary-700 font-bold rounded-lg text-xs hover:bg-secondary-50 transition-colors flex items-center gap-1.5 dark:border-secondary-700 dark:text-white dark:hover:bg-secondary-800"
@@ -398,7 +398,7 @@ export default function Bimbingan() {
               </div>
             </Show>
 
-            <Show when={user()?.role === 'mahasiswa' && studentBimbingan()}>
+            <Show when={auth.hasRole(['mahasiswa']) && studentBimbingan()}>
               <div class="flex items-center gap-3">
                 <span class="text-sm text-secondary-400 font-medium">Ujian:</span>
                 <Show
@@ -419,7 +419,7 @@ export default function Bimbingan() {
         </div>
 
         {/* --- MAHASISWA VIEW --- */}
-        <Show when={user()?.role === 'mahasiswa'}>
+        <Show when={auth.hasRole(['mahasiswa'])}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* Chat Thread Panel */}
             <div class="lg:col-span-2 bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-[600px] overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
@@ -569,14 +569,14 @@ export default function Bimbingan() {
         </Show>
 
         {/* --- DOSEN & ADMIN VIEW --- */}
-        <Show when={user()?.role === 'dosen' || user()?.role === 'admin'}>
+        <Show when={auth.hasRole(['dosen', 'admin'])}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* List Mahasiswa */}
             <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm overflow-hidden h-[600px] flex flex-col dark:bg-secondary-900 dark:border-secondary-800">
               <div class="p-3 border-b border-secondary-50 bg-secondary-50/50 flex flex-col gap-2 dark:bg-secondary-800 dark:border-secondary-700">
                 <div class="flex items-center justify-between">
                   <h3 class="font-bold text-secondary-800 text-sm dark:text-white">
-                    {user()?.role === 'dosen' ? 'Mahasiswa Bimbingan' : 'Seluruh Bimbingan'}
+                    {auth.hasRole(['dosen']) ? 'Mahasiswa Bimbingan' : 'Seluruh Bimbingan'}
                   </h3>
                   <span class="text-[10px] font-bold text-secondary-400">{filteredMonitoring().length} Mahasiswa</span>
                 </div>
@@ -646,7 +646,7 @@ export default function Bimbingan() {
                             </Show>
                           </div>
                           <span class="text-xs text-secondary-400">NIM: {item.nim}</span>
-                          <Show when={user()?.role === 'admin'}>
+                          <Show when={auth.hasRole(['admin'])}>
                             <span class="text-[10px] text-secondary-400 italic">
                               PA: {item.dosenPaNama || 'Belum diplot'}
                             </span>
@@ -893,7 +893,7 @@ export default function Bimbingan() {
                               <label class="text-xs font-bold text-secondary-600 dark:text-secondary-300">
                                 Jenis / Kategori Bimbingan
                               </label>
-                              <Show when={['admin', 'super_admin', 'prodi', 'dosen'].includes(user()?.role || '')}>
+                              <Show when={auth.hasRole(['admin', 'super_admin', 'prodi', 'dosen'])}>
                                 <button
                                   type="button"
                                   onClick={() => setShowKategoriModal(true)}

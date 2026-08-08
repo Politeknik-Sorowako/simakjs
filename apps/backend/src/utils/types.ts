@@ -3,19 +3,26 @@ import { Context } from 'elysia';
 export type UserRole =
   | 'super_admin'
   | 'admin'
+  | 'kaprodi'
   | 'dosen'
   | 'mahasiswa'
   | 'prodi'
   | 'keuangan'
   | 'guest'
-  | 'calon_mahasiswa';
+  | 'calon_mahasiswa'
+  | 'plp'
+  | 'instruktur';
 
 export interface UserPayload {
   id: number;
   email: string;
   nama: string;
+  /** Legacy single role (deprecated). Use `roles` going forward. */
   role: UserRole;
+  /** All roles held by the user (multi-role). Always includes at least one. */
+  roles: UserRole[];
   mustChangePassword?: boolean;
+  isGlobalScope?: boolean;
 }
 
 export function allowed(user: UserPayload | null | undefined, roles: UserRole[]): boolean {

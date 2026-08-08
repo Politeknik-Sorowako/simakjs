@@ -15,7 +15,7 @@ export default function Pelanggaran() {
   // Student Profile (if logged in as student)
   const [mhsProfile] = createResource(
     () => {
-      if (user()?.role === 'mahasiswa') return user()?.email;
+      if (auth.hasRole(['mahasiswa'])) return user()?.email;
       return null;
     },
     async (email) => {
@@ -37,7 +37,7 @@ export default function Pelanggaran() {
   // Load all violations (for Admin/Dosen)
   const [allViolations, { refetch: refetchAllViolations }] = createResource(
     () => {
-      if (user()?.role === 'admin' || user()?.role === 'dosen') return true;
+      if (auth.hasRole(['admin', 'dosen'])) return true;
       return null;
     },
     async () => {
@@ -48,7 +48,7 @@ export default function Pelanggaran() {
   // List of all students for the form dropdown (Admin/Dosen)
   const [students] = createResource(
     () => {
-      if (user()?.role === 'admin' || user()?.role === 'dosen') return true;
+      if (auth.hasRole(['admin', 'dosen'])) return true;
       return null;
     },
     async () => {
@@ -130,7 +130,7 @@ export default function Pelanggaran() {
             </h1>
             <p class="text-sm text-secondary-500">Pencatatan pelanggaran indisipliner dan rekap poin kedisiplinan</p>
           </div>
-          <Show when={user()?.role === 'admin' || user()?.role === 'dosen'}>
+          <Show when={auth.hasRole(['admin', 'dosen'])}>
             <button
               onClick={openAddModal}
               class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all active:scale-95 shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
@@ -141,7 +141,7 @@ export default function Pelanggaran() {
         </div>
 
         {/* Student View */}
-        <Show when={user()?.role === 'mahasiswa'}>
+        <Show when={auth.hasRole(['mahasiswa'])}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Summary Widget */}
             <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
@@ -215,7 +215,7 @@ export default function Pelanggaran() {
         </Show>
 
         {/* Admin & Dosen View */}
-        <Show when={user()?.role === 'admin' || user()?.role === 'dosen'}>
+        <Show when={auth.hasRole(['admin', 'dosen'])}>
           <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
             <Show
@@ -237,7 +237,7 @@ export default function Pelanggaran() {
                       <th class="p-3">Jenis Pelanggaran</th>
                       <th class="p-3">Bobot Poin</th>
                       <th class="p-3">Keterangan</th>
-                      <Show when={user()?.role === 'admin'}>
+                      <Show when={auth.hasRole(['admin'])}>
                         <th class="p-3 text-center">Aksi</th>
                       </Show>
                     </tr>
@@ -257,7 +257,7 @@ export default function Pelanggaran() {
                             </span>
                           </td>
                           <td class="p-3">{item.keterangan}</td>
-                          <Show when={user()?.role === 'admin'}>
+                          <Show when={auth.hasRole(['admin'])}>
                             <td class="p-3 text-center">
                               <Button
                                 onClick={() => openEditModal(item)}
