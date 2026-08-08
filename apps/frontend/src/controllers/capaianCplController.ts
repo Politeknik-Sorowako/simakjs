@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 
 export interface CapaianCpl {
   id: number;
@@ -30,14 +31,23 @@ export const capaianCplController = {
   },
 
   async getRekap(params?: { kurikulumId?: number; periodeId?: string }): Promise<RekapCapaianCpl[]> {
-    const qs = new URLSearchParams();
-    if (params?.kurikulumId) qs.set('kurikulumId', String(params.kurikulumId));
-    if (params?.periodeId) qs.set('periodeId', params.periodeId);
-    const query = qs.toString();
-    return fetchApi<RekapCapaianCpl[]>(`/capaian-cpl/rekap${query ? `?${query}` : ''}`);
+    const query: Record<string, string> = {};
+    if (params?.kurikulumId) query.kurikulumId = String(params.kurikulumId);
+    if (params?.periodeId) query.periodeId = params.periodeId;
+    return unwrap<RekapCapaianCpl[]>(
+      eden['capaian-cpl'].rekap.get({ $query: query }) as unknown as Promise<{
+        data?: RekapCapaianCpl[] | null;
+        error?: unknown;
+      }>,
+    );
   },
 
   async hitungBatch(data: { kurikulumId: number; periodeId?: string }): Promise<{ message: string; count: number }> {
-    return fetchApi('/capaian-cpl/hitung-batch', { method: 'POST', body: JSON.stringify(data) });
+    return unwrap<{ message: string; count: number }>(
+      eden['capaian-cpl']['hitung-batch'].post(data) as unknown as Promise<{
+        data?: { message: string; count: number };
+        error?: unknown;
+      }>,
+    );
   },
 };

@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 
 export interface AngkatanKurikulum {
   id: number;
@@ -6,8 +7,8 @@ export interface AngkatanKurikulum {
   angkatan: string;
   kurikulumId: number;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string | Date | null;
+  updatedAt: string | Date | null;
   programStudi?: { id: number; kode: string; nama: string; jenjang: string } | null;
   kurikulum?: { id: number; kode: string; nama: string } | null;
 }
@@ -30,19 +31,20 @@ export interface KurikulumDetail {
 
 export const angkatanKurikulumController = {
   async getAll(programStudiId?: number): Promise<AngkatanKurikulum[]> {
-    const params = programStudiId ? `?programStudiId=${programStudiId}` : '';
-    return fetchApi<AngkatanKurikulum[]>(`/angkatan-kurikulum${params}`);
+    return unwrap<AngkatanKurikulum[]>(eden['angkatan-kurikulum'].get({ $query: { programStudiId } }));
   },
 
   async getAktif(programStudiId: number, angkatan: string): Promise<KurikulumDetail> {
-    return fetchApi<KurikulumDetail>(`/angkatan-kurikulum/aktif?programStudiId=${programStudiId}&angkatan=${angkatan}`);
+    return unwrap<KurikulumDetail>(eden['angkatan-kurikulum'].aktif.get({ $query: { programStudiId, angkatan } }));
   },
 
   async create(data: { programStudiId: number; angkatan: string; kurikulumId: number }): Promise<AngkatanKurikulum> {
-    return fetchApi<AngkatanKurikulum>('/angkatan-kurikulum', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return unwrap<AngkatanKurikulum>(
+      eden['angkatan-kurikulum'].post(data) as unknown as Promise<{
+        data?: AngkatanKurikulum;
+        error?: unknown;
+      }>,
+    );
   },
 
   async update(id: number, data: Partial<AngkatanKurikulum>): Promise<AngkatanKurikulum> {

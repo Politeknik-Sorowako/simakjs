@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 
 export interface ObeSummary {
   programStudi: { id: number; kode: string; nama: string };
@@ -57,15 +58,28 @@ export interface EvaluasiRekap {
 
 export const obeReportController = {
   async getSummary(prodiId: number): Promise<ObeSummary> {
-    return fetchApi<ObeSummary>(`/laporan-obe/summary?prodiId=${prodiId}`);
+    return unwrap<ObeSummary>(
+      eden['laporan-obe'].summary.get({ $query: { prodiId } }) as unknown as Promise<{
+        data?: ObeSummary;
+        error?: unknown;
+      }>,
+    );
   },
 
   async getCplCpmkCoverage(kurikulumId: number): Promise<CplCpmkCoverage> {
-    return fetchApi<CplCpmkCoverage>(`/laporan-obe/cpl-cpmk-coverage?kurikulumId=${kurikulumId}`);
+    return unwrap<CplCpmkCoverage>(
+      eden['laporan-obe']['cpl-cpmk-coverage'].get({
+        $query: { kurikulumId },
+      }) as unknown as Promise<{ data?: CplCpmkCoverage; error?: unknown }>,
+    );
   },
 
   async getBkMkCoverage(kurikulumId: number): Promise<BkMkCoverage> {
-    return fetchApi<BkMkCoverage>(`/laporan-obe/bk-mk-coverage?kurikulumId=${kurikulumId}`);
+    return unwrap<BkMkCoverage>(
+      eden['laporan-obe']['bk-mk-coverage'].get({
+        $query: { kurikulumId },
+      }) as unknown as Promise<{ data?: BkMkCoverage; error?: unknown }>,
+    );
   },
 
   async getCpmkAchievement(kelasKuliahId: number): Promise<CpmkAchievement[]> {
@@ -73,11 +87,14 @@ export const obeReportController = {
   },
 
   async getCplAchievement(params?: { kurikulumId?: number; periodeId?: string }): Promise<CplAchievement[]> {
-    const qs = new URLSearchParams();
-    if (params?.kurikulumId) qs.set('kurikulumId', String(params.kurikulumId));
-    if (params?.periodeId) qs.set('periodeId', params.periodeId);
-    const query = qs.toString();
-    return fetchApi<CplAchievement[]>(`/laporan-obe/cpl-achievement${query ? `?${query}` : ''}`);
+    const query: Record<string, string> = {};
+    if (params?.kurikulumId) query.kurikulumId = String(params.kurikulumId);
+    if (params?.periodeId) query.periodeId = params.periodeId;
+    return unwrap<CplAchievement[]>(
+      eden['laporan-obe']['cpl-achievement'].get({
+        $query: query,
+      }) as unknown as Promise<{ data?: CplAchievement[]; error?: unknown }>,
+    );
   },
 
   async getEvaluasiRekap(kurikulumId: number): Promise<EvaluasiRekap> {
