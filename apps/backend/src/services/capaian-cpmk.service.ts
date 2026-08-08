@@ -25,7 +25,7 @@ export class CapaianCpmkService {
           columns: { id: true, namaKelas: true },
           with: {
             mataKuliah: { columns: { id: true, kode: true, nama: true } },
-            periode: { columns: { id: true, nama: true } },
+            periodeAkademik: { columns: { id: true, nama: true } },
           },
         },
       },
@@ -37,7 +37,7 @@ export class CapaianCpmkService {
       where: eq(kelasKuliah.id, kelasKuliahId),
       with: {
         mataKuliah: true,
-        periode: true,
+        periodeAkademik: true,
       },
     });
     if (!kelas) throw new Error('Kelas tidak ditemukan');

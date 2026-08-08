@@ -49,7 +49,7 @@ export const getNilaiPraktikByRombelSchema = {
         komponenNama: t.Union([t.String(), t.Null()]),
         nilaiAngka: t.String(),
         keterangan: t.Union([t.String(), t.Null()]),
-        createdAt: t.Any(),
+        createdAt: t.Union([t.String(), t.Null()], { default: null }),
       }),
     ),
     400: t.Object({ error: t.String() }),

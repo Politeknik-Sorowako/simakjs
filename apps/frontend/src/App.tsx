@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from '@solidjs/router';
+import { QueryClientProvider } from '@tanstack/solid-query';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -85,6 +86,7 @@ import LaporanRekapNilai from './routes/reports/LaporanRekapNilai';
 import LaporanYudisium from './routes/reports/LaporanYudisium';
 import VisiMisiProdi from './routes/VisiMisiProdi';
 import Yudisium from './routes/Yudisium';
+import { queryClient } from './utils/queryClient';
 
 function AppContent() {
   const auth = useAuth();
@@ -715,14 +717,16 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <WorkspaceProvider>
-            <AppContent />
-          </WorkspaceProvider>
-        </AuthProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <WorkspaceProvider>
+              <AppContent />
+            </WorkspaceProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

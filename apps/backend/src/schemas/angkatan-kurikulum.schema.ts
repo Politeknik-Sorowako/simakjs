@@ -33,8 +33,8 @@ export const getAngkatanKurikulumSchema = {
         angkatan: t.String({ default: '2024' }),
         kurikulumId: t.Integer({ default: 1 }),
         isActive: t.Boolean({ default: true }),
-        createdAt: t.Any(),
-        updatedAt: t.Any(),
+        createdAt: t.Union([t.String(), t.Null()], { default: null }),
+        updatedAt: t.Union([t.String(), t.Null()], { default: null }),
         programStudi: t.Union([
           t.Object({
             id: t.Integer(),
@@ -113,8 +113,8 @@ export const createAngkatanKurikulumSchema = {
       angkatan: t.String({ default: '2024' }),
       kurikulumId: t.Integer({ default: 1 }),
       isActive: t.Boolean({ default: true }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      createdAt: t.Union([t.String(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.String(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
@@ -142,8 +142,8 @@ export const updateAngkatanKurikulumSchema = {
       angkatan: t.String({ default: '2024' }),
       kurikulumId: t.Integer({ default: 1 }),
       isActive: t.Boolean({ default: true }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      createdAt: t.Union([t.String(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.String(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
