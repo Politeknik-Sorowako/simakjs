@@ -3,12 +3,14 @@ FROM oven/bun:1-alpine
 # Install PostgreSQL client for backup/restore
 RUN apk add --no-cache postgresql-client git
 
+# Commit hash injected at build time so version.service can resolve it without shipping .git
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=${GIT_COMMIT}
+
 WORKDIR /app
 COPY package.json bun.lock ./
 COPY apps/backend/package.json ./apps/backend/
 RUN bun install --filter backend
-# Copy .git so version.service can resolve the commit hash in the container
-COPY .git ./.git
 COPY apps/backend ./apps/backend
 
 # Create backups directory

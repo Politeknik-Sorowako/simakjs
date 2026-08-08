@@ -3,7 +3,7 @@ import { createEffect, createResource, createSignal, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { settingsController } from '../controllers/settingsController';
-import { fetchApi } from '../utils/api';
+import { eden } from '../utils/eden';
 
 export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const auth = useAuth();
@@ -14,8 +14,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const [publicSettings] = createResource(() => settingsController.getPublicSettings());
   const [versionInfo] = createResource(async () => {
     try {
-      const res = await fetchApi<{ version?: string; environment?: string }>('/system/version');
-      return res || null;
+      const res = await eden.system.version.get();
+      return (res.data as { version?: string; environment?: string } | undefined) || null;
     } catch {
       return null;
     }
