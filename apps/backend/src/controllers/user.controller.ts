@@ -54,6 +54,7 @@ export class UserController {
           theme: users.theme,
           avatar: users.avatar,
           createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
         })
         .from(users)
         .where(whereClause)

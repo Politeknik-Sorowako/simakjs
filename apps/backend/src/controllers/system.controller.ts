@@ -79,7 +79,7 @@ export class SystemController {
       })
       .from(systemSettings)
       .orderBy(systemSettings.key);
-    return rows;
+    return { data: rows };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

@@ -13,7 +13,16 @@ export const systemRoutes = new Elysia({ prefix: '/system' })
         environment: t.String(),
         lastUpdated: t.String(),
         source: t.Optional(t.Union([t.String(), t.Null()])),
-        parameters: t.Optional(t.Record(t.String(), t.String())),
+        parameters: t.Optional(
+          t.Record(
+            t.String(),
+            t.Object({
+              type: t.String(),
+              description: t.String(),
+              defaultValue: t.String(),
+            }),
+          ),
+        ),
       }),
     },
   })
@@ -29,7 +38,16 @@ export const systemRoutes = new Elysia({ prefix: '/system' })
   })
   .get('/settings', SystemController.getSettings, {
     response: {
-      200: t.Object({ data: t.Record(t.String(), t.Unknown()) }),
+      200: t.Object({
+        data: t.Array(
+          t.Object({
+            key: t.String(),
+            value: t.Unknown(),
+            paramType: t.Unknown(),
+            description: t.Unknown(),
+          }),
+        ),
+      }),
       403: t.Object({ error: t.String() }),
     },
   })

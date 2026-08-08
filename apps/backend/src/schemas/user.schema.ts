@@ -41,8 +41,8 @@ export const getAllUsersSchema = {
           mustChangePassword: t.Optional(t.Boolean({ default: false })),
           theme: t.String({ default: 'light' }),
           avatar: t.Union([t.String(), t.Null()], { default: null }),
-          createdAt: t.Union([t.String(), t.Null()], { default: null }),
-          updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+          createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+          updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
         }),
       ),
       meta: t.Object({
@@ -225,6 +225,6 @@ export const userResponseObject = t.Object({
   isActive: t.Boolean({ default: true }),
   theme: t.String({ default: 'light' }),
   avatar: t.Union([t.String(), t.Null()], { default: null }),
-  createdAt: t.Union([t.String(), t.Null()], { default: null }),
-  updatedAt: t.Union([t.String(), t.Null()], { default: null }),
+  createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+  updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
 });
