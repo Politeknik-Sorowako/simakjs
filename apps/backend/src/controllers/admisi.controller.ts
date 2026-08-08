@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'path';
 import { AdmisiService } from '../services/admisi.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export const STORAGE_DIR = resolve(import.meta.dir!, '../../storage/applications');
@@ -369,7 +370,7 @@ export class AdmisiController {
         .where(and(eq(applications.id, doc.applicationId), eq(applications.userId, user.id)))
         .limit(1);
 
-      if (!app && user.role !== 'admin') {
+      if (!app && !hasRole(user, ['admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak' };
       }

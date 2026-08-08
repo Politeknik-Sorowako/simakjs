@@ -1,15 +1,27 @@
-import { count, eq, ilike, or } from 'drizzle-orm';
-import { users } from '../models/schema';
+import { count, eq, ilike, inArray, or } from 'drizzle-orm';
+import { userRoles, users } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { db } from '../utils/db';
-import { AuthContext } from '../utils/types';
+import { hasRole, validateRoleCombination } from '../utils/role';
+import { AuthContext, UserRole } from '../utils/types';
 
 export class UserController {
+  static async getRolesForUsers(userIds: number[]): Promise<Map<number, UserRole[]>> {
+    const result = new Map<number, UserRole[]>();
+    if (userIds.length === 0) return result;
+    const rows = await db.select().from(userRoles).where(inArray(userRoles.userId, userIds));
+    for (const r of rows) {
+      const list = result.get(r.userId) ?? [];
+      list.push(r.role);
+      result.set(r.userId, list);
+    }
+    return result;
+  }
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+      if (!user || !hasRole(user, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
       }
@@ -48,8 +60,13 @@ export class UserController {
         .limit(limit)
         .offset(offset);
 
+      const rolesMap = await UserController.getRolesForUsers(allUsers.map((u) => u.id));
+
       return {
-        data: allUsers,
+        data: allUsers.map((u) => ({
+          ...u,
+          roles: rolesMap.get(u.id) ?? [u.role],
+        })),
         meta: {
           total,
           page,
@@ -67,22 +84,31 @@ export class UserController {
   static async createUser({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+      if (!currentUser || !hasRole(currentUser, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
 
       // biome-ignore lint/suspicious/noExplicitAny: Elysia body type
-      const { email, password, nama, role, prodiIds } = body as any;
+      const { email, password, nama, role, prodiIds, roles } = body as any;
       if (!email || !password || !nama) {
         set.status = 400;
         return { error: 'Email, password, dan nama wajib diisi' };
       }
 
-      const targetRole = role || 'mahasiswa';
-      if (targetRole === 'super_admin' && currentUser.role !== 'super_admin') {
-        set.status = 403;
-        return { error: 'Hanya Super Admin yang dapat membuat akun dengan role Super Admin.' };
+      const targetRoles: UserRole[] = Array.isArray(roles) && roles.length > 0 ? roles : [role || 'mahasiswa'];
+      for (const r of targetRoles) {
+        if (!hasRole(currentUser, ['super_admin']) && r === 'super_admin') {
+          set.status = 403;
+          return { error: 'Hanya Super Admin yang dapat membuat akun dengan role Super Admin.' };
+        }
+      }
+      if (
+        targetRoles.length > 1 &&
+        targetRoles.some((r) => ['mahasiswa', 'guest', 'calon_mahasiswa', 'super_admin'].includes(r))
+      ) {
+        set.status = 400;
+        return { error: 'Role tersebut tidak dapat dikombinasikan dengan role lain.' };
       }
 
       const existing = await db.query.users.findFirst({ where: eq(users.email, email) });
@@ -98,15 +124,17 @@ export class UserController {
           email,
           password: hashedPassword,
           nama,
-          role: targetRole,
+          role: targetRoles[0],
           prodiIds: Array.isArray(prodiIds) ? prodiIds : [],
           isActive: true,
           mustChangePassword: true,
         })
         .returning();
 
+      await db.insert(userRoles).values(targetRoles.map((r) => ({ userId: newUser.id, role: r })));
+
       set.status = 201;
-      return newUser;
+      return { ...newUser, roles: targetRoles };
     } catch (error: unknown) {
       set.status = 500;
       return { error: 'Gagal menambahkan pengguna baru' };
@@ -213,6 +241,9 @@ export class UserController {
 
       const [updated] = await db.update(users).set({ role: newRole }).where(eq(users.id, userId)).returning();
 
+      await db.delete(userRoles).where(eq(userRoles.userId, userId));
+      await db.insert(userRoles).values({ userId, role: newRole });
+
       return {
         message: 'Peran pengguna berhasil diperbarui',
         user: {
@@ -222,6 +253,95 @@ export class UserController {
           role: updated.role,
           isActive: updated.isActive,
         },
+      };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal memperbarui peran pengguna' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateUserRoles({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser || !hasRole(currentUser, ['admin', 'super_admin'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
+      }
+
+      const userId = Number((params as Record<string, unknown>)?.id);
+      // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
+      const roles = (body as any)?.roles;
+
+      if (!Number.isInteger(userId)) {
+        set.status = 400;
+        return { error: 'ID pengguna tidak valid' };
+      }
+      if (!Array.isArray(roles) || roles.length === 0) {
+        set.status = 400;
+        return { error: 'Field roles harus berupa array non-kosong' };
+      }
+
+      const VALID_ROLES = [
+        'super_admin',
+        'admin',
+        'kaprodi',
+        'dosen',
+        'prodi',
+        'keuangan',
+        'plp',
+        'instruktur',
+        'mahasiswa',
+        'guest',
+        'calon_mahasiswa',
+      ];
+      const invalid = roles.filter((r) => !VALID_ROLES.includes(r as UserRole));
+      if (invalid.length > 0) {
+        set.status = 400;
+        return { error: `Role tidak valid: ${invalid.join(', ')}` };
+      }
+
+      const target = await db.query.users.findFirst({ where: eq(users.id, userId) });
+      if (!target) {
+        set.status = 404;
+        return { error: 'Pengguna tidak ditemukan' };
+      }
+
+      if (target.role === 'super_admin') {
+        set.status = 403;
+        return { error: 'Role Super Admin tidak dapat diubah.' };
+      }
+      if (!hasRole(currentUser, ['super_admin']) && roles.includes('super_admin')) {
+        set.status = 403;
+        return { error: 'Hanya Super Admin yang dapat memberikan role Super Admin.' };
+      }
+
+      const rolesSet = [...new Set(roles as UserRole[])];
+      if (
+        rolesSet.length > 1 &&
+        rolesSet.some((r) => ['super_admin', 'mahasiswa', 'guest', 'calon_mahasiswa'].includes(r))
+      ) {
+        set.status = 400;
+        return { error: 'Role tersebut tidak dapat dikombinasikan dengan role lain.' };
+      }
+      for (const r of rolesSet) {
+        const check = validateRoleCombination(
+          r,
+          rolesSet.filter((x) => x !== r),
+        );
+        if (!check.valid) {
+          set.status = 400;
+          return { error: check.reason };
+        }
+      }
+
+      await db.delete(userRoles).where(eq(userRoles.userId, userId));
+      await db.insert(userRoles).values(rolesSet.map((role) => ({ userId, role })));
+      await db.update(users).set({ role: rolesSet[0] }).where(eq(users.id, userId));
+
+      return {
+        message: 'Peran pengguna berhasil diperbarui',
+        roles: rolesSet,
       };
     } catch (error: unknown) {
       set.status = 500;

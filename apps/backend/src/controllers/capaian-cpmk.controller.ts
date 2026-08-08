@@ -1,4 +1,5 @@
 import { CapaianCpmkService } from '../services/capaian-cpmk.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CapaianCpmkController {
@@ -19,7 +20,7 @@ export class CapaianCpmkController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async hitungPerKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

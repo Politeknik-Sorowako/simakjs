@@ -67,6 +67,15 @@ export const users = pgTable('users', {
     .$onUpdate(() => new Date()),
 });
 
+export const userRoles = pgTable('user_roles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  role: roleEnum('role').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const programStudi = pgTable('program_studi', {
   id: serial('id').primaryKey(),
   kode: varchar('kode', { length: 50 }).notNull().unique(),
@@ -271,6 +280,13 @@ export const krs = pgTable(
 );
 
 // Relations
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, {
+    fields: [userRoles.userId],
+    references: [users.id],
+  }),
+}));
+
 export const programStudiRelations = relations(programStudi, ({ many }) => ({
   mahasiswa: many(mahasiswa),
   dosen: many(dosen),

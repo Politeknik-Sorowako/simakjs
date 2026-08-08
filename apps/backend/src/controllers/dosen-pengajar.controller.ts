@@ -1,4 +1,5 @@
 import { DosenPengajarService } from '../services/dosen-pengajar.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class DosenPengajarController {
@@ -14,7 +15,7 @@ export class DosenPengajarController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -31,7 +32,7 @@ export class DosenPengajarController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

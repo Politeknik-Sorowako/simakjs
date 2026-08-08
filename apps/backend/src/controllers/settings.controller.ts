@@ -1,4 +1,5 @@
 import { SettingsService } from '../services/settings.service';
+import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
 export class SettingsController {
@@ -27,7 +28,7 @@ export class SettingsController {
   static async getAll({ getCurrentUser, set }: AuthContext<any>): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+      if (!user || !hasRole(user, ['admin', 'prodi'])) {
         set.status = 403;
         return { error: 'Hanya Admin atau Prodi yang dapat mengakses pengaturan sistem' };
       }
@@ -44,7 +45,7 @@ export class SettingsController {
   static async updateSetting({ getCurrentUser, body, set }: AuthContext<any>): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || user.role !== 'admin') {
+      if (!user || !hasRole(user, ['admin'])) {
         set.status = 403;
         return { error: 'Hanya Admin yang dapat mengubah pengaturan sistem' };
       }

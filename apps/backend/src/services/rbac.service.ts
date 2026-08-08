@@ -24,8 +24,8 @@ const ROLE_TO_GROUP: Record<string, string> = {
   prodi: 'Kaprodi',
   dosen: 'Dosen Pengampu',
   mahasiswa: 'Mahasiswa',
-  plp: 'PLP / Teknisi Lab / Instruktur',
-  instruktur: 'PLP / Teknisi Lab / Instruktur',
+  plp: 'Instruktur',
+  instruktur: 'Instruktur',
   keuangan: 'Admin Akademik (BAAK)',
 };
 
@@ -36,7 +36,7 @@ const ROLE_GROUP_PROFILE: Record<string, string[]> = {
   Kaprodi: ['view', 'create', 'update', 'export', 'approve'],
   'Dosen Pengampu': ['view', 'create', 'update', 'export'],
   'Pembimbing Akademik (PA)': ['view', 'export'],
-  'PLP / Teknisi Lab / Instruktur': ['view', 'create', 'update', 'approve'],
+  Instruktur: ['view', 'create', 'update', 'approve'],
   Mahasiswa: ['view'],
 };
 

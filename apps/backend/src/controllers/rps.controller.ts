@@ -1,11 +1,12 @@
 import { RpsService } from '../services/rps.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bulkGenerate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -31,7 +32,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createRps({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -43,7 +44,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateRps({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -58,7 +59,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async addTopik({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -70,7 +71,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateTopik({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -85,7 +86,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteTopik({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -110,7 +111,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createRencanaEvaluasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -127,7 +128,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateRencanaEvaluasi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -147,7 +148,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async copyRps({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -164,7 +165,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteRencanaEvaluasi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -186,7 +187,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async attachEvaluasiSubCpmk({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -199,7 +200,7 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async detachEvaluasiSubCpmk({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

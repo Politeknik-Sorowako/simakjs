@@ -288,6 +288,20 @@
       "when": 1786031500000,
       "tag": "0040_add_konfigurasi_sistem",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1786042000000,
+      "tag": "0041_consolidate_permission_modules",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1786043000000,
+      "tag": "0042_multi_role_users",
+      "breakpoints": true
     }
   ]
 }

@@ -146,8 +146,8 @@ SELECT 'Pembimbing Akademik (PA)', 'Dosen Pembimbing Akademik'
 WHERE NOT EXISTS (SELECT 1 FROM "role_groups" WHERE "name" = 'Pembimbing Akademik (PA)');
 
 INSERT INTO "role_groups" ("name", "description")
-SELECT 'PLP / Teknisi Lab / Instruktur', 'Penanganan praktikum, alat, verifikasi kompen manual'
-WHERE NOT EXISTS (SELECT 1 FROM "role_groups" WHERE "name" = 'PLP / Teknisi Lab / Instruktur');
+SELECT 'Instruktur', 'Penanganan praktikum, alat, verifikasi kompen manual'
+WHERE NOT EXISTS (SELECT 1 FROM "role_groups" WHERE "name" = 'Instruktur');
 
 INSERT INTO "role_groups" ("name", "description")
 SELECT 'Mahasiswa', 'Pengguna mahasiswa'
@@ -165,9 +165,9 @@ VALUES
   ('LOCK_KARTU_UJIAN_JIKA_KOMPEN', 'false', 'boolean', 'Kunci kartu ujian jika mahasiswa memiliki tanggungan kompensasi')
 ON CONFLICT ("key") DO NOTHING;
 
--- Seed action catalog
+-- Seed action catalog (17 consolidated modules)
 INSERT INTO "permissions" ("module", "action", "description")
-SELECT m.module, a.action, NULL
+SELECT v.module, v.action, NULL
 FROM (VALUES
   ('dashboard','view'),
   ('mahasiswa','view'), ('mahasiswa','create'), ('mahasiswa','update'), ('mahasiswa','delete'), ('mahasiswa','export'),
@@ -176,8 +176,15 @@ FROM (VALUES
   ('presensi','view'), ('presensi','create'), ('presensi','update'), ('presensi','export'), ('presensi','approve'),
   ('kompensasi','view'), ('kompensasi','create'), ('kompensasi','update'), ('kompensasi','delete'), ('kompensasi','export'), ('kompensasi','approve'),
   ('nilai','view'), ('nilai','create'), ('nilai','update'), ('nilai','export'), ('nilai','approve'),
-  ('langsung','view'), ('langsung','export'),
   ('feedback','view'), ('feedback','create'), ('feedback','update'),
-  ('konfigurasi','view'), ('konfigurasi','create'), ('konfigurasi','update'), ('konfigurasi','delete')
-AS v(module, action)
+  ('konfigurasi','view'), ('konfigurasi','create'), ('konfigurasi','update'), ('konfigurasi','delete'),
+  ('kurikulum','view'), ('kurikulum','create'), ('kurikulum','update'), ('kurikulum','delete'), ('kurikulum','export'),
+  ('evaluasi','view'), ('evaluasi','create'), ('evaluasi','update'), ('evaluasi','export'), ('evaluasi','approve'),
+  ('layanan','view'), ('layanan','create'), ('layanan','update'), ('layanan','delete'), ('layanan','export'),
+  ('laporan','view'), ('laporan','export'),
+  ('keuangan','view'), ('keuangan','create'), ('keuangan','update'), ('keuangan','delete'), ('keuangan','export'), ('keuangan','approve'),
+  ('admisi','view'), ('admisi','create'), ('admisi','update'), ('admisi','delete'), ('admisi','export'), ('admisi','approve'),
+  ('apel','view'), ('apel','create'), ('apel','update'), ('apel','export'), ('apel','approve'),
+  ('bimbingan','view'), ('bimbingan','create'), ('bimbingan','update'), ('bimbingan','export')
+) AS v(module, action)
 ON CONFLICT DO NOTHING;

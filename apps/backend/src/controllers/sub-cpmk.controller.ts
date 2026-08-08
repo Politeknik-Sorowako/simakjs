@@ -1,4 +1,5 @@
 import { SubCpmkService } from '../services/sub-cpmk.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class SubCpmkController {
@@ -22,7 +23,7 @@ export class SubCpmkController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -34,7 +35,7 @@ export class SubCpmkController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -49,7 +50,7 @@ export class SubCpmkController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

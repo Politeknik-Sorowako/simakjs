@@ -17,7 +17,10 @@ export interface UserPayload {
   id: number;
   email: string;
   nama: string;
+  /** Legacy single role (deprecated). Use `roles` going forward. */
   role: UserRole;
+  /** All roles held by the user (multi-role). Always includes at least one. */
+  roles: UserRole[];
   mustChangePassword?: boolean;
   isGlobalScope?: boolean;
 }

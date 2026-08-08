@@ -16,10 +16,13 @@ export interface User {
     | 'calon_mahasiswa'
     | 'plp'
     | 'instruktur';
+  roles?: User['role'][];
   mustChangePassword?: boolean;
   theme?: string;
   avatar?: string;
 }
+
+export type UserRole = User['role'];
 
 interface AuthContextType {
   user: () => User | null;
@@ -30,9 +33,14 @@ interface AuthContextType {
   updateUser: (updatedFields: Partial<User>) => void;
   theme: () => string;
   setTheme: (newTheme: string) => void;
+  hasRole: (allowedRoles: UserRole[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType>();
+
+export const SINGLE_ROLE_ONLY: UserRole[] = ['super_admin', 'mahasiswa', 'guest', 'calon_mahasiswa'];
+export const MULTI_ROLE_ALLOWED: UserRole[] = ['admin', 'kaprodi', 'prodi', 'dosen', 'keuangan', 'plp', 'instruktur'];
+export const ALL_ROLES: UserRole[] = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
 
 export function AuthProvider(props: { children: JSX.Element }) {
   const [user, setUser] = createSignal<User | null>(null);
@@ -92,9 +100,15 @@ export function AuthProvider(props: { children: JSX.Element }) {
 
   const theme = () => user()?.theme || localTheme();
   const isAuthenticated = () => !!token();
+  const hasRole = (allowedRoles: UserRole[]) => {
+    const current = user();
+    if (!current) return false;
+    const roles = current.roles && current.roles.length > 0 ? current.roles : [current.role];
+    return roles.some((r) => allowedRoles.includes(r));
+  };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout, updateUser, theme, setTheme }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout, updateUser, theme, setTheme, hasRole }}>
       {props.children}
     </AuthContext.Provider>
   );

@@ -1,4 +1,5 @@
 import { MataKuliahService } from '../services/mata-kuliah.service';
+import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class MataKuliahController {
@@ -55,7 +56,7 @@ export class MataKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -67,7 +68,7 @@ export class MataKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -82,7 +83,7 @@ export class MataKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -97,7 +98,7 @@ export class MataKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async import({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }

@@ -1,5 +1,5 @@
 import { BahanKajianService } from '../services/bahan-kajian.service';
-import { isAdminOrProdi } from '../utils/role';
+import { hasRole, isAdminOrProdi } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class BahanKajianController {
@@ -50,7 +50,7 @@ export class BahanKajianController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
