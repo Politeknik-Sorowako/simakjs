@@ -68,7 +68,14 @@ export class KrsService {
     });
   }
 
-  static async getAll(page = 1, limit = 10, search = '', mahasiswaId?: number, dosenPaId?: number) {
+  static async getAll(
+    page = 1,
+    limit = 10,
+    search = '',
+    mahasiswaId?: number,
+    dosenPaId?: number,
+    kelasKuliahId?: number,
+  ) {
     const offset = (page - 1) * limit;
 
     const searchConditions: SQL<unknown>[] = [];
@@ -81,6 +88,9 @@ export class KrsService {
     }
     if (dosenPaId !== undefined) {
       searchConditions.push(eq(mahasiswa.dosenPaId, dosenPaId));
+    }
+    if (kelasKuliahId !== undefined) {
+      searchConditions.push(eq(krs.kelasKuliahId, kelasKuliahId));
     }
 
     const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
