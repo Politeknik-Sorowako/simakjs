@@ -251,9 +251,9 @@ export default function BapPresensi() {
     async ({ kelasId, loaded }) => {
       if (!loaded || !kelasId) return [];
       try {
-        // Load KRS entries for this class
-        const res = await krsController.getAll(undefined, 1, 1000);
-        return res.data.filter((k) => k.kelasKuliahId === kelasId) || [];
+        // Load KRS entries for this class (server-side filter)
+        const res = await krsController.getAll(undefined, 1, 1000, kelasId);
+        return res.data;
       } catch (e: unknown) {
         toast.showToast('Gagal memuat mahasiswa kelas', 'error');
         return [];
