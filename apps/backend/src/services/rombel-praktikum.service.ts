@@ -267,6 +267,12 @@ export class RombelPraktikumService {
     return updated || null;
   }
 
+  static async deleteBap(id: number) {
+    await db.delete(presensiPraktikum).where(eq(presensiPraktikum.bapPraktikumId, id));
+    const [deleted] = await db.delete(bapPraktikum).where(eq(bapPraktikum.id, id)).returning();
+    return deleted || null;
+  }
+
   static async updateBapBulk(data: {
     bapPraktikumId: number;
     tanggal: string;

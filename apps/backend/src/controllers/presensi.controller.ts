@@ -6,12 +6,12 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    // Dosen/instruktur only may set hadir, telat, or unknown; admin may set everything.
-    if (!hasRole(user, ['admin', 'super_admin'])) {
+    // Dosen/instruktur only may set hadir, telat( +durasi) or unknown; admin & prodi may validate unknown into sakit/izin/alpa.
+    if (!hasRole(user, ['admin', 'super_admin', 'prodi'])) {
       const allowedStatuses = new Set(['hadir', 'telat', 'unknown']);
       const restricted = (body.presensiList || []).filter((p: { status: string }) => !allowedStatuses.has(p.status));
       if (restricted.length > 0) {

@@ -120,6 +120,49 @@ export class BapController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const deleted = await BapService.delete(parseInt(params.id));
+      if (!deleted) {
+        set.status = 404;
+        return { error: 'BAP tidak ditemukan' };
+      }
+      return { success: true, id: deleted.id };
+    } catch (e: unknown) {
+      const causeMsg = extractErrorMessage(e);
+      set.status = 400;
+      return { error: `Gagal menghapus BAP: ${causeMsg}` };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async duplicate({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const newPertemuanKe = Number(body.pertemuanKe);
+      const newTanggal = body.tanggal as string | undefined;
+      const newBap = await BapService.duplicateBap(parseInt(params.id), newPertemuanKe, newTanggal);
+      set.status = 201;
+      return newBap;
+    } catch (e: unknown) {
+      const causeMsg = extractErrorMessage(e);
+      set.status = 400;
+      return { error: causeMsg };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateBapBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {

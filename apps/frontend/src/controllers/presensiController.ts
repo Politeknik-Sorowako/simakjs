@@ -199,10 +199,19 @@ export const presensiController = {
   async createBap(
     data: Omit<BAP, 'id'> & {
       tema?: string | null;
-      sesiIds?: number[];
     },
   ): Promise<BAP> {
     return fetchApi<BAP>('/bap', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async duplicateBap(
+    bapId: number,
+    data: { pertemuanKe: number; tanggal?: string },
+  ): Promise<BAP & { presensiCount: number }> {
+    return fetchApi<BAP & { presensiCount: number }>(`/bap/${bapId}/duplicate`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -230,6 +239,12 @@ export const presensiController = {
     return fetchApi<BAP[]>('/bap/bulk', {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  },
+
+  async deleteBap(id: number): Promise<{ success: boolean; id: number }> {
+    return fetchApi<{ success: boolean; id: number }>(`/bap/${id}`, {
+      method: 'DELETE',
     });
   },
 

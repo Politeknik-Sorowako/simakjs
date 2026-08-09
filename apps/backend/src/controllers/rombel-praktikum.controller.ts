@@ -22,7 +22,7 @@ export class RombelPraktikumController {
   static async createRombel({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -37,7 +37,7 @@ export class RombelPraktikumController {
   static async updateRombel({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -52,7 +52,7 @@ export class RombelPraktikumController {
   static async deleteRombel({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -67,7 +67,7 @@ export class RombelPraktikumController {
   static async assignMahasiswa({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -140,14 +140,34 @@ export class RombelPraktikumController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
-  static async savePresensiBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+  static async deleteBap({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-      if (!hasRole(user, ['admin', 'super_admin'])) {
+      const deleted = await RombelPraktikumService.deleteBap(parseInt(params.id));
+      if (!deleted) {
+        set.status = 404;
+        return { error: 'BAP praktikum tidak ditemukan' };
+      }
+      return { success: true, id: deleted.id };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async savePresensiBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      if (!hasRole(user, ['admin', 'super_admin', 'prodi'])) {
         const allowedStatuses = new Set(['hadir', 'telat', 'unknown']);
         const restricted = (body.presensiList || []).filter((p: { status: string }) => !allowedStatuses.has(p.status));
         if (restricted.length > 0) {
@@ -280,7 +300,7 @@ export class RombelPraktikumController {
   static async syncPresensi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -295,7 +315,7 @@ export class RombelPraktikumController {
   static async syncNilai({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }

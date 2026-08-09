@@ -7,6 +7,7 @@ import {
   dosenPengajarKelas,
   kelasKuliah,
   periodeAkademik,
+  presensi,
   rps,
   rpsTopik,
 } from '../models/schema';
@@ -81,9 +82,8 @@ export class BapService {
     cpmkId?: number | null;
     topikIds?: number[];
     dosenId: number;
-    sesiIds?: number[];
   }) {
-    const { topikIds, sesiIds, ...rawPayload } = data;
+    const { topikIds, ...rawPayload } = data;
 
     const kelasId = Number(rawPayload.kelasKuliahId);
     const existingKelas = await db.query.kelasKuliah.findFirst({ where: eq(kelasKuliah.id, kelasId) });
@@ -186,24 +186,6 @@ export class BapService {
     }
 
     const [newBap] = await db.insert(bap).values(bapPayload).returning();
-
-    // Multi-sesi: replicate BAP per selected pertemuan (sesi) for repetitive reporting
-    if (sesiIds && Array.isArray(sesiIds) && sesiIds.length > 1) {
-      const duplicates = [];
-      for (const sesi of sesiIds.map((s) => Number(s))) {
-        if (isNaN(sesi) || sesi <= 0) continue;
-        const [dup] = await db
-          .insert(bap)
-          .values({ ...bapPayload, pertemuanKe: sesi, cpmkId: bapPayload.cpmkId ?? null })
-          .returning();
-        duplicates.push(dup);
-      }
-      // Return the same BAP-shaped object as the single-sesi path so the
-      // caller always gets a consistent shape (with an `id`).
-      if (duplicates.length > 0) {
-        return { ...duplicates[0], topikIds: [] };
-      }
-    }
 
     let savedTopikIds: number[] = [];
     if (topikIds && Array.isArray(topikIds) && topikIds.length > 0) {
@@ -399,6 +381,79 @@ export class BapService {
       .select()
       .from(bap)
       .where(and(eq(bap.kelasKuliahId, primary.kelasKuliahId), eq(bap.tanggal, targetDate)));
+  }
+
+  static async delete(id: number) {
+    await db.delete(presensi).where(eq(presensi.bapId, id));
+    await db.delete(bapTopik).where(eq(bapTopik.bapId, id));
+    const [deleted] = await db.delete(bap).where(eq(bap.id, id)).returning();
+    return deleted || null;
+  }
+
+  static async duplicateBap(sourceBapId: number, newPertemuanKe: number, newTanggal?: string) {
+    const [sourceBap] = await db.select().from(bap).where(eq(bap.id, sourceBapId));
+    if (!sourceBap) {
+      throw new Error('BAP tidak ditemukan.');
+    }
+
+    const targetPertemuan = Number(newPertemuanKe);
+    if (!targetPertemuan || targetPertemuan <= 0) {
+      throw new Error('Nomor pertemuan tidak valid.');
+    }
+
+    const duplicateCheck = await db
+      .select({ p: bap.pertemuanKe })
+      .from(bap)
+      .where(and(eq(bap.kelasKuliahId, sourceBap.kelasKuliahId), eq(bap.pertemuanKe, targetPertemuan)));
+    if (duplicateCheck.length > 0) {
+      throw new Error(`Pertemuan ${targetPertemuan} sudah ada untuk kelas ini. Masukkan nomor pertemuan yang lain.`);
+    }
+
+    const sourceTopiks = await db.select().from(bapTopik).where(eq(bapTopik.bapId, sourceBapId));
+    const sourcePresensi = await db.select().from(presensi).where(eq(presensi.bapId, sourceBapId));
+
+    const [newBap] = await db
+      .insert(bap)
+      .values({
+        kelasKuliahId: sourceBap.kelasKuliahId,
+        tanggal: newTanggal || sourceBap.tanggal,
+        pertemuanKe: targetPertemuan,
+        tema: sourceBap.tema,
+        materi: sourceBap.materi,
+        catatan: sourceBap.catatan,
+        durasiMenit: sourceBap.durasiMenit,
+        cpmkId: sourceBap.cpmkId,
+        dosenId: sourceBap.dosenId,
+      })
+      .returning();
+
+    if (sourceTopiks.length > 0) {
+      await db.insert(bapTopik).values(
+        sourceTopiks.map((t) => ({
+          bapId: newBap.id,
+          topikId: t.topikId,
+          cpmkId: t.cpmkId,
+        })),
+      );
+    }
+
+    if (sourcePresensi.length > 0) {
+      await db.insert(presensi).values(
+        sourcePresensi.map((p) => ({
+          bapId: newBap.id,
+          mahasiswaId: p.mahasiswaId,
+          status: p.status,
+          durasiMangkir: p.durasiMangkir,
+          keterangan: p.keterangan,
+        })),
+      );
+    }
+
+    return {
+      ...newBap,
+      topikIds: sourceTopiks.map((t) => t.topikId).filter(Boolean),
+      presensiCount: sourcePresensi.length,
+    };
   }
 
   static async getMonitoringRps(periodeId?: string | number, prodiId?: number) {

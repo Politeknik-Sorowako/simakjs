@@ -137,6 +137,12 @@ export const rombelPraktikumController = {
     });
   },
 
+  async deleteBap(id: number): Promise<{ success: boolean; id: number }> {
+    return fetchApi<{ success: boolean; id: number }>(`/rombel-praktikum/bap/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   async savePresensiBulk(payload: {
     bapPraktikumId: number;
     presensiList: {

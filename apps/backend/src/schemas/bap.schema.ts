@@ -11,8 +11,38 @@ export const bapBody = t.Object({
   cpmkId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
   topikIds: t.Optional(t.Array(t.Integer())),
   dosenId: t.Integer({ default: 1 }),
-  sesiIds: t.Optional(t.Array(t.Integer())),
 });
+
+export const duplicateBapSchema = {
+  detail: {
+    tags: ['BAP'],
+    summary: 'Duplikasi BAP',
+    description: 'Menduplikasi BAP beserta presensi dan topik ke pertemuan baru.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    pertemuanKe: t.Integer(),
+    tanggal: t.Optional(t.String()),
+  }),
+  response: {
+    201: t.Object({
+      id: t.Optional(t.Integer({ default: 1 })),
+      kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
+      tanggal: t.Optional(t.String({ default: '2026-06-27' })),
+      pertemuanKe: t.Optional(t.Integer({ default: 1 })),
+      tema: t.Optional(t.Nullable(t.String())),
+      materi: t.Optional(t.String()),
+      catatan: t.Optional(t.Nullable(t.String())),
+      durasiMenit: t.Optional(t.Integer({ default: 100 })),
+      cpmkId: t.Optional(t.Union([t.Integer(), t.Null()])),
+      dosenId: t.Optional(t.Integer({ default: 1 })),
+      topikIds: t.Optional(t.Array(t.Integer())),
+      presensiCount: t.Optional(t.Integer({ default: 0 })),
+    }),
+  },
+};
 
 export const createBapSchema = {
   detail: {
