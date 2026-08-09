@@ -284,6 +284,123 @@ export class BapService {
     return updatedBap ? { ...updatedBap, topikIds: savedTopikIds } : null;
   }
 
+  static async updateBapBulk(data: {
+    bapId: number;
+    tanggal: string;
+    pertemuanIds: number[];
+    tema?: string | null;
+    materi: string;
+    catatan?: string | null;
+    durasiMenit: number;
+    cpmkId?: number | null;
+    topikIds?: number[];
+    dosenId?: number;
+  }) {
+    const { bapId, pertemuanIds, topikIds, ...updates } = data;
+    const primary = await db.query.bap.findFirst({ where: eq(bap.id, bapId) });
+    if (!primary) {
+      throw new Error('BAP tidak ditemukan.');
+    }
+    const targetDate = updates.tanggal;
+    const pertemuanSet = new Set(pertemuanIds.filter((p) => !isNaN(Number(p)) && Number(p) > 0).map((p) => Number(p)));
+
+    // Validate cpmkId if provided
+    let validCpmkId: number | null | undefined = updates.cpmkId;
+    if (updates.cpmkId) {
+      const existingCpmk = await db.query.cpmk.findFirst({ where: eq(cpmk.id, updates.cpmkId) });
+      if (!existingCpmk) {
+        validCpmkId = null;
+      }
+    }
+    const commonPayload: {
+      tanggal: string;
+      tema?: string;
+      materi: string;
+      durasiMenit: number;
+      dosenId: number;
+      catatan?: string;
+      cpmkId?: number;
+    } = {
+      tanggal: targetDate,
+      tema: updates.tema ?? undefined,
+      materi: updates.materi,
+      catatan: updates.catatan ?? undefined,
+      durasiMenit: updates.durasiMenit,
+      cpmkId: validCpmkId ?? undefined,
+      dosenId: Number(updates.dosenId) || primary.dosenId,
+    };
+
+    const sameDateRows = await db
+      .select({ id: bap.id, pertemuanKe: bap.pertemuanKe })
+      .from(bap)
+      .where(and(eq(bap.kelasKuliahId, primary.kelasKuliahId), eq(bap.tanggal, targetDate)));
+
+    const primaryKept = sameDateRows.some((r) => r.id === bapId);
+    if (primaryKept) {
+      await db.update(bap).set(commonPayload).where(eq(bap.id, bapId));
+      for (const row of sameDateRows) {
+        if (row.id !== bapId && !pertemuanSet.has(Number(row.pertemuanKe))) {
+          await db.delete(bap).where(eq(bap.id, row.id));
+        }
+      }
+    } else {
+      await db.delete(bap).where(eq(bap.id, bapId));
+    }
+
+    const afterDelete = await db
+      .select({ pertemuanKe: bap.pertemuanKe })
+      .from(bap)
+      .where(and(eq(bap.kelasKuliahId, primary.kelasKuliahId), eq(bap.tanggal, targetDate)));
+    const existingPertemuanSet = new Set(afterDelete.map((r) => Number(r.pertemuanKe)));
+
+    if (existingPertemuanSet.size === 0 && pertemuanSet.size > 0) {
+      const firstP = Number(Math.min(...Array.from(pertemuanSet)));
+      const [created] = await db
+        .insert(bap)
+        .values({ ...commonPayload, pertemuanKe: firstP, kelasKuliahId: primary.kelasKuliahId })
+        .returning();
+      existingPertemuanSet.add(firstP);
+    }
+
+    for (const p of Array.from(pertemuanSet)) {
+      if (!existingPertemuanSet.has(p)) {
+        await db.insert(bap).values({
+          ...commonPayload,
+          pertemuanKe: p,
+          kelasKuliahId: primary.kelasKuliahId,
+        });
+      }
+    }
+
+    // Sync topikIds across all same-date BAP records.
+    if (topikIds !== undefined) {
+      const updatedRows = await db
+        .select({ id: bap.id })
+        .from(bap)
+        .where(and(eq(bap.kelasKuliahId, primary.kelasKuliahId), eq(bap.tanggal, targetDate)));
+      for (const row of updatedRows) {
+        await db.delete(bapTopik).where(eq(bapTopik.bapId, row.id));
+      }
+      const validRpsTopiks =
+        topikIds.length > 0 ? await db.select().from(rpsTopik).where(inArray(rpsTopik.id, topikIds)) : [];
+      const savedTopiks = validRpsTopiks.map((t) => t.id);
+      if (savedTopiks.length > 0) {
+        const values: { bapId: number; topikId: number; cpmkId: number | null }[] = [];
+        for (const row of updatedRows) {
+          for (const topikId of savedTopiks) {
+            values.push({ bapId: row.id, topikId, cpmkId: validCpmkId ?? null });
+          }
+        }
+        await db.insert(bapTopik).values(values);
+      }
+    }
+
+    return await db
+      .select()
+      .from(bap)
+      .where(and(eq(bap.kelasKuliahId, primary.kelasKuliahId), eq(bap.tanggal, targetDate)));
+  }
+
   static async getMonitoringRps(periodeId?: string | number, prodiId?: number) {
     try {
       let targetPeriodeId = periodeId ? String(periodeId) : undefined;

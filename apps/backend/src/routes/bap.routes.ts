@@ -7,6 +7,7 @@ import {
   getMonitoringRpsDetailSchema,
   getMonitoringRpsSchema,
   getRpsTopikByKelasSchema,
+  updateBapBulkSchema,
   updateBapSchema,
 } from '../schemas/bap.schema';
 
@@ -17,4 +18,5 @@ export const bapRoutes = new Elysia({ prefix: '/bap' })
   .get('/monitoring-rps', BapController.getMonitoringRps, getMonitoringRpsSchema)
   .get('/monitoring-rps/kelas/:kelasKuliahId', BapController.getMonitoringRpsDetail, getMonitoringRpsDetailSchema)
   .post('/', BapController.create, createBapSchema)
+  .put('/bulk', BapController.updateBapBulk, updateBapBulkSchema)
   .put('/:id', BapController.update, updateBapSchema);

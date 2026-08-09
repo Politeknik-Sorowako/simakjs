@@ -98,7 +98,7 @@ export class RombelPraktikumController {
   static async createBap({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -113,11 +113,26 @@ export class RombelPraktikumController {
   static async updateBap({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
       return await RombelPraktikumService.updateBap(parseInt(params.id), body);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async updateBapBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      return await RombelPraktikumService.updateBapBulk(body);
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

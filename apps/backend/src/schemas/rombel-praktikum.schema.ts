@@ -28,6 +28,17 @@ export const createBapPraktikumBody = t.Object({
 
 export const updateBapPraktikumBody = t.Partial(createBapPraktikumBody);
 
+export const updateBapPraktikumBulkBody = t.Object({
+  bapPraktikumId: t.Integer(),
+  tanggal: t.String(),
+  sesiIds: t.Array(t.Integer()),
+  tema: t.Optional(t.Nullable(t.String())),
+  materi: t.String(),
+  catatan: t.Optional(t.Nullable(t.String())),
+  durasiMenit: t.Integer({ default: 100 }),
+  instrukturId: t.Optional(t.Nullable(t.Integer())),
+});
+
 export const savePresensiPraktikumBody = t.Object({
   bapPraktikumId: t.Integer(),
   presensiList: t.Array(

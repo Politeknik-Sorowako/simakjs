@@ -575,7 +575,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                 <div class="px-3 pt-3 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
                   3. RPS
                 </div>
-                <Show when={isAdmin() || isDosen()}>
+                <Show when={isAdmin() || isDosen() || isInstruktur()}>
                   <A
                     href="/rps"
                     onClick={() => props.onClose()}
@@ -705,7 +705,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
             <Show when={isPelaksanaanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <Show when={isAdmin() || isDosen() || isProdi()}>
+                <Show when={isAdmin() || isDosen() || isProdi() || isInstruktur()}>
                   <A
                     href="/jurnal-presensi"
                     onClick={() => props.onClose()}
@@ -743,7 +743,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Presensi Apel
                   </A>
                 </Show>
-                <Show when={isAdmin() || isDosen() || isProdi()}>
+                <Show when={isAdmin() || isDosen() || isProdi() || isInstruktur()}>
                   <A
                     href="/input-nilai"
                     onClick={() => props.onClose()}
@@ -868,7 +868,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           </div>
         </Show>
         {/* Laporan */}
-        <Show when={isAdmin() || isDosen() || isProdi()}>
+        <Show when={isAdmin() || isDosen() || isProdi() || isInstruktur()}>
           <div class="pt-2">
             <button
               onClick={() => setIsLaporanOpen(!isLaporanOpen())}
@@ -1039,7 +1039,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Jam Kompensasi
                   </A>
                 </Show>
-                <Show when={isAdmin()}>
+                <Show when={isAdmin() || isInstruktur()}>
                   <A
                     href="/kompensasi-manual"
                     onClick={() => props.onClose()}
@@ -1253,7 +1253,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
             <Show when={isLayananOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <Show when={isAdmin() || isDosen() || isMahasiswa()}>
+                <Show when={isAdmin() || isDosen() || isMahasiswa() || isInstruktur()}>
                   <A
                     href="/pelanggaran"
                     onClick={() => props.onClose()}

@@ -13,6 +13,7 @@ interface ProtectedRouteProps {
     | 'keuangan'
     | 'guest'
     | 'calon_mahasiswa'
+    | 'instruktur'
   )[];
 }
 
@@ -36,7 +37,16 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
     if (userRole === 'super_admin') return true;
     if (!props.allowedRoles) return true;
     return props.allowedRoles.includes(
-      userRole as 'super_admin' | 'admin' | 'dosen' | 'mahasiswa' | 'prodi' | 'keuangan' | 'guest' | 'calon_mahasiswa',
+      userRole as
+        | 'super_admin'
+        | 'admin'
+        | 'dosen'
+        | 'mahasiswa'
+        | 'prodi'
+        | 'keuangan'
+        | 'guest'
+        | 'calon_mahasiswa'
+        | 'instruktur',
     );
   };
 

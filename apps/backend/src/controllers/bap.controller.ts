@@ -40,14 +40,14 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
 
     try {
       let dosenId = body.dosenId;
-      if (hasRole(user, ['dosen'])) {
+      if (hasRole(user, ['dosen', 'instruktur'])) {
         const dosenProfile = await BapService.getDosenByEmail(user.email);
         if (!dosenProfile) {
           set.status = 400;
@@ -88,14 +88,14 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
 
     try {
       let dosenId = body.dosenId;
-      if (hasRole(user, ['dosen'])) {
+      if (hasRole(user, ['dosen', 'instruktur'])) {
         const dosenProfile = await BapService.getDosenByEmail(user.email);
         if (dosenProfile) {
           dosenId = dosenProfile.id;
@@ -112,6 +112,35 @@ export class BapController {
         return { error: 'BAP tidak ditemukan' };
       }
       return updated;
+    } catch (e: unknown) {
+      const causeMsg = extractErrorMessage(e);
+      set.status = 400;
+      return { error: `Gagal memperbarui BAP: ${causeMsg}` };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateBapBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      let dosenId = body.dosenId;
+      if (hasRole(user, ['dosen', 'instruktur'])) {
+        const dosenProfile = await BapService.getDosenByEmail(user.email);
+        if (dosenProfile) {
+          dosenId = dosenProfile.id;
+        }
+      }
+      const merged = await BapService.updateBapBulk({ ...body, dosenId });
+      if (merged.length === 0) {
+        set.status = 404;
+        return { error: 'BAP tidak ditemukan' };
+      }
+      return merged;
     } catch (e: unknown) {
       const causeMsg = extractErrorMessage(e);
       set.status = 400;

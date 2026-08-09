@@ -95,6 +95,7 @@ export const rombelPraktikumController = {
     catatan?: string | null;
     durasiMenit: number;
     instrukturId?: number | null;
+    sesiIds?: number[];
   }): Promise<BapPraktikum> {
     return fetchApi<BapPraktikum>('/rombel-praktikum/bap', {
       method: 'POST',
@@ -115,6 +116,22 @@ export const rombelPraktikumController = {
     }>,
   ): Promise<BapPraktikum> {
     return fetchApi<BapPraktikum>(`/rombel-praktikum/bap/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async updateBapBulk(payload: {
+    bapPraktikumId: number;
+    tanggal: string;
+    sesiIds: number[];
+    tema?: string | null;
+    materi: string;
+    catatan?: string | null;
+    durasiMenit: number;
+    instrukturId?: number | null;
+  }): Promise<BapPraktikum[]> {
+    return fetchApi<BapPraktikum[]>('/rombel-praktikum/bap/bulk', {
       method: 'PUT',
       body: JSON.stringify(payload),
     });

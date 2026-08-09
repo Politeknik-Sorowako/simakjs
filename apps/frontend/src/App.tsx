@@ -177,7 +177,7 @@ function AppContent() {
       <Route
         path="/jurnal-presensi"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
             <BapPresensi />
           </ProtectedRoute>
         }
@@ -193,7 +193,7 @@ function AppContent() {
       <Route
         path="/kompensasi-manual"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'instruktur']}>
             <KompensasiManual />
           </ProtectedRoute>
         }
@@ -210,7 +210,7 @@ function AppContent() {
       <Route
         path="/presensi-apel"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
             <ApelKelola />
           </ProtectedRoute>
         }
@@ -250,7 +250,7 @@ function AppContent() {
       <Route
         path="/pelanggaran"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'instruktur']}>
             <Pelanggaran />
           </ProtectedRoute>
         }
@@ -274,7 +274,7 @@ function AppContent() {
       <Route
         path="/input-nilai"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
             <InputNilai />
           </ProtectedRoute>
         }
@@ -410,7 +410,7 @@ function AppContent() {
       <Route
         path="/rps"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'instruktur']}>
             <Rps />
           </ProtectedRoute>
         }

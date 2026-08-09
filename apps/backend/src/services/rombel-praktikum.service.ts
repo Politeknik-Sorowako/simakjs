@@ -240,7 +240,8 @@ export class RombelPraktikumService {
           .returning();
         created.push(row);
       }
-      return created;
+      // Return first created BAP (consistent single-object shape for the caller)
+      return created[0] || null;
     }
     const sesi = sesiIds && sesiIds.length === 1 ? sesiIds[0] : base.sesiKe;
     const [newBap] = await db
@@ -264,6 +265,74 @@ export class RombelPraktikumService {
   ) {
     const [updated] = await db.update(bapPraktikum).set(data).where(eq(bapPraktikum.id, id)).returning();
     return updated || null;
+  }
+
+  static async updateBapBulk(data: {
+    bapPraktikumId: number;
+    tanggal: string;
+    sesiIds: number[];
+    tema?: string | null;
+    materi: string;
+    catatan?: string | null;
+    durasiMenit: number;
+    instrukturId?: number | null;
+  }) {
+    const { bapPraktikumId, sesiIds, ...updates } = data;
+    const primary = await db.query.bapPraktikum.findFirst({ where: eq(bapPraktikum.id, bapPraktikumId) });
+    if (!primary) {
+      throw new Error('BAP praktikum tidak ditemukan.');
+    }
+    const targetDate = updates.tanggal;
+    const sesiSet = new Set(sesiIds.filter((s) => !isNaN(Number(s)) && Number(s) > 0).map((s) => Number(s)));
+
+    const sameDateRows = await db
+      .select({ id: bapPraktikum.id, sesiKe: bapPraktikum.sesiKe })
+      .from(bapPraktikum)
+      .where(and(eq(bapPraktikum.rombelPraktikumId, primary.rombelPraktikumId), eq(bapPraktikum.tanggal, targetDate)));
+
+    // Keep the primary BAP (update it), delete any other same-date BAPs not in selection.
+    const existingSesiSet = new Set(sameDateRows.map((r) => Number(r.sesiKe)));
+    const primaryKept = sameDateRows.some((r) => r.id === bapPraktikumId);
+
+    if (primaryKept) {
+      await db.update(bapPraktikum).set(updates).where(eq(bapPraktikum.id, bapPraktikumId));
+      for (const row of sameDateRows) {
+        if (row.id !== bapPraktikumId && !sesiSet.has(Number(row.sesiKe))) {
+          await db.delete(bapPraktikum).where(eq(bapPraktikum.id, row.id));
+        }
+      }
+    } else {
+      await db.delete(bapPraktikum).where(eq(bapPraktikum.id, bapPraktikumId));
+    }
+
+    // Determine final existing sesi set after deletions.
+    const afterDelete = await db
+      .select({ sesiKe: bapPraktikum.sesiKe })
+      .from(bapPraktikum)
+      .where(and(eq(bapPraktikum.rombelPraktikumId, primary.rombelPraktikumId), eq(bapPraktikum.tanggal, targetDate)));
+    const finalExisting = new Set(afterDelete.map((r) => Number(r.sesiKe)));
+
+    if (finalExisting.size === 0 && sesiSet.size > 0) {
+      // No primary BAP kept; create a fresh one for the first selected sesi.
+      const firstSesi = Number(Math.min(...Array.from(sesiSet)));
+      await db
+        .insert(bapPraktikum)
+        .values({ ...updates, sesiKe: firstSesi, rombelPraktikumId: primary.rombelPraktikumId });
+      finalExisting.add(firstSesi);
+    }
+
+    // Create missing BAP records for selected sesi not yet present.
+    for (const sesiKe of Array.from(sesiSet)) {
+      if (!finalExisting.has(sesiKe)) {
+        await db.insert(bapPraktikum).values({ ...updates, sesiKe, rombelPraktikumId: primary.rombelPraktikumId });
+      }
+    }
+
+    void existingSesiSet;
+    return await db
+      .select()
+      .from(bapPraktikum)
+      .where(and(eq(bapPraktikum.rombelPraktikumId, primary.rombelPraktikumId), eq(bapPraktikum.tanggal, targetDate)));
   }
 
   static async savePresensiBulk(

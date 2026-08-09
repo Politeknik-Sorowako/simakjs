@@ -36,6 +36,7 @@ export interface BAP {
   kelasKuliahId: number;
   tanggal: string;
   pertemuanKe: number;
+  tema?: string | null;
   materi: string;
   catatan?: string | null;
   durasiMenit: number;
@@ -195,7 +196,12 @@ export const presensiController = {
     >(`/bap/kelas/${kelasKuliahId}/topik`);
   },
 
-  async createBap(data: Omit<BAP, 'id'>): Promise<BAP> {
+  async createBap(
+    data: Omit<BAP, 'id'> & {
+      tema?: string | null;
+      sesiIds?: number[];
+    },
+  ): Promise<BAP> {
     return fetchApi<BAP>('/bap', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -204,6 +210,24 @@ export const presensiController = {
 
   async updateBap(id: number, data: Partial<Omit<BAP, 'id'>>): Promise<BAP> {
     return fetchApi<BAP>(`/bap/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateBapBulk(data: {
+    bapId: number;
+    tanggal: string;
+    pertemuanIds: number[];
+    tema?: string | null;
+    materi: string;
+    catatan?: string | null;
+    durasiMenit: number;
+    cpmkId?: number | null;
+    topikIds?: number[];
+    dosenId?: number;
+  }): Promise<BAP[]> {
+    return fetchApi<BAP[]>('/bap/bulk', {
       method: 'PUT',
       body: JSON.stringify(data),
     });

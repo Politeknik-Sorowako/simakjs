@@ -12,6 +12,7 @@ import {
   syncBapPraktikumBody,
   toggleEnrollmentBody,
   updateBapPraktikumBody,
+  updateBapPraktikumBulkBody,
   updateRombelBody,
 } from '../schemas/rombel-praktikum.schema';
 
@@ -35,6 +36,7 @@ export const rombelPraktikumRoutes = new Elysia({ prefix: '/rombel-praktikum' })
   .get('/:id/bap', RombelPraktikumController.getBapByRombel)
   .post('/bap', RombelPraktikumController.createBap, { body: createBapPraktikumBody })
   .put('/bap/:id', RombelPraktikumController.updateBap, { body: updateBapPraktikumBody })
+  .put('/bap/bulk', RombelPraktikumController.updateBapBulk, { body: updateBapPraktikumBulkBody })
   .post('/presensi', RombelPraktikumController.savePresensiBulk, { body: savePresensiPraktikumBody })
   .get('/bap/:id/presensi', RombelPraktikumController.getPresensiByBap)
   .post('/:id/sync-presensi', RombelPraktikumController.syncPresensi, { body: syncBapPraktikumBody })

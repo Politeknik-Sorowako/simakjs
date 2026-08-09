@@ -112,6 +112,27 @@ export const updateBapSchema = {
   ),
 };
 
+export const updateBapBulkSchema = {
+  detail: {
+    tags: ['BAP'],
+    summary: 'Perbarui Multi-Pertemuan BAP',
+    description:
+      'Memperbarui beberapa pertemuan BAP sekaligus pada kelas & tanggal yang sama (menghapus pertemuan yang tidak dipilih, membuat yang baru).',
+  },
+  body: t.Object({
+    bapId: t.Integer(),
+    tanggal: t.String(),
+    pertemuanIds: t.Array(t.Integer()),
+    tema: t.Optional(t.Nullable(t.String())),
+    materi: t.String(),
+    catatan: t.Optional(t.Nullable(t.String())),
+    durasiMenit: t.Integer({ default: 100 }),
+    cpmkId: t.Optional(t.Integer()),
+    topikIds: t.Optional(t.Array(t.Integer())),
+    dosenId: t.Optional(t.Integer()),
+  }),
+};
+
 export const getMonitoringRpsSchema = {
   detail: {
     tags: ['BAP'],
