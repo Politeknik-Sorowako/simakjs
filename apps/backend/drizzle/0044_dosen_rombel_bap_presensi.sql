@@ -1,32 +1,13 @@
 -- Fitur: Rombel self-enrollment (token & QR), BAP tema, presensi admin resolution.
 -- All statements are idempotent / guarded so they are safe to run repeatedly.
 
--- Ensure dosen fields nullable for manual add (NIK, NIDN already nullable; keep guards)
+-- DOSEN: allow manual add without NIK/NIDN/tempat lahir/tanggal lahir.
+-- NIDN stays nullable but its existing UNIQUE constraint still guarantees
+-- non-NULL values are unique (PostgreSQL unique constraints allow multiple NULLs).
 ALTER TABLE "dosen" ALTER COLUMN "nidn" DROP NOT NULL;
 ALTER TABLE "dosen" ALTER COLUMN "nik" DROP NOT NULL;
 ALTER TABLE "dosen" ALTER COLUMN "tempat_lahir" DROP NOT NULL;
 ALTER TABLE "dosen" ALTER COLUMN "tanggal_lahir" DROP NOT NULL;
-
--- Allow multiple NULLs on dosen.nidn by using a partial unique index instead
--- of the table-level unique constraint (NULLS NOT DISTINCT requires PG15+).
-DO $$
-BEGIN
-  -- Drop old full unique constraint if present; recreate as partial unique
-  IF EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'dosen_nidn_unique'
-  ) THEN
-    ALTER TABLE "dosen" DROP CONSTRAINT "dosen_nidn_unique";
-  END IF;
-END $$;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE indexname = 'dosen_nidn_not_null_idx'
-  ) THEN
-    CREATE INDEX "dosen_nidn_not_null_idx" ON "dosen" ("nidn") WHERE "nidn" IS NOT NULL;
-  END IF;
-END $$;
 
 -- Rombel self-enrollment columns
 ALTER TABLE "rombel_praktikum" ADD COLUMN IF NOT EXISTS "enrollment_token" varchar(64);
