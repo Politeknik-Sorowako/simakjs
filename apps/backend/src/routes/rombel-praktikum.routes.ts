@@ -6,7 +6,7 @@ import {
   createBapPraktikumBody,
   createRombelBody,
   getEnrollmentLogSchema,
-  publicEnrollSchema,
+  publicEnrollParamsSchema,
   publicRombelInfoSchema,
   savePresensiPraktikumBody,
   syncBapPraktikumBody,
@@ -15,9 +15,11 @@ import {
   updateRombelBody,
 } from '../schemas/rombel-praktikum.schema';
 
-export const rombelPraktikumPublicRoutes = new Elysia({ prefix: '/rombel-praktikum/public' })
-  .get('/:token', RombelPraktikumController.getRombelByToken, publicRombelInfoSchema)
-  .post('/enroll/:token', RombelPraktikumController.selfEnroll, publicEnrollSchema);
+export const rombelPraktikumPublicRoutes = new Elysia({ prefix: '/rombel-praktikum/public' }).get(
+  '/:token',
+  RombelPraktikumController.getRombelByToken,
+  publicRombelInfoSchema,
+);
 
 export const rombelPraktikumRoutes = new Elysia({ prefix: '/rombel-praktikum' })
   .use(authMiddleware)
@@ -25,6 +27,7 @@ export const rombelPraktikumRoutes = new Elysia({ prefix: '/rombel-praktikum' })
   .post('/', RombelPraktikumController.createRombel, { body: createRombelBody })
   .put('/:id', RombelPraktikumController.updateRombel, { body: updateRombelBody })
   .delete('/:id', RombelPraktikumController.deleteRombel)
+  .post('/public/enroll/:token', RombelPraktikumController.selfEnroll, publicEnrollParamsSchema)
   .post('/:id/mahasiswa', RombelPraktikumController.assignMahasiswa, { body: assignMahasiswaBody })
   .post('/:id/generate-token', RombelPraktikumController.generateEnrollmentToken)
   .post('/:id/toggle-enrollment', RombelPraktikumController.toggleEnrollment, { body: toggleEnrollmentBody })

@@ -173,11 +173,9 @@ export const rombelPraktikumController = {
     return fetchApi<PublicRombelInfo>(`/rombel-praktikum/public/${token}`, { requireAuth: false });
   },
 
-  async enrollByToken(token: string, mahasiswaId: number): Promise<{ member: unknown; rombelNama: string }> {
+  async enrollByToken(token: string): Promise<{ member: unknown; rombelNama: string }> {
     return fetchApi<{ member: unknown; rombelNama: string }>(`/rombel-praktikum/public/enroll/${token}`, {
       method: 'POST',
-      requireAuth: false,
-      body: JSON.stringify({ mahasiswaId }),
     });
   },
 };

@@ -1,5 +1,5 @@
 import { useParams } from '@solidjs/router';
-import { createResource, createSignal, Match, Show, Switch } from 'solid-js';
+import { createResource, createSignal, Show, Switch } from 'solid-js';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -39,13 +39,12 @@ export default function RombelEnroll() {
   const currentMhsId = () => mhsProfile()?.id;
 
   const handleEnroll = async () => {
-    const mhsId = currentMhsId();
     const tok = token();
-    if (!mhsId || !tok) return;
+    if (!tok) return;
     setEnrolling(true);
     setError('');
     try {
-      await rombelPraktikumController.enrollByToken(tok, mhsId);
+      await rombelPraktikumController.enrollByToken(tok);
       setEnrolled(true);
       toast.showToast('Pendaftaran berhasil!', 'success');
     } catch (e) {

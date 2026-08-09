@@ -1,5 +1,6 @@
 import { RombelPraktikumService } from '../services/rombel-praktikum.service';
-import { type AuthContext, allowed, type PublicContext } from '../utils/types';
+import { hasRole } from '../utils/role';
+import { type AuthContext, type PublicContext } from '../utils/types';
 
 export class RombelPraktikumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
@@ -21,7 +22,7 @@ export class RombelPraktikumController {
   static async createRombel({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -36,7 +37,7 @@ export class RombelPraktikumController {
   static async updateRombel({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -51,7 +52,7 @@ export class RombelPraktikumController {
   static async deleteRombel({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -66,7 +67,7 @@ export class RombelPraktikumController {
   static async assignMahasiswa({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -97,7 +98,7 @@ export class RombelPraktikumController {
   static async createBap({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -112,7 +113,7 @@ export class RombelPraktikumController {
   static async updateBap({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -127,11 +128,11 @@ export class RombelPraktikumController {
   static async savePresensiBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-      if (!allowed(user, ['admin', 'super_admin'])) {
+      if (!hasRole(user, ['admin', 'super_admin'])) {
         const allowedStatuses = new Set(['hadir', 'telat', 'unknown']);
         const restricted = (body.presensiList || []).filter((p: { status: string }) => !allowedStatuses.has(p.status));
         if (restricted.length > 0) {
@@ -166,7 +167,7 @@ export class RombelPraktikumController {
   static async generateEnrollmentToken({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -181,7 +182,7 @@ export class RombelPraktikumController {
   static async toggleEnrollment({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -220,11 +221,23 @@ export class RombelPraktikumController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
-  static async selfEnroll({ params, body, request, set }: PublicContext): Promise<any> {
+  static async selfEnroll({ params, request, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      // IDOR prevention: enroll as the authenticated student only — the
+      // mahasiswaId is resolved from the session's email, not from the body.
+      const mahasiswaId = await RombelPraktikumService.getMahasiswaIdByEmail(user.email);
+      if (!mahasiswaId) {
+        set.status = 400;
+        return { error: 'Profil mahasiswa tidak ditemukan untuk akun ini.' };
+      }
       const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
       const userAgent = request.headers.get('user-agent');
-      const result = await RombelPraktikumService.selfEnroll(params.token, body.mahasiswaId, ipAddress, userAgent);
+      const result = await RombelPraktikumService.selfEnroll(params.token, mahasiswaId, ipAddress, userAgent);
       set.status = 201;
       return result;
     } catch (e: unknown) {
@@ -237,7 +250,7 @@ export class RombelPraktikumController {
   static async getEnrollmentLog({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -252,7 +265,7 @@ export class RombelPraktikumController {
   static async syncPresensi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -267,7 +280,7 @@ export class RombelPraktikumController {
   static async syncNilai({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }

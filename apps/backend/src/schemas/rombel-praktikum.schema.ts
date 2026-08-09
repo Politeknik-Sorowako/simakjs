@@ -73,17 +73,15 @@ export const publicRombelInfoSchema = {
   }),
 };
 
-export const publicEnrollSchema = {
+export const publicEnrollParamsSchema = {
   detail: {
     tags: ['Rombel Praktikum'],
     summary: 'Self-Enrollment Mahasiswa',
-    description: 'Pendaftaran mandiri mahasiswa ke rombel praktikum menggunakan token (tanpa autentikasi admin).',
+    description:
+      'Pendaftaran mandiri mahasiswa ke rombel praktikum menggunakan token. Mahasiswa terautentikasi, mahasiswaId diambil dari sesi yang sedang login.',
   },
   params: t.Object({
     token: t.String(),
-  }),
-  body: t.Object({
-    mahasiswaId: t.Integer(),
   }),
 };
 

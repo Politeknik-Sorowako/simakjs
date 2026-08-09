@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
   bap,
@@ -103,6 +103,11 @@ export class RombelPraktikumService {
     return updated;
   }
 
+  static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
+    return mhs?.id ?? null;
+  }
+
   static async getRombelByToken(token: string) {
     const rombel = await db.query.rombelPraktikum.findFirst({
       where: eq(rombelPraktikum.enrollmentToken, token),
@@ -124,58 +129,73 @@ export class RombelPraktikumService {
   }
 
   static async selfEnroll(token: string, mahasiswaId: number, ipAddress?: string | null, userAgent?: string | null) {
-    const rombel = await this.getRombelByToken(token);
-    if (!rombel) {
+    // Validate the token first (cheap, no lock needed).
+    const precheck = await db.query.rombelPraktikum.findFirst({
+      where: eq(rombelPraktikum.enrollmentToken, token),
+    });
+    if (!precheck) {
       throw new Error('Token pendaftaran tidak valid');
     }
-    if (!rombel.enrollmentEnabled) {
+    if (!precheck.enrollmentEnabled) {
       throw new Error('Pendaftaran mandiri rombel ini sedang ditutup');
     }
-    if (rombel.enrollmentExpiresAt && new Date(rombel.enrollmentExpiresAt) < new Date()) {
-      throw new Error('Masa pendaftaran rombel telah berakhir');
-    }
-    if (rombel.enrollmentMaxStudents && rombel.mahasiswaList.length >= rombel.enrollmentMaxStudents) {
-      throw new Error('Kuota mahasiswa rombel sudah penuh');
-    }
 
-    const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, mahasiswaId));
-    if (!mhs) {
-      throw new Error('Mahasiswa tidak ditemukan');
-    }
-
-    // It should be a student enrolled in the parent class (KRS) — for the same periode
-    const isEnrolled = await db.$count(
+    const enrolledKrs = await db.$count(
       krs,
-      and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.kelasKuliahId, rombel.kelasKuliahId)),
+      and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.kelasKuliahId, precheck.kelasKuliahId)),
     );
-    if (isEnrolled === 0) {
+    if (enrolledKrs === 0) {
       throw new Error('Mahasiswa belum terdaftar pada kelas mata kuliah ini');
     }
 
-    const alreadyMember = await db.$count(
-      rombelPraktikumMahasiswa,
-      and(
-        eq(rombelPraktikumMahasiswa.rombelPraktikumId, rombel.id),
-        eq(rombelPraktikumMahasiswa.mahasiswaId, mahasiswaId),
-      ),
-    );
-    if (alreadyMember > 0) {
-      throw new Error('Mahasiswa sudah terdaftar di rombel ini');
-    }
+    // The quota check + membership insert + log insert run inside a single
+    // transaction with a row-level lock on the rombel row to prevent the race
+    // condition where concurrent requests both pass the capacity check.
+    const result = await db.transaction(async (tx) => {
+      const [locked] = await tx.select().from(rombelPraktikum).where(eq(rombelPraktikum.id, precheck.id)).for('update');
+      if (!locked) {
+        throw new Error('Rombel praktikum tidak ditemukan');
+      }
+      if (locked.enrollmentExpiresAt && new Date(locked.enrollmentExpiresAt) < new Date()) {
+        throw new Error('Masa pendaftaran rombel telah berakhir');
+      }
+      if (locked.enrollmentMaxStudents) {
+        const currentCount = await tx.$count(
+          rombelPraktikumMahasiswa,
+          eq(rombelPraktikumMahasiswa.rombelPraktikumId, locked.id),
+        );
+        if (currentCount >= locked.enrollmentMaxStudents) {
+          throw new Error('Kuota mahasiswa rombel sudah penuh');
+        }
+      }
 
-    const [member] = await db
-      .insert(rombelPraktikumMahasiswa)
-      .values({ rombelPraktikumId: rombel.id, mahasiswaId })
-      .returning();
+      const alreadyMember = await tx.$count(
+        rombelPraktikumMahasiswa,
+        and(
+          eq(rombelPraktikumMahasiswa.rombelPraktikumId, locked.id),
+          eq(rombelPraktikumMahasiswa.mahasiswaId, mahasiswaId),
+        ),
+      );
+      if (alreadyMember > 0) {
+        throw new Error('Mahasiswa sudah terdaftar di rombel ini');
+      }
 
-    await db.insert(rombelEnrollmentLog).values({
-      rombelPraktikumId: rombel.id,
-      mahasiswaId,
-      ipAddress: ipAddress || null,
-      userAgent: userAgent || null,
+      const [member] = await tx
+        .insert(rombelPraktikumMahasiswa)
+        .values({ rombelPraktikumId: locked.id, mahasiswaId })
+        .returning();
+
+      await tx.insert(rombelEnrollmentLog).values({
+        rombelPraktikumId: locked.id,
+        mahasiswaId,
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
+      });
+
+      return { member, rombelNama: locked.namaGroup };
     });
 
-    return { member, rombelNama: rombel.namaGroup };
+    return result;
   }
 
   static async getEnrollmentLog(id: number) {
