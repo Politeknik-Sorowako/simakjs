@@ -552,7 +552,7 @@ export default function ApelKelola() {
                       }
                     >
                       <Show
-                        when={auth.hasRole(['admin', 'dosen'])}
+                        when={auth.hasRole(['admin', 'dosen', 'prodi'])}
                         fallback={
                           <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded font-semibold">
                             Sesi Tertutup
@@ -569,7 +569,7 @@ export default function ApelKelola() {
                       </Show>
                     </Show>
 
-                    <Show when={auth.hasRole(['admin', 'dosen'])}>
+                    <Show when={auth.hasRole(['admin', 'dosen', 'prodi'])}>
                       <button
                         class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50"
                         onClick={openEditSesiModal}

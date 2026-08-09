@@ -146,7 +146,7 @@ export class ApelController {
   static async submitPresensi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'dosen'])) {
+      if (!allowed(user, ['admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -191,7 +191,7 @@ export class ApelController {
   static async tutupSesi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'dosen'])) {
+      if (!allowed(user, ['admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -206,7 +206,7 @@ export class ApelController {
   static async bukaKembaliSesi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'dosen'])) {
+      if (!allowed(user, ['admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -236,7 +236,7 @@ export class ApelController {
   static async updateSesi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'dosen'])) {
+      if (!allowed(user, ['admin', 'dosen', 'prodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }

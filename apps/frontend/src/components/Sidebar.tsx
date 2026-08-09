@@ -723,7 +723,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Jurnal & Presensi
                   </A>
                 </Show>
-                <Show when={isAdmin() || isDosen()}>
+                <Show when={isAdmin() || isDosen() || isProdi()}>
                   <A
                     href="/presensi-apel"
                     onClick={() => props.onClose()}
