@@ -2,6 +2,10 @@ import { RombelPraktikumService } from '../services/rombel-praktikum.service';
 import { hasRole } from '../utils/role';
 import { type AuthContext, type PublicContext } from '../utils/types';
 
+const enrollRateLimit = new Map<string, { count: number; resetTime: number }>();
+const ENROLL_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const ENROLL_RATE_LIMIT_MAX = 10;
+
 export class RombelPraktikumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async getByKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
@@ -257,12 +261,27 @@ export class RombelPraktikumController {
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async selfEnroll({ params, request, set, getCurrentUser }: AuthContext): Promise<any> {
-    try {
-      const user = await getCurrentUser();
-      if (!user) {
-        set.status = 401;
-        return { error: 'Unauthorized' };
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Unauthorized' };
+    }
+    // Rate-limit token guesses per user to mitigate enrollment-token brute-force.
+    if (process.env.NODE_ENV !== 'test') {
+      const now = Date.now();
+      const limitKey = `enroll:${user.id}`;
+      const record = enrollRateLimit.get(limitKey);
+      if (record && now < record.resetTime) {
+        if (record.count >= ENROLL_RATE_LIMIT_MAX) {
+          set.status = 429;
+          return { error: 'Terlalu banyak percobaan pendaftaran. Silakan coba lagi dalam 10 menit.' };
+        }
+        record.count++;
+      } else {
+        enrollRateLimit.set(limitKey, { count: 1, resetTime: now + ENROLL_RATE_LIMIT_WINDOW_MS });
       }
+    }
+    try {
       // IDOR prevention: enroll as the authenticated student only — the
       // mahasiswaId is resolved from the session's email, not from the body.
       const mahasiswaId = await RombelPraktikumService.getMahasiswaIdByEmail(user.email);
