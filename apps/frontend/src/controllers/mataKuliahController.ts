@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 import { PaginatedResponse, Prodi } from './prodiController';
 
 export interface MataKuliah {
@@ -29,17 +30,21 @@ export const mataKuliahController = {
     sortOrder?: string,
     programStudiId?: number,
   ): Promise<PaginatedResponse<MataKuliah>> {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (page) params.append('page', String(page));
-    if (limit) params.append('limit', String(limit));
-    if (kurikulumId) params.append('kurikulumId', String(kurikulumId));
-    if (semester !== undefined) params.append('semester', String(semester));
-    if (sortBy) params.append('sortBy', sortBy);
-    if (sortOrder) params.append('sortOrder', sortOrder);
-    if (programStudiId) params.append('programStudiId', String(programStudiId));
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<PaginatedResponse<MataKuliah>>(`/mata-kuliah${queryString}`);
+    const query: Record<string, string> = {};
+    if (search) query.search = search;
+    if (page) query.page = String(page);
+    if (limit) query.limit = String(limit);
+    if (kurikulumId) query.kurikulumId = String(kurikulumId);
+    if (semester !== undefined) query.semester = String(semester);
+    if (sortBy) query.sortBy = sortBy;
+    if (sortOrder) query.sortOrder = sortOrder;
+    if (programStudiId) query.programStudiId = String(programStudiId);
+    return unwrap<PaginatedResponse<MataKuliah>>(
+      eden['mata-kuliah'].get({ $query: query }) as unknown as Promise<{
+        data?: PaginatedResponse<MataKuliah>;
+        error?: unknown;
+      }>,
+    );
   },
 
   async getById(id: number): Promise<MataKuliah> {
@@ -47,10 +52,11 @@ export const mataKuliahController = {
   },
 
   async create(data: Omit<MataKuliah, 'id' | 'semester' | 'kurikulum' | 'programStudi'>): Promise<MataKuliah> {
-    return fetchApi<MataKuliah>('/mata-kuliah', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const res = (await eden['mata-kuliah'].post(data as unknown as never)) as unknown as {
+      data?: MataKuliah;
+      error?: unknown;
+    };
+    return unwrap<MataKuliah>(Promise.resolve(res));
   },
 
   async update(
@@ -80,9 +86,13 @@ export const mataKuliahController = {
       idPddikti?: string;
     }[],
   ): Promise<{ success: number; failed: number; errors: { row: number; kode: string; error: string }[] }> {
-    return fetchApi('/mata-kuliah/import', {
-      method: 'POST',
-      body: JSON.stringify({ items }),
-    });
+    return unwrap<{ success: number; failed: number; errors: { row: number; kode: string; error: string }[] }>(
+      eden['mata-kuliah'].import.post({
+        items,
+      }) as unknown as Promise<{
+        data?: { success: number; failed: number; errors: { row: number; kode: string; error: string }[] };
+        error?: unknown;
+      }>,
+    );
   },
 };

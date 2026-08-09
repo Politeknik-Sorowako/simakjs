@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 import { Cpl } from './cplController';
 import { Prodi } from './prodiController';
 
@@ -48,10 +49,13 @@ export interface ImportResult {
 
 export const bahanKajianController = {
   async getAll(prodiId?: number): Promise<BahanKajian[]> {
-    const params = new URLSearchParams();
-    if (prodiId) params.append('prodiId', String(prodiId));
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<BahanKajian[]>(`/bahan-kajian${queryString}`);
+    const query: Record<string, number> = prodiId ? { prodiId } : {};
+    return unwrap<BahanKajian[]>(
+      eden['bahan-kajian'].get({ $query: query }) as unknown as Promise<{
+        data?: BahanKajian[];
+        error?: unknown;
+      }>,
+    );
   },
 
   async getById(id: number): Promise<BahanKajian> {
@@ -59,10 +63,11 @@ export const bahanKajianController = {
   },
 
   async create(data: Omit<BahanKajian, 'id'>): Promise<BahanKajian> {
-    return fetchApi<BahanKajian>('/bahan-kajian', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const res = (await eden['bahan-kajian'].post(data as never)) as unknown as {
+      data?: BahanKajian;
+      error?: unknown;
+    };
+    return unwrap<BahanKajian>(Promise.resolve(res));
   },
 
   async update(id: number, data: Partial<Omit<BahanKajian, 'id'>>): Promise<BahanKajian> {
@@ -79,10 +84,11 @@ export const bahanKajianController = {
   },
 
   async import(items: { kodeProdi?: string; kode: string; nama: string; deskripsi?: string }[]): Promise<ImportResult> {
-    return fetchApi<ImportResult>('/bahan-kajian/import', {
-      method: 'POST',
-      body: JSON.stringify({ items }),
-    });
+    const res = (await eden['bahan-kajian'].import.post({ items: items as never })) as unknown as {
+      data?: ImportResult;
+      error?: unknown;
+    };
+    return unwrap<ImportResult>(Promise.resolve(res));
   },
 
   async downloadTemplate(): Promise<string> {
@@ -91,12 +97,16 @@ export const bahanKajianController = {
 
   // Mapping
   async getMappings(bahanKajianId?: number, cplId?: number, prodiId?: number): Promise<BahanKajianCplMapping[]> {
-    const params = new URLSearchParams();
-    if (bahanKajianId) params.append('bahanKajianId', String(bahanKajianId));
-    if (cplId) params.append('cplId', String(cplId));
-    if (prodiId) params.append('prodiId', String(prodiId));
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<BahanKajianCplMapping[]>(`/bahan-kajian-cpl-mapping${queryString}`);
+    const query: Record<string, number> = {};
+    if (bahanKajianId) query.bahanKajianId = bahanKajianId;
+    if (cplId) query.cplId = cplId;
+    if (prodiId) query.prodiId = prodiId;
+    return unwrap<BahanKajianCplMapping[]>(
+      eden['bahan-kajian-cpl-mapping'].get({ $query: query }) as unknown as Promise<{
+        data?: BahanKajianCplMapping[];
+        error?: unknown;
+      }>,
+    );
   },
 
   async createMapping(data: {
@@ -104,10 +114,11 @@ export const bahanKajianController = {
     cplId: number;
     bobot?: number | null;
   }): Promise<BahanKajianCplMapping> {
-    return fetchApi<BahanKajianCplMapping>('/bahan-kajian-cpl-mapping', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const res = (await eden['bahan-kajian-cpl-mapping'].post(data as never)) as unknown as {
+      data?: BahanKajianCplMapping;
+      error?: unknown;
+    };
+    return unwrap<BahanKajianCplMapping>(Promise.resolve(res));
   },
 
   async deleteMapping(id: number): Promise<{ message: string }> {
@@ -117,6 +128,11 @@ export const bahanKajianController = {
   },
 
   async getMatriks(prodiId: number): Promise<BahanKajianMatriksResponse> {
-    return fetchApi<BahanKajianMatriksResponse>(`/bahan-kajian-cpl-mapping/matriks?prodiId=${prodiId}`);
+    return unwrap<BahanKajianMatriksResponse>(
+      eden['bahan-kajian-cpl-mapping'].matriks.get({ $query: { prodiId } }) as unknown as Promise<{
+        data?: BahanKajianMatriksResponse;
+        error?: unknown;
+      }>,
+    );
   },
 };
