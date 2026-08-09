@@ -36,23 +36,23 @@ export function Modal(props: ModalProps) {
 
   return (
     <Show when={isVisible()}>
-      <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4 print:static print:block print:p-0">
         {/* Overlay */}
         <div
-          class="absolute inset-0 bg-secondary-950/60 backdrop-blur-sm animate-fade-in"
+          class="absolute inset-0 bg-secondary-950/60 backdrop-blur-sm animate-fade-in print:hidden"
           onClick={() => props.onClose?.()}
         />
 
         {/* Modal Content */}
         <div
-          class={`relative w-full ${width()} bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl border border-secondary-200/80 dark:border-secondary-800 animate-scale-in`}
+          class={`relative w-full ${width()} bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl border border-secondary-200/80 dark:border-secondary-800 animate-scale-in print:static print:max-w-none print:rounded-none print:shadow-none print:border-0 print:bg-white dark:print:bg-white print:animate-none`}
           role="dialog"
           aria-modal="true"
           aria-label={props.title || 'Dialog'}
         >
           {/* Header */}
           <Show when={props.title}>
-            <div class="flex items-center justify-between px-6 py-4 border-b border-secondary-200/80 dark:border-secondary-800">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-secondary-200/80 dark:border-secondary-800 print:hidden">
               <h3 class="text-lg font-heading font-semibold text-secondary-900 dark:text-white">{props.title}</h3>
               <button
                 onClick={() => props.onClose?.()}
@@ -67,7 +67,9 @@ export function Modal(props: ModalProps) {
           </Show>
 
           {/* Body */}
-          <div class="max-h-[70vh] overflow-y-auto p-6">{props.children}</div>
+          <div class="max-h-[70vh] overflow-y-auto p-6 print:max-h-none print:overflow-visible print:p-0">
+            {props.children}
+          </div>
         </div>
       </div>
     </Show>

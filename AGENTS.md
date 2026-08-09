@@ -39,6 +39,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 - **Component Structure**: Export standard function declarations as `default` wrapped inside `<MainLayout>`.
 - **Reactivity & State**: Use SolidJS primitives (`createSignal`, `createResource`) instead of React hooks.
 - **List Rendering & Types**: When using `<For>` components over dynamic API data, use named interfaces or `SafeAny` to prevent strict flow component type errors.
+- **Eden Date Handling**: Response schemas for `timestamp()`/`date()` DB columns MUST use `t.Date()`, not `t.String()` — otherwise Elysia rejects valid `Date` values at runtime (422). Eden/TS infers these as `Date`, but the JSON wire format is still an ISO string; sanitize on the frontend when needed.
 
 ---
 

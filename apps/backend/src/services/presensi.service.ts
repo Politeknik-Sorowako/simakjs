@@ -16,6 +16,7 @@ import {
   sesiApel,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { SystemParameterService } from './system-parameter.service';
 
 export class PresensiService {
   static async saveBulkPresensi(
@@ -68,6 +69,9 @@ export class PresensiService {
         status: presensi.status,
         durasiMangkir: presensi.durasiMangkir,
         keterangan: presensi.keterangan,
+        lampiranEvidens: presensi.lampiranEvidens,
+        keteranganAdmin: presensi.keteranganAdmin,
+        resolvedAt: presensi.resolvedAt,
       })
       .from(presensi)
       .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
@@ -75,16 +79,105 @@ export class PresensiService {
     return rows;
   }
 
-  static calculateKompensasiMinutes(status: string, durasiMangkir: number): number {
+  // --- ADMIN RESOLUTION OF UNKNOWN STATUS ---
+  static async getUnknownPresensi(page = 1, limit = 20, search?: string, prodiId?: number) {
+    const conditions: SQL<unknown>[] = [eq(presensi.status, 'unknown')];
+    if (search) {
+      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      if (orCondition) conditions.push(orCondition);
+    }
+    if (prodiId) {
+      conditions.push(eq(mahasiswa.programStudiId, prodiId));
+    }
+    const whereClause = and(...conditions);
+
+    const [totalResult] = await db
+      .select({ total: count() })
+      .from(presensi)
+      .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .where(whereClause);
+
+    const total = totalResult?.total || 0;
+
+    const rows = await db
+      .select({
+        id: presensi.id,
+        bapId: presensi.bapId,
+        mahasiswaId: presensi.mahasiswaId,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        status: presensi.status,
+        durasiMangkir: presensi.durasiMangkir,
+        keterangan: presensi.keterangan,
+        lampiranEvidens: presensi.lampiranEvidens,
+        keteranganAdmin: presensi.keteranganAdmin,
+        resolvedAt: presensi.resolvedAt,
+        bapTanggal: bap.tanggal,
+        bapPertemuan: bap.pertemuanKe,
+        bapMateri: bap.materi,
+      })
+      .from(presensi)
+      .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .innerJoin(bap, eq(presensi.bapId, bap.id))
+      .where(whereClause)
+      .limit(limit)
+      .offset((page - 1) * limit)
+      .orderBy(bap.tanggal);
+
+    const totalPages = Math.ceil(total / limit);
+    return { data: rows, meta: { total, page, limit, totalPages } };
+  }
+
+  static async resolveUnknownPresensi(
+    presensiId: number,
+    newStatus: 'sakit' | 'izin' | 'alpa',
+    adminUserId: number,
+    keteranganAdmin?: string,
+    lampiranEvidens?: string,
+  ) {
+    const [row] = await db.select().from(presensi).where(eq(presensi.id, presensiId));
+    if (!row) {
+      throw new Error('Data presensi tidak ditemukan');
+    }
+    if (row.status !== 'unknown') {
+      throw new Error('Status presensi bukan "unknown" sehingga tidak dapat di-resolve');
+    }
+
+    const [bapRow] = await db.select().from(bap).where(eq(bap.id, row.bapId));
+    let durasiMangkir = row.durasiMangkir;
+    if (bapRow) {
+      durasiMangkir = bapRow.durasiMenit;
+    }
+
+    const [updated] = await db
+      .update(presensi)
+      .set({
+        status: newStatus,
+        durasiMangkir,
+        keteranganAdmin: keteranganAdmin || null,
+        lampiranEvidens: lampiranEvidens || null,
+        resolvedBy: adminUserId,
+        resolvedAt: new Date(),
+      })
+      .where(eq(presensi.id, presensiId))
+      .returning();
+    return updated || null;
+  }
+
+  static async calculateKompensasiMinutes(status: string, durasiMangkir: number): Promise<number> {
     switch (status) {
       case 'alpa':
       case 'telat':
       case 'terlambat':
-      case 'unknown':
-        return durasiMangkir * 5;
+      case 'unknown': {
+        const pengali = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
+        return durasiMangkir * pengali;
+      }
       case 'sakit':
-      case 'izin':
-        return durasiMangkir * 1;
+      case 'izin': {
+        const pengali = await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
+        return durasiMangkir * pengali;
+      }
       case 'hadir':
       default:
         return 0;
@@ -156,20 +249,22 @@ export class PresensiService {
 
     const allPresensi = [...presensiList, ...apelList, ...manualList];
 
-    const historyKompensasi = allPresensi
-      .map((p) => {
-        const poinKompensasi =
-          p.sumber === 'manual'
-            ? ['alpa', 'terlambat', 'rusak'].includes(p.status)
-              ? p.durasiMangkir * 5
-              : p.durasiMangkir
-            : this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
-        return {
-          ...p,
-          poinKompensasi,
-        };
-      })
-      .filter((p) => p.poinKompensasi > 0);
+    const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
+    const mapped = await Promise.all(
+      allPresensi.map(async (p) => {
+        let poinKompensasi: number;
+        if (p.sumber === 'manual') {
+          const pengali = ['alpa', 'terlambat', 'rusak'].includes(p.status)
+            ? pengaliMangkir
+            : await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
+          poinKompensasi = p.durasiMangkir * pengali;
+        } else {
+          poinKompensasi = await this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
+        }
+        return { ...p, poinKompensasi };
+      }),
+    );
+    const historyKompensasi = mapped.filter((p) => p.poinKompensasi > 0);
 
     const totalKompensasi = historyKompensasi.reduce((sum, item) => sum + item.poinKompensasi, 0);
 
@@ -201,13 +296,14 @@ export class PresensiService {
     exportAll = false,
   ) {
     const offset = (page - 1) * limit;
+    const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
 
     const presensiAggSubquery = db.$with('presensi_mangkir').as(
       db
         .select({
           mahasiswaId: presensi.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN status::text IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * 5
+              WHEN status::text IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * ${pengaliMangkir}
               WHEN status::text IN ('sakit', 'izin') THEN durasi_mangkir
               ELSE 0 END)`.as('poin'),
         })
@@ -221,7 +317,7 @@ export class PresensiService {
         .select({
           mahasiswaId: presensiApel.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * 5
+              WHEN COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
               WHEN COALESCE(verified_status::text, status::text) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
               ELSE 0 END)`.as('poin'),
         })
@@ -235,7 +331,7 @@ export class PresensiService {
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * ${pengaliMangkir}
               WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
               ELSE durasi_menit END)`.as('poin'),
         })
@@ -342,12 +438,13 @@ export class PresensiService {
   }
 
   static async getLaporanKompensasiStats() {
+    const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
     const presensiAggSubquery = db.$with('presensi_mangkir').as(
       db
         .select({
           mahasiswaId: presensi.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN status IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * 5
+              WHEN status IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * ${pengaliMangkir}
               WHEN status IN ('sakit', 'izin') THEN durasi_mangkir
               ELSE 0 END)`.as('poin'),
         })
@@ -361,7 +458,7 @@ export class PresensiService {
         .select({
           mahasiswaId: presensiApel.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * 5
+              WHEN COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
               WHEN COALESCE(verified_status, status) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
               ELSE 0 END)`.as('poin'),
         })
@@ -375,7 +472,7 @@ export class PresensiService {
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * 5
+              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * ${pengaliMangkir}
               WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
               ELSE durasi_menit END)`.as('poin'),
         })

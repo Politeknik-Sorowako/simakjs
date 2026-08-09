@@ -74,7 +74,7 @@ export const getKompensasiMahasiswaDetailSchema = {
             bapId: t.Optional(t.Nullable(t.Integer())),
             status: t.Optional(t.String({ default: 'alpa' })),
             durasiMangkir: t.Optional(t.Integer({ default: 120 })),
-            createdAt: t.Optional(t.Any()),
+            createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
             bapPertemuan: t.Optional(t.Nullable(t.Integer())),
             bapMateri: t.Optional(t.Nullable(t.String())),
             bapTanggal: t.Optional(t.Nullable(t.String())),
@@ -92,7 +92,7 @@ export const getKompensasiMahasiswaDetailSchema = {
             tanggal: t.Optional(t.String({ default: '2026-06-27' })),
             keterangan: t.Optional(t.String({ default: 'Membersihkan Laboratorium' })),
             petugasId: t.Optional(t.Union([t.Integer(), t.Null()], { default: 1 })),
-            createdAt: t.Optional(t.Any()),
+            createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
           }),
         ),
       ),
@@ -218,8 +218,49 @@ export const updateKompensasiBayarSchema = {
       tanggal: t.String(),
       keterangan: t.String(),
       petugasId: t.Union([t.Integer(), t.Null()]),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  },
+};
+
+export const getUnknownPresensiSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Daftar Presensi Unknown',
+    description: 'Mengambil daftar presensi berstatus unknown (perlu verifikasi admin).',
+  },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '20' })),
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+  }),
+};
+
+export const resolveUnknownPresensiSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Resolusi Presensi Unknown oleh Admin',
+    description: 'Memperbarui status presensi unknown menjadi sakit/izin/alpa berdasarkan verifikasi admin.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    newStatus: t.Union([t.Literal('sakit'), t.Literal('izin'), t.Literal('alpa')]),
+    keteranganAdmin: t.Optional(t.String()),
+    lampiranEvidens: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Object({
+      id: t.Integer(),
+      status: t.String(),
+      keteranganAdmin: t.Union([t.String(), t.Null()]),
+      resolvedAt: t.Union([t.Date(), t.Null()]),
     }),
     400: t.Object({ error: t.String() }),
     403: t.Object({ error: t.String() }),

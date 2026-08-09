@@ -404,6 +404,7 @@ export default function KelasKuliah() {
               <SortableHeader field="dosenPengajarKelas" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                 Dosen Pengajar
               </SortableHeader>,
+              'Jumlah Mahasiswa',
               'Aksi',
             ]}
           >
@@ -443,6 +444,9 @@ export default function KelasKuliah() {
                         + Plot Dosen
                       </button>
                     </div>
+                  </td>
+                  <td class="px-6 py-4 text-secondary-800 dark:text-secondary-200 font-semibold">
+                    {item.mahasiswaCount ?? 0}
                   </td>
                   <td class="px-6 py-4 flex gap-2">
                     <Button

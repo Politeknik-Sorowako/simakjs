@@ -5,6 +5,7 @@ import { KhsService } from '../services/khs.service';
 import { PelanggaranService } from '../services/pelanggaran.service';
 import { PresensiService } from '../services/presensi.service';
 import { db } from '../utils/db';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class BimbinganController {
@@ -24,7 +25,7 @@ export class BimbinganController {
   static async getByMhsId(ctx: AuthContext<any, any>): Promise<any> {
     const { params, query, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -36,13 +37,13 @@ export class BimbinganController {
     }
 
     // RBAC check
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya dapat mengakses bimbingan Anda sendiri.' };
       }
-    } else if (user.role === 'dosen') {
+    } else if (hasRole(user, ['dosen'])) {
       const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
       const [mhs] = await db
         .select({ dosenPaId: mahasiswa.dosenPaId })
@@ -68,7 +69,7 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser, server } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -81,14 +82,14 @@ export class BimbinganController {
     let senderRole: 'mahasiswa' | 'dosen' | 'admin' | 'prodi' = 'mahasiswa';
 
     // RBAC check
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya dapat mengirim pesan ke bimbingan Anda sendiri.' };
       }
       senderRole = 'mahasiswa';
-    } else if (user.role === 'dosen') {
+    } else if (hasRole(user, ['dosen'])) {
       const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
       const [mhs] = await db
         .select({ dosenPaId: mahasiswa.dosenPaId })
@@ -100,9 +101,9 @@ export class BimbinganController {
         return { error: 'Akses ditolak. Dosen PA tidak cocok.' };
       }
       senderRole = 'dosen';
-    } else if (user.role === 'admin') {
+    } else if (hasRole(user, ['admin'])) {
       senderRole = 'admin';
-    } else if (user.role === 'prodi') {
+    } else if (hasRole(user, ['prodi'])) {
       senderRole = 'prodi';
     }
 
@@ -132,12 +133,12 @@ export class BimbinganController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateBimbingan({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
 
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Mahasiswa tidak diizinkan mengubah status bimbingan.' };
     }
@@ -149,7 +150,7 @@ export class BimbinganController {
     }
 
     // If Dosen, check if they are the PA
-    if (user.role === 'dosen') {
+    if (hasRole(user, ['dosen'])) {
       const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
       const [mhs] = await db
         .select({ dosenPaId: mahasiswa.dosenPaId })
@@ -175,13 +176,13 @@ export class BimbinganController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMonitoring({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen yang dapat mengakses monitoring.' };
     }
 
     let dosenId: number | undefined = undefined;
-    if (user.role === 'dosen') {
+    if (hasRole(user, ['dosen'])) {
       const dId = await BimbinganController.getDosenIdByEmail(user.email);
       dosenId = dId || undefined;
     }
@@ -192,13 +193,13 @@ export class BimbinganController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRekapBkd({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
 
     let dosenId: number | null = null;
-    if (user.role === 'dosen') {
+    if (hasRole(user, ['dosen'])) {
       dosenId = await BimbinganController.getDosenIdByEmail(user.email);
       if (!dosenId) {
         set.status = 400;
@@ -222,7 +223,7 @@ export class BimbinganController {
   static async getAkademikSummary(ctx: AuthContext<any, any>) {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -285,7 +286,7 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -318,7 +319,7 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -349,7 +350,7 @@ export class BimbinganController {
   static async deleteSesi(ctx: AuthContext) {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -372,7 +373,7 @@ export class BimbinganController {
   static async clearChat(ctx: AuthContext) {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -397,10 +398,7 @@ export class BimbinganController {
   static async getMonitoringLengkap(ctx: AuthContext<any, any>): Promise<any> {
     const { query, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (
-      !user ||
-      (user.role !== 'admin' && user.role !== 'prodi' && user.role !== 'dosen' && user.role !== 'super_admin')
-    ) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'dosen', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

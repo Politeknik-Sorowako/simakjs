@@ -45,11 +45,14 @@ import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { presensiRoutes } from './routes/presensi.routes';
 import { prodiRoutes } from './routes/prodi.routes';
+import { prodiScopeRoutes } from './routes/prodi-scope.routes';
 import { profilLulusanRoutes } from './routes/profil-lulusan.routes';
-import { rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
+import { rbacRoutes } from './routes/rbac.routes';
+import { rombelPraktikumPublicRoutes, rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
 import { rpsRoutes } from './routes/rps.routes';
 import { settingsRoutes } from './routes/settings.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
+import { systemRoutes } from './routes/system.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
@@ -57,86 +60,86 @@ import { yudisiumRoutes } from './routes/yudisium.routes';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
-export const app = new Elysia();
-
-if (isDevelopment) {
-  app.use(
-    swagger({
-      documentation: {
-        info: {
-          title: 'SIMAK Vokasi API',
-          version: '1.0.0',
-          description:
-            'REST API Sistem Informasi Akademik Vokasi. Semua endpoint (kecuali /auth/*) memerlukan token JWT via header Authorization: Bearer <token> atau cookie access_token.',
-        },
-        tags: [
-          { name: 'Autentikasi', description: 'Registrasi, login, dan manajemen password' },
-          { name: 'Pengguna', description: 'Manajemen pengguna sistem' },
-          { name: 'Program Studi', description: 'Manajemen data program studi' },
-          { name: 'Dosen', description: 'Manajemen data dosen' },
-          { name: 'Mahasiswa', description: 'Manajemen data mahasiswa' },
-          { name: 'Mahasiswa Keluar', description: 'Pencatatan mahasiswa keluar/DO/pindah' },
-          { name: 'Periode Akademik', description: 'Manajemen periode akademik' },
-          { name: 'Mata Kuliah', description: 'Manajemen data mata kuliah' },
-          { name: 'Kelas Kuliah', description: 'Manajemen kelas kuliah per periode' },
-          { name: 'Dosen Pengajar Kelas', description: 'Plotting dosen ke kelas kuliah' },
-          { name: 'Kurikulum', description: 'Manajemen kurikulum dan mata kuliah kurikulum' },
-          { name: 'Angkatan Kurikulum', description: 'Binding angkatan ke kurikulum' },
-          { name: 'Profil Lulusan', description: 'Profil Lulusan Program Studi' },
-          { name: 'CPL', description: 'Capaian Pembelajaran Lulusan' },
-          { name: 'CPL Mapping', description: 'Pemetaan CPL ke Profil Lulusan' },
-          { name: 'SubCPMK', description: 'Sub-Capaian Pembelajaran Mata Kuliah' },
-          { name: 'CPMK-CPL Mapping', description: 'Pemetaan CPMK ke CPL' },
-          { name: 'Visi Misi Prodi', description: 'Visi Misi Program Studi' },
-          { name: 'Bahan Kajian', description: 'Bahan Kajian Program Studi' },
-          { name: 'BK-CPL Mapping', description: 'Pemetaan Bahan Kajian ke CPL' },
-          { name: 'CPMK', description: 'Capaian Pembelajaran Mata Kuliah' },
-          { name: 'RPS', description: 'Rencana Pembelajaran Semester' },
-          { name: 'Laporan OBE', description: 'Laporan dan analisis Outcome-Based Education' },
-          { name: 'CPL Mata Kuliah', description: 'Pemetaan CPL ke Mata Kuliah (Top-Down)' },
-          { name: 'Capaian CPMK', description: 'Capaian CPMK per mahasiswa per kelas' },
-          { name: 'Capaian CPL', description: 'Capaian CPL per mahasiswa' },
-          { name: 'Evaluasi Kurikulum', description: 'Evaluasi dan rekomendasi perbaikan kurikulum (PPEPP)' },
-          { name: 'Rencana Evaluasi', description: 'Rencana evaluasi/penilaian mata kuliah' },
-          { name: 'BAP', description: 'Berita Acara Perkuliahan' },
-          { name: 'Presensi', description: 'Presensi kehadiran mahasiswa' },
-          { name: 'Kompensasi', description: 'Kompensasi keterlambatan/mangkir mahasiswa' },
-          { name: 'KRS', description: 'Kontrak Rencana Studi' },
-          { name: 'KHS & Transkrip', description: 'Kartu Hasil Studi dan transkrip nilai' },
-          { name: 'Bimbingan', description: 'Bimbingan akademik dosen PA dan mahasiswa' },
-          { name: 'Kedisiplinan', description: 'Pencatatan pelanggaran kedisiplinan' },
-          { name: 'Cuti', description: 'Pengajuan dan manajemen cuti akademik' },
-          { name: 'Tagihan', description: 'Tagihan SPP dan pembayaran' },
-          { name: 'Yudisium & Komponen Nilai', description: 'Pengajuan yudisium dan input nilai akhir' },
-          { name: 'PDDIKTI', description: 'Sinkronisasi data ke PDDIKTI' },
-          {
-            name: 'Admisi - Calon Mahasiswa',
-            description: 'Endpoint untuk calon mahasiswa: registrasi, pendaftaran, upload dokumen, daftar ulang',
-          },
-          { name: 'Admisi - Admin', description: 'Endpoint admin: manajemen sesi, verifikasi, penilaian, jadwal, NIM' },
-          {
-            name: 'E2E Testing',
-            description:
-              '⚠️ DANGER: Reset database & seed data. **Hanya untuk development/testing.** JANGAN panggil di production. Restricted ke role Admin.',
-          },
-          { name: 'Health Check', description: 'Monitoring kesehatan server' },
-        ],
-        components: {
-          securitySchemes: {
-            bearerAuth: {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
+export const app = new Elysia()
+  .use(
+    isDevelopment
+      ? swagger({
+          documentation: {
+            info: {
+              title: 'SIMAK Vokasi API',
+              version: '1.0.0',
+              description:
+                'REST API Sistem Informasi Akademik Vokasi. Semua endpoint (kecuali /auth/*) memerlukan token JWT via header Authorization: Bearer <token> atau cookie access_token.',
             },
+            tags: [
+              { name: 'Autentikasi', description: 'Registrasi, login, dan manajemen password' },
+              { name: 'Pengguna', description: 'Manajemen pengguna sistem' },
+              { name: 'Program Studi', description: 'Manajemen data program studi' },
+              { name: 'Dosen', description: 'Manajemen data dosen' },
+              { name: 'Mahasiswa', description: 'Manajemen data mahasiswa' },
+              { name: 'Mahasiswa Keluar', description: 'Pencatatan mahasiswa keluar/DO/pindah' },
+              { name: 'Periode Akademik', description: 'Manajemen periode akademik' },
+              { name: 'Mata Kuliah', description: 'Manajemen data mata kuliah' },
+              { name: 'Kelas Kuliah', description: 'Manajemen kelas kuliah per periode' },
+              { name: 'Dosen Pengajar Kelas', description: 'Plotting dosen ke kelas kuliah' },
+              { name: 'Kurikulum', description: 'Manajemen kurikulum dan mata kuliah kurikulum' },
+              { name: 'Angkatan Kurikulum', description: 'Binding angkatan ke kurikulum' },
+              { name: 'Profil Lulusan', description: 'Profil Lulusan Program Studi' },
+              { name: 'CPL', description: 'Capaian Pembelajaran Lulusan' },
+              { name: 'CPL Mapping', description: 'Pemetaan CPL ke Profil Lulusan' },
+              { name: 'SubCPMK', description: 'Sub-Capaian Pembelajaran Mata Kuliah' },
+              { name: 'CPMK-CPL Mapping', description: 'Pemetaan CPMK ke CPL' },
+              { name: 'Visi Misi Prodi', description: 'Visi Misi Program Studi' },
+              { name: 'Bahan Kajian', description: 'Bahan Kajian Program Studi' },
+              { name: 'BK-CPL Mapping', description: 'Pemetaan Bahan Kajian ke CPL' },
+              { name: 'CPMK', description: 'Capaian Pembelajaran Mata Kuliah' },
+              { name: 'RPS', description: 'Rencana Pembelajaran Semester' },
+              { name: 'Laporan OBE', description: 'Laporan dan analisis Outcome-Based Education' },
+              { name: 'CPL Mata Kuliah', description: 'Pemetaan CPL ke Mata Kuliah (Top-Down)' },
+              { name: 'Capaian CPMK', description: 'Capaian CPMK per mahasiswa per kelas' },
+              { name: 'Capaian CPL', description: 'Capaian CPL per mahasiswa' },
+              { name: 'Evaluasi Kurikulum', description: 'Evaluasi dan rekomendasi perbaikan kurikulum (PPEPP)' },
+              { name: 'Rencana Evaluasi', description: 'Rencana evaluasi/penilaian mata kuliah' },
+              { name: 'BAP', description: 'Berita Acara Perkuliahan' },
+              { name: 'Presensi', description: 'Presensi kehadiran mahasiswa' },
+              { name: 'Kompensasi', description: 'Kompensasi keterlambatan/mangkir mahasiswa' },
+              { name: 'KRS', description: 'Kontrak Rencana Studi' },
+              { name: 'KHS & Transkrip', description: 'Kartu Hasil Studi dan transkrip nilai' },
+              { name: 'Bimbingan', description: 'Bimbingan akademik dosen PA dan mahasiswa' },
+              { name: 'Kedisiplinan', description: 'Pencatatan pelanggaran kedisiplinan' },
+              { name: 'Cuti', description: 'Pengajuan dan manajemen cuti akademik' },
+              { name: 'Tagihan', description: 'Tagihan SPP dan pembayaran' },
+              { name: 'Yudisium & Komponen Nilai', description: 'Pengajuan yudisium dan input nilai akhir' },
+              { name: 'PDDIKTI', description: 'Sinkronisasi data ke PDDIKTI' },
+              {
+                name: 'Admisi - Calon Mahasiswa',
+                description: 'Endpoint untuk calon mahasiswa: registrasi, pendaftaran, upload dokumen, daftar ulang',
+              },
+              {
+                name: 'Admisi - Admin',
+                description: 'Endpoint admin: manajemen sesi, verifikasi, penilaian, jadwal, NIM',
+              },
+              {
+                name: 'E2E Testing',
+                description:
+                  '⚠️ DANGER: Reset database & seed data. **Hanya untuk development/testing.** JANGAN panggil di production. Restricted ke role Admin.',
+              },
+              { name: 'Health Check', description: 'Monitoring kesehatan server' },
+            ],
+            components: {
+              securitySchemes: {
+                bearerAuth: {
+                  type: 'http',
+                  scheme: 'bearer',
+                  bearerFormat: 'JWT',
+                },
+              },
+            },
+            security: [{ bearerAuth: [] }],
           },
-        },
-        security: [{ bearerAuth: [] }],
-      },
-    }),
-  );
-}
-
-app
+        })
+      : new Elysia(),
+  )
   .use(
     cors({
       origin: process.env.CORS_ORIGIN
@@ -307,7 +310,13 @@ app
   .use(rpsRoutes)
   .use(cutiRoutes)
   .use(feedbackRoutes)
+  .use(systemRoutes)
+  .use(rbacRoutes)
+  .use(prodiScopeRoutes)
+  .use(rombelPraktikumPublicRoutes)
   .use(rombelPraktikumRoutes)
   .use(mahasiswaKeluarRoutes)
   .use(auditPlugin)
   .use(auditRoutes);
+
+export type App = typeof app;

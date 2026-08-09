@@ -1,9 +1,9 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { periodeAkademikController } from '../controllers/periodeAkademikController';
-import { prodiController } from '../controllers/prodiController';
+import { createEdenQuery } from '../hooks/useEdenQuery';
 import { fetchApi } from '../utils/api';
+import { eden } from '../utils/eden';
 import { ThemeToggle } from './ThemeToggle';
 
 interface NotificationItem {
@@ -12,6 +12,18 @@ interface NotificationItem {
   message: string;
   isRead: boolean;
   createdAt: string;
+}
+
+interface SafeProdi {
+  id: number;
+  kode: string;
+  nama: string;
+  jenjang: string;
+}
+
+interface SafePeriode {
+  id: string;
+  nama: string;
 }
 
 export function Navbar(props: { onToggleSidebar: () => void }) {
@@ -53,30 +65,18 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
   };
 
   // Load Prodis for admin global filter
-  const [prodis] = createResource(
-    () => role() === 'admin',
-    async () => {
-      try {
-        const res = await prodiController.getAll(undefined, 1, 100);
-        return res.data;
-      } catch (_) {
-        return [];
-      }
-    },
-  );
+  const prodis = createEdenQuery<{ data: SafeProdi[]; meta?: object }>(() => ({
+    queryKey: ['prodi', { page: 1, limit: 100 }],
+    queryFn: () => eden.prodi.get({ $query: { page: 1, limit: 100 } }),
+    enabled: () => role() === 'admin',
+  }));
 
   // Load Periodes for admin global filter
-  const [periodes] = createResource(
-    () => role() === 'admin',
-    async () => {
-      try {
-        const res = await periodeAkademikController.getAll(undefined, 1, 100);
-        return res.data;
-      } catch (_) {
-        return [];
-      }
-    },
-  );
+  const periodes = createEdenQuery<{ data: SafePeriode[]; meta?: object }>(() => ({
+    queryKey: ['periode-akademik', { page: 1, limit: 100 }],
+    queryFn: () => eden['periode-akademik'].get({ $query: { page: 1, limit: 100 } }),
+    enabled: () => role() === 'admin',
+  }));
 
   return (
     <header class="sticky top-0 z-40 h-16 backdrop-blur-md bg-white/80 dark:bg-secondary-900/80 border-b border-secondary-200/80 dark:border-secondary-800/80 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
@@ -110,7 +110,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
               <option value="" selected={workspace.selectedProdiId() === null}>
                 Semua Prodi
               </option>
-              <For each={prodis()}>
+              <For each={prodis.data?.data ?? []}>
                 {(p) => (
                   <option value={p.id} selected={workspace.selectedProdiId() === p.id}>
                     {p.nama}
@@ -132,7 +132,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
               <option value="" selected={workspace.selectedPeriodeId() === null}>
                 Semua Periode
               </option>
-              <For each={periodes()}>
+              <For each={periodes.data?.data ?? []}>
                 {(p) => (
                   <option value={p.id} selected={workspace.selectedPeriodeId() === p.id}>
                     {p.nama}

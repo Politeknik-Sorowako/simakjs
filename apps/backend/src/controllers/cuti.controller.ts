@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { dosen, mahasiswa } from '../models/schema';
 import { CutiService } from '../services/cuti.service';
 import { db } from '../utils/db';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class CutiController {
@@ -18,7 +19,7 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'mahasiswa') {
+    if (!user || !hasRole(user, ['mahasiswa'])) {
       set.status = 403;
       return { error: 'Hanya mahasiswa yang dapat mengajukan cuti.' };
     }
@@ -46,7 +47,7 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async inputByAdmin({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !['admin', 'prodi'].includes(user.role)) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Hanya Admin atau Prodi yang dapat menginput cuti mahasiswa.' };
     }
@@ -72,7 +73,7 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -80,13 +81,13 @@ export class CutiController {
     let filterMhsId: number | undefined = undefined;
     let filterDsnId: number | undefined = undefined;
 
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await CutiController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
         return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } };
       }
       filterMhsId = myMhsId;
-    } else if (user.role === 'dosen') {
+    } else if (hasRole(user, ['dosen'])) {
       const myDsnId = await CutiController.getDosenIdByEmail(user.email);
       if (!myDsnId) {
         return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 0 } };
@@ -112,7 +113,7 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMahasiswaCuti({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -128,7 +129,7 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -139,13 +140,13 @@ export class CutiController {
       return { error: 'Data tidak ditemukan.' };
     }
 
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await CutiController.getMahasiswaIdByEmail(user.email);
       if (myMhsId !== data.mahasiswaId) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-    } else if (user.role === 'dosen') {
+    } else if (hasRole(user, ['dosen'])) {
       const myDsnId = await CutiController.getDosenIdByEmail(user.email);
       if (myDsnId !== data.mahasiswa?.dosenPaId) {
         set.status = 403;
@@ -159,13 +160,13 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async approve({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || ['mahasiswa', 'guest'].includes(user.role)) {
+    if (!user || hasRole(user, ['mahasiswa', 'guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Anda tidak memiliki wewenang untuk memberikan persetujuan.' };
     }
 
     let userRefId: number | null = null;
-    if (user.role === 'dosen') {
+    if (hasRole(user, ['dosen'])) {
       userRefId = await CutiController.getDosenIdByEmail(user.email);
       if (!userRefId) {
         set.status = 403;
@@ -190,7 +191,7 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async aktifKembali({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || ['mahasiswa', 'guest'].includes(user.role)) {
+    if (!user || hasRole(user, ['mahasiswa', 'guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya admin/prodi/dosen yang dapat mengaktifkan kembali.' };
     }
@@ -212,10 +213,10 @@ export class CutiController {
       return { error: 'Akses ditolak.' };
     }
 
-    const isAdmin = ['admin', 'prodi'].includes(user.role);
+    const isAdmin = hasRole(user, ['admin', 'prodi']);
     let filterMhsId: number | undefined = undefined;
 
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await CutiController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId) {
         set.status = 404;

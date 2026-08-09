@@ -28,6 +28,20 @@ export default function ApelKelola() {
   const [catatanSesi, setCatatanSesi] = createSignal('');
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
+
+  // Hanya admin/super_admin yang boleh menetapkan sakit/izin/alpa secara manual.
+  // Dosen/PJ apel hanya dapat memilih Hadir, Terlambat (+durasi), atau Unknown.
+  const APEL_STATUS_LABELS: Record<string, string> = {
+    hadir: 'Hadir (H)',
+    terlambat: 'Terlambat (T)',
+    sakit: 'Sakit (S)',
+    izin: 'Izin (I)',
+    alpa: 'Alpa (A)',
+    unknown: 'Unknown (?)',
+  };
+  const APEL_FULL_STATUSES = ['hadir', 'terlambat', 'sakit', 'izin', 'alpa', 'unknown'];
+  const APEL_STAFF_STATUSES = ['hadir', 'terlambat', 'unknown'];
+  const statusOptions = () => (auth.hasRole(['admin', 'super_admin']) ? APEL_FULL_STATUSES : APEL_STAFF_STATUSES);
   const [showBukaSesiModal, setShowBukaSesiModal] = createSignal(false);
 
   // Modal Buat Kelompok State
@@ -85,9 +99,8 @@ export default function ApelKelola() {
 
   // Resource Data Kelompok (Memuat seluruh kelompok apel kampus)
   const [kelompokList, { refetch: refetchKelompok }] = createResource(async () => {
-    const user = auth.user();
-    if (user?.role === 'dosen') {
-      const dosenId = user.id as unknown as number;
+    if (auth.hasRole(['dosen'])) {
+      const dosenId = auth.user()?.id as unknown as number;
       return apelController.getKelompokByProdi(undefined, dosenId);
     }
     return apelController.getKelompokByProdi();
@@ -417,7 +430,7 @@ export default function ApelKelola() {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
               <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold">Pilih Kelompok</h2>
-                <Show when={auth.user()?.role === 'super_admin' || auth.user()?.role === 'admin'}>
+                <Show when={auth.hasRole(['super_admin', 'admin'])}>
                   <button
                     class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                     onClick={() => setShowCreateModal(true)}
@@ -469,7 +482,7 @@ export default function ApelKelola() {
                     >
                       + Tambah Sesi
                     </button>
-                    <Show when={selectedSesi() && auth.user()?.role === 'admin'}>
+                    <Show when={selectedSesi() && auth.hasRole(['admin'])}>
                       <button
                         class="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold"
                         onClick={() => handleDeleteSesi(selectedSesi()!)}
@@ -553,9 +566,9 @@ export default function ApelKelola() {
                       }
                     >
                       <Show
-                        when={['admin', 'dosen'].includes(auth.user()?.role || '')}
+                        when={auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur'])}
                         fallback={
-                          <span class="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded font-semibold">
+                          <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded font-semibold">
                             Sesi Tertutup
                           </span>
                         }
@@ -570,7 +583,7 @@ export default function ApelKelola() {
                       </Show>
                     </Show>
 
-                    <Show when={['admin', 'dosen'].includes(auth.user()?.role || '')}>
+                    <Show when={auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur'])}>
                       <button
                         class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50"
                         onClick={openEditSesiModal}
@@ -581,7 +594,7 @@ export default function ApelKelola() {
                       </button>
                     </Show>
 
-                    <Show when={auth.user()?.role === 'admin'}>
+                    <Show when={auth.hasRole(['admin'])}>
                       <button
                         class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 text-sm font-medium disabled:opacity-50"
                         onClick={() => handleDeleteSesi()}
@@ -643,12 +656,9 @@ export default function ApelKelola() {
                                   )
                                 }
                               >
-                                <option value="hadir">Hadir (H)</option>
-                                <option value="terlambat">Terlambat (T)</option>
-                                <option value="sakit">Sakit (S)</option>
-                                <option value="izin">Izin (I)</option>
-                                <option value="alpa">Alpa (A)</option>
-                                <option value="unknown">Unknown (?)</option>
+                                <For each={statusOptions()}>
+                                  {(opt) => <option value={opt}>{APEL_STATUS_LABELS[opt]}</option>}
+                                </For>
                               </select>
                             </td>
                             <td class="px-4 py-3 text-center">

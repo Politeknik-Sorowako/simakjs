@@ -7,6 +7,10 @@ export interface RombelPraktikum {
   namaGroup: string;
   instrukturId?: number | null;
   keterangan?: string | null;
+  enrollmentToken?: string | null;
+  enrollmentEnabled?: boolean;
+  enrollmentMaxStudents?: number | null;
+  enrollmentExpiresAt?: string | null;
   instruktur?: { id: number; nama: string; nip: string } | null;
   mahasiswaList?: { id: number; mahasiswaId: number; mahasiswa?: Mahasiswa }[];
 }
@@ -16,6 +20,7 @@ export interface BapPraktikum {
   rombelPraktikumId: number;
   tanggal: string;
   sesiKe: number;
+  tema?: string | null;
   materi: string;
   catatan?: string | null;
   durasiMenit: number;
@@ -85,10 +90,12 @@ export const rombelPraktikumController = {
     rombelPraktikumId: number;
     tanggal: string;
     sesiKe: number;
+    tema?: string | null;
     materi: string;
     catatan?: string | null;
     durasiMenit: number;
     instrukturId?: number | null;
+    sesiIds?: number[];
   }): Promise<BapPraktikum> {
     return fetchApi<BapPraktikum>('/rombel-praktikum/bap', {
       method: 'POST',
@@ -101,6 +108,7 @@ export const rombelPraktikumController = {
     payload: Partial<{
       tanggal: string;
       sesiKe: number;
+      tema?: string | null;
       materi: string;
       catatan?: string | null;
       durasiMenit: number;
@@ -110,6 +118,28 @@ export const rombelPraktikumController = {
     return fetchApi<BapPraktikum>(`/rombel-praktikum/bap/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
+    });
+  },
+
+  async updateBapBulk(payload: {
+    bapPraktikumId: number;
+    tanggal: string;
+    sesiIds: number[];
+    tema?: string | null;
+    materi: string;
+    catatan?: string | null;
+    durasiMenit: number;
+    instrukturId?: number | null;
+  }): Promise<BapPraktikum[]> {
+    return fetchApi<BapPraktikum[]>('/rombel-praktikum/bap/bulk', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async deleteBap(id: number): Promise<{ success: boolean; id: number }> {
+    return fetchApi<{ success: boolean; id: number }>(`/rombel-praktikum/bap/${id}`, {
+      method: 'DELETE',
     });
   },
 
@@ -144,10 +174,65 @@ export const rombelPraktikumController = {
       method: 'POST',
     });
   },
+
+  async generateEnrollmentToken(id: number): Promise<{ token: string; enrollmentEnabled: boolean }> {
+    return fetchApi<{ token: string; enrollmentEnabled: boolean }>(`/rombel-praktikum/${id}/generate-token`, {
+      method: 'POST',
+    });
+  },
+
+  async toggleEnrollment(id: number, enabled: boolean): Promise<RombelPraktikum> {
+    return fetchApi<RombelPraktikum>(`/rombel-praktikum/${id}/toggle-enrollment`, {
+      method: 'POST',
+      body: JSON.stringify({ enabled }),
+    });
+  },
+
+  async getEnrollmentLog(id: number): Promise<EnrollmentLogItem[]> {
+    return fetchApi<EnrollmentLogItem[]>(`/rombel-praktikum/${id}/enrollment-log`);
+  },
+
+  async getPublicRombel(token: string): Promise<PublicRombelInfo> {
+    return fetchApi<PublicRombelInfo>(`/rombel-praktikum/public/${token}`, { requireAuth: false });
+  },
+
+  async enrollByToken(token: string): Promise<{ member: EnrollmentMember; rombelNama: string }> {
+    return fetchApi<{ member: EnrollmentMember; rombelNama: string }>(`/rombel-praktikum/public/enroll/${token}`, {
+      method: 'POST',
+    });
+  },
 };
 
 export interface SyncResult {
   success: boolean;
   syncedCount: number;
   bapTeoriId?: number;
+}
+
+export interface EnrollmentMember {
+  id: number;
+  rombelPraktikumId: number;
+  mahasiswaId: number;
+}
+
+export interface EnrollmentLogItem {
+  id: number;
+  rombelPraktikumId: number;
+  mahasiswaId: number;
+  enrolledAt: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  mahasiswa?: Mahasiswa;
+}
+
+export interface PublicRombelInfo {
+  id: number;
+  namaGroup: string;
+  keterangan?: string | null;
+  enrollmentEnabled: boolean;
+  enrollmentMaxStudents?: number | null;
+  enrollmentExpiresAt?: string | null;
+  enrolledCount: number;
+  instruktur?: { id: number; nama: string; nip: string } | null;
+  mataKuliah?: { id: number; kode: string; nama: string } | null;
 }

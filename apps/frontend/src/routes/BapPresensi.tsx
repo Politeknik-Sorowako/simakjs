@@ -1,4 +1,5 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import EnrollmentQrModal from '../components/EnrollmentQrModal';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -23,6 +24,36 @@ export default function BapPresensi() {
   const toast = useToast();
   const user = () => auth.user();
 
+  // Hanya admin & prodi yang boleh memvalidasi status Unknown menjadi Sakit/Izin/Alpa.
+  // Dosen/instruktur hanya dapat memilih Hadir (H), Terlambat (+durasi), atau Unknown (?).
+  const KELAS_FULL_STATUSES = ['hadir', 'sakit', 'izin', 'telat', 'alpa', 'unknown'];
+  const KELAS_STAFF_STATUSES = ['hadir', 'telat', 'unknown'];
+  const kelasStatusOptions = () =>
+    auth.hasRole(['admin', 'super_admin', 'prodi']) ? KELAS_FULL_STATUSES : KELAS_STAFF_STATUSES;
+  const PRAKTIKUM_FULL_STATUSES = ['hadir', 'izin', 'sakit', 'alpa', 'telat', 'unknown'];
+  const PRAKTIKUM_STAFF_STATUSES = ['hadir', 'telat', 'unknown'];
+  const praktikumStatusOptions = () =>
+    auth.hasRole(['admin', 'super_admin', 'prodi']) ? PRAKTIKUM_FULL_STATUSES : PRAKTIKUM_STAFF_STATUSES;
+
+  const STATUS_SHORT: Record<string, string> = {
+    hadir: 'H',
+    telat: 'T',
+    unknown: '?',
+    sakit: 'S',
+    izin: 'I',
+    alpa: 'A',
+  };
+  const STATUS_FULL: Record<string, string> = {
+    hadir: 'Hadir',
+    telat: 'Telat',
+    unknown: 'Unknown',
+    sakit: 'Sakit',
+    izin: 'Izin',
+    alpa: 'Alpa',
+  };
+  const statusLabel = (st: string) => STATUS_SHORT[st] || st;
+  const statusFullLabel = (st: string) => STATUS_FULL[st] || st;
+
   // Selected state
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
   const [selectedBapId, setSelectedBapId] = createSignal<number | null>(null);
@@ -37,8 +68,12 @@ export default function BapPresensi() {
 
   // Modals
   const [showBapModal, setShowBapModal] = createSignal(false);
+  const [showPrintModal, setShowPrintModal] = createSignal(false);
+  const [keteranganModalMhsId, setKeteranganModalMhsId] = createSignal<number | null>(null);
+  const [keteranganDraft, setKeteranganDraft] = createSignal('');
   const [showCpmkModal, setShowCpmkModal] = createSignal(false);
   const [showRombelModal, setShowRombelModal] = createSignal(false);
+  const [showEnrollmentQrModal, setShowEnrollmentQrModal] = createSignal(false);
   const [namaGroupRombel, setNamaGroupRombel] = createSignal('');
   const [keteranganRombel, setKeteranganRombel] = createSignal('');
   const [isSubmittingRombel, setIsSubmittingRombel] = createSignal(false);
@@ -46,9 +81,10 @@ export default function BapPresensi() {
   // BAP Praktikum Form state
   const [showCreateBapPrakModal, setShowCreateBapPrakModal] = createSignal(false);
   const [editBapPrakId, setEditBapPrakId] = createSignal<number | null>(null);
-  const [sesiKePrak, setSesiKePrak] = createSignal(1);
+  const [selectedSesiIdsPrak, setSelectedSesiIdsPrak] = createSignal<number[]>([]);
   const [tanggalPrak, setTanggalPrak] = createSignal(new Date().toISOString().split('T')[0]);
   const [materiPrak, setMateriPrak] = createSignal('');
+  const [temaPrak, setTemaPrak] = createSignal('');
   const [durasiPrak, setDurasiPrak] = createSignal(100);
   const [catatanPrak, setCatatanPrak] = createSignal('');
   const [instrukturIdPrak, setInstrukturIdPrak] = createSignal<number | null>(null);
@@ -79,13 +115,20 @@ export default function BapPresensi() {
 
   // Form states
   const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
-  const [pertemuanKe, setPertemuanKe] = createSignal(1);
+  const [selectedPertemuanIds, setSelectedPertemuanIds] = createSignal<number[]>([]);
   const [materi, setMateri] = createSignal('');
   const [catatan, setCatatan] = createSignal('');
   const [durasiMenit, setDurasiMenit] = createSignal(100);
   const [selectedCpmkId, setSelectedCpmkId] = createSignal<number | null>(null);
   const [selectedTopikIds, setSelectedTopikIds] = createSignal<number[]>([]);
   const [editBapId, setEditBapId] = createSignal<number | null>(null);
+
+  // Duplicate BAP state
+  const [showDuplicateModal, setShowDuplicateModal] = createSignal(false);
+  const [duplicateSourceBapId, setDuplicateSourceBapId] = createSignal<number | null>(null);
+  const [duplicateTargetPertemuan, setDuplicateTargetPertemuan] = createSignal(1);
+  const [duplicateTargetTanggal, setDuplicateTargetTanggal] = createSignal('');
+  const [duplicateLoading, setDuplicateLoading] = createSignal(false);
 
   // Filter Resources
   const [periodeData] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
@@ -115,7 +158,7 @@ export default function BapPresensi() {
   const [dosenProfile] = createResource(
     () => user()?.email,
     async (email) => {
-      if (!email || user()?.role !== 'dosen') return null;
+      if (!email || !auth.hasRole(['dosen'])) return null;
       const res = await dosenController.getAll(email, 1, 1);
       return res.data[0] || null;
     },
@@ -123,7 +166,7 @@ export default function BapPresensi() {
 
   // Dosen list for instruktur selection (BAP praktikum)
   const [dosenList] = createResource(
-    () => (user()?.role === 'dosen' ? `dosen:${dosenProfile()?.id}` : 'all'),
+    () => (auth.hasRole(['dosen']) ? `dosen:${dosenProfile()?.id}` : 'all'),
     async (key) => {
       if (key === 'all') {
         const res = await dosenController.getAll(undefined, 1, 500);
@@ -147,7 +190,7 @@ export default function BapPresensi() {
 
   const activeKelasList = () => {
     const all = kelasData()?.data || [];
-    if (user()?.role === 'dosen') {
+    if (auth.hasRole(['dosen'])) {
       const dId = dosenProfile()?.id;
       if (!dId) return all;
       return all.filter((k) => k.dosenPengajarKelas?.some((dp) => dp.dosenId === dId));
@@ -366,7 +409,7 @@ export default function BapPresensi() {
   const openCreateBapPrakModal = () => {
     setEditBapPrakId(null);
     const maxSesi = (bapPraktikumData() || []).reduce((max, b) => Math.max(max, b.sesiKe || 0), 0);
-    setSesiKePrak(maxSesi + 1);
+    setSelectedSesiIdsPrak(maxSesi > 0 ? [maxSesi + 1] : [1]);
     setTanggalPrak(new Date().toISOString().split('T')[0]);
     setMateriPrak('');
     setCatatanPrak('');
@@ -378,9 +421,15 @@ export default function BapPresensi() {
 
   const openEditBapPrakModal = (bapPrak: BapPraktikum) => {
     setEditBapPrakId(bapPrak.id);
-    setSesiKePrak(bapPrak.sesiKe);
+    const group = (bapPraktikumData() || []).filter((b) => b.tanggal === bapPrak.tanggal);
+    if (group.length > 1) {
+      setSelectedSesiIdsPrak(group.map((b) => b.sesiKe).sort((a, b) => a - b));
+    } else {
+      setSelectedSesiIdsPrak([bapPrak.sesiKe]);
+    }
     setTanggalPrak(bapPrak.tanggal);
     setMateriPrak(bapPrak.materi);
+    setTemaPrak(bapPrak.tema || '');
     setCatatanPrak(bapPrak.catatan || '');
     setDurasiPrak(bapPrak.durasiMenit);
     setInstrukturIdPrak(bapPrak.instrukturId ?? currentRombel()?.instrukturId ?? null);
@@ -401,9 +450,14 @@ export default function BapPresensi() {
     }
     setIsSubmittingBapPrak(true);
     try {
+      if (selectedSesiIdsPrak().length === 0) {
+        toast.showToast('Pilih minimal satu sesi', 'error');
+        setIsSubmittingBapPrak(false);
+        return;
+      }
       const common = {
-        sesiKe: sesiKePrak(),
         tanggal: tanggalPrak(),
+        tema: temaPrak().trim() || null,
         materi: materiPrak().trim(),
         durasiMenit: durasiPrak(),
         catatan: catatanPrak().trim() || null,
@@ -411,11 +465,17 @@ export default function BapPresensi() {
       };
       const editId = editBapPrakId();
       if (editId) {
-        await rombelPraktikumController.updateBap(editId, common);
+        await rombelPraktikumController.updateBapBulk({
+          bapPraktikumId: editId,
+          sesiIds: selectedSesiIdsPrak(),
+          ...common,
+        });
         toast.showToast('BAP Praktikum berhasil diperbarui', 'success');
       } else {
         await rombelPraktikumController.createBap({
           rombelPraktikumId: rombelId,
+          sesiKe: selectedSesiIdsPrak()[0],
+          sesiIds: selectedSesiIdsPrak().length > 1 ? selectedSesiIdsPrak() : undefined,
           ...common,
         });
         toast.showToast('BAP Praktikum berhasil dibuat', 'success');
@@ -569,7 +629,8 @@ export default function BapPresensi() {
     setEditBapId(null);
     setTanggal(new Date().toISOString().split('T')[0]);
     const maxPertemuan = (bapData() || []).reduce((max, b) => Math.max(max, b.pertemuanKe || 0), 0);
-    setPertemuanKe(maxPertemuan + 1);
+    setSelectedPertemuanIds(maxPertemuan > 0 ? [maxPertemuan + 1] : [1]);
+    setSelectedSesiIdsPrak([]);
     setMateri('');
     setCatatan('');
     setDurasiMenit(100);
@@ -583,7 +644,7 @@ export default function BapPresensi() {
     if (!activeBap) return;
     setEditBapId(activeBap.id);
     setTanggal(new Date(activeBap.tanggal).toISOString().split('T')[0]);
-    setPertemuanKe(activeBap.pertemuanKe);
+    setSelectedPertemuanIds([activeBap.pertemuanKe]);
     setMateri(activeBap.materi);
     setCatatan(activeBap.catatan || '');
     setDurasiMenit(activeBap.durasiMenit);
@@ -596,16 +657,18 @@ export default function BapPresensi() {
     e.preventDefault();
     const kelasId = selectedKelasId();
     if (!kelasId) return;
+    if (selectedPertemuanIds().length === 0) {
+      toast.showToast('Pilih minimal satu pertemuan', 'error');
+      return;
+    }
 
     try {
       const selectedTopics = (rpsTopics() || []).filter((t) => selectedTopikIds().includes(t.id));
       const autoMateri = selectedTopics.map((t) => `P${t.pertemuanKe}: ${t.topik}`).join(', ');
       const finalMateri = materi() || autoMateri || 'Materi Perkuliahan RPS';
 
-      const payload = {
-        kelasKuliahId: kelasId,
+      const common = {
         tanggal: tanggal(),
-        pertemuanKe: pertemuanKe(),
         materi: finalMateri,
         catatan: catatan() && catatan().trim() !== '' ? catatan().trim() : undefined,
         durasiMenit: durasiMenit(),
@@ -616,10 +679,17 @@ export default function BapPresensi() {
 
       let activeBapId = editBapId();
       if (activeBapId) {
-        await presensiController.updateBap(activeBapId, payload);
+        await presensiController.updateBap(activeBapId, {
+          pertemuanKe: selectedPertemuanIds()[0],
+          ...common,
+        });
         toast.showToast('BAP berhasil diperbarui', 'success');
       } else {
-        const newBap = await presensiController.createBap(payload);
+        const newBap = await presensiController.createBap({
+          kelasKuliahId: kelasId,
+          pertemuanKe: selectedPertemuanIds()[0],
+          ...common,
+        });
         toast.showToast('BAP berhasil dibuat', 'success');
         activeBapId = newBap.id;
       }
@@ -631,6 +701,85 @@ export default function BapPresensi() {
       }
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menyimpan BAP', 'error');
+    }
+  };
+
+  const handleDeleteBap = async (bapId: number) => {
+    const bapToDelete = (bapData() || []).find((b) => b.id === bapId);
+    const confirmMsg = bapToDelete
+      ? `Hapus BAP Pertemuan ${bapToDelete.pertemuanKe} (${bapToDelete.tanggal})?\nPresensi terkait akan ikut terhapus.`
+      : 'Hapus BAP ini?';
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await presensiController.deleteBap(bapId);
+      toast.showToast('BAP berhasil dihapus', 'success');
+      if (selectedBapId() === bapId) {
+        setSelectedBapId(null);
+      }
+      refetchBap();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus BAP', 'error');
+    }
+  };
+
+  const handleDuplicateBap = (bapId: number) => {
+    const sourceBap = bapData()?.find((b) => b.id === bapId);
+    if (!sourceBap) return;
+    const existingPertemuan = new Set((bapData() || []).map((b) => b.pertemuanKe));
+    let nextPertemuan = sourceBap.pertemuanKe + 1;
+    while (existingPertemuan.has(nextPertemuan)) {
+      nextPertemuan += 1;
+    }
+    setDuplicateSourceBapId(bapId);
+    setDuplicateTargetPertemuan(nextPertemuan);
+    setDuplicateTargetTanggal(sourceBap.tanggal);
+    setDuplicateLoading(false);
+    setShowDuplicateModal(true);
+  };
+
+  const executeDuplicate = async () => {
+    const sourceBapId = duplicateSourceBapId();
+    if (!sourceBapId) return;
+    const targetPertemuan = duplicateTargetPertemuan();
+    if (!targetPertemuan || targetPertemuan <= 0) {
+      toast.showToast('Masukkan nomor pertemuan yang valid.', 'error');
+      return;
+    }
+    setDuplicateLoading(true);
+    try {
+      const newBap = await presensiController.duplicateBap(sourceBapId, {
+        pertemuanKe: targetPertemuan,
+        tanggal: duplicateTargetTanggal() || undefined,
+      });
+      toast.showToast(
+        `BAP Pertemuan ${newBap.pertemuanKe} berhasil diduplikasi (${newBap.presensiCount} presensi disalin).`,
+        'success',
+      );
+      setShowDuplicateModal(false);
+      refetchBap();
+      setSelectedBapId(newBap.id);
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menduplikasi BAP.', 'error');
+    } finally {
+      setDuplicateLoading(false);
+    }
+  };
+
+  const handleDeleteBapPrak = async (bapPrakId: number) => {
+    const bap = (bapPraktikumData() || []).find((b) => b.id === bapPrakId);
+    const confirmMsg = bap
+      ? `Hapus BAP Praktikum Sesi ${bap.sesiKe} (${bap.tanggal})?\nPresensi terkait akan ikut terhapus.`
+      : 'Hapus BAP Praktikum ini?';
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await rombelPraktikumController.deleteBap(bapPrakId);
+      toast.showToast('BAP Praktikum berhasil dihapus', 'success');
+      refetchBapPraktikum();
+      if (selectedBapPrak()?.id === bapPrakId) {
+        setSelectedBapPrak(null);
+      }
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus BAP Praktikum', 'error');
     }
   };
 
@@ -705,6 +854,173 @@ export default function BapPresensi() {
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menyimpan presensi', 'error');
     }
+  };
+
+  // BAP Teori print list
+  const printBapList = () => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) return [];
+    return (bapData() || [])
+      .filter((b) => b.kelasKuliahId === kelasId)
+      .sort((a, b) => a.pertemuanKe - b.pertemuanKe || a.id - b.id);
+  };
+
+  // BAP Praktikum print list
+  const printBapPrakList = () => {
+    const rombelId = selectedRombelId();
+    if (!rombelId) return [];
+    return [...(bapPraktikumData() || [])].sort((a, b) => a.sesiKe - b.sesiKe || a.id - b.id);
+  };
+
+  const currentKelasPrint = () => (activeKelasList() || []).find((k) => k.id === selectedKelasId()) || null;
+
+  const currentDosenPrint = () => {
+    const kelas = currentKelasPrint();
+    return kelas?.dosenPengajarKelas?.[0]?.dosen?.nama || '';
+  };
+
+  const openBapPrintWindow = () => {
+    const kelas = currentKelasPrint();
+    const dosenNama = currentDosenPrint() || '-';
+    const rows = printBapList();
+    const title = kelas?.mataKuliah?.kode
+      ? `[${kelas.mataKuliah.kode}] ${kelas.mataKuliah.nama}`
+      : kelas?.mataKuliah?.nama || '';
+    const kelasLabel = kelas?.namaKelas || '';
+
+    const rowsHtml = rows
+      .map(
+        (bap, i) => `
+        <tr>
+          <td class="border px-3 py-2 text-center">${i + 1}</td>
+          <td class="border px-3 py-2 text-center">${bap.pertemuanKe}</td>
+          <td class="border px-3 py-2 text-center">${bap.tanggal}</td>
+          <td class="border px-3 py-2">${bap.materi}</td>
+          <td class="border px-3 py-2 text-center">${bap.durasiMenit} mnt</td>
+          <td class="border px-3 py-2"></td>
+        </tr>`,
+      )
+      .join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>BAP</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
+    h2 { text-align: center; margin: 0 0 8px; font-size: 18px; }
+    .sub { text-align: center; font-size: 14px; margin: 2px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
+    th, td { border: 1px solid #000; padding: 8px 12px; text-align: left; }
+    th { background: #eee; }
+    .sign-area { text-align: right; margin-top: 48px; }
+    .sign-box { display: inline-block; margin-right: 32px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h2>BERITA ACARA PERKULIAHAN (BAP)</h2>
+  <p class="sub">${title} · Kelas ${kelasLabel}</p>
+  <p class="sub">Dosen Pengampu: ${dosenNama}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  <div class="sign-area">
+    <div class="sign-box">
+      <p style="margin-bottom:56px">(_______________)</p>
+      <p>${dosenNama}</p>
+    </div>
+  </div>
+  <script>
+    window.onload = function() { window.print(); };
+  <\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      toast.showToast('Popup diblokir. Aktifkan popup untuk mencetak.', 'error');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  };
+
+  const openBapPrakPrintWindow = () => {
+    const rombel = currentRombel();
+    const rows = printBapPrakList();
+    const rombelLabel = rombel?.namaGroup || '';
+    const instrukturNama = rombel?.instruktur?.nama || 'Instruktur';
+
+    const rowsHtml = rows
+      .map(
+        (bap, i) => `
+        <tr>
+          <td class="border px-3 py-2 text-center">${i + 1}</td>
+          <td class="border px-3 py-2 text-center">${bap.sesiKe}</td>
+          <td class="border px-3 py-2 text-center">${bap.tanggal}</td>
+          <td class="border px-3 py-2">${bap.tema || '-'}</td>
+          <td class="border px-3 py-2">${bap.materi}</td>
+          <td class="border px-3 py-2 text-center">${bap.durasiMenit} mnt</td>
+          <td class="border px-3 py-2"></td>
+        </tr>`,
+      )
+      .join('');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>BAP Praktikum</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
+    h2 { text-align: center; margin: 0 0 8px; font-size: 18px; }
+    .sub { text-align: center; font-size: 14px; margin: 2px 0; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
+    th, td { border: 1px solid #000; padding: 8px 12px; text-align: left; }
+    th { background: #eee; }
+    .sign-area { text-align: right; margin-top: 48px; }
+    .sign-box { display: inline-block; margin-right: 32px; text-align: center; }
+  </style>
+</head>
+<body>
+  <h2>BERITA ACARA PRAKTIKUM (BAP)</h2>
+  <p class="sub">Kelas Praktikum (Rombel): ${rombelLabel}</p>
+  <p class="sub">Instruktur: ${instrukturNama}</p>
+  <table>
+    <thead>
+      <tr>
+        <th>No</th><th>Sesi</th><th>Tanggal</th><th>Tema</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  <div class="sign-area">
+    <div class="sign-box">
+      <p style="margin-bottom:56px">(_______________)</p>
+      <p>${instrukturNama}</p>
+    </div>
+  </div>
+  <script>
+    window.onload = function() { window.print(); };
+  <\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (!win) {
+      toast.showToast('Popup diblokir. Aktifkan popup untuk mencetak.', 'error');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
   };
 
   return (
@@ -805,9 +1121,30 @@ export default function BapPresensi() {
               <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 lg:col-span-1 h-fit dark:bg-secondary-900 dark:border-secondary-800">
                 <div class="flex justify-between items-center border-b pb-2">
                   <h3 class="font-bold text-secondary-800 dark:text-white">Detail Berita Acara (BAP)</h3>
-                  <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-xs">
-                    Edit
-                  </Button>
+                  <div class="flex items-center gap-2">
+                    <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-xs">
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={() => handleDuplicateBap(selectedBapId()!)}
+                      variant="secondary"
+                      class="py-1 px-2.5 text-xs"
+                    >
+                      Duplikasi
+                    </Button>
+                    <Button onClick={() => setShowPrintModal(true)} variant="accent" class="py-1 px-2.5 text-xs">
+                      Cetak BAP
+                    </Button>
+                    <Show when={selectedBapId()}>
+                      <Button
+                        onClick={() => handleDeleteBap(selectedBapId()!)}
+                        variant="danger"
+                        class="py-1 px-2.5 text-xs"
+                      >
+                        Hapus
+                      </Button>
+                    </Show>
+                  </div>
                 </div>
 
                 <div class="flex flex-col gap-1">
@@ -893,7 +1230,7 @@ export default function BapPresensi() {
                               </td>
                               <td class="py-4 px-4">
                                 <div class="flex items-center gap-2">
-                                  <For each={['hadir', 'sakit', 'izin', 'telat', 'alpa', 'unknown']}>
+                                  <For each={kelasStatusOptions()}>
                                     {(st) => (
                                       <button
                                         type="button"
@@ -909,8 +1246,9 @@ export default function BapPresensi() {
                                                   : 'bg-accent-50 text-accent-700 border-accent-200'
                                             : 'bg-transparent text-secondary-400 border-secondary-200 hover:bg-secondary-100'
                                         }`}
+                                        title={statusFullLabel(st)}
                                       >
-                                        {st === 'unknown' ? '? UNKNOWN' : st.toUpperCase()}
+                                        {st === 'unknown' ? '? UNKNOWN' : statusLabel(st)}
                                       </button>
                                     )}
                                   </For>
@@ -940,13 +1278,20 @@ export default function BapPresensi() {
                                 </Show>
                               </td>
                               <td class="py-4 px-4">
-                                <input
-                                  type="text"
-                                  placeholder="Keterangan / Alasan..."
-                                  value={state().keterangan || ''}
-                                  onInput={(e) => handleKeteranganChange(k.mahasiswaId, e.currentTarget.value)}
-                                  class="w-full min-w-[140px] bg-secondary-50 border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setKeteranganModalMhsId(k.mahasiswaId);
+                                    setKeteranganDraft(state().keterangan || '');
+                                  }}
+                                  class={`w-full max-w-[180px] truncate text-left text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                                    state().keterangan
+                                      ? 'bg-secondary-100 border-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-secondary-200 hover:bg-secondary-200'
+                                      : 'bg-secondary-50 border-secondary-200 text-secondary-400 dark:bg-secondary-800 dark:border-secondary-700 hover:bg-secondary-100 border-dashed'
+                                  }`}
+                                >
+                                  {state().keterangan ? `📝 ${state().keterangan}` : '+ Tambah keterangan'}
+                                </button>
                               </td>
                             </tr>
                           );
@@ -996,7 +1341,7 @@ export default function BapPresensi() {
                       }}
                     />
                   </div>
-                  <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
+                  <Show when={auth.hasRole(['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])}>
                     <Button onClick={() => setShowRombelModal(true)} variant="secondary" class="shrink-0 mb-0.5">
                       + Tambah Rombel
                     </Button>
@@ -1016,9 +1361,12 @@ export default function BapPresensi() {
                     </p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
-                    <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
+                    <Show when={auth.hasRole(['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])}>
                       <Button onClick={openAssignModal} variant="secondary">
                         Kelola Anggota ({currentRombel()?.mahasiswaList?.length || 0})
+                      </Button>
+                      <Button onClick={() => setShowEnrollmentQrModal(true)} variant="secondary">
+                        QR Enroll Mahasiswa
                       </Button>
                       <Button onClick={openCreateBapPrakModal} variant="primary">
                         + Sesi BAP Praktikum
@@ -1027,6 +1375,9 @@ export default function BapPresensi() {
                         Input Nilai Praktikum
                       </Button>
                     </Show>
+                    <Button onClick={() => setShowPrintModal(true)} variant="accent">
+                      Cetak BAP Praktikum
+                    </Button>
                     <Button
                       onClick={() => handleSyncNilai(selectedRombelId()!)}
                       loading={syncLoadingNilai()}
@@ -1056,7 +1407,16 @@ export default function BapPresensi() {
                           <tr class="border-b border-secondary-50 dark:border-secondary-800/60 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
                             <td class="py-3 px-4 font-bold text-brand-600">Sesi {bap.sesiKe}</td>
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">{bap.tanggal}</td>
-                            <td class="py-3 px-4 text-secondary-800 dark:text-white">{bap.materi}</td>
+                            <td class="py-3 px-4 text-secondary-800 dark:text-white">
+                              <Show when={bap.tema} fallback={bap.materi}>
+                                {(t) => (
+                                  <div>
+                                    <span class="font-semibold text-brand-600">{t()}</span>
+                                    <div class="text-xs text-secondary-500 dark:text-secondary-300">{bap.materi}</div>
+                                  </div>
+                                )}
+                              </Show>
+                            </td>
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">
                               <Show
                                 when={bap.instruktur?.nama}
@@ -1097,6 +1457,13 @@ export default function BapPresensi() {
                                   class="text-xs py-1.5 px-3"
                                 >
                                   Sync Presensi
+                                </Button>
+                                <Button
+                                  onClick={() => handleDeleteBapPrak(bap.id)}
+                                  variant="danger"
+                                  class="text-xs py-1.5 px-3"
+                                >
+                                  Hapus
                                 </Button>
                               </div>
                             </td>
@@ -1371,11 +1738,13 @@ export default function BapPresensi() {
             />
             <Input
               type="number"
-              label="Pertemuan Ke"
-              min="1"
-              max="20"
-              value={pertemuanKe()}
-              onInput={(e) => setPertemuanKe(parseInt(e.currentTarget.value) || 1)}
+              label="Nomor Pertemuan"
+              value={selectedPertemuanIds()[0] || ''}
+              onInput={(e) => {
+                const v = Number(e.currentTarget.value);
+                setSelectedPertemuanIds(v > 0 ? [v] : []);
+              }}
+              min={1}
               required
             />
           </div>
@@ -1559,6 +1928,14 @@ export default function BapPresensi() {
         </form>
       </Modal>
 
+      {/* Modal Enrollment QR Mahasiswa */}
+      <EnrollmentQrModal
+        isOpen={showEnrollmentQrModal()}
+        rombelId={selectedRombelId() ?? 0}
+        rombelNama={currentRombel()?.namaGroup || ''}
+        onClose={() => setShowEnrollmentQrModal(false)}
+      />
+
       {/* Modal Kelola Anggota Rombel (Lintas Kelas) */}
       <Modal
         isOpen={showAssignMhsModal()}
@@ -1693,18 +2070,45 @@ export default function BapPresensi() {
       <Modal
         isOpen={showCreateBapPrakModal()}
         onClose={() => setShowCreateBapPrakModal(false)}
-        title={editBapPrakId() ? `Edit Sesi BAP Praktikum — Sesi ${sesiKePrak()}` : 'Tambah Sesi BAP Praktikum Baru'}
+        title={
+          editBapPrakId()
+            ? `Edit Sesi BAP Praktikum — Sesi ${selectedSesiIdsPrak().join(', ')}`
+            : 'Tambah Sesi BAP Praktikum Baru'
+        }
       >
         <form onSubmit={handleCreateBapPrak} class="flex flex-col gap-4">
           <div class="grid grid-cols-2 gap-4">
-            <Input
-              type="number"
-              min={1}
-              label="Sesi Ke"
-              value={sesiKePrak()}
-              onChange={(e: Event) => setSesiKePrak(parseInt((e.currentTarget as HTMLInputElement).value) || 1)}
-              required
-            />
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+                Sesi Ke (Bisa Lebih Dari Satu)
+              </label>
+              <div class="grid grid-cols-4 gap-1 max-h-32 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800">
+                <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]}>
+                  {(p) => {
+                    const isChecked = () => selectedSesiIdsPrak().includes(p);
+                    return (
+                      <label class="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-1.5 rounded-lg transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={isChecked()}
+                          onChange={(e) => {
+                            let nextIds: number[];
+                            if (e.currentTarget.checked) {
+                              nextIds = [...selectedSesiIdsPrak(), p].sort((a, b) => a - b);
+                            } else {
+                              nextIds = selectedSesiIdsPrak().filter((id) => id !== p);
+                            }
+                            setSelectedSesiIdsPrak(nextIds);
+                          }}
+                          class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                        />
+                        <span class="font-bold text-brand-700 dark:text-brand-400">{p}</span>
+                      </label>
+                    );
+                  }}
+                </For>
+              </div>
+            </div>
             <Input
               type="date"
               label="Tanggal Sesi"
@@ -1763,6 +2167,13 @@ export default function BapPresensi() {
             </div>
           </Show>
 
+          <Input
+            type="text"
+            label="Tema Praktikum (opsional)"
+            placeholder="Misal: Percobaan Fisika Dasar II"
+            value={temaPrak()}
+            onInput={(e) => setTemaPrak(e.currentTarget.value)}
+          />
           <Input
             type="text"
             label="Materi Praktikum"
@@ -1852,16 +2263,38 @@ export default function BapPresensi() {
                           const val = e.currentTarget.value;
                           setPresensiPrakSheet((prev) => ({
                             ...prev,
-                            [mhsItem.mahasiswaId]: { ...prev[mhsItem.mahasiswaId], status: val },
+                            [mhsItem.mahasiswaId]: {
+                              ...prev[mhsItem.mahasiswaId],
+                              status: val,
+                              durasiMangkir: val === 'telat' ? (prev[mhsItem.mahasiswaId]?.durasiMangkir ?? 15) : 0,
+                            },
                           }));
                         }}
                       >
-                        <option value="hadir">Hadir</option>
-                        <option value="izin">Izin</option>
-                        <option value="sakit">Sakit</option>
-                        <option value="alpa">Alpa</option>
-                        <option value="telat">Telat</option>
+                        <For each={praktikumStatusOptions()}>
+                          {(opt) => (
+                            <option value={opt}>
+                              {opt === 'unknown' ? 'Unknown (?)' : `${statusLabel(opt)} - ${statusFullLabel(opt)}`}
+                            </option>
+                          )}
+                        </For>
                       </select>
+                      <Show when={sheet().status === 'telat'}>
+                        <input
+                          type="number"
+                          min={0}
+                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          placeholder="Menit"
+                          value={sheet().durasiMangkir}
+                          onInput={(e) => {
+                            const val = parseInt(e.currentTarget.value) || 0;
+                            setPresensiPrakSheet((prev) => ({
+                              ...prev,
+                              [mhsItem.mahasiswaId]: { ...prev[mhsItem.mahasiswaId], durasiMangkir: val },
+                            }));
+                          }}
+                        />
+                      </Show>
                     </div>
                   </div>
                 );
@@ -1943,6 +2376,262 @@ export default function BapPresensi() {
             </Button>
             <Button type="submit" variant="primary" disabled={isSavingNilaiPrak()}>
               {isSavingNilaiPrak() ? 'Menyimpan...' : 'Simpan Nilai Praktikum'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Print BAP Modal */}
+      <Modal
+        isOpen={showPrintModal()}
+        onClose={() => setShowPrintModal(false)}
+        title="Cetak Berita Acara Perkuliahan (BAP)"
+      >
+        <div class="print:p-0">
+          <Show when={mainTab() === 'teori'}>
+            {(() => {
+              const rows = printBapList();
+              const kelas = currentKelasPrint();
+              return (
+                <div>
+                  <div class="print:hidden flex justify-end mb-4">
+                    <Button onClick={openBapPrintWindow} variant="primary">
+                      Cetak
+                    </Button>
+                  </div>
+                  <div class="print:mt-4">
+                    <div class="text-center mb-4">
+                      <h2 class="text-lg font-bold">BERITA ACARA PERKULIAHAN (BAP)</h2>
+                      <p class="text-sm">
+                        {kelas?.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}
+                        {kelas?.mataKuliah?.nama || ''} · Kelas {kelas?.namaKelas || ''}
+                      </p>
+                      <p class="text-sm">Dosen Pengampu: {currentDosenPrint() || '-'}</p>
+                    </div>
+                    <table class="w-full text-sm border-collapse print:border-black">
+                      <thead>
+                        <tr>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            No
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Pertemuan
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Tanggal
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Materi
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Durasi
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Tanda Tangan
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <For each={rows}>
+                          {(bap, i) => (
+                            <tr>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {i() + 1}
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {bap.pertemuanKe}
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {bap.tanggal}
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 print:border-black">{bap.materi}</td>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {bap.durasiMenit} mnt
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 print:border-black"></td>
+                            </tr>
+                          )}
+                        </For>
+                      </tbody>
+                    </table>
+                    <div class="flex justify-end mt-6">
+                      <div class="text-center mr-8">
+                        <p class="text-xs mb-10">(_______________)</p>
+                        <p class="text-xs">{currentDosenPrint()}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="print:hidden">
+                    <p class="text-xs text-secondary-500">
+                      Menampilkan {rows.length} baris BAP (satu baris per pertemuan) untuk kelas ini. Klik Cetak untuk
+                      mencetak.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+          </Show>
+
+          <Show when={mainTab() === 'praktikum'}>
+            {(() => {
+              const rows = printBapPrakList();
+              const rombel = currentRombel();
+              return (
+                <div>
+                  <div class="print:hidden flex justify-end mb-4">
+                    <Button onClick={openBapPrakPrintWindow} variant="primary">
+                      Cetak
+                    </Button>
+                  </div>
+                  <div class="print:mt-4">
+                    <div class="text-center mb-4">
+                      <h2 class="text-lg font-bold">BERITA ACARA PRAKTIKUM (BAP)</h2>
+                      <p class="text-sm">Kelas Praktikum (Rombel): {rombel?.namaGroup || ''}</p>
+                      <p class="text-sm">Instruktur: {rombel?.instruktur?.nama || '-'}</p>
+                    </div>
+                    <table class="w-full text-sm border-collapse print:border-black">
+                      <thead>
+                        <tr>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            No
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Sesi
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Tanggal
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Tema
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Materi
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Durasi
+                          </th>
+                          <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
+                            Tanda Tangan
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <For each={rows}>
+                          {(bap, i) => (
+                            <tr>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {i() + 1}
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {bap.sesiKe}
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {bap.tanggal}
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 print:border-black">
+                                {bap.tema || '-'}
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 print:border-black">{bap.materi}</td>
+                              <td class="border border-secondary-300 px-2 py-1.5 text-center print:border-black">
+                                {bap.durasiMenit} mnt
+                              </td>
+                              <td class="border border-secondary-300 px-2 py-1.5 print:border-black"></td>
+                            </tr>
+                          )}
+                        </For>
+                      </tbody>
+                    </table>
+                    <div class="flex justify-end mt-6">
+                      <div class="text-center mr-8">
+                        <p class="text-xs mb-10">(_______________)</p>
+                        <p class="text-xs">{rombel?.instruktur?.nama || 'Instruktur'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="print:hidden">
+                    <p class="text-xs text-secondary-500">
+                      Menampilkan {rows.length} baris BAP praktikum (satu baris per sesi) untuk rombel ini. Klik Cetak
+                      untuk mencetak.
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+          </Show>
+        </div>
+      </Modal>
+
+      {/* Duplikasi BAP Modal */}
+      <Modal isOpen={showDuplicateModal()} onClose={() => setShowDuplicateModal(false)} title="Duplikasi BAP">
+        <div class="flex flex-col gap-4">
+          <p class="text-sm text-secondary-600 dark:text-secondary-200">
+            Duplikasi BAP jenis teoretis untuk Pertemuan{' '}
+            <span class="font-bold">{bapData()?.find((b) => b.id === duplicateSourceBapId())?.pertemuanKe}</span> kepada
+            pertemuan baru. Presensi, topik, dan catatan akan disalin otomatis.
+          </p>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Nomor Pertemuan Baru</label>
+            <input
+              type="number"
+              min={1}
+              value={duplicateTargetPertemuan()}
+              onInput={(e) => setDuplicateTargetPertemuan(Number(e.currentTarget.value))}
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Tanggal Pertemuan</label>
+            <input
+              type="date"
+              value={duplicateTargetTanggal()}
+              onInput={(e) => setDuplicateTargetTanggal(e.currentTarget.value)}
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+            />
+          </div>
+          <div class="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowDuplicateModal(false)}>
+              Batal
+            </Button>
+            <Button variant="primary" onClick={executeDuplicate} disabled={duplicateLoading()}>
+              {duplicateLoading() ? 'Menduplikasi...' : 'Duplikasi'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Keterangan Presensi Modal */}
+      <Modal
+        isOpen={keteranganModalMhsId() !== null}
+        onClose={() => setKeteranganModalMhsId(null)}
+        title="Tambahkan Keterangan Presensi"
+      >
+        <form
+          onSubmit={(e: Event) => {
+            e.preventDefault();
+            const mhsId = keteranganModalMhsId();
+            if (mhsId !== null) {
+              handleKeteranganChange(mhsId, keteranganDraft());
+            }
+            setKeteranganModalMhsId(null);
+          }}
+          class="flex flex-col gap-4"
+        >
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Keterangan / Alasan</label>
+            <textarea
+              class="w-full min-h-[120px] bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white resize-y"
+              placeholder="Tulis keterangan detail (misal alasan keterlambatan, kondisi khusus, dll)..."
+              value={keteranganDraft()}
+              onInput={(e) => setKeteranganDraft(e.currentTarget.value)}
+              autofocus
+            />
+          </div>
+          <div class="flex justify-end gap-2 mt-2">
+            <Button type="button" onClick={() => setKeteranganModalMhsId(null)} variant="secondary">
+              Batal
+            </Button>
+            <Button type="submit" variant="primary">
+              Simpan Keterangan
             </Button>
           </div>
         </form>

@@ -36,9 +36,9 @@ const mataKuliahResponseFields = {
   sksSimulasi: t.Optional(t.Union([t.Integer(), t.Null()])),
   idPddikti: t.Union([t.String(), t.Null()], { default: null }),
   isSynced: t.Boolean({ default: false }),
-  lastSyncAt: t.Any(),
-  createdAt: t.Any(),
-  updatedAt: t.Any(),
+  lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
+  createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+  updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
 };
 
 export const getMataKuliahSchema = {

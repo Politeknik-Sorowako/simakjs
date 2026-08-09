@@ -1,4 +1,5 @@
 import { AuditService } from '../services/audit.service';
+import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
 export class AuditController {
@@ -6,7 +7,7 @@ export class AuditController {
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || user.role !== 'admin') {
+      if (!user || !hasRole(user, ['admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -34,7 +35,7 @@ export class AuditController {
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || user.role !== 'admin') {
+      if (!user || !hasRole(user, ['admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }

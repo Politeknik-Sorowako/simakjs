@@ -66,7 +66,7 @@ export default function AdmisiSeleksiMassal() {
           </Button>
         </div>
 
-        <Show when={results}>
+        <Show when={results()}>
           <div class="grid md:grid-cols-2 gap-6 mb-6">
             {/* Lulus */}
             <div class="bg-white dark:bg-secondary-800/40 border border-green-200 dark:border-green-800 rounded-xl p-4">
@@ -121,7 +121,7 @@ export default function AdmisiSeleksiMassal() {
           </div>
         </Show>
 
-        <Show when={!results && sessionId()}>
+        <Show when={!results() && sessionId()}>
           <div class="text-center py-8 text-secondary-400">
             Klik <strong>Preview Hasil</strong> untuk melihat kandidat lulus/tidak lulus berdasarkan nilai akhir dan
             passing grade.

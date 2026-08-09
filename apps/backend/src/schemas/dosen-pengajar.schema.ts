@@ -36,8 +36,8 @@ export const getDosenPengajarSchema = {
           kelasKuliahId: t.Integer(),
           sksBebanMengajar: t.Union([t.Integer(), t.Null()]),
           idPddikti: t.Union([t.String(), t.Null()]),
-          createdAt: t.Any(),
-          updatedAt: t.Any(),
+          createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+          updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
           dosen: t.Union([
             t.Object({
               id: t.Integer(),
@@ -81,8 +81,8 @@ export const createDosenPengajarSchema = {
       kelasKuliahId: t.Integer(),
       sksBebanMengajar: t.Union([t.Integer(), t.Null()]),
       idPddikti: t.Union([t.String(), t.Null()]),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String(),

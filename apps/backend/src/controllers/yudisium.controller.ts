@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { mahasiswa } from '../models/schema';
 import { YudisiumService } from '../services/yudisium.service';
 import { db } from '../utils/db';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class YudisiumController {
@@ -13,7 +14,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getPengajuan({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role === 'guest') {
+    if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -25,7 +26,7 @@ export class YudisiumController {
     }
 
     // RBAC check
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await YudisiumController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
@@ -56,13 +57,13 @@ export class YudisiumController {
     }
 
     // RBAC check: student can only submit their own, admin/dosen can submit for anyone
-    if (user.role === 'mahasiswa') {
+    if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await YudisiumController.getMahasiswaIdByEmail(user.email);
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-    } else if (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi') {
+    } else if (!hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -80,7 +81,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateStatus({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen.' };
     }
@@ -103,7 +104,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -114,7 +115,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getStats({ query, set, getCurrentUser }: AuthContext<any, { periodeId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -131,7 +132,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveKomponen({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -149,7 +150,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getNilaiMahasiswa({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -160,7 +161,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveNilaiMahasiswa({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -177,7 +178,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async lockKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -194,7 +195,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async unlockKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen' && user.role !== 'prodi')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Anda tidak memiliki wewenang untuk membuka kunci nilai kelas.' };
     }

@@ -12,6 +12,7 @@ export interface CreateDosenDto {
   nik?: string;
   jenisKelamin?: 'L' | 'P';
   tanggalLahir?: string;
+  tempatLahir?: string;
 }
 
 export class DosenService {
@@ -74,6 +75,7 @@ export class DosenService {
       ...data,
       nik: data.nik?.trim() ? data.nik : null,
       tanggalLahir: data.tanggalLahir?.trim() ? data.tanggalLahir : null,
+      tempatLahir: data.tempatLahir?.trim() ? data.tempatLahir : null,
       nidn: data.nidn?.trim() ? data.nidn : null,
       idPddikti: data.idPddikti?.trim() ? data.idPddikti : null,
     };
@@ -85,6 +87,7 @@ export class DosenService {
     const sanitized: Record<string, unknown> = { ...data };
     if ('nik' in data) sanitized.nik = data.nik?.trim() ? data.nik : null;
     if ('tanggalLahir' in data) sanitized.tanggalLahir = data.tanggalLahir?.trim() ? data.tanggalLahir : null;
+    if ('tempatLahir' in data) sanitized.tempatLahir = data.tempatLahir?.trim() ? data.tempatLahir : null;
     if ('nidn' in data) sanitized.nidn = data.nidn?.trim() ? data.nidn : null;
     if ('idPddikti' in data) sanitized.idPddikti = data.idPddikti?.trim() ? data.idPddikti : null;
 

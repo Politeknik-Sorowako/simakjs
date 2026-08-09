@@ -10,6 +10,7 @@ export const dosenBody = t.Object({
   nik: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
   jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P'), t.Null()], { default: 'L' })),
   tanggalLahir: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
+  tempatLahir: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
 });
 
 export const updateDosenBody = t.Partial(
@@ -23,6 +24,7 @@ export const updateDosenBody = t.Partial(
     nik: t.Union([t.String(), t.Null()]),
     jenisKelamin: t.Union([t.Literal('L'), t.Literal('P'), t.Null()]),
     tanggalLahir: t.Union([t.String(), t.Null()]),
+    tempatLahir: t.Union([t.String(), t.Null()]),
   }),
 );
 
@@ -50,13 +52,13 @@ export const getDosenSchema = {
           programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
-          lastSyncAt: t.Any(),
+          lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
           nidn: t.Union([t.String(), t.Null()], { default: '0001018701' }),
           nik: t.Union([t.String(), t.Null()], { default: '1234567890123456' }),
           jenisKelamin: t.Union([t.String(), t.Null()], { default: 'L' }),
-          tanggalLahir: t.Any(),
-          createdAt: t.Any(),
-          updatedAt: t.Any(),
+          tanggalLahir: t.Union([t.Date(), t.Null()], { default: null }),
+          createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+          updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
           programStudi: t.Union([
             t.Object({
               id: t.Integer(),
@@ -94,13 +96,13 @@ export const createDosenSchema = {
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
       nidn: t.Union([t.String(), t.Null()], { default: '0001018701' }),
       nik: t.Union([t.String(), t.Null()], { default: '1234567890123456' }),
       jenisKelamin: t.Union([t.String(), t.Null()], { default: 'L' }),
-      tanggalLahir: t.Any(),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      tanggalLahir: t.Union([t.Date(), t.Null()], { default: null }),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
@@ -126,13 +128,13 @@ export const getDosenByIdSchema = {
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
       nidn: t.Union([t.String(), t.Null()], { default: '0001018701' }),
       nik: t.Union([t.String(), t.Null()], { default: '1234567890123456' }),
       jenisKelamin: t.Union([t.String(), t.Null()], { default: 'L' }),
-      tanggalLahir: t.Any(),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      tanggalLahir: t.Union([t.Date(), t.Null()], { default: null }),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
       programStudi: t.Union([
         t.Object({
           id: t.Integer(),
@@ -168,13 +170,13 @@ export const updateDosenSchema = {
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
+      lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
       nidn: t.Union([t.String(), t.Null()], { default: '0001018701' }),
       nik: t.Union([t.String(), t.Null()], { default: '1234567890123456' }),
       jenisKelamin: t.Union([t.String(), t.Null()], { default: 'L' }),
-      tanggalLahir: t.Any(),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      tanggalLahir: t.Union([t.Date(), t.Null()], { default: null }),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from '@solidjs/router';
+import { QueryClientProvider } from '@tanstack/solid-query';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -48,6 +49,10 @@ import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
 import Khs from './routes/Khs';
 import KompensasiManual from './routes/KompensasiManual';
+import KonfigurasiAbout from './routes/KonfigurasiAbout';
+import KonfigurasiAksesRole from './routes/KonfigurasiAksesRole';
+import KonfigurasiParameter from './routes/KonfigurasiParameter';
+import KonfigurasiScopeProdi from './routes/KonfigurasiScopeProdi';
 import Krs from './routes/Krs';
 import Kurikulum from './routes/Kurikulum';
 import LaporanKompensasi from './routes/LaporanKompensasi';
@@ -68,6 +73,7 @@ import Profil from './routes/Profil';
 import ProfilLulusan from './routes/ProfilLulusan';
 import ProgramStudi from './routes/ProgramStudi';
 import ResetPassword from './routes/ResetPassword';
+import RombelEnroll from './routes/RombelEnroll';
 import Rps from './routes/Rps';
 import LaporanAkademik from './routes/reports/LaporanAkademik';
 import LaporanBKD from './routes/reports/LaporanBKD';
@@ -81,6 +87,7 @@ import LaporanRekapNilai from './routes/reports/LaporanRekapNilai';
 import LaporanYudisium from './routes/reports/LaporanYudisium';
 import VisiMisiProdi from './routes/VisiMisiProdi';
 import Yudisium from './routes/Yudisium';
+import { queryClient } from './utils/queryClient';
 
 function AppContent() {
   const auth = useAuth();
@@ -92,6 +99,7 @@ function AppContent() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/ganti-password" component={ForceChangePassword} />
+      <Route path="/rombel/enroll/:token" component={RombelEnroll} />
 
       {/* Protected Routes */}
       <Route
@@ -169,7 +177,7 @@ function AppContent() {
       <Route
         path="/jurnal-presensi"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
             <BapPresensi />
           </ProtectedRoute>
         }
@@ -185,7 +193,7 @@ function AppContent() {
       <Route
         path="/kompensasi-manual"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'instruktur']}>
             <KompensasiManual />
           </ProtectedRoute>
         }
@@ -202,7 +210,7 @@ function AppContent() {
       <Route
         path="/presensi-apel"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
             <ApelKelola />
           </ProtectedRoute>
         }
@@ -242,7 +250,7 @@ function AppContent() {
       <Route
         path="/pelanggaran"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'instruktur']}>
             <Pelanggaran />
           </ProtectedRoute>
         }
@@ -266,7 +274,7 @@ function AppContent() {
       <Route
         path="/input-nilai"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
             <InputNilai />
           </ProtectedRoute>
         }
@@ -292,6 +300,38 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Pengguna />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/akses-role"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KonfigurasiAksesRole />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/scope-prodi"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KonfigurasiScopeProdi />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/parameter"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <KonfigurasiParameter />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/konfigurasi/about"
+        element={
+          <ProtectedRoute>
+            <KonfigurasiAbout />
           </ProtectedRoute>
         }
       />
@@ -370,7 +410,7 @@ function AppContent() {
       <Route
         path="/rps"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'instruktur']}>
             <Rps />
           </ProtectedRoute>
         }
@@ -679,14 +719,16 @@ function AppContent() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <AuthProvider>
-          <WorkspaceProvider>
-            <AppContent />
-          </WorkspaceProvider>
-        </AuthProvider>
-      </ToastProvider>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <WorkspaceProvider>
+              <AppContent />
+            </WorkspaceProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }

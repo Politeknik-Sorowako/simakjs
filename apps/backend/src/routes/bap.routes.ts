@@ -3,10 +3,12 @@ import { BapController } from '../controllers/bap.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   createBapSchema,
+  duplicateBapSchema,
   getBapByKelasSchema,
   getMonitoringRpsDetailSchema,
   getMonitoringRpsSchema,
   getRpsTopikByKelasSchema,
+  updateBapBulkSchema,
   updateBapSchema,
 } from '../schemas/bap.schema';
 
@@ -17,4 +19,7 @@ export const bapRoutes = new Elysia({ prefix: '/bap' })
   .get('/monitoring-rps', BapController.getMonitoringRps, getMonitoringRpsSchema)
   .get('/monitoring-rps/kelas/:kelasKuliahId', BapController.getMonitoringRpsDetail, getMonitoringRpsDetailSchema)
   .post('/', BapController.create, createBapSchema)
-  .put('/:id', BapController.update, updateBapSchema);
+  .post('/:id/duplicate', BapController.duplicate, duplicateBapSchema)
+  .put('/bulk', BapController.updateBapBulk, updateBapBulkSchema)
+  .put('/:id', BapController.update, updateBapSchema)
+  .delete('/:id', BapController.delete);

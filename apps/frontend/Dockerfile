@@ -5,6 +5,7 @@ COPY package.json bun.lock ./
 COPY apps/frontend/package.json ./apps/frontend/
 RUN bun install --filter frontend
 COPY apps/frontend ./apps/frontend
+COPY scripts ./scripts
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 ARG VITE_APP_MODE=production

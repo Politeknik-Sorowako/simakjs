@@ -20,12 +20,15 @@ import {
 export const roleEnum = pgEnum('user_role', [
   'super_admin',
   'admin',
+  'kaprodi',
   'dosen',
   'mahasiswa',
   'prodi',
   'keuangan',
   'guest',
   'calon_mahasiswa',
+  'plp',
+  'instruktur',
 ]);
 
 export const applicationStatusEnum = pgEnum('application_status', [
@@ -53,6 +56,7 @@ export const users = pgTable('users', {
   role: roleEnum('role').notNull().default('mahasiswa'),
   prodiIds: jsonb('prodi_ids').$type<number[]>().default([]).notNull(),
   isActive: boolean('is_active').default(false).notNull(),
+  isGlobalScope: boolean('is_global_scope').default(false).notNull(),
   mustChangePassword: boolean('must_change_password').default(false).notNull(),
   theme: varchar('theme', { length: 20 }).default('light').notNull(),
   avatar: text('avatar'),
@@ -61,6 +65,15 @@ export const users = pgTable('users', {
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
+});
+
+export const userRoles = pgTable('user_roles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  role: roleEnum('role').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const programStudi = pgTable('program_studi', {
@@ -267,6 +280,13 @@ export const krs = pgTable(
 );
 
 // Relations
+export const userRolesRelations = relations(userRoles, ({ one }) => ({
+  user: one(users, {
+    fields: [userRoles.userId],
+    references: [users.id],
+  }),
+}));
+
 export const programStudiRelations = relations(programStudi, ({ many }) => ({
   mahasiswa: many(mahasiswa),
   dosen: many(dosen),
@@ -415,6 +435,7 @@ export const bap = pgTable('bap', {
     .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
   tanggal: date('tanggal').notNull(),
   pertemuanKe: integer('pertemuan_ke').notNull(),
+  tema: varchar('tema', { length: 255 }),
   materi: text('materi').notNull(),
   catatan: text('catatan'),
   durasiMenit: integer('durasi_menit').notNull(),
@@ -442,6 +463,10 @@ export const presensi = pgTable(
     status: presensiStatusEnum('status').notNull(),
     durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
     keterangan: text('keterangan'),
+    lampiranEvidens: text('lampiran_evidens'),
+    keteranganAdmin: text('keterangan_admin'),
+    resolvedBy: integer('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -2275,6 +2300,10 @@ export const rombelPraktikum = pgTable('rombel_praktikum', {
   namaGroup: varchar('nama_group', { length: 255 }).notNull(),
   instrukturId: integer('instruktur_id').references(() => dosen.id, { onDelete: 'set null' }),
   keterangan: text('keterangan'),
+  enrollmentToken: varchar('enrollment_token', { length: 64 }).unique(),
+  enrollmentEnabled: boolean('enrollment_enabled').default(false).notNull(),
+  enrollmentMaxStudents: integer('enrollment_max_students'),
+  enrollmentExpiresAt: timestamp('enrollment_expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -2293,6 +2322,25 @@ export const rombelPraktikumMahasiswa = pgTable('rombel_praktikum_mahasiswa', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const rombelEnrollmentLog = pgTable(
+  'rombel_enrollment_log',
+  {
+    id: serial('id').primaryKey(),
+    rombelPraktikumId: integer('rombel_praktikum_id')
+      .notNull()
+      .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    enrolledAt: timestamp('enrolled_at').defaultNow().notNull(),
+    ipAddress: varchar('ip_address', { length: 45 }),
+    userAgent: text('user_agent'),
+  },
+  (t) => ({
+    uniqueEnrollment: unique('rombel_enrollment_log_unique').on(t.rombelPraktikumId, t.mahasiswaId),
+  }),
+);
+
 export const bapPraktikum = pgTable('bap_praktikum', {
   id: serial('id').primaryKey(),
   rombelPraktikumId: integer('rombel_praktikum_id')
@@ -2300,6 +2348,7 @@ export const bapPraktikum = pgTable('bap_praktikum', {
     .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
   tanggal: date('tanggal').notNull(),
   sesiKe: integer('sesi_ke').default(1).notNull(),
+  tema: varchar('tema', { length: 255 }),
   materi: text('materi').notNull(),
   catatan: text('catatan'),
   durasiMenit: integer('durasi_menit').default(100).notNull(),
@@ -2322,6 +2371,10 @@ export const presensiPraktikum = pgTable('presensi_praktikum', {
   status: presensiStatusEnum('status').notNull(),
   durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
   keterangan: text('keterangan'),
+  lampiranEvidens: text('lampiran_evidens'),
+  keteranganAdmin: text('keterangan_admin'),
+  resolvedBy: integer('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+  resolvedAt: timestamp('resolved_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -2340,6 +2393,18 @@ export const rombelPraktikumRelations = relations(rombelPraktikum, ({ one, many 
   }),
   mahasiswaList: many(rombelPraktikumMahasiswa),
   bapList: many(bapPraktikum),
+  enrollmentLog: many(rombelEnrollmentLog),
+}));
+
+export const rombelEnrollmentLogRelations = relations(rombelEnrollmentLog, ({ one }) => ({
+  rombelPraktikum: one(rombelPraktikum, {
+    fields: [rombelEnrollmentLog.rombelPraktikumId],
+    references: [rombelPraktikum.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [rombelEnrollmentLog.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
 }));
 
 export const rombelPraktikumMahasiswaRelations = relations(rombelPraktikumMahasiswa, ({ one }) => ({
@@ -2488,9 +2553,101 @@ export const systemFeedbackRelations = relations(systemFeedback, ({ one }) => ({
 export const systemSettings = pgTable('system_settings', {
   key: varchar('key', { length: 100 }).primaryKey(),
   value: text('value').notNull(),
+  paramType: varchar('param_type', { length: 20 }).default('string').notNull(),
   description: text('description'),
+  updatedBy: integer('updated_by'),
   updatedAt: timestamp('updated_at')
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
 });
+
+export const roleGroups = pgTable('role_groups', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull().unique(),
+  description: text('description'),
+  roleType: varchar('role_type', { length: 20 }).default('rbac_group').notNull(),
+  roleValue: varchar('role_value', { length: 50 }),
+  isSystem: boolean('is_system').default(false).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const permissions = pgTable('permissions', {
+  id: serial('id').primaryKey(),
+  module: varchar('module', { length: 100 }).notNull(),
+  action: varchar('action', { length: 50 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const roleGroupPermissions = pgTable(
+  'role_group_permissions',
+  {
+    id: serial('id').primaryKey(),
+    roleGroupId: integer('role_group_id')
+      .notNull()
+      .references(() => roleGroups.id, { onDelete: 'cascade' }),
+    permissionId: integer('permission_id')
+      .notNull()
+      .references(() => permissions.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [unique('role_group_permissions_group_permission_unique').on(table.roleGroupId, table.permissionId)],
+);
+
+export const userProdiScopes = pgTable(
+  'user_prodi_scopes',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [unique('user_prodi_scopes_user_prodi_unique').on(table.userId, table.programStudiId)],
+);
+
+export const roleGroupsRelations = relations(roleGroups, ({ many }) => ({
+  permissions: many(roleGroupPermissions),
+}));
+
+export const permissionsRelations = relations(permissions, ({ many }) => ({
+  roleGroups: many(roleGroupPermissions),
+}));
+
+export const roleGroupPermissionsRelations = relations(roleGroupPermissions, ({ one }) => ({
+  roleGroup: one(roleGroups, {
+    fields: [roleGroupPermissions.roleGroupId],
+    references: [roleGroups.id],
+  }),
+  permission: one(permissions, {
+    fields: [roleGroupPermissions.permissionId],
+    references: [permissions.id],
+  }),
+}));
+
+export const userProdiScopesRelations = relations(userProdiScopes, ({ one }) => ({
+  user: one(users, {
+    fields: [userProdiScopes.userId],
+    references: [users.id],
+  }),
+  programStudi: one(programStudi, {
+    fields: [userProdiScopes.programStudiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
+  updatedByUser: one(users, {
+    fields: [systemSettings.updatedBy],
+    references: [users.id],
+  }),
+}));

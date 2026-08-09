@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
   bap,
@@ -9,6 +10,7 @@ import {
   nilaiPraktik,
   presensi,
   presensiPraktikum,
+  rombelEnrollmentLog,
   rombelPraktikum,
   rombelPraktikumMahasiswa,
 } from '../models/schema';
@@ -71,6 +73,140 @@ export class RombelPraktikumService {
     return true;
   }
 
+  // --- SELF-ENROLLMENT (LINK & QR) ---
+  static async generateEnrollmentToken(id: number) {
+    const token = randomBytes(16).toString('base64url').slice(0, 24);
+    const [updated] = await db
+      .update(rombelPraktikum)
+      .set({
+        enrollmentToken: token,
+        enrollmentEnabled: true,
+        enrollmentExpiresAt: null,
+      })
+      .where(eq(rombelPraktikum.id, id))
+      .returning();
+    if (!updated) {
+      throw new Error('Rombel praktikum tidak ditemukan');
+    }
+    return { token, enrollmentEnabled: true };
+  }
+
+  static async toggleEnrollment(id: number, enabled: boolean) {
+    const [updated] = await db
+      .update(rombelPraktikum)
+      .set({ enrollmentEnabled: enabled })
+      .where(eq(rombelPraktikum.id, id))
+      .returning();
+    if (!updated) {
+      throw new Error('Rombel praktikum tidak ditemukan');
+    }
+    return updated;
+  }
+
+  static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
+    return mhs?.id ?? null;
+  }
+
+  static async getRombelByToken(token: string) {
+    const rombel = await db.query.rombelPraktikum.findFirst({
+      where: eq(rombelPraktikum.enrollmentToken, token),
+      with: {
+        instruktur: true,
+        kelasKuliah: {
+          with: {
+            mataKuliah: true,
+          },
+        },
+        mahasiswaList: {
+          with: {
+            mahasiswa: true,
+          },
+        },
+      },
+    });
+    return rombel || null;
+  }
+
+  static async selfEnroll(token: string, mahasiswaId: number, ipAddress?: string | null, userAgent?: string | null) {
+    // Validate the token first (cheap, no lock needed).
+    const precheck = await db.query.rombelPraktikum.findFirst({
+      where: eq(rombelPraktikum.enrollmentToken, token),
+    });
+    if (!precheck) {
+      throw new Error('Token pendaftaran tidak valid');
+    }
+    if (!precheck.enrollmentEnabled) {
+      throw new Error('Pendaftaran mandiri rombel ini sedang ditutup');
+    }
+
+    const enrolledKrs = await db.$count(
+      krs,
+      and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.kelasKuliahId, precheck.kelasKuliahId)),
+    );
+    if (enrolledKrs === 0) {
+      throw new Error('Mahasiswa belum terdaftar pada kelas mata kuliah ini');
+    }
+
+    // The quota check + membership insert + log insert run inside a single
+    // transaction with a row-level lock on the rombel row to prevent the race
+    // condition where concurrent requests both pass the capacity check.
+    const result = await db.transaction(async (tx) => {
+      const [locked] = await tx.select().from(rombelPraktikum).where(eq(rombelPraktikum.id, precheck.id)).for('update');
+      if (!locked) {
+        throw new Error('Rombel praktikum tidak ditemukan');
+      }
+      if (locked.enrollmentExpiresAt && new Date(locked.enrollmentExpiresAt) < new Date()) {
+        throw new Error('Masa pendaftaran rombel telah berakhir');
+      }
+      if (locked.enrollmentMaxStudents) {
+        const currentCount = await tx.$count(
+          rombelPraktikumMahasiswa,
+          eq(rombelPraktikumMahasiswa.rombelPraktikumId, locked.id),
+        );
+        if (currentCount >= locked.enrollmentMaxStudents) {
+          throw new Error('Kuota mahasiswa rombel sudah penuh');
+        }
+      }
+
+      const alreadyMember = await tx.$count(
+        rombelPraktikumMahasiswa,
+        and(
+          eq(rombelPraktikumMahasiswa.rombelPraktikumId, locked.id),
+          eq(rombelPraktikumMahasiswa.mahasiswaId, mahasiswaId),
+        ),
+      );
+      if (alreadyMember > 0) {
+        throw new Error('Mahasiswa sudah terdaftar di rombel ini');
+      }
+
+      const [member] = await tx
+        .insert(rombelPraktikumMahasiswa)
+        .values({ rombelPraktikumId: locked.id, mahasiswaId })
+        .returning();
+
+      await tx.insert(rombelEnrollmentLog).values({
+        rombelPraktikumId: locked.id,
+        mahasiswaId,
+        ipAddress: ipAddress || null,
+        userAgent: userAgent || null,
+      });
+
+      return { member, rombelNama: locked.namaGroup };
+    });
+
+    return result;
+  }
+
+  static async getEnrollmentLog(id: number) {
+    return await db.query.rombelEnrollmentLog.findMany({
+      where: eq(rombelEnrollmentLog.rombelPraktikumId, id),
+      with: {
+        mahasiswa: true,
+      },
+    });
+  }
+
   // --- BAP PRAKTIKUM ---
   static async getBapByRombel(rombelPraktikumId: number) {
     return await db.query.bapPraktikum.findMany({
@@ -86,12 +222,32 @@ export class RombelPraktikumService {
     rombelPraktikumId: number;
     tanggal: string;
     sesiKe: number;
+    tema?: string | null;
     materi: string;
     catatan?: string | null;
     durasiMenit: number;
     instrukturId?: number | null;
+    sesiIds?: number[];
   }) {
-    const [newBap] = await db.insert(bapPraktikum).values(data).returning();
+    const { sesiIds, ...base } = data;
+    if (sesiIds && sesiIds.length > 1) {
+      // Multi-sesi: duplicate BAP per selected sesi for repetitive reporting
+      const created = [];
+      for (const sesiKe of sesiIds) {
+        const [row] = await db
+          .insert(bapPraktikum)
+          .values({ ...base, sesiKe })
+          .returning();
+        created.push(row);
+      }
+      // Return first created BAP (consistent single-object shape for the caller)
+      return created[0] || null;
+    }
+    const sesi = sesiIds && sesiIds.length === 1 ? sesiIds[0] : base.sesiKe;
+    const [newBap] = await db
+      .insert(bapPraktikum)
+      .values({ ...base, sesiKe: sesi })
+      .returning();
     return newBap;
   }
 
@@ -100,6 +256,7 @@ export class RombelPraktikumService {
     data: Partial<{
       tanggal: string;
       sesiKe: number;
+      tema?: string | null;
       materi: string;
       catatan?: string | null;
       durasiMenit: number;
@@ -108,6 +265,80 @@ export class RombelPraktikumService {
   ) {
     const [updated] = await db.update(bapPraktikum).set(data).where(eq(bapPraktikum.id, id)).returning();
     return updated || null;
+  }
+
+  static async deleteBap(id: number) {
+    await db.delete(presensiPraktikum).where(eq(presensiPraktikum.bapPraktikumId, id));
+    const [deleted] = await db.delete(bapPraktikum).where(eq(bapPraktikum.id, id)).returning();
+    return deleted || null;
+  }
+
+  static async updateBapBulk(data: {
+    bapPraktikumId: number;
+    tanggal: string;
+    sesiIds: number[];
+    tema?: string | null;
+    materi: string;
+    catatan?: string | null;
+    durasiMenit: number;
+    instrukturId?: number | null;
+  }) {
+    const { bapPraktikumId, sesiIds, ...updates } = data;
+    const primary = await db.query.bapPraktikum.findFirst({ where: eq(bapPraktikum.id, bapPraktikumId) });
+    if (!primary) {
+      throw new Error('BAP praktikum tidak ditemukan.');
+    }
+    const targetDate = updates.tanggal;
+    const sesiSet = new Set(sesiIds.filter((s) => !isNaN(Number(s)) && Number(s) > 0).map((s) => Number(s)));
+
+    const sameDateRows = await db
+      .select({ id: bapPraktikum.id, sesiKe: bapPraktikum.sesiKe })
+      .from(bapPraktikum)
+      .where(and(eq(bapPraktikum.rombelPraktikumId, primary.rombelPraktikumId), eq(bapPraktikum.tanggal, targetDate)));
+
+    // Keep the primary BAP (update it), delete any other same-date BAPs not in selection.
+    const existingSesiSet = new Set(sameDateRows.map((r) => Number(r.sesiKe)));
+    const primaryKept = sameDateRows.some((r) => r.id === bapPraktikumId);
+
+    if (primaryKept) {
+      await db.update(bapPraktikum).set(updates).where(eq(bapPraktikum.id, bapPraktikumId));
+      for (const row of sameDateRows) {
+        if (row.id !== bapPraktikumId && !sesiSet.has(Number(row.sesiKe))) {
+          await db.delete(bapPraktikum).where(eq(bapPraktikum.id, row.id));
+        }
+      }
+    } else {
+      await db.delete(bapPraktikum).where(eq(bapPraktikum.id, bapPraktikumId));
+    }
+
+    // Determine final existing sesi set after deletions.
+    const afterDelete = await db
+      .select({ sesiKe: bapPraktikum.sesiKe })
+      .from(bapPraktikum)
+      .where(and(eq(bapPraktikum.rombelPraktikumId, primary.rombelPraktikumId), eq(bapPraktikum.tanggal, targetDate)));
+    const finalExisting = new Set(afterDelete.map((r) => Number(r.sesiKe)));
+
+    if (finalExisting.size === 0 && sesiSet.size > 0) {
+      // No primary BAP kept; create a fresh one for the first selected sesi.
+      const firstSesi = Number(Math.min(...Array.from(sesiSet)));
+      await db
+        .insert(bapPraktikum)
+        .values({ ...updates, sesiKe: firstSesi, rombelPraktikumId: primary.rombelPraktikumId });
+      finalExisting.add(firstSesi);
+    }
+
+    // Create missing BAP records for selected sesi not yet present.
+    for (const sesiKe of Array.from(sesiSet)) {
+      if (!finalExisting.has(sesiKe)) {
+        await db.insert(bapPraktikum).values({ ...updates, sesiKe, rombelPraktikumId: primary.rombelPraktikumId });
+      }
+    }
+
+    void existingSesiSet;
+    return await db
+      .select()
+      .from(bapPraktikum)
+      .where(and(eq(bapPraktikum.rombelPraktikumId, primary.rombelPraktikumId), eq(bapPraktikum.tanggal, targetDate)));
   }
 
   static async savePresensiBulk(

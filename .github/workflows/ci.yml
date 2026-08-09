@@ -121,6 +121,7 @@ jobs:
           file: ./apps/backend/Dockerfile
           push: false
           tags: simak-backend:ci-check
+          build-args: GIT_COMMIT=${{ github.sha }}
 
       - name: Build frontend image
         uses: docker/build-push-action@v5

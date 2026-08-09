@@ -23,7 +23,7 @@ type SortField = 'nama' | 'kode' | 'sks' | 'semester' | 'programStudi' | 'kuriku
 export default function MataKuliah() {
   const auth = useAuth();
   const ws = useWorkspace();
-  const isAdmin = () => auth.user()?.role === 'admin';
+  const isAdmin = () => auth.hasRole(['admin']);
   const [showImportModal, setShowImportModal] = createSignal(false);
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
 

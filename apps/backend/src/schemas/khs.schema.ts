@@ -15,7 +15,7 @@ export const getKhsSchema = {
     200: t.Object({
       blocked: t.Optional(t.Boolean({ default: false })),
       reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
-      detail: t.Optional(t.Any()),
+      detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
       krsList: t.Optional(
         t.Array(
           t.Object({
@@ -72,7 +72,17 @@ export const getTranskripSchema = {
           prodi: t.Optional(t.String({ default: '-' })),
         }),
       ),
-      transkripList: t.Optional(t.Array(t.Any())),
+      transkripList: t.Optional(
+        t.Array(
+          t.Object({
+            mataKuliahKode: t.Optional(t.String()),
+            mataKuliahNama: t.Optional(t.String()),
+            sks: t.Optional(t.Integer()),
+            nilaiHuruf: t.Optional(t.String()),
+            nilaiIndeks: t.Optional(t.String()),
+          }),
+        ),
+      ),
       totalSksLulus: t.Optional(t.Integer({ default: 84 })),
       ipk: t.Optional(t.Number({ default: 3.65 })),
       predikatKelulusan: t.Optional(t.String({ default: '-' })),
@@ -105,7 +115,26 @@ export const getExamEligibilitySchema = {
           eligible: t.Optional(t.Boolean({ default: false })),
         }),
       ),
-      classes: t.Optional(t.Array(t.Any())),
+      classes: t.Optional(
+        t.Array(
+          t.Object({
+            kelasKuliahId: t.Optional(t.Integer()),
+            namaKelas: t.Optional(t.String()),
+            mataKuliahNama: t.Optional(t.String()),
+            mataKuliahKode: t.Optional(t.String()),
+            totalMeetings: t.Optional(t.Integer()),
+            presentMeetings: t.Optional(t.Integer()),
+            attendanceRate: t.Optional(t.Number()),
+            eligible: t.Optional(t.Boolean()),
+            reasons: t.Optional(
+              t.Object({
+                attendance: t.Optional(t.String()),
+                bimbingan: t.Optional(t.String()),
+              }),
+            ),
+          }),
+        ),
+      ),
       overallEligible: t.Optional(t.Boolean({ default: true })),
     }),
   },

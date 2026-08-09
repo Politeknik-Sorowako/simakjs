@@ -9,6 +9,8 @@ import {
   getLaporanKompensasiSchema,
   getRekapKehadiranMahasiswaSchema,
   getRekapKehadiranSchema,
+  getUnknownPresensiSchema,
+  resolveUnknownPresensiSchema,
   saveBulkPresensiSchema,
   updateKompensasiBayarSchema,
 } from '../schemas/presensi.schema';
@@ -17,6 +19,8 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .use(authMiddleware)
   .post('/bulk', PresensiController.saveBulk, saveBulkPresensiSchema)
   .get('/bap/:bapId', PresensiController.getByBap, getByBapSchema)
+  .get('/unknown-list', PresensiController.getUnknownPresensi, getUnknownPresensiSchema)
+  .put('/unknown/:id/resolve', PresensiController.resolveUnknown, resolveUnknownPresensiSchema)
   .get('/kompensasi/stats', PresensiController.getLaporanKompensasiStats, getKompensasiStatsSchema)
   .get('/kompensasi/laporan', PresensiController.getLaporanKompensasi, getLaporanKompensasiSchema)
   .get('/rekap-kehadiran', PresensiController.getRekapKehadiran, getRekapKehadiranSchema)

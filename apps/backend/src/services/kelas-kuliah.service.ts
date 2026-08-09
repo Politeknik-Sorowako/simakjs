@@ -1,5 +1,5 @@
-import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
-import { dosen, dosenPengajarKelas, kelasKuliah, mataKuliah, programStudi } from '../models/schema';
+import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { dosen, dosenPengajarKelas, kelasKuliah, krs, mataKuliah, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
 export interface CreateKelasDto {
@@ -81,8 +81,24 @@ export class KelasKuliahService {
 
     const totalPages = Math.ceil(total / limit);
 
+    const kelasIds = data.map((k) => k.id);
+    const countMap = new Map<number, number>();
+    if (kelasIds.length > 0) {
+      const counts = await db
+        .select({ kelasKuliahId: krs.kelasKuliahId, jumlah: count() })
+        .from(krs)
+        .where(inArray(krs.kelasKuliahId, kelasIds))
+        .groupBy(krs.kelasKuliahId);
+      for (const c of counts) {
+        countMap.set(c.kelasKuliahId, c.jumlah);
+      }
+    }
+
     return {
-      data,
+      data: data.map((k) => ({
+        ...k,
+        mahasiswaCount: countMap.get(k.id) || 0,
+      })),
       meta: {
         total,
         page,
@@ -105,7 +121,9 @@ export class KelasKuliahService {
         },
       },
     });
-    return data || null;
+    if (!data) return null;
+    const [krsCount] = await db.select({ count: count() }).from(krs).where(eq(krs.kelasKuliahId, id));
+    return { ...data, mahasiswaCount: krsCount?.count || 0 };
   }
 
   static async create(data: CreateKelasDto) {

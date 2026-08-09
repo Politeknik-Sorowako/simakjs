@@ -1,5 +1,6 @@
 import { FeedbackService } from '../services/feedback.service';
 import { SettingsService } from '../services/settings.service';
+import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
 export class FeedbackController {
@@ -38,7 +39,7 @@ export class FeedbackController {
         set.status = 401;
         return { error: 'Unauthorized' };
       }
-      if (user.role === 'admin' || user.role === 'super_admin') {
+      if (hasRole(user, ['admin', 'super_admin'])) {
         return await FeedbackService.getAll();
       }
       return await FeedbackService.getByUserId(user.id);
@@ -52,7 +53,7 @@ export class FeedbackController {
   static async updateStatus({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+      if (!user || !hasRole(user, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }

@@ -17,6 +17,7 @@ export interface KelasKuliah {
   dosenPengajarKelas?: DosenPengajar[] | null;
   idPddikti?: string | null;
   isSynced?: boolean;
+  mahasiswaCount?: number;
 }
 
 export const kelasKuliahController = {

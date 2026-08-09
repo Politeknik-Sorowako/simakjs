@@ -41,9 +41,10 @@ export const getKelasSchema = {
           isLocked: t.Boolean({ default: false }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
-          lastSyncAt: t.Any(),
-          createdAt: t.Any(),
-          updatedAt: t.Any(),
+          lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
+          mahasiswaCount: t.Integer({ default: 0 }),
+          createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+          updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
           mataKuliah: t.Union([
             t.Object({
               id: t.Integer(),
@@ -107,9 +108,9 @@ export const createKelasSchema = {
       namaKelas: t.String({ default: '4A' }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
@@ -135,9 +136,9 @@ export const getKelasByIdSchema = {
       isLocked: t.Boolean({ default: false }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
       mataKuliah: t.Union([
         t.Object({
           id: t.Integer(),
@@ -199,9 +200,9 @@ export const updateKelasSchema = {
       namaKelas: t.String({ default: '4A' }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
-      lastSyncAt: t.Union([t.String(), t.Null()], { default: null }),
-      createdAt: t.Any(),
-      updatedAt: t.Any(),
+      lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
+      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
+      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),

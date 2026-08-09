@@ -1,13 +1,23 @@
 import { PresensiService } from '../services/presensi.service';
+import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
+    }
+    // Dosen/instruktur only may set hadir, telat( +durasi) or unknown; admin & prodi may validate unknown into sakit/izin/alpa.
+    if (!hasRole(user, ['admin', 'super_admin', 'prodi'])) {
+      const allowedStatuses = new Set(['hadir', 'telat', 'unknown']);
+      const restricted = (body.presensiList || []).filter((p: { status: string }) => !allowedStatuses.has(p.status));
+      if (restricted.length > 0) {
+        set.status = 400;
+        return { error: 'Dosen hanya dapat menetapkan status Hadir, Telat, atau Unknown untuk presensi.' };
+      }
     }
     return await PresensiService.saveBulkPresensi(body.bapId, body.presensiList);
   }
@@ -26,7 +36,7 @@ export class PresensiController {
   static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+      if (!user || !hasRole(user, ['admin', 'dosen'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -60,7 +70,7 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -76,7 +86,7 @@ export class PresensiController {
     }
     const targetMhsId = parseInt(params.mahasiswaId);
     const detail = await PresensiService.getKompensasiDetail(targetMhsId);
-    if (user.role === 'mahasiswa' && detail.mahasiswa.email !== user.email) {
+    if (hasRole(user, ['mahasiswa']) && detail.mahasiswa.email !== user.email) {
       set.status = 403;
       return { error: 'Akses ditolak. Anda hanya dapat melihat data Anda sendiri.' };
     }
@@ -90,7 +100,7 @@ export class PresensiController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { kelasKuliahId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'dosen')) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -124,7 +134,7 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -140,7 +150,7 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateKompensasiBayar({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -150,6 +160,47 @@ export class PresensiController {
       if (!updated) {
         set.status = 404;
         return { error: 'Data penyelesaian kompensasi tidak ditemukan.' };
+      }
+      return updated;
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getUnknownPresensi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    const page = query?.page ? parseInt(query.page) : 1;
+    const limit = query?.limit ? parseInt(query.limit) : 20;
+    const search = query?.search;
+    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+    return await PresensiService.getUnknownPresensi(page, limit, search, prodiId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async resolveUnknown({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const id = parseInt(params.id);
+      const updated = await PresensiService.resolveUnknownPresensi(
+        id,
+        body.newStatus,
+        user.id,
+        body.keteranganAdmin,
+        body.lampiranEvidens,
+      );
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Data presensi tidak ditemukan.' };
       }
       return updated;
     } catch (err: unknown) {
