@@ -150,6 +150,16 @@ export class ApelController {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
+      // Hanya admin/super_admin yang boleh menetapkan status sakit/izin/alpa secara langsung.
+      // Dosen/PJ apel hanya dapat menetapkan Hadir, Terlambat, atau Unknown.
+      if (!allowed(user, ['admin', 'super_admin'])) {
+        const allowedStatuses = new Set(['hadir', 'terlambat', 'unknown']);
+        const restricted = (body.presensiList || []).filter((p: { status: string }) => !allowedStatuses.has(p.status));
+        if (restricted.length > 0) {
+          set.status = 400;
+          return { error: 'Dosen hanya dapat menetapkan status Hadir, Terlambat, atau Unknown untuk presensi apel.' };
+        }
+      }
       return await ApelService.submitPresensi(parseInt(params.id), body.presensiList);
     } catch (e: unknown) {
       set.status = 400;

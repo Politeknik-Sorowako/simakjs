@@ -24,6 +24,17 @@ export default function BapPresensi() {
   const toast = useToast();
   const user = () => auth.user();
 
+  // Hanya admin/super_admin yang boleh menetapkan sakit/izin/alpa secara manual.
+  // Dosen/instruktur hanya dapat memilih Hadir, Terlambat (+durasi), atau Unknown.
+  const KELAS_FULL_STATUSES = ['hadir', 'sakit', 'izin', 'telat', 'alpa', 'unknown'];
+  const KELAS_STAFF_STATUSES = ['hadir', 'telat', 'unknown'];
+  const kelasStatusOptions = () =>
+    auth.hasRole(['admin', 'super_admin']) ? KELAS_FULL_STATUSES : KELAS_STAFF_STATUSES;
+  const PRAKTIKUM_FULL_STATUSES = ['hadir', 'izin', 'sakit', 'alpa', 'telat', 'unknown'];
+  const PRAKTIKUM_STAFF_STATUSES = ['hadir', 'telat', 'unknown'];
+  const praktikumStatusOptions = () =>
+    auth.hasRole(['admin', 'super_admin']) ? PRAKTIKUM_FULL_STATUSES : PRAKTIKUM_STAFF_STATUSES;
+
   // Selected state
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
   const [selectedBapId, setSelectedBapId] = createSignal<number | null>(null);
@@ -898,7 +909,7 @@ export default function BapPresensi() {
                               </td>
                               <td class="py-4 px-4">
                                 <div class="flex items-center gap-2">
-                                  <For each={['hadir', 'sakit', 'izin', 'telat', 'alpa', 'unknown']}>
+                                  <For each={kelasStatusOptions()}>
                                     {(st) => (
                                       <button
                                         type="button"
@@ -1884,16 +1895,38 @@ export default function BapPresensi() {
                           const val = e.currentTarget.value;
                           setPresensiPrakSheet((prev) => ({
                             ...prev,
-                            [mhsItem.mahasiswaId]: { ...prev[mhsItem.mahasiswaId], status: val },
+                            [mhsItem.mahasiswaId]: {
+                              ...prev[mhsItem.mahasiswaId],
+                              status: val,
+                              durasiMangkir: val === 'telat' ? (prev[mhsItem.mahasiswaId]?.durasiMangkir ?? 15) : 0,
+                            },
                           }));
                         }}
                       >
-                        <option value="hadir">Hadir</option>
-                        <option value="izin">Izin</option>
-                        <option value="sakit">Sakit</option>
-                        <option value="alpa">Alpa</option>
-                        <option value="telat">Telat</option>
+                        <For each={praktikumStatusOptions()}>
+                          {(opt) => (
+                            <option value={opt}>
+                              {opt === 'unknown' ? 'Unknown (?)' : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                            </option>
+                          )}
+                        </For>
                       </select>
+                      <Show when={sheet().status === 'telat'}>
+                        <input
+                          type="number"
+                          min={0}
+                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          placeholder="Menit"
+                          value={sheet().durasiMangkir}
+                          onInput={(e) => {
+                            const val = parseInt(e.currentTarget.value) || 0;
+                            setPresensiPrakSheet((prev) => ({
+                              ...prev,
+                              [mhsItem.mahasiswaId]: { ...prev[mhsItem.mahasiswaId], durasiMangkir: val },
+                            }));
+                          }}
+                        />
+                      </Show>
                     </div>
                   </div>
                 );

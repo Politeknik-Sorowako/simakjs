@@ -28,6 +28,20 @@ export default function ApelKelola() {
   const [catatanSesi, setCatatanSesi] = createSignal('');
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
+
+  // Hanya admin/super_admin yang boleh menetapkan sakit/izin/alpa secara manual.
+  // Dosen/PJ apel hanya dapat memilih Hadir, Terlambat (+durasi), atau Unknown.
+  const APEL_STATUS_LABELS: Record<string, string> = {
+    hadir: 'Hadir (H)',
+    terlambat: 'Terlambat (T)',
+    sakit: 'Sakit (S)',
+    izin: 'Izin (I)',
+    alpa: 'Alpa (A)',
+    unknown: 'Unknown (?)',
+  };
+  const APEL_FULL_STATUSES = ['hadir', 'terlambat', 'sakit', 'izin', 'alpa', 'unknown'];
+  const APEL_STAFF_STATUSES = ['hadir', 'terlambat', 'unknown'];
+  const statusOptions = () => (auth.hasRole(['admin', 'super_admin']) ? APEL_FULL_STATUSES : APEL_STAFF_STATUSES);
   const [showBukaSesiModal, setShowBukaSesiModal] = createSignal(false);
 
   // Modal Buat Kelompok State
@@ -642,12 +656,9 @@ export default function ApelKelola() {
                                   )
                                 }
                               >
-                                <option value="hadir">Hadir (H)</option>
-                                <option value="terlambat">Terlambat (T)</option>
-                                <option value="sakit">Sakit (S)</option>
-                                <option value="izin">Izin (I)</option>
-                                <option value="alpa">Alpa (A)</option>
-                                <option value="unknown">Unknown (?)</option>
+                                <For each={statusOptions()}>
+                                  {(opt) => <option value={opt}>{APEL_STATUS_LABELS[opt]}</option>}
+                                </For>
                               </select>
                             </td>
                             <td class="px-4 py-3 text-center">
