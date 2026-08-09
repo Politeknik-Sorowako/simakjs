@@ -87,7 +87,7 @@ export class RombelPraktikumController {
         set.status = 401;
         return { error: 'Unauthorized' };
       }
-      return await RombelPraktikumService.getBapByRombel(parseInt(params.rombelId));
+      return await RombelPraktikumService.getBapByRombel(parseInt(params.id));
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };
@@ -156,7 +156,7 @@ export class RombelPraktikumController {
         set.status = 401;
         return { error: 'Unauthorized' };
       }
-      return await RombelPraktikumService.getPresensiByBap(parseInt(params.bapPraktikumId));
+      return await RombelPraktikumService.getPresensiByBap(parseInt(params.id));
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };
