@@ -6,6 +6,8 @@ import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
+type KrsQuery = PaginationQuery & { kelasKuliahId?: number };
+
 export class KrsController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
     const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
@@ -19,7 +21,7 @@ export class KrsController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getAll({ query, set, getCurrentUser }: AuthContext<any, PaginationQuery>): Promise<any> {
+  static async getAll({ query, set, getCurrentUser }: AuthContext<any, KrsQuery>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
@@ -28,6 +30,7 @@ export class KrsController {
     const page = query?.page ? parseInt(String(query.page)) : 1;
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
+    const kelasKuliahId = query?.kelasKuliahId ? parseInt(String(query.kelasKuliahId)) : undefined;
 
     let filterMhsId: number | undefined = undefined;
     let dosenPaId: number | undefined = undefined;
@@ -48,7 +51,7 @@ export class KrsController {
       }
     }
 
-    return await KrsService.getAll(page, limit, search, filterMhsId, dosenPaId);
+    return await KrsService.getAll(page, limit, search, filterMhsId, dosenPaId, kelasKuliahId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

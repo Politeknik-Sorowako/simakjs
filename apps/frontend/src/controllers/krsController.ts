@@ -32,11 +32,17 @@ export interface Krs {
 }
 
 export const krsController = {
-  async getAll(search?: string, page?: number, limit?: number): Promise<PaginatedResponse<Krs>> {
+  async getAll(
+    search?: string,
+    page?: number,
+    limit?: number,
+    kelasKuliahId?: number,
+  ): Promise<PaginatedResponse<Krs>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
+    if (kelasKuliahId) params.append('kelasKuliahId', String(kelasKuliahId));
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Krs>>(`/krs${queryString}`);
   },
