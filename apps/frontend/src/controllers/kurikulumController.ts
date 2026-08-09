@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 import { MataKuliah } from './mataKuliahController';
 import { PaginatedResponse, Prodi } from './prodiController';
 
@@ -42,13 +43,17 @@ export const kurikulumController = {
     limit?: number,
     prodiId?: number,
   ): Promise<PaginatedResponse<Kurikulum>> {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (page) params.append('page', String(page));
-    if (limit) params.append('limit', String(limit));
-    if (prodiId) params.append('prodiId', String(prodiId));
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<PaginatedResponse<Kurikulum>>(`/kurikulum${queryString}`);
+    const query: Record<string, string | number> = {};
+    if (search) query.search = search;
+    if (page) query.page = page;
+    if (limit) query.limit = limit;
+    if (prodiId) query.prodiId = prodiId;
+    return unwrap<PaginatedResponse<Kurikulum>>(
+      eden['kurikulum'].get({ $query: query }) as unknown as Promise<{
+        data?: PaginatedResponse<Kurikulum>;
+        error?: unknown;
+      }>,
+    );
   },
 
   async getById(id: number): Promise<KurikulumDetail> {
@@ -56,10 +61,11 @@ export const kurikulumController = {
   },
 
   async create(data: Omit<Kurikulum, 'id'>): Promise<Kurikulum> {
-    return fetchApi<Kurikulum>('/kurikulum', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    const res = (await eden['kurikulum'].post(data as never)) as unknown as {
+      data?: Kurikulum;
+      error?: unknown;
+    };
+    return unwrap<Kurikulum>(Promise.resolve(res));
   },
 
   async update(id: number, data: Partial<Omit<Kurikulum, 'id'>>): Promise<Kurikulum> {

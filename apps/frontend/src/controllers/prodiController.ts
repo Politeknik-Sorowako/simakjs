@@ -1,4 +1,5 @@
 import { fetchApi } from '../utils/api';
+import { eden, unwrap } from '../utils/eden';
 
 export interface Prodi {
   id: number;
@@ -21,12 +22,16 @@ export interface PaginatedResponse<T> {
 
 export const prodiController = {
   async getAll(search?: string, page?: number, limit?: number): Promise<PaginatedResponse<Prodi>> {
-    const params = new URLSearchParams();
-    if (search) params.append('search', search);
-    if (page) params.append('page', String(page));
-    if (limit) params.append('limit', String(limit));
-    const queryString = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<PaginatedResponse<Prodi>>(`/prodi${queryString}`);
+    const query: Record<string, string> = {};
+    if (search) query.search = search;
+    if (page) query.page = String(page);
+    if (limit) query.limit = String(limit);
+    return unwrap<PaginatedResponse<Prodi>>(
+      eden.prodi.get({ $query: query }) as unknown as Promise<{
+        data?: PaginatedResponse<Prodi>;
+        error?: unknown;
+      }>,
+    );
   },
 
   async getById(id: number): Promise<Prodi> {
@@ -34,10 +39,14 @@ export const prodiController = {
   },
 
   async create(data: Omit<Prodi, 'id'>): Promise<Prodi> {
-    return fetchApi<Prodi>('/prodi', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return unwrap<Prodi>(
+      eden.prodi.post(
+        data as { kode: string; nama: string; jenjang: string; idPddikti?: string },
+      ) as unknown as Promise<{
+        data?: Prodi;
+        error?: unknown;
+      }>,
+    );
   },
 
   async update(id: number, data: Partial<Omit<Prodi, 'id'>>): Promise<Prodi> {
