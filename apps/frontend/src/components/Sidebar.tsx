@@ -116,6 +116,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
   const isMahasiswa = () => role() === 'mahasiswa';
   const isProdi = () => role() === 'prodi';
   const isKeuangan = () => role() === 'keuangan';
+  const isInstruktur = () => role() === 'instruktur';
   const isCalonMhs = () => role() === 'calon_mahasiswa';
   const isSuperAdmin = () => role() === 'super_admin';
   const isAdminMgmt = () => role() === 'admin' || role() === 'super_admin';
@@ -723,7 +724,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Jurnal & Presensi
                   </A>
                 </Show>
-                <Show when={isAdmin() || isDosen() || isProdi()}>
+                <Show when={isAdmin() || isDosen() || isProdi() || isInstruktur()}>
                   <A
                     href="/presensi-apel"
                     onClick={() => props.onClose()}
