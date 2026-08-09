@@ -198,10 +198,11 @@ export class BapService {
           .returning();
         duplicates.push(dup);
       }
-      return {
-        data: duplicates,
-        pertemuanKe: sesiIds.map((s) => Number(s)),
-      };
+      // Return the same BAP-shaped object as the single-sesi path so the
+      // caller always gets a consistent shape (with an `id`).
+      if (duplicates.length > 0) {
+        return { ...duplicates[0], topikIds: [] };
+      }
     }
 
     let savedTopikIds: number[] = [];

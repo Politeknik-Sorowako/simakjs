@@ -33,7 +33,8 @@ export default function EnrollmentQrModal(props: EnrollmentQrModalProps) {
       const res = await rombelPraktikumController.generateEnrollmentToken(props.rombelId);
       setToken(res.token);
       setEnabled(res.enrollmentEnabled);
-      const url = publicUrl();
+      const base = publicBaseUrl() || window.location.origin;
+      const url = `${base}/rombel/enroll/${res.token}`;
       const dataUrl = await QRCode.toDataURL(url, { width: 280, margin: 2 });
       setQrDataUrl(dataUrl);
       const fetchedInfo = await rombelPraktikumController.getPublicRombel(res.token);

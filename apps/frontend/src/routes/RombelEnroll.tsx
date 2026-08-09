@@ -4,7 +4,6 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { mahasiswaController } from '../controllers/mahasiswaController';
 import { rombelPraktikumController } from '../controllers/rombelPraktikumController';
 
 export default function RombelEnroll() {
@@ -26,17 +25,6 @@ export default function RombelEnroll() {
       return null;
     }
   });
-
-  const [mhsProfile] = createResource(
-    () => (auth.user()?.role === 'mahasiswa' ? auth.user()?.email : null),
-    async (email) => {
-      if (!email) return null;
-      const res = await mahasiswaController.getAll(email, 1, 1);
-      return res.data[0] || null;
-    },
-  );
-
-  const currentMhsId = () => mhsProfile()?.id;
 
   const handleEnroll = async () => {
     const tok = token();
@@ -81,8 +69,8 @@ export default function RombelEnroll() {
                     {i().namaGroup}
                   </h1>
                   <p class="mt-1 text-sm text-secondary-500 dark:text-secondary-300">
-                    {info()?.mataKuliah?.kode && info()?.mataKuliah?.nama
-                      ? `${info()?.mataKuliah?.kode} — ${info()?.mataKuliah?.nama}`
+                    {i().mataKuliah?.kode && i().mataKuliah?.nama
+                      ? `${i().mataKuliah?.kode} — ${i().mataKuliah?.nama}`
                       : 'Rombel Praktikum'}
                   </p>
                 </div>
@@ -131,10 +119,7 @@ export default function RombelEnroll() {
                       </p>
                     </div>
                   </Show>
-                  <Show when={auth.user()?.role === 'mahasiswa' && mhsProfile.loading}>
-                    <div class="text-center text-sm text-secondary-500">Memuat profil mahasiswa...</div>
-                  </Show>
-                  <Show when={auth.user()?.role === 'mahasiswa' && !mhsProfile.loading && currentMhsId()}>
+                  <Show when={auth.user()?.role === 'mahasiswa'}>
                     <div class="space-y-3">
                       <Show when={error() !== ''}>
                         <p class="text-sm text-danger-600 dark:text-danger-400 text-center">{error()}</p>
@@ -148,13 +133,6 @@ export default function RombelEnroll() {
                       >
                         {enrolling() ? 'Mendaftar...' : 'Daftar / Join Rombel'}
                       </Button>
-                    </div>
-                  </Show>
-                  <Show when={auth.user()?.role === 'mahasiswa' && !mhsProfile.loading && !currentMhsId()}>
-                    <div class="text-center">
-                      <p class="text-sm text-warning-600 dark:text-warning-400">
-                        Profil mahasiswa tidak ditemukan untuk akun ini.
-                      </p>
                     </div>
                   </Show>
                 </Switch>

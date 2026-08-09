@@ -27,6 +27,7 @@ export const createBapSchema = {
       kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
       tanggal: t.Optional(t.String({ default: '2026-06-27' })),
       pertemuanKe: t.Optional(t.Integer({ default: 1 })),
+      tema: t.Optional(t.Nullable(t.String())),
       materi: t.Optional(t.String({ default: 'Pengenalan dan Dasar Pemrograman' })),
       catatan: t.Optional(t.Nullable(t.String())),
       durasiMenit: t.Optional(t.Integer({ default: 100 })),

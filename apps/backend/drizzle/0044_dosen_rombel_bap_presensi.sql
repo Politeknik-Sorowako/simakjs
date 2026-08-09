@@ -18,7 +18,8 @@ ALTER TABLE "rombel_praktikum" ADD COLUMN IF NOT EXISTS "enrollment_expires_at" 
 DO $$
 BEGIN
   IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes WHERE indexname = 'rombel_praktikum_enrollment_token_unique'
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'rombel_praktikum_enrollment_token_unique'
   ) THEN
     ALTER TABLE "rombel_praktikum" ADD CONSTRAINT "rombel_praktikum_enrollment_token_unique" UNIQUE ("enrollment_token");
   END IF;

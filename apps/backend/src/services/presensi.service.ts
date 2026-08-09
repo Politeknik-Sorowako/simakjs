@@ -80,13 +80,7 @@ export class PresensiService {
   }
 
   // --- ADMIN RESOLUTION OF UNKNOWN STATUS ---
-  static async getUnknownPresensi(
-    page = 1,
-    limit = 20,
-    search?: string,
-    prodiId?: number,
-    source: 'perkuliahan' | 'praktikum' = 'perkuliahan',
-  ) {
+  static async getUnknownPresensi(page = 1, limit = 20, search?: string, prodiId?: number) {
     const conditions: SQL<unknown>[] = [eq(presensi.status, 'unknown')];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
