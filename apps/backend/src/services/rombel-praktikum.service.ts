@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import {
   bap,
@@ -9,6 +10,7 @@ import {
   nilaiPraktik,
   presensi,
   presensiPraktikum,
+  rombelEnrollmentLog,
   rombelPraktikum,
   rombelPraktikumMahasiswa,
 } from '../models/schema';
@@ -71,6 +73,120 @@ export class RombelPraktikumService {
     return true;
   }
 
+  // --- SELF-ENROLLMENT (LINK & QR) ---
+  static async generateEnrollmentToken(id: number) {
+    const token = randomBytes(16).toString('base64url').slice(0, 24);
+    const [updated] = await db
+      .update(rombelPraktikum)
+      .set({
+        enrollmentToken: token,
+        enrollmentEnabled: true,
+        enrollmentExpiresAt: null,
+      })
+      .where(eq(rombelPraktikum.id, id))
+      .returning();
+    if (!updated) {
+      throw new Error('Rombel praktikum tidak ditemukan');
+    }
+    return { token, enrollmentEnabled: true };
+  }
+
+  static async toggleEnrollment(id: number, enabled: boolean) {
+    const [updated] = await db
+      .update(rombelPraktikum)
+      .set({ enrollmentEnabled: enabled })
+      .where(eq(rombelPraktikum.id, id))
+      .returning();
+    if (!updated) {
+      throw new Error('Rombel praktikum tidak ditemukan');
+    }
+    return updated;
+  }
+
+  static async getRombelByToken(token: string) {
+    const rombel = await db.query.rombelPraktikum.findFirst({
+      where: eq(rombelPraktikum.enrollmentToken, token),
+      with: {
+        instruktur: true,
+        kelasKuliah: {
+          with: {
+            mataKuliah: true,
+          },
+        },
+        mahasiswaList: {
+          with: {
+            mahasiswa: true,
+          },
+        },
+      },
+    });
+    return rombel || null;
+  }
+
+  static async selfEnroll(token: string, mahasiswaId: number, ipAddress?: string | null, userAgent?: string | null) {
+    const rombel = await this.getRombelByToken(token);
+    if (!rombel) {
+      throw new Error('Token pendaftaran tidak valid');
+    }
+    if (!rombel.enrollmentEnabled) {
+      throw new Error('Pendaftaran mandiri rombel ini sedang ditutup');
+    }
+    if (rombel.enrollmentExpiresAt && new Date(rombel.enrollmentExpiresAt) < new Date()) {
+      throw new Error('Masa pendaftaran rombel telah berakhir');
+    }
+    if (rombel.enrollmentMaxStudents && rombel.mahasiswaList.length >= rombel.enrollmentMaxStudents) {
+      throw new Error('Kuota mahasiswa rombel sudah penuh');
+    }
+
+    const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, mahasiswaId));
+    if (!mhs) {
+      throw new Error('Mahasiswa tidak ditemukan');
+    }
+
+    // It should be a student enrolled in the parent class (KRS) — for the same periode
+    const isEnrolled = await db.$count(
+      krs,
+      and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.kelasKuliahId, rombel.kelasKuliahId)),
+    );
+    if (isEnrolled === 0) {
+      throw new Error('Mahasiswa belum terdaftar pada kelas mata kuliah ini');
+    }
+
+    const alreadyMember = await db.$count(
+      rombelPraktikumMahasiswa,
+      and(
+        eq(rombelPraktikumMahasiswa.rombelPraktikumId, rombel.id),
+        eq(rombelPraktikumMahasiswa.mahasiswaId, mahasiswaId),
+      ),
+    );
+    if (alreadyMember > 0) {
+      throw new Error('Mahasiswa sudah terdaftar di rombel ini');
+    }
+
+    const [member] = await db
+      .insert(rombelPraktikumMahasiswa)
+      .values({ rombelPraktikumId: rombel.id, mahasiswaId })
+      .returning();
+
+    await db.insert(rombelEnrollmentLog).values({
+      rombelPraktikumId: rombel.id,
+      mahasiswaId,
+      ipAddress: ipAddress || null,
+      userAgent: userAgent || null,
+    });
+
+    return { member, rombelNama: rombel.namaGroup };
+  }
+
+  static async getEnrollmentLog(id: number) {
+    return await db.query.rombelEnrollmentLog.findMany({
+      where: eq(rombelEnrollmentLog.rombelPraktikumId, id),
+      with: {
+        mahasiswa: true,
+      },
+    });
+  }
+
   // --- BAP PRAKTIKUM ---
   static async getBapByRombel(rombelPraktikumId: number) {
     return await db.query.bapPraktikum.findMany({
@@ -86,12 +202,31 @@ export class RombelPraktikumService {
     rombelPraktikumId: number;
     tanggal: string;
     sesiKe: number;
+    tema?: string | null;
     materi: string;
     catatan?: string | null;
     durasiMenit: number;
     instrukturId?: number | null;
+    sesiIds?: number[];
   }) {
-    const [newBap] = await db.insert(bapPraktikum).values(data).returning();
+    const { sesiIds, ...base } = data;
+    if (sesiIds && sesiIds.length > 1) {
+      // Multi-sesi: duplicate BAP per selected sesi for repetitive reporting
+      const created = [];
+      for (const sesiKe of sesiIds) {
+        const [row] = await db
+          .insert(bapPraktikum)
+          .values({ ...base, sesiKe })
+          .returning();
+        created.push(row);
+      }
+      return created;
+    }
+    const sesi = sesiIds && sesiIds.length === 1 ? sesiIds[0] : base.sesiKe;
+    const [newBap] = await db
+      .insert(bapPraktikum)
+      .values({ ...base, sesiKe: sesi })
+      .returning();
     return newBap;
   }
 
@@ -100,6 +235,7 @@ export class RombelPraktikumService {
     data: Partial<{
       tanggal: string;
       sesiKe: number;
+      tema?: string | null;
       materi: string;
       catatan?: string | null;
       durasiMenit: number;

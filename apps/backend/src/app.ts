@@ -48,7 +48,7 @@ import { prodiRoutes } from './routes/prodi.routes';
 import { prodiScopeRoutes } from './routes/prodi-scope.routes';
 import { profilLulusanRoutes } from './routes/profil-lulusan.routes';
 import { rbacRoutes } from './routes/rbac.routes';
-import { rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
+import { rombelPraktikumPublicRoutes, rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
 import { rpsRoutes } from './routes/rps.routes';
 import { settingsRoutes } from './routes/settings.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
@@ -313,6 +313,7 @@ export const app = new Elysia()
   .use(systemRoutes)
   .use(rbacRoutes)
   .use(prodiScopeRoutes)
+  .use(rombelPraktikumPublicRoutes)
   .use(rombelPraktikumRoutes)
   .use(mahasiswaKeluarRoutes)
   .use(auditPlugin)

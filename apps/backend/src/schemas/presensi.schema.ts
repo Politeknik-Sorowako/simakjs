@@ -226,3 +226,44 @@ export const updateKompensasiBayarSchema = {
     404: t.Object({ error: t.String() }),
   },
 };
+
+export const getUnknownPresensiSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Daftar Presensi Unknown',
+    description: 'Mengambil daftar presensi berstatus unknown (perlu verifikasi admin).',
+  },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '20' })),
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+  }),
+};
+
+export const resolveUnknownPresensiSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Resolusi Presensi Unknown oleh Admin',
+    description: 'Memperbarui status presensi unknown menjadi sakit/izin/alpa berdasarkan verifikasi admin.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    newStatus: t.Union([t.Literal('sakit'), t.Literal('izin'), t.Literal('alpa')]),
+    keteranganAdmin: t.Optional(t.String()),
+    lampiranEvidens: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Object({
+      id: t.Integer(),
+      status: t.String(),
+      keteranganAdmin: t.Union([t.String(), t.Null()]),
+      resolvedAt: t.Union([t.Date(), t.Null()]),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  },
+};

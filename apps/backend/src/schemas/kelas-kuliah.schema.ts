@@ -42,6 +42,7 @@ export const getKelasSchema = {
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Boolean({ default: false }),
           lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
+          mahasiswaCount: t.Integer({ default: 0 }),
           createdAt: t.Union([t.Date(), t.Null()], { default: null }),
           updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
           mataKuliah: t.Union([

@@ -73,6 +73,7 @@ import Profil from './routes/Profil';
 import ProfilLulusan from './routes/ProfilLulusan';
 import ProgramStudi from './routes/ProgramStudi';
 import ResetPassword from './routes/ResetPassword';
+import RombelEnroll from './routes/RombelEnroll';
 import Rps from './routes/Rps';
 import LaporanAkademik from './routes/reports/LaporanAkademik';
 import LaporanBKD from './routes/reports/LaporanBKD';
@@ -98,6 +99,7 @@ function AppContent() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/ganti-password" component={ForceChangePassword} />
+      <Route path="/rombel/enroll/:token" component={RombelEnroll} />
 
       {/* Protected Routes */}
       <Route

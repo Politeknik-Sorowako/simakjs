@@ -1,4 +1,5 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import EnrollmentQrModal from '../components/EnrollmentQrModal';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -39,6 +40,7 @@ export default function BapPresensi() {
   const [showBapModal, setShowBapModal] = createSignal(false);
   const [showCpmkModal, setShowCpmkModal] = createSignal(false);
   const [showRombelModal, setShowRombelModal] = createSignal(false);
+  const [showEnrollmentQrModal, setShowEnrollmentQrModal] = createSignal(false);
   const [namaGroupRombel, setNamaGroupRombel] = createSignal('');
   const [keteranganRombel, setKeteranganRombel] = createSignal('');
   const [isSubmittingRombel, setIsSubmittingRombel] = createSignal(false);
@@ -49,6 +51,7 @@ export default function BapPresensi() {
   const [sesiKePrak, setSesiKePrak] = createSignal(1);
   const [tanggalPrak, setTanggalPrak] = createSignal(new Date().toISOString().split('T')[0]);
   const [materiPrak, setMateriPrak] = createSignal('');
+  const [temaPrak, setTemaPrak] = createSignal('');
   const [durasiPrak, setDurasiPrak] = createSignal(100);
   const [catatanPrak, setCatatanPrak] = createSignal('');
   const [instrukturIdPrak, setInstrukturIdPrak] = createSignal<number | null>(null);
@@ -381,6 +384,7 @@ export default function BapPresensi() {
     setSesiKePrak(bapPrak.sesiKe);
     setTanggalPrak(bapPrak.tanggal);
     setMateriPrak(bapPrak.materi);
+    setTemaPrak(bapPrak.tema || '');
     setCatatanPrak(bapPrak.catatan || '');
     setDurasiPrak(bapPrak.durasiMenit);
     setInstrukturIdPrak(bapPrak.instrukturId ?? currentRombel()?.instrukturId ?? null);
@@ -404,6 +408,7 @@ export default function BapPresensi() {
       const common = {
         sesiKe: sesiKePrak(),
         tanggal: tanggalPrak(),
+        tema: temaPrak().trim() || null,
         materi: materiPrak().trim(),
         durasiMenit: durasiPrak(),
         catatan: catatanPrak().trim() || null,
@@ -1020,6 +1025,9 @@ export default function BapPresensi() {
                       <Button onClick={openAssignModal} variant="secondary">
                         Kelola Anggota ({currentRombel()?.mahasiswaList?.length || 0})
                       </Button>
+                      <Button onClick={() => setShowEnrollmentQrModal(true)} variant="secondary">
+                        QR Enroll Mahasiswa
+                      </Button>
                       <Button onClick={openCreateBapPrakModal} variant="primary">
                         + Sesi BAP Praktikum
                       </Button>
@@ -1056,7 +1064,16 @@ export default function BapPresensi() {
                           <tr class="border-b border-secondary-50 dark:border-secondary-800/60 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
                             <td class="py-3 px-4 font-bold text-brand-600">Sesi {bap.sesiKe}</td>
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">{bap.tanggal}</td>
-                            <td class="py-3 px-4 text-secondary-800 dark:text-white">{bap.materi}</td>
+                            <td class="py-3 px-4 text-secondary-800 dark:text-white">
+                              <Show when={bap.tema} fallback={bap.materi}>
+                                {(t) => (
+                                  <div>
+                                    <span class="font-semibold text-brand-600">{t()}</span>
+                                    <div class="text-xs text-secondary-500 dark:text-secondary-300">{bap.materi}</div>
+                                  </div>
+                                )}
+                              </Show>
+                            </td>
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">
                               <Show
                                 when={bap.instruktur?.nama}
@@ -1559,6 +1576,14 @@ export default function BapPresensi() {
         </form>
       </Modal>
 
+      {/* Modal Enrollment QR Mahasiswa */}
+      <EnrollmentQrModal
+        isOpen={showEnrollmentQrModal()}
+        rombelId={selectedRombelId() ?? 0}
+        rombelNama={currentRombel()?.namaGroup || ''}
+        onClose={() => setShowEnrollmentQrModal(false)}
+      />
+
       {/* Modal Kelola Anggota Rombel (Lintas Kelas) */}
       <Modal
         isOpen={showAssignMhsModal()}
@@ -1763,6 +1788,13 @@ export default function BapPresensi() {
             </div>
           </Show>
 
+          <Input
+            type="text"
+            label="Tema Praktikum (opsional)"
+            placeholder="Misal: Percobaan Fisika Dasar II"
+            value={temaPrak()}
+            onInput={(e) => setTemaPrak(e.currentTarget.value)}
+          />
           <Input
             type="text"
             label="Materi Praktikum"

@@ -10,6 +10,7 @@ export const dosenBody = t.Object({
   nik: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
   jenisKelamin: t.Optional(t.Union([t.Literal('L'), t.Literal('P'), t.Null()], { default: 'L' })),
   tanggalLahir: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
+  tempatLahir: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
 });
 
 export const updateDosenBody = t.Partial(
@@ -23,6 +24,7 @@ export const updateDosenBody = t.Partial(
     nik: t.Union([t.String(), t.Null()]),
     jenisKelamin: t.Union([t.Literal('L'), t.Literal('P'), t.Null()]),
     tanggalLahir: t.Union([t.String(), t.Null()]),
+    tempatLahir: t.Union([t.String(), t.Null()]),
   }),
 );
 

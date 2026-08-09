@@ -69,11 +69,105 @@ export class PresensiService {
         status: presensi.status,
         durasiMangkir: presensi.durasiMangkir,
         keterangan: presensi.keterangan,
+        lampiranEvidens: presensi.lampiranEvidens,
+        keteranganAdmin: presensi.keteranganAdmin,
+        resolvedAt: presensi.resolvedAt,
       })
       .from(presensi)
       .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
       .where(eq(presensi.bapId, bapId));
     return rows;
+  }
+
+  // --- ADMIN RESOLUTION OF UNKNOWN STATUS ---
+  static async getUnknownPresensi(
+    page = 1,
+    limit = 20,
+    search?: string,
+    prodiId?: number,
+    source: 'perkuliahan' | 'praktikum' = 'perkuliahan',
+  ) {
+    const conditions: SQL<unknown>[] = [eq(presensi.status, 'unknown')];
+    if (search) {
+      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      if (orCondition) conditions.push(orCondition);
+    }
+    if (prodiId) {
+      conditions.push(eq(mahasiswa.programStudiId, prodiId));
+    }
+    const whereClause = and(...conditions);
+
+    const [totalResult] = await db
+      .select({ total: count() })
+      .from(presensi)
+      .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .where(whereClause);
+
+    const total = totalResult?.total || 0;
+
+    const rows = await db
+      .select({
+        id: presensi.id,
+        bapId: presensi.bapId,
+        mahasiswaId: presensi.mahasiswaId,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        status: presensi.status,
+        durasiMangkir: presensi.durasiMangkir,
+        keterangan: presensi.keterangan,
+        lampiranEvidens: presensi.lampiranEvidens,
+        keteranganAdmin: presensi.keteranganAdmin,
+        resolvedAt: presensi.resolvedAt,
+        bapTanggal: bap.tanggal,
+        bapPertemuan: bap.pertemuanKe,
+        bapMateri: bap.materi,
+      })
+      .from(presensi)
+      .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .innerJoin(bap, eq(presensi.bapId, bap.id))
+      .where(whereClause)
+      .limit(limit)
+      .offset((page - 1) * limit)
+      .orderBy(bap.tanggal);
+
+    const totalPages = Math.ceil(total / limit);
+    return { data: rows, meta: { total, page, limit, totalPages } };
+  }
+
+  static async resolveUnknownPresensi(
+    presensiId: number,
+    newStatus: 'sakit' | 'izin' | 'alpa',
+    adminUserId: number,
+    keteranganAdmin?: string,
+    lampiranEvidens?: string,
+  ) {
+    const [row] = await db.select().from(presensi).where(eq(presensi.id, presensiId));
+    if (!row) {
+      throw new Error('Data presensi tidak ditemukan');
+    }
+    if (row.status !== 'unknown') {
+      throw new Error('Status presensi bukan "unknown" sehingga tidak dapat di-resolve');
+    }
+
+    const [bapRow] = await db.select().from(bap).where(eq(bap.id, row.bapId));
+    let durasiMangkir = row.durasiMangkir;
+    if (bapRow) {
+      durasiMangkir = bapRow.durasiMenit;
+    }
+
+    const [updated] = await db
+      .update(presensi)
+      .set({
+        status: newStatus,
+        durasiMangkir,
+        keteranganAdmin: keteranganAdmin || null,
+        lampiranEvidens: lampiranEvidens || null,
+        resolvedBy: adminUserId,
+        resolvedAt: new Date(),
+      })
+      .where(eq(presensi.id, presensiId))
+      .returning();
+    return updated || null;
   }
 
   static async calculateKompensasiMinutes(status: string, durasiMangkir: number): Promise<number> {

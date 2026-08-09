@@ -45,6 +45,19 @@ export type AuthContext<TBody = any, TQuery = any, TParams = any> = Omit<
   getCurrentUser: () => Promise<UserPayload | null>;
 };
 
+// Context for public (unauthenticated) endpoints that do not use authMiddleware.
+export type PublicContext = Omit<Context, 'body' | 'query' | 'params' | 'set' | 'status'> & {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia route inference requires any
+  body: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia route inference requires any
+  query: any;
+  params: { token: string };
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia set/status require any for framework compatibility
+  set: any;
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia set/status require any for framework compatibility
+  status: any;
+};
+
 export interface PaginationQuery {
   page?: number;
   limit?: number;

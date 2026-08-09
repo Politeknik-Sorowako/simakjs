@@ -435,6 +435,7 @@ export const bap = pgTable('bap', {
     .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
   tanggal: date('tanggal').notNull(),
   pertemuanKe: integer('pertemuan_ke').notNull(),
+  tema: varchar('tema', { length: 255 }),
   materi: text('materi').notNull(),
   catatan: text('catatan'),
   durasiMenit: integer('durasi_menit').notNull(),
@@ -462,6 +463,10 @@ export const presensi = pgTable(
     status: presensiStatusEnum('status').notNull(),
     durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
     keterangan: text('keterangan'),
+    lampiranEvidens: text('lampiran_evidens'),
+    keteranganAdmin: text('keterangan_admin'),
+    resolvedBy: integer('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -2295,6 +2300,10 @@ export const rombelPraktikum = pgTable('rombel_praktikum', {
   namaGroup: varchar('nama_group', { length: 255 }).notNull(),
   instrukturId: integer('instruktur_id').references(() => dosen.id, { onDelete: 'set null' }),
   keterangan: text('keterangan'),
+  enrollmentToken: varchar('enrollment_token', { length: 64 }).unique(),
+  enrollmentEnabled: boolean('enrollment_enabled').default(false).notNull(),
+  enrollmentMaxStudents: integer('enrollment_max_students'),
+  enrollmentExpiresAt: timestamp('enrollment_expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -2313,6 +2322,25 @@ export const rombelPraktikumMahasiswa = pgTable('rombel_praktikum_mahasiswa', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const rombelEnrollmentLog = pgTable(
+  'rombel_enrollment_log',
+  {
+    id: serial('id').primaryKey(),
+    rombelPraktikumId: integer('rombel_praktikum_id')
+      .notNull()
+      .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    enrolledAt: timestamp('enrolled_at').defaultNow().notNull(),
+    ipAddress: varchar('ip_address', { length: 45 }),
+    userAgent: text('user_agent'),
+  },
+  (t) => ({
+    uniqueEnrollment: unique('rombel_enrollment_log_unique').on(t.rombelPraktikumId, t.mahasiswaId),
+  }),
+);
+
 export const bapPraktikum = pgTable('bap_praktikum', {
   id: serial('id').primaryKey(),
   rombelPraktikumId: integer('rombel_praktikum_id')
@@ -2320,6 +2348,7 @@ export const bapPraktikum = pgTable('bap_praktikum', {
     .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
   tanggal: date('tanggal').notNull(),
   sesiKe: integer('sesi_ke').default(1).notNull(),
+  tema: varchar('tema', { length: 255 }),
   materi: text('materi').notNull(),
   catatan: text('catatan'),
   durasiMenit: integer('durasi_menit').default(100).notNull(),
@@ -2342,6 +2371,10 @@ export const presensiPraktikum = pgTable('presensi_praktikum', {
   status: presensiStatusEnum('status').notNull(),
   durasiMangkir: integer('durasi_mangkir').default(0).notNull(),
   keterangan: text('keterangan'),
+  lampiranEvidens: text('lampiran_evidens'),
+  keteranganAdmin: text('keterangan_admin'),
+  resolvedBy: integer('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+  resolvedAt: timestamp('resolved_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -2360,6 +2393,18 @@ export const rombelPraktikumRelations = relations(rombelPraktikum, ({ one, many 
   }),
   mahasiswaList: many(rombelPraktikumMahasiswa),
   bapList: many(bapPraktikum),
+  enrollmentLog: many(rombelEnrollmentLog),
+}));
+
+export const rombelEnrollmentLogRelations = relations(rombelEnrollmentLog, ({ one }) => ({
+  rombelPraktikum: one(rombelPraktikum, {
+    fields: [rombelEnrollmentLog.rombelPraktikumId],
+    references: [rombelPraktikum.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [rombelEnrollmentLog.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
 }));
 
 export const rombelPraktikumMahasiswaRelations = relations(rombelPraktikumMahasiswa, ({ one }) => ({

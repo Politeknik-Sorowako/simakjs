@@ -74,14 +74,16 @@ export class BapService {
     kelasKuliahId: number;
     tanggal: string;
     pertemuanKe: number;
+    tema?: string | null;
     materi: string;
     catatan?: string | null;
     durasiMenit: number;
     cpmkId?: number | null;
     topikIds?: number[];
     dosenId: number;
+    sesiIds?: number[];
   }) {
-    const { topikIds, ...rawPayload } = data;
+    const { topikIds, sesiIds, ...rawPayload } = data;
 
     const kelasId = Number(rawPayload.kelasKuliahId);
     const existingKelas = await db.query.kelasKuliah.findFirst({ where: eq(kelasKuliah.id, kelasId) });
@@ -156,6 +158,7 @@ export class BapService {
       kelasKuliahId: number;
       tanggal: string;
       pertemuanKe: number;
+      tema?: string;
       materi: string;
       durasiMenit: number;
       dosenId: number;
@@ -170,6 +173,10 @@ export class BapService {
       dosenId: validDosenId,
     };
 
+    if (rawPayload.tema && String(rawPayload.tema).trim() !== '') {
+      bapPayload.tema = String(rawPayload.tema).trim();
+    }
+
     if (rawPayload.catatan && String(rawPayload.catatan).trim() !== '') {
       bapPayload.catatan = String(rawPayload.catatan).trim();
     }
@@ -179,6 +186,23 @@ export class BapService {
     }
 
     const [newBap] = await db.insert(bap).values(bapPayload).returning();
+
+    // Multi-sesi: replicate BAP per selected pertemuan (sesi) for repetitive reporting
+    if (sesiIds && Array.isArray(sesiIds) && sesiIds.length > 1) {
+      const duplicates = [];
+      for (const sesi of sesiIds.map((s) => Number(s))) {
+        if (isNaN(sesi) || sesi <= 0) continue;
+        const [dup] = await db
+          .insert(bap)
+          .values({ ...bapPayload, pertemuanKe: sesi, cpmkId: bapPayload.cpmkId ?? null })
+          .returning();
+        duplicates.push(dup);
+      }
+      return {
+        data: duplicates,
+        pertemuanKe: sesiIds.map((s) => Number(s)),
+      };
+    }
 
     let savedTopikIds: number[] = [];
     if (topikIds && Array.isArray(topikIds) && topikIds.length > 0) {

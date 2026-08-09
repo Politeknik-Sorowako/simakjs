@@ -12,6 +12,7 @@ export interface Dosen {
   nik?: string | null;
   jenisKelamin?: 'L' | 'P' | null;
   tanggalLahir?: string | null;
+  tempatLahir?: string | null;
   programStudi?: Prodi | null;
   idPddikti?: string | null;
   isSynced?: boolean;

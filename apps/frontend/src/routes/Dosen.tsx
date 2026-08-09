@@ -79,6 +79,7 @@ export default function Dosen() {
   const [nik, setNik] = createSignal('');
   const [gender, setGender] = createSignal<'L' | 'P' | ''>('');
   const [birthdate, setBirthdate] = createSignal('');
+  const [tempatLahir, setTempatLahir] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
 
   const openAddModal = () => {
@@ -92,6 +93,7 @@ export default function Dosen() {
     setNik('');
     setGender('L');
     setBirthdate('');
+    setTempatLahir('');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -106,6 +108,7 @@ export default function Dosen() {
     setNik(item.nik || '');
     setGender(item.jenisKelamin || 'L');
     setBirthdate(item.tanggalLahir ? String(item.tanggalLahir).split('T')[0] : '');
+    setTempatLahir(item.tempatLahir || '');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -123,6 +126,7 @@ export default function Dosen() {
         nik: nik() || null,
         jenisKelamin: gender() === '' ? null : (gender() as 'L' | 'P'),
         tanggalLahir: birthdate() || null,
+        tempatLahir: tempatLahir() || null,
       };
 
       if (editId()) {
@@ -401,6 +405,12 @@ export default function Dosen() {
                 label="Tanggal Lahir"
                 value={birthdate()}
                 onInput={(e) => setBirthdate(e.currentTarget.value)}
+              />
+              <Input
+                label="Tempat Lahir"
+                value={tempatLahir()}
+                onInput={(e) => setTempatLahir(e.currentTarget.value)}
+                placeholder="Kota tempat lahir"
               />
             </div>
             <div class="flex justify-end gap-2 border-t pt-4">

@@ -10,6 +10,15 @@ export class PresensiController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
+    // Dosen/instruktur only may set hadir, telat, or unknown; admin may set everything.
+    if (!hasRole(user, ['admin', 'super_admin'])) {
+      const allowedStatuses = new Set(['hadir', 'telat', 'unknown']);
+      const restricted = (body.presensiList || []).filter((p: { status: string }) => !allowedStatuses.has(p.status));
+      if (restricted.length > 0) {
+        set.status = 400;
+        return { error: 'Dosen hanya dapat menetapkan status Hadir, Telat, atau Unknown untuk presensi.' };
+      }
+    }
     return await PresensiService.saveBulkPresensi(body.bapId, body.presensiList);
   }
 
@@ -151,6 +160,47 @@ export class PresensiController {
       if (!updated) {
         set.status = 404;
         return { error: 'Data penyelesaian kompensasi tidak ditemukan.' };
+      }
+      return updated;
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getUnknownPresensi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    const page = query?.page ? parseInt(query.page) : 1;
+    const limit = query?.limit ? parseInt(query.limit) : 20;
+    const search = query?.search;
+    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+    return await PresensiService.getUnknownPresensi(page, limit, search, prodiId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async resolveUnknown({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const id = parseInt(params.id);
+      const updated = await PresensiService.resolveUnknownPresensi(
+        id,
+        body.newStatus,
+        user.id,
+        body.keteranganAdmin,
+        body.lampiranEvidens,
+      );
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Data presensi tidak ditemukan.' };
       }
       return updated;
     } catch (err: unknown) {
