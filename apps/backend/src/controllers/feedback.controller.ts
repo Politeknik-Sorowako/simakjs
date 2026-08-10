@@ -26,6 +26,7 @@ export class FeedbackController {
         rating: body.rating,
       });
     } catch (e: unknown) {
+      console.error('[FeedbackController.create] Error:', e instanceof Error ? e.message : e);
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };
     }
