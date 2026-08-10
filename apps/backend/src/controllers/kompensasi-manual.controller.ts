@@ -129,6 +129,8 @@ export class KompensasiManualController {
         jenisKompen: query?.jenisKompen,
         page: query?.page ? Number(query.page) : undefined,
         limit: query?.limit ? Number(query.limit) : undefined,
+        sortBy: query?.sortBy,
+        sortOrder: query?.sortOrder === 'asc' ? 'asc' : query?.sortOrder === 'desc' ? 'desc' : undefined,
       });
     } catch (e: unknown) {
       set.status = 400;

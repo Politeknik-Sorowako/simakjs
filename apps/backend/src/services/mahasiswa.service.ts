@@ -100,6 +100,9 @@ export class MahasiswaService {
         orderByClause = filters.sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn);
       }
     }
+    if (!orderByClause) {
+      orderByClause = asc(mahasiswa.nim);
+    }
 
     const data = await db.query.mahasiswa.findMany({
       where: whereClause,

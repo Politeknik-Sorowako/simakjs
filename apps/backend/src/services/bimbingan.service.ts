@@ -248,6 +248,7 @@ export class BimbinganService {
         queryBuilder.where(eq(mahasiswa.dosenPaId, dosenId));
       }
 
+      queryBuilder.orderBy(mahasiswa.nim);
       const listMahasiswa = await queryBuilder;
 
       // Ambil semua bimbingan untuk periode aktif

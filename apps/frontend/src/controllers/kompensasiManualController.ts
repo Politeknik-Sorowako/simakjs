@@ -106,6 +106,8 @@ export const kompensasiManualController = {
     jenisKompen?: string;
     page?: number;
     limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }): Promise<{
     data: Array<
       KompensasiManualRecord & {
@@ -126,6 +128,8 @@ export const kompensasiManualController = {
     if (params?.jenisKompen) query.append('jenisKompen', params.jenisKompen);
     if (params?.page) query.append('page', String(params.page));
     if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
 
     const qStr = query.toString() ? `?${query.toString()}` : '';
     return fetchApi(`/kompensasi-manual${qStr}`);
