@@ -36,6 +36,12 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
+# Wajib opt-in eksplisit: hanya berjalan bila SYNC_STAGING_ENABLED=true (staging).
+if [ "${SYNC_STAGING_ENABLED:-false}" != "true" ]; then
+  log "SKIP: SYNC_STAGING_ENABLED != true. Sinkronisasi staging DB dinonaktifkan."
+  exit 0
+fi
+
 # Anti-tabrakan: pastikan tidak ada sync lain yang berjalan
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
