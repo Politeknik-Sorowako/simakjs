@@ -172,9 +172,9 @@ export interface PresensiUnknownItem {
   bapTanggal: string;
   bapPertemuan: number;
   bapMateri: string;
-  kelasKuliahId: number;
-  namaKelas: string;
-  periodeId: string;
+  kelasKuliahId?: number | null;
+  namaKelas?: string | null;
+  periodeId?: string | null;
   mataKuliahKode?: string | null;
   mataKuliahNama?: string | null;
   dosenNama?: string | null;

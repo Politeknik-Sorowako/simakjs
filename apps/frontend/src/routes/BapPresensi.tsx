@@ -10,7 +10,7 @@ import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { dosenController, Dosen as IDosen } from '../controllers/dosenController';
-import { kelasKuliahController, KelasKuliah } from '../controllers/kelasKuliahController';
+import { KelasKuliah, kelasKuliahController } from '../controllers/kelasKuliahController';
 import { krsController } from '../controllers/krsController';
 import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { nilaiPraktikController } from '../controllers/nilaiPraktikController';

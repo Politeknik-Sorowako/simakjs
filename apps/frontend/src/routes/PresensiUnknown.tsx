@@ -2,13 +2,11 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { PresensiUnknownItem, presensiController } from '../controllers/presensiController';
 
 export default function PresensiUnknown() {
-  const auth = useAuth();
   const toast = useToast();
   const workspace = useWorkspace();
 
