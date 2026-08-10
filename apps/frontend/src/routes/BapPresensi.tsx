@@ -227,7 +227,18 @@ export default function BapPresensi() {
     }
   };
 
-  const selectedKelas = () => kelasList().find((k) => k.id === selectedKelasId());
+  const [selectedKelasDetail, { mutate: mutateSelectedKelasDetail }] = createResource(
+    () => (selectedKelasId() && !kelasList().some((k) => k.id === selectedKelasId()) ? selectedKelasId() : null),
+    async (kelasId) => {
+      try {
+        return await kelasKuliahController.getById(kelasId);
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  const selectedKelas = () => kelasList().find((k) => k.id === selectedKelasId()) || selectedKelasDetail() || null;
 
   // 2. Fetch BAPs for selected Class
   const [bapData, { refetch: refetchBap }] = createResource(selectedKelasId, async (kelasId) => {
