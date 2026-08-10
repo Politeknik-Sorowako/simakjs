@@ -44,15 +44,40 @@ function getStagingDbConfig() {
   };
 }
 
-function validateEnv(isDryRun: boolean) {
-  const requiredVars = ['DATABASE_URL'];
-  if (!isDryRun) {
-    requiredVars.push('PROD_SSH_HOST');
+interface ExecResult {
+  ok: boolean;
+  stderr: string;
+}
+
+function sendTelegram(message: string): void {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const enabled = process.env.SYNC_TELEGRAM_ENABLED === 'true' && process.env.TELEGRAM_ENABLED !== 'false';
+  if (!enabled || !token || !chatId) {
+    auditLog('Telegram disabled or credentials missing; skipping notification.');
+    return;
   }
-  const missing = requiredVars.filter((v) => !process.env[v]);
-  if (missing.length > 0) {
-    throw new Error(`Missing required environment variable(s): ${missing.join(', ')}`);
+  const safeMsg = message.replace(/(\r\n|\r|\n)/g, '%0A').replace(/[«»"]/g, '');
+  const cmd = `curl -s --max-time 10 -X POST "https://api.telegram.org/bot${token}/sendMessage" -d chat_id=${chatId} -d parse_mode=Markdown -d "text=${safeMsg}"`;
+  const result = spawnSync('sh', ['-c', cmd], { stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000 });
+  if (result.status === 0) {
+    auditLog('Telegram notification sent.');
+  } else {
+    auditLog(`Failed to send Telegram notification: ${result.stderr?.toString() || 'unknown error'}`);
   }
+}
+
+function runCommand(cmd: string, timeoutMs: number, onError: (stderr: string) => never): ExecResult {
+  const result = spawnSync('sh', ['-c', cmd], {
+    env: process.env,
+    stdio: ['inherit', 'pipe', 'pipe'],
+    timeout: timeoutMs,
+  });
+  if (result.error || result.status !== 0) {
+    const stderr = result.stderr ? result.stderr.toString() : result.error?.message || '';
+    onError(stderr);
+  }
+  return { ok: result.status === 0, stderr: result.stderr ? result.stderr.toString() : '' };
 }
 
 async function main() {
@@ -63,22 +88,27 @@ async function main() {
     auditLog('Running in DRY-RUN mode. Actions will be logged but not executed on DB.');
   }
 
-  validateEnv(isDryRun);
-
-  const prodSshHost = process.env.PROD_SSH_HOST || '';
-  const prodSshUser = process.env.PROD_SSH_USER || 'deploy';
-  const prodSshPort = process.env.PROD_SSH_PORT || '22';
-  const prodSshKeyRaw = process.env.PROD_SSH_KEY || '~/.ssh/id_rsa_staging_pull';
-  const prodSshKey = expandTildePath(prodSshKeyRaw);
+  const localSync = (process.env.LOCAL_SYNC || 'true') === 'true';
+  const stagingDbContainer = process.env.STAGING_DB_CONTAINER || 'simak_db_staging';
+  const stagingBackendContainer = process.env.STAGING_BACKEND_CONTAINER || 'simak_backend_staging';
   const prodDbName = process.env.PROD_DB_NAME || 'simak_vokasi';
   const prodDbUser = process.env.PROD_DB_USER || 'simak_user';
   const prodDbContainer = process.env.PROD_DB_CONTAINER || 'simak_db';
+  const prodSshHost = process.env.PROD_SSH_HOST || 'localhost';
+  const prodSshUser = process.env.PROD_SSH_USER || 'deploy';
+  const prodSshPort = process.env.PROD_SSH_PORT || '22';
+  const prodSshKey = expandTildePath(process.env.PROD_SSH_KEY || '~/.ssh/id_rsa_staging_pull');
+  const backendUrl = process.env.STAGING_BACKEND_URL || 'http://localhost:3001';
+
+  if (!process.env.DATABASE_URL) {
+    auditLog('Missing required environment variable: DATABASE_URL');
+    throw new Error('Missing required environment variable: DATABASE_URL');
+  }
 
   const randomId = crypto.randomBytes(8).toString('hex');
   const backupDir = join(process.cwd(), 'backups');
   const tempDumpPath = join(backupDir, `temp_prod_dump_${randomId}.sql`);
   const sanitizeSqlPath = join(__dirname, 'sanitize-staging.sql');
-
   const config = getStagingDbConfig();
 
   try {
@@ -87,98 +117,86 @@ async function main() {
     }
 
     if (isDryRun) {
-      auditLog(`[DRY-RUN] Key Path: ${prodSshKey}`);
+      auditLog(`[DRY-RUN] Mode: ${localSync ? 'LOCAL (docker exec on same VPS)' : 'SSH'}`);
       auditLog(
-        `[DRY-RUN] Would fetch dump from ${prodSshUser}@${prodSshHost || 'PROD_HOST'}:${prodSshPort} -> ${tempDumpPath}`,
+        localSync
+          ? `[DRY-RUN] Would dump production DB from container ${prodDbContainer} (db=${prodDbName}) -> ${tempDumpPath}`
+          : `[DRY-RUN] Would fetch dump from ${prodSshUser}@${prodSshHost}:${prodSshPort} -> ${tempDumpPath}`,
       );
-      auditLog(`[DRY-RUN] Would restore dump into local DB: ${config.db} at ${config.host}:${config.port}`);
-      auditLog(`[DRY-RUN] Would execute auto-migrations (safe-migrate)`);
+      auditLog(`[DRY-RUN] Would restore dump into staging DB ${config.db} via container ${stagingDbContainer}`);
+      auditLog('[DRY-RUN] Would execute auto-migrations (safe-migrate)');
       auditLog(`[DRY-RUN] Would execute sanitization script: ${sanitizeSqlPath}`);
+      auditLog('[DRY-RUN] Would verify: row counts, remaining PII, health check');
       auditLog('[DRY-RUN] Staging DB Sync completed successfully (simulation).');
       return;
     }
 
-    auditLog(`Fetching dump from Production (${prodSshHost}:${prodSshPort})...`);
-
-    // 1. Pull dump from Prod using SSH & pg_dump (exec in Docker container if configured)
-    const remoteDumpCmd =
-      prodDbContainer && prodDbContainer !== 'none'
-        ? `docker exec ${prodDbContainer} pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl`
-        : `pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl`;
-
-    const sshDumpCmd = `ssh -p ${prodSshPort} -i "${prodSshKey}" -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "${remoteDumpCmd}" > "${tempDumpPath}"`;
-
-    const fetchResult = spawnSync('sh', ['-c', sshDumpCmd], {
-      env: process.env,
-      stdio: ['inherit', 'pipe', 'pipe'],
-      timeout: 600000, // 10 minutes
-    });
-
-    if (fetchResult.error || fetchResult.status !== 0) {
-      const stderr = fetchResult.stderr ? fetchResult.stderr.toString() : '';
-      throw new Error(`Failed to fetch dump from Prod. Code: ${fetchResult.status}. Stderr: ${stderr}`);
+    // 1. Pull dump from Production
+    const pgDumpBase = `pg_dump -U ${prodDbUser} -d ${prodDbName} --clean --if-exists --no-owner --no-acl`;
+    if (localSync) {
+      auditLog(`Dumping production DB from local container ${prodDbContainer}...`);
+      const dumpCmd = `docker exec ${prodDbContainer} ${pgDumpBase} > "${tempDumpPath}"`;
+      runCommand(dumpCmd, 600000, (stderr) => {
+        throw new Error(`Failed to dump production DB (local). Stderr: ${stderr}`);
+      });
+    } else {
+      auditLog(`Fetching dump from Production (${prodSshHost}:${prodSshPort})...`);
+      const remoteDumpCmd =
+        prodDbContainer && prodDbContainer !== 'none' ? `docker exec ${prodDbContainer} ${pgDumpBase}` : pgDumpBase;
+      const sshDumpCmd = `ssh -p ${prodSshPort} -i "${prodSshKey}" -o StrictHostKeyChecking=accept-new ${prodSshUser}@${prodSshHost} "${remoteDumpCmd}" > "${tempDumpPath}"`;
+      runCommand(sshDumpCmd, 600000, (stderr) => {
+        throw new Error(`Failed to fetch dump from Prod. Stderr: ${stderr}`);
+      });
     }
 
-    // Set secure file mode 0o600
+    // Secure file mode
     try {
       chmodSync(tempDumpPath, 0o600);
     } catch {
-      // Non-fatal if chmod not supported on OS
+      // Non-fatal
     }
 
-    // Sanity check: verify file size (must be >= 10 KB)
+    // Sanity check
     const fileStats = statSync(tempDumpPath);
     if (fileStats.size < 10240) {
       throw new Error(
         `Retrieved dump size is suspiciously small (${fileStats.size} bytes). Aborting restore to prevent corrupting Staging DB.`,
       );
     }
-
     auditLog(
       `Dump successfully retrieved (${(fileStats.size / 1024 / 1024).toFixed(2)} MB). Restoring into Staging DB...`,
     );
 
-    const stagingDbContainer = process.env.STAGING_DB_CONTAINER || 'simak_db_staging';
-
-    // 2. Restore into Staging DB (via Docker container or direct psql)
-    let restoreResult;
+    // 2. Restore into Staging DB
     if (stagingDbContainer && stagingDbContainer !== 'none') {
-      const restoreCmd = `docker exec -i ${stagingDbContainer} psql -U ${config.user} -d ${config.db} < "${tempDumpPath}"`;
-      restoreResult = spawnSync('sh', ['-c', restoreCmd], {
-        env: process.env,
-        stdio: ['inherit', 'pipe', 'pipe'],
-        timeout: 600000,
-      });
+      runCommand(
+        `docker exec -i ${stagingDbContainer} psql -U ${config.user} -d ${config.db} < "${tempDumpPath}"`,
+        600000,
+        (stderr) => {
+          throw new Error(`Failed to restore dump into Staging DB. Stderr: ${stderr}`);
+        },
+      );
     } else {
-      restoreResult = spawnSync(
-        'psql',
-        ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '-f', tempDumpPath],
-        {
-          env: { ...process.env, PGPASSWORD: config.password },
-          stdio: ['inherit', 'pipe', 'pipe'],
-          timeout: 600000,
+      runCommand(
+        `psql -h ${config.host} -p ${config.port} -U ${config.user} -d ${config.db} -f "${tempDumpPath}"`,
+        600000,
+        (stderr) => {
+          throw new Error(`Failed to restore dump into Staging DB. Stderr: ${stderr}`);
         },
       );
     }
+    auditLog('Restore completed.');
 
-    if (restoreResult.error || restoreResult.status !== 0) {
-      const stderr = restoreResult.stderr
-        ? restoreResult.stderr.toString()
-        : restoreResult.error
-          ? restoreResult.error.message
-          : '';
-      throw new Error(`Failed to restore dump into Staging DB. Code: ${restoreResult.status}. Stderr: ${stderr}`);
-    }
-
-    auditLog('Restore completed. Running auto-migrations (safe-migrate)...');
-
-    // 3. Apply Staging Migrations (Catch up DB schema if Prod lags behind Staging)
-    const migrateResult = spawnSync('bun', ['run', 'src/scripts/safe-migrate.ts'], {
+    // 3. Apply Staging Migrations
+    //    Dijalankan di dalam container backend staging agar host `db_staging`
+    //    (network Docker) dapat di-resolve, konsisten dengan deploy-staging.sh.
+    auditLog('Running auto-migrations (safe-migrate) inside staging backend container...');
+    const migrateCmd = `docker exec ${stagingBackendContainer} sh -c 'cd /app/apps/backend && bun run db:safe-migrate'`;
+    const migrateResult = spawnSync('sh', ['-c', migrateCmd], {
       env: process.env,
       stdio: ['inherit', 'pipe', 'pipe'],
-      timeout: 120000,
+      timeout: 180000,
     });
-
     if (migrateResult.error || migrateResult.status !== 0) {
       const stderr = migrateResult.stderr
         ? migrateResult.stderr.toString()
@@ -190,46 +208,96 @@ async function main() {
       auditLog('Auto-migration (safe-migrate) executed successfully.');
     }
 
-    auditLog('Running data sanitization script...');
-
     // 4. Run Data Sanitization SQL
+    auditLog('Running data sanitization script...');
     if (existsSync(sanitizeSqlPath)) {
-      let sanitizeResult;
       if (stagingDbContainer && stagingDbContainer !== 'none') {
-        const sanitizeCmd = `docker exec -i ${stagingDbContainer} psql -U ${config.user} -d ${config.db} < "${sanitizeSqlPath}"`;
-        sanitizeResult = spawnSync('sh', ['-c', sanitizeCmd], {
-          env: process.env,
-          stdio: ['inherit', 'pipe', 'pipe'],
-          timeout: 60000,
-        });
+        runCommand(
+          `docker exec -i ${stagingDbContainer} psql -U ${config.user} -d ${config.db} < "${sanitizeSqlPath}"`,
+          60000,
+          (stderr) => {
+            throw new Error(`Data sanitization failed. Stderr: ${stderr}`);
+          },
+        );
       } else {
-        sanitizeResult = spawnSync(
-          'psql',
-          ['-h', config.host, '-p', config.port, '-U', config.user, '-d', config.db, '-f', sanitizeSqlPath],
-          {
-            env: { ...process.env, PGPASSWORD: config.password },
-            stdio: ['inherit', 'pipe', 'pipe'],
-            timeout: 60000,
+        runCommand(
+          `psql -h ${config.host} -p ${config.port} -U ${config.user} -d ${config.db} -f "${sanitizeSqlPath}"`,
+          60000,
+          (stderr) => {
+            throw new Error(`Data sanitization failed. Stderr: ${stderr}`);
           },
         );
       }
+      auditLog('Data sanitization executed successfully.');
+    }
 
-      if (sanitizeResult.error || sanitizeResult.status !== 0) {
-        const stderr = sanitizeResult.stderr
-          ? sanitizeResult.stderr.toString()
-          : sanitizeResult.error
-            ? sanitizeResult.error.message
-            : '';
-        auditLog(`Warning: Data sanitization returned error: ${stderr}`);
-      } else {
-        auditLog('Data sanitization executed successfully.');
+    // 5. Verification
+    auditLog('Running post-sync verification...');
+    const verifyPsqlCmd = (query: string) => {
+      const q = query.replace(/"/g, '\\"');
+      if (stagingDbContainer && stagingDbContainer !== 'none') {
+        return `docker exec ${stagingDbContainer} psql -U ${config.user} -d ${config.db} -t -A -c "${q}"`;
       }
+      return `PGPASSWORD=${config.password} psql -h ${config.host} -p ${config.port} -U ${config.user} -d ${config.db} -t -A -c "${q}"`;
+    };
+
+    const queryValue = (query: string, label: string): string => {
+      const result = spawnSync('sh', ['-c', verifyPsqlCmd(query)], { stdio: ['pipe', 'pipe', 'pipe'], timeout: 30000 });
+      const out = result.stdout ? result.stdout.toString().trim() : '';
+      if (result.status !== 0) {
+        auditLog(`Warning: verification query "${label}" failed: ${result.stderr?.toString().trim() || 'unknown'}`);
+      }
+      return out;
+    };
+
+    const usersCount = queryValue('SELECT COUNT(*) FROM users', 'users');
+    const mahasiswaCount = queryValue('SELECT COUNT(*) FROM mahasiswa', 'mahasiswa');
+    const dosenCount = queryValue('SELECT COUNT(*) FROM dosen', 'dosen');
+    const matkulCount = queryValue('SELECT COUNT(*) FROM mata_kuliah', 'mata_kuliah');
+    auditLog(
+      `Row counts -> users: ${usersCount}, mahasiswa: ${mahasiswaCount}, dosen: ${dosenCount}, mata_kuliah: ${matkulCount}`,
+    );
+
+    const remainingEmails = queryValue(
+      `SELECT COUNT(*) FROM (
+        SELECT email FROM users WHERE email NOT LIKE '%@staging.simak.local'
+        UNION ALL
+        SELECT email FROM dosen WHERE email NOT LIKE '%@staging.simak.local'
+        UNION ALL
+        SELECT email FROM mahasiswa WHERE email NOT LIKE '%@staging.simak.local'
+      ) AS remaining`,
+      'remaining-asli-emails',
+    );
+    const remainingNikMhs = queryValue(
+      `SELECT COUNT(*) FROM mahasiswa WHERE nik IS NOT NULL AND nik NOT LIKE '0%'`,
+      'remaining-asli-nik-mahasiswa',
+    );
+    auditLog(`Remaining asli PII -> emails: ${remainingEmails}, mahasiswa nik: ${remainingNikMhs}`);
+
+    const healthResult = spawnSync(
+      'curl',
+      ['-s', '-o', '/dev/null', '-w', '%{http_code}', `${backendUrl}/health`, '--connect-timeout', '5'],
+      { stdio: ['pipe', 'pipe', 'pipe'], timeout: 15000 },
+    );
+    const httpCode = healthResult.stdout?.toString().trim() || '000';
+    auditLog(`Staging backend health check -> HTTP ${httpCode}`);
+    if (httpCode !== '200') {
+      auditLog('Warning: staging backend did not return HTTP 200 on /health.');
     }
 
     auditLog('=== STAGING DB SYNC COMPLETED SUCCESSFULLY ===');
+    sendTelegram(
+      `✅ *Staging DB Sync Successful*
+*Mode:* ${localSync ? 'Local (same VPS)' : 'SSH'}
+*Rows:* users=${usersCount || '?'}, mahasiswa=${mahasiswaCount || '?'}, dosen=${dosenCount || '?'}
+*Remaining PII:* emails=${remainingEmails || '?'}, nik=${remainingNikMhs || '?'}
+*Health:* HTTP ${httpCode}
+*Time:* ${new Date().toISOString()}`,
+    );
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     auditLog(`Sync failed: ${errorMsg}`);
+    sendTelegram(`❌ *Staging DB Sync Failed*\n*Error:* ${errorMsg}\n*Time:* ${new Date().toISOString()}`);
     process.exit(1);
   } finally {
     if (existsSync(tempDumpPath)) {
