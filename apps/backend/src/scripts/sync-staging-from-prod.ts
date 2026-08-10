@@ -88,6 +88,35 @@ async function main() {
     auditLog('Running in DRY-RUN mode. Actions will be logged but not executed on DB.');
   }
 
+  if (!process.env.DATABASE_URL) {
+    auditLog('Missing required environment variable: DATABASE_URL');
+    throw new Error('Missing required environment variable: DATABASE_URL');
+  }
+
+  // --- Safety guard: script ini HANYA boleh berjalan di lingkungan staging ---
+  // 1) Jangan pernah berjalan saat NODE_ENV=production.
+  if (process.env.NODE_ENV === 'production') {
+    auditLog('ABORT: Sync staging DB tidak boleh dijalankan pada NODE_ENV=production.');
+    process.exit(1);
+  }
+
+  // 2) Wajib opt-in eksplisit (SYNC_STAGING_ENABLED=true). Default mati.
+  if ((process.env.SYNC_STAGING_ENABLED || 'false') !== 'true') {
+    auditLog('ABORT: SYNC_STAGING_ENABLED belum diset true. Sinkronisasi staging DB dinonaktifkan.');
+    process.exit(1);
+  }
+
+  // 3) Target restore harus benar-benar database staging (nama DB wajib mengandung "staging").
+  const stagingDbName = new URL(process.env.DATABASE_URL).pathname.slice(1).toLowerCase();
+  if (!stagingDbName.includes('staging')) {
+    auditLog(
+      `ABORT: Database target "${stagingDbName}" tidak terdeteksi sebagai DB staging. ` +
+        'Sinkronisasi dibatalkan untuk mencegah kerusakan data non-staging.',
+    );
+    process.exit(1);
+  }
+  auditLog(`Verified target DB "${stagingDbName}" is a staging database.`);
+
   const localSync = (process.env.LOCAL_SYNC || 'true') === 'true';
   const stagingDbContainer = process.env.STAGING_DB_CONTAINER || 'simak_db_staging';
   const stagingBackendContainer = process.env.STAGING_BACKEND_CONTAINER || 'simak_backend_staging';
@@ -99,11 +128,6 @@ async function main() {
   const prodSshPort = process.env.PROD_SSH_PORT || '22';
   const prodSshKey = expandTildePath(process.env.PROD_SSH_KEY || '~/.ssh/id_rsa_staging_pull');
   const backendUrl = process.env.STAGING_BACKEND_URL || 'http://localhost:3001';
-
-  if (!process.env.DATABASE_URL) {
-    auditLog('Missing required environment variable: DATABASE_URL');
-    throw new Error('Missing required environment variable: DATABASE_URL');
-  }
 
   const randomId = crypto.randomBytes(8).toString('hex');
   const backupDir = join(process.cwd(), 'backups');
