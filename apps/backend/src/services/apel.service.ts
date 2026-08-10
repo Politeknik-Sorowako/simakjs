@@ -264,7 +264,7 @@ export class ApelService {
       .from(presensiApel)
       .leftJoin(mahasiswa, eq(presensiApel.mahasiswaId, mahasiswa.id))
       .where(eq(presensiApel.sesiApelId, sesiId))
-      .orderBy(mahasiswa.nama);
+      .orderBy(mahasiswa.nim, mahasiswa.nama);
 
     return { sesi, presensi: rows };
   }

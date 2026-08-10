@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import {
   bap,
   bapTopik,
@@ -46,7 +46,7 @@ export class BapService {
     if (!matchedRps) return [];
 
     // Return all topics under that RPS
-    return await db.select().from(rpsTopik).where(eq(rpsTopik.rpsId, matchedRps.id));
+    return await db.select().from(rpsTopik).where(eq(rpsTopik.rpsId, matchedRps.id)).orderBy(asc(rpsTopik.pertemuanKe));
   }
 
   static async getDosenByEmail(email: string) {

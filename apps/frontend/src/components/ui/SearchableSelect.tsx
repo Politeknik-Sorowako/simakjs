@@ -14,6 +14,10 @@ interface SearchableSelectProps {
   disabled?: boolean;
   required?: boolean;
   class?: string;
+  onSearch?: (query: string) => void;
+  isLoading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export function SearchableSelect(props: SearchableSelectProps) {
@@ -22,6 +26,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
   const [highlightIndex, setHighlightIndex] = createSignal(0);
   let containerRef: HTMLDivElement | undefined;
   let searchInputRef: HTMLInputElement | undefined;
+  let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
   const selectedOption = () => props.options.find((o) => String(o.value) === String(props.value));
 
@@ -29,6 +34,15 @@ export function SearchableSelect(props: SearchableSelectProps) {
     const query = searchText().toLowerCase().trim();
     const list = query ? props.options.filter((o) => o.label.toLowerCase().includes(query)) : props.options;
     return list.slice(0, 50); // Performance optimization: cap rendering at 50 options
+  };
+
+  const handleSearchInput = (value: string) => {
+    setSearchText(value);
+    setHighlightIndex(0);
+    if (props.onSearch) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => props.onSearch?.(value), 300);
+    }
   };
 
   const handleClickOutside = (e: MouseEvent) => {
@@ -39,7 +53,10 @@ export function SearchableSelect(props: SearchableSelectProps) {
 
   onMount(() => {
     document.addEventListener('click', handleClickOutside);
-    onCleanup(() => document.removeEventListener('click', handleClickOutside));
+    onCleanup(() => {
+      document.removeEventListener('click', handleClickOutside);
+      clearTimeout(searchTimer);
+    });
   });
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -131,10 +148,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
                 autofocus
                 placeholder="Ketik untuk mencari..."
                 value={searchText()}
-                onInput={(e) => {
-                  setSearchText(e.currentTarget.value);
-                  setHighlightIndex(0);
-                }}
+                onInput={(e) => handleSearchInput(e.currentTarget.value)}
                 class="w-full rounded-lg border border-secondary-200 bg-secondary-50 px-3 py-1.5 text-xs text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
               />
               <Show when={searchText()}>
@@ -153,9 +167,16 @@ export function SearchableSelect(props: SearchableSelectProps) {
 
             {/* Options List */}
             <div class="max-h-56 overflow-y-auto flex flex-col gap-0.5" role="listbox">
+              <Show when={props.isLoading}>
+                <p class="text-xs text-secondary-400 text-center py-2">Memuat...</p>
+              </Show>
               <For
                 each={filteredOptions()}
-                fallback={<p class="text-xs text-secondary-400 text-center py-3">Tidak ada pilihan yang cocok.</p>}
+                fallback={
+                  <p class="text-xs text-secondary-400 text-center py-3">
+                    {props.isLoading ? 'Memuat...' : 'Tidak ada pilihan yang cocok.'}
+                  </p>
+                }
               >
                 {(opt, idx) => {
                   const isSelected = () => String(opt.value) === String(props.value);
@@ -187,6 +208,18 @@ export function SearchableSelect(props: SearchableSelectProps) {
                   );
                 }}
               </For>
+              <Show when={props.hasMore && props.onLoadMore && !props.isLoading}>
+                <button
+                  type="button"
+                  onClick={() => props.onLoadMore?.()}
+                  class="w-full text-xs text-center py-2 mt-1 text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-semibold hover:bg-secondary-100 dark:hover:bg-secondary-800 rounded-lg transition-colors"
+                >
+                  Muat lebih banyak...
+                </button>
+              </Show>
+              <Show when={props.isLoading && props.options.length > 0}>
+                <p class="text-xs text-secondary-400 text-center py-1">Memuat...</p>
+              </Show>
             </div>
           </div>
         </Show>
