@@ -79,15 +79,15 @@ export class PresensiService {
     return rows;
   }
 
-  // --- ADMIN RESOLUTION OF UNKNOWN STATUS ---
-  static async getUnknownPresensi(page = 1, limit = 20, search?: string, prodiId?: number) {
+  // --- ADMIN/PRODI RESOLUTION OF UNKNOWN STATUS ---
+  static async getUnknownPresensi(page = 1, limit = 20, search?: string, prodiIds?: number[]) {
     const conditions: SQL<unknown>[] = [eq(presensi.status, 'unknown')];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
     }
-    if (prodiId) {
-      conditions.push(eq(mahasiswa.programStudiId, prodiId));
+    if (prodiIds && prodiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, prodiIds));
     }
     const whereClause = and(...conditions);
 
@@ -106,6 +106,8 @@ export class PresensiService {
         mahasiswaId: presensi.mahasiswaId,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        programStudiId: mahasiswa.programStudiId,
+        prodiNama: programStudi.nama,
         status: presensi.status,
         durasiMangkir: presensi.durasiMangkir,
         keterangan: presensi.keterangan,
@@ -115,10 +117,20 @@ export class PresensiService {
         bapTanggal: bap.tanggal,
         bapPertemuan: bap.pertemuanKe,
         bapMateri: bap.materi,
+        kelasKuliahId: kelasKuliah.id,
+        namaKelas: kelasKuliah.namaKelas,
+        periodeId: kelasKuliah.periodeId,
+        mataKuliahKode: mataKuliah.kode,
+        mataKuliahNama: mataKuliah.nama,
+        dosenNama: dosen.nama,
       })
       .from(presensi)
       .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
       .innerJoin(bap, eq(presensi.bapId, bap.id))
+      .leftJoin(kelasKuliah, eq(bap.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .leftJoin(dosen, eq(bap.dosenId, dosen.id))
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .where(whereClause)
       .limit(limit)
       .offset((page - 1) * limit)
@@ -168,8 +180,7 @@ export class PresensiService {
     switch (status) {
       case 'alpa':
       case 'telat':
-      case 'terlambat':
-      case 'unknown': {
+      case 'terlambat': {
         const pengali = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
         return durasiMangkir * pengali;
       }
@@ -179,6 +190,7 @@ export class PresensiService {
         return durasiMangkir * pengali;
       }
       case 'hadir':
+      case 'unknown': // Belum dikonfirmasi admin, jangan hitung kompensasi
       default:
         return 0;
     }
@@ -303,12 +315,12 @@ export class PresensiService {
         .select({
           mahasiswaId: presensi.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN status::text IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * ${pengaliMangkir}
+              WHEN status::text IN ('alpa', 'telat', 'terlambat') THEN durasi_mangkir * ${pengaliMangkir}
               WHEN status::text IN ('sakit', 'izin') THEN durasi_mangkir
               ELSE 0 END)`.as('poin'),
         })
         .from(presensi)
-        .where(sql`status::text IN ('alpa', 'telat', 'terlambat', 'unknown', 'sakit', 'izin')`)
+        .where(sql`status::text IN ('alpa', 'telat', 'terlambat', 'sakit', 'izin')`)
         .groupBy(presensi.mahasiswaId),
     );
 
@@ -317,12 +329,12 @@ export class PresensiService {
         .select({
           mahasiswaId: presensiApel.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
+              WHEN COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
               WHEN COALESCE(verified_status::text, status::text) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
               ELSE 0 END)`.as('poin'),
         })
         .from(presensiApel)
-        .where(sql`COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'unknown', 'sakit', 'izin')`)
+        .where(sql`COALESCE(verified_status::text, status::text) IN ('alpa', 'terlambat', 'sakit', 'izin')`)
         .groupBy(presensiApel.mahasiswaId),
     );
 
@@ -444,12 +456,12 @@ export class PresensiService {
         .select({
           mahasiswaId: presensi.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN status IN ('alpa', 'telat', 'terlambat', 'unknown') THEN durasi_mangkir * ${pengaliMangkir}
+              WHEN status IN ('alpa', 'telat', 'terlambat') THEN durasi_mangkir * ${pengaliMangkir}
               WHEN status IN ('sakit', 'izin') THEN durasi_mangkir
               ELSE 0 END)`.as('poin'),
         })
         .from(presensi)
-        .where(inArray(presensi.status, ['alpa', 'telat', 'terlambat', 'unknown', 'sakit', 'izin']))
+        .where(inArray(presensi.status, ['alpa', 'telat', 'terlambat', 'sakit', 'izin']))
         .groupBy(presensi.mahasiswaId),
     );
 
@@ -458,12 +470,12 @@ export class PresensiService {
         .select({
           mahasiswaId: presensiApel.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
+              WHEN COALESCE(verified_status, status) IN ('alpa', 'terlambat') THEN COALESCE(menit_terlambat, 0) * ${pengaliMangkir}
               WHEN COALESCE(verified_status, status) IN ('sakit', 'izin') THEN COALESCE(menit_terlambat, 0)
               ELSE 0 END)`.as('poin'),
         })
         .from(presensiApel)
-        .where(sql`COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'unknown', 'sakit', 'izin')`)
+        .where(sql`COALESCE(verified_status, status) IN ('alpa', 'terlambat', 'sakit', 'izin')`)
         .groupBy(presensiApel.mahasiswaId),
     );
 

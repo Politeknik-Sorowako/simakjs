@@ -20,12 +20,14 @@ export const dosenPengajarController = {
     dosenId?: number,
     page?: number,
     limit?: number,
+    periodeId?: string,
   ): Promise<PaginatedResponse<DosenPengajar>> {
     const params = new URLSearchParams();
     if (kelasKuliahId) params.append('kelasKuliahId', String(kelasKuliahId));
     if (dosenId) params.append('dosenId', String(dosenId));
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
+    if (periodeId) params.append('periodeId', periodeId);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<DosenPengajar>>(`/dosen-pengajar${queryString}`);
   },

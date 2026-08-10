@@ -155,6 +155,31 @@ export interface KompensasiDetailResponse {
   };
 }
 
+export interface PresensiUnknownItem {
+  id: number;
+  bapId: number;
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  programStudiId?: number | null;
+  prodiNama?: string | null;
+  status: string;
+  durasiMangkir: number;
+  keterangan?: string | null;
+  lampiranEvidens?: string | null;
+  keteranganAdmin?: string | null;
+  resolvedAt?: string | null;
+  bapTanggal: string;
+  bapPertemuan: number;
+  bapMateri: string;
+  kelasKuliahId: number;
+  namaKelas: string;
+  periodeId: string;
+  mataKuliahKode?: string | null;
+  mataKuliahNama?: string | null;
+  dosenNama?: string | null;
+}
+
 export const presensiController = {
   // CPMK
   async getCpmkByMataKuliah(mataKuliahId: number): Promise<CPMK[]> {
@@ -261,6 +286,32 @@ export const presensiController = {
 
   async getPresensiByBap(bapId: number): Promise<PresensiItem[]> {
     return fetchApi<PresensiItem[]>(`/presensi/bap/${bapId}`);
+  },
+
+  // Unknown (verifikasi admin/prodi)
+  async getUnknownList(
+    page?: number,
+    limit?: number,
+    search?: string,
+    prodiId?: number,
+  ): Promise<PaginatedResponse<PresensiUnknownItem>> {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    if (search) params.append('search', search);
+    if (prodiId) params.append('prodiId', String(prodiId));
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<PaginatedResponse<PresensiUnknownItem>>(`/presensi/unknown-list${queryString}`);
+  },
+
+  async resolveUnknown(
+    id: number,
+    data: { newStatus: 'sakit' | 'izin' | 'alpa'; keteranganAdmin?: string },
+  ): Promise<PresensiUnknownItem> {
+    return fetchApi<PresensiUnknownItem>(`/presensi/unknown/${id}/resolve`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 
   // Rekap Kehadiran
