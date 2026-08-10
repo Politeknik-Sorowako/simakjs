@@ -44,7 +44,9 @@ export class KrsController {
         };
       }
       filterMhsId = myMhsId;
-    } else if (hasRole(user, ['dosen'])) {
+    } else if (hasRole(user, ['dosen']) && kelasKuliahId === undefined) {
+      // Saat filter kelasKuliahId diberikan (mis. roster BAP presensi), tampilkan
+      // semua mahasiswa di kelas tersebut tanpa membatasi hanya mahasiswa PA dosen ini.
       const dsnId = await KrsController.getDosenIdByEmail(user.email);
       if (dsnId) {
         dosenPaId = dsnId;
