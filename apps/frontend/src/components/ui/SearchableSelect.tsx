@@ -53,7 +53,10 @@ export function SearchableSelect(props: SearchableSelectProps) {
 
   onMount(() => {
     document.addEventListener('click', handleClickOutside);
-    onCleanup(() => document.removeEventListener('click', handleClickOutside));
+    onCleanup(() => {
+      document.removeEventListener('click', handleClickOutside);
+      clearTimeout(searchTimer);
+    });
   });
 
   const handleKeyDown = (e: KeyboardEvent) => {

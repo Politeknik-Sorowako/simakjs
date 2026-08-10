@@ -15,7 +15,7 @@ import {
   type KompensasiManualRecord,
   kompensasiManualController,
 } from '../controllers/kompensasiManualController';
-import { mahasiswaController } from '../controllers/mahasiswaController';
+import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 
 const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([value, label]) => ({
   value,
@@ -74,18 +74,24 @@ export default function KompensasiManual() {
   const [isDeleting, setIsDeleting] = createSignal(false);
 
   // Resources
+  const [allMhs, setAllMhs] = createSignal<Mahasiswa[]>([]);
   const [mhsData] = createResource(
     () => ({ search: searchMhsInput(), page: mhsPage() }),
     async ({ search, page }) => {
       const res = await mahasiswaController.getAll(search || undefined, page, 50, undefined, {
         filterStatus: 'aktif',
       });
+      if (page === 1) {
+        setAllMhs(res.data || []);
+      } else {
+        setAllMhs((prev) => [...prev, ...(res.data || [])]);
+      }
       return res;
     },
   );
 
   const mhsOptions = createMemo<SelectOption[]>(() => {
-    const list = mhsData()?.data || [];
+    const list = allMhs();
     return [...list]
       .sort((a, b) => String(a.nim).localeCompare(String(b.nim), 'id', { numeric: true }))
       .map((m) => ({ value: m.id, label: `${m.nim} — ${m.nama}` }));
@@ -98,6 +104,7 @@ export default function KompensasiManual() {
   };
 
   const handleMhsSearch = (query: string) => {
+    setAllMhs([]);
     setMhsPage(1);
     setSearchMhsInput(query);
   };
