@@ -26,6 +26,7 @@ PROD_DB_CONTAINER="${PROD_DB_CONTAINER:-simak_db}"
 
 # --- Container staging (target restore) ---
 STAGING_DB_CONTAINER="${STAGING_DB_CONTAINER:-simak_db_staging}"
+STAGING_BACKEND_CONTAINER="${STAGING_BACKEND_CONTAINER:-simak_backend_staging}"
 
 # --- Fallback SSH (hanya dipakai bila LOCAL_SYNC=false) ---
 PROD_SSH_HOST="${PROD_SSH_HOST:-localhost}"

@@ -90,6 +90,7 @@ async function main() {
 
   const localSync = (process.env.LOCAL_SYNC || 'true') === 'true';
   const stagingDbContainer = process.env.STAGING_DB_CONTAINER || 'simak_db_staging';
+  const stagingBackendContainer = process.env.STAGING_BACKEND_CONTAINER || 'simak_backend_staging';
   const prodDbName = process.env.PROD_DB_NAME || 'simak_vokasi';
   const prodDbUser = process.env.PROD_DB_USER || 'simak_user';
   const prodDbContainer = process.env.PROD_DB_CONTAINER || 'simak_db';
@@ -187,11 +188,14 @@ async function main() {
     auditLog('Restore completed.');
 
     // 3. Apply Staging Migrations
-    auditLog('Running auto-migrations (safe-migrate)...');
-    const migrateResult = spawnSync('bun', ['run', 'src/scripts/safe-migrate.ts'], {
+    //    Dijalankan di dalam container backend staging agar host `db_staging`
+    //    (network Docker) dapat di-resolve, konsisten dengan deploy-staging.sh.
+    auditLog('Running auto-migrations (safe-migrate) inside staging backend container...');
+    const migrateCmd = `docker exec ${stagingBackendContainer} sh -c 'cd /app/apps/backend && bun run db:safe-migrate'`;
+    const migrateResult = spawnSync('sh', ['-c', migrateCmd], {
       env: process.env,
       stdio: ['inherit', 'pipe', 'pipe'],
-      timeout: 120000,
+      timeout: 180000,
     });
     if (migrateResult.error || migrateResult.status !== 0) {
       const stderr = migrateResult.stderr

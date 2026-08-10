@@ -11,6 +11,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Pastikan bun tersedia di PATH (cron & shell non-interaktif)
+if command -v bun >/dev/null 2>&1; then
+  BUN_BIN="$(command -v bun)"
+else
+  BUN_BIN="${BUN_HOME:-$HOME/.bun}/bin/bun"
+fi
+export PATH="$(dirname "$BUN_BIN"):$PATH"
+
 LOCK_FILE="${LOCK_FILE:-/tmp/simak-sync-staging.lock}"
 LOG_DIR="$PROJECT_DIR/logs"
 mkdir -p "$LOG_DIR"

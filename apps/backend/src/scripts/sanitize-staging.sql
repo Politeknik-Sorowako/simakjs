@@ -31,8 +31,8 @@ SET nama           = 'Dosen ' || id,
     email          = CONCAT('dosen_', id, '@staging.simak.local'),
     nik            = COALESCE(LEFT('00000000' || id::text, 16), '0000000000000000'),
     nidn           = NULL,
-    tempatLahir    = NULL,
-    tanggalLahir   = NULL
+    tempat_lahir   = NULL,
+    tanggal_lahir  = NULL
 WHERE email IS NOT NULL;
 
 -- =========================================================
@@ -43,13 +43,13 @@ SET nama             = 'Mahasiswa ' || id,
     email            = CONCAT('mhs_', id, '@staging.simak.local'),
     nim              = CONCAT('NIM', RIGHT(COALESCE(angkatan, '0000'), 4), LPAD(id::text, 5, '0')),
     nik              = COALESCE(LEFT('00000000' || id::text, 16), '0000000000000000'),
-    namaIbuKandung   = 'Ibu ' || id,
-    tanggalLahir     = NULL,
-    tempatLahir      = NULL,
+    nama_ibu_kandung = 'Ibu ' || id,
+    tanggal_lahir    = NULL,
+    tempat_lahir     = NULL,
     jalan            = NULL,
     rt               = NULL,
     rw               = NULL,
-    kodePos          = NULL
+    kode_pos         = NULL
 WHERE email IS NOT NULL;
 
 -- =========================================================
@@ -57,16 +57,16 @@ WHERE email IS NOT NULL;
 -- =========================================================
 UPDATE applications
 SET nik             = COALESCE(LEFT('00000000' || id::text, 16), '0000000000000000'),
-    namaLengkap     = 'Calon Mahasiswa ' || id,
-    tempatLahir     = NULL,
-    tanggalLahir    = NULL,
+    nama_lengkap    = 'Calon Mahasiswa ' || id,
+    tempat_lahir    = NULL,
+    tanggal_lahir   = NULL,
     jalan           = NULL,
     rt              = NULL,
     rw              = NULL,
-    kodePos         = NULL,
+    kode_pos        = NULL,
     telepon         = NULL,
-    namaIbuKandung  = 'Ibu ' || id,
-    noPendaftar     = NULL
+    nama_ibu_kandung = 'Ibu ' || id,
+    no_pendaftar    = NULL
 WHERE id IS NOT NULL;
 
 -- =========================================================
