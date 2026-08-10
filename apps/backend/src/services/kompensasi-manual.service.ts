@@ -1,4 +1,4 @@
-import { and, count, desc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, or, sql } from 'drizzle-orm';
 import { kompensasiManual, mahasiswa, users } from '../models/schema';
 import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
@@ -310,6 +310,8 @@ export class KompensasiManualService {
     jenisKompen?: string;
     page?: number;
     limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }) {
     const page = options?.page || 1;
     const limit = options?.limit || 50;
@@ -338,6 +340,22 @@ export class KompensasiManualService {
 
     const total = Number(totalRow?.count || 0);
 
+    const sortMap: Record<string, unknown | undefined> = {
+      tanggal: kompensasiManual.tanggal,
+      mahasiswaNim: mahasiswa.nim,
+      mahasiswaNama: mahasiswa.nama,
+      jenisKompen: kompensasiManual.jenisKompen,
+      durasiMenit: kompensasiManual.durasiMenit,
+    };
+    const sortColumn = options?.sortBy ? sortMap[options.sortBy] : undefined;
+    const sortOrderClause = options?.sortOrder === 'asc' ? asc : desc;
+    // biome-ignore lint/suspicious/noExplicitAny: Drizzle column type for dynamic sort
+    const sortClause = sortColumn ? sortOrderClause(sortColumn as any) : undefined;
+
+    const orderByClause = sortClause
+      ? [sortClause, desc(kompensasiManual.id)]
+      : [desc(kompensasiManual.tanggal), desc(kompensasiManual.id)];
+
     const rows = await db
       .select({
         id: kompensasiManual.id,
@@ -355,7 +373,7 @@ export class KompensasiManualService {
       .from(kompensasiManual)
       .innerJoin(mahasiswa, eq(kompensasiManual.mahasiswaId, mahasiswa.id))
       .where(whereClause)
-      .orderBy(desc(kompensasiManual.tanggal), desc(kompensasiManual.id))
+      .orderBy(...orderByClause)
       .limit(limit)
       .offset(offset);
 

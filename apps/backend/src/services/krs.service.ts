@@ -142,6 +142,7 @@ export class KrsService {
       .leftJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .leftJoin(dosen, eq(krs.approvedById, dosen.id))
       .where(whereClause)
+      .orderBy(mahasiswa.nim, krs.id)
       .limit(limit)
       .offset(offset);
 

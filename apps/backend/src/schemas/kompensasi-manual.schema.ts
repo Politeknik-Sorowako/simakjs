@@ -182,6 +182,8 @@ export const getAllKompensasiManualSchema = {
     jenisKompen: t.Optional(t.String()),
     page: t.Optional(t.Numeric()),
     limit: t.Optional(t.Numeric()),
+    sortBy: t.Optional(t.String()),
+    sortOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')])),
   }),
   response: {
     200: t.Object({

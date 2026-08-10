@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -14,7 +15,7 @@ import {
   type KompensasiManualRecord,
   kompensasiManualController,
 } from '../controllers/kompensasiManualController';
-import { mahasiswaController } from '../controllers/mahasiswaController';
+import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 
 const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([value, label]) => ({
   value,
@@ -35,7 +36,19 @@ export default function KompensasiManual() {
   const [filterSearch, setFilterSearch] = createSignal('');
   const [filterTanggal, setFilterTanggal] = createSignal('');
   const [filterJenis, setFilterJenis] = createSignal('');
+  const [sortBy, setSortBy] = createSignal('');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
   const [page, setPage] = createSignal(1);
+
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'tanggal' ? 'desc' : 'asc');
+    }
+    setPage(1);
+  };
 
   // Form & Modal states
   const [showFormModal, setShowFormModal] = createSignal(false);
@@ -46,6 +59,7 @@ export default function KompensasiManual() {
   const [durasiMenit, setDurasiMenit] = createSignal(0);
   const [keterangan, setKeterangan] = createSignal('');
   const [searchMhsInput, setSearchMhsInput] = createSignal('');
+  const [mhsPage, setMhsPage] = createSignal(1);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
 
   // Warning Confirmation Modal state
@@ -60,24 +74,52 @@ export default function KompensasiManual() {
   const [isDeleting, setIsDeleting] = createSignal(false);
 
   // Resources
+  const [allMhs, setAllMhs] = createSignal<Mahasiswa[]>([]);
   const [mhsData] = createResource(
-    () => searchMhsInput(),
-    async (search) => {
-      const res = await mahasiswaController.getAll(search || undefined, 1, 50);
-      return res.data || [];
+    () => ({ search: searchMhsInput(), page: mhsPage() }),
+    async ({ search, page }) => {
+      const res = await mahasiswaController.getAll(search || undefined, page, 50, undefined, {
+        filterStatus: 'aktif',
+      });
+      if (page === 1) {
+        setAllMhs(res.data || []);
+      } else {
+        setAllMhs((prev) => [...prev, ...(res.data || [])]);
+      }
+      return res;
     },
   );
 
   const mhsOptions = createMemo<SelectOption[]>(() => {
-    const list = mhsData() || [];
-    return list.map((m) => ({ value: m.id, label: `${m.nim} — ${m.nama}` }));
+    const list = allMhs();
+    return [...list]
+      .sort((a, b) => String(a.nim).localeCompare(String(b.nim), 'id', { numeric: true }))
+      .map((m) => ({ value: m.id, label: `${m.nim} — ${m.nama}` }));
   });
+
+  const mhsHasMore = () => {
+    const meta = mhsData()?.meta;
+    if (!meta) return false;
+    return meta.page < meta.totalPages;
+  };
+
+  const handleMhsSearch = (query: string) => {
+    setAllMhs([]);
+    setMhsPage(1);
+    setSearchMhsInput(query);
+  };
+
+  const handleLoadMore = () => {
+    if (mhsHasMore()) setMhsPage((p) => p + 1);
+  };
 
   const [kompensasiList, { refetch }] = createResource(
     () => ({
       search: filterSearch(),
       tanggal: filterTanggal(),
       jenisKompen: filterJenis(),
+      sortBy: sortBy(),
+      sortOrder: sortOrder(),
       page: page(),
     }),
     async (params) => {
@@ -85,6 +127,8 @@ export default function KompensasiManual() {
         search: params.search || undefined,
         tanggal: params.tanggal || undefined,
         jenisKompen: params.jenisKompen || undefined,
+        sortBy: params.sortBy || undefined,
+        sortOrder: params.sortBy ? params.sortOrder : undefined,
         page: params.page,
         limit: 20,
       });
@@ -312,8 +356,45 @@ export default function KompensasiManual() {
         <Table
           headers={
             isAdminRole()
-              ? ['No', 'NIM', 'Nama Mahasiswa', 'Tanggal', 'Jenis', 'Durasi', 'Keterangan', 'Aksi']
-              : ['No', 'NIM', 'Nama Mahasiswa', 'Tanggal', 'Jenis', 'Durasi', 'Keterangan']
+              ? [
+                  'No',
+                  <SortableHeader field="mahasiswaNim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    NIM
+                  </SortableHeader>,
+                  <SortableHeader field="mahasiswaNama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Nama Mahasiswa
+                  </SortableHeader>,
+                  <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Tanggal
+                  </SortableHeader>,
+                  <SortableHeader field="jenisKompen" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Jenis
+                  </SortableHeader>,
+                  <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Durasi
+                  </SortableHeader>,
+                  'Keterangan',
+                  'Aksi',
+                ]
+              : [
+                  'No',
+                  <SortableHeader field="mahasiswaNim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    NIM
+                  </SortableHeader>,
+                  <SortableHeader field="mahasiswaNama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Nama Mahasiswa
+                  </SortableHeader>,
+                  <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Tanggal
+                  </SortableHeader>,
+                  <SortableHeader field="jenisKompen" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Jenis
+                  </SortableHeader>,
+                  <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Durasi
+                  </SortableHeader>,
+                  'Keterangan',
+                ]
           }
         >
           <For each={kompensasiList()?.data || []}>
@@ -403,6 +484,10 @@ export default function KompensasiManual() {
               value={selectedMhsId()}
               onChange={setSelectedMhsId}
               placeholder="Cari NIM atau Nama Mahasiswa..."
+              onSearch={handleMhsSearch}
+              isLoading={mhsData.loading}
+              hasMore={mhsHasMore()}
+              onLoadMore={handleLoadMore}
             />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
