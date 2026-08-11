@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import EnrollmentQrModal from '../components/EnrollmentQrModal';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
@@ -10,7 +10,7 @@ import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { dosenController, Dosen as IDosen } from '../controllers/dosenController';
-import { kelasKuliahController } from '../controllers/kelasKuliahController';
+import { KelasKuliah, kelasKuliahController } from '../controllers/kelasKuliahController';
 import { krsController } from '../controllers/krsController';
 import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { nilaiPraktikController } from '../controllers/nilaiPraktikController';
@@ -57,7 +57,6 @@ export default function BapPresensi() {
   // Selected state
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
   const [selectedBapId, setSelectedBapId] = createSignal<number | null>(null);
-  const [filterMkText, setFilterMkText] = createSignal('');
 
   // Main Tabs: 'teori' | 'praktikum' | 'monitoring'
   const [mainTab, setMainTab] = createSignal<'teori' | 'praktikum' | 'monitoring'>('teori');
@@ -185,30 +184,61 @@ export default function BapPresensi() {
     Record<number, { status: string; durasiMangkir: number; keterangan: string }>
   >({});
 
-  // 1. Fetch Classes
-  const [kelasData] = createResource(() => kelasKuliahController.getAll(undefined, 1, 100));
+  // 1. Fetch Classes (server-side search + lazy loading / load more)
+  const KELAS_PAGE_SIZE = 50;
+  const [kelasList, setKelasList] = createSignal<KelasKuliah[]>([]);
+  const [kelasSearch, setKelasSearch] = createSignal('');
+  const [kelasPage, setKelasPage] = createSignal(1);
+  const [kelasHasMore, setKelasHasMore] = createSignal(false);
+  const [kelasLoading, setKelasLoading] = createSignal(false);
+  let kelasDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const activeKelasList = () => {
-    const all = kelasData()?.data || [];
-    if (auth.hasRole(['dosen'])) {
-      const dId = dosenProfile()?.id;
-      if (!dId) return all;
-      return all.filter((k) => k.dosenPengajarKelas?.some((dp) => dp.dosenId === dId));
+  const fetchKelas = async (page: number, search: string, append: boolean) => {
+    setKelasLoading(true);
+    try {
+      const res = await kelasKuliahController.getAll(search || undefined, page, KELAS_PAGE_SIZE);
+      setKelasList((prev) => (append ? [...prev, ...res.data] : res.data));
+      setKelasPage(page + 1);
+      setKelasHasMore(page < (res.meta?.totalPages || 1));
+    } catch {
+      toast.showToast('Gagal memuat daftar kelas kuliah', 'error');
+    } finally {
+      setKelasLoading(false);
     }
-    return all;
   };
 
-  const filteredKelasList = () => {
-    const txt = filterMkText().toLowerCase().trim();
-    if (!txt) return activeKelasList();
-    return activeKelasList().filter((k) => {
-      const mkNama = k.mataKuliah?.nama?.toLowerCase() || '';
-      const mkKode = k.mataKuliah?.kode?.toLowerCase() || '';
-      const kelasNama = k.namaKelas?.toLowerCase() || '';
-      return mkNama.includes(txt) || mkKode.includes(txt) || kelasNama.includes(txt);
-    });
+  onMount(() => {
+    fetchKelas(1, '', false);
+  });
+
+  onCleanup(() => {
+    clearTimeout(kelasDebounceTimer);
+  });
+
+  const handleKelasSearch = (q: string) => {
+    setKelasSearch(q);
+    clearTimeout(kelasDebounceTimer);
+    kelasDebounceTimer = setTimeout(() => fetchKelas(1, q, false), 350);
   };
-  const selectedKelas = () => activeKelasList().find((k) => k.id === selectedKelasId());
+
+  const handleKelasLoadMore = () => {
+    if (kelasHasMore() && !kelasLoading()) {
+      fetchKelas(kelasPage(), kelasSearch(), true);
+    }
+  };
+
+  const [selectedKelasDetail] = createResource(
+    () => (selectedKelasId() && !kelasList().some((k) => k.id === selectedKelasId()) ? selectedKelasId() : null),
+    async (kelasId) => {
+      try {
+        return await kelasKuliahController.getById(kelasId);
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  const selectedKelas = () => kelasList().find((k) => k.id === selectedKelasId()) || selectedKelasDetail() || null;
 
   // 2. Fetch BAPs for selected Class
   const [bapData, { refetch: refetchBap }] = createResource(selectedKelasId, async (kelasId) => {
@@ -872,7 +902,7 @@ export default function BapPresensi() {
     return [...(bapPraktikumData() || [])].sort((a, b) => a.sesiKe - b.sesiKe || a.id - b.id);
   };
 
-  const currentKelasPrint = () => (activeKelasList() || []).find((k) => k.id === selectedKelasId()) || null;
+  const currentKelasPrint = () => selectedKelas();
 
   const currentDosenPrint = () => {
     const kelas = currentKelasPrint();
@@ -1085,7 +1115,7 @@ export default function BapPresensi() {
                 label="Pilih Kelas Kuliah"
                 placeholder="-- Cari & Pilih Kelas Kuliah --"
                 value={selectedKelasId()}
-                options={(activeKelasList() || []).map((kelas) => ({
+                options={(kelasList() || []).map((kelas) => ({
                   label: `${kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}${kelas.mataKuliah?.nama} (Kelas ${kelas.namaKelas})`,
                   value: kelas.id,
                 }))}
@@ -1093,6 +1123,10 @@ export default function BapPresensi() {
                   setSelectedKelasId(val ? Number(val) : null);
                   setSelectedBapId(null);
                 }}
+                onSearch={handleKelasSearch}
+                hasMore={kelasHasMore()}
+                onLoadMore={handleKelasLoadMore}
+                isLoading={kelasLoading()}
               />
             </div>
 
@@ -1313,7 +1347,7 @@ export default function BapPresensi() {
                   label="Pilih Kelas Kuliah"
                   placeholder="-- Cari & Pilih Kelas Kuliah --"
                   value={selectedKelasId()}
-                  options={(activeKelasList() || []).map((kelas) => ({
+                  options={(kelasList() || []).map((kelas) => ({
                     label: `${kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}${kelas.mataKuliah?.nama} (Kelas ${kelas.namaKelas})`,
                     value: kelas.id,
                   }))}
@@ -1322,6 +1356,10 @@ export default function BapPresensi() {
                     setSelectedRombelId(null);
                     setSelectedBapId(null);
                   }}
+                  onSearch={handleKelasSearch}
+                  hasMore={kelasHasMore()}
+                  onLoadMore={handleKelasLoadMore}
+                  isLoading={kelasLoading()}
                 />
               </div>
               <Show when={selectedKelasId()}>
@@ -1752,14 +1790,34 @@ export default function BapPresensi() {
           <Show
             when={(rpsTopics() || []).length > 0}
             fallback={
-              <Input
-                type="text"
-                label="Materi Pertemuan"
-                placeholder="Misal: Pengenalan dan Dasar Perkuliahan"
-                value={materi()}
-                onInput={(e) => setMateri(e.currentTarget.value)}
-                required
-              />
+              <div class="flex flex-col gap-2">
+                <Input
+                  type="text"
+                  label="Materi Pertemuan"
+                  placeholder="Misal: Pengenalan dan Dasar Perkuliahan"
+                  value={materi()}
+                  onInput={(e) => setMateri(e.currentTarget.value)}
+                  required
+                />
+                <Show when={selectedKelas()}>
+                  {(kelas) => (
+                    <div class="flex items-center justify-between gap-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs dark:bg-amber-900/20 dark:border-amber-800/40">
+                      <span class="text-amber-800 dark:text-amber-200">
+                        Mata kuliah ini belum memiliki Rencana Perkuliahan (RPS). Buat RPS terlebih dahulu agar dapat
+                        memilih topik pertemuan dan menautkan CPMK.
+                      </span>
+                      <a
+                        href={`/rps?mataKuliahId=${kelas().mataKuliahId}&periodeId=${kelas().periodeId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-1 font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors shrink-0"
+                      >
+                        Buat RPS Baru →
+                      </a>
+                    </div>
+                  )}
+                </Show>
+              </div>
             }
           >
             <div class="flex flex-col gap-1.5">

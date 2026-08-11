@@ -1,4 +1,5 @@
 import { PresensiService } from '../services/presensi.service';
+import { ProdiScopeService } from '../services/prodi-scope.service';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
@@ -171,23 +172,29 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getUnknownPresensi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+    if (!user || !hasRole(user, ['admin', 'super_admin', 'prodi'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin.' };
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 20;
     const search = query?.search;
-    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
-    return await PresensiService.getUnknownPresensi(page, limit, search, prodiId);
+    let prodiIds: number[] | undefined;
+    if (hasRole(user, ['admin', 'super_admin'])) {
+      const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+      prodiIds = prodiId ? [prodiId] : undefined;
+    } else {
+      prodiIds = (await ProdiScopeService.getUserAccessibleProdiIds(user)) || undefined;
+    }
+    return await PresensiService.getUnknownPresensi(page, limit, search, prodiIds);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async resolveUnknown({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+    if (!user || !hasRole(user, ['admin', 'super_admin', 'prodi'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin.' };
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }
     try {
       const id = parseInt(params.id);

@@ -69,6 +69,7 @@ import Pelanggaran from './routes/Pelanggaran';
 import Pengguna from './routes/Pengguna';
 import PeriodeAkademik from './routes/PeriodeAkademik';
 import PetaObe from './routes/PetaObe';
+import PresensiUnknown from './routes/PresensiUnknown';
 import Profil from './routes/Profil';
 import ProfilLulusan from './routes/ProfilLulusan';
 import ProgramStudi from './routes/ProgramStudi';
@@ -228,6 +229,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
             <ApelMonitor />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/presensi-unknown"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi']}>
+            <PresensiUnknown />
           </ProtectedRoute>
         }
       />

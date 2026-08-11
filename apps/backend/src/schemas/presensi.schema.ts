@@ -258,9 +258,17 @@ export const resolveUnknownPresensiSchema = {
   response: {
     200: t.Object({
       id: t.Integer(),
+      bapId: t.Integer(),
+      mahasiswaId: t.Integer(),
       status: t.String(),
+      durasiMangkir: t.Integer(),
+      keterangan: t.Union([t.String(), t.Null()]),
+      lampiranEvidens: t.Union([t.String(), t.Null()]),
       keteranganAdmin: t.Union([t.String(), t.Null()]),
+      resolvedBy: t.Union([t.Integer(), t.Null()]),
       resolvedAt: t.Union([t.Date(), t.Null()]),
+      createdAt: t.Date(),
+      updatedAt: t.Date(),
     }),
     400: t.Object({ error: t.String() }),
     403: t.Object({ error: t.String() }),
