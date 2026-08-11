@@ -5,6 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { PresensiUnknownItem, presensiController } from '../controllers/presensiController';
+import { fmtWaktu } from '../utils/format';
 
 export default function PresensiUnknown() {
   const toast = useToast();
@@ -56,18 +57,6 @@ export default function PresensiUnknown() {
   };
 
   const statusWord = (st: string) => (st === 'sakit' ? 'Sakit' : st === 'izin' ? 'Izin' : st === 'alpa' ? 'Alpa' : st);
-
-  const fmtWaktu = (iso?: string | null) => {
-    if (!iso) return '-';
-    const d = new Date(iso);
-    return d.toLocaleString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   return (
     <MainLayout>

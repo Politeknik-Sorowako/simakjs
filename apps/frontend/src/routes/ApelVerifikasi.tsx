@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, UnknownPresensiItem } from '../controllers/apelController';
 import { PaginatedResponse } from '../controllers/prodiController';
+import { fmtWaktu } from '../utils/format';
 
 export default function ApelVerifikasi() {
   const auth = useAuth();
@@ -56,18 +57,6 @@ export default function ApelVerifikasi() {
       {count}
     </span>
   );
-
-  const fmtWaktu = (iso?: string) => {
-    if (!iso) return '-';
-    const d = new Date(iso);
-    return d.toLocaleString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   return (
     <MainLayout>

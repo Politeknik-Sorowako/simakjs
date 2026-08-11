@@ -16,6 +16,7 @@ import {
   kompensasiManualController,
 } from '../controllers/kompensasiManualController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { fmtWaktu } from '../utils/format';
 
 const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([value, label]) => ({
   value,
@@ -48,18 +49,6 @@ export default function KompensasiManual() {
       setSortOrder(field === 'tanggal' ? 'desc' : 'asc');
     }
     setPage(1);
-  };
-
-  const fmtWaktu = (iso?: string) => {
-    if (!iso) return '-';
-    const d = new Date(iso);
-    return d.toLocaleString('id-ID', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   // Form & Modal states
