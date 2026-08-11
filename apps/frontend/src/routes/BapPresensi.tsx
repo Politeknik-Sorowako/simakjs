@@ -227,7 +227,7 @@ export default function BapPresensi() {
     }
   };
 
-  const [selectedKelasDetail, { mutate: mutateSelectedKelasDetail }] = createResource(
+  const [selectedKelasDetail] = createResource(
     () => (selectedKelasId() && !kelasList().some((k) => k.id === selectedKelasId()) ? selectedKelasId() : null),
     async (kelasId) => {
       try {

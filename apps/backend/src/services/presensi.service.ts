@@ -154,6 +154,9 @@ export class PresensiService {
     if (row.status !== 'unknown') {
       throw new Error('Status presensi bukan "unknown" sehingga tidak dapat di-resolve');
     }
+    if (!['sakit', 'izin', 'alpa'].includes(newStatus)) {
+      throw new Error('Status tujuan tidak valid; harus salah satu dari sakit, izin, atau alpa');
+    }
 
     const [bapRow] = await db.select().from(bap).where(eq(bap.id, row.bapId));
     let durasiMangkir = row.durasiMangkir;
