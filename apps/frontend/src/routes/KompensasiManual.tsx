@@ -30,7 +30,7 @@ export default function KompensasiManual() {
   const user = () => auth.user();
 
   const isAdminRole = () => ['admin', 'super_admin'].includes(user()?.role || '');
-  const tableColumnCount = () => (isAdminRole() ? 8 : 7);
+  const tableColumnCount = () => (isAdminRole() ? 9 : 8);
 
   // Filters state
   const [filterSearch, setFilterSearch] = createSignal('');
@@ -48,6 +48,18 @@ export default function KompensasiManual() {
       setSortOrder(field === 'tanggal' ? 'desc' : 'asc');
     }
     setPage(1);
+  };
+
+  const fmtWaktu = (iso?: string) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    return d.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
 
   // Form & Modal states
@@ -373,6 +385,7 @@ export default function KompensasiManual() {
                   <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                     Durasi
                   </SortableHeader>,
+                  'Waktu Pencatatan',
                   'Keterangan',
                   'Aksi',
                 ]
@@ -393,6 +406,7 @@ export default function KompensasiManual() {
                   <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                     Durasi
                   </SortableHeader>,
+                  'Waktu Pencatatan',
                   'Keterangan',
                 ]
           }
@@ -412,6 +426,7 @@ export default function KompensasiManual() {
                   </Badge>
                 </td>
                 <td class="py-3 px-4 font-semibold text-brand-600 dark:text-brand-400">{rec.durasiMenit} menit</td>
+                <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{fmtWaktu(rec.createdAt)}</td>
                 <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300 max-w-xs truncate">
                   {rec.keterangan || '-'}
                 </td>

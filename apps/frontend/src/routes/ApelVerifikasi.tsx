@@ -57,6 +57,18 @@ export default function ApelVerifikasi() {
     </span>
   );
 
+  const fmtWaktu = (iso?: string) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    return d.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <MainLayout>
       <div class="space-y-6">
@@ -85,6 +97,7 @@ export default function ApelVerifikasi() {
                   <th class="px-4 py-3 text-left text-xs font-medium uppercase">Tanggal</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Shift</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Dosen</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Waktu Pencatatan</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
                 </tr>
               </thead>
@@ -100,6 +113,7 @@ export default function ApelVerifikasi() {
                       <td class="px-4 py-3 text-sm">{item.tanggal}</td>
                       <td class="px-4 py-3 text-center text-sm">{item.shift}</td>
                       <td class="px-4 py-3 text-center text-sm">{item.dosenNama}</td>
+                      <td class="px-4 py-3 text-center text-sm">{fmtWaktu(item.createdAt)}</td>
                       <td class="px-4 py-3 text-center">
                         <button
                           class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
@@ -116,7 +130,7 @@ export default function ApelVerifikasi() {
                 </For>
                 <Show when={!data()?.data.length}>
                   <tr>
-                    <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                    <td colspan="10" class="px-4 py-8 text-center text-gray-500">
                       Tidak ada data presensi unknown yang perlu diverifikasi
                     </td>
                   </tr>

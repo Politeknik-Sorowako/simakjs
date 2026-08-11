@@ -57,6 +57,18 @@ export default function PresensiUnknown() {
 
   const statusWord = (st: string) => (st === 'sakit' ? 'Sakit' : st === 'izin' ? 'Izin' : st === 'alpa' ? 'Alpa' : st);
 
+  const fmtWaktu = (iso?: string | null) => {
+    if (!iso) return '-';
+    const d = new Date(iso);
+    return d.toLocaleString('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -95,6 +107,7 @@ export default function PresensiUnknown() {
                   <th class="py-3 px-4">Mata Kuliah (Kelas)</th>
                   <th class="py-3 px-4">Dosen Pengampu</th>
                   <th class="py-3 px-4">Pertemuan & Tanggal</th>
+                  <th class="py-3 px-4">Waktu Pencatatan</th>
                   <th class="py-3 px-4">Materi</th>
                   <th class="py-3 px-4 text-center">Aksi</th>
                 </tr>
@@ -122,6 +135,7 @@ export default function PresensiUnknown() {
                         <div>Pertemuan {item.bapPertemuan}</div>
                         <div class="text-secondary-400 dark:text-secondary-200">{item.bapTanggal}</div>
                       </td>
+                      <td class="py-3 px-4 text-xs">{fmtWaktu(item.createdAt)}</td>
                       <td class="py-3 px-4 text-xs max-w-xs truncate" title={item.bapMateri}>
                         {item.bapMateri}
                       </td>
@@ -135,7 +149,7 @@ export default function PresensiUnknown() {
                 </For>
                 <Show when={(data()?.data || []).length === 0}>
                   <tr>
-                    <td colspan="8" class="py-10 text-center text-secondary-400 text-sm">
+                    <td colspan="9" class="py-10 text-center text-secondary-400 text-sm">
                       Tidak ada presensi unknown yang menunggu konfirmasi.
                     </td>
                   </tr>
