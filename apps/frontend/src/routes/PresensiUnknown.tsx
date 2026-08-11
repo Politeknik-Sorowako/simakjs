@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -13,14 +13,18 @@ export default function PresensiUnknown() {
 
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const [resolveModal, setResolveModal] = createSignal<PresensiUnknownItem | null>(null);
   const [resolveStatus, setResolveStatus] = createSignal<'sakit' | 'izin' | 'alpa'>('alpa');
   const [resolveNote, setResolveNote] = createSignal('');
 
   const [data, { refetch }] = createResource(
-    () => ({ page: page(), search: search(), prodiId: workspace.selectedProdiId() }),
+    () => ({ page: page(), search: debouncedSearch(), prodiId: workspace.selectedProdiId() }),
     async (params) => {
       return presensiController.getUnknownList(
         params.page,
@@ -77,8 +81,11 @@ export default function PresensiUnknown() {
               class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               value={search()}
               onInput={(e) => {
-                setSearch(e.currentTarget.value);
+                const q = e.currentTarget.value;
+                setSearch(q);
                 setPage(1);
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => setDebouncedSearch(q), 350);
               }}
             />
             <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">

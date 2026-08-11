@@ -902,7 +902,7 @@ export default function BapPresensi() {
     return [...(bapPraktikumData() || [])].sort((a, b) => a.sesiKe - b.sesiKe || a.id - b.id);
   };
 
-  const currentKelasPrint = () => (kelasList() || []).find((k) => k.id === selectedKelasId()) || null;
+  const currentKelasPrint = () => selectedKelas();
 
   const currentDosenPrint = () => {
     const kelas = currentKelasPrint();
