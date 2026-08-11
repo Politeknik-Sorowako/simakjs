@@ -10,7 +10,7 @@ export interface CreateDosenPengajarDto {
 }
 
 export class DosenPengajarService {
-  static async getAll(page = 1, limit = 10, kelasKuliahId?: number, dosenId?: number) {
+  static async getAll(page = 1, limit = 10, kelasKuliahId?: number, dosenId?: number, periodeId?: string) {
     const offset = (page - 1) * limit;
 
     const conditions: SQL<unknown>[] = [];
@@ -20,9 +20,19 @@ export class DosenPengajarService {
     if (dosenId) {
       conditions.push(eq(dosenPengajarKelas.dosenId, dosenId));
     }
+    if (periodeId) {
+      conditions.push(eq(kelasKuliah.periodeId, periodeId));
+    }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [totalResult] = await db.select({ total: count() }).from(dosenPengajarKelas).where(whereClause);
+    const useKelasJoin = !!periodeId;
+    const [totalResult] = useKelasJoin
+      ? await db
+          .select({ total: count() })
+          .from(dosenPengajarKelas)
+          .leftJoin(kelasKuliah, eq(dosenPengajarKelas.kelasKuliahId, kelasKuliah.id))
+          .where(whereClause)
+      : await db.select({ total: count() }).from(dosenPengajarKelas).where(whereClause);
 
     const total = totalResult?.total || 0;
 

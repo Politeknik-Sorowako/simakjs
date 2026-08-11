@@ -249,11 +249,16 @@ function DosenWidgets() {
     return res.data[0] || null;
   });
 
+  const [periodeAktif] = createResource(async () => {
+    const res = await periodeAkademikController.getAll('', 1, 50);
+    return res.data.find((p: { aktif: boolean }) => p.aktif);
+  });
+
   const [kelasDiampu] = createResource(
-    () => dosenProfile()?.id,
-    async (dosenId) => {
-      if (!dosenId) return { data: [] };
-      return await dosenPengajarController.getAll(undefined, dosenId, 1, 50);
+    () => ({ dosenId: dosenProfile()?.id, periodeId: periodeAktif()?.id }),
+    async (key) => {
+      if (!key.dosenId) return { data: [] };
+      return await dosenPengajarController.getAll(undefined, key.dosenId, 1, 50, key.periodeId || undefined);
     },
   );
 

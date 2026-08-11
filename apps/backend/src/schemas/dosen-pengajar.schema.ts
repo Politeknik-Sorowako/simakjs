@@ -26,6 +26,7 @@ export const getDosenPengajarSchema = {
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     kelasKuliahId: t.Optional(t.Numeric()),
+    periodeId: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({
