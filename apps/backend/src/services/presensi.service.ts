@@ -114,6 +114,7 @@ export class PresensiService {
         lampiranEvidens: presensi.lampiranEvidens,
         keteranganAdmin: presensi.keteranganAdmin,
         resolvedAt: presensi.resolvedAt,
+        createdAt: presensi.createdAt,
         bapTanggal: bap.tanggal,
         bapPertemuan: bap.pertemuanKe,
         bapMateri: bap.materi,

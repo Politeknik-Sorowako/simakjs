@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, UnknownPresensiItem } from '../controllers/apelController';
 import { PaginatedResponse } from '../controllers/prodiController';
+import { fmtWaktu } from '../utils/format';
 
 export default function ApelVerifikasi() {
   const auth = useAuth();
@@ -85,6 +86,7 @@ export default function ApelVerifikasi() {
                   <th class="px-4 py-3 text-left text-xs font-medium uppercase">Tanggal</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Shift</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Dosen</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Waktu Pencatatan</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
                 </tr>
               </thead>
@@ -100,6 +102,7 @@ export default function ApelVerifikasi() {
                       <td class="px-4 py-3 text-sm">{item.tanggal}</td>
                       <td class="px-4 py-3 text-center text-sm">{item.shift}</td>
                       <td class="px-4 py-3 text-center text-sm">{item.dosenNama}</td>
+                      <td class="px-4 py-3 text-center text-sm">{fmtWaktu(item.createdAt)}</td>
                       <td class="px-4 py-3 text-center">
                         <button
                           class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
@@ -116,7 +119,7 @@ export default function ApelVerifikasi() {
                 </For>
                 <Show when={!data()?.data.length}>
                   <tr>
-                    <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                    <td colspan="10" class="px-4 py-8 text-center text-gray-500">
                       Tidak ada data presensi unknown yang perlu diverifikasi
                     </td>
                   </tr>

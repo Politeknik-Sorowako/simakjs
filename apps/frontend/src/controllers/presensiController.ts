@@ -169,6 +169,7 @@ export interface PresensiUnknownItem {
   lampiranEvidens?: string | null;
   keteranganAdmin?: string | null;
   resolvedAt?: string | null;
+  createdAt?: string | null;
   bapTanggal: string;
   bapPertemuan: number;
   bapMateri: string;
