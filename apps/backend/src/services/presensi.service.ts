@@ -226,7 +226,7 @@ export class PresensiService {
         bapPertemuan: bap.pertemuanKe,
         bapMateri: bap.materi,
         bapTanggal: bap.tanggal,
-        sumber: sql<'perkuliahan' | 'apel'>`'perkuliahan'`,
+        sumber: sql<'perkuliahan'>`'perkuliahan'`,
       })
       .from(presensi)
       .innerJoin(bap, eq(presensi.bapId, bap.id))
@@ -237,12 +237,13 @@ export class PresensiService {
         id: presensiApel.id,
         bapId: sql<number>`NULL`,
         status: presensiApel.status,
+        verifiedStatus: presensiApel.verifiedStatus,
         durasiMangkir: sql<number>`COALESCE(${presensiApel.menitTerlambat}, 0)`,
         createdAt: presensiApel.createdAt,
         bapPertemuan: sql<number>`NULL`,
         bapMateri: sql<string>`NULL`,
         bapTanggal: sesiApel.tanggal,
-        sumber: sql<'perkuliahan' | 'apel'>`'apel'`,
+        sumber: sql<'apel'>`'apel'`,
       })
       .from(presensiApel)
       .innerJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))
@@ -258,7 +259,7 @@ export class PresensiService {
         bapPertemuan: sql<number>`NULL`,
         bapMateri: sql<string>`'Kompensasi Manual'`,
         bapTanggal: kompensasiManual.tanggal,
-        sumber: sql<'perkuliahan' | 'apel' | 'manual'>`'manual'`,
+        sumber: sql<'manual'>`'manual'`,
       })
       .from(kompensasiManual)
       .where(eq(kompensasiManual.mahasiswaId, mahasiswaId));
@@ -274,6 +275,9 @@ export class PresensiService {
             ? pengaliMangkir
             : await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
           poinKompensasi = p.durasiMangkir * pengali;
+        } else if (p.sumber === 'apel') {
+          const effectiveStatus = p.verifiedStatus ?? p.status;
+          poinKompensasi = await this.calculateKompensasiMinutes(effectiveStatus, p.durasiMangkir);
         } else {
           poinKompensasi = await this.calculateKompensasiMinutes(p.status, p.durasiMangkir);
         }
