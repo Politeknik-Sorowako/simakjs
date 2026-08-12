@@ -28,8 +28,12 @@ export async function getDosenAllowedKelasIds(dosenId: number): Promise<number[]
 }
 
 export async function isDosenTeachesKelas(dosenId: number, kelasKuliahId: number): Promise<boolean> {
-  const allowed = await getDosenAllowedKelasIds(dosenId);
-  return allowed.includes(kelasKuliahId);
+  const rows = await db
+    .select({ id: dosenPengajarKelas.id })
+    .from(dosenPengajarKelas)
+    .where(and(eq(dosenPengajarKelas.dosenId, dosenId), eq(dosenPengajarKelas.kelasKuliahId, kelasKuliahId)))
+    .limit(1);
+  return rows.length > 0;
 }
 
 export async function isDosenTeachesMk(dosenId: number, mataKuliahId: number): Promise<boolean> {

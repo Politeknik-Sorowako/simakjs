@@ -1,8 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { dosen } from '../models/schema';
 import { KelasKuliahService } from '../services/kelas-kuliah.service';
-import { db } from '../utils/db';
-import { getDosenAllowedKelasIds } from '../utils/dosen-scope';
+import { getDosenAllowedKelasIds, getDosenIdByEmail } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
@@ -20,10 +17,7 @@ export class KelasKuliahController {
     if (!dosenId && getCurrentUser) {
       const user = await getCurrentUser();
       if (user && hasRole(user, ['dosen', 'instruktur'])) {
-        const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email)).limit(1);
-        if (dsn) {
-          dosenId = dsn.id;
-        }
+        dosenId = (await getDosenIdByEmail(user.email)) ?? undefined;
       }
     }
 
@@ -47,13 +41,13 @@ export class KelasKuliahController {
     const search = query?.search || '';
     const periodeId = query?.periodeId || undefined;
 
-    const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email)).limit(1);
-    if (!dsn) {
+    const dosenId = await getDosenIdByEmail(user.email);
+    if (!dosenId) {
       set.status = 404;
       return { error: 'Profil dosen tidak ditemukan. Hubungi admin untuk menautkan akun dengan data dosen.' };
     }
 
-    return await KelasKuliahService.getAll(page, limit, search, periodeId, dsn.id);
+    return await KelasKuliahService.getAll(page, limit, search, periodeId, dosenId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -66,12 +60,12 @@ export class KelasKuliahController {
     }
     const user = await getCurrentUser();
     if (user && hasRole(user, ['dosen', 'instruktur'])) {
-      const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email)).limit(1);
-      if (!dsn) {
+      const dosenId = await getDosenIdByEmail(user.email);
+      if (!dosenId) {
         set.status = 404;
         return { error: 'Profil dosen tidak ditemukan. Hubungi admin untuk menautkan akun dengan data dosen.' };
       }
-      const allowed = await getDosenAllowedKelasIds(dsn.id);
+      const allowed = await getDosenAllowedKelasIds(dosenId);
       const kelasList = await KelasKuliahService.getByMk(mkId, periodeId);
       return kelasList.filter((k) => allowed.includes(k.id));
     }

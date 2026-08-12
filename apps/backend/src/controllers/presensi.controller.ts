@@ -54,7 +54,7 @@ export class PresensiController {
   static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur'])) {
+      if (!user || !hasRole(user, ['admin', 'dosen'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -88,7 +88,7 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
