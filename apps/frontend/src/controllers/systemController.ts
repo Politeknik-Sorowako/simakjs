@@ -29,6 +29,17 @@ export interface SystemParameter {
   updatedBy?: number | null;
 }
 
+export interface ChangelogGroup {
+  heading: string;
+  items: string[];
+}
+
+export interface ChangelogSection {
+  version: string;
+  date: string | null;
+  groups: ChangelogGroup[];
+}
+
 type SystemParamsEden = Promise<{ data?: { data: SystemParameter[] } | null; error?: unknown }>;
 
 export const systemController = {
@@ -38,6 +49,11 @@ export const systemController = {
 
   async getHealth(): Promise<HealthStatus> {
     return unwrap<HealthStatus>(eden.system.health.get());
+  },
+
+  async getChangelog(): Promise<ChangelogSection[]> {
+    const res = await fetchApi<{ sections: ChangelogSection[] }>('/system/changelog');
+    return res.sections || [];
   },
 
   async getParameters(): Promise<SystemParameter[]> {

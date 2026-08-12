@@ -1,8 +1,13 @@
-import { createResource, For } from 'solid-js';
+import { createResource, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
-import { type HealthStatus, systemController, type VersionInfo } from '../controllers/systemController';
+import {
+  type ChangelogSection,
+  type HealthStatus,
+  systemController,
+  type VersionInfo,
+} from '../controllers/systemController';
 
 function HealthRow(props: { label: string; value: string }) {
   const ok = () => props.value === 'connected' || props.value === 'ok';
@@ -14,9 +19,42 @@ function HealthRow(props: { label: string; value: string }) {
   );
 }
 
+function ChangelogSectionView(props: { section: ChangelogSection }) {
+  return (
+    <div class="border border-secondary-100 dark:border-secondary-800 rounded-xl p-4">
+      <h3 class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+        {props.section.version}
+        <Show when={props.section.date}>
+          <span class="ml-2 text-xs font-normal text-secondary-400">— {props.section.date}</span>
+        </Show>
+      </h3>
+      <Show
+        when={(props.section.groups || []).length > 0}
+        fallback={<p class="mt-2 text-xs text-secondary-400">Belum ada catatan untuk versi ini.</p>}
+      >
+        <div class="mt-2 flex flex-col gap-2">
+          <For each={props.section.groups}>
+            {(group) => (
+              <div>
+                <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-brand-50 text-brand-700 border border-brand-100 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                  {group.heading}
+                </span>
+                <ul class="mt-1 list-disc pl-5 text-xs text-secondary-600 dark:text-secondary-400 space-y-0.5">
+                  <For each={group.items}>{(item) => <li>{item}</li>}</For>
+                </ul>
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
+    </div>
+  );
+}
+
 export default function KonfigurasiAbout() {
   const [version] = createResource<VersionInfo>(() => systemController.getVersion());
   const [health] = createResource<HealthStatus>(() => systemController.getHealth());
+  const [changelog] = createResource<ChangelogSection[]>(() => systemController.getChangelog());
 
   const items = () => [
     { label: 'Versi Aplikasi', value: `v${version()?.version || '-'}` },
@@ -68,19 +106,18 @@ export default function KonfigurasiAbout() {
             <h2 class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Changelog</h2>
             <p class="text-xs text-secondary-500">Riwayat pembaruan sistem per versi</p>
           </div>
-          <div class="text-sm text-secondary-600 dark:text-secondary-400 space-y-2">
-            <div>
-              <span class="font-semibold text-secondary-800 dark:text-secondary-100">[1.0.0] — 2026-08-07</span>
-              <p class="mt-1">
-                Modul <strong>Konfigurasi</strong> menggantikan menu <strong>Integrasi Data</strong>: Manajemen User,
-                Pemberian Akses per Role Group (matriks RBAC), Scope Program Studi, Parameter Kompensasi & Akademik,
-                Usulan & Evaluasi Sistem, serta About & Versioning.
+          <Show
+            when={!changelog.loading && (changelog() || []).length > 0}
+            fallback={
+              <p class="text-sm text-secondary-400">
+                {changelog.loading ? 'Memuat changelog...' : 'Belum ada data changelog.'}
               </p>
-              <p class="mt-1 text-xs text-secondary-400">
-                Detail lengkap tersedia pada berkas <code>CHANGELOG.md</code> di repositori.
-              </p>
+            }
+          >
+            <div class="flex flex-col gap-3">
+              <For each={changelog()}>{(section) => <ChangelogSectionView section={section} />}</For>
             </div>
-          </div>
+          </Show>
         </Card>
       </div>
     </MainLayout>

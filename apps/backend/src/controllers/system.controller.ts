@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { systemSettings } from '../models/schema';
+import { ChangelogService } from '../services/changelog.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { VersionService } from '../services/version.service';
 import { db } from '../utils/db';
@@ -13,6 +14,12 @@ export class SystemController {
     const info = VersionService.readFromFile(env);
     const defaults = SystemParameterService.descriptions();
     return { ...info, parameters: defaults };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getChangelog(): Promise<any> {
+    const sections = ChangelogService.getSections();
+    return { sections };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
