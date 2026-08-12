@@ -936,7 +936,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Presensi Kelas
                   </A>
                 </Show>
-                <Show when={isAdmin() || isProdi() || isDosen()}>
+                <Show when={isAdmin() || isProdi() || isDosen() || isInstruktur()}>
                   <A
                     href="/laporan/peringatan"
                     onClick={() => props.onClose()}

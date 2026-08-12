@@ -41,7 +41,9 @@ export class MahasiswaController {
         query?.hasAccount !== undefined && query?.hasAccount !== '' ? String(query.hasAccount) === 'true' : undefined,
     };
 
-    if (hasRole(user, ['dosen'])) {
+    const allStudents = query?.allStudents === true || query?.allStudents === 'true';
+
+    if (hasRole(user, ['dosen']) && !allStudents) {
       const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
       if (!dsnId) {
         return {

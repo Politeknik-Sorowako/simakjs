@@ -58,6 +58,7 @@ export const mahasiswaController = {
       filterEmail?: string;
       filterStatus?: string;
       hasAccount?: boolean;
+      allStudents?: boolean;
     },
   ): Promise<PaginatedResponse<Mahasiswa>> {
     const params = new URLSearchParams();
@@ -72,6 +73,7 @@ export const mahasiswaController = {
     if (filters?.filterEmail) params.append('filterEmail', filters.filterEmail);
     if (filters?.filterStatus) params.append('filterStatus', filters.filterStatus);
     if (filters?.hasAccount !== undefined) params.append('hasAccount', String(filters.hasAccount));
+    if (filters?.allStudents) params.append('allStudents', 'true');
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Mahasiswa>>(`/mahasiswa${queryString}`);
   },

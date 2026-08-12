@@ -260,7 +260,7 @@ function AppContent() {
       <Route
         path="/pelanggaran"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'instruktur']}>
+          <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'instruktur', 'prodi']}>
             <Pelanggaran />
           </ProtectedRoute>
         }
@@ -470,7 +470,7 @@ function AppContent() {
       <Route
         path="/laporan/peringatan"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen', 'instruktur']}>
             <LaporanPeringatan />
           </ProtectedRoute>
         }
