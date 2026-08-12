@@ -292,10 +292,14 @@ export class PresensiService {
       allPresensi.map(async (p) => {
         let poinKompensasi: number;
         if (p.sumber === 'manual') {
-          const pengali = ['alpa', 'terlambat', 'rusak'].includes(p.status)
-            ? pengaliMangkir
-            : await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
-          poinKompensasi = p.durasiMangkir * pengali;
+          if (p.status === 'rusak') {
+            poinKompensasi = p.durasiMangkir;
+          } else {
+            const pengali = ['alpa', 'terlambat'].includes(p.status)
+              ? pengaliMangkir
+              : await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
+            poinKompensasi = p.durasiMangkir * pengali;
+          }
         } else if (p.sumber === 'apel') {
           const effectiveStatus = p.verifiedStatus ?? p.status;
           poinKompensasi = await this.calculateKompensasiMinutes(effectiveStatus, p.durasiMangkir);
@@ -372,8 +376,8 @@ export class PresensiService {
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * ${pengaliMangkir}
-              WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
+              WHEN jenis_kompen IN ('alpa', 'terlambat') THEN durasi_menit * ${pengaliMangkir}
+              WHEN jenis_kompen IN ('sakit', 'izin', 'rusak') THEN durasi_menit
               ELSE durasi_menit END)`.as('poin'),
         })
         .from(kompensasiManual)
@@ -513,8 +517,8 @@ export class PresensiService {
         .select({
           mahasiswaId: kompensasiManual.mahasiswaId,
           poin: sql<number>`SUM(CASE
-              WHEN jenis_kompen IN ('alpa', 'terlambat', 'rusak') THEN durasi_menit * ${pengaliMangkir}
-              WHEN jenis_kompen IN ('sakit', 'izin') THEN durasi_menit
+              WHEN jenis_kompen IN ('alpa', 'terlambat') THEN durasi_menit * ${pengaliMangkir}
+              WHEN jenis_kompen IN ('sakit', 'izin', 'rusak') THEN durasi_menit
               ELSE durasi_menit END)`.as('poin'),
         })
         .from(kompensasiManual)
