@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, isNotNull, or, type SQL, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   dosen,
@@ -246,7 +246,7 @@ export class PresensiService {
       })
       .from(presensi)
       .innerJoin(bap, eq(presensi.bapId, bap.id))
-      .where(eq(presensi.mahasiswaId, mahasiswaId));
+      .where(and(eq(presensi.mahasiswaId, mahasiswaId), ne(presensi.status, 'unknown')));
 
     const apelList = await db
       .select({
@@ -263,7 +263,12 @@ export class PresensiService {
       })
       .from(presensiApel)
       .innerJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))
-      .where(eq(presensiApel.mahasiswaId, mahasiswaId));
+      .where(
+        and(
+          eq(presensiApel.mahasiswaId, mahasiswaId),
+          or(ne(presensiApel.status, 'unknown'), isNotNull(presensiApel.verifiedStatus)),
+        ),
+      );
 
     const manualList = await db
       .select({
@@ -278,7 +283,7 @@ export class PresensiService {
         sumber: sql<'manual'>`'manual'`,
       })
       .from(kompensasiManual)
-      .where(eq(kompensasiManual.mahasiswaId, mahasiswaId));
+      .where(and(eq(kompensasiManual.mahasiswaId, mahasiswaId), ne(kompensasiManual.jenisKompen, 'unknown')));
 
     const allPresensi = [...presensiList, ...apelList, ...manualList];
 
