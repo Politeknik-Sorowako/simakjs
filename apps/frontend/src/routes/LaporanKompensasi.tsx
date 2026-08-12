@@ -6,8 +6,8 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
-import type { SafeAny } from '../utils/api';
 import { type ExportColumn, exportToExcel } from '../utils/export';
+import { fmtTanggal } from '../utils/format';
 
 const PER_PAGE = 20;
 
@@ -450,13 +450,13 @@ export default function LaporanKompensasi() {
                         <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
                           <div class="flex flex-col gap-0.5">
                             <span class="font-bold text-secondary-700 dark:text-secondary-200">
-                              {(log as SafeAny).sumber === 'apel'
+                              {log.sumber === 'apel'
                                 ? 'Presensi Apel'
                                 : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
                             </span>
-                            <span class="text-secondary-400 dark:text-secondary-200">{log.bapTanggal ?? '-'}</span>
+                            <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(log.bapTanggal)}</span>
                             <span class="font-semibold text-accent-600 dark:text-accent-400">
-                              Status: {log.status.toUpperCase()} ({log.durasiMangkir} Menit)
+                              Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
                             </span>
                           </div>
                           <span class="font-bold text-red-600 font-mono dark:text-red-400">+{log.poinKompensasi}m</span>
@@ -487,7 +487,7 @@ export default function LaporanKompensasi() {
                         <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
                           <div class="flex flex-col gap-0.5">
                             <span class="font-bold text-secondary-700 dark:text-secondary-200">{pay.keterangan}</span>
-                            <span class="text-secondary-400 dark:text-secondary-200">{pay.tanggal}</span>
+                            <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(pay.tanggal)}</span>
                           </div>
                           <div class="flex items-center gap-2">
                             <span class="font-bold text-accent-600 font-mono dark:text-accent-400">
