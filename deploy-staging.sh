@@ -136,7 +136,7 @@ docker compose -f "$COMPOSE_FILE" build 2>&1 | tee -a "$LOG_FILE" || {
 }
 ok "Docker images built"
 
-docker compose -f "$COMPOSE_FILE" up -d 2>&1 | tee -a "$LOG_FILE" || {
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend_staging frontend_staging 2>&1 | tee -a "$LOG_FILE" || {
   fail "Docker compose up failed"
   exit 1
 }
