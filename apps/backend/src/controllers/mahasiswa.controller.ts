@@ -58,7 +58,7 @@ export class MahasiswaController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+  static async getById({ params, query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
@@ -78,7 +78,8 @@ export class MahasiswaController {
       return { error: 'Data tidak ditemukan' };
     }
 
-    if (hasRole(user, ['dosen'])) {
+    const allStudents = query?.allStudents === true || query?.allStudents === 'true';
+    if (hasRole(user, ['dosen']) && !allStudents) {
       const dsnId = await MahasiswaService.getDosenIdByEmail(user.email);
       if (!dsnId || mhs.dosenPaId !== dsnId) {
         set.status = 403;

@@ -78,8 +78,9 @@ export const mahasiswaController = {
     return fetchApi<PaginatedResponse<Mahasiswa>>(`/mahasiswa${queryString}`);
   },
 
-  async getById(id: number): Promise<Mahasiswa> {
-    return fetchApi<Mahasiswa>(`/mahasiswa/${id}`);
+  async getById(id: number, allStudents?: boolean): Promise<Mahasiswa> {
+    const query = allStudents ? '?allStudents=true' : '';
+    return fetchApi<Mahasiswa>(`/mahasiswa/${id}${query}`);
   },
 
   async create(data: Omit<Mahasiswa, 'id'>): Promise<Mahasiswa> {

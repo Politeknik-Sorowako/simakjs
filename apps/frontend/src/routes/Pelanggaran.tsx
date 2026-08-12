@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -54,7 +54,6 @@ export default function Pelanggaran() {
   const [mahasiswaPage, setMahasiswaPage] = createSignal(1);
   const [mahasiswaHasMore, setMahasiswaHasMore] = createSignal(false);
   const [mahasiswaLoading, setMahasiswaLoading] = createSignal(false);
-  let mahasiswaDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
   const fetchMahasiswa = async (page: number, search: string, append: boolean) => {
     if (!isStaff()) return;
@@ -78,14 +77,9 @@ export default function Pelanggaran() {
     fetchMahasiswa(1, '', false);
   });
 
-  onCleanup(() => {
-    clearTimeout(mahasiswaDebounceTimer);
-  });
-
   const handleMahasiswaSearch = (q: string) => {
     setMahasiswaSearch(q);
-    clearTimeout(mahasiswaDebounceTimer);
-    mahasiswaDebounceTimer = setTimeout(() => fetchMahasiswa(1, q, false), 350);
+    fetchMahasiswa(1, q, false);
   };
 
   const handleMahasiswaLoadMore = () => {
@@ -97,7 +91,7 @@ export default function Pelanggaran() {
   const ensureStudentLoaded = async (id: number) => {
     if (mahasiswaList().some((m) => m.id === id)) return;
     try {
-      const m = await mahasiswaController.getById(id);
+      const m = await mahasiswaController.getById(id, true);
       if (m && !mahasiswaList().some((x) => x.id === m.id)) {
         setMahasiswaList((prev) => [m, ...prev]);
       }
