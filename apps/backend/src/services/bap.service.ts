@@ -154,6 +154,11 @@ export class BapService {
       targetPertemuan = maxP + 1;
     }
 
+    const todayLocal = (() => {
+      const n = new Date();
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    })();
+
     const bapPayload: {
       kelasKuliahId: number;
       tanggal: string;
@@ -166,7 +171,7 @@ export class BapService {
       cpmkId?: number;
     } = {
       kelasKuliahId: kelasId,
-      tanggal: String(rawPayload.tanggal || new Date().toISOString().split('T')[0]),
+      tanggal: String(rawPayload.tanggal || todayLocal),
       pertemuanKe: targetPertemuan,
       materi: String(rawPayload.materi || '').trim() || 'Materi Perkuliahan RPS',
       durasiMenit: Number(rawPayload.durasiMenit) || 100,

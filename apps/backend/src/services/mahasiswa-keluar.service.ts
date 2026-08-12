@@ -31,10 +31,10 @@ export class MahasiswaKeluarService {
         mahasiswaId: data.mahasiswaId,
         periodeId: data.periodeId,
         statusBaru: data.statusBaru,
-        tanggalKeluar: new Date(data.tanggalKeluar).toISOString().split('T')[0],
+        tanggalKeluar: data.tanggalKeluar,
         alasanKeluar: data.alasanKeluar,
         noSk: data.noSk,
-        tanggalSk: data.tanggalSk ? new Date(data.tanggalSk).toISOString().split('T')[0] : null,
+        tanggalSk: data.tanggalSk,
         ipk: data.ipk ? String(data.ipk) : null,
         nomorIjazah: data.nomorIjazah,
       })

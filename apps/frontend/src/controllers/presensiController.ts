@@ -139,7 +139,9 @@ export interface KompensasiDetailResponse {
   historyKompensasi: Array<{
     id: number;
     bapId: number;
-    status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa';
+    sumber: 'perkuliahan' | 'apel' | 'manual';
+    status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown';
+    verifiedStatus?: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown' | null;
     durasiMangkir: number;
     createdAt: string;
     bapPertemuan: number;
