@@ -1,15 +1,20 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import {
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
+  kompensasiBayar,
+  kompensasiManual,
   krs,
   mahasiswa,
   mataKuliah,
+  pasalPelanggaran,
+  pelanggaran,
   programStudi,
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { JENIS_KOMPEN } from './kompensasi-manual.service';
 
 export interface ImportResult {
   successCount: number;
@@ -819,6 +824,360 @@ export class CsvImportService {
         result.errors.push({
           line: lineNum,
           error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    return result;
+  }
+
+  static async importPelanggaran(csvText: string, mode: string = 'skip', userId?: number): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
+    const result: ImportResult = { successCount: 0, errors: [] };
+
+    const nimIdx = headers.indexOf('nim');
+    const tanggalIdx = headers.indexOf('tanggal');
+    const jenisIdx = headers.indexOf('jenis_pelanggaran');
+    const bobotIdx = headers.indexOf('bobot_poin');
+    const keteranganIdx = headers.indexOf('keterangan');
+    const pasalIdx = headers.indexOf('nomor_pasal');
+    const sanksiIdx = headers.indexOf('jenis_sanksi');
+
+    if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1 || bobotIdx === -1) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_pelanggaran, bobot_poin' }],
+      };
+    }
+
+    const pasalCache = new Map<string, { id: number; bobotPoin: number; jenisSanksi: number }>();
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
+
+      const nimVal = row[nimIdx].trim();
+      const tanggalVal = row[tanggalIdx].trim();
+      const jenisVal = row[jenisIdx].trim();
+      const bobotRaw = row[bobotIdx].trim();
+      const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : '';
+      const pasalVal = pasalIdx !== -1 ? row[pasalIdx].trim() : '';
+      const sanksiRaw = sanksiIdx !== -1 ? row[sanksiIdx].trim().toUpperCase() : '';
+
+      if (!nimVal || !tanggalVal || !jenisVal || !bobotRaw) {
+        result.errors.push({
+          line: lineNum,
+          error: 'Kolom NIM, Tanggal, Jenis Pelanggaran, dan Bobot Poin wajib diisi.',
+        });
+        continue;
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalVal)) {
+        result.errors.push({ line: lineNum, error: `Format tanggal "${tanggalVal}" tidak valid (harus YYYY-MM-DD).` });
+        continue;
+      }
+
+      const bobotPoin = parseInt(bobotRaw);
+      if (isNaN(bobotPoin) || bobotPoin <= 0 || bobotPoin > 100) {
+        result.errors.push({ line: lineNum, error: 'Bobot poin harus berupa angka antara 1 dan 100.' });
+        continue;
+      }
+
+      let sanksi = sanksiRaw;
+      if (sanksi && sanksi !== '1' && sanksi !== 'L' && sanksi !== '4' && sanksi !== 'T') {
+        result.errors.push({
+          line: lineNum,
+          error: 'Jenis sanksi tidak valid. Gunakan L (Lisan=1) atau T (Tertulis=4).',
+        });
+        continue;
+      }
+
+      let jenisSanksi = 1;
+      if (sanksi === '4' || sanksi === 'T') jenisSanksi = 4;
+
+      let pasalId: number | null = null;
+      if (pasalVal) {
+        const cached = pasalCache.get(pasalVal.toLowerCase());
+        if (cached) {
+          pasalId = cached.id;
+          jenisSanksi = cached.jenisSanksi;
+        } else {
+          const [pasal] = await db
+            .select({
+              id: pasalPelanggaran.id,
+              bobotPoin: pasalPelanggaran.bobotPoin,
+              jenisSanksi: pasalPelanggaran.jenisSanksi,
+            })
+            .from(pasalPelanggaran)
+            .where(eq(pasalPelanggaran.nomorPasal, pasalVal))
+            .limit(1);
+          if (!pasal) {
+            result.errors.push({ line: lineNum, error: `Pasal "${pasalVal}" tidak ditemukan di master BPA.` });
+            continue;
+          }
+          pasalId = pasal.id;
+          jenisSanksi = pasal.jenisSanksi;
+          pasalCache.set(pasalVal.toLowerCase(), {
+            id: pasal.id,
+            bobotPoin: pasal.bobotPoin,
+            jenisSanksi: pasal.jenisSanksi,
+          });
+        }
+      }
+
+      try {
+        const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
+        if (!mhs) {
+          result.errors.push({ line: lineNum, error: `Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.` });
+          continue;
+        }
+
+        if (mode === 'update') {
+          const [existing] = await db
+            .select({ id: pelanggaran.id })
+            .from(pelanggaran)
+            .where(and(eq(pelanggaran.mahasiswaId, mhs.id), eq(pelanggaran.tanggal, tanggalVal)))
+            .orderBy(sql`${pelanggaran.id} DESC`)
+            .limit(1);
+          if (existing) {
+            await db
+              .update(pelanggaran)
+              .set({
+                jenisPelanggaran: jenisVal,
+                bobotPoin,
+                keterangan: keteranganVal || '-',
+                pasalId,
+                jenisSanksi,
+              })
+              .where(eq(pelanggaran.id, existing.id));
+            result.successCount++;
+            continue;
+          }
+        }
+
+        await db.insert(pelanggaran).values({
+          mahasiswaId: mhs.id,
+          tanggal: tanggalVal,
+          jenisPelanggaran: jenisVal,
+          bobotPoin,
+          keterangan: keteranganVal || '-',
+          pasalId,
+          jenisSanksi,
+          dibuatOleh: userId ?? null,
+        });
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal menyimpan pelanggaran NIM "${nimVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  static async importKompensasiManual(csvText: string, mode: string = 'skip', userId?: number): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
+    const result: ImportResult = { successCount: 0, errors: [] };
+
+    const nimIdx = headers.indexOf('nim');
+    const tanggalIdx = headers.indexOf('tanggal');
+    const jenisIdx = headers.indexOf('jenis_kompen');
+    const durasiIdx = headers.indexOf('durasi_menit');
+    const keteranganIdx = headers.indexOf('keterangan');
+
+    if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1 || durasiIdx === -1) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_kompen, durasi_menit' }],
+      };
+    }
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
+
+      const nimVal = row[nimIdx].trim();
+      const tanggalVal = row[tanggalIdx].trim();
+      const jenisVal = row[jenisIdx].trim().toLowerCase();
+      const durasiRaw = row[durasiIdx].trim();
+      const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : null;
+
+      if (!nimVal || !tanggalVal || !jenisVal || !durasiRaw) {
+        result.errors.push({ line: lineNum, error: 'Kolom NIM, Tanggal, Jenis Kompen, dan Durasi Menit wajib diisi.' });
+        continue;
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalVal)) {
+        result.errors.push({ line: lineNum, error: `Format tanggal "${tanggalVal}" tidak valid (harus YYYY-MM-DD).` });
+        continue;
+      }
+
+      // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type requirement
+      if (!JENIS_KOMPEN.includes(jenisVal as any)) {
+        result.errors.push({
+          line: lineNum,
+          error: `Jenis kompen "${jenisVal}" tidak valid. Pilihan: ${JENIS_KOMPEN.join(', ')}`,
+        });
+        continue;
+      }
+
+      const durasiMenit = parseInt(durasiRaw);
+      if (isNaN(durasiMenit) || durasiMenit <= 0) {
+        result.errors.push({ line: lineNum, error: 'Durasi menit harus berupa angka positif.' });
+        continue;
+      }
+
+      try {
+        const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
+        if (!mhs) {
+          result.errors.push({ line: lineNum, error: `Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.` });
+          continue;
+        }
+
+        if (mode === 'update') {
+          const [existing] = await db
+            .select({ id: kompensasiManual.id })
+            .from(kompensasiManual)
+            .where(
+              and(
+                eq(kompensasiManual.mahasiswaId, mhs.id),
+                eq(kompensasiManual.tanggal, tanggalVal),
+                eq(kompensasiManual.jenisKompen, jenisVal),
+              ),
+            )
+            .limit(1);
+          if (existing) {
+            await db
+              .update(kompensasiManual)
+              .set({ durasiMenit, keterangan: keteranganVal })
+              .where(eq(kompensasiManual.id, existing.id));
+            result.successCount++;
+            continue;
+          }
+        }
+
+        await db.insert(kompensasiManual).values({
+          mahasiswaId: mhs.id,
+          tanggal: tanggalVal,
+          jenisKompen: jenisVal,
+          durasiMenit,
+          keterangan: keteranganVal,
+          createdBy: userId ?? null,
+        });
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal menyimpan kompensasi NIM "${nimVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  static async importKompensasiBayar(csvText: string, mode: string = 'skip', userId?: number): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
+    const result: ImportResult = { successCount: 0, errors: [] };
+
+    const nimIdx = headers.indexOf('nim');
+    const tanggalIdx = headers.indexOf('tanggal');
+    const jumlahIdx = headers.indexOf('jumlah_menit');
+    const keteranganIdx = headers.indexOf('keterangan');
+
+    if (nimIdx === -1 || tanggalIdx === -1 || jumlahIdx === -1) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jumlah_menit' }],
+      };
+    }
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
+
+      const nimVal = row[nimIdx].trim();
+      const tanggalVal = row[tanggalIdx].trim();
+      const jumlahRaw = row[jumlahIdx].trim();
+      const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : '-';
+
+      if (!nimVal || !tanggalVal || !jumlahRaw) {
+        result.errors.push({ line: lineNum, error: 'Kolom NIM, Tanggal, dan Jumlah Menit wajib diisi.' });
+        continue;
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalVal)) {
+        result.errors.push({ line: lineNum, error: `Format tanggal "${tanggalVal}" tidak valid (harus YYYY-MM-DD).` });
+        continue;
+      }
+
+      const jumlahMenit = parseInt(jumlahRaw);
+      if (isNaN(jumlahMenit) || jumlahMenit <= 0) {
+        result.errors.push({ line: lineNum, error: 'Jumlah menit harus berupa angka positif.' });
+        continue;
+      }
+
+      try {
+        const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
+        if (!mhs) {
+          result.errors.push({ line: lineNum, error: `Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.` });
+          continue;
+        }
+
+        if (mode === 'update') {
+          const [existing] = await db
+            .select({ id: kompensasiBayar.id })
+            .from(kompensasiBayar)
+            .where(
+              and(
+                eq(kompensasiBayar.mahasiswaId, mhs.id),
+                eq(kompensasiBayar.tanggal, tanggalVal),
+                eq(kompensasiBayar.jumlahMenit, jumlahMenit),
+              ),
+            )
+            .limit(1);
+          if (existing) {
+            await db
+              .update(kompensasiBayar)
+              .set({ keterangan: keteranganVal })
+              .where(eq(kompensasiBayar.id, existing.id));
+            result.successCount++;
+            continue;
+          }
+        }
+
+        await db.insert(kompensasiBayar).values({
+          mahasiswaId: mhs.id,
+          jumlahMenit,
+          tanggal: tanggalVal,
+          keterangan: keteranganVal,
+          petugasId: userId ?? null,
+        });
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal menyimpan pembayaran kompensasi NIM "${nimVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
         });
       }
     }

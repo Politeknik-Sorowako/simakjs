@@ -1,5 +1,5 @@
 import { and, count, desc, eq, SQL, sql, sum } from 'drizzle-orm';
-import { mahasiswa, pelanggaran, programStudi } from '../models/schema';
+import { mahasiswa, pasalPelanggaran, pelanggaran, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
 export class PelanggaranService {
@@ -9,18 +9,51 @@ export class PelanggaranService {
     jenisPelanggaran: string;
     bobotPoin: number;
     keterangan: string;
+    pasalId?: number | null;
+    jenisSanksi?: number;
     dibuatOleh?: number;
   }) {
-    if (data.bobotPoin <= 0 || data.bobotPoin > 100) {
-      throw new Error('Bobot poin pelanggaran harus bernilai antara 1 dan 100.');
-    }
-
     const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, data.mahasiswaId));
     if (!mhs) {
       throw new Error('Mahasiswa tidak ditemukan.');
     }
 
-    const [newPelanggaran] = await db.insert(pelanggaran).values(data).returning();
+    let pasalId = data.pasalId ?? null;
+    let jenisSanksi = data.jenisSanksi ?? 1;
+    let jenisPelanggaran = data.jenisPelanggaran;
+    let bobotPoin = data.bobotPoin;
+
+    // Auto-fill jenis pelanggaran & bobot poin dari master pasal BPA bila pasal dipilih.
+    if (pasalId) {
+      const [pasal] = await db.select().from(pasalPelanggaran).where(eq(pasalPelanggaran.id, pasalId));
+      if (!pasal) {
+        throw new Error('Pasal pelanggaran tidak ditemukan.');
+      }
+      jenisPelanggaran = `${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255);
+      bobotPoin = pasal.bobotPoin;
+      jenisSanksi = pasal.jenisSanksi;
+    }
+
+    if (bobotPoin <= 0 || bobotPoin > 100) {
+      throw new Error('Bobot poin pelanggaran harus bernilai antara 1 dan 100.');
+    }
+    if (jenisSanksi !== 1 && jenisSanksi !== 4) {
+      throw new Error('Jenis sanksi harus bernilai 1 (Lisan) atau 4 (Tertulis).');
+    }
+
+    const [newPelanggaran] = await db
+      .insert(pelanggaran)
+      .values({
+        mahasiswaId: data.mahasiswaId,
+        tanggal: data.tanggal,
+        jenisPelanggaran,
+        bobotPoin,
+        keterangan: data.keterangan,
+        pasalId,
+        jenisSanksi,
+        dibuatOleh: data.dibuatOleh,
+      })
+      .returning();
     return newPelanggaran;
   }
 
@@ -32,9 +65,14 @@ export class PelanggaranService {
         jenisPelanggaran: pelanggaran.jenisPelanggaran,
         bobotPoin: pelanggaran.bobotPoin,
         keterangan: pelanggaran.keterangan,
+        pasalId: pelanggaran.pasalId,
+        jenisSanksi: pelanggaran.jenisSanksi,
+        nomorPasal: pasalPelanggaran.nomorPasal,
+        bunyiPasal: pasalPelanggaran.bunyiPasal,
         createdAt: pelanggaran.createdAt,
       })
       .from(pelanggaran)
+      .leftJoin(pasalPelanggaran, eq(pelanggaran.pasalId, pasalPelanggaran.id))
       .where(eq(pelanggaran.mahasiswaId, mahasiswaId))
       .orderBy(desc(pelanggaran.tanggal));
 
@@ -58,11 +96,16 @@ export class PelanggaranService {
         jenisPelanggaran: pelanggaran.jenisPelanggaran,
         bobotPoin: pelanggaran.bobotPoin,
         keterangan: pelanggaran.keterangan,
+        pasalId: pelanggaran.pasalId,
+        jenisSanksi: pelanggaran.jenisSanksi,
+        nomorPasal: pasalPelanggaran.nomorPasal,
+        bunyiPasal: pasalPelanggaran.bunyiPasal,
         createdAt: pelanggaran.createdAt,
       })
       .from(pelanggaran)
       .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(pasalPelanggaran, eq(pelanggaran.pasalId, pasalPelanggaran.id))
       .orderBy(desc(pelanggaran.tanggal));
   }
 
@@ -150,10 +193,15 @@ export class PelanggaranService {
       jenisPelanggaran: string;
       bobotPoin: number;
       keterangan: string;
+      pasalId?: number | null;
+      jenisSanksi?: number;
     }>,
   ) {
     if (data.bobotPoin !== undefined && (data.bobotPoin <= 0 || data.bobotPoin > 100)) {
       throw new Error('Bobot poin pelanggaran harus bernilai antara 1 dan 100.');
+    }
+    if (data.jenisSanksi !== undefined && data.jenisSanksi !== 1 && data.jenisSanksi !== 4) {
+      throw new Error('Jenis sanksi harus bernilai 1 (Lisan) atau 4 (Tertulis).');
     }
     const [updated] = await db.update(pelanggaran).set(data).where(eq(pelanggaran.id, id)).returning();
     return updated || null;

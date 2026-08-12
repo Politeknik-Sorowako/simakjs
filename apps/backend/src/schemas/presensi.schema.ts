@@ -47,6 +47,23 @@ export const bayarKompensasiSchema = {
   },
 };
 
+export const importKompensasiBayarSchema = {
+  detail: {
+    tags: ['Kompensasi'],
+    summary: 'Impor Data Pembayaran Kompensasi via CSV',
+    description:
+      'Mengimpor data pembayaran kompensasi mahasiswa melalui file CSV. Kolom: nim, tanggal, jumlah_menit, keterangan.',
+  },
+  response: {
+    200: t.Object({
+      successCount: t.Integer(),
+      errors: t.Array(t.Object({ line: t.Integer(), error: t.String() })),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
 export const getKompensasiMahasiswaDetailSchema = {
   detail: {
     tags: ['Kompensasi'],

@@ -78,6 +78,10 @@ export interface Pelanggaran {
   jenisPelanggaran: string;
   bobotPoin: number;
   keterangan: string;
+  pasalId?: number | null;
+  jenisSanksi?: number;
+  nomorPasal?: string | null;
+  bunyiPasal?: string | null;
   dibuatOleh?: number | null;
   createdAt?: string;
 }
@@ -207,6 +211,19 @@ export const bimbinganController = {
     return fetchApi<Pelanggaran>(`/pelanggaran/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  },
+
+  async importPelanggaran(
+    file: File,
+    mode: string,
+  ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', mode);
+    return fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>('/pelanggaran/import', {
+      method: 'POST',
+      body: formData,
     });
   },
 

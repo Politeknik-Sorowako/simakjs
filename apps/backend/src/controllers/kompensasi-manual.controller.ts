@@ -1,3 +1,4 @@
+import { CsvImportService } from '../services/csv-import.service';
 import { type JenisKompen, KompensasiManualService } from '../services/kompensasi-manual.service';
 import { type AuthContext, allowed } from '../utils/types';
 
@@ -132,6 +133,31 @@ export class KompensasiManualController {
         sortBy: query?.sortBy,
         sortOrder: query?.sortOrder === 'asc' ? 'asc' : query?.sortOrder === 'desc' ? 'desc' : undefined,
       });
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user || !allowed(user, ['admin', 'super_admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+      }
+
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      const mode = (formData.get('mode') as string) || 'skip';
+      if (!file) {
+        set.status = 400;
+        return { error: 'File CSV tidak ditemukan.' };
+      }
+
+      const text = await file.text();
+      return await CsvImportService.importKompensasiManual(text, mode, user.id);
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

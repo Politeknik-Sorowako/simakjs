@@ -10,6 +10,7 @@ import {
   getRekapKehadiranMahasiswaSchema,
   getRekapKehadiranSchema,
   getUnknownPresensiSchema,
+  importKompensasiBayarSchema,
   resolveUnknownPresensiSchema,
   saveBulkPresensiSchema,
   updateKompensasiBayarSchema,
@@ -27,4 +28,5 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .get('/rekap-kehadiran-mahasiswa', PresensiController.getRekapKehadiranMahasiswa, getRekapKehadiranMahasiswaSchema)
   .get('/kompensasi/mahasiswa/:mahasiswaId', PresensiController.getKompensasiDetail, getKompensasiMahasiswaDetailSchema)
   .post('/kompensasi/bayar', PresensiController.bayarKompensasi, bayarKompensasiSchema)
+  .post('/kompensasi/bayar/import', PresensiController.importKompensasiBayar, importKompensasiBayarSchema)
   .put('/kompensasi/bayar/:id', PresensiController.updateKompensasiBayar, updateKompensasiBayarSchema);

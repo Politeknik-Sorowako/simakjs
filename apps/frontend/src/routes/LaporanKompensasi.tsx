@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
@@ -36,6 +37,7 @@ export default function LaporanKompensasi() {
   const [page, setPage] = createSignal(1);
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [isExporting, setIsExporting] = createSignal(false);
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Debounce search input
   createEffect(() => {
@@ -191,14 +193,23 @@ export default function LaporanKompensasi() {
               Pantau dan kelola tanggungan jam kompensasi (Disiplin Vokasi) mahasiswa
             </p>
           </div>
-          <Button
-            onClick={handleExportExcel}
-            disabled={isExporting()}
-            variant="success"
-            class="!px-4 !py-2 text-xs font-bold flex items-center gap-2 shadow-sm"
-          >
-            📊 {isExporting() ? 'Mengunduh...' : 'Ekspor Excel (.xlsx)'}
-          </Button>
+          <div class="flex items-center gap-3">
+            <Button
+              onClick={() => setShowImportModal(true)}
+              variant="secondary"
+              class="!px-4 !py-2 text-xs font-bold flex items-center gap-2 shadow-sm"
+            >
+              Impor CSV
+            </Button>
+            <Button
+              onClick={handleExportExcel}
+              disabled={isExporting()}
+              variant="success"
+              class="!px-4 !py-2 text-xs font-bold flex items-center gap-2 shadow-sm"
+            >
+              📊 {isExporting() ? 'Mengunduh...' : 'Ekspor Excel (.xlsx)'}
+            </Button>
+          </div>
         </div>
 
         {/* Filters & Control Toolbar */}
@@ -562,6 +573,21 @@ export default function LaporanKompensasi() {
           </div>
         </form>
       </Modal>
+
+      {/* Import CSV Modal */}
+      <ImportCsvModal
+        show={showImportModal()}
+        onClose={() => setShowImportModal(false)}
+        title="Pembayaran Kompensasi"
+        importUrl="/presensi/kompensasi/bayar/import"
+        templateHeaders={['nim', 'tanggal', 'jumlah_menit', 'keterangan']}
+        customTemplateRows={[
+          ['nim', 'tanggal', 'jumlah_menit', 'keterangan'],
+          ['202301001', '2026-06-27', '480', 'Selesai kompensasi lab'],
+          ['202301002', '2026-06-27', '240', 'Selesai kompensasi taman kampus'],
+        ]}
+        onSuccess={refetchLaporan}
+      />
     </MainLayout>
   );
 }
