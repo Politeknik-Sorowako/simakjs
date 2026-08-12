@@ -2,6 +2,7 @@ import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
@@ -32,6 +33,7 @@ export default function KompensasiManual() {
 
   const isAdminRole = () => ['admin', 'super_admin'].includes(user()?.role || '');
   const tableColumnCount = () => (isAdminRole() ? 9 : 8);
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Filters state
   const [filterSearch, setFilterSearch] = createSignal('');
@@ -309,9 +311,14 @@ export default function KompensasiManual() {
             </p>
           </div>
           <Show when={['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '')}>
-            <Button onClick={openCreateModal} variant="primary">
-              + Tambah Kompensasi
-            </Button>
+            <div class="flex items-center gap-3">
+              <Button onClick={() => setShowImportModal(true)} variant="secondary">
+                Impor CSV
+              </Button>
+              <Button onClick={openCreateModal} variant="primary">
+                + Tambah Kompensasi
+              </Button>
+            </div>
           </Show>
         </div>
 
@@ -609,6 +616,21 @@ export default function KompensasiManual() {
             </div>
           </div>
         </Modal>
+
+        {/* Import CSV Modal */}
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          title="Kompensasi Mahasiswa"
+          importUrl="/kompensasi-manual/import"
+          templateHeaders={['nim', 'tanggal', 'jenis_kompen', 'durasi_menit', 'keterangan']}
+          customTemplateRows={[
+            ['nim', 'tanggal', 'jenis_kompen', 'durasi_menit', 'keterangan'],
+            ['202301001', '2026-06-27', 'terlambat', '30', 'Terlambat masuk praktikum'],
+            ['202301002', '2026-06-27', 'rusak', '60', 'Kerusakan alat laboratorium'],
+          ]}
+          onSuccess={refetch}
+        />
       </div>
     </MainLayout>
   );

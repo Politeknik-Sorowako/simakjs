@@ -1,3 +1,4 @@
+import { CsvImportService } from '../services/csv-import.service';
 import { PresensiService } from '../services/presensi.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
 import { getBapKelasId, guardKelasScope } from '../utils/dosen-scope';
@@ -189,6 +190,26 @@ export class PresensiController {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
     }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async importKompensasiBayar({ request, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'prodi', 'keuangan'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi/Keuangan.' };
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const mode = (formData.get('mode') as string) || 'skip';
+    if (!file) {
+      set.status = 400;
+      return { error: 'File CSV tidak ditemukan.' };
+    }
+
+    const text = await file.text();
+    return await CsvImportService.importKompensasiBayar(text, mode, user.id);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

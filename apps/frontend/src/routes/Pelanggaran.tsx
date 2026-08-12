@@ -1,6 +1,7 @@
 import { createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
@@ -8,6 +9,7 @@ import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { pasalController } from '../controllers/pasalController';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -46,6 +48,16 @@ export default function Pelanggaran() {
       return await bimbinganController.getAllPelanggaran();
     },
   );
+
+  // Load master pasal BPA (global + prodi scoped)
+  const [pasalList] = createResource(
+    () => (isStaff() ? true : null),
+    async () => {
+      if (!isStaff()) return [];
+      return await pasalController.getAll();
+    },
+  );
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Server-side search + lazy-load list of active students for the form dropdown
   const MAHASISWA_PAGE_SIZE = 50;
@@ -107,6 +119,8 @@ export default function Pelanggaran() {
   const [jenisPelanggaran, setJenisPelanggaran] = createSignal('');
   const [bobotPoin, setBobotPoin] = createSignal(0);
   const [keterangan, setKeterangan] = createSignal('');
+  const [pasalId, setPasalId] = createSignal<number | null>(null);
+  const [jenisSanksi, setJenisSanksi] = createSignal(1);
   const [errorMsg, setErrorMsg] = createSignal('');
   const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
 
@@ -114,22 +128,40 @@ export default function Pelanggaran() {
     setEditPelanggaranId(null);
     const firstStudent = mahasiswaList()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
-    setTanggal(new Date().toISOString().split('T')[0]);
+    const today = new Date();
+    setTanggal(
+      `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
+    );
     setJenisPelanggaran('');
     setBobotPoin(5);
     setKeterangan('');
+    setPasalId(null);
+    setJenisSanksi(1);
     setErrorMsg('');
     setShowModal(true);
+  };
+
+  const handlePasalChange = (val: string | number) => {
+    const id = Number(val);
+    setPasalId(id);
+    const pasal = pasalList()?.find((p) => p.id === id);
+    if (pasal) {
+      setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
+      setBobotPoin(pasal.bobotPoin);
+      setJenisSanksi(pasal.jenisSanksi);
+    }
   };
 
   const openEditModal = (item: IPelanggaran) => {
     setEditPelanggaranId(item.id);
     setMahasiswaId(item.mahasiswaId);
     ensureStudentLoaded(item.mahasiswaId);
-    setTanggal(new Date(item.tanggal).toISOString().split('T')[0]);
+    setTanggal(item.tanggal);
     setJenisPelanggaran(item.jenisPelanggaran);
     setBobotPoin(item.bobotPoin);
     setKeterangan(item.keterangan);
+    setPasalId(item.pasalId ?? null);
+    setJenisSanksi(item.jenisSanksi ?? 1);
     setErrorMsg('');
     setShowModal(true);
   };
@@ -148,6 +180,8 @@ export default function Pelanggaran() {
         jenisPelanggaran: jenisPelanggaran(),
         bobotPoin: bobotPoin(),
         keterangan: keterangan(),
+        pasalId: pasalId(),
+        jenisSanksi: jenisSanksi(),
       };
 
       const activeId = editPelanggaranId();
@@ -175,12 +209,20 @@ export default function Pelanggaran() {
             <p class="text-sm text-secondary-500">Pencatatan pelanggaran indisipliner dan rekap poin kedisiplinan</p>
           </div>
           <Show when={isStaff()}>
-            <button
-              onClick={openAddModal}
-              class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all active:scale-95 shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
-            >
-              + Catat Pelanggaran
-            </button>
+            <div class="flex items-center gap-3">
+              <button
+                onClick={() => setShowImportModal(true)}
+                class="px-5 py-2.5 bg-secondary-100 hover:bg-secondary-200 text-secondary-700 font-bold rounded-xl text-sm transition-all active:scale-95 dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
+              >
+                Impor CSV
+              </button>
+              <button
+                onClick={openAddModal}
+                class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all active:scale-95 shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
+              >
+                + Catat Pelanggaran
+              </button>
+            </div>
           </Show>
         </div>
 
@@ -230,8 +272,10 @@ export default function Pelanggaran() {
                     <thead>
                       <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
                         <th class="p-3">Tanggal</th>
+                        <th class="p-3">Pasal</th>
                         <th class="p-3">Jenis Pelanggaran</th>
                         <th class="p-3">Bobot Poin</th>
+                        <th class="p-3">Sanksi</th>
                         <th class="p-3">Keterangan</th>
                       </tr>
                     </thead>
@@ -240,10 +284,31 @@ export default function Pelanggaran() {
                         {(item) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                             <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
+                            <td class="p-3">
+                              <Show when={item.nomorPasal} fallback={<span class="text-secondary-400">-</span>}>
+                                <span class="font-bold text-secondary-800 dark:text-white">{item.nomorPasal}</span>
+                                <Show when={item.bunyiPasal}>
+                                  <div class="text-[11px] text-secondary-500 max-w-[200px] truncate">
+                                    {item.bunyiPasal}
+                                  </div>
+                                </Show>
+                              </Show>
+                            </td>
                             <td class="p-3">{item.jenisPelanggaran}</td>
                             <td class="p-3">
                               <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
                                 {item.bobotPoin} Poin
+                              </span>
+                            </td>
+                            <td class="p-3">
+                              <span
+                                class={`px-2 py-0.5 rounded border font-bold ${
+                                  item.jenisSanksi === 4
+                                    ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                                }`}
+                              >
+                                {item.jenisSanksi === 4 ? 'Tertulis' : 'Lisan'}
                               </span>
                             </td>
                             <td class="p-3">{item.keterangan}</td>
@@ -278,8 +343,10 @@ export default function Pelanggaran() {
                       <th class="p-3">NIM</th>
                       <th class="p-3">Program Studi</th>
                       <th class="p-3">Tanggal</th>
+                      <th class="p-3">Pasal</th>
                       <th class="p-3">Jenis Pelanggaran</th>
                       <th class="p-3">Bobot Poin</th>
+                      <th class="p-3">Sanksi</th>
                       <th class="p-3">Keterangan</th>
                       <Show when={auth.hasRole(['admin'])}>
                         <th class="p-3 text-center">Aksi</th>
@@ -294,10 +361,31 @@ export default function Pelanggaran() {
                           <td class="p-3 whitespace-nowrap">{item.nim}</td>
                           <td class="p-3">{item.prodiNama}</td>
                           <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
+                          <td class="p-3">
+                            <Show when={item.nomorPasal} fallback={<span class="text-secondary-400">-</span>}>
+                              <span class="font-bold text-secondary-800 dark:text-white">{item.nomorPasal}</span>
+                              <Show when={item.bunyiPasal}>
+                                <div class="text-[11px] text-secondary-500 max-w-[220px] truncate">
+                                  {item.bunyiPasal}
+                                </div>
+                              </Show>
+                            </Show>
+                          </td>
                           <td class="p-3">{item.jenisPelanggaran}</td>
                           <td class="p-3">
                             <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
                               {item.bobotPoin}
+                            </span>
+                          </td>
+                          <td class="p-3">
+                            <span
+                              class={`px-2 py-0.5 rounded border font-bold ${
+                                item.jenisSanksi === 4
+                                  ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                  : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                              }`}
+                            >
+                              {item.jenisSanksi === 4 ? 'Tertulis' : 'Lisan'}
                             </span>
                           </td>
                           <td class="p-3">{item.keterangan}</td>
@@ -362,6 +450,31 @@ export default function Pelanggaran() {
               onInput={(e) => setTanggal(e.currentTarget.value)}
             />
 
+            {/* Pasal BPA */}
+            <SearchableSelect
+              label="Pasal Pelanggaran (BPA)"
+              placeholder="Cari Nomor Pasal / Bunyi Pasal..."
+              value={pasalId() ?? ''}
+              options={(pasalList() || []).map((p) => ({
+                label: `${p.nomorPasal} - ${p.bunyiPasal.slice(0, 80)}${p.bunyiPasal.length > 80 ? '…' : ''} (${p.bobotPoin} poin)`,
+                value: p.id,
+              }))}
+              onChange={handlePasalChange}
+            />
+
+            {/* Jenis Sanksi */}
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-bold text-secondary-700">Jenis Sanksi</label>
+              <select
+                value={jenisSanksi()}
+                onChange={(e) => setJenisSanksi(parseInt(e.currentTarget.value))}
+                class="border border-secondary-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-brand-500 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200"
+              >
+                <option value={1}>Lisan (1)</option>
+                <option value={4}>Tertulis (4)</option>
+              </select>
+            </div>
+
             {/* Jenis Pelanggaran */}
             <Input
               label="Jenis Pelanggaran"
@@ -406,6 +519,45 @@ export default function Pelanggaran() {
             </div>
           </form>
         </Modal>
+
+        {/* Import CSV Modal */}
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          title="Pelanggaran / Peringatan"
+          importUrl="/pelanggaran/import"
+          templateHeaders={[
+            'nim',
+            'tanggal',
+            'nomor_pasal',
+            'jenis_pelanggaran',
+            'bobot_poin',
+            'jenis_sanksi',
+            'keterangan',
+          ]}
+          customTemplateRows={[
+            ['nim', 'tanggal', 'nomor_pasal', 'jenis_pelanggaran', 'bobot_poin', 'jenis_sanksi', 'keterangan'],
+            [
+              '202301001',
+              '2026-06-27',
+              'Pasal 2',
+              'Terlambat masuk kelas praktikum',
+              '5',
+              'L',
+              'Terlambat lebih dari 30 menit tanpa alasan sah.',
+            ],
+            [
+              '202301002',
+              '2026-06-27',
+              '',
+              'Merusak fasilitas laboratorium',
+              '15',
+              'T',
+              'Melaporkan kerusakan keyboard praktikum.',
+            ],
+          ]}
+          onSuccess={refetchAllViolations}
+        />
       </div>
     </MainLayout>
   );

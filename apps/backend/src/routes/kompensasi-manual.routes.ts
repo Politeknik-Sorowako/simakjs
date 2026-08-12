@@ -8,6 +8,7 @@ import {
   getDuplicateRiskSchema,
   getKompensasiManualStatsSchema,
   getRiwayatKompensasiManualSchema,
+  importKompensasiManualSchema,
   updateKompensasiManualSchema,
 } from '../schemas/kompensasi-manual.schema';
 
@@ -18,5 +19,6 @@ export const kompensasiManualRoutes = new Elysia({ prefix: '/kompensasi-manual' 
   .get('/duplicate-risk', KompensasiManualController.getDuplicateRisk, getDuplicateRiskSchema)
   .get('/stats', KompensasiManualController.getStats, getKompensasiManualStatsSchema)
   .post('/', KompensasiManualController.createKompensasi, createKompensasiManualSchema)
+  .post('/import', KompensasiManualController.importCsv, importKompensasiManualSchema)
   .put('/:id', KompensasiManualController.updateKompensasi, updateKompensasiManualSchema)
   .delete('/:id', KompensasiManualController.deleteKompensasi, deleteKompensasiManualSchema);

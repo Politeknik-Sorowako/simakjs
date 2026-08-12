@@ -743,6 +743,21 @@ export const sesiBimbingan = pgTable('sesi_bimbingan', {
     .$onUpdate(() => new Date()),
 });
 
+export const pasalPelanggaran = pgTable('pasal_pelanggaran', {
+  id: serial('id').primaryKey(),
+  nomorPasal: varchar('nomor_pasal', { length: 50 }).notNull(),
+  bunyiPasal: text('bunyi_pasal').notNull(),
+  bobotPoin: integer('bobot_poin').default(5).notNull(),
+  jenisSanksi: integer('jenis_sanksi').default(1).notNull(), // 1 = Lisan, 4 = Tertulis
+  programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'cascade' }),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
 export const pelanggaran = pgTable('pelanggaran', {
   id: serial('id').primaryKey(),
   mahasiswaId: integer('mahasiswa_id')
@@ -752,6 +767,8 @@ export const pelanggaran = pgTable('pelanggaran', {
   jenisPelanggaran: varchar('jenis_pelanggaran', { length: 255 }).notNull(),
   bobotPoin: integer('bobot_poin').notNull(),
   keterangan: text('keterangan').notNull(),
+  pasalId: integer('pasal_id').references(() => pasalPelanggaran.id, { onDelete: 'set null' }),
+  jenisSanksi: integer('jenis_sanksi').default(1).notNull(), // 1 = Lisan, 4 = Tertulis
   dibuatOleh: integer('dibuat_oleh').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
@@ -808,6 +825,18 @@ export const pelanggaranRelations = relations(pelanggaran, ({ one }) => ({
     fields: [pelanggaran.dibuatOleh],
     references: [users.id],
   }),
+  pasal: one(pasalPelanggaran, {
+    fields: [pelanggaran.pasalId],
+    references: [pasalPelanggaran.id],
+  }),
+}));
+
+export const pasalPelanggaranRelations = relations(pasalPelanggaran, ({ one, many }) => ({
+  programStudi: one(programStudi, {
+    fields: [pasalPelanggaran.programStudiId],
+    references: [programStudi.id],
+  }),
+  pelanggaranList: many(pelanggaran),
 }));
 
 export const komponenNilai = pgTable('komponen_nilai', {

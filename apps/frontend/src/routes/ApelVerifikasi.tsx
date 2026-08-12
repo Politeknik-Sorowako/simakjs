@@ -1,10 +1,10 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, UnknownPresensiItem } from '../controllers/apelController';
-import { PaginatedResponse } from '../controllers/prodiController';
+import { PaginatedResponse, prodiController } from '../controllers/prodiController';
 import { fmtWaktu } from '../utils/format';
 
 export default function ApelVerifikasi() {
@@ -14,7 +14,19 @@ export default function ApelVerifikasi() {
 
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [filterProdi, setFilterProdi] = createSignal<number | undefined>(undefined);
+  const [filterStatus, setFilterStatus] = createSignal<'belum' | 'sudah' | 'all'>('all');
+  const [sortBy, setSortBy] = createSignal('');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+
+  createEffect(() => {
+    const q = search();
+    const timer = setTimeout(() => setDebouncedSearch(q), 400);
+    return () => clearTimeout(timer);
+  });
+
+  const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
   const [verifyModal, setVerifyModal] = createSignal<{ id: number; nama: string; menit: number | null } | null>(null);
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
@@ -23,15 +35,38 @@ export default function ApelVerifikasi() {
   const [isAnulir, setIsAnulir] = createSignal(false);
 
   const [data, { refetch }] = createResource(
-    () => ({ page: page(), prodiId: filterProdi() || ws.selectedProdiId() }),
+    () => ({
+      page: page(),
+      prodiId: filterProdi() || ws.selectedProdiId(),
+      search: debouncedSearch(),
+      statusFilter: filterStatus(),
+      sortBy: sortBy(),
+      sortOrder: sortOrder(),
+    }),
     async (params) => {
       return apelController.getPresensiUnknown({
         page: params.page,
         limit: 20,
         prodiId: params.prodiId ?? undefined,
+        search: params.search || undefined,
+        statusFilter: params.statusFilter,
+        sortBy: params.sortBy || undefined,
+        sortOrder: params.sortOrder,
       });
     },
   );
+
+  const handleSort = (col: string) => {
+    if (sortBy() === col) {
+      setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(col);
+      setSortOrder('asc');
+    }
+    setPage(1);
+  };
+
+  const sortIcon = (col: string) => (sortBy() === col ? (sortOrder() === 'asc' ? ' ▲' : ' ▼') : ' ⇅');
 
   const handleVerify = async () => {
     const modal = verifyModal();
@@ -93,8 +128,34 @@ export default function ApelVerifikasi() {
               placeholder="Cari NIM/Nama..."
               class="border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
               value={search()}
-              onInput={(e) => setSearch(e.target.value)}
+              onInput={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
             />
+            <select
+              class="border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+              value={filterStatus()}
+              onChange={(e) => {
+                setFilterStatus(e.target.value as 'belum' | 'sudah' | 'all');
+                setPage(1);
+              }}
+            >
+              <option value="all">Semua Status</option>
+              <option value="belum">Belum Diverifikasi</option>
+              <option value="sudah">Sudah Diverifikasi</option>
+            </select>
+            <select
+              class="border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
+              value={filterProdi() || ''}
+              onChange={(e) => {
+                setFilterProdi(e.currentTarget.value ? parseInt(e.currentTarget.value) : undefined);
+                setPage(1);
+              }}
+            >
+              <option value="">Semua Program Studi</option>
+              <For each={prodis()?.data || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+            </select>
           </div>
 
           <div class="overflow-x-auto">
@@ -102,14 +163,44 @@ export default function ApelVerifikasi() {
               <thead class="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th class="px-4 py-3 text-left text-xs font-medium uppercase">No</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium uppercase">NIM</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium uppercase">Nama</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium uppercase">Prodi</th>
+                  <th
+                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                    onClick={() => handleSort('nim')}
+                  >
+                    NIM{sortIcon('nim')}
+                  </th>
+                  <th
+                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                    onClick={() => handleSort('nama')}
+                  >
+                    Nama{sortIcon('nama')}
+                  </th>
+                  <th
+                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                    onClick={() => handleSort('prodi')}
+                  >
+                    Prodi{sortIcon('prodi')}
+                  </th>
                   <th class="px-4 py-3 text-left text-xs font-medium uppercase">Kelompok</th>
-                  <th class="px-4 py-3 text-left text-xs font-medium uppercase">Tanggal</th>
-                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Shift</th>
+                  <th
+                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                    onClick={() => handleSort('tanggal')}
+                  >
+                    Tanggal{sortIcon('tanggal')}
+                  </th>
+                  <th
+                    class="px-4 py-3 text-center text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                    onClick={() => handleSort('shift')}
+                  >
+                    Shift{sortIcon('shift')}
+                  </th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Dosen</th>
-                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Waktu Pencatatan</th>
+                  <th
+                    class="px-4 py-3 text-center text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                    onClick={() => handleSort('waktu')}
+                  >
+                    Waktu Pencatatan{sortIcon('waktu')}
+                  </th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Durasi</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
