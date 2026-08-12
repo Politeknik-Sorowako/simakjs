@@ -47,6 +47,4 @@ export const auditController = {
     const qs = searchParams.toString();
     return fetchApi<AuditLogResponse>(`/audit-logs${qs ? `?${qs}` : ''}`);
   },
-
-  getById: (id: string): Promise<{ data: AuditLog }> => fetchApi<{ data: AuditLog }>(`/audit-logs/${id}`),
 };

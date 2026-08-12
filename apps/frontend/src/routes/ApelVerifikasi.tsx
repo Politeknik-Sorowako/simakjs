@@ -115,6 +115,9 @@ export default function ApelVerifikasi() {
                           onClick={() => {
                             setVerifyModal({ id: item.id, nama: item.mahasiswaNama });
                             setVerifyStatus('alpa');
+                            setIsAnulir(false);
+                            setVerifyNote('');
+                            setVerifyDuration(0);
                           }}
                         >
                           Verifikasi
@@ -233,7 +236,15 @@ export default function ApelVerifikasi() {
                   />
                 </div>
                 <div class="flex gap-2 justify-end">
-                  <button class="px-4 py-2 border rounded-lg text-sm" onClick={() => setVerifyModal(null)}>
+                  <button
+                    class="px-4 py-2 border rounded-lg text-sm"
+                    onClick={() => {
+                      setVerifyModal(null);
+                      setVerifyNote('');
+                      setVerifyDuration(0);
+                      setIsAnulir(false);
+                    }}
+                  >
                     Batal
                   </button>
                   <button
