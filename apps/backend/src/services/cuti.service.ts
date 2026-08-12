@@ -68,7 +68,7 @@ export class CutiService {
         semesterMulaiCuti: semesterMulai,
         semesterBerakhirCuti: semesterBerakhir,
         noSuratIzin: data.noSuratIzin,
-        tanggalSuratIzin: data.tanggalSuratIzin ? new Date(data.tanggalSuratIzin).toISOString().split('T')[0] : null,
+        tanggalSuratIzin: data.tanggalSuratIzin,
       })
       .returning();
 
@@ -235,9 +235,7 @@ export class CutiService {
         status: nextStatus,
         catatan: payload.catatan || cuti.catatan,
         noSuratIzin: payload.noSuratIzin || cuti.noSuratIzin,
-        tanggalSuratIzin: payload.tanggalSuratIzin
-          ? new Date(payload.tanggalSuratIzin).toISOString().split('T')[0]
-          : cuti.tanggalSuratIzin,
+        tanggalSuratIzin: payload.tanggalSuratIzin ? payload.tanggalSuratIzin : cuti.tanggalSuratIzin,
         updatedAt: new Date(),
       })
       .where(eq(pengajuanCuti.id, id))
