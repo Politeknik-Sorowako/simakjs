@@ -373,12 +373,23 @@ export class ApelService {
     return updated;
   }
 
-  static async getPresensiUnknown(page = 1, limit = 20, prodiId?: number, kelompokId?: number, tanggal?: string) {
+  static async getPresensiUnknown(
+    page = 1,
+    limit = 20,
+    prodiId?: number,
+    kelompokId?: number,
+    tanggal?: string,
+    search?: string,
+  ) {
     const offset = (page - 1) * limit;
     const conditions = [eq(presensiApel.status, 'unknown')];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
     if (kelompokId) conditions.push(eq(sesiApel.kelompokApelId, kelompokId));
     if (tanggal) conditions.push(eq(sesiApel.tanggal, tanggal));
+    if (search) {
+      const searchCondition = or(ilike(mahasiswa.nim, `%${search}%`), ilike(mahasiswa.nama, `%${search}%`));
+      if (searchCondition) conditions.push(searchCondition);
+    }
 
     const [totalResult] = await db
       .select({ total: sql<number>`count(*)` })

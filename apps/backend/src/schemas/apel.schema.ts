@@ -167,6 +167,7 @@ export const getPresensiUnknownSchema = {
     prodiId: t.Optional(t.String({ error: 'Prodi ID tidak valid' })),
     kelompokId: t.Optional(t.String({ error: 'Kelompok ID tidak valid' })),
     tanggal: t.Optional(t.String({ error: 'Tanggal tidak valid' })),
+    search: t.Optional(t.String({ error: 'Pencarian tidak valid' })),
   }),
 };
 
