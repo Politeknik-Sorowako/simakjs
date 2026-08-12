@@ -10,7 +10,8 @@ export class DosenPengajarController {
     const kelasKuliahId = query?.kelasKuliahId ? parseInt(query.kelasKuliahId) : undefined;
     const dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
     const periodeId = query?.periodeId || undefined;
-    return await DosenPengajarService.getAll(page, limit, kelasKuliahId, dosenId, periodeId);
+    const currentOnly = query?.currentOnly === true || query?.currentOnly === 'true';
+    return await DosenPengajarService.getAll(page, limit, kelasKuliahId, dosenId, periodeId, currentOnly);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

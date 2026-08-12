@@ -20,6 +20,7 @@ export default function ApelVerifikasi() {
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
   const [verifyNote, setVerifyNote] = createSignal('');
   const [verifyDuration, setVerifyDuration] = createSignal(0);
+  const [isAnulir, setIsAnulir] = createSignal(false);
 
   const [data, { refetch }] = createResource(
     () => ({ page: page(), prodiId: filterProdi() || ws.selectedProdiId() }),
@@ -36,15 +37,20 @@ export default function ApelVerifikasi() {
     const modal = verifyModal();
     if (!modal) return;
     try {
+      if (isAnulir() && !verifyNote().trim()) {
+        toast.showToast('Alasan/keterangan wajib diisi saat menganulir', 'error');
+        return;
+      }
       await apelController.verifyPresensi(modal.id, {
         verifiedStatus: verifyStatus(),
         verificationNote: verifyNote() || undefined,
-        menitTerlambat: verifyStatus() !== 'hadir' ? verifyDuration() : 0,
+        menitTerlambat: isAnulir() ? 0 : verifyStatus() !== 'hadir' ? verifyDuration() : 0,
       });
       toast.showToast('Presensi berhasil diverifikasi', 'success');
       setVerifyModal(null);
       setVerifyNote('');
       setVerifyDuration(0);
+      setIsAnulir(false);
       refetch();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal verifikasi presensi';
@@ -109,6 +115,9 @@ export default function ApelVerifikasi() {
                           onClick={() => {
                             setVerifyModal({ id: item.id, nama: item.mahasiswaNama });
                             setVerifyStatus('alpa');
+                            setIsAnulir(false);
+                            setVerifyNote('');
+                            setVerifyDuration(0);
                           }}
                         >
                           Verifikasi
@@ -168,13 +177,36 @@ export default function ApelVerifikasi() {
                     value={verifyStatus()}
                     onChange={(e) => setVerifyStatus(e.target.value)}
                   >
-                    <option value="alpa">Alpa (Tanpa Keterangan)</option>
-                    <option value="sakit">Sakit</option>
-                    <option value="izin">Izin</option>
-                    <option value="hadir">Hadir (ternyata datang)</option>
+                    <Show when={!isAnulir()} fallback={null}>
+                      <option value="alpa">Alpa (Tanpa Keterangan)</option>
+                      <option value="sakit">Sakit</option>
+                      <option value="izin">Izin</option>
+                      <option value="hadir">Hadir (ternyata datang)</option>
+                    </Show>
+                    <Show when={isAnulir()}>
+                      <option value="alpa">Alpa</option>
+                      <option value="sakit">Sakit</option>
+                      <option value="izin">Izin</option>
+                    </Show>
                   </select>
                 </div>
-                <Show when={verifyStatus() !== 'hadir'}>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="anulir-checkbox"
+                    class="h-4 w-4 accent-blue-600"
+                    checked={isAnulir()}
+                    onChange={(e) => {
+                      const on = e.currentTarget.checked;
+                      setIsAnulir(on);
+                      if (on) setVerifyStatus('alpa');
+                    }}
+                  />
+                  <label for="anulir-checkbox" class="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Anulir (Durasi = 0)
+                  </label>
+                </div>
+                <Show when={!isAnulir() && verifyStatus() !== 'hadir'}>
                   <div>
                     <label class="block text-sm font-medium mb-1">Durasi Ketidakhadiran (Menit)</label>
                     <input
@@ -187,8 +219,15 @@ export default function ApelVerifikasi() {
                     />
                   </div>
                 </Show>
+                <Show when={isAnulir()}>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Durasi ditetapkan 0 menit sehingga tidak masuk dalam rekap kompensasi.
+                  </p>
+                </Show>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Catatan (opsional)</label>
+                  <label class="block text-sm font-medium mb-1">
+                    {isAnulir() ? 'Alasan/Keterangan (wajib)' : 'Catatan (opsional)'}
+                  </label>
                   <textarea
                     class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
                     rows={3}
@@ -197,14 +236,22 @@ export default function ApelVerifikasi() {
                   />
                 </div>
                 <div class="flex gap-2 justify-end">
-                  <button class="px-4 py-2 border rounded-lg text-sm" onClick={() => setVerifyModal(null)}>
+                  <button
+                    class="px-4 py-2 border rounded-lg text-sm"
+                    onClick={() => {
+                      setVerifyModal(null);
+                      setVerifyNote('');
+                      setVerifyDuration(0);
+                      setIsAnulir(false);
+                    }}
+                  >
                     Batal
                   </button>
                   <button
                     class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
                     onClick={handleVerify}
                   >
-                    Simpan
+                    {isAnulir() ? 'Anulir' : 'Simpan'}
                   </button>
                 </div>
               </div>
