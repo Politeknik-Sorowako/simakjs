@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { mahasiswa } from '../models/schema';
+import { CsvImportService } from '../services/csv-import.service';
 import { PelanggaranService } from '../services/pelanggaran.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
@@ -109,5 +110,26 @@ export class PelanggaranController {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
     }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+    }
+
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const mode = (formData.get('mode') as string) || 'skip';
+    if (!file) {
+      set.status = 400;
+      return { error: 'File CSV tidak ditemukan.' };
+    }
+
+    const text = await file.text();
+    const result = await CsvImportService.importPelanggaran(text, mode, user.id);
+    return result;
   }
 }

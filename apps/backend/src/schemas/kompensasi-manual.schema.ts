@@ -213,3 +213,20 @@ export const getAllKompensasiManualSchema = {
     403: t.Object({ error: t.String() }),
   },
 };
+
+export const importKompensasiManualSchema = {
+  detail: {
+    tags: ['Kompensasi Manual'],
+    summary: 'Impor Data Kompensasi Mahasiswa via CSV',
+    description:
+      'Mengimpor data kompensasi manual melalui file CSV. Kolom: nim, tanggal, jenis_kompen (sakit/izin/alpa/terlambat/rusak), durasi_menit, keterangan.',
+  },
+  response: {
+    200: t.Object({
+      successCount: t.Integer(),
+      errors: t.Array(t.Object({ line: t.Integer(), error: t.String() })),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};

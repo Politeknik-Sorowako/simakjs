@@ -78,6 +78,10 @@ export interface Pelanggaran {
   jenisPelanggaran: string;
   bobotPoin: number;
   keterangan: string;
+  pasalId?: number | null;
+  jenisSanksi?: number;
+  nomorPasal?: string | null;
+  bunyiPasal?: string | null;
   dibuatOleh?: number | null;
   createdAt?: string;
 }

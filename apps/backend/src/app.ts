@@ -40,6 +40,7 @@ import { mataKuliahBahanKajianRoutes } from './routes/mata-kuliah-bahan-kajian.r
 import { nilaiPraktikRoutes } from './routes/nilai-praktik.routes';
 import { notificationRoutes } from './routes/notification.routes';
 import { obeReportRoutes } from './routes/obe-report.routes';
+import { pasalPelanggaranRoutes } from './routes/pasal-pelanggaran.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
@@ -299,6 +300,7 @@ export const app = new Elysia()
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
   .use(settingsRoutes)
+  .use(pasalPelanggaranRoutes)
   .use(pelanggaranRoutes)
   .use(khsRoutes)
   .use(yudisiumRoutes)

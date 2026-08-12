@@ -6,6 +6,7 @@ import {
   getAllPelanggaranSchema,
   getPelanggaranMahasiswaSchema,
   getRekapPelanggaranSchema,
+  importPelanggaranSchema,
   updatePelanggaranSchema,
 } from '../schemas/pelanggaran.schema';
 
@@ -15,4 +16,5 @@ export const pelanggaranRoutes = new Elysia({ prefix: '/pelanggaran' })
   .get('/mahasiswa/:mhsId', PelanggaranController.getByMhsId, getPelanggaranMahasiswaSchema)
   .get('/rekap', PelanggaranController.getRekap, getRekapPelanggaranSchema)
   .get('/', PelanggaranController.getAll, getAllPelanggaranSchema)
-  .put('/:id', PelanggaranController.update, updatePelanggaranSchema);
+  .put('/:id', PelanggaranController.update, updatePelanggaranSchema)
+  .post('/import', PelanggaranController.importCsv, importPelanggaranSchema);
