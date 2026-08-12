@@ -315,7 +315,7 @@ export class ApelController {
       const search = query?.search || undefined;
       const statusFilter = query?.statusFilter || undefined;
       const sortBy = query?.sortBy || undefined;
-      const sortOrder = query?.sortOrder === 'asc' ? 'asc' : 'desc';
+      const sortOrder = query?.sortOrder === 'desc' ? 'desc' : 'asc';
       return await ApelService.getPresensiUnknown(
         page,
         limit,

@@ -168,9 +168,21 @@ export const getPresensiUnknownSchema = {
     kelompokId: t.Optional(t.String({ error: 'Kelompok ID tidak valid' })),
     tanggal: t.Optional(t.String({ error: 'Tanggal tidak valid' })),
     search: t.Optional(t.String({ error: 'Pencarian tidak valid' })),
-    statusFilter: t.Optional(t.String({ error: 'Filter status tidak valid' })),
-    sortBy: t.Optional(t.String({ error: 'Kolom urut tidak valid' })),
-    sortOrder: t.Optional(t.String({ error: 'Arah urut tidak valid' })),
+    statusFilter: t.Optional(t.Union([t.Literal('belum'), t.Literal('sudah')], { error: 'Filter status tidak valid' })),
+    sortBy: t.Optional(
+      t.Union(
+        [
+          t.Literal('nama'),
+          t.Literal('nim'),
+          t.Literal('tanggal'),
+          t.Literal('shift'),
+          t.Literal('waktu'),
+          t.Literal('prodi'),
+        ],
+        { error: 'Kolom urut tidak valid' },
+      ),
+    ),
+    sortOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')], { error: 'Arah urut tidak valid' })),
   }),
 };
 
