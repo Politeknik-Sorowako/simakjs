@@ -387,8 +387,8 @@ export class ApelService {
     if (kelompokId) conditions.push(eq(sesiApel.kelompokApelId, kelompokId));
     if (tanggal) conditions.push(eq(sesiApel.tanggal, tanggal));
     if (search) {
-      const searchCondition = or(ilike(mahasiswa.nim, `%${search}%`), ilike(mahasiswa.nama, `%${search}%`));
-      if (searchCondition) conditions.push(searchCondition);
+      const escaped = search.replace(/[\\%_]/g, '\\$&');
+      conditions.push(or(ilike(mahasiswa.nim, `%${escaped}%`), ilike(mahasiswa.nama, `%${escaped}%`))!);
     }
 
     const [totalResult] = await db

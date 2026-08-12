@@ -19,10 +19,7 @@ export default function ApelVerifikasi() {
 
   createEffect(() => {
     const q = search();
-    const timer = setTimeout(() => {
-      setDebouncedSearch(q);
-      setPage(1);
-    }, 400);
+    const timer = setTimeout(() => setDebouncedSearch(q), 400);
     return () => clearTimeout(timer);
   });
 
@@ -104,7 +101,10 @@ export default function ApelVerifikasi() {
               placeholder="Cari NIM/Nama..."
               class="border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
               value={search()}
-              onInput={(e) => setSearch(e.target.value)}
+              onInput={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 
