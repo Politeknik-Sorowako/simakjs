@@ -20,7 +20,7 @@ export class PresensiController {
         return { error: 'Dosen hanya dapat menetapkan status Hadir, Telat, atau Unknown untuk presensi.' };
       }
     }
-    return await PresensiService.saveBulkPresensi(body.bapId, body.presensiList);
+    return await PresensiService.saveBulkPresensi(body.bapId, body.presensiList, user.id);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
