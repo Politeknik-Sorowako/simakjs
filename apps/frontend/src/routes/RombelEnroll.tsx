@@ -48,7 +48,7 @@ export default function RombelEnroll() {
         <Switch
           fallback={<div class="text-secondary-500 dark:text-secondary-300 text-center py-10">Memuat informasi...</div>}
         >
-          <Show when={info.error() || (info() === null && !info.loading)}>
+          <Show when={info.error || (info() === null && !info.loading)}>
             <div class="text-center py-10">
               <p class="text-danger-600 dark:text-danger-400 font-semibold mb-4">
                 Link pendaftaran tidak valid atau telah dinonaktifkan.
