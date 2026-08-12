@@ -214,19 +214,6 @@ export const bimbinganController = {
     });
   },
 
-  async importPelanggaran(
-    file: File,
-    mode: string,
-  ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('mode', mode);
-    return fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>('/pelanggaran/import', {
-      method: 'POST',
-      body: formData,
-    });
-  },
-
   async getMonitoringLengkap(filter?: {
     periodeId?: string;
     prodiId?: number;

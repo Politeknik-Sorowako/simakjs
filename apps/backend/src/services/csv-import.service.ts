@@ -14,7 +14,8 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
-import { JENIS_KOMPEN } from './kompensasi-manual.service';
+import { JENIS_FULL_DAY, JENIS_KOMPEN } from './kompensasi-manual.service';
+import { SystemParameterService } from './system-parameter.service';
 
 export interface ImportResult {
   successCount: number;
@@ -903,7 +904,8 @@ export class CsvImportService {
 
       let pasalId: number | null = null;
       if (pasalVal) {
-        const cached = pasalCache.get(pasalVal.toLowerCase());
+        const cacheKey = pasalVal.toLowerCase();
+        const cached = pasalCache.get(cacheKey);
         if (cached) {
           pasalId = cached.id;
           jenisSanksi = cached.jenisSanksi;
@@ -915,7 +917,7 @@ export class CsvImportService {
               jenisSanksi: pasalPelanggaran.jenisSanksi,
             })
             .from(pasalPelanggaran)
-            .where(eq(pasalPelanggaran.nomorPasal, pasalVal))
+            .where(sql`LOWER(${pasalPelanggaran.nomorPasal}) = LOWER(${pasalVal})`)
             .limit(1);
           if (!pasal) {
             result.errors.push({ line: lineNum, error: `Pasal "${pasalVal}" tidak ditemukan di master BPA.` });
@@ -923,7 +925,7 @@ export class CsvImportService {
           }
           pasalId = pasal.id;
           jenisSanksi = pasal.jenisSanksi;
-          pasalCache.set(pasalVal.toLowerCase(), {
+          pasalCache.set(cacheKey, {
             id: pasal.id,
             bobotPoin: pasal.bobotPoin,
             jenisSanksi: pasal.jenisSanksi,
@@ -1036,7 +1038,12 @@ export class CsvImportService {
       }
 
       const durasiMenit = parseInt(durasiRaw);
-      if (isNaN(durasiMenit) || durasiMenit <= 0) {
+      const isFullDay = (JENIS_FULL_DAY as readonly string[]).includes(jenisVal);
+      if (isNaN(durasiMenit) && !isFullDay) {
+        result.errors.push({ line: lineNum, error: 'Durasi menit harus berupa angka positif.' });
+        continue;
+      }
+      if (!isFullDay && durasiMenit <= 0) {
         result.errors.push({ line: lineNum, error: 'Durasi menit harus berupa angka positif.' });
         continue;
       }
@@ -1045,6 +1052,27 @@ export class CsvImportService {
         const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
         if (!mhs) {
           result.errors.push({ line: lineNum, error: `Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.` });
+          continue;
+        }
+
+        const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
+        const resolvedDurasi = (JENIS_FULL_DAY as readonly string[]).includes(jenisVal)
+          ? maksHarian
+          : Math.min(durasiMenit, maksHarian);
+
+        await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`kompen_import_${mhs.id}_${tanggalVal}`}))`);
+
+        const [sumRow] = await db
+          .select({ total: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
+          .from(kompensasiManual)
+          .where(and(eq(kompensasiManual.mahasiswaId, mhs.id), eq(kompensasiManual.tanggal, tanggalVal)));
+        const totalHariIni = Number(sumRow?.total || 0);
+
+        if (totalHariIni + resolvedDurasi > maksHarian) {
+          result.errors.push({
+            line: lineNum,
+            error: `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat menambah ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
+          });
           continue;
         }
 
@@ -1063,7 +1091,7 @@ export class CsvImportService {
           if (existing) {
             await db
               .update(kompensasiManual)
-              .set({ durasiMenit, keterangan: keteranganVal })
+              .set({ durasiMenit: resolvedDurasi, keterangan: keteranganVal })
               .where(eq(kompensasiManual.id, existing.id));
             result.successCount++;
             continue;
@@ -1074,7 +1102,7 @@ export class CsvImportService {
           mahasiswaId: mhs.id,
           tanggal: tanggalVal,
           jenisKompen: jenisVal,
-          durasiMenit,
+          durasiMenit: resolvedDurasi,
           keterangan: keteranganVal,
           createdBy: userId ?? null,
         });

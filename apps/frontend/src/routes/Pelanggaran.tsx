@@ -128,7 +128,10 @@ export default function Pelanggaran() {
     setEditPelanggaranId(null);
     const firstStudent = mahasiswaList()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
-    setTanggal(new Date().toISOString().split('T')[0]);
+    const today = new Date();
+    setTanggal(
+      `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
+    );
     setJenisPelanggaran('');
     setBobotPoin(5);
     setKeterangan('');
@@ -153,7 +156,7 @@ export default function Pelanggaran() {
     setEditPelanggaranId(item.id);
     setMahasiswaId(item.mahasiswaId);
     ensureStudentLoaded(item.mahasiswaId);
-    setTanggal(new Date(item.tanggal).toISOString().split('T')[0]);
+    setTanggal(item.tanggal);
     setJenisPelanggaran(item.jenisPelanggaran);
     setBobotPoin(item.bobotPoin);
     setKeterangan(item.keterangan);

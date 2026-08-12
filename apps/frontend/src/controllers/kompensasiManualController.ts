@@ -134,17 +134,4 @@ export const kompensasiManualController = {
     const qStr = query.toString() ? `?${query.toString()}` : '';
     return fetchApi(`/kompensasi-manual${qStr}`);
   },
-
-  async importKompensasi(
-    file: File,
-    mode: string,
-  ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('mode', mode);
-    return fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>('/kompensasi-manual/import', {
-      method: 'POST',
-      body: formData,
-    });
-  },
 };
