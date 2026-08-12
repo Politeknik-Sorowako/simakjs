@@ -61,10 +61,10 @@ export class AuditService {
       conditions.push(eq(auditLogs.userId, userId));
     }
     if (startDate) {
-      conditions.push(gte(auditLogs.timestamp, new Date(startDate)));
+      conditions.push(gte(auditLogs.timestamp, new Date(`${startDate}T00:00:00`)));
     }
     if (endDate) {
-      conditions.push(lte(auditLogs.timestamp, new Date(endDate)));
+      conditions.push(lte(auditLogs.timestamp, new Date(`${endDate}T23:59:59.999`)));
     }
     if (search) {
       conditions.push(

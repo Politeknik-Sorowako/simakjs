@@ -16,7 +16,7 @@ export default function ApelVerifikasi() {
   const [search, setSearch] = createSignal('');
   const [filterProdi, setFilterProdi] = createSignal<number | undefined>(undefined);
 
-  const [verifyModal, setVerifyModal] = createSignal<{ id: number; nama: string } | null>(null);
+  const [verifyModal, setVerifyModal] = createSignal<{ id: number; nama: string; menit: number | null } | null>(null);
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
   const [verifyNote, setVerifyNote] = createSignal('');
   const [verifyDuration, setVerifyDuration] = createSignal(0);
@@ -64,6 +64,23 @@ export default function ApelVerifikasi() {
     </span>
   );
 
+  const statusLabel = (s?: string | null) => {
+    switch (s) {
+      case 'hadir':
+        return 'Hadir';
+      case 'sakit':
+        return 'Sakit';
+      case 'izin':
+        return 'Izin';
+      case 'alpa':
+        return 'Alpa';
+      case 'telat':
+        return 'Telat';
+      default:
+        return '';
+    }
+  };
+
   return (
     <MainLayout>
       <div class="space-y-6">
@@ -93,13 +110,19 @@ export default function ApelVerifikasi() {
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Shift</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Dosen</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Waktu Pencatatan</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Durasi</th>
+                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status</th>
                   <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
                 </tr>
               </thead>
               <tbody class="divide-y dark:divide-gray-700">
                 <For each={data()?.data}>
                   {(item: UnknownPresensiItem, idx) => (
-                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
+                    <tr
+                      class={`hover:bg-gray-50 dark:hover:bg-gray-750 ${
+                        item.verifiedStatus ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''
+                      }`}
+                    >
                       <td class="px-4 py-3 text-sm">{idx() + 1}</td>
                       <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
                       <td class="px-4 py-3 text-sm">{item.mahasiswaNama}</td>
@@ -109,18 +132,40 @@ export default function ApelVerifikasi() {
                       <td class="px-4 py-3 text-center text-sm">{item.shift}</td>
                       <td class="px-4 py-3 text-center text-sm">{item.dosenNama}</td>
                       <td class="px-4 py-3 text-center text-sm">{fmtWaktu(item.createdAt)}</td>
+                      <td class="px-4 py-3 text-center text-sm">
+                        {item.menitTerlambat != null ? `${item.menitTerlambat} mnt` : '-'}
+                      </td>
+                      <td class="px-4 py-3 text-center">
+                        {item.verifiedStatus ? (
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                            ✓ {statusLabel(item.verifiedStatus)}
+                          </span>
+                        ) : (
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                            ⏳ Belum
+                          </span>
+                        )}
+                      </td>
                       <td class="px-4 py-3 text-center">
                         <button
-                          class="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700"
+                          class={
+                            item.verifiedStatus
+                              ? 'bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600'
+                              : 'bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700'
+                          }
                           onClick={() => {
-                            setVerifyModal({ id: item.id, nama: item.mahasiswaNama });
-                            setVerifyStatus('alpa');
+                            setVerifyModal({
+                              id: item.id,
+                              nama: item.mahasiswaNama,
+                              menit: item.menitTerlambat ?? null,
+                            });
+                            setVerifyStatus(item.verifiedStatus || 'alpa');
+                            setVerifyDuration(item.menitTerlambat || 0);
                             setIsAnulir(false);
                             setVerifyNote('');
-                            setVerifyDuration(0);
                           }}
                         >
-                          Verifikasi
+                          {item.verifiedStatus ? 'Koreksi' : 'Verifikasi'}
                         </button>
                       </td>
                     </tr>
@@ -128,8 +173,8 @@ export default function ApelVerifikasi() {
                 </For>
                 <Show when={!data()?.data.length}>
                   <tr>
-                    <td colspan="10" class="px-4 py-8 text-center text-gray-500">
-                      Tidak ada data presensi unknown yang perlu diverifikasi
+                    <td colspan="12" class="px-4 py-8 text-center text-gray-500">
+                      Tidak ada data presensi unknown
                     </td>
                   </tr>
                 </Show>
@@ -168,7 +213,13 @@ export default function ApelVerifikasi() {
         <Show when={verifyModal()}>
           <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
-              <h2 class="text-lg font-semibold mb-4">Verifikasi - {verifyModal()?.nama}</h2>
+              <h2 class="text-lg font-semibold mb-2">Verifikasi - {verifyModal()?.nama}</h2>
+              <p class="text-sm text-gray-500 mb-4">
+                Durasi tercatat:{' '}
+                <span class="font-semibold text-gray-700 dark:text-gray-200">
+                  {verifyModal()?.menit != null ? `${verifyModal()?.menit} menit` : '-'}
+                </span>
+              </p>
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium mb-1">Ubah status menjadi</label>
@@ -200,6 +251,7 @@ export default function ApelVerifikasi() {
                       const on = e.currentTarget.checked;
                       setIsAnulir(on);
                       if (on) setVerifyStatus('alpa');
+                      else setVerifyDuration(verifyModal()?.menit ?? 0);
                     }}
                   />
                   <label for="anulir-checkbox" class="text-sm font-medium text-gray-700 dark:text-gray-200">

@@ -1,5 +1,5 @@
 import { useParams } from '@solidjs/router';
-import { createResource, createSignal, Show, Switch } from 'solid-js';
+import { createResource, createSignal, Match, Show, Switch } from 'solid-js';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -48,7 +48,7 @@ export default function RombelEnroll() {
         <Switch
           fallback={<div class="text-secondary-500 dark:text-secondary-300 text-center py-10">Memuat informasi...</div>}
         >
-          <Show when={info.error() || (info() === null && !info.loading)}>
+          <Match when={info.error || (info() === null && !info.loading)}>
             <div class="text-center py-10">
               <p class="text-danger-600 dark:text-danger-400 font-semibold mb-4">
                 Link pendaftaran tidak valid atau telah dinonaktifkan.
@@ -57,8 +57,8 @@ export default function RombelEnroll() {
                 Kembali ke aplikasi
               </a>
             </div>
-          </Show>
-          <Show when={info()}>
+          </Match>
+          <Match when={info()}>
             {(i) => (
               <div class="space-y-6">
                 <div class="text-center">
@@ -97,12 +97,12 @@ export default function RombelEnroll() {
                 </div>
 
                 <Switch>
-                  <Show when={enrolled()}>
+                  <Match when={enrolled()}>
                     <div class="text-center text-success-600 dark:text-success-400 font-semibold py-4">
                       Berhasil! Anda telah terdaftar pada rombel ini.
                     </div>
-                  </Show>
-                  <Show when={!auth.user()}>
+                  </Match>
+                  <Match when={!auth.user()}>
                     <div class="text-center">
                       <p class="text-sm text-secondary-500 dark:text-secondary-300 mb-4">
                         Silakan masuk sebagai mahasiswa terlebih dahulu untuk mendaftar.
@@ -111,15 +111,15 @@ export default function RombelEnroll() {
                         <Button>Masuk / Login</Button>
                       </a>
                     </div>
-                  </Show>
-                  <Show when={auth.user()?.role !== 'mahasiswa'}>
+                  </Match>
+                  <Match when={auth.user()?.role !== 'mahasiswa'}>
                     <div class="text-center">
                       <p class="text-sm text-warning-600 dark:text-warning-400 font-semibold">
                         Hanya akun mahasiswa yang dapat mendaftar mandiri.
                       </p>
                     </div>
-                  </Show>
-                  <Show when={auth.user()?.role === 'mahasiswa'}>
+                  </Match>
+                  <Match when={auth.user()?.role === 'mahasiswa'}>
                     <div class="space-y-3">
                       <Show when={error() !== ''}>
                         <p class="text-sm text-danger-600 dark:text-danger-400 text-center">{error()}</p>
@@ -134,11 +134,11 @@ export default function RombelEnroll() {
                         {enrolling() ? 'Mendaftar...' : 'Daftar / Join Rombel'}
                       </Button>
                     </div>
-                  </Show>
+                  </Match>
                 </Switch>
               </div>
             )}
-          </Show>
+          </Match>
         </Switch>
       </div>
     </div>

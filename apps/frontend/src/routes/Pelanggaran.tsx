@@ -339,7 +339,8 @@ export default function Pelanggaran() {
             <div class="flex flex-col gap-1">
               <SearchableSelect
                 label="Pilih Mahasiswa"
-                placeholder="-- Cari & Pilih Mahasiswa Aktif --"
+                required
+                placeholder="Cari NIM atau Nama Mahasiswa Aktif..."
                 value={mahasiswaId()}
                 options={mahasiswaList().map((m) => ({
                   label: `${m.nama} (${m.nim})`,
