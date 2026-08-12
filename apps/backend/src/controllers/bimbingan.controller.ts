@@ -301,7 +301,7 @@ export class BimbinganController {
       const bimb = await BimbinganService.getOrCreateBimbingan(mhsId);
       const newSesi = await BimbinganService.addSesiBimbingan(bimb.id, {
         pertemuanKe: body.pertemuanKe,
-        tanggalBimbingan: new Date(body.tanggalBimbingan),
+        tanggalBimbingan: body.tanggalBimbingan,
         permasalahan: body.permasalahan,
         solusi: body.solusi,
         statusBkd: body.statusBkd ?? true,
@@ -333,7 +333,7 @@ export class BimbinganController {
     try {
       const data: Record<string, unknown> = {};
       if (body.pertemuanKe !== undefined) data.pertemuanKe = body.pertemuanKe;
-      if (body.tanggalBimbingan !== undefined) data.tanggalBimbingan = new Date(body.tanggalBimbingan);
+      if (body.tanggalBimbingan !== undefined) data.tanggalBimbingan = body.tanggalBimbingan;
       if (body.permasalahan !== undefined) data.permasalahan = body.permasalahan;
       if (body.solusi !== undefined) data.solusi = body.solusi;
       if (body.statusBkd !== undefined) data.statusBkd = body.statusBkd;

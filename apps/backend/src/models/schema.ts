@@ -103,7 +103,7 @@ export const dosen = pgTable('dosen', {
   nidn: varchar('nidn', { length: 50 }).unique(),
   nik: varchar('nik', { length: 16 }),
   jenisKelamin: jenisKelaminEnum('jenis_kelamin'),
-  tanggalLahir: date('tanggal_lahir'),
+  tanggalLahir: date('tanggal_lahir', { mode: 'string' }),
   tempatLahir: varchar('tempat_lahir', { length: 100 }),
   idAgama: integer('id_agama'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -128,7 +128,7 @@ export const mahasiswa = pgTable('mahasiswa', {
   namaIbuKandung: varchar('nama_ibu_kandung', { length: 255 }),
   nik: varchar('nik', { length: 16 }).unique(),
   jenisKelamin: jenisKelaminEnum('jenis_kelamin').notNull(),
-  tanggalLahir: date('tanggal_lahir'),
+  tanggalLahir: date('tanggal_lahir', { mode: 'string' }),
   tempatLahir: varchar('tempat_lahir', { length: 100 }),
   idAgama: integer('id_agama'),
   jalan: text('jalan'),
@@ -195,8 +195,8 @@ export const kelasKuliah = pgTable('kelas_kuliah', {
     .references(() => periodeAkademik.id, { onDelete: 'restrict' }),
   namaKelas: varchar('nama_kelas', { length: 50 }).notNull(),
   isLocked: boolean('is_locked').default(false).notNull(),
-  tanggalMulaiEfektif: date('tanggal_mulai_efektif'),
-  tanggalAkhirEfektif: date('tanggal_akhir_efektif'),
+  tanggalMulaiEfektif: date('tanggal_mulai_efektif', { mode: 'string' }),
+  tanggalAkhirEfektif: date('tanggal_akhir_efektif', { mode: 'string' }),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
   lastSyncAt: timestamp('last_sync_at'),
@@ -433,7 +433,7 @@ export const bap = pgTable('bap', {
   kelasKuliahId: integer('kelas_kuliah_id')
     .notNull()
     .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
-  tanggal: date('tanggal').notNull(),
+  tanggal: date('tanggal', { mode: 'string' }).notNull(),
   pertemuanKe: integer('pertemuan_ke').notNull(),
   tema: varchar('tema', { length: 255 }),
   materi: text('materi').notNull(),
@@ -484,7 +484,7 @@ export const kompensasiBayar = pgTable('kompensasi_bayar', {
     .notNull()
     .references(() => mahasiswa.id, { onDelete: 'cascade' }),
   jumlahMenit: integer('jumlah_menit').notNull(),
-  tanggal: date('tanggal').notNull(),
+  tanggal: date('tanggal', { mode: 'string' }).notNull(),
   keterangan: text('keterangan').notNull(),
   petugasId: integer('petugas_id').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -532,7 +532,7 @@ export const sesiApel = pgTable('sesi_apel', {
   kelompokApelId: integer('kelompok_apel_id')
     .notNull()
     .references(() => kelompokApel.id, { onDelete: 'cascade' }),
-  tanggal: date('tanggal').notNull(),
+  tanggal: date('tanggal', { mode: 'string' }).notNull(),
   shift: varchar('shift', { length: 10 }).notNull(),
   dosenId: integer('dosen_id')
     .notNull()
@@ -705,7 +705,7 @@ export const bimbingan = pgTable('bimbingan', {
   isApproved: boolean('is_approved').default(false).notNull(),
   permasalahan: text('permasalahan'),
   solusi: text('solusi'),
-  tanggalBimbingan: date('tanggal_bimbingan'),
+  tanggalBimbingan: date('tanggal_bimbingan', { mode: 'string' }),
   statusBkd: boolean('status_bkd').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
@@ -732,7 +732,7 @@ export const sesiBimbingan = pgTable('sesi_bimbingan', {
     .references(() => bimbingan.id, { onDelete: 'cascade' }),
   kategoriId: integer('kategori_id').references(() => kategoriBimbingan.id, { onDelete: 'set null' }),
   pertemuanKe: integer('pertemuan_ke').notNull(),
-  tanggalBimbingan: date('tanggal_bimbingan').notNull(),
+  tanggalBimbingan: date('tanggal_bimbingan', { mode: 'string' }).notNull(),
   permasalahan: text('permasalahan').notNull(),
   solusi: text('solusi').notNull(),
   statusBkd: boolean('status_bkd').default(true).notNull(),
@@ -748,7 +748,7 @@ export const pelanggaran = pgTable('pelanggaran', {
   mahasiswaId: integer('mahasiswa_id')
     .notNull()
     .references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  tanggal: date('tanggal').notNull(),
+  tanggal: date('tanggal', { mode: 'string' }).notNull(),
   jenisPelanggaran: varchar('jenis_pelanggaran', { length: 255 }).notNull(),
   bobotPoin: integer('bobot_poin').notNull(),
   keterangan: text('keterangan').notNull(),
@@ -1520,7 +1520,7 @@ export const pengajuanCuti = pgTable('pengajuan_cuti', {
   semesterBerakhirCuti: varchar('semester_berakhir_cuti', { length: 5 }),
   catatan: text('catatan'),
   noSuratIzin: varchar('no_surat_izin_cuti', { length: 100 }),
-  tanggalSuratIzin: date('tgl_surat_izin_cuti'),
+  tanggalSuratIzin: date('tgl_surat_izin_cuti', { mode: 'string' }),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   isSynced: boolean('is_synced').default(false).notNull(),
   lastSyncAt: timestamp('last_sync_at'),
@@ -1551,10 +1551,10 @@ export const mahasiswaKeluar = pgTable('mahasiswa_keluar', {
     .notNull()
     .references(() => periodeAkademik.id),
   statusBaru: varchar('status_baru', { length: 50 }).notNull(), // keluar, drop_out, pindah, wafat, non_aktif
-  tanggalKeluar: date('tanggal_keluar').notNull(),
+  tanggalKeluar: date('tanggal_keluar', { mode: 'string' }).notNull(),
   alasanKeluar: text('alasan_keluar'),
   noSk: varchar('no_sk_yudisium', { length: 100 }),
-  tanggalSk: date('tanggal_sk_yudisium'),
+  tanggalSk: date('tanggal_sk_yudisium', { mode: 'string' }),
   ipk: numeric('ipk', { precision: 3, scale: 2 }),
   nomorIjazah: varchar('nomor_ijazah', { length: 100 }),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
@@ -1587,11 +1587,11 @@ export const admissionSessions = pgTable('admission_sessions', {
   kode: varchar('kode', { length: 20 }).notNull().unique(),
   nama: varchar('nama', { length: 255 }).notNull(),
   deskripsi: text('deskripsi'),
-  tanggalMulai: date('tanggal_mulai').notNull(),
-  tanggalTutup: date('tanggal_tutup').notNull(),
-  tanggalVerif: date('tanggal_verif'),
-  tanggalUjian: date('tanggal_ujian'),
-  tanggalPengumuman: date('tanggal_pengumuman'),
+  tanggalMulai: date('tanggal_mulai', { mode: 'string' }).notNull(),
+  tanggalTutup: date('tanggal_tutup', { mode: 'string' }).notNull(),
+  tanggalVerif: date('tanggal_verif', { mode: 'string' }),
+  tanggalUjian: date('tanggal_ujian', { mode: 'string' }),
+  tanggalPengumuman: date('tanggal_pengumuman', { mode: 'string' }),
   kuota: integer('kuota'),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -1662,7 +1662,7 @@ export const applications = pgTable('applications', {
   nik: varchar('nik', { length: 16 }),
   namaLengkap: varchar('nama_lengkap', { length: 255 }),
   tempatLahir: varchar('tempat_lahir', { length: 100 }),
-  tanggalLahir: date('tanggal_lahir'),
+  tanggalLahir: date('tanggal_lahir', { mode: 'string' }),
   jenisKelamin: jenisKelaminEnum('jenis_kelamin'),
   idAgama: integer('id_agama'),
   kewarganegaraan: varchar('kewarganegaraan', { length: 5 }).default('ID'),
@@ -1764,7 +1764,7 @@ export const examSchedules = pgTable('exam_schedules', {
     .references(() => admissionSessions.id, { onDelete: 'cascade' }),
   reviewerId: integer('reviewer_id').references(() => users.id, { onDelete: 'set null' }),
   tipeUjian: varchar('tipe_ujian', { length: 50 }).notNull(),
-  tanggal: date('tanggal').notNull(),
+  tanggal: date('tanggal', { mode: 'string' }).notNull(),
   waktuMulai: varchar('waktu_mulai', { length: 10 }).notNull(),
   waktuSelesai: varchar('waktu_selesai', { length: 10 }),
   lokasiType: varchar('lokasi_type', { length: 20 }).notNull().default('kampus'),
@@ -2346,7 +2346,7 @@ export const bapPraktikum = pgTable('bap_praktikum', {
   rombelPraktikumId: integer('rombel_praktikum_id')
     .notNull()
     .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
-  tanggal: date('tanggal').notNull(),
+  tanggal: date('tanggal', { mode: 'string' }).notNull(),
   sesiKe: integer('sesi_ke').default(1).notNull(),
   tema: varchar('tema', { length: 255 }),
   materi: text('materi').notNull(),
@@ -2449,7 +2449,7 @@ export const kompensasiManual = pgTable(
     mahasiswaId: integer('mahasiswa_id')
       .notNull()
       .references(() => mahasiswa.id, { onDelete: 'cascade' }),
-    tanggal: date('tanggal').notNull(),
+    tanggal: date('tanggal', { mode: 'string' }).notNull(),
     jenisKompen: varchar('jenis_kompen', { length: 20 }).notNull(),
     durasiMenit: integer('durasi_menit').notNull().default(0),
     keterangan: text('keterangan'),

@@ -55,7 +55,10 @@ export default function KompensasiManual() {
   const [showFormModal, setShowFormModal] = createSignal(false);
   const [editingId, setEditingId] = createSignal<number | null>(null);
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | string | null>(null);
-  const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
+  const now = new Date();
+  const [tanggal, setTanggal] = createSignal(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+  );
   const [jenisKompen, setJenisKompen] = createSignal<string | number>('');
   const [durasiMenit, setDurasiMenit] = createSignal(0);
   const [keterangan, setKeterangan] = createSignal('');
@@ -142,7 +145,10 @@ export default function KompensasiManual() {
   const resetForm = () => {
     setEditingId(null);
     setSelectedMhsId(null);
-    setTanggal(new Date().toISOString().split('T')[0]);
+    const now = new Date();
+    setTanggal(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    );
     setJenisKompen('');
     setDurasiMenit(0);
     setKeterangan('');
