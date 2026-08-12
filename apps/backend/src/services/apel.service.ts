@@ -375,7 +375,7 @@ export class ApelService {
 
   static async getPresensiUnknown(page = 1, limit = 20, prodiId?: number, kelompokId?: number, tanggal?: string) {
     const offset = (page - 1) * limit;
-    const conditions = [eq(presensiApel.status, 'unknown'), isNull(presensiApel.verifiedStatus)];
+    const conditions = [eq(presensiApel.status, 'unknown')];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
     if (kelompokId) conditions.push(eq(sesiApel.kelompokApelId, kelompokId));
     if (tanggal) conditions.push(eq(sesiApel.tanggal, tanggal));
@@ -403,6 +403,10 @@ export class ApelService {
         kelompokNama: kelompokApel.namaKelompok,
         dosenNama: dosen.nama,
         createdAt: presensiApel.createdAt,
+        menitTerlambat: presensiApel.menitTerlambat,
+        verifiedStatus: presensiApel.verifiedStatus,
+        verifiedAt: presensiApel.verifiedAt,
+        verifiedBy: presensiApel.verifiedBy,
       })
       .from(presensiApel)
       .innerJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))
@@ -425,7 +429,13 @@ export class ApelService {
     const [found] = await db.select().from(presensiApel).where(eq(presensiApel.id, id));
     if (!found) throw new Error('Presensi apel tidak ditemukan');
     if (found.status !== 'unknown') throw new Error('Status presensi bukan unknown');
-    if (found.verifiedStatus) throw new Error('Presensi sudah diverifikasi');
+
+    let verificationNote = data.verificationNote;
+    if (found.verifiedStatus) {
+      const prev = found.verificationNote ? `, catatan sebelumnya: "${found.verificationNote}"` : '';
+      verificationNote =
+        `[Koreksi] Status sebelumnya: ${found.verifiedStatus}${prev} → ${data.verificationNote || ''}`.trim();
+    }
 
     const [updated] = await db
       .update(presensiApel)
@@ -433,7 +443,7 @@ export class ApelService {
         verifiedStatus: data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa',
         verifiedBy: data.verifiedBy,
         verifiedAt: new Date(),
-        verificationNote: data.verificationNote,
+        verificationNote,
         menitTerlambat:
           data.menitTerlambat !== undefined && data.menitTerlambat !== null
             ? data.menitTerlambat

@@ -139,8 +139,15 @@ export default function KompensasiManual() {
     },
   );
 
-  const isDurasiHidden = () => JENIS_FULL_DAY.includes(jenisKompen() as JenisKompen);
-  const isDurasiRequired = () => !isDurasiHidden() && jenisKompen() !== '';
+  const isDurasiRequired = () => jenisKompen() !== '';
+  const isFullDay = () => JENIS_FULL_DAY.includes(jenisKompen() as JenisKompen);
+
+  const handleJenisChange = (value: string) => {
+    setJenisKompen(value);
+    if (JENIS_FULL_DAY.includes(value as JenisKompen)) {
+      setDurasiMenit(480);
+    }
+  };
 
   const resetForm = () => {
     setEditingId(null);
@@ -225,7 +232,7 @@ export default function KompensasiManual() {
         jenisKompen: jenisKompen() as JenisKompen,
         keterangan: keterangan() || undefined,
       };
-      if (!isDurasiHidden()) {
+      if (durasiMenit() && durasiMenit() > 0) {
         payload.durasiMenit = durasiMenit();
       }
 
@@ -515,29 +522,27 @@ export default function KompensasiManual() {
                 required
                 selectOptions={[{ value: '', label: '-- Pilih Jenis --' }, ...JENIS_OPTIONS]}
                 value={jenisKompen()}
-                onChange={(e: Event) => setJenisKompen((e.currentTarget as HTMLSelectElement).value)}
+                onChange={(e: Event) => handleJenisChange((e.currentTarget as HTMLSelectElement).value)}
               />
             </div>
 
-            <Show
-              when={!isDurasiHidden()}
-              fallback={
-                <div class="rounded-xl bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 px-4 py-3 text-xs text-brand-700 dark:text-brand-300">
-                  Durasi otomatis 480 menit (satu hari penuh) untuk jenis Sakit/Izin/Alpa.
-                </div>
-              }
-            >
+            <div class="flex flex-col gap-1.5">
               <Input
                 type="number"
                 min={1}
                 max={480}
                 label="Durasi (menit)"
                 required={isDurasiRequired()}
-                placeholder="Contoh: 60"
+                placeholder={isFullDay() ? '480' : 'Contoh: 60'}
                 value={durasiMenit() || ''}
                 onChange={(e: Event) => setDurasiMenit(parseInt((e.currentTarget as HTMLInputElement).value) || 0)}
               />
-            </Show>
+              <Show when={isFullDay()}>
+                <p class="text-xs text-secondary-500 dark:text-secondary-400">
+                  Default 480 menit (satu hari penuh) untuk Sakit/Izin/Alpa — dapat diubah.
+                </p>
+              </Show>
+            </div>
 
             <div class="flex flex-col gap-1.5">
               <label class="text-xs font-semibold uppercase tracking-wider text-secondary-600 dark:text-secondary-400">

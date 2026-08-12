@@ -181,7 +181,7 @@ export default function BapPresensi() {
 
   // Attendance Sheet state (studentId -> { status, durasiMangkir, keterangan })
   const [attendanceSheet, setAttendanceSheet] = createSignal<
-    Record<number, { status: string; durasiMangkir: number; keterangan: string }>
+    Record<number, { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }>
   >({});
 
   // 1. Fetch Classes (server-side search + lazy loading / load more)
@@ -632,7 +632,10 @@ export default function BapPresensi() {
     const listMhs = krsData() || [];
     const saved = savedPresensi() || [];
 
-    const initialSheet: Record<number, { status: string; durasiMangkir: number; keterangan: string }> = {};
+    const initialSheet: Record<
+      number,
+      { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }
+    > = {};
 
     for (const k of listMhs) {
       const existing = saved.find((p) => p.mahasiswaId === k.mahasiswaId);
@@ -641,12 +644,14 @@ export default function BapPresensi() {
           status: existing.status,
           durasiMangkir: existing.durasiMangkir,
           keterangan: existing.keterangan || '',
+          resolvedAt: existing.resolvedAt || null,
         };
       } else {
         initialSheet[k.mahasiswaId] = {
           status: 'hadir',
           durasiMangkir: 0,
           keterangan: '',
+          resolvedAt: null,
         };
       }
     }
@@ -1263,29 +1268,36 @@ export default function BapPresensi() {
                                 <div class="text-xs text-secondary-400 dark:text-secondary-200">{k.mahasiswa?.nim}</div>
                               </td>
                               <td class="py-4 px-4">
-                                <div class="flex items-center gap-2">
-                                  <For each={kelasStatusOptions()}>
-                                    {(st) => (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleStatusChange(k.mahasiswaId, st)}
-                                        class={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                          state().status === st
-                                            ? st === 'hadir'
-                                              ? 'bg-accent-50 text-accent-700 border-accent-200'
-                                              : st === 'alpa'
-                                                ? 'bg-red-50 text-red-700 border-red-200'
-                                                : st === 'unknown'
-                                                  ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300'
-                                                  : 'bg-accent-50 text-accent-700 border-accent-200'
-                                            : 'bg-transparent text-secondary-400 border-secondary-200 hover:bg-secondary-100'
-                                        }`}
-                                        title={statusFullLabel(st)}
-                                      >
-                                        {st === 'unknown' ? '? UNKNOWN' : statusLabel(st)}
-                                      </button>
-                                    )}
-                                  </For>
+                                <div class="flex flex-col gap-2">
+                                  <div class="flex items-center gap-2">
+                                    <For each={kelasStatusOptions()}>
+                                      {(st) => (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleStatusChange(k.mahasiswaId, st)}
+                                          class={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                            state().status === st
+                                              ? st === 'hadir'
+                                                ? 'bg-accent-50 text-accent-700 border-accent-200'
+                                                : st === 'alpa'
+                                                  ? 'bg-red-50 text-red-700 border-red-200'
+                                                  : st === 'unknown'
+                                                    ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300'
+                                                    : 'bg-accent-50 text-accent-700 border-accent-200'
+                                              : 'bg-transparent text-secondary-400 border-secondary-200 hover:bg-secondary-100'
+                                          }`}
+                                          title={statusFullLabel(st)}
+                                        >
+                                          {st === 'unknown' ? '? UNKNOWN' : statusLabel(st)}
+                                        </button>
+                                      )}
+                                    </For>
+                                  </div>
+                                  <Show when={state().resolvedAt}>
+                                    <span class="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                      ✓ Diverifikasi Admin
+                                    </span>
+                                  </Show>
                                 </div>
                               </td>
                               <td class="py-4 px-4">
@@ -1293,7 +1305,11 @@ export default function BapPresensi() {
                                   when={state().status === 'telat'}
                                   fallback={
                                     <span class="text-xs text-secondary-400 italic dark:text-secondary-200">
-                                      {state().status === 'hadir' ? '0' : 'Full Sesi'}
+                                      {state().status === 'hadir'
+                                        ? '0'
+                                        : state().status === 'unknown'
+                                          ? `${state().durasiMangkir} Menit`
+                                          : 'Full Sesi'}
                                     </span>
                                   }
                                 >

@@ -1,12 +1,13 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
-import { mahasiswaController } from '../controllers/mahasiswaController';
+import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -45,17 +46,50 @@ export default function Pelanggaran() {
     },
   );
 
-  // List of all students for the form dropdown (Admin/Dosen)
-  const [students] = createResource(
+  // List of all students for the form dropdown (Admin/Dosen) - searchable, paginated
+  const [searchMhsInput, setSearchMhsInput] = createSignal('');
+  const [mhsPage, setMhsPage] = createSignal(1);
+  const [allMhs, setAllMhs] = createSignal<Mahasiswa[]>([]);
+  const [mhsData] = createResource(
     () => {
-      if (auth.hasRole(['admin', 'dosen'])) return true;
+      if (auth.hasRole(['admin', 'dosen'])) return { search: searchMhsInput(), page: mhsPage() };
       return null;
     },
-    async () => {
-      const res = await mahasiswaController.getAll(undefined, 1, 100);
-      return res.data;
+    async ({ search, page }) => {
+      const res = await mahasiswaController.getAll(search || undefined, page, 50, undefined, {
+        filterStatus: 'aktif',
+      });
+      if (page === 1) {
+        setAllMhs(res.data || []);
+      } else {
+        setAllMhs((prev) => [...prev, ...(res.data || [])]);
+      }
+      return res;
     },
   );
+
+  const mhsOptions = createMemo<SelectOption[]>(() => {
+    const list = allMhs();
+    return [...list]
+      .sort((a, b) => String(a.nim).localeCompare(String(b.nim), 'id', { numeric: true }))
+      .map((m) => ({ value: m.id, label: `${m.nim} — ${m.nama}` }));
+  });
+
+  const mhsHasMore = () => {
+    const meta = mhsData()?.meta;
+    if (!meta) return false;
+    return meta.page < meta.totalPages;
+  };
+
+  const handleMhsSearch = (query: string) => {
+    setAllMhs([]);
+    setMhsPage(1);
+    setSearchMhsInput(query);
+  };
+
+  const handleLoadMore = () => {
+    if (mhsHasMore()) setMhsPage((p) => p + 1);
+  };
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -69,7 +103,7 @@ export default function Pelanggaran() {
 
   const openAddModal = () => {
     setEditPelanggaranId(null);
-    const firstStudent = students()?.[0]?.id || 0;
+    const firstStudent = allMhs()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
     setTanggal(new Date().toISOString().split('T')[0]);
     setJenisPelanggaran('');
@@ -292,22 +326,18 @@ export default function Pelanggaran() {
             </Show>
 
             {/* Select Mahasiswa */}
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-secondary-700">Pilih Mahasiswa</label>
-              <select
-                value={mahasiswaId()}
-                onChange={(e) => setMahasiswaId(parseInt(e.currentTarget.value))}
-                class="border border-secondary-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-              >
-                <For each={students()}>
-                  {(item) => (
-                    <option value={item.id}>
-                      {item.nama} ({item.nim})
-                    </option>
-                  )}
-                </For>
-              </select>
-            </div>
+            <SearchableSelect
+              label="Pilih Mahasiswa"
+              required
+              options={mhsOptions()}
+              value={mahasiswaId()}
+              onChange={setMahasiswaId}
+              placeholder="Cari NIM atau Nama Mahasiswa..."
+              onSearch={handleMhsSearch}
+              isLoading={mhsData.loading}
+              hasMore={mhsHasMore()}
+              onLoadMore={handleLoadMore}
+            />
 
             {/* Tanggal */}
             <Input

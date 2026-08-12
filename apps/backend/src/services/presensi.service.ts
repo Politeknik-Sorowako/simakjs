@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, isNotNull, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   dosen,
@@ -22,10 +22,21 @@ export class PresensiService {
   static async saveBulkPresensi(
     bapId: number,
     presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number; keterangan?: string | null }>,
+    adminUserId?: number,
   ) {
     const [foundBap] = await db.select().from(bap).where(eq(bap.id, bapId));
     if (!foundBap) {
       throw new Error('BAP tidak ditemukan');
+    }
+
+    // Track previously-unknown records so resolved entries remain visible for audit.
+    let previousUnknownIds = new Set<number>();
+    if (adminUserId) {
+      const previousUnknown = await db
+        .select({ mahasiswaId: presensi.mahasiswaId })
+        .from(presensi)
+        .where(and(eq(presensi.bapId, bapId), eq(presensi.status, 'unknown')));
+      previousUnknownIds = new Set(previousUnknown.map((r) => r.mahasiswaId));
     }
 
     const itemsToInsert = presensiList.map((item) => {
@@ -40,12 +51,16 @@ export class PresensiService {
         durMangkir = 0;
       }
 
+      const wasUnknown = adminUserId ? previousUnknownIds.has(item.mahasiswaId) && status !== 'unknown' : false;
+
       return {
         bapId,
         mahasiswaId: item.mahasiswaId,
         status: status as 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown',
         durasiMangkir: durMangkir,
         keterangan: item.keterangan || null,
+        resolvedBy: wasUnknown ? adminUserId : null,
+        resolvedAt: wasUnknown ? new Date() : null,
       };
     });
 
@@ -81,7 +96,7 @@ export class PresensiService {
 
   // --- ADMIN/PRODI RESOLUTION OF UNKNOWN STATUS ---
   static async getUnknownPresensi(page = 1, limit = 20, search?: string, prodiIds?: number[]) {
-    const conditions: SQL<unknown>[] = [eq(presensi.status, 'unknown')];
+    const conditions: SQL<unknown>[] = [or(eq(presensi.status, 'unknown'), isNotNull(presensi.resolvedAt))!];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
@@ -114,6 +129,7 @@ export class PresensiService {
         lampiranEvidens: presensi.lampiranEvidens,
         keteranganAdmin: presensi.keteranganAdmin,
         resolvedAt: presensi.resolvedAt,
+        resolvedBy: presensi.resolvedBy,
         createdAt: presensi.createdAt,
         bapTanggal: bap.tanggal,
         bapPertemuan: bap.pertemuanKe,

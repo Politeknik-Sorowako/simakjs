@@ -72,6 +72,10 @@ export interface UnknownPresensiItem {
   kelompokNama: string;
   dosenNama: string;
   createdAt: string;
+  menitTerlambat?: number | null;
+  verifiedStatus?: string | null;
+  verifiedAt?: string | null;
+  verifiedBy?: number | null;
 }
 
 export interface MonitorResponse {
