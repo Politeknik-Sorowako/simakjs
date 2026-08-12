@@ -177,6 +177,9 @@ export const apelController = {
     kelompokId?: number;
     tanggal?: string;
     search?: string;
+    statusFilter?: 'belum' | 'sudah' | 'all';
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
@@ -185,6 +188,9 @@ export const apelController = {
     if (params?.kelompokId) searchParams.set('kelompokId', String(params.kelompokId));
     if (params?.tanggal) searchParams.set('tanggal', params.tanggal);
     if (params?.search) searchParams.set('search', params.search);
+    if (params?.statusFilter && params.statusFilter !== 'all') searchParams.set('statusFilter', params.statusFilter);
+    if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
+    if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
     const qs = searchParams.toString();
     return fetchApi<PaginatedResponse<UnknownPresensiItem>>(`/apel/verifikasi/unknown${qs ? `?${qs}` : ''}`);
   },

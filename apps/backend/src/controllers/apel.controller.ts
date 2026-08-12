@@ -313,7 +313,20 @@ export class ApelController {
       const kelompokId = query?.kelompokId ? parseInt(query.kelompokId) : undefined;
       const tanggal = query?.tanggal || undefined;
       const search = query?.search || undefined;
-      return await ApelService.getPresensiUnknown(page, limit, prodiId, kelompokId, tanggal, search);
+      const statusFilter = query?.statusFilter || undefined;
+      const sortBy = query?.sortBy || undefined;
+      const sortOrder = query?.sortOrder === 'desc' ? 'desc' : 'asc';
+      return await ApelService.getPresensiUnknown(
+        page,
+        limit,
+        prodiId,
+        kelompokId,
+        tanggal,
+        search,
+        statusFilter,
+        sortBy,
+        sortOrder,
+      );
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

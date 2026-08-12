@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, isNull, not, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import {
   dosen,
   kelompokApel,
@@ -380,15 +380,35 @@ export class ApelService {
     kelompokId?: number,
     tanggal?: string,
     search?: string,
+    statusFilter?: 'belum' | 'sudah' | 'all',
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
   ) {
     const offset = (page - 1) * limit;
     const conditions = [eq(presensiApel.status, 'unknown')];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
     if (kelompokId) conditions.push(eq(sesiApel.kelompokApelId, kelompokId));
     if (tanggal) conditions.push(eq(sesiApel.tanggal, tanggal));
+    if (statusFilter === 'belum') conditions.push(isNull(presensiApel.verifiedStatus));
+    if (statusFilter === 'sudah') conditions.push(isNotNull(presensiApel.verifiedStatus));
     if (search) {
       const escaped = search.replace(/[\\%_]/g, '\\$&');
       conditions.push(or(ilike(mahasiswa.nim, `%${escaped}%`), ilike(mahasiswa.nama, `%${escaped}%`))!);
+    }
+
+    const sortColumns: Record<string, { asc: unknown; desc: unknown }> = {
+      nama: { asc: asc(mahasiswa.nama), desc: desc(mahasiswa.nama) },
+      nim: { asc: asc(mahasiswa.nim), desc: desc(mahasiswa.nim) },
+      tanggal: { asc: asc(sesiApel.tanggal), desc: desc(sesiApel.tanggal) },
+      shift: { asc: asc(sesiApel.shift), desc: desc(sesiApel.shift) },
+      waktu: { asc: asc(presensiApel.createdAt), desc: desc(presensiApel.createdAt) },
+      prodi: { asc: asc(programStudi.nama), desc: desc(programStudi.nama) },
+    };
+
+    let orderByClause = sql`${sesiApel.tanggal} DESC, ${presensiApel.createdAt} DESC`;
+    if (sortBy && sortColumns[sortBy]) {
+      const dir = sortOrder === 'asc' ? sortColumns[sortBy].asc : sortColumns[sortBy].desc;
+      orderByClause = sql`${dir}`;
     }
 
     const [totalResult] = await db
@@ -426,7 +446,7 @@ export class ApelService {
       .leftJoin(kelompokApel, eq(sesiApel.kelompokApelId, kelompokApel.id))
       .leftJoin(dosen, eq(sesiApel.dosenId, dosen.id))
       .where(and(...conditions))
-      .orderBy(sql`${sesiApel.tanggal} DESC, ${sesiApel.createdAt} DESC`)
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset);
 
