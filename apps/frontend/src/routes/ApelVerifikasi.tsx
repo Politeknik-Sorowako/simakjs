@@ -200,6 +200,7 @@ export default function ApelVerifikasi() {
                       const on = e.currentTarget.checked;
                       setIsAnulir(on);
                       if (on) setVerifyStatus('alpa');
+                      else setVerifyDuration(0);
                     }}
                   />
                   <label for="anulir-checkbox" class="text-sm font-medium text-gray-700 dark:text-gray-200">
