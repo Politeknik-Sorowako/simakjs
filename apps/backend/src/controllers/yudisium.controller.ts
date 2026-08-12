@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { mahasiswa } from '../models/schema';
 import { YudisiumService } from '../services/yudisium.service';
 import { db } from '../utils/db';
+import { guardKelasScope } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
@@ -125,8 +126,19 @@ export class YudisiumController {
   // --- GRADE COMPONENTS CONTROLLERS ---
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getKomponen({ params }: AuthContext): Promise<any> {
-    return await YudisiumService.getKomponen(parseInt(params.kelasKuliahId));
+  static async getKomponen({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const kelasKuliahId = parseInt(params.kelasKuliahId);
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+    return await YudisiumService.getKomponen(kelasKuliahId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -135,6 +147,12 @@ export class YudisiumController {
     if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
+    }
+
+    const scopeError = await guardKelasScope(user, body.kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
     }
 
     try {
@@ -155,7 +173,14 @@ export class YudisiumController {
       return { error: 'Akses ditolak.' };
     }
 
-    return await YudisiumService.getNilaiMahasiswa(parseInt(params.kelasKuliahId));
+    const kelasKuliahId = parseInt(params.kelasKuliahId);
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+
+    return await YudisiumService.getNilaiMahasiswa(kelasKuliahId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -164,6 +189,12 @@ export class YudisiumController {
     if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
+    }
+
+    const scopeError = await guardKelasScope(user, body.kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
     }
 
     try {
@@ -183,8 +214,15 @@ export class YudisiumController {
       return { error: 'Akses ditolak.' };
     }
 
+    const kelasKuliahId = parseInt(params.kelasKuliahId);
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+
     try {
-      const result = await YudisiumService.lockKelas(parseInt(params.kelasKuliahId));
+      const result = await YudisiumService.lockKelas(kelasKuliahId);
       return result;
     } catch (e: unknown) {
       set.status = 400;
@@ -200,8 +238,15 @@ export class YudisiumController {
       return { error: 'Akses ditolak. Anda tidak memiliki wewenang untuk membuka kunci nilai kelas.' };
     }
 
+    const kelasKuliahId = parseInt(params.kelasKuliahId);
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+
     try {
-      const result = await YudisiumService.unlockKelas(parseInt(params.kelasKuliahId));
+      const result = await YudisiumService.unlockKelas(kelasKuliahId);
       return result;
     } catch (e: unknown) {
       set.status = 400;

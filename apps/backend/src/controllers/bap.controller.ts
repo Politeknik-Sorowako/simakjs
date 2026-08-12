@@ -1,4 +1,5 @@
 import { BapService } from '../services/bap.service';
+import { getBapKelasId, guardKelasScope } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -24,7 +25,13 @@ export class BapController {
       set.status = 401;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    return await BapService.getByKelas(parseInt(String(params.kelasKuliahId)));
+    const kelasKuliahId = parseInt(String(params.kelasKuliahId));
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+    return await BapService.getByKelas(kelasKuliahId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -34,7 +41,13 @@ export class BapController {
       set.status = 401;
       return { error: 'Akses ditolak. Silakan login.' };
     }
-    return await BapService.getRpsTopikByKelas(parseInt(String(params.kelasKuliahId)));
+    const kelasKuliahId = parseInt(String(params.kelasKuliahId));
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+    return await BapService.getRpsTopikByKelas(kelasKuliahId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -43,6 +56,12 @@ export class BapController {
     if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
+    }
+
+    const scopeError = await guardKelasScope(user, Number(body.kelasKuliahId));
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
     }
 
     try {
@@ -94,6 +113,13 @@ export class BapController {
     }
 
     try {
+      const bapKelasId = await getBapKelasId(parseInt(params.id));
+      const scopeError = bapKelasId ? await guardKelasScope(user, bapKelasId) : null;
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
+      }
+
       let dosenId = body.dosenId;
       if (hasRole(user, ['dosen', 'instruktur'])) {
         const dosenProfile = await BapService.getDosenByEmail(user.email);
@@ -128,6 +154,12 @@ export class BapController {
     }
 
     try {
+      const bapKelasId = await getBapKelasId(parseInt(params.id));
+      const scopeError = bapKelasId ? await guardKelasScope(user, bapKelasId) : null;
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
+      }
       const deleted = await BapService.delete(parseInt(params.id));
       if (!deleted) {
         set.status = 404;
@@ -150,6 +182,12 @@ export class BapController {
     }
 
     try {
+      const bapKelasId = await getBapKelasId(parseInt(params.id));
+      const scopeError = bapKelasId ? await guardKelasScope(user, bapKelasId) : null;
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
+      }
       const newPertemuanKe = Number(body.pertemuanKe);
       const newTanggal = body.tanggal as string | undefined;
       const newBap = await BapService.duplicateBap(parseInt(params.id), newPertemuanKe, newTanggal);
@@ -171,6 +209,12 @@ export class BapController {
     }
 
     try {
+      const bapKelasId = await getBapKelasId(Number(body.bapId));
+      const scopeError = bapKelasId ? await guardKelasScope(user, bapKelasId) : null;
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
+      }
       let dosenId = body.dosenId;
       if (hasRole(user, ['dosen', 'instruktur'])) {
         const dosenProfile = await BapService.getDosenByEmail(user.email);

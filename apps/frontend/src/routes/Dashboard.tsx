@@ -258,7 +258,7 @@ function DosenWidgets() {
     () => ({ dosenId: dosenProfile()?.id, periodeId: periodeAktif()?.id }),
     async (key) => {
       if (!key.dosenId) return { data: [] };
-      return await dosenPengajarController.getAll(undefined, key.dosenId, 1, 50, key.periodeId || undefined, true);
+      return await dosenPengajarController.getAll(undefined, key.dosenId, 1, 50, key.periodeId || undefined, false);
     },
   );
 

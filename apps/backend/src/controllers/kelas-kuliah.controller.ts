@@ -1,7 +1,5 @@
-import { eq } from 'drizzle-orm';
-import { dosen } from '../models/schema';
 import { KelasKuliahService } from '../services/kelas-kuliah.service';
-import { db } from '../utils/db';
+import { getDosenAllowedKelasIds, getDosenIdByEmail } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
@@ -18,11 +16,8 @@ export class KelasKuliahController {
 
     if (!dosenId && getCurrentUser) {
       const user = await getCurrentUser();
-      if (user && hasRole(user, ['dosen'])) {
-        const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email)).limit(1);
-        if (dsn) {
-          dosenId = dsn.id;
-        }
+      if (user && hasRole(user, ['dosen', 'instruktur'])) {
+        dosenId = (await getDosenIdByEmail(user.email)) ?? undefined;
       }
     }
 
@@ -30,12 +25,49 @@ export class KelasKuliahController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getByMk({ query, set }: AuthContext): Promise<any> {
+  static async myClasses({ query, set, getCurrentUser }: AuthContext<any, KelasKuliahQuery>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Tidak terautentikasi' };
+    }
+    if (!hasRole(user, ['dosen', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Dosen/Instruktur.' };
+    }
+
+    const page = query?.page ? parseInt(String(query.page)) : 1;
+    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
+    const search = query?.search || '';
+    const periodeId = query?.periodeId || undefined;
+
+    const dosenId = await getDosenIdByEmail(user.email);
+    if (!dosenId) {
+      set.status = 404;
+      return { error: 'Profil dosen tidak ditemukan. Hubungi admin untuk menautkan akun dengan data dosen.' };
+    }
+
+    return await KelasKuliahService.getAll(page, limit, search, periodeId, dosenId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getByMk({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const mkId = query?.mataKuliahId ? parseInt(query.mataKuliahId) : undefined;
     const periodeId = query?.periodeId;
     if (!mkId || !periodeId) {
       set.status = 400;
       return { error: 'mataKuliahId dan periodeId harus dikirim' };
+    }
+    const user = await getCurrentUser();
+    if (user && hasRole(user, ['dosen', 'instruktur'])) {
+      const dosenId = await getDosenIdByEmail(user.email);
+      if (!dosenId) {
+        set.status = 404;
+        return { error: 'Profil dosen tidak ditemukan. Hubungi admin untuk menautkan akun dengan data dosen.' };
+      }
+      const allowed = await getDosenAllowedKelasIds(dosenId);
+      const kelasList = await KelasKuliahService.getByMk(mkId, periodeId);
+      return kelasList.filter((k) => allowed.includes(k.id));
     }
     return await KelasKuliahService.getByMk(mkId, periodeId);
   }
