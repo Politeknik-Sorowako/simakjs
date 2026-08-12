@@ -60,6 +60,7 @@ export const getMahasiswaSchema = {
     filterNama: t.Optional(t.String()),
     filterEmail: t.Optional(t.String()),
     filterStatus: t.Optional(t.String()),
+    allStudents: t.Optional(t.Union([t.Boolean(), t.String()])),
   }),
   response: {
     200: t.Object({
@@ -172,6 +173,11 @@ export const getMahasiswaByIdSchema = {
   params: t.Object({
     id: t.Numeric(),
   }),
+  query: t.Optional(
+    t.Object({
+      allStudents: t.Optional(t.Union([t.Boolean(), t.String()])),
+    }),
+  ),
   response: {
     200: t.Object({
       id: t.Integer({ default: 1 }),

@@ -1,9 +1,9 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
@@ -12,6 +12,7 @@ import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaControll
 export default function Pelanggaran() {
   const auth = useAuth();
   const user = () => auth.user();
+  const isStaff = () => auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur']);
 
   // Student Profile (if logged in as student)
   const [mhsProfile] = createResource(
@@ -35,10 +36,10 @@ export default function Pelanggaran() {
     },
   );
 
-  // Load all violations (for Admin/Dosen)
+  // Load all violations (for Staff: Admin/Dosen/Prodi/Instruktur)
   const [allViolations, { refetch: refetchAllViolations }] = createResource(
     () => {
-      if (auth.hasRole(['admin', 'dosen'])) return true;
+      if (isStaff()) return true;
       return null;
     },
     async () => {
@@ -46,49 +47,57 @@ export default function Pelanggaran() {
     },
   );
 
-  // List of all students for the form dropdown (Admin/Dosen) - searchable, paginated
-  const [searchMhsInput, setSearchMhsInput] = createSignal('');
-  const [mhsPage, setMhsPage] = createSignal(1);
-  const [allMhs, setAllMhs] = createSignal<Mahasiswa[]>([]);
-  const [mhsData] = createResource(
-    () => {
-      if (auth.hasRole(['admin', 'dosen'])) return { search: searchMhsInput(), page: mhsPage() };
-      return null;
-    },
-    async ({ search, page }) => {
-      const res = await mahasiswaController.getAll(search || undefined, page, 50, undefined, {
-        filterStatus: 'aktif',
-      });
-      if (page === 1) {
-        setAllMhs(res.data || []);
-      } else {
-        setAllMhs((prev) => [...prev, ...(res.data || [])]);
-      }
-      return res;
-    },
-  );
+  // Server-side search + lazy-load list of active students for the form dropdown
+  const MAHASISWA_PAGE_SIZE = 50;
+  const [mahasiswaList, setMahasiswaList] = createSignal<Mahasiswa[]>([]);
+  const [mahasiswaSearch, setMahasiswaSearch] = createSignal('');
+  const [mahasiswaPage, setMahasiswaPage] = createSignal(1);
+  const [mahasiswaHasMore, setMahasiswaHasMore] = createSignal(false);
+  const [mahasiswaLoading, setMahasiswaLoading] = createSignal(false);
 
-  const mhsOptions = createMemo<SelectOption[]>(() => {
-    const list = allMhs();
-    return [...list]
-      .sort((a, b) => String(a.nim).localeCompare(String(b.nim), 'id', { numeric: true }))
-      .map((m) => ({ value: m.id, label: `${m.nim} — ${m.nama}` }));
+  const fetchMahasiswa = async (page: number, search: string, append: boolean) => {
+    if (!isStaff()) return;
+    setMahasiswaLoading(true);
+    try {
+      const res = await mahasiswaController.getAll(search || undefined, page, MAHASISWA_PAGE_SIZE, undefined, {
+        filterStatus: 'aktif',
+        allStudents: true,
+      });
+      setMahasiswaList((prev) => (append ? [...prev, ...res.data] : res.data));
+      setMahasiswaPage(page + 1);
+      setMahasiswaHasMore(page < (res.meta?.totalPages || 1));
+    } catch {
+      // silently ignore search errors
+    } finally {
+      setMahasiswaLoading(false);
+    }
+  };
+
+  onMount(() => {
+    fetchMahasiswa(1, '', false);
   });
 
-  const mhsHasMore = () => {
-    const meta = mhsData()?.meta;
-    if (!meta) return false;
-    return meta.page < meta.totalPages;
+  const handleMahasiswaSearch = (q: string) => {
+    setMahasiswaSearch(q);
+    fetchMahasiswa(1, q, false);
   };
 
-  const handleMhsSearch = (query: string) => {
-    setAllMhs([]);
-    setMhsPage(1);
-    setSearchMhsInput(query);
+  const handleMahasiswaLoadMore = () => {
+    if (mahasiswaHasMore() && !mahasiswaLoading()) {
+      fetchMahasiswa(mahasiswaPage(), mahasiswaSearch(), true);
+    }
   };
 
-  const handleLoadMore = () => {
-    if (mhsHasMore()) setMhsPage((p) => p + 1);
+  const ensureStudentLoaded = async (id: number) => {
+    if (mahasiswaList().some((m) => m.id === id)) return;
+    try {
+      const m = await mahasiswaController.getById(id, true);
+      if (m && !mahasiswaList().some((x) => x.id === m.id)) {
+        setMahasiswaList((prev) => [m, ...prev]);
+      }
+    } catch {
+      // ignore
+    }
   };
 
   // Form State
@@ -103,7 +112,7 @@ export default function Pelanggaran() {
 
   const openAddModal = () => {
     setEditPelanggaranId(null);
-    const firstStudent = allMhs()?.[0]?.id || 0;
+    const firstStudent = mahasiswaList()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
     setTanggal(new Date().toISOString().split('T')[0]);
     setJenisPelanggaran('');
@@ -116,6 +125,7 @@ export default function Pelanggaran() {
   const openEditModal = (item: IPelanggaran) => {
     setEditPelanggaranId(item.id);
     setMahasiswaId(item.mahasiswaId);
+    ensureStudentLoaded(item.mahasiswaId);
     setTanggal(new Date(item.tanggal).toISOString().split('T')[0]);
     setJenisPelanggaran(item.jenisPelanggaran);
     setBobotPoin(item.bobotPoin);
@@ -164,7 +174,7 @@ export default function Pelanggaran() {
             </h1>
             <p class="text-sm text-secondary-500">Pencatatan pelanggaran indisipliner dan rekap poin kedisiplinan</p>
           </div>
-          <Show when={auth.hasRole(['admin', 'dosen'])}>
+          <Show when={isStaff()}>
             <button
               onClick={openAddModal}
               class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-sm transition-all active:scale-95 shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
@@ -248,8 +258,8 @@ export default function Pelanggaran() {
           </div>
         </Show>
 
-        {/* Admin & Dosen View */}
-        <Show when={auth.hasRole(['admin', 'dosen'])}>
+        {/* Staff View (Admin/Dosen/Prodi/Instruktur) */}
+        <Show when={isStaff()}>
           <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
             <Show
@@ -326,18 +336,23 @@ export default function Pelanggaran() {
             </Show>
 
             {/* Select Mahasiswa */}
-            <SearchableSelect
-              label="Pilih Mahasiswa"
-              required
-              options={mhsOptions()}
-              value={mahasiswaId()}
-              onChange={setMahasiswaId}
-              placeholder="Cari NIM atau Nama Mahasiswa..."
-              onSearch={handleMhsSearch}
-              isLoading={mhsData.loading}
-              hasMore={mhsHasMore()}
-              onLoadMore={handleLoadMore}
-            />
+            <div class="flex flex-col gap-1">
+              <SearchableSelect
+                label="Pilih Mahasiswa"
+                required
+                placeholder="Cari NIM atau Nama Mahasiswa Aktif..."
+                value={mahasiswaId()}
+                options={mahasiswaList().map((m) => ({
+                  label: `${m.nama} (${m.nim})`,
+                  value: m.id,
+                }))}
+                onChange={(val) => setMahasiswaId(Number(val))}
+                onSearch={handleMahasiswaSearch}
+                hasMore={mahasiswaHasMore()}
+                onLoadMore={handleMahasiswaLoadMore}
+                isLoading={mahasiswaLoading()}
+              />
+            </div>
 
             {/* Tanggal */}
             <Input
