@@ -36,7 +36,12 @@ export const systemRoutes = new Elysia({ prefix: '/system' })
             groups: t.Array(
               t.Object({
                 heading: t.String(),
-                items: t.Array(t.String()),
+                items: t.Array(
+                  t.Object({
+                    text: t.String(),
+                    children: t.Array(t.String()),
+                  }),
+                ),
               }),
             ),
           }),

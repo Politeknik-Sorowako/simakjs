@@ -29,9 +29,14 @@ export interface SystemParameter {
   updatedBy?: number | null;
 }
 
+export interface ChangelogItem {
+  text: string;
+  children: string[];
+}
+
 export interface ChangelogGroup {
   heading: string;
-  items: string[];
+  items: ChangelogItem[];
 }
 
 export interface ChangelogSection {

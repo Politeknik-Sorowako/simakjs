@@ -3,6 +3,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Card } from '../components/ui/Card';
 import {
+  type ChangelogItem,
   type ChangelogSection,
   type HealthStatus,
   systemController,
@@ -16,6 +17,38 @@ function HealthRow(props: { label: string; value: string }) {
       <span class="text-sm text-secondary-600 dark:text-secondary-400">{props.label}</span>
       <Badge variant={ok() ? 'success' : 'danger'}>{props.value}</Badge>
     </div>
+  );
+}
+
+function renderInline(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(
+      /`([^`]+)`/g,
+      '<code class="px-1 py-0.5 rounded bg-secondary-100 dark:bg-secondary-800 text-brand-700 dark:text-brand-300 text-[11px]">$1</code>',
+    )
+    .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-secondary-800 dark:text-secondary-100">$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function ChangelogItemView(props: { item: ChangelogItem }) {
+  return (
+    <>
+      <span innerHTML={renderInline(props.item.text)} />
+      <Show when={(props.item.children || []).length > 0}>
+        <ul class="list-disc pl-5 mt-0.5">
+          <For each={props.item.children}>
+            {(child) => (
+              <li>
+                <span innerHTML={renderInline(child)} />
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
+    </>
   );
 }
 
@@ -40,7 +73,13 @@ function ChangelogSectionView(props: { section: ChangelogSection }) {
                   {group.heading}
                 </span>
                 <ul class="mt-1 list-disc pl-5 text-xs text-secondary-600 dark:text-secondary-400 space-y-0.5">
-                  <For each={group.items}>{(item) => <li>{item}</li>}</For>
+                  <For each={group.items}>
+                    {(item) => (
+                      <li>
+                        <ChangelogItemView item={item} />
+                      </li>
+                    )}
+                  </For>
                 </ul>
               </div>
             )}
@@ -110,7 +149,11 @@ export default function KonfigurasiAbout() {
             when={!changelog.loading && (changelog() || []).length > 0}
             fallback={
               <p class="text-sm text-secondary-400">
-                {changelog.loading ? 'Memuat changelog...' : 'Belum ada data changelog.'}
+                {changelog.loading
+                  ? 'Memuat changelog...'
+                  : changelog.error
+                    ? 'Gagal memuat changelog.'
+                    : 'Belum ada data changelog.'}
               </p>
             }
           >

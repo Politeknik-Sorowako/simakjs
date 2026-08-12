@@ -1,9 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+export interface ChangelogItem {
+  text: string;
+  children: string[];
+}
+
 export interface ChangelogGroup {
   heading: string;
-  items: string[];
+  items: ChangelogItem[];
 }
 
 export interface ChangelogSection {
@@ -15,6 +20,9 @@ export interface ChangelogSection {
 const SECTION_RE = /^##\s+\[([^\]]+)\](?:\s*-\s*(.*))?$/;
 const GROUP_RE = /^###\s+(.+)$/;
 const ITEM_RE = /^[-*]\s+(.+)$/;
+const SUB_ITEM_RE = /^\s+[-*]\s+(.+)$/;
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
 function findChangelogPath(): string | null {
   const candidates = [
@@ -28,18 +36,34 @@ function findChangelogPath(): string | null {
   return null;
 }
 
+let cachedSections: ChangelogSection[] | null = null;
+let cachedAt = 0;
+
 export class ChangelogService {
   static getSections(): ChangelogSection[] {
-    const path = findChangelogPath();
-    if (!path) return [];
-
-    let raw: string;
-    try {
-      raw = readFileSync(path, 'utf8');
-    } catch {
-      return [];
+    const now = Date.now();
+    if (cachedSections && now - cachedAt < CACHE_TTL_MS) {
+      return cachedSections;
     }
 
+    const path = findChangelogPath();
+    let sections: ChangelogSection[] = [];
+    if (path) {
+      let raw: string;
+      try {
+        raw = readFileSync(path, 'utf8');
+      } catch {
+        raw = '';
+      }
+      sections = ChangelogService.parse(raw);
+    }
+
+    cachedSections = sections;
+    cachedAt = now;
+    return sections;
+  }
+
+  static parse(raw: string): ChangelogSection[] {
     const lines = raw.split(/\r?\n/);
     const sections: ChangelogSection[] = [];
     let current: ChangelogSection | null = null;
@@ -71,7 +95,14 @@ export class ChangelogService {
           currentGroup = { heading: 'Umum', items: [] };
           current.groups.push(currentGroup);
         }
-        currentGroup.items.push(itemMatch[1].trim());
+        currentGroup.items.push({ text: itemMatch[1].trim(), children: [] });
+        continue;
+      }
+
+      const subItemMatch = line.match(SUB_ITEM_RE);
+      if (subItemMatch && currentGroup && currentGroup.items.length > 0) {
+        const lastItem = currentGroup.items[currentGroup.items.length - 1];
+        lastItem.children.push(subItemMatch[1].trim());
       }
     }
     if (current) sections.push(current);
