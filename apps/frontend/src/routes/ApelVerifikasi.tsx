@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -14,7 +14,14 @@ export default function ApelVerifikasi() {
 
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [filterProdi, setFilterProdi] = createSignal<number | undefined>(undefined);
+
+  createEffect(() => {
+    const q = search();
+    const timer = setTimeout(() => setDebouncedSearch(q), 400);
+    return () => clearTimeout(timer);
+  });
 
   const [verifyModal, setVerifyModal] = createSignal<{ id: number; nama: string; menit: number | null } | null>(null);
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
@@ -23,12 +30,13 @@ export default function ApelVerifikasi() {
   const [isAnulir, setIsAnulir] = createSignal(false);
 
   const [data, { refetch }] = createResource(
-    () => ({ page: page(), prodiId: filterProdi() || ws.selectedProdiId() }),
+    () => ({ page: page(), prodiId: filterProdi() || ws.selectedProdiId(), search: debouncedSearch() }),
     async (params) => {
       return apelController.getPresensiUnknown({
         page: params.page,
         limit: 20,
         prodiId: params.prodiId ?? undefined,
+        search: params.search || undefined,
       });
     },
   );
@@ -93,7 +101,10 @@ export default function ApelVerifikasi() {
               placeholder="Cari NIM/Nama..."
               class="border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
               value={search()}
-              onInput={(e) => setSearch(e.target.value)}
+              onInput={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
 

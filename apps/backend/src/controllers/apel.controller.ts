@@ -312,7 +312,8 @@ export class ApelController {
       const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
       const kelompokId = query?.kelompokId ? parseInt(query.kelompokId) : undefined;
       const tanggal = query?.tanggal || undefined;
-      return await ApelService.getPresensiUnknown(page, limit, prodiId, kelompokId, tanggal);
+      const search = query?.search || undefined;
+      return await ApelService.getPresensiUnknown(page, limit, prodiId, kelompokId, tanggal, search);
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

@@ -176,6 +176,7 @@ export const apelController = {
     prodiId?: number;
     kelompokId?: number;
     tanggal?: string;
+    search?: string;
   }) => {
     const searchParams = new URLSearchParams();
     if (params?.page) searchParams.set('page', String(params.page));
@@ -183,6 +184,7 @@ export const apelController = {
     if (params?.prodiId) searchParams.set('prodiId', String(params.prodiId));
     if (params?.kelompokId) searchParams.set('kelompokId', String(params.kelompokId));
     if (params?.tanggal) searchParams.set('tanggal', params.tanggal);
+    if (params?.search) searchParams.set('search', params.search);
     const qs = searchParams.toString();
     return fetchApi<PaginatedResponse<UnknownPresensiItem>>(`/apel/verifikasi/unknown${qs ? `?${qs}` : ''}`);
   },
