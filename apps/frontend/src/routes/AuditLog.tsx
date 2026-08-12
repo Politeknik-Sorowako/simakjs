@@ -1,6 +1,6 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
-import { AuditLog, AuditLogFilters, auditController } from '../controllers/auditController';
+import { AuditLog as AuditLogEntry, AuditLogFilters, auditController } from '../controllers/auditController';
 import { fmtWaktu } from '../utils/format';
 
 const MODULES = [
@@ -40,7 +40,7 @@ export default function AuditLog() {
   const [actionType, setActionType] = createSignal<string>('');
   const [startDate, setStartDate] = createSignal('');
   const [endDate, setEndDate] = createSignal('');
-  const [detail, setDetail] = createSignal<AuditLog | null>(null);
+  const [detail, setDetail] = createSignal<AuditLogEntry | null>(null);
 
   const [data, { refetch }] = createResource(
     () => ({
