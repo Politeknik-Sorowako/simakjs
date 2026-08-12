@@ -1,5 +1,6 @@
 import { PresensiService } from '../services/presensi.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
+import { getBapKelasId, guardKelasScope } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
@@ -10,6 +11,14 @@ export class PresensiController {
     if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
+    }
+    const bapKelasId = await getBapKelasId(Number(body.bapId));
+    if (bapKelasId) {
+      const scopeError = await guardKelasScope(user, bapKelasId);
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
+      }
     }
     // Dosen/instruktur only may set hadir, telat( +durasi) or unknown; admin & prodi may validate unknown into sakit/izin/alpa.
     if (!hasRole(user, ['admin', 'super_admin', 'prodi'])) {
@@ -30,6 +39,14 @@ export class PresensiController {
       set.status = 401;
       return { error: 'Akses ditolak. Silakan login.' };
     }
+    const bapKelasId = await getBapKelasId(parseInt(params.bapId));
+    if (bapKelasId) {
+      const scopeError = await guardKelasScope(user, bapKelasId);
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
+      }
+    }
     return await PresensiService.getPresensiByBap(parseInt(params.bapId));
   }
 
@@ -37,7 +54,7 @@ export class PresensiController {
   static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin', 'dosen'])) {
+      if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -71,7 +88,7 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -101,7 +118,7 @@ export class PresensiController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { kelasKuliahId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -109,6 +126,11 @@ export class PresensiController {
     if (!kelasKuliahId) {
       set.status = 400;
       return { error: 'Parameter kelasKuliahId diperlukan.' };
+    }
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
     }
     return await PresensiService.getRekapKehadiran(kelasKuliahId);
   }
