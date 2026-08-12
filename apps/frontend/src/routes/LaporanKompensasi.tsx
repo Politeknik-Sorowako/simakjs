@@ -24,7 +24,10 @@ export default function LaporanKompensasi() {
   } | null>(null);
   const [jumlahMenit, setJumlahMenit] = createSignal(60);
   const [keterangan, setKeterangan] = createSignal('');
-  const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
+  const now = new Date();
+  const [tanggal, setTanggal] = createSignal(
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+  );
   const [search, setSearch] = createSignal('');
   const [filterProdiId, setFilterProdiId] = createSignal<number | string | undefined>();
   const [sortBy, setSortBy] = createSignal('sisa');
@@ -84,14 +87,17 @@ export default function LaporanKompensasi() {
     setEditingPay(null);
     setJumlahMenit(60);
     setKeterangan('');
-    setTanggal(new Date().toISOString().split('T')[0]);
+    const now = new Date();
+    setTanggal(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
+    );
     setShowPayModal(true);
   };
   const openEditPaymentModal = (pay: { id: number; jumlahMenit: number; keterangan: string; tanggal: string }) => {
     setEditingPay(pay);
     setJumlahMenit(pay.jumlahMenit);
     setKeterangan(pay.keterangan);
-    setTanggal(new Date(pay.tanggal).toISOString().split('T')[0]);
+    setTanggal(pay.tanggal);
     setShowPayModal(true);
   };
 
@@ -144,7 +150,14 @@ export default function LaporanKompensasi() {
           accessor: (r: Record<string, unknown>) => (Number(r.sisaKompensasi) > 0 ? 'Belum Lunas' : 'Lunas'),
         },
       ];
-      exportToExcel(res.data, cols, `Laporan_Kompensasi_${new Date().toISOString().split('T')[0]}`);
+      exportToExcel(
+        res.data,
+        cols,
+        `Laporan_Kompensasi_${(() => {
+          const n = new Date();
+          return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+        })()}`,
+      );
       toast.showToast('Laporan kompensasi berhasil diunduh (.xlsx)', 'success');
     } catch (e: unknown) {
       toast.showToast('Gagal mengunduh laporan excel', 'error');
@@ -441,9 +454,7 @@ export default function LaporanKompensasi() {
                                 ? 'Presensi Apel'
                                 : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
                             </span>
-                            <span class="text-secondary-400 dark:text-secondary-200">
-                              {log.bapTanggal ? new Date(log.bapTanggal).toLocaleDateString('id-ID') : '-'}
-                            </span>
+                            <span class="text-secondary-400 dark:text-secondary-200">{log.bapTanggal ?? '-'}</span>
                             <span class="font-semibold text-accent-600 dark:text-accent-400">
                               Status: {log.status.toUpperCase()} ({log.durasiMangkir} Menit)
                             </span>
@@ -476,9 +487,7 @@ export default function LaporanKompensasi() {
                         <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
                           <div class="flex flex-col gap-0.5">
                             <span class="font-bold text-secondary-700 dark:text-secondary-200">{pay.keterangan}</span>
-                            <span class="text-secondary-400 dark:text-secondary-200">
-                              {new Date(pay.tanggal).toLocaleDateString('id-ID')}
-                            </span>
+                            <span class="text-secondary-400 dark:text-secondary-200">{pay.tanggal}</span>
                           </div>
                           <div class="flex items-center gap-2">
                             <span class="font-bold text-accent-600 font-mono dark:text-accent-400">

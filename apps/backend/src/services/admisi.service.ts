@@ -153,8 +153,12 @@ export class AdmisiService {
       .limit(1);
 
     if (!session) throw new Error('Sesi admisi tidak ditemukan atau tidak aktif');
-    if (session.tanggalMulai > new Date().toISOString().split('T')[0]) throw new Error('Sesi admisi belum dimulai');
-    if (session.tanggalTutup < new Date().toISOString().split('T')[0]) throw new Error('Sesi admisi sudah ditutup');
+    const todayLocal = (() => {
+      const n = new Date();
+      return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    })();
+    if (session.tanggalMulai > todayLocal) throw new Error('Sesi admisi belum dimulai');
+    if (session.tanggalTutup < todayLocal) throw new Error('Sesi admisi sudah ditutup');
 
     // Prevent duplicate application in same session
     const [existing] = await db

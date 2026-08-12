@@ -143,7 +143,7 @@ export class BimbinganService {
       isApproved?: boolean;
       permasalahan?: string;
       solusi?: string;
-      tanggalBimbingan?: Date;
+      tanggalBimbingan?: string;
       statusBkd?: boolean;
     },
   ) {
@@ -151,7 +151,7 @@ export class BimbinganService {
       .update(bimbingan)
       .set({
         ...data,
-        tanggalBimbingan: data.tanggalBimbingan ? data.tanggalBimbingan.toISOString().split('T')[0] : undefined,
+        tanggalBimbingan: data.tanggalBimbingan,
         updatedAt: new Date(),
       })
       .where(eq(bimbingan.id, bimbinganId))
@@ -168,7 +168,7 @@ export class BimbinganService {
     bimbinganId: number,
     data: {
       pertemuanKe: number;
-      tanggalBimbingan: Date;
+      tanggalBimbingan: string;
       permasalahan: string;
       solusi: string;
       statusBkd: boolean;
@@ -181,7 +181,7 @@ export class BimbinganService {
         bimbinganId,
         ...data,
         kategoriId: data.kategoriId || null,
-        tanggalBimbingan: data.tanggalBimbingan.toISOString().split('T')[0],
+        tanggalBimbingan: data.tanggalBimbingan,
       })
       .returning();
     return newSesi;
@@ -191,7 +191,7 @@ export class BimbinganService {
     sesiId: number,
     data: {
       pertemuanKe?: number;
-      tanggalBimbingan?: Date;
+      tanggalBimbingan?: string;
       permasalahan?: string;
       solusi?: string;
       statusBkd?: boolean;
@@ -203,7 +203,7 @@ export class BimbinganService {
       .set({
         ...data,
         kategoriId: data.kategoriId !== undefined ? data.kategoriId : undefined,
-        tanggalBimbingan: data.tanggalBimbingan ? data.tanggalBimbingan.toISOString().split('T')[0] : undefined,
+        tanggalBimbingan: data.tanggalBimbingan,
         updatedAt: new Date(),
       })
       .where(eq(sesiBimbingan.id, sesiId))
