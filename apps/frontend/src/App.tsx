@@ -18,6 +18,7 @@ import AngkatanKurikulum from './routes/AngkatanKurikulum';
 import ApelKelola from './routes/ApelKelola';
 import ApelMonitor from './routes/ApelMonitor';
 import ApelVerifikasi from './routes/ApelVerifikasi';
+import AuditLog from './routes/AuditLog';
 import AdmisiDaftarUlangNIM from './routes/admisi/AdmisiDaftarUlangNIM';
 import AdmisiImportUjian from './routes/admisi/AdmisiImportUjian';
 import AdmisiJadwal from './routes/admisi/AdmisiJadwal';
@@ -309,6 +310,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Pengguna />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/audit-log"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+            <AuditLog />
           </ProtectedRoute>
         }
       />

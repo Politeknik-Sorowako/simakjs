@@ -21,6 +21,7 @@ export const dosenPengajarController = {
     page?: number,
     limit?: number,
     periodeId?: string,
+    currentOnly?: boolean,
   ): Promise<PaginatedResponse<DosenPengajar>> {
     const params = new URLSearchParams();
     if (kelasKuliahId) params.append('kelasKuliahId', String(kelasKuliahId));
@@ -28,6 +29,7 @@ export const dosenPengajarController = {
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     if (periodeId) params.append('periodeId', periodeId);
+    if (currentOnly) params.append('currentOnly', 'true');
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<DosenPengajar>>(`/dosen-pengajar${queryString}`);
   },
