@@ -26,6 +26,29 @@ export const systemRoutes = new Elysia({ prefix: '/system' })
       }),
     },
   })
+  .get('/changelog', SystemController.getChangelog, {
+    response: {
+      200: t.Object({
+        sections: t.Array(
+          t.Object({
+            version: t.String(),
+            date: t.Union([t.String(), t.Null()], { default: null }),
+            groups: t.Array(
+              t.Object({
+                heading: t.String(),
+                items: t.Array(
+                  t.Object({
+                    text: t.String(),
+                    children: t.Array(t.String()),
+                  }),
+                ),
+              }),
+            ),
+          }),
+        ),
+      }),
+    },
+  })
   .get('/health', SystemController.health, {
     response: {
       200: t.Object({

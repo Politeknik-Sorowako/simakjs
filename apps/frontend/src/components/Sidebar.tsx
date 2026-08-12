@@ -106,6 +106,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         '/pengguna',
         '/evaluasi-sistem',
         '/pddikti',
+        '/audit-log',
         '/konfigurasi',
         '/konfigurasi/akses-role',
         '/konfigurasi/scope-prodi',
@@ -935,7 +936,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Presensi Kelas
                   </A>
                 </Show>
-                <Show when={isAdmin() || isProdi() || isDosen()}>
+                <Show when={isAdmin() || isProdi() || isDosen() || isInstruktur()}>
                   <A
                     href="/laporan/peringatan"
                     onClick={() => props.onClose()}
@@ -1728,6 +1729,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                       />
                     </svg>
                     Sinkronisasi PDDIKTI
+                  </A>
+                </Show>
+                <Show when={isAdminMgmt()}>
+                  <A
+                    href="/audit-log"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.478 4.482 9.957 9 10.886V21h-2v2h6v-2h-2v-1.114a11.005 11.005 0 006-3.136"
+                      />
+                    </svg>
+                    Audit Log Aktivitas
                   </A>
                 </Show>
                 <Show when={publicSettings.loading ? true : (publicSettings()?.featureFeedbackEnabled ?? true)}>

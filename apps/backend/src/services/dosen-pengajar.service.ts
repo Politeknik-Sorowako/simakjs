@@ -1,4 +1,4 @@
-import { and, count, eq, type SQL } from 'drizzle-orm';
+import { and, count, eq, gte, isNotNull, lte, type SQL } from 'drizzle-orm';
 import { dosen, dosenPengajarKelas, kelasKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -10,8 +10,18 @@ export interface CreateDosenPengajarDto {
 }
 
 export class DosenPengajarService {
-  static async getAll(page = 1, limit = 10, kelasKuliahId?: number, dosenId?: number, periodeId?: string) {
+  static async getAll(
+    page = 1,
+    limit = 10,
+    kelasKuliahId?: number,
+    dosenId?: number,
+    periodeId?: string,
+    currentOnly = false,
+  ) {
     const offset = (page - 1) * limit;
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
     const conditions: SQL<unknown>[] = [];
     if (kelasKuliahId) {
@@ -23,9 +33,18 @@ export class DosenPengajarService {
     if (periodeId) {
       conditions.push(eq(kelasKuliah.periodeId, periodeId));
     }
+    if (currentOnly) {
+      const currentClause = and(
+        isNotNull(kelasKuliah.tanggalMulaiEfektif),
+        isNotNull(kelasKuliah.tanggalAkhirEfektif),
+        lte(kelasKuliah.tanggalMulaiEfektif, todayStr),
+        gte(kelasKuliah.tanggalAkhirEfektif, todayStr),
+      );
+      conditions.push(currentClause!);
+    }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const useKelasJoin = !!periodeId;
+    const useKelasJoin = !!periodeId || currentOnly;
     const [totalResult] = useKelasJoin
       ? await db
           .select({ total: count() })

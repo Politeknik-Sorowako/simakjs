@@ -8,6 +8,18 @@ Nilai versi dibaca otomatis dari `package.json`.
 
 ## [Unreleased]
 
+### Added
+- Halaman **About & Versioning**: seksi Changelog kini dimuat dinamis dari `CHANGELOG.md` melalui endpoint baru `GET /system/changelog` (tidak lagi hardcoded).
+- Akses **Peringatan/Kedisiplinan** untuk admin, dosen, instruktur, dan prodi. Dropdown mahasiswa pada panel tambah peringatan kini memakai `SearchableSelect` dengan pencarian server-side, filter status aktif, dan lazy-load. Dosen dapat membuat peringatan ke **seluruh mahasiswa aktif**, termasuk yang bukan bimbingan PA (param `allStudents`).
+
+### Changed
+- **Access Control**: dosen/instruktur hanya dapat mengelola RPS, BAP, nilai/komponen, dan presensi untuk kelas yang mereka ampu (`dosen_pengajar_kelas`). Admin/super_admin/prodi tetap akses penuh.
+- Laporan kompensasi (`getLaporanKompensasi` / `getLaporanKompensasiStats`) dibatasi kembali ke admin & dosen karena agregatnya mencakup sumber global (apel/manual) yang tidak bisa di-scope per kelas.
+
+### Fixed
+- Error "resource enroll rombel" (*info.error* bukan fungsi) pada halaman enroll rombel.
+- Panel "Kelas Diampu" pada dashboard dosen kosong karena filter `currentOnly` yang bergantung pada tanggal efektif.
+
 ## [1.0.0] - 2026-08-07
 
 ### Added

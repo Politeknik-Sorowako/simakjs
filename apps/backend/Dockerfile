@@ -9,6 +9,7 @@ ENV GIT_COMMIT=${GIT_COMMIT}
 
 WORKDIR /app
 COPY package.json bun.lock ./
+COPY CHANGELOG.md ./
 COPY apps/backend/package.json ./apps/backend/
 RUN bun install --filter backend
 COPY apps/backend ./apps/backend

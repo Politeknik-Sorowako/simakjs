@@ -52,6 +52,9 @@ export interface PresensiItem {
   status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'unknown';
   durasiMangkir: number;
   keterangan?: string | null;
+  keteranganAdmin?: string | null;
+  resolvedAt?: string | null;
+  resolvedBy?: number | null;
 }
 
 export interface KompensasiLaporanItem {
@@ -171,6 +174,7 @@ export interface PresensiUnknownItem {
   lampiranEvidens?: string | null;
   keteranganAdmin?: string | null;
   resolvedAt?: string | null;
+  resolvedBy?: number | null;
   createdAt?: string | null;
   bapTanggal: string;
   bapPertemuan: number;

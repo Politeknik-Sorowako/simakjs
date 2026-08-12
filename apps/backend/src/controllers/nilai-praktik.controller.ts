@@ -1,4 +1,5 @@
 import { NilaiPraktikService } from '../services/nilai-praktik.service';
+import { guardRombelScope } from '../utils/dosen-scope';
 import { type AuthContext, allowed } from '../utils/types';
 
 export class NilaiPraktikController {
@@ -6,9 +7,14 @@ export class NilaiPraktikController {
   static async saveNilaiBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+      if (!user || !allowed(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
+      }
+      const scopeError = await guardRombelScope(user, body.rombelPraktikumId);
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
       }
       return await NilaiPraktikService.saveNilaiBulk({
         rombelPraktikumId: body.rombelPraktikumId,
@@ -28,6 +34,11 @@ export class NilaiPraktikController {
       if (!user) {
         set.status = 401;
         return { error: 'Unauthorized' };
+      }
+      const scopeError = await guardRombelScope(user, parseInt(params.rombelPraktikumId));
+      if (scopeError) {
+        set.status = 403;
+        return { error: scopeError };
       }
       return await NilaiPraktikService.getNilaiByRombel(parseInt(params.rombelPraktikumId));
     } catch (e: unknown) {

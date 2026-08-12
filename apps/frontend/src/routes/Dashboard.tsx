@@ -258,7 +258,7 @@ function DosenWidgets() {
     () => ({ dosenId: dosenProfile()?.id, periodeId: periodeAktif()?.id }),
     async (key) => {
       if (!key.dosenId) return { data: [] };
-      return await dosenPengajarController.getAll(undefined, key.dosenId, 1, 50, key.periodeId || undefined);
+      return await dosenPengajarController.getAll(undefined, key.dosenId, 1, 50, key.periodeId || undefined, false);
     },
   );
 
@@ -336,7 +336,7 @@ function DosenWidgets() {
       {/* Daftar Kelas Diampu */}
       <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5 shadow-sm">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Kelas Diampu Semester Ini</h3>
+          <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Kelas Aktif Semester Ini</h3>
           <a href="/jurnal-presensi" class="text-xs font-bold text-brand-600 hover:text-brand-700 underline">
             Isi BAP & Presensi →
           </a>
@@ -689,7 +689,7 @@ export default function Dashboard() {
         <Show when={role() === 'admin'}>
           <AdminWidgets />
         </Show>
-        <Show when={role() === 'dosen'}>
+        <Show when={role() === 'dosen' || role() === 'instruktur'}>
           <DosenWidgets />
         </Show>
         <Show when={role() === 'mahasiswa'}>
