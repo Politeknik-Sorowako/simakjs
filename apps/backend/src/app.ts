@@ -56,6 +56,7 @@ import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { systemRoutes } from './routes/system.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
 import { userRoutes } from './routes/user.routes';
+import { verifikasiUnknownRoutes } from './routes/verifikasi-unknown.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 
@@ -296,6 +297,7 @@ export const app = new Elysia()
   .use(evaluasiKurikulumRoutes)
   .use(presensiRoutes)
   .use(kompensasiManualRoutes)
+  .use(verifikasiUnknownRoutes)
   .use(nilaiPraktikRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
