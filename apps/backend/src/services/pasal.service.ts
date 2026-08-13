@@ -25,7 +25,6 @@ export class PasalPelanggaranService {
         id: pasalPelanggaran.id,
         nomorPasal: pasalPelanggaran.nomorPasal,
         bunyiPasal: pasalPelanggaran.bunyiPasal,
-        bobotPoin: pasalPelanggaran.bobotPoin,
         jenisSanksi: pasalPelanggaran.jenisSanksi,
         programStudiId: pasalPelanggaran.programStudiId,
         prodiNama: programStudi.nama,
@@ -42,13 +41,9 @@ export class PasalPelanggaranService {
   static async create(data: {
     nomorPasal: string;
     bunyiPasal: string;
-    bobotPoin: number;
     jenisSanksi: number;
     programStudiId?: number | null;
   }) {
-    if (data.bobotPoin <= 0 || data.bobotPoin > 100) {
-      throw new Error('Bobot poin pasal harus bernilai antara 1 dan 100.');
-    }
     if (data.jenisSanksi !== 1 && data.jenisSanksi !== 4) {
       throw new Error('Jenis sanksi harus bernilai 1 (Lisan) atau 4 (Tertulis).');
     }
@@ -61,15 +56,11 @@ export class PasalPelanggaranService {
     data: Partial<{
       nomorPasal: string;
       bunyiPasal: string;
-      bobotPoin: number;
       jenisSanksi: number;
       programStudiId?: number | null;
       isActive: boolean;
     }>,
   ) {
-    if (data.bobotPoin !== undefined && (data.bobotPoin <= 0 || data.bobotPoin > 100)) {
-      throw new Error('Bobot poin pasal harus bernilai antara 1 dan 100.');
-    }
     if (data.jenisSanksi !== undefined && data.jenisSanksi !== 1 && data.jenisSanksi !== 4) {
       throw new Error('Jenis sanksi harus bernilai 1 (Lisan) atau 4 (Tertulis).');
     }

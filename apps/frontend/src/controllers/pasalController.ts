@@ -4,7 +4,6 @@ export interface PasalPelanggaran {
   id: number;
   nomorPasal: string;
   bunyiPasal: string;
-  bobotPoin: number;
   jenisSanksi: number;
   programStudiId?: number | null;
   prodiNama?: string | null;

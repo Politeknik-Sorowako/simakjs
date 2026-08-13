@@ -89,6 +89,23 @@ export interface Pelanggaran {
 export interface PelanggaranRekap {
   pelanggaranList: Pelanggaran[];
   totalPoin: number;
+  predikat: string;
+}
+
+export interface RekapPelanggaran {
+  totalPelanggaran: number;
+  totalMahasiswa: number;
+  perJenis: { jenis: string; jumlah: number; totalPoin: number }[];
+  perProdi: { prodiId: number | null; prodiNama: string; totalPelanggaran: number; totalPoin: number }[];
+  topPelanggar: {
+    mahasiswaId: number;
+    nim: string;
+    nama: string;
+    prodiNama: string;
+    totalPoin: number;
+    jumlahPelanggaran: number;
+    predikat: string;
+  }[];
 }
 
 export const bimbinganController = {
@@ -192,7 +209,12 @@ export const bimbinganController = {
     });
   },
 
-  async createPelanggaran(data: Omit<Pelanggaran, 'id'>): Promise<Pelanggaran> {
+  async createPelanggaran(
+    data: Omit<Pelanggaran, 'id' | 'jenisPelanggaran' | 'bobotPoin'> & {
+      jenisPelanggaran?: string;
+      bobotPoin?: number;
+    },
+  ): Promise<Pelanggaran> {
     return fetchApi<Pelanggaran>('/pelanggaran', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -205,6 +227,14 @@ export const bimbinganController = {
 
   async getAllPelanggaran(): Promise<Pelanggaran[]> {
     return fetchApi<Pelanggaran[]>('/pelanggaran');
+  },
+
+  async getRekapPelanggaran(periodeId?: string, programStudiId?: number): Promise<RekapPelanggaran> {
+    const params = new URLSearchParams();
+    if (periodeId) params.append('periodeId', periodeId);
+    if (programStudiId) params.append('programStudiId', String(programStudiId));
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<RekapPelanggaran>(`/pelanggaran/rekap${query}`);
   },
 
   async updatePelanggaran(id: number, data: Partial<Omit<Pelanggaran, 'id'>>): Promise<Pelanggaran> {

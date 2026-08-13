@@ -3,7 +3,6 @@ import { t } from 'elysia';
 export const pasalPelanggaranBody = t.Object({
   nomorPasal: t.String({ minLength: 1, maxLength: 50, default: 'Pasal 1' }),
   bunyiPasal: t.String({ minLength: 3, default: 'Berpakaian tidak rapi selama kegiatan akademik.' }),
-  bobotPoin: t.Integer({ minimum: 1, maximum: 100, default: 5 }),
   jenisSanksi: t.Integer({ minimum: 1, maximum: 4, default: 1 }),
   programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
 });
@@ -25,7 +24,6 @@ export const getAllPasalSchema = {
         id: t.Integer(),
         nomorPasal: t.String(),
         bunyiPasal: t.String(),
-        bobotPoin: t.Integer(),
         jenisSanksi: t.Integer(),
         programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
         prodiNama: t.Optional(t.Union([t.String(), t.Null()])),
@@ -49,7 +47,6 @@ export const createPasalSchema = {
       id: t.Integer(),
       nomorPasal: t.String(),
       bunyiPasal: t.String(),
-      bobotPoin: t.Integer(),
       jenisSanksi: t.Integer(),
       programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
       isActive: t.Boolean(),
@@ -76,7 +73,6 @@ export const updatePasalSchema = {
       id: t.Integer(),
       nomorPasal: t.String(),
       bunyiPasal: t.String(),
-      bobotPoin: t.Integer(),
       jenisSanksi: t.Integer(),
       programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
       isActive: t.Boolean(),

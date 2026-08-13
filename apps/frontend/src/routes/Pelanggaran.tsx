@@ -116,13 +116,12 @@ export default function Pelanggaran() {
   const [showModal, setShowModal] = createSignal(false);
   const [mahasiswaId, setMahasiswaId] = createSignal(0);
   const [tanggal, setTanggal] = createSignal('');
-  const [jenisPelanggaran, setJenisPelanggaran] = createSignal('');
-  const [bobotPoin, setBobotPoin] = createSignal(0);
   const [keterangan, setKeterangan] = createSignal('');
   const [pasalId, setPasalId] = createSignal<number | null>(null);
-  const [jenisSanksi, setJenisSanksi] = createSignal(1);
   const [errorMsg, setErrorMsg] = createSignal('');
   const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
+
+  const selectedPasal = () => pasalList()?.find((p) => p.id === pasalId()) || null;
 
   const openAddModal = () => {
     setEditPelanggaranId(null);
@@ -132,24 +131,14 @@ export default function Pelanggaran() {
     setTanggal(
       `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
     );
-    setJenisPelanggaran('');
-    setBobotPoin(5);
     setKeterangan('');
     setPasalId(null);
-    setJenisSanksi(1);
     setErrorMsg('');
     setShowModal(true);
   };
 
   const handlePasalChange = (val: string | number) => {
-    const id = Number(val);
-    setPasalId(id);
-    const pasal = pasalList()?.find((p) => p.id === id);
-    if (pasal) {
-      setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
-      setBobotPoin(pasal.bobotPoin);
-      setJenisSanksi(pasal.jenisSanksi);
-    }
+    setPasalId(Number(val));
   };
 
   const openEditModal = (item: IPelanggaran) => {
@@ -157,19 +146,16 @@ export default function Pelanggaran() {
     setMahasiswaId(item.mahasiswaId);
     ensureStudentLoaded(item.mahasiswaId);
     setTanggal(item.tanggal);
-    setJenisPelanggaran(item.jenisPelanggaran);
-    setBobotPoin(item.bobotPoin);
     setKeterangan(item.keterangan);
     setPasalId(item.pasalId ?? null);
-    setJenisSanksi(item.jenisSanksi ?? 1);
     setErrorMsg('');
     setShowModal(true);
   };
 
   const handleSave = async (e: Event) => {
     e.preventDefault();
-    if (!mahasiswaId() || !tanggal() || !jenisPelanggaran() || !bobotPoin() || !keterangan()) {
-      setErrorMsg('Semua data wajib diisi.');
+    if (!mahasiswaId() || !tanggal() || !pasalId() || !keterangan()) {
+      setErrorMsg('Semua data wajib diisi (pilih pasal BPA dan tulis keterangan).');
       return;
     }
 
@@ -177,11 +163,8 @@ export default function Pelanggaran() {
       const payload = {
         mahasiswaId: mahasiswaId(),
         tanggal: tanggal(),
-        jenisPelanggaran: jenisPelanggaran(),
-        bobotPoin: bobotPoin(),
         keterangan: keterangan(),
         pasalId: pasalId(),
-        jenisSanksi: jenisSanksi(),
       };
 
       const activeId = editPelanggaranId();
@@ -192,10 +175,23 @@ export default function Pelanggaran() {
       }
       setShowModal(false);
       refetchAllViolations();
+      refetchRekap();
     } catch (err: unknown) {
       setErrorMsg((err as Error).message || 'Gagal menyimpan data.');
     }
   };
+
+  // Rekap state
+  const [viewTab, setViewTab] = createSignal<'daftar' | 'rekap'>('daftar');
+  const [rekapProdi, setRekapProdi] = createSignal<number | undefined>(undefined);
+  const [rekapPeriode, setRekapPeriode] = createSignal<string>('');
+  const [rekap, { refetch: refetchRekap }] = createResource(
+    () => ({ prodi: rekapProdi(), periode: rekapPeriode() }),
+    async ({ prodi, periode }) => {
+      if (!isStaff()) return null;
+      return await bimbinganController.getRekapPelanggaran(periode || undefined, prodi);
+    },
+  );
 
   return (
     <MainLayout>
@@ -210,6 +206,14 @@ export default function Pelanggaran() {
           </div>
           <Show when={isStaff()}>
             <div class="flex items-center gap-3">
+              <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
+                <a
+                  href="/pelanggaran/pasal-bpa"
+                  class="px-5 py-2.5 bg-white border border-secondary-200 hover:bg-secondary-50 text-secondary-700 font-bold rounded-xl text-sm transition-all active:scale-95 dark:bg-secondary-900 dark:border-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-800"
+                >
+                  Kelola Pasal BPA
+                </a>
+              </Show>
               <button
                 onClick={() => setShowImportModal(true)}
                 class="px-5 py-2.5 bg-secondary-100 hover:bg-secondary-200 text-secondary-700 font-bold rounded-xl text-sm transition-all active:scale-95 dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
@@ -225,6 +229,32 @@ export default function Pelanggaran() {
             </div>
           </Show>
         </div>
+
+        {/* Staff tab switcher */}
+        <Show when={isStaff()}>
+          <div class="flex gap-2">
+            <button
+              onClick={() => setViewTab('daftar')}
+              class={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                viewTab() === 'daftar'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
+              }`}
+            >
+              Daftar Pelanggaran
+            </button>
+            <button
+              onClick={() => setViewTab('rekap')}
+              class={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                viewTab() === 'rekap'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
+              }`}
+            >
+              Rekap & Predikat TXLY
+            </button>
+          </div>
+        </Show>
 
         {/* Student View */}
         <Show when={auth.hasRole(['mahasiswa'])}>
@@ -243,6 +273,11 @@ export default function Pelanggaran() {
                 <span class="text-xs font-semibold uppercase tracking-wider text-secondary-400">
                   Total Poin Pelanggaran
                 </span>
+                <Show when={studentViolations()?.predikat}>
+                  <span class="px-3 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-extrabold text-sm dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                    Predikat: {studentViolations()?.predikat}
+                  </span>
+                </Show>
               </div>
               <div class="p-3.5 bg-secondary-50 border border-secondary-100 rounded-xl dark:bg-secondary-800 dark:border-secondary-800">
                 <p class="text-[10px] text-secondary-400 leading-relaxed uppercase tracking-wider font-semibold">
@@ -324,7 +359,7 @@ export default function Pelanggaran() {
         </Show>
 
         {/* Staff View (Admin/Dosen/Prodi/Instruktur) */}
-        <Show when={isStaff()}>
+        <Show when={isStaff() && viewTab() === 'daftar'}>
           <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
             <Show
@@ -410,6 +445,172 @@ export default function Pelanggaran() {
           </div>
         </Show>
 
+        {/* Rekap View (Staff) */}
+        <Show when={isStaff() && viewTab() === 'rekap'}>
+          <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">
+                  Rekap Pelanggaran & Predikat TXLY
+                </h3>
+                <p class="text-xs text-secondary-500 mt-1">
+                  Predikat TXLY: X = kelipatan 4 dari total bobot (sanksi tertulis), Y = sisa bobot (sanksi lisan).
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] font-bold text-secondary-500 uppercase">Periode</label>
+                  <input
+                    type="text"
+                    placeholder="cth: 20261"
+                    value={rekapPeriode()}
+                    onInput={(e) => setRekapPeriode(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                  />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label class="text-[10px] font-bold text-secondary-500 uppercase">Program Studi</label>
+                  <input
+                    type="number"
+                    placeholder="Prodi ID"
+                    value={rekapProdi() ?? ''}
+                    onInput={(e) => setRekapProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                  />
+                </div>
+                <Button variant="secondary" class="mt-4" onClick={() => refetchRekap()}>
+                  Terapkan
+                </Button>
+              </div>
+            </div>
+
+            {/* Summary stats */}
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="p-4 bg-secondary-50 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
+                <div class="text-2xl font-extrabold text-secondary-800 dark:text-white">
+                  {rekap()?.totalPelanggaran || 0}
+                </div>
+                <div class="text-[10px] uppercase font-semibold text-secondary-400">Total Pelanggaran</div>
+              </div>
+              <div class="p-4 bg-secondary-50 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
+                <div class="text-2xl font-extrabold text-secondary-800 dark:text-white">
+                  {rekap()?.totalMahasiswa || 0}
+                </div>
+                <div class="text-[10px] uppercase font-semibold text-secondary-400">Mahasiswa</div>
+              </div>
+              <div class="p-4 bg-accent-50 rounded-xl border border-accent-100 dark:bg-secondary-800 dark:border-secondary-800">
+                <div class="text-2xl font-extrabold text-accent-600 dark:text-accent-400">
+                  {rekap()?.perProdi.reduce((a, p) => a + p.totalPoin, 0) || 0}
+                </div>
+                <div class="text-[10px] uppercase font-semibold text-secondary-400">Total Poin</div>
+              </div>
+              <div class="p-4 bg-brand-50 rounded-xl border border-brand-100 dark:bg-secondary-800 dark:border-secondary-800">
+                <div class="text-2xl font-extrabold text-brand-600 dark:text-brand-400">
+                  {rekap()?.topPelanggar.length || 0}
+                </div>
+                <div class="text-[10px] uppercase font-semibold text-secondary-400">Top 10</div>
+              </div>
+            </div>
+
+            {/* Top pelanggar table with predikat */}
+            <div>
+              <h4 class="text-sm font-bold text-secondary-700 border-b pb-2 mb-2 dark:text-secondary-200">
+                Pelanggar Terbanyak (Top 10)
+              </h4>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                      <th class="p-3">#</th>
+                      <th class="p-3">NIM</th>
+                      <th class="p-3">Nama</th>
+                      <th class="p-3">Program Studi</th>
+                      <th class="p-3">Jumlah Pelanggaran</th>
+                      <th class="p-3">Total Poin</th>
+                      <th class="p-3">Predikat TXLY</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
+                    <For each={rekap()?.topPelanggar || []}>
+                      {(item, idx) => (
+                        <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                          <td class="p-3">{idx() + 1}</td>
+                          <td class="p-3 font-mono">{item.nim}</td>
+                          <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.nama}</td>
+                          <td class="p-3">{item.prodiNama}</td>
+                          <td class="p-3">{item.jumlahPelanggaran}</td>
+                          <td class="p-3">
+                            <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+                              {item.totalPoin}
+                            </span>
+                          </td>
+                          <td class="p-3">
+                            <span class="px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-extrabold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                              {item.predikat}
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Per prodi breakdown */}
+            <Show when={(rekap()?.perProdi || []).length > 0}>
+              <div>
+                <h4 class="text-sm font-bold text-secondary-700 border-b pb-2 mb-2 dark:text-secondary-200">
+                  Per Program Studi
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <For each={rekap()?.perProdi || []}>
+                    {(p) => (
+                      <div class="p-3 bg-secondary-50 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
+                        <div class="text-xs font-bold text-secondary-800 dark:text-white">{p.prodiNama}</div>
+                        <div class="text-[11px] text-secondary-500 mt-1">
+                          {p.totalPelanggaran} pelanggaran · {p.totalPoin} poin
+                        </div>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </div>
+            </Show>
+
+            {/* Per jenis breakdown */}
+            <Show when={(rekap()?.perJenis || []).length > 0}>
+              <div>
+                <h4 class="text-sm font-bold text-secondary-700 border-b pb-2 mb-2 dark:text-secondary-200">
+                  Per Jenis Pelanggaran
+                </h4>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th class="p-3">Jenis</th>
+                        <th class="p-3">Jumlah</th>
+                        <th class="p-3">Total Poin</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
+                      <For each={rekap()?.perJenis || []}>
+                        {(j) => (
+                          <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                            <td class="p-3">{j.jenis}</td>
+                            <td class="p-3">{j.jumlah}</td>
+                            <td class="p-3">{j.totalPoin}</td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </Show>
+          </div>
+        </Show>
+
         {/* Modal Entry Pelanggaran */}
         <Modal
           show={showModal()}
@@ -453,56 +654,41 @@ export default function Pelanggaran() {
             {/* Pasal BPA */}
             <SearchableSelect
               label="Pasal Pelanggaran (BPA)"
+              required
               placeholder="Cari Nomor Pasal / Bunyi Pasal..."
               value={pasalId() ?? ''}
               options={(pasalList() || []).map((p) => ({
-                label: `${p.nomorPasal} - ${p.bunyiPasal.slice(0, 80)}${p.bunyiPasal.length > 80 ? '…' : ''} (${p.bobotPoin} poin)`,
+                label: `${p.nomorPasal} - ${p.bunyiPasal.slice(0, 80)}${p.bunyiPasal.length > 80 ? '…' : ''}`,
                 value: p.id,
               }))}
               onChange={handlePasalChange}
             />
 
-            {/* Jenis Sanksi */}
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-secondary-700">Jenis Sanksi</label>
-              <select
-                value={jenisSanksi()}
-                onChange={(e) => setJenisSanksi(parseInt(e.currentTarget.value))}
-                class="border border-secondary-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-brand-500 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200"
-              >
-                <option value={1}>Lisan (1)</option>
-                <option value={4}>Tertulis (4)</option>
-              </select>
-            </div>
-
-            {/* Jenis Pelanggaran */}
-            <Input
-              label="Jenis Pelanggaran"
-              type="text"
-              placeholder="Contoh: Terlambat Kelas Praktik, Kerusakan Fasilitas"
-              value={jenisPelanggaran()}
-              onInput={(e) => setJenisPelanggaran(e.currentTarget.value)}
-            />
-
-            {/* Bobot Poin */}
-            <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-secondary-700">Bobot Pelanggaran (Poin)</label>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={bobotPoin()}
-                onInput={(e) => setBobotPoin(parseInt(e.currentTarget.value))}
-                class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 dark:border-secondary-700"
-              />
-            </div>
+            {/* Info pasal terpilih */}
+            <Show when={selectedPasal()}>
+              <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl text-xs flex flex-col gap-1 dark:bg-secondary-800 dark:border-secondary-700">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-accent-800 dark:text-accent-300">{selectedPasal()?.nomorPasal}</span>
+                  <span
+                    class={`px-2 py-0.5 rounded border font-bold ${
+                      selectedPasal()?.jenisSanksi === 4
+                        ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                        : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                    }`}
+                  >
+                    {selectedPasal()?.jenisSanksi === 4 ? 'Tertulis (4 poin)' : 'Lisan (1 poin)'}
+                  </span>
+                </div>
+                <p class="text-secondary-600 dark:text-secondary-300">{selectedPasal()?.bunyiPasal}</p>
+              </div>
+            </Show>
 
             {/* Keterangan */}
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-bold text-secondary-700">Keterangan Detail</label>
+              <label class="text-xs font-bold text-secondary-700">Keterangan Pelanggaran</label>
               <textarea
                 rows="4"
-                placeholder="Tulis kronologi singkat atau rincian pelanggaran..."
+                placeholder="Tulis kronologi singkat atau rincian pelanggaran yang terjadi..."
                 value={keterangan()}
                 onInput={(e) => setKeterangan(e.currentTarget.value)}
                 class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 resize-none dark:border-secondary-700"
@@ -526,23 +712,14 @@ export default function Pelanggaran() {
           onClose={() => setShowImportModal(false)}
           title="Pelanggaran / Peringatan"
           importUrl="/pelanggaran/import"
-          templateHeaders={[
-            'nim',
-            'tanggal',
-            'nomor_pasal',
-            'jenis_pelanggaran',
-            'bobot_poin',
-            'jenis_sanksi',
-            'keterangan',
-          ]}
+          templateHeaders={['nim', 'tanggal', 'nomor_pasal', 'jenis_pelanggaran', 'jenis_sanksi', 'keterangan']}
           customTemplateRows={[
-            ['nim', 'tanggal', 'nomor_pasal', 'jenis_pelanggaran', 'bobot_poin', 'jenis_sanksi', 'keterangan'],
+            ['nim', 'tanggal', 'nomor_pasal', 'jenis_pelanggaran', 'jenis_sanksi', 'keterangan'],
             [
               '202301001',
               '2026-06-27',
               'Pasal 2',
               'Terlambat masuk kelas praktikum',
-              '5',
               'L',
               'Terlambat lebih dari 30 menit tanpa alasan sah.',
             ],
@@ -551,7 +728,6 @@ export default function Pelanggaran() {
               '2026-06-27',
               '',
               'Merusak fasilitas laboratorium',
-              '15',
               'T',
               'Melaporkan kerusakan keyboard praktikum.',
             ],

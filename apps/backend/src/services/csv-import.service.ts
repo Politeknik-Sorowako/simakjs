@@ -844,19 +844,18 @@ export class CsvImportService {
     const nimIdx = headers.indexOf('nim');
     const tanggalIdx = headers.indexOf('tanggal');
     const jenisIdx = headers.indexOf('jenis_pelanggaran');
-    const bobotIdx = headers.indexOf('bobot_poin');
     const keteranganIdx = headers.indexOf('keterangan');
     const pasalIdx = headers.indexOf('nomor_pasal');
     const sanksiIdx = headers.indexOf('jenis_sanksi');
 
-    if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1 || bobotIdx === -1) {
+    if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1) {
       return {
         successCount: 0,
-        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_pelanggaran, bobot_poin' }],
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_pelanggaran' }],
       };
     }
 
-    const pasalCache = new Map<string, { id: number; bobotPoin: number; jenisSanksi: number }>();
+    const pasalCache = new Map<string, { id: number; jenisSanksi: number }>();
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -866,27 +865,20 @@ export class CsvImportService {
       const nimVal = row[nimIdx].trim();
       const tanggalVal = row[tanggalIdx].trim();
       const jenisVal = row[jenisIdx].trim();
-      const bobotRaw = row[bobotIdx].trim();
       const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : '';
       const pasalVal = pasalIdx !== -1 ? row[pasalIdx].trim() : '';
       const sanksiRaw = sanksiIdx !== -1 ? row[sanksiIdx].trim().toUpperCase() : '';
 
-      if (!nimVal || !tanggalVal || !jenisVal || !bobotRaw) {
+      if (!nimVal || !tanggalVal || !jenisVal) {
         result.errors.push({
           line: lineNum,
-          error: 'Kolom NIM, Tanggal, Jenis Pelanggaran, dan Bobot Poin wajib diisi.',
+          error: 'Kolom NIM, Tanggal, dan Jenis Pelanggaran wajib diisi.',
         });
         continue;
       }
 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalVal)) {
         result.errors.push({ line: lineNum, error: `Format tanggal "${tanggalVal}" tidak valid (harus YYYY-MM-DD).` });
-        continue;
-      }
-
-      const bobotPoin = parseInt(bobotRaw);
-      if (isNaN(bobotPoin) || bobotPoin <= 0 || bobotPoin > 100) {
-        result.errors.push({ line: lineNum, error: 'Bobot poin harus berupa angka antara 1 dan 100.' });
         continue;
       }
 
@@ -913,7 +905,6 @@ export class CsvImportService {
           const [pasal] = await db
             .select({
               id: pasalPelanggaran.id,
-              bobotPoin: pasalPelanggaran.bobotPoin,
               jenisSanksi: pasalPelanggaran.jenisSanksi,
             })
             .from(pasalPelanggaran)
@@ -925,11 +916,7 @@ export class CsvImportService {
           }
           pasalId = pasal.id;
           jenisSanksi = pasal.jenisSanksi;
-          pasalCache.set(cacheKey, {
-            id: pasal.id,
-            bobotPoin: pasal.bobotPoin,
-            jenisSanksi: pasal.jenisSanksi,
-          });
+          pasalCache.set(cacheKey, { id: pasal.id, jenisSanksi: pasal.jenisSanksi });
         }
       }
 
@@ -952,7 +939,6 @@ export class CsvImportService {
               .update(pelanggaran)
               .set({
                 jenisPelanggaran: jenisVal,
-                bobotPoin,
                 keterangan: keteranganVal || '-',
                 pasalId,
                 jenisSanksi,
@@ -967,7 +953,6 @@ export class CsvImportService {
           mahasiswaId: mhs.id,
           tanggal: tanggalVal,
           jenisPelanggaran: jenisVal,
-          bobotPoin,
           keterangan: keteranganVal || '-',
           pasalId,
           jenisSanksi,
