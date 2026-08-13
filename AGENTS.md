@@ -7,6 +7,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 ## 1. Project Overview & CI/CD
 - **Stack**: Bun monorepo (`apps/backend`: Elysia + Drizzle ORM + Postgres, `apps/frontend`: SolidJS + Vite + Tailwind), Biome v2.5.2.
 - **CI/CD & Deployment Workflow**: Primary deployment MUST go through GitHub Actions workflows. NEVER push directly to `development` (staging) or `main` (production) branches. All changes MUST be submitted via a Pull Request (PR) targeting `development` or `main`.
+- **NEVER delete `development` or `main` branches**: NEVER merge PRs with `--delete-branch` when the head branch is `development` or `main` (e.g. deploy-style PRs `development -> main`). These branches are the permanent source of truth for staging/production and MUST always exist on the remote. Only delete short-lived feature/hotfix branches. To merge a PR whose head is a protected branch, use `gh pr merge <N> --merge` WITHOUT `--delete-branch`.
 - **Pre-commit Checks**: Always run linting and strict type checks before committing:
   ```bash
   bun run lint
