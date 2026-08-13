@@ -403,6 +403,17 @@ export const presensiStatusEnum = pgEnum('presensi_status', [
   'unknown',
 ]);
 
+export const ketidakhadiranSumberEnum = pgEnum('ketidakhadiran_sumber', ['BAP', 'APEL', 'MANUAL']);
+
+export const ketidakhadiranStatusEnum = pgEnum('ketidakhadiran_status', [
+  'UNKNOWN',
+  'SAKIT',
+  'IZIN',
+  'ALPA',
+  'TERLAMBAT',
+  'RUSAK',
+]);
+
 export const cpmk = pgTable(
   'cpmk',
   {
@@ -704,9 +715,13 @@ export const bimbingan = pgTable('bimbingan', {
   ringkasan: text('ringkasan'),
   isApproved: boolean('is_approved').default(false).notNull(),
   permasalahan: text('permasalahan'),
+  topikBimbingan: text('topik_bimbingan'),
   solusi: text('solusi'),
   tanggalBimbingan: date('tanggal_bimbingan', { mode: 'string' }),
   statusBkd: boolean('status_bkd').default(false).notNull(),
+  kategori: varchar('kategori', { length: 20 }).default('PA').notNull(),
+  isReadByMahasiswa: boolean('is_read_by_mahasiswa').default(false).notNull(),
+  readAtMahasiswa: timestamp('read_at_mahasiswa'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -722,6 +737,8 @@ export const bimbinganThread = pgTable('bimbingan_thread', {
   senderRole: roleEnum('sender_role').notNull(),
   pesan: text('pesan').notNull(),
   tipe: varchar('tipe', { length: 10 }).default('uts').notNull(),
+  isReadByMahasiswa: boolean('is_read_by_mahasiswa').default(false).notNull(),
+  readAtMahasiswa: timestamp('read_at_mahasiswa'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
@@ -733,7 +750,8 @@ export const sesiBimbingan = pgTable('sesi_bimbingan', {
   kategoriId: integer('kategori_id').references(() => kategoriBimbingan.id, { onDelete: 'set null' }),
   pertemuanKe: integer('pertemuan_ke').notNull(),
   tanggalBimbingan: date('tanggal_bimbingan', { mode: 'string' }).notNull(),
-  permasalahan: text('permasalahan').notNull(),
+  permasalahan: text('permasalahan'),
+  topikBimbingan: text('topik_bimbingan'),
   solusi: text('solusi').notNull(),
   statusBkd: boolean('status_bkd').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -741,6 +759,20 @@ export const sesiBimbingan = pgTable('sesi_bimbingan', {
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
+});
+
+export const bimbinganAttachments = pgTable('bimbingan_attachments', {
+  id: serial('id').primaryKey(),
+  bimbinganId: integer('bimbingan_id')
+    .notNull()
+    .references(() => bimbingan.id, { onDelete: 'cascade' }),
+  bimbinganThreadId: integer('bimbingan_thread_id').references(() => bimbinganThread.id, { onDelete: 'cascade' }),
+  fileUrl: text('file_url').notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileSize: integer('file_size').notNull(),
+  fileType: varchar('file_type', { length: 100 }).notNull(),
+  uploadedBy: integer('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const pasalPelanggaran = pgTable('pasal_pelanggaran', {
@@ -2278,6 +2310,7 @@ export const notifications = pgTable(
       .notNull(),
     title: varchar('title', { length: 255 }).notNull(),
     message: text('message').notNull(),
+    link: text('link'),
     isRead: boolean('is_read').default(false).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
@@ -2492,6 +2525,38 @@ export const kompensasiManual = pgTable(
     return {
       mahasiswaTanggalIdx: index('idx_kompensasi_manual_mhs_tgl').on(table.mahasiswaId, table.tanggal),
       jenisIdx: index('idx_kompensasi_manual_jenis').on(table.jenisKompen),
+    };
+  },
+);
+
+// --- KETIDAKHADIRAN MAHASISWA (Unified Absence Table) ---
+export const ketidakhadiranMahasiswa = pgTable(
+  'ketidakhadiran_mahasiswa',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    tanggal: date('tanggal', { mode: 'string' }).notNull(),
+    sumber: ketidakhadiranSumberEnum('sumber').notNull(),
+    sumberId: integer('sumber_id'),
+    status: ketidakhadiranStatusEnum('status').notNull(),
+    durasiMenit: integer('durasi_menit').notNull().default(0),
+    keterangan: text('keterangan'),
+    isVerified: boolean('is_verified').notNull().default(false),
+    verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at'),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      sumberUnique: unique('idx_ketidakhadiran_sumber').on(table.sumber, table.sumberId),
+      mhsTanggalIdx: index('idx_ketidakhadiran_mhs_tgl').on(table.mahasiswaId, table.tanggal),
     };
   },
 );

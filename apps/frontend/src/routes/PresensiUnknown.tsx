@@ -23,6 +23,7 @@ export default function PresensiUnknown() {
   const [resolveModal, setResolveModal] = createSignal<PresensiUnknownItem | null>(null);
   const [resolveStatus, setResolveStatus] = createSignal<'sakit' | 'izin' | 'alpa'>('alpa');
   const [resolveNote, setResolveNote] = createSignal('');
+  const [resolveDurasi, setResolveDurasi] = createSignal(0);
   const [isAnulir, setIsAnulir] = createSignal(false);
 
   const [data, { refetch }] = createResource(
@@ -47,7 +48,8 @@ export default function PresensiUnknown() {
     setResolveModal(item);
     setResolveStatus(item.status === 'unknown' ? 'alpa' : (item.status as 'sakit' | 'izin' | 'alpa'));
     setResolveNote(item.keteranganAdmin || '');
-    setIsAnulir(false);
+    setResolveDurasi(item.durasiMangkir || 0);
+    setIsAnulir(item.durasiMangkir === 0);
   };
 
   const isResolved = (item: PresensiUnknownItem) => !!item.resolvedAt;
@@ -78,10 +80,12 @@ export default function PresensiUnknown() {
     }
     setSubmitting(true);
     try {
-      await presensiController.resolveUnknown(item.id, {
-        newStatus: resolveStatus(),
-        keteranganAdmin: resolveNote() || undefined,
-        isAnulir: isAnulir(),
+      await presensiController.verifikasiUnknown({
+        sumber: 'BAP',
+        sumberId: item.id,
+        statusKonfirmasi: resolveStatus().toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA',
+        durasiMenit: isAnulir() ? 0 : resolveDurasi(),
+        keterangan: resolveNote() || undefined,
       });
       toast.showToast(
         isAnulir()
@@ -303,8 +307,24 @@ export default function PresensiUnknown() {
               </div>
               <Show when={isAnulir()}>
                 <p class="text-xs text-secondary-500 dark:text-secondary-300">
-                  Presensi ditetapkan hadir dengan durasi 0 menit sehingga tidak masuk dalam rekap kompensasi.
+                  Ketidakhadiran tetap dikonfirmasi namun dengan durasi 0 menit sehingga tidak masuk dalam rekap
+                  kompensasi.
                 </p>
+              </Show>
+
+              <Show when={!isAnulir()}>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+                    Durasi Ketidakhadiran (menit)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    value={resolveDurasi()}
+                    onInput={(e) => setResolveDurasi(Number(e.currentTarget.value) || 0)}
+                  />
+                </div>
               </Show>
 
               <div class="flex flex-col gap-1.5">

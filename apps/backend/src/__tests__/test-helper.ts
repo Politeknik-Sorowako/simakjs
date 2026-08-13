@@ -22,6 +22,7 @@ import {
   kelasKuliah,
   kelompokApel,
   kelompokApelAnggota,
+  ketidakhadiranMahasiswa,
   kompensasiBayar,
   komponenNilai,
   konversiNilai,
@@ -130,6 +131,7 @@ export async function clearDatabase() {
   await db.delete(sesiApel);
   await db.delete(kelompokApelAnggota);
   await db.delete(kelompokApel);
+  await db.delete(ketidakhadiranMahasiswa);
   await db.delete(kompensasiBayar);
   await db.delete(presensi);
   await db.delete(bap);
