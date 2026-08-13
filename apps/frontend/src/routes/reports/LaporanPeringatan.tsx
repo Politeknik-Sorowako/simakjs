@@ -15,10 +15,11 @@ export default function LaporanPeringatan() {
       const rekap: Record<string, { jenis: string; jumlah: number; totalPoin: number }> = {};
       let totalPoin = 0;
       for (const p of data) {
-        totalPoin += p.bobotPoin;
+        const poin = p.jenisSanksi ?? p.bobotPoin ?? 0;
+        totalPoin += poin;
         const existing = rekap[p.jenisPelanggaran] || { jenis: p.jenisPelanggaran, jumlah: 0, totalPoin: 0 };
         existing.jumlah++;
-        existing.totalPoin += p.bobotPoin;
+        existing.totalPoin += poin;
         rekap[p.jenisPelanggaran] = existing;
       }
       return { total: data.length, totalPoin, perJenis: Object.values(rekap), data };
@@ -181,13 +182,21 @@ export default function LaporanPeringatan() {
                     </tr>
                   }
                 >
-                  {(item: { tanggal: string; jenisPelanggaran: string; bobotPoin: number; keterangan: string }) => (
+                  {(item: {
+                    tanggal: string;
+                    jenisPelanggaran: string;
+                    bobotPoin?: number;
+                    jenisSanksi?: number;
+                    keterangan: string;
+                  }) => (
                     <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                       <td class="py-3 px-5">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
                       <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">
                         {item.jenisPelanggaran}
                       </td>
-                      <td class="py-3 px-5 text-center font-bold text-rose-600">{item.bobotPoin}</td>
+                      <td class="py-3 px-5 text-center font-bold text-rose-600">
+                        {item.jenisSanksi ?? item.bobotPoin}
+                      </td>
                       <td class="py-3 px-5 text-secondary-500">{item.keterangan}</td>
                     </tr>
                   )}

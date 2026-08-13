@@ -9,13 +9,16 @@ const MODULES = [
   'users',
   'dosen',
   'mahasiswa',
+  'mata-kuliah',
   'kelas',
   'krs',
   'kompensasi',
+  'pelanggaran',
+  'pasal-pelanggaran',
   'audit-logs',
   'system',
 ];
-const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN'];
+const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'];
 
 const actionBadge = (action: string) => {
   const styles: Record<string, string> = {
@@ -23,6 +26,7 @@ const actionBadge = (action: string) => {
     UPDATE: 'bg-blue-50 text-blue-700 border-blue-200',
     DELETE: 'bg-rose-50 text-rose-700 border-rose-200',
     LOGIN: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    LOGOUT: 'bg-purple-50 text-purple-700 border-purple-200',
   };
   return (
     <span
@@ -41,6 +45,10 @@ export default function AuditLog() {
   const [startDate, setStartDate] = createSignal('');
   const [endDate, setEndDate] = createSignal('');
   const [detail, setDetail] = createSignal<AuditLogEntry | null>(null);
+  const [notice, setNotice] = createSignal('');
+  const [noticeType, setNoticeType] = createSignal<'success' | 'error'>('success');
+  const [isExporting, setIsExporting] = createSignal(false);
+  const [isPurging, setIsPurging] = createSignal(false);
 
   const [data, { refetch }] = createResource(
     () => ({
@@ -62,9 +70,57 @@ export default function AuditLog() {
     },
   );
 
+  const currentFilters = (): AuditLogFilters => {
+    const filters: AuditLogFilters = {};
+    if (search()) filters.search = search();
+    if (module()) filters.module = module();
+    if (actionType()) filters.actionType = actionType();
+    if (startDate()) filters.startDate = startDate();
+    if (endDate()) filters.endDate = endDate();
+    return filters;
+  };
+
   const applyFilter = () => {
     setPage(1);
     refetch();
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setNotice('');
+    try {
+      await auditController.exportCsv(currentFilters());
+      setNoticeType('success');
+      setNotice('Audit log berhasil diekspor.');
+    } catch (e: unknown) {
+      setNoticeType('error');
+      setNotice(e instanceof Error ? e.message : 'Gagal mengekspor audit log.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handlePurge = async () => {
+    if (
+      !window.confirm(
+        'Hapus semua audit log yang lebih lama dari 200 hari (1 semester)? Tindakan ini tidak dapat dibatalkan.',
+      )
+    ) {
+      return;
+    }
+    setIsPurging(true);
+    setNotice('');
+    try {
+      const res = await auditController.purge(200);
+      setNoticeType('success');
+      setNotice(res.message);
+      refetch();
+    } catch (e: unknown) {
+      setNoticeType('error');
+      setNotice(e instanceof Error ? e.message : 'Gagal membersihkan audit log.');
+    } finally {
+      setIsPurging(false);
+    }
   };
 
   return (
@@ -75,6 +131,35 @@ export default function AuditLog() {
           <p class="text-sm text-secondary-500 dark:text-secondary-200">
             Log aktivitas &amp; perubahan data user di sistem untuk keperluan audit dan pemantauan.
           </p>
+        </div>
+
+        <Show when={notice()}>
+          <div
+            class={`rounded-xl px-4 py-3 text-sm ${
+              noticeType() === 'error'
+                ? 'bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400'
+                : 'bg-success-50 border border-success-200 text-success-700 dark:bg-success-900/30 dark:border-success-800 dark:text-success-400'
+            }`}
+          >
+            {notice()}
+          </div>
+        </Show>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button
+            class="rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            disabled={isExporting()}
+            onClick={handleExport}
+          >
+            {isExporting() ? 'Mengekspor...' : 'Ekspor CSV'}
+          </button>
+          <button
+            class="rounded-xl border border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 px-4 py-2 text-sm font-semibold disabled:opacity-50"
+            disabled={isPurging()}
+            onClick={handlePurge}
+          >
+            {isPurging() ? 'Membersihkan...' : 'Hapus Log > 200 Hari'}
+          </button>
         </div>
 
         <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
@@ -169,6 +254,7 @@ export default function AuditLog() {
                   <th class="py-3 px-4">Role</th>
                   <th class="py-3 px-4">Aksi</th>
                   <th class="py-3 px-4">Module</th>
+                  <th class="py-3 px-4">Entitas</th>
                   <th class="py-3 px-4">Deskripsi</th>
                   <th class="py-3 px-4">IP</th>
                   <th class="py-3 px-4 text-center">Detail</th>
@@ -179,7 +265,7 @@ export default function AuditLog() {
                   when={!data.loading}
                   fallback={
                     <tr>
-                      <td colspan="8" class="py-8 text-center text-secondary-400">
+                      <td colspan="9" class="py-8 text-center text-secondary-400">
                         Memuat data...
                       </td>
                     </tr>
@@ -197,6 +283,9 @@ export default function AuditLog() {
                         <td class="py-3 px-4 text-xs capitalize">{item.userRole || '-'}</td>
                         <td class="py-3 px-4">{actionBadge(item.actionType)}</td>
                         <td class="py-3 px-4 text-xs font-mono">{item.module}</td>
+                        <td class="py-3 px-4 max-w-[200px] truncate text-secondary-600 dark:text-secondary-300">
+                          {item.entityName || item.entityId || '-'}
+                        </td>
                         <td class="py-3 px-4 max-w-xs truncate text-secondary-600 dark:text-secondary-300">
                           {item.description}
                         </td>
@@ -214,7 +303,7 @@ export default function AuditLog() {
                   </For>
                   <Show when={!data()?.data?.length}>
                     <tr>
-                      <td colspan="8" class="py-8 text-center text-secondary-400">
+                      <td colspan="9" class="py-8 text-center text-secondary-400">
                         Tidak ada data audit log
                       </td>
                     </tr>
@@ -290,6 +379,10 @@ export default function AuditLog() {
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">Entity ID</div>
                     <div>{detail()?.entityId || '-'}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold text-secondary-400 uppercase">Nama Entitas</div>
+                    <div>{detail()?.entityName || '-'}</div>
                   </div>
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">IP Address</div>

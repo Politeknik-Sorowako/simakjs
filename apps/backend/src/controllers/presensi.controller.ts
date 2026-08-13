@@ -222,6 +222,8 @@ export class PresensiController {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 20;
     const search = query?.search;
+    const statusFilter =
+      query?.statusFilter === 'belum' || query?.statusFilter === 'sudah' ? query.statusFilter : undefined;
     let prodiIds: number[] | undefined;
     if (hasRole(user, ['admin', 'super_admin'])) {
       const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
@@ -229,7 +231,7 @@ export class PresensiController {
     } else {
       prodiIds = (await ProdiScopeService.getUserAccessibleProdiIds(user)) || undefined;
     }
-    return await PresensiService.getUnknownPresensi(page, limit, search, prodiIds);
+    return await PresensiService.getUnknownPresensi(page, limit, search, prodiIds, statusFilter);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -247,6 +249,7 @@ export class PresensiController {
         user.id,
         body.keteranganAdmin,
         body.lampiranEvidens,
+        body.isAnulir,
       );
       if (!updated) {
         set.status = 404;

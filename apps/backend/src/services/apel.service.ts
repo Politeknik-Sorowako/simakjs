@@ -3,6 +3,7 @@ import {
   dosen,
   kelompokApel,
   kelompokApelAnggota,
+  ketidakhadiranMahasiswa,
   mahasiswa,
   presensiApel,
   programStudi,
@@ -201,6 +202,7 @@ export class ApelService {
         .from(presensiApel)
         .where(and(eq(presensiApel.sesiApelId, sesiId), eq(presensiApel.mahasiswaId, item.mahasiswaId)));
 
+      let presensiId: number;
       if (existing) {
         await db
           .update(presensiApel)
@@ -211,15 +213,52 @@ export class ApelService {
             keterangan: item.keterangan ?? null,
           })
           .where(eq(presensiApel.id, existing.id));
+        presensiId = existing.id;
       } else {
-        await db.insert(presensiApel).values({
-          sesiApelId: sesiId,
-          mahasiswaId: item.mahasiswaId,
-          // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
-          status: item.status as any,
-          menitTerlambat: menit,
-          keterangan: item.keterangan ?? null,
-        });
+        const [created] = await db
+          .insert(presensiApel)
+          .values({
+            sesiApelId: sesiId,
+            mahasiswaId: item.mahasiswaId,
+            // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type mismatch
+            status: item.status as any,
+            menitTerlambat: menit,
+            keterangan: item.keterangan ?? null,
+          })
+          .returning({ id: presensiApel.id });
+        presensiId = created.id;
+      }
+
+      // Sinkron ke tabel terpusat ketidakhadiran (single source of truth).
+      if (item.status !== 'hadir') {
+        const durasi = item.status !== 'hadir' ? (menit ?? 0) : 0;
+        await db
+          .insert(ketidakhadiranMahasiswa)
+          .values({
+            mahasiswaId: item.mahasiswaId,
+            tanggal: foundSesi.tanggal,
+            sumber: 'APEL',
+            sumberId: presensiId,
+            status: (item.status === 'telat' ? 'TERLAMBAT' : item.status.toUpperCase()) as
+              | 'UNKNOWN'
+              | 'SAKIT'
+              | 'IZIN'
+              | 'ALPA'
+              | 'TERLAMBAT'
+              | 'RUSAK',
+            durasiMenit: durasi,
+            keterangan: item.keterangan ?? null,
+            isVerified: item.status !== 'unknown',
+          })
+          .onConflictDoUpdate({
+            target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+            set: {
+              status: sql`excluded.status`,
+              durasiMenit: sql`excluded.durasi_menit`,
+              isVerified: sql`excluded.is_verified`,
+              keterangan: sql`excluded.keterangan`,
+            },
+          });
       }
     }
 
@@ -471,6 +510,7 @@ export class ApelService {
     const [updated] = await db
       .update(presensiApel)
       .set({
+        status: (data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa') || found.status,
         verifiedStatus: data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa',
         verifiedBy: data.verifiedBy,
         verifiedAt: new Date(),

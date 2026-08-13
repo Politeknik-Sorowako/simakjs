@@ -4,7 +4,6 @@ export interface PasalPelanggaran {
   id: number;
   nomorPasal: string;
   bunyiPasal: string;
-  bobotPoin: number;
   jenisSanksi: number;
   programStudiId?: number | null;
   prodiNama?: string | null;
@@ -47,6 +46,19 @@ export const pasalController = {
   async remove(id: number): Promise<{ success: boolean }> {
     return fetchApi<{ success: boolean }>(`/pasal-pelanggaran/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  async importCsv(
+    file: File,
+    mode: string,
+  ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', mode);
+    return fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>('/pasal-pelanggaran/import', {
+      method: 'POST',
+      body: formData,
     });
   },
 };

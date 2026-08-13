@@ -844,19 +844,18 @@ export class CsvImportService {
     const nimIdx = headers.indexOf('nim');
     const tanggalIdx = headers.indexOf('tanggal');
     const jenisIdx = headers.indexOf('jenis_pelanggaran');
-    const bobotIdx = headers.indexOf('bobot_poin');
     const keteranganIdx = headers.indexOf('keterangan');
     const pasalIdx = headers.indexOf('nomor_pasal');
     const sanksiIdx = headers.indexOf('jenis_sanksi');
 
-    if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1 || bobotIdx === -1) {
+    if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1) {
       return {
         successCount: 0,
-        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_pelanggaran, bobot_poin' }],
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_pelanggaran' }],
       };
     }
 
-    const pasalCache = new Map<string, { id: number; bobotPoin: number; jenisSanksi: number }>();
+    const pasalCache = new Map<string, { id: number; jenisSanksi: number }>();
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
@@ -866,27 +865,20 @@ export class CsvImportService {
       const nimVal = row[nimIdx].trim();
       const tanggalVal = row[tanggalIdx].trim();
       const jenisVal = row[jenisIdx].trim();
-      const bobotRaw = row[bobotIdx].trim();
       const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : '';
       const pasalVal = pasalIdx !== -1 ? row[pasalIdx].trim() : '';
       const sanksiRaw = sanksiIdx !== -1 ? row[sanksiIdx].trim().toUpperCase() : '';
 
-      if (!nimVal || !tanggalVal || !jenisVal || !bobotRaw) {
+      if (!nimVal || !tanggalVal || !jenisVal) {
         result.errors.push({
           line: lineNum,
-          error: 'Kolom NIM, Tanggal, Jenis Pelanggaran, dan Bobot Poin wajib diisi.',
+          error: 'Kolom NIM, Tanggal, dan Jenis Pelanggaran wajib diisi.',
         });
         continue;
       }
 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggalVal)) {
         result.errors.push({ line: lineNum, error: `Format tanggal "${tanggalVal}" tidak valid (harus YYYY-MM-DD).` });
-        continue;
-      }
-
-      const bobotPoin = parseInt(bobotRaw);
-      if (isNaN(bobotPoin) || bobotPoin <= 0 || bobotPoin > 100) {
-        result.errors.push({ line: lineNum, error: 'Bobot poin harus berupa angka antara 1 dan 100.' });
         continue;
       }
 
@@ -913,7 +905,6 @@ export class CsvImportService {
           const [pasal] = await db
             .select({
               id: pasalPelanggaran.id,
-              bobotPoin: pasalPelanggaran.bobotPoin,
               jenisSanksi: pasalPelanggaran.jenisSanksi,
             })
             .from(pasalPelanggaran)
@@ -925,11 +916,7 @@ export class CsvImportService {
           }
           pasalId = pasal.id;
           jenisSanksi = pasal.jenisSanksi;
-          pasalCache.set(cacheKey, {
-            id: pasal.id,
-            bobotPoin: pasal.bobotPoin,
-            jenisSanksi: pasal.jenisSanksi,
-          });
+          pasalCache.set(cacheKey, { id: pasal.id, jenisSanksi: pasal.jenisSanksi });
         }
       }
 
@@ -952,7 +939,6 @@ export class CsvImportService {
               .update(pelanggaran)
               .set({
                 jenisPelanggaran: jenisVal,
-                bobotPoin,
                 keterangan: keteranganVal || '-',
                 pasalId,
                 jenisSanksi,
@@ -967,7 +953,6 @@ export class CsvImportService {
           mahasiswaId: mhs.id,
           tanggal: tanggalVal,
           jenisPelanggaran: jenisVal,
-          bobotPoin,
           keterangan: keteranganVal || '-',
           pasalId,
           jenisSanksi,
@@ -978,6 +963,89 @@ export class CsvImportService {
         result.errors.push({
           line: lineNum,
           error: `Gagal menyimpan pelanggaran NIM "${nimVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  static async importPasalPelanggaran(csvText: string, mode: string = 'skip'): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
+    const result: ImportResult = { successCount: 0, errors: [] };
+
+    const nomorIdx = headers.indexOf('nomor_pasal');
+    const bunyiIdx = headers.indexOf('bunyi_pasal');
+    const sanksiIdx = headers.indexOf('jenis_sanksi');
+
+    if (nomorIdx === -1 || bunyiIdx === -1) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nomor_pasal, bunyi_pasal' }],
+      };
+    }
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
+
+      const nomorVal = row[nomorIdx].trim();
+      const bunyiVal = row[bunyiIdx].trim();
+      const sanksiRaw = sanksiIdx !== -1 ? row[sanksiIdx].trim().toUpperCase() : '';
+
+      if (!nomorVal || !bunyiVal) {
+        result.errors.push({ line: lineNum, error: 'Kolom nomor_pasal dan bunyi_pasal wajib diisi.' });
+        continue;
+      }
+
+      let jenisSanksi = 1;
+      if (sanksiRaw) {
+        if (sanksiRaw === '4' || sanksiRaw === 'T') jenisSanksi = 4;
+        else if (sanksiRaw === '1' || sanksiRaw === 'L') jenisSanksi = 1;
+        else {
+          result.errors.push({
+            line: lineNum,
+            error: 'Jenis sanksi tidak valid. Gunakan L (Lisan=1) atau T (Tertulis=4).',
+          });
+          continue;
+        }
+      }
+
+      try {
+        const [existing] = await db
+          .select({ id: pasalPelanggaran.id })
+          .from(pasalPelanggaran)
+          .where(sql`LOWER(${pasalPelanggaran.nomorPasal}) = LOWER(${nomorVal})`)
+          .limit(1);
+
+        if (existing) {
+          if (mode === 'update') {
+            await db
+              .update(pasalPelanggaran)
+              .set({ bunyiPasal: bunyiVal, jenisSanksi, isActive: true })
+              .where(eq(pasalPelanggaran.id, existing.id));
+            result.successCount++;
+          } else {
+            result.errors.push({
+              line: lineNum,
+              error: `Pasal "${nomorVal}" sudah ada. Gunakan mode Update untuk menimpa.`,
+            });
+          }
+          continue;
+        }
+
+        await db.insert(pasalPelanggaran).values({ nomorPasal: nomorVal, bunyiPasal: bunyiVal, jenisSanksi });
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal menyimpan pasal "${nomorVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
         });
       }
     }

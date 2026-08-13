@@ -141,14 +141,15 @@ export interface KompensasiDetailResponse {
   };
   historyKompensasi: Array<{
     id: number;
-    bapId: number;
+    bapId: number | null;
     sumber: 'perkuliahan' | 'apel' | 'manual';
     status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown';
     verifiedStatus?: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown' | null;
+    keteranganAdmin?: string | null;
     durasiMangkir: number;
     createdAt: string;
-    bapPertemuan: number;
-    bapMateri: string;
+    bapPertemuan: number | null;
+    bapMateri: string | null;
     bapTanggal: string;
     poinKompensasi: number;
   }>;
@@ -175,6 +176,7 @@ export interface PresensiUnknownItem {
   keteranganAdmin?: string | null;
   resolvedAt?: string | null;
   resolvedBy?: number | null;
+  resolvedByName?: string | null;
   createdAt?: string | null;
   bapTanggal: string;
   bapPertemuan: number;
@@ -301,22 +303,37 @@ export const presensiController = {
     limit?: number,
     search?: string,
     prodiId?: number,
+    statusFilter?: 'belum' | 'sudah',
   ): Promise<PaginatedResponse<PresensiUnknownItem>> {
     const params = new URLSearchParams();
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     if (search) params.append('search', search);
     if (prodiId) params.append('prodiId', String(prodiId));
+    if (statusFilter) params.append('statusFilter', statusFilter);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<PresensiUnknownItem>>(`/presensi/unknown-list${queryString}`);
   },
 
   async resolveUnknown(
     id: number,
-    data: { newStatus: 'sakit' | 'izin' | 'alpa'; keteranganAdmin?: string },
+    data: { newStatus: 'sakit' | 'izin' | 'alpa'; keteranganAdmin?: string; isAnulir?: boolean },
   ): Promise<PresensiUnknownItem> {
     return fetchApi<PresensiUnknownItem>(`/presensi/unknown/${id}/resolve`, {
       method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async verifikasiUnknown(data: {
+    sumber: 'BAP' | 'APEL' | 'MANUAL';
+    sumberId: number;
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
+    durasiMenit?: number;
+    keterangan?: string;
+  }): Promise<Record<string, unknown>> {
+    return fetchApi<Record<string, unknown>>('/ketidakhadiran/verifikasi-unknown', {
+      method: 'POST',
       body: JSON.stringify(data),
     });
   },

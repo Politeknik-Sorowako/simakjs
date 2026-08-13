@@ -75,6 +75,8 @@ async function main() {
       {
         env: { ...process.env, PGPASSWORD: config.password },
         stdio: ['inherit', 'pipe', 'inherit'],
+        encoding: 'buffer',
+        maxBuffer: 100 * 1024 * 1024,
         timeout: 300000,
       },
     );

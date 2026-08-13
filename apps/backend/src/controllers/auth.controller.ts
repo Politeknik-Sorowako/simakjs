@@ -7,6 +7,12 @@ const forgotRateLimit = new Map<string, { count: number; resetTime: number }>();
 
 export class AuthController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async logout({ set }: AuthContext): Promise<any> {
+    set.status = 200;
+    return { message: 'Logout berhasil' };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async register({ body, set }: AuthContext): Promise<any> {
     if (body.role === 'admin' || body.role === 'prodi' || body.role === 'keuangan') {
       set.status = 403;

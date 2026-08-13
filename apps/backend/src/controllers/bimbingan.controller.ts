@@ -58,7 +58,8 @@ export class BimbinganController {
 
     try {
       const targetPeriodeId = query?.periodeId || undefined;
-      return await BimbinganService.getOrCreateBimbingan(targetMhsId, targetPeriodeId);
+      const kategori = query?.kategori || 'PA';
+      return await BimbinganService.getOrCreateBimbingan(targetMhsId, targetPeriodeId, kategori);
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses bimbingan.' };
@@ -174,7 +175,50 @@ export class BimbinganController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getMonitoring({ set, getCurrentUser }: AuthContext): Promise<any> {
+  static async markAsRead(ctx: AuthContext<any, any>): Promise<any> {
+    const { params, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (!user || hasRole(user, ['guest'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    // Ownership check: mahasiswa hanya bisa menandai bimbingan miliknya sendiri.
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== targetMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat menandai bimbingan Anda sendiri.' };
+      }
+    } else if (hasRole(user, ['dosen'])) {
+      const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
+      const [mhs] = await db
+        .select({ dosenPaId: mahasiswa.dosenPaId })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, targetMhsId));
+      if (!myDosenId || !mhs || mhs.dosenPaId !== myDosenId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Dosen PA tidak cocok.' };
+      }
+    }
+
+    try {
+      // Hanya menandai bimbingan yang sudah ada sebagai dibaca — tidak membuat record baru.
+      return await BimbinganService.markAllReadByMahasiswa(targetMhsId);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memperbarui status dibaca.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMonitoring({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
@@ -187,7 +231,8 @@ export class BimbinganController {
       dosenId = dId || undefined;
     }
 
-    return await BimbinganService.getMonitoringBimbingan(dosenId);
+    const kategori = query?.kategori || undefined;
+    return await BimbinganService.getMonitoringBimbingan(dosenId, kategori);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -211,7 +256,8 @@ export class BimbinganController {
 
     try {
       const periodeId = query?.periodeId || undefined;
-      const data = await BimbinganService.getRekapBimbinganDosen(dosenId || undefined, periodeId);
+      const kategori = query?.kategori || undefined;
+      const data = await BimbinganService.getRekapBimbinganDosen(dosenId || undefined, periodeId, kategori);
       return { data };
     } catch (e: unknown) {
       set.status = 400;
@@ -302,7 +348,8 @@ export class BimbinganController {
       const newSesi = await BimbinganService.addSesiBimbingan(bimb.id, {
         pertemuanKe: body.pertemuanKe,
         tanggalBimbingan: body.tanggalBimbingan,
-        permasalahan: body.permasalahan,
+        topikBimbingan: body.topikBimbingan || body.permasalahan,
+        permasalahan: body.permasalahan || body.topikBimbingan,
         solusi: body.solusi,
         statusBkd: body.statusBkd ?? true,
         kategoriId: body.kategoriId ? Number(body.kategoriId) : null,
@@ -334,7 +381,10 @@ export class BimbinganController {
       const data: Record<string, unknown> = {};
       if (body.pertemuanKe !== undefined) data.pertemuanKe = body.pertemuanKe;
       if (body.tanggalBimbingan !== undefined) data.tanggalBimbingan = body.tanggalBimbingan;
-      if (body.permasalahan !== undefined) data.permasalahan = body.permasalahan;
+      if (body.topikBimbingan !== undefined || body.permasalahan !== undefined) {
+        data.topikBimbingan = body.topikBimbingan !== undefined ? body.topikBimbingan : body.permasalahan;
+        data.permasalahan = data.topikBimbingan;
+      }
       if (body.solusi !== undefined) data.solusi = body.solusi;
       if (body.statusBkd !== undefined) data.statusBkd = body.statusBkd;
       if (body.kategoriId !== undefined) data.kategoriId = body.kategoriId ? Number(body.kategoriId) : null;
@@ -408,6 +458,7 @@ export class BimbinganController {
         periodeId: query?.periodeId ? String(query.periodeId) : undefined,
         prodiId: query?.prodiId ? parseInt(query.prodiId) : undefined,
         dosenPaId: query?.dosenPaId ? parseInt(query.dosenPaId) : undefined,
+        kategori: query?.kategori ? String(query.kategori) : undefined,
         search: query?.search ? String(query.search) : undefined,
         page: query?.page ? parseInt(query.page) : 1,
         limit: query?.limit ? parseInt(query.limit) : 10,
