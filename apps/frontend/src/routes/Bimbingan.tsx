@@ -87,23 +87,28 @@ export default function Bimbingan() {
     },
   );
 
+  // Kategori Filter Signal (PA, TUGAS_AKHIR, MAGANG)
+  const [kategoriFilter, setKategoriFilter] = createSignal<string>('ALL');
+
   // Load student's own bimbingan (active or selected period)
   const [studentBimbingan, { refetch: refetchStudentBimb }] = createResource(
-    () => ({ id: mhsProfile()?.id, period: selectedPeriode() }),
-    async ({ id, period }) => {
+    () => ({ id: mhsProfile()?.id, period: selectedPeriode(), kat: kategoriFilter() }),
+    async ({ id, period, kat }) => {
       if (!id) return null;
-      return await bimbinganController.getByMhsId(id, period || undefined);
+      const res = await bimbinganController.getByMhsId(id, period || undefined, kat !== 'ALL' ? kat : undefined);
+      if (res && res.isReadByMahasiswa === false) {
+        bimbinganController.markAsRead(id).catch(() => {});
+      }
+      return res;
     },
   );
 
   // Load Dosen/Admin monitoring data
   const [monitoringList, { refetch: refetchMonitoring }] = createResource(
-    () => {
-      if (auth.hasRole(['admin', 'dosen'])) return true;
-      return null;
-    },
-    async () => {
-      return await bimbinganController.getMonitoring();
+    () => ({ role: auth.hasRole(['admin', 'dosen']), kat: kategoriFilter() }),
+    async ({ role, kat }) => {
+      if (!role) return null;
+      return await bimbinganController.getMonitoring(kat !== 'ALL' ? kat : undefined);
     },
   );
 
@@ -588,7 +593,17 @@ export default function Bimbingan() {
                   onInput={(e) => setSearchFilter(e.currentTarget.value)}
                   class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 />
-                <div class="grid grid-cols-2 gap-1.5">
+                <div class="grid grid-cols-3 gap-1.5">
+                  <select
+                    value={kategoriFilter()}
+                    onChange={(e) => setKategoriFilter(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] focus:outline-none focus:border-brand-500 text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                  >
+                    <option value="ALL">Semua Kategori</option>
+                    <option value="PA">Akademik (PA)</option>
+                    <option value="TUGAS_AKHIR">Tugas Akhir</option>
+                    <option value="MAGANG">Magang</option>
+                  </select>
                   <select
                     value={angkatanFilter()}
                     onChange={(e) => setAngkatanFilter(e.currentTarget.value)}
@@ -632,20 +647,36 @@ export default function Bimbingan() {
                         >
                           <div class="flex items-center justify-between">
                             <span class="font-bold text-secondary-800 text-sm dark:text-white">{item.nama}</span>
-                            <Show
-                              when={item.isApproved}
-                              fallback={
-                                <span class="px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[10px] font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                                  Belum
+                            <div class="flex items-center gap-1.5">
+                              <span class="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-[10px] font-bold dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+                                {item.totalSesi || 0}x Bimbingan (Semester Ini)
+                              </span>
+                              <Show
+                                when={item.isApproved}
+                                fallback={
+                                  <span class="px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[10px] font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+                                    Belum
+                                  </span>
+                                }
+                              >
+                                <span class="px-2 py-0.5 bg-accent-50 text-accent-600 border border-accent-100 rounded text-[10px] font-bold dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800">
+                                  Layak
                                 </span>
-                              }
-                            >
-                              <span class="px-2 py-0.5 bg-accent-50 text-accent-600 border border-accent-100 rounded text-[10px] font-bold dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800">
-                                Layak
+                              </Show>
+                            </div>
+                          </div>
+                          <div class="flex items-center justify-between text-xs text-secondary-400">
+                            <span>NIM: {item.nim}</span>
+                            <Show when={item.isReadByMahasiswa !== undefined}>
+                              <span
+                                class={`text-[10px] font-semibold ${item.isReadByMahasiswa ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
+                              >
+                                {item.isReadByMahasiswa
+                                  ? `✓ Dibaca ${item.readAtMahasiswa ? new Date(item.readAtMahasiswa).toLocaleDateString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : ''}`
+                                  : '• Belum Dibaca Mahasiswa'}
                               </span>
                             </Show>
                           </div>
-                          <span class="text-xs text-secondary-400">NIM: {item.nim}</span>
                           <Show when={auth.hasRole(['admin'])}>
                             <span class="text-[10px] text-secondary-400 italic">
                               PA: {item.dosenPaNama || 'Belum diplot'}
@@ -917,10 +948,10 @@ export default function Bimbingan() {
                             </select>
                           </div>
                           <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-secondary-600">Permasalahan</label>
+                            <label class="text-xs font-bold text-secondary-600">Topik Bimbingan</label>
                             <textarea
                               rows="3"
-                              placeholder="Tulis permasalahan akademis/non-akademis..."
+                              placeholder="Tulis topik bimbingan akademis/non-akademis..."
                               value={permasalahanInput()}
                               onInput={(e) => setPermasalahanInput(e.currentTarget.value)}
                               class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"

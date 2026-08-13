@@ -1,12 +1,15 @@
 import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
 import {
   bimbingan,
+  bimbinganAttachments,
   bimbinganThread,
   dosen,
   mahasiswa,
+  notifications,
   periodeAkademik,
   programStudi,
   sesiBimbingan,
+  users,
 } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -16,7 +19,40 @@ export class BimbinganService {
     return active;
   }
 
-  static async getOrCreateBimbingan(mahasiswaId: number, targetPeriodeId?: string) {
+  static async notifyDosenPa(mahasiswaId: number, title: string, message: string, bimbinganId: number) {
+    try {
+      const [mhs] = await db
+        .select({
+          id: mahasiswa.id,
+          nama: mahasiswa.nama,
+          nim: mahasiswa.nim,
+          dosenPaId: mahasiswa.dosenPaId,
+        })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, mahasiswaId));
+
+      if (!mhs || !mhs.dosenPaId) return;
+
+      const [dosenRow] = await db.select({ email: dosen.email }).from(dosen).where(eq(dosen.id, mhs.dosenPaId));
+
+      if (!dosenRow || !dosenRow.email) return;
+
+      const [userRow] = await db.select({ id: users.id }).from(users).where(eq(users.email, dosenRow.email));
+
+      if (!userRow) return;
+
+      await db.insert(notifications).values({
+        userId: userRow.id,
+        title,
+        message,
+        link: `/bimbingan?id=${bimbinganId}`,
+      });
+    } catch (e) {
+      console.error('[BimbinganService] Error sending notification to Dosen PA:', e);
+    }
+  }
+
+  static async getOrCreateBimbingan(mahasiswaId: number, targetPeriodeId?: string, kategori = 'PA') {
     const activePeriode = await this.getActivePeriode();
     if (!activePeriode) {
       throw new Error('Tidak ada periode akademik aktif.');
@@ -27,7 +63,7 @@ export class BimbinganService {
     const rawPeriodes = await db
       .select({ periodeId: bimbingan.periodeId })
       .from(bimbingan)
-      .where(eq(bimbingan.mahasiswaId, mahasiswaId));
+      .where(and(eq(bimbingan.mahasiswaId, mahasiswaId), eq(bimbingan.kategori, kategori)));
     const availablePeriodes = rawPeriodes.map((p) => p.periodeId);
 
     // Tambahkan periode aktif jika belum ada di list
@@ -35,36 +71,53 @@ export class BimbinganService {
       availablePeriodes.push(activePeriode.id);
     }
 
-    // Cari bimbingan untuk periode terpilih
+    // Cari bimbingan untuk periode terpilih & kategori
     const [existing] = await db
       .select()
       .from(bimbingan)
-      .where(and(eq(bimbingan.mahasiswaId, mahasiswaId), eq(bimbingan.periodeId, reqPeriodeId)));
+      .where(
+        and(
+          eq(bimbingan.mahasiswaId, mahasiswaId),
+          eq(bimbingan.periodeId, reqPeriodeId),
+          eq(bimbingan.kategori, kategori),
+        ),
+      );
 
     if (existing) {
-      // Ambil thread chat
       const threadMessages = await db
         .select()
         .from(bimbinganThread)
         .where(eq(bimbinganThread.bimbinganId, existing.id))
         .orderBy(desc(bimbinganThread.createdAt));
 
-      // Ambil semua sesi bimbingan
       const sesiList = await db
         .select()
         .from(sesiBimbingan)
         .where(eq(sesiBimbingan.bimbinganId, existing.id))
         .orderBy(asc(sesiBimbingan.pertemuanKe));
 
+      const attachments = await db
+        .select()
+        .from(bimbinganAttachments)
+        .where(eq(bimbinganAttachments.bimbinganId, existing.id));
+
+      const topik = existing.topikBimbingan || existing.permasalahan || null;
+
       return {
         ...existing,
+        topikBimbingan: topik,
+        permasalahan: topik,
         thread: threadMessages,
-        sesi: sesiList,
+        sesi: sesiList.map((s) => ({
+          ...s,
+          topikBimbingan: s.topikBimbingan || s.permasalahan,
+          permasalahan: s.topikBimbingan || s.permasalahan,
+        })),
+        attachments,
         availablePeriodes,
       };
     }
 
-    // Jika belum ada, buat bimbingan baru (hanya untuk periode aktif)
     if (reqPeriodeId !== activePeriode.id) {
       return {
         id: 0,
@@ -74,11 +127,16 @@ export class BimbinganService {
         ringkasan: null,
         isApproved: false,
         permasalahan: null,
+        topikBimbingan: null,
         solusi: null,
         tanggalBimbingan: null,
         statusBkd: false,
+        kategori,
+        isReadByMahasiswa: true,
+        readAtMahasiswa: null,
         thread: [],
         sesi: [],
+        attachments: [],
         availablePeriodes,
       };
     }
@@ -104,16 +162,22 @@ export class BimbinganService {
         ringkasan: null,
         isApproved: false,
         permasalahan: null,
+        topikBimbingan: null,
         solusi: null,
         tanggalBimbingan: null,
         statusBkd: false,
+        kategori,
+        isReadByMahasiswa: true,
       })
       .returning();
 
     return {
       ...newBimbingan,
+      topikBimbingan: null,
+      permasalahan: null,
       thread: [],
       sesi: [],
+      attachments: [],
       availablePeriodes,
     };
   }
@@ -123,7 +187,9 @@ export class BimbinganService {
     senderRole: 'dosen' | 'mahasiswa' | 'admin' | 'prodi',
     pesan: string,
     tipe?: string,
+    fileAttachment?: { fileUrl: string; fileName: string; fileSize: number; fileType: string; uploadedBy?: number },
   ) {
+    const isMahasiswa = senderRole === 'mahasiswa';
     const [newMsg] = await db
       .insert(bimbinganThread)
       .values({
@@ -131,8 +197,43 @@ export class BimbinganService {
         senderRole,
         pesan,
         tipe: tipe || 'uts',
+        isReadByMahasiswa: isMahasiswa,
+        readAtMahasiswa: isMahasiswa ? new Date() : null,
       })
       .returning();
+
+    if (fileAttachment) {
+      await db.insert(bimbinganAttachments).values({
+        bimbinganId,
+        bimbinganThreadId: newMsg.id,
+        fileUrl: fileAttachment.fileUrl,
+        fileName: fileAttachment.fileName,
+        fileSize: fileAttachment.fileSize,
+        fileType: fileAttachment.fileType,
+        uploadedBy: fileAttachment.uploadedBy || null,
+      });
+    }
+
+    // Update bimbingan read status if sent by dosen
+    if (!isMahasiswa) {
+      await db
+        .update(bimbingan)
+        .set({ isReadByMahasiswa: false, readAtMahasiswa: null, updatedAt: new Date() })
+        .where(eq(bimbingan.id, bimbinganId));
+    } else {
+      // Trigger notification to Dosen PA
+      const bimb = await this.getBimbinganById(bimbinganId);
+      if (bimb) {
+        const topik = bimb.topikBimbingan || bimb.permasalahan || 'Topik Bimbingan';
+        await this.notifyDosenPa(
+          bimb.mahasiswaId,
+          'Balasan Bimbingan',
+          `Mahasiswa membalas Bimbingan dengan topik: "${topik}"`,
+          bimbinganId,
+        );
+      }
+    }
+
     return newMsg;
   }
 
@@ -141,26 +242,76 @@ export class BimbinganService {
     data: {
       ringkasan?: string;
       isApproved?: boolean;
+      topikBimbingan?: string;
       permasalahan?: string;
       solusi?: string;
       tanggalBimbingan?: string;
       statusBkd?: boolean;
+      kategori?: string;
     },
   ) {
+    const topikVal = data.topikBimbingan !== undefined ? data.topikBimbingan : data.permasalahan;
+
     const [updated] = await db
       .update(bimbingan)
       .set({
         ...data,
+        topikBimbingan: topikVal,
+        permasalahan: topikVal,
         tanggalBimbingan: data.tanggalBimbingan,
         updatedAt: new Date(),
       })
       .where(eq(bimbingan.id, bimbinganId))
       .returning();
+
     return updated;
+  }
+
+  static async markAsReadByMahasiswa(bimbinganId: number) {
+    const now = new Date();
+    await db
+      .update(bimbingan)
+      .set({ isReadByMahasiswa: true, readAtMahasiswa: now })
+      .where(eq(bimbingan.id, bimbinganId));
+
+    await db
+      .update(bimbinganThread)
+      .set({ isReadByMahasiswa: true, readAtMahasiswa: now })
+      .where(eq(bimbinganThread.bimbinganId, bimbinganId));
+
+    return { success: true, readAt: now };
+  }
+
+  static async addAttachment(data: {
+    bimbinganId: number;
+    bimbinganThreadId?: number | null;
+    fileUrl: string;
+    fileName: string;
+    fileSize: number;
+    fileType: string;
+    uploadedBy?: number | null;
+  }) {
+    const [newAttachment] = await db
+      .insert(bimbinganAttachments)
+      .values({
+        bimbinganId: data.bimbinganId,
+        bimbinganThreadId: data.bimbinganThreadId || null,
+        fileUrl: data.fileUrl,
+        fileName: data.fileName,
+        fileSize: data.fileSize,
+        fileType: data.fileType,
+        uploadedBy: data.uploadedBy || null,
+      })
+      .returning();
+    return newAttachment;
   }
 
   static async getBimbinganById(id: number) {
     const [record] = await db.select().from(bimbingan).where(eq(bimbingan.id, id));
+    if (record) {
+      const topik = record.topikBimbingan || record.permasalahan || null;
+      return { ...record, topikBimbingan: topik, permasalahan: topik };
+    }
     return record;
   }
 
@@ -169,21 +320,39 @@ export class BimbinganService {
     data: {
       pertemuanKe: number;
       tanggalBimbingan: string;
-      permasalahan: string;
+      topikBimbingan?: string;
+      permasalahan?: string;
       solusi: string;
       statusBkd: boolean;
       kategoriId?: number | null;
     },
   ) {
+    const topikVal = data.topikBimbingan || data.permasalahan || '';
     const [newSesi] = await db
       .insert(sesiBimbingan)
       .values({
         bimbinganId,
-        ...data,
-        kategoriId: data.kategoriId || null,
+        pertemuanKe: data.pertemuanKe,
         tanggalBimbingan: data.tanggalBimbingan,
+        topikBimbingan: topikVal,
+        permasalahan: topikVal,
+        solusi: data.solusi,
+        statusBkd: data.statusBkd,
+        kategoriId: data.kategoriId || null,
       })
       .returning();
+
+    // Trigger notification to Dosen PA
+    const bimb = await this.getBimbinganById(bimbinganId);
+    if (bimb) {
+      await this.notifyDosenPa(
+        bimb.mahasiswaId,
+        'Pengajuan Sesi Bimbingan Baru',
+        `Mahasiswa mengajukan Sesi Bimbingan Ke-${data.pertemuanKe} dengan topik: "${topikVal}"`,
+        bimbinganId,
+      );
+    }
+
     return newSesi;
   }
 
@@ -192,16 +361,21 @@ export class BimbinganService {
     data: {
       pertemuanKe?: number;
       tanggalBimbingan?: string;
+      topikBimbingan?: string;
       permasalahan?: string;
       solusi?: string;
       statusBkd?: boolean;
       kategoriId?: number | null;
     },
   ) {
+    const topikVal = data.topikBimbingan !== undefined ? data.topikBimbingan : data.permasalahan;
+
     const [updatedSesi] = await db
       .update(sesiBimbingan)
       .set({
         ...data,
+        topikBimbingan: topikVal,
+        permasalahan: topikVal,
         kategoriId: data.kategoriId !== undefined ? data.kategoriId : undefined,
         tanggalBimbingan: data.tanggalBimbingan,
         updatedAt: new Date(),
@@ -221,14 +395,13 @@ export class BimbinganService {
     return { success: true };
   }
 
-  static async getMonitoringBimbingan(dosenId?: number) {
+  static async getMonitoringBimbingan(dosenId?: number, kategori?: string) {
     try {
       const activePeriode = await this.getActivePeriode();
       if (!activePeriode) {
         return [];
       }
 
-      // Ambil daftar mahasiswa
       const queryBuilder = db
         .select({
           id: mahasiswa.id,
@@ -251,15 +424,19 @@ export class BimbinganService {
       queryBuilder.orderBy(mahasiswa.nim);
       const listMahasiswa = await queryBuilder;
 
-      // Ambil semua bimbingan untuk periode aktif
+      const bimbConditions = [eq(bimbingan.periodeId, activePeriode.id)];
+      if (kategori && kategori !== 'ALL') {
+        bimbConditions.push(eq(bimbingan.kategori, kategori));
+      }
+
       let listBimbingan: (typeof bimbingan.$inferSelect)[] = [];
       try {
-        listBimbingan = await db.select().from(bimbingan).where(eq(bimbingan.periodeId, activePeriode.id));
+        listBimbingan = await db
+          .select()
+          .from(bimbingan)
+          .where(and(...bimbConditions));
       } catch (e: unknown) {
-        console.error('[BimbinganService] Error querying bimbingan for active periode:', {
-          periodeId: activePeriode.id,
-          error: e instanceof Error ? e.message : e,
-        });
+        console.error('[BimbinganService] Error querying bimbingan:', e);
       }
 
       const mapBimbingan = new Map<number, typeof bimbingan.$inferSelect>();
@@ -269,7 +446,6 @@ export class BimbinganService {
         bimbinganIds.push(b.id);
       }
 
-      // Ambil rekap total sesi per bimbingan (hanya untuk bimbingan di periode aktif)
       let allSesi: { id: number; bimbinganId: number }[] = [];
       if (bimbinganIds.length > 0) {
         try {
@@ -281,10 +457,7 @@ export class BimbinganService {
             .from(sesiBimbingan)
             .where(inArray(sesiBimbingan.bimbinganId, bimbinganIds));
         } catch (e: unknown) {
-          console.error('[BimbinganService] Error querying sesiBimbingan:', {
-            bimbinganCount: bimbinganIds.length,
-            error: e instanceof Error ? e.message : e,
-          });
+          console.error('[BimbinganService] Error querying sesiBimbingan:', e);
         }
       }
 
@@ -297,29 +470,31 @@ export class BimbinganService {
       return listMahasiswa.map((mhs) => {
         const bimb = mapBimbingan.get(mhs.id);
         const totalSesi = bimb ? sesiCountMap.get(bimb.id) || 0 : 0;
+        const topik = bimb?.topikBimbingan || bimb?.permasalahan || null;
         return {
           ...mhs,
           bimbinganId: bimb?.id || null,
           ringkasan: bimb?.ringkasan || null,
           isApproved: bimb?.isApproved || false,
           totalSesi,
-          permasalahan: bimb?.permasalahan || null,
+          topikBimbingan: topik,
+          permasalahan: topik,
           solusi: bimb?.solusi || null,
           tanggalBimbingan: bimb?.tanggalBimbingan || null,
           statusBkd: bimb?.statusBkd || false,
+          kategori: bimb?.kategori || 'PA',
+          isReadByMahasiswa: bimb?.isReadByMahasiswa ?? true,
+          readAtMahasiswa: bimb?.readAtMahasiswa || null,
           createdAt: bimb?.createdAt || null,
         };
       });
     } catch (err: unknown) {
-      console.error('[BimbinganService] Error in getMonitoringBimbingan:', {
-        dosenId,
-        error: err instanceof Error ? err.message : err,
-      });
+      console.error('[BimbinganService] Error in getMonitoringBimbingan:', err);
       return [];
     }
   }
 
-  static async getRekapBimbinganDosen(dosenId?: number, periodeId?: string) {
+  static async getRekapBimbinganDosen(dosenId?: number, periodeId?: string, kategori?: string) {
     const filterPeriodeId = periodeId || (await this.getActivePeriode())?.id;
     if (!filterPeriodeId) {
       return [];
@@ -328,6 +503,9 @@ export class BimbinganService {
     const conditions = [eq(bimbingan.periodeId, filterPeriodeId)];
     if (dosenId !== undefined) {
       conditions.push(eq(bimbingan.dosenId, dosenId));
+    }
+    if (kategori && kategori !== 'ALL') {
+      conditions.push(eq(bimbingan.kategori, kategori));
     }
 
     const bimbinganList = await db
@@ -338,6 +516,11 @@ export class BimbinganService {
         periodeId: bimbingan.periodeId,
         ringkasan: bimbingan.ringkasan,
         isApproved: bimbingan.isApproved,
+        topikBimbingan: bimbingan.topikBimbingan,
+        permasalahan: bimbingan.permasalahan,
+        kategori: bimbingan.kategori,
+        isReadByMahasiswa: bimbingan.isReadByMahasiswa,
+        readAtMahasiswa: bimbingan.readAtMahasiswa,
         mahasiswa: {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
@@ -367,9 +550,16 @@ export class BimbinganService {
 
     return bimbinganList.map((b) => {
       const sesi = sesiMap.get(b.id) || [];
+      const topik = b.topikBimbingan || b.permasalahan || null;
       return {
         ...b,
-        sesi,
+        topikBimbingan: topik,
+        permasalahan: topik,
+        sesi: sesi.map((s) => ({
+          ...s,
+          topikBimbingan: s.topikBimbingan || s.permasalahan,
+          permasalahan: s.topikBimbingan || s.permasalahan,
+        })),
         totalSesi: sesi.length,
         statusBkd: sesi.some((s) => s.statusBkd),
       };
@@ -380,6 +570,7 @@ export class BimbinganService {
     periodeId?: string;
     prodiId?: number;
     dosenPaId?: number;
+    kategori?: string;
     search?: string;
     page?: number;
     limit?: number;
@@ -396,6 +587,7 @@ export class BimbinganService {
     const limit = Math.min(10000, Math.max(1, filter?.limit || 10));
     const offset = (page - 1) * limit;
     const search = filter?.search?.trim();
+    const kategori = filter?.kategori;
 
     const mhsQuery = db
       .select({
@@ -436,12 +628,21 @@ export class BimbinganService {
 
     const listMahasiswa = await mhsQuery.where(whereClause).limit(limit).offset(offset);
     const pageMahasiswaIds = listMahasiswa.map((m) => m.id);
+
+    const bimbConditions = [eq(bimbingan.periodeId, targetPeriodeId)];
+    if (pageMahasiswaIds.length > 0) {
+      bimbConditions.push(inArray(bimbingan.mahasiswaId, pageMahasiswaIds));
+    }
+    if (kategori && kategori !== 'ALL') {
+      bimbConditions.push(eq(bimbingan.kategori, kategori));
+    }
+
     const listBimbingan =
       pageMahasiswaIds.length > 0
         ? await db
             .select()
             .from(bimbingan)
-            .where(and(eq(bimbingan.periodeId, targetPeriodeId), inArray(bimbingan.mahasiswaId, pageMahasiswaIds)))
+            .where(and(...bimbConditions))
         : [];
 
     const bimbinganMap = new Map<number, typeof bimbingan.$inferSelect>();
@@ -461,7 +662,11 @@ export class BimbinganService {
 
       for (const s of allSesi) {
         const current = sesiMap.get(s.bimbinganId) || [];
-        current.push(s);
+        current.push({
+          ...s,
+          topikBimbingan: s.topikBimbingan || s.permasalahan,
+          permasalahan: s.topikBimbingan || s.permasalahan,
+        });
         sesiMap.set(s.bimbinganId, current);
       }
     }
@@ -469,6 +674,7 @@ export class BimbinganService {
     const data = listMahasiswa.map((mhs) => {
       const bimb = bimbinganMap.get(mhs.id);
       const sesiList = bimb ? sesiMap.get(bimb.id) || [] : [];
+      const topik = bimb?.topikBimbingan || bimb?.permasalahan || null;
       return {
         mahasiswaId: mhs.id,
         nim: mhs.nim,
@@ -481,6 +687,11 @@ export class BimbinganService {
         totalSesi: sesiList.length,
         isApproved: bimb?.isApproved || false,
         statusBkd: bimb?.statusBkd || false,
+        kategori: bimb?.kategori || 'PA',
+        isReadByMahasiswa: bimb?.isReadByMahasiswa ?? true,
+        readAtMahasiswa: bimb?.readAtMahasiswa || null,
+        topikBimbingan: topik,
+        permasalahan: topik,
         sesiList,
       };
     });
