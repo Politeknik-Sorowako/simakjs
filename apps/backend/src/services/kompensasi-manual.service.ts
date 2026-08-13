@@ -1,5 +1,5 @@
 import { and, asc, count, desc, eq, or, sql } from 'drizzle-orm';
-import { kompensasiManual, mahasiswa, users } from '../models/schema';
+import { ketidakhadiranMahasiswa, kompensasiManual, mahasiswa, users } from '../models/schema';
 import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
 
@@ -109,6 +109,30 @@ export class KompensasiManualService {
         })
         .returning();
 
+      // Sinkron ke tabel terpusat ketidakhadiran (single source of truth).
+      await tx
+        .insert(ketidakhadiranMahasiswa)
+        .values({
+          mahasiswaId: data.mahasiswaId,
+          tanggal: data.tanggal,
+          sumber: 'MANUAL',
+          sumberId: null,
+          status: data.jenisKompen.toUpperCase() as 'UNKNOWN' | 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
+          durasiMenit,
+          keterangan: data.keterangan || null,
+          isVerified: true,
+          createdBy: creatorId,
+        })
+        .onConflictDoUpdate({
+          target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+          set: {
+            status: sql`excluded.status`,
+            durasiMenit: sql`excluded.durasi_menit`,
+            isVerified: sql`excluded.is_verified`,
+            keterangan: sql`excluded.keterangan`,
+          },
+        });
+
       return { ...record, isDuplicateRisk };
     });
   }
@@ -168,12 +192,45 @@ export class KompensasiManualService {
         .where(eq(kompensasiManual.id, id))
         .returning();
 
+      if (updated) {
+        await tx
+          .update(ketidakhadiranMahasiswa)
+          .set({
+            status: jenisKompen.toUpperCase() as 'UNKNOWN' | 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
+            durasiMenit,
+            keterangan: data.keterangan ?? existing.keterangan,
+          })
+          .where(
+            and(
+              eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'),
+              eq(ketidakhadiranMahasiswa.mahasiswaId, mahasiswaId),
+              eq(ketidakhadiranMahasiswa.tanggal, tanggal),
+              eq(ketidakhadiranMahasiswa.durasiMenit, existing.durasiMenit),
+            ),
+          );
+      }
+
       return updated || null;
     });
   }
 
   static async deleteKompensasi(id: number) {
     const [deleted] = await db.delete(kompensasiManual).where(eq(kompensasiManual.id, id)).returning();
+    if (deleted) {
+      await db
+        .delete(ketidakhadiranMahasiswa)
+        .where(
+          and(
+            eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'),
+            eq(ketidakhadiranMahasiswa.mahasiswaId, deleted.mahasiswaId),
+            eq(ketidakhadiranMahasiswa.tanggal, deleted.tanggal),
+            eq(
+              ketidakhadiranMahasiswa.status,
+              deleted.jenisKompen.toUpperCase() as 'UNKNOWN' | 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
+            ),
+          ),
+        );
+    }
     return deleted || null;
   }
 

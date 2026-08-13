@@ -18,6 +18,15 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'user_role', value: 'calon_mahasiswa', before: 'guest' },
   { name: 'presensi_status', value: 'terlambat' },
   { name: 'presensi_status', value: 'unknown' },
+  { name: 'ketidakhadiran_sumber', value: 'BAP' },
+  { name: 'ketidakhadiran_sumber', value: 'APEL' },
+  { name: 'ketidakhadiran_sumber', value: 'MANUAL' },
+  { name: 'ketidakhadiran_status', value: 'UNKNOWN' },
+  { name: 'ketidakhadiran_status', value: 'SAKIT' },
+  { name: 'ketidakhadiran_status', value: 'IZIN' },
+  { name: 'ketidakhadiran_status', value: 'ALPA' },
+  { name: 'ketidakhadiran_status', value: 'TERLAMBAT' },
+  { name: 'ketidakhadiran_status', value: 'RUSAK' },
 ];
 
 async function ensureEnums() {
@@ -152,7 +161,34 @@ async function ensureEnums() {
         "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
         "title" varchar(255) NOT NULL,
         "message" text NOT NULL,
+        "link" text,
         "is_read" boolean DEFAULT false NOT NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await pool.query(`ALTER TABLE "notifications" ADD COLUMN IF NOT EXISTS "link" text;`);
+    await pool.query(`ALTER TABLE "bimbingan" ADD COLUMN IF NOT EXISTS "topik_bimbingan" text;`);
+    await pool.query(`ALTER TABLE "bimbingan" ADD COLUMN IF NOT EXISTS "kategori" varchar(20) DEFAULT 'PA' NOT NULL;`);
+    await pool.query(
+      `ALTER TABLE "bimbingan" ADD COLUMN IF NOT EXISTS "is_read_by_mahasiswa" boolean DEFAULT false NOT NULL;`,
+    );
+    await pool.query(`ALTER TABLE "bimbingan" ADD COLUMN IF NOT EXISTS "read_at_mahasiswa" timestamp;`);
+    await pool.query(
+      `ALTER TABLE "bimbingan_thread" ADD COLUMN IF NOT EXISTS "is_read_by_mahasiswa" boolean DEFAULT false NOT NULL;`,
+    );
+    await pool.query(`ALTER TABLE "bimbingan_thread" ADD COLUMN IF NOT EXISTS "read_at_mahasiswa" timestamp;`);
+    await pool.query(`ALTER TABLE "sesi_bimbingan" ADD COLUMN IF NOT EXISTS "topik_bimbingan" text;`);
+    await pool.query(`ALTER TABLE "sesi_bimbingan" ALTER COLUMN "permasalahan" DROP NOT NULL;`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "bimbingan_attachments" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "bimbingan_id" integer NOT NULL REFERENCES "bimbingan"("id") ON DELETE CASCADE,
+        "bimbingan_thread_id" integer REFERENCES "bimbingan_thread"("id") ON DELETE CASCADE,
+        "file_url" text NOT NULL,
+        "file_name" varchar(255) NOT NULL,
+        "file_size" integer NOT NULL,
+        "file_type" varchar(100) NOT NULL,
+        "uploaded_by" integer REFERENCES "users"("id") ON DELETE SET NULL,
         "created_at" timestamp DEFAULT now() NOT NULL
       );
     `);
@@ -212,6 +248,46 @@ async function ensureEnums() {
     console.log('[ENSURE ENUMS] Checked audit_logs, notifications, and apel tables.');
   } catch (tblErr: unknown) {
     console.log(`[ENSURE ENUMS] Table check skipped: ${(tblErr as Error).message || String(tblErr)}`);
+  }
+
+  try {
+    const sumberType = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'ketidakhadiran_sumber'`);
+    if (sumberType.rows.length === 0) {
+      await pool.query(`CREATE TYPE "ketidakhadiran_sumber" AS ENUM ('BAP', 'APEL', 'MANUAL');`);
+    }
+    const statusType = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'ketidakhadiran_status'`);
+    if (statusType.rows.length === 0) {
+      await pool.query(
+        `CREATE TYPE "ketidakhadiran_status" AS ENUM ('UNKNOWN', 'SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'RUSAK');`,
+      );
+    }
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS "ketidakhadiran_mahasiswa" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "mahasiswa_id" integer NOT NULL REFERENCES "mahasiswa"("id") ON DELETE CASCADE,
+        "tanggal" date NOT NULL,
+        "sumber" ketidakhadiran_sumber NOT NULL,
+        "sumber_id" integer,
+        "status" ketidakhadiran_status NOT NULL,
+        "durasi_menit" integer DEFAULT 0 NOT NULL,
+        "keterangan" text,
+        "is_verified" boolean DEFAULT false NOT NULL,
+        "verified_by" integer REFERENCES "users"("id") ON DELETE SET NULL,
+        "verified_at" timestamp,
+        "created_by" integer REFERENCES "users"("id") ON DELETE SET NULL,
+        "created_at" timestamp DEFAULT now() NOT NULL,
+        "updated_at" timestamp DEFAULT now() NOT NULL
+      );
+    `);
+    await pool.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "idx_ketidakhadiran_sumber" ON "ketidakhadiran_mahasiswa" ("sumber", "sumber_id");`,
+    );
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS "idx_ketidakhadiran_mhs_tgl" ON "ketidakhadiran_mahasiswa" ("mahasiswa_id", "tanggal");`,
+    );
+    console.log('[ENSURE ENUMS] Checked ketidakhadiran_mahasiswa table.');
+  } catch (keErr: unknown) {
+    console.log(`[ENSURE ENUMS] ketidakhadiran table check skipped: ${(keErr as Error).message || String(keErr)}`);
   }
 
   await pool.end();

@@ -76,10 +76,12 @@ export default function ApelVerifikasi() {
         toast.showToast('Alasan/keterangan wajib diisi saat menganulir', 'error');
         return;
       }
-      await apelController.verifyPresensi(modal.id, {
-        verifiedStatus: verifyStatus(),
-        verificationNote: verifyNote() || undefined,
-        menitTerlambat: isAnulir() ? 0 : verifyStatus() !== 'hadir' ? verifyDuration() : 0,
+      await apelController.verifikasiUnknown({
+        sumber: 'APEL',
+        sumberId: modal.id,
+        statusKonfirmasi: verifyStatus().toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA',
+        durasiMenit: isAnulir() ? 0 : verifyStatus() !== 'hadir' ? verifyDuration() : 0,
+        keterangan: verifyNote() || undefined,
       });
       toast.showToast('Presensi berhasil diverifikasi', 'success');
       setVerifyModal(null);

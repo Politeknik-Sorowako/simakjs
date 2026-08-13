@@ -198,5 +198,17 @@ export const apelController = {
   verifyPresensi: (id: number, data: { verifiedStatus: string; verificationNote?: string; menitTerlambat?: number }) =>
     fetchApi(`/apel/verifikasi/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
+  verifikasiUnknown: (data: {
+    sumber: 'BAP' | 'APEL' | 'MANUAL';
+    sumberId: number;
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA';
+    durasiMenit?: number;
+    keterangan?: string;
+  }) =>
+    fetchApi('/ketidakhadiran/verifikasi-unknown', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   getRekapApel: (kelompokId: number) => fetchApi(`/apel/rekap/${kelompokId}`),
 };

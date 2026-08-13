@@ -325,6 +325,19 @@ export const presensiController = {
     });
   },
 
+  async verifikasiUnknown(data: {
+    sumber: 'BAP' | 'APEL' | 'MANUAL';
+    sumberId: number;
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA';
+    durasiMenit?: number;
+    keterangan?: string;
+  }): Promise<Record<string, unknown>> {
+    return fetchApi<Record<string, unknown>>('/ketidakhadiran/verifikasi-unknown', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   // Rekap Kehadiran
   async getRekapKehadiran(kelasKuliahId: number): Promise<RekapKehadiranKelasResponse> {
     return fetchApi<RekapKehadiranKelasResponse>(`/presensi/rekap-kehadiran?kelasKuliahId=${kelasKuliahId}`);
