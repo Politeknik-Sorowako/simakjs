@@ -14,6 +14,7 @@ import {
   presensiApel,
   programStudi,
   sesiApel,
+  users,
 } from '../models/schema';
 import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
@@ -95,8 +96,21 @@ export class PresensiService {
   }
 
   // --- ADMIN/PRODI RESOLUTION OF UNKNOWN STATUS ---
-  static async getUnknownPresensi(page = 1, limit = 20, search?: string, prodiIds?: number[]) {
+  static async getUnknownPresensi(
+    page = 1,
+    limit = 20,
+    search?: string,
+    prodiIds?: number[],
+    statusFilter?: 'belum' | 'sudah',
+  ) {
     const conditions: SQL<unknown>[] = [or(eq(presensi.status, 'unknown'), isNotNull(presensi.resolvedAt))!];
+    if (statusFilter === 'belum') {
+      conditions.length = 0;
+      conditions.push(eq(presensi.status, 'unknown'));
+    } else if (statusFilter === 'sudah') {
+      conditions.length = 0;
+      conditions.push(isNotNull(presensi.resolvedAt));
+    }
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
@@ -130,6 +144,7 @@ export class PresensiService {
         keteranganAdmin: presensi.keteranganAdmin,
         resolvedAt: presensi.resolvedAt,
         resolvedBy: presensi.resolvedBy,
+        resolvedByName: users.nama,
         createdAt: presensi.createdAt,
         bapTanggal: bap.tanggal,
         bapPertemuan: bap.pertemuanKe,
@@ -148,6 +163,7 @@ export class PresensiService {
       .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .leftJoin(dosen, eq(bap.dosenId, dosen.id))
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(users, eq(presensi.resolvedBy, users.id))
       .where(whereClause)
       .limit(limit)
       .offset((page - 1) * limit)
