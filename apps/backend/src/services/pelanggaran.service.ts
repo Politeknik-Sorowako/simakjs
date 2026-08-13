@@ -38,7 +38,9 @@ export class PelanggaranService {
     }
 
     if (!jenisPelanggaran) {
-      throw new Error('Jenis pelanggaran tidak boleh kosong. Pilih pasal BPA atau isi keterangan.');
+      throw new Error(
+        'Jenis pelanggaran tidak boleh kosong. Pilih pasal BPA atau tulis jenis pelanggaran secara manual.',
+      );
     }
     if (jenisSanksi !== 1 && jenisSanksi !== 4) {
       throw new Error('Jenis sanksi harus bernilai 1 (Lisan) atau 4 (Tertulis).');

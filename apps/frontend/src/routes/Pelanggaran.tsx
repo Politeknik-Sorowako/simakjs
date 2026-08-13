@@ -166,6 +166,10 @@ export default function Pelanggaran() {
       setErrorMsg('Mahasiswa, tanggal, dan keterangan wajib diisi.');
       return;
     }
+    if (!jenisPelanggaran().trim()) {
+      setErrorMsg('Jenis pelanggaran wajib diisi. Pilih pasal BPA atau tulis jenis pelanggaran secara manual.');
+      return;
+    }
 
     try {
       const payload = {
