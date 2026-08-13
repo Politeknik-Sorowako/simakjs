@@ -34,6 +34,7 @@ import {
   mataKuliah,
   mataKuliahBahanKajian,
   nilaiKomponenMahasiswa,
+  pasalPelanggaran,
   pelanggaran,
   pengajuanCuti,
   pengajuanYudisium,
@@ -127,6 +128,7 @@ export async function clearDatabase() {
   await db.delete(bimbinganThread);
   await db.delete(bimbingan);
   await db.delete(pelanggaran);
+  await db.delete(pasalPelanggaran);
   await db.delete(presensiApel);
   await db.delete(sesiApel);
   await db.delete(kelompokApelAnggota);
