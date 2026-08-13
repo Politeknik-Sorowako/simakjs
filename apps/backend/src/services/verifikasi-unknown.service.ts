@@ -65,8 +65,10 @@ export class VerifikasiUnknownService {
       const lockKey = `kompen_${absence.mahasiswaId}_${absence.tanggal}`;
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
 
-      // HADIR = mahasiswa ternyata hadir -> bukan ketidakhadiran. Hapus baris terpusat
-      // dan tandai sumber asal sebagai hadir agar tidak masuk rekap kompensasi.
+      // HADIR = mahasiswa ternyata hadir -> bukan ketidakhadiran. Pertahankan baris
+      // terpusat dengan status UNKNOWN + is_verified=true + durasi 0 agar (a) tidak masuk
+      // rekap kompensasi (UNKNOWN bukan kelas mangkir/ringan) dan (b) tetap bisa dikoreksi
+      // lewat endpoint ini bila admin salah konfirmasi. Tandai sumber asal sebagai hadir.
       if (input.statusKonfirmasi === 'HADIR') {
         const note = input.keterangan?.trim() || '';
         const terkonfirmasi = `[terkonfirmasi] hadir${note ? ` — ${note}` : ''}`;
@@ -106,7 +108,18 @@ export class VerifikasiUnknownService {
             .where(eq(presensiApel.id, absence.sumberId));
         }
 
-        await tx.delete(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.id, absence.id));
+        await tx
+          .update(ketidakhadiranMahasiswa)
+          .set({
+            status: 'UNKNOWN',
+            durasiMenit: 0,
+            keterangan: absence.keterangan,
+            isVerified: true,
+            verifiedBy: input.adminUserId,
+            verifiedAt: new Date(),
+          })
+          .where(eq(ketidakhadiranMahasiswa.id, absence.id));
+
         return { ...absence, status: 'HADIR', isVerified: true, durasiMenit: 0, verifiedBy: input.adminUserId };
       }
 
@@ -231,7 +244,7 @@ export class VerifikasiUnknownService {
       .from(ketidakhadiranMahasiswa)
       .innerJoin(mahasiswa, eq(ketidakhadiranMahasiswa.mahasiswaId, mahasiswa.id))
       .leftJoin(users, eq(ketidakhadiranMahasiswa.verifiedBy, users.id))
-      .where(eq(ketidakhadiranMahasiswa.status, 'UNKNOWN'))
+      .where(eq(ketidakhadiranMahasiswa.isVerified, false))
       .orderBy(ketidakhadiranMahasiswa.tanggal)
       .limit(limit)
       .offset(offset);
