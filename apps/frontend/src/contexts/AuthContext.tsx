@@ -1,4 +1,5 @@
 import { createContext, createEffect, createSignal, JSX, useContext } from 'solid-js';
+import { API_URL } from '../utils/api';
 
 export interface User {
   id: number;
@@ -87,10 +88,20 @@ export function AuthProvider(props: { children: JSX.Element }) {
   };
 
   const logout = () => {
+    const currentToken = token();
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    if (currentToken) {
+      void fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${currentToken}` },
+        credentials: 'include',
+      }).catch(() => {
+        // Logout audit recording is best-effort; ignore failures.
+      });
+    }
   };
 
   const setTheme = (newTheme: string) => {

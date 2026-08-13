@@ -2252,6 +2252,7 @@ export const auditLogs = pgTable(
     actionType: varchar('action_type', { length: 20 }).notNull(),
     module: varchar('module', { length: 50 }).notNull(),
     entityId: varchar('entity_id', { length: 100 }),
+    entityName: varchar('entity_name', { length: 255 }),
     description: text('description').notNull(),
     metadata: jsonb('metadata'),
   },

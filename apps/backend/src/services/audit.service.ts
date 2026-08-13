@@ -10,6 +10,7 @@ export interface CreateAuditLogDto {
   actionType: string;
   module: string;
   entityId?: string | null;
+  entityName?: string | null;
   description: string;
   metadata?: Record<string, unknown> | null;
 }
@@ -27,6 +28,7 @@ export class AuditService {
           actionType: data.actionType,
           module: data.module,
           entityId: data.entityId ?? null,
+          entityName: data.entityName ?? null,
           description: data.description,
           metadata: data.metadata ?? null,
         })
@@ -105,5 +107,90 @@ export class AuditService {
   static async getById(id: string) {
     const [log] = await db.select().from(auditLogs).where(eq(auditLogs.id, id));
     return log || null;
+  }
+
+  static async exportCsv(
+    module?: string,
+    actionType?: string,
+    userId?: number,
+    startDate?: string,
+    endDate?: string,
+    search?: string,
+    limit = 10000,
+  ): Promise<string> {
+    const conditions: ReturnType<typeof and>[] = [];
+
+    if (module) {
+      conditions.push(eq(auditLogs.module, module));
+    }
+    if (actionType) {
+      conditions.push(eq(auditLogs.actionType, actionType));
+    }
+    if (userId) {
+      conditions.push(eq(auditLogs.userId, userId));
+    }
+    if (startDate) {
+      conditions.push(gte(auditLogs.timestamp, new Date(`${startDate}T00:00:00`)));
+    }
+    if (endDate) {
+      conditions.push(lte(auditLogs.timestamp, new Date(`${endDate}T23:59:59.999`)));
+    }
+    if (search) {
+      const searchCond = or(
+        ilike(auditLogs.description, `%${search}%`),
+        ilike(auditLogs.module, `%${search}%`),
+        ilike(auditLogs.actionType, `%${search}%`),
+      );
+      if (searchCond) conditions.push(searchCond);
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const rows = await db
+      .select()
+      .from(auditLogs)
+      .where(whereClause ?? undefined)
+      .orderBy(desc(auditLogs.timestamp))
+      .limit(limit);
+
+    const headers = [
+      'Waktu',
+      'User ID',
+      'Peran',
+      'Aksi',
+      'Modul',
+      'Entitas ID',
+      'Nama Entitas',
+      'Deskripsi',
+      'IP',
+      'User Agent',
+    ];
+    const escape = (val: string | number | null | undefined): string => {
+      const s = val == null ? '' : String(val);
+      return `"${s.replace(/"/g, '""')}"`;
+    };
+    const lines = rows.map((r) =>
+      [
+        escape(r.timestamp?.toISOString()),
+        escape(r.userId),
+        escape(r.userRole),
+        escape(r.actionType),
+        escape(r.module),
+        escape(r.entityId),
+        escape(r.entityName),
+        escape(r.description),
+        escape(r.ipAddress),
+        escape(r.userAgent),
+      ].join(','),
+    );
+    return [headers.join(','), ...lines].join('\r\n');
+  }
+
+  static async purgeOlderThan(days: number) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const [before] = await db.select({ total: count() }).from(auditLogs).where(lte(auditLogs.timestamp, cutoff));
+    await db.delete(auditLogs).where(lte(auditLogs.timestamp, cutoff));
+    return Number(before?.total || 0);
   }
 }
