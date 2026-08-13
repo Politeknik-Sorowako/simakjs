@@ -73,6 +73,7 @@ SELECT
 FROM "presensi_apel" pa
 JOIN "sesi_apel" sa ON sa."id" = pa."sesi_apel_id"
 WHERE pa."status" <> 'hadir'
+  AND COALESCE(pa."verified_status"::text, pa."status"::text) <> 'hadir'
   AND NOT EXISTS (SELECT 1 FROM "ketidakhadiran_mahasiswa" k WHERE k."sumber" = 'APEL' AND k."sumber_id" = pa."id");
 
 INSERT INTO "ketidakhadiran_mahasiswa"
