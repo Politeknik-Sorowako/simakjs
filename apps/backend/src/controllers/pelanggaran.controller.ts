@@ -81,14 +81,14 @@ export class PelanggaranController {
     set,
     getCurrentUser,
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  }: AuthContext<any, { periodeId?: string; programStudiId?: string }>): Promise<any> {
+  }: AuthContext<any, { programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
     const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
-    return await PelanggaranService.getRekap(query?.periodeId, prodiId);
+    return await PelanggaranService.getRekap(prodiId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

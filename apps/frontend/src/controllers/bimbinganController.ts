@@ -229,9 +229,8 @@ export const bimbinganController = {
     return fetchApi<Pelanggaran[]>('/pelanggaran');
   },
 
-  async getRekapPelanggaran(periodeId?: string, programStudiId?: number): Promise<RekapPelanggaran> {
+  async getRekapPelanggaran(programStudiId?: number): Promise<RekapPelanggaran> {
     const params = new URLSearchParams();
-    if (periodeId) params.append('periodeId', periodeId);
     if (programStudiId) params.append('programStudiId', String(programStudiId));
     const query = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<RekapPelanggaran>(`/pelanggaran/rekap${query}`);

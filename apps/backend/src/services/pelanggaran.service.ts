@@ -112,7 +112,7 @@ export class PelanggaranService {
       .orderBy(desc(pelanggaran.tanggal));
   }
 
-  static async getRekap(periodeId?: string, programStudiId?: number) {
+  static async getRekap(programStudiId?: number) {
     const { mahasiswa: mhs, programStudi: ps } = await import('../models/schema');
 
     const conditions: SQL<unknown>[] = [];

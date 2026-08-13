@@ -184,12 +184,11 @@ export default function Pelanggaran() {
   // Rekap state
   const [viewTab, setViewTab] = createSignal<'daftar' | 'rekap'>('daftar');
   const [rekapProdi, setRekapProdi] = createSignal<number | undefined>(undefined);
-  const [rekapPeriode, setRekapPeriode] = createSignal<string>('');
   const [rekap, { refetch: refetchRekap }] = createResource(
-    () => ({ prodi: rekapProdi(), periode: rekapPeriode() }),
-    async ({ prodi, periode }) => {
+    () => rekapProdi(),
+    async (prodi) => {
       if (!isStaff()) return null;
-      return await bimbinganController.getRekapPelanggaran(periode || undefined, prodi);
+      return await bimbinganController.getRekapPelanggaran(prodi);
     },
   );
 
@@ -458,16 +457,6 @@ export default function Pelanggaran() {
                 </p>
               </div>
               <div class="flex items-center gap-3">
-                <div class="flex flex-col gap-1">
-                  <label class="text-[10px] font-bold text-secondary-500 uppercase">Periode</label>
-                  <input
-                    type="text"
-                    placeholder="cth: 20261"
-                    value={rekapPeriode()}
-                    onInput={(e) => setRekapPeriode(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
-                  />
-                </div>
                 <div class="flex flex-col gap-1">
                   <label class="text-[10px] font-bold text-secondary-500 uppercase">Program Studi</label>
                   <input
