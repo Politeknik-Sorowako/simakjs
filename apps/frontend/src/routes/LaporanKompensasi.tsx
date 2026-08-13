@@ -458,8 +458,8 @@ export default function LaporanKompensasi() {
                       }
                     >
                       {(log) => (
-                        <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
-                          <div class="flex flex-col gap-0.5">
+                        <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-start gap-3 dark:bg-secondary-900 dark:border-secondary-800">
+                          <div class="flex flex-col gap-0.5 min-w-0">
                             <span class="font-bold text-secondary-700 dark:text-secondary-200">
                               {log.sumber === 'apel'
                                 ? 'Presensi Apel'
@@ -469,8 +469,15 @@ export default function LaporanKompensasi() {
                             <span class="font-semibold text-accent-600 dark:text-accent-400">
                               Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
                             </span>
+                            <Show when={log.keteranganAdmin}>
+                              <span class="text-secondary-500 dark:text-secondary-300">
+                                Catatan admin: {log.keteranganAdmin}
+                              </span>
+                            </Show>
                           </div>
-                          <span class="font-bold text-red-600 font-mono dark:text-red-400">+{log.poinKompensasi}m</span>
+                          <span class="font-bold text-red-600 font-mono dark:text-red-400 shrink-0">
+                            +{log.poinKompensasi}m
+                          </span>
                         </div>
                       )}
                     </For>

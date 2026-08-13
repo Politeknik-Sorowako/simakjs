@@ -249,6 +249,7 @@ export class PresensiController {
         user.id,
         body.keteranganAdmin,
         body.lampiranEvidens,
+        body.isAnulir,
       );
       if (!updated) {
         set.status = 404;

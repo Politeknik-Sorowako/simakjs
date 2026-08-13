@@ -269,9 +269,10 @@ export const resolveUnknownPresensiSchema = {
     id: t.Numeric(),
   }),
   body: t.Object({
-    newStatus: t.Union([t.Literal('sakit'), t.Literal('izin'), t.Literal('alpa')]),
+    newStatus: t.Optional(t.Union([t.Literal('sakit'), t.Literal('izin'), t.Literal('alpa')])),
     keteranganAdmin: t.Optional(t.String()),
     lampiranEvidens: t.Optional(t.String()),
+    isAnulir: t.Optional(t.Boolean({ default: false })),
   }),
   response: {
     200: t.Object({
