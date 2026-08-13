@@ -1,4 +1,4 @@
-import { fetchApi } from '../utils/api';
+import { API_URL, fetchApi } from '../utils/api';
 
 export interface AuditLog {
   id: string;
@@ -57,7 +57,7 @@ export const auditController = {
     if (params?.endDate) searchParams.set('endDate', params.endDate);
     if (params?.search) searchParams.set('search', params.search);
     const qs = searchParams.toString();
-    const res = await fetch(`/audit-logs/export${qs ? `?${qs}` : ''}`, {
+    const res = await fetch(`${API_URL}/audit-logs/export${qs ? `?${qs}` : ''}`, {
       method: 'GET',
       headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
       credentials: 'include',

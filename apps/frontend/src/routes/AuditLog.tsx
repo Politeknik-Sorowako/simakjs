@@ -46,6 +46,7 @@ export default function AuditLog() {
   const [endDate, setEndDate] = createSignal('');
   const [detail, setDetail] = createSignal<AuditLogEntry | null>(null);
   const [notice, setNotice] = createSignal('');
+  const [noticeType, setNoticeType] = createSignal<'success' | 'error'>('success');
   const [isExporting, setIsExporting] = createSignal(false);
   const [isPurging, setIsPurging] = createSignal(false);
 
@@ -86,10 +87,13 @@ export default function AuditLog() {
 
   const handleExport = async () => {
     setIsExporting(true);
+    setNotice('');
     try {
       await auditController.exportCsv(currentFilters());
+      setNoticeType('success');
       setNotice('Audit log berhasil diekspor.');
     } catch (e: unknown) {
+      setNoticeType('error');
       setNotice(e instanceof Error ? e.message : 'Gagal mengekspor audit log.');
     } finally {
       setIsExporting(false);
@@ -105,11 +109,14 @@ export default function AuditLog() {
       return;
     }
     setIsPurging(true);
+    setNotice('');
     try {
       const res = await auditController.purge(200);
+      setNoticeType('success');
       setNotice(res.message);
       refetch();
     } catch (e: unknown) {
+      setNoticeType('error');
       setNotice(e instanceof Error ? e.message : 'Gagal membersihkan audit log.');
     } finally {
       setIsPurging(false);
@@ -127,7 +134,13 @@ export default function AuditLog() {
         </div>
 
         <Show when={notice()}>
-          <div class="rounded-xl bg-success-50 border border-success-200 dark:bg-success-900/30 dark:border-success-800 px-4 py-3 text-sm text-success-700 dark:text-success-400">
+          <div
+            class={`rounded-xl px-4 py-3 text-sm ${
+              noticeType() === 'error'
+                ? 'bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-900/30 dark:border-rose-800 dark:text-rose-400'
+                : 'bg-success-50 border border-success-200 text-success-700 dark:bg-success-900/30 dark:border-success-800 dark:text-success-400'
+            }`}
+          >
             {notice()}
           </div>
         </Show>

@@ -70,8 +70,10 @@ export class AuditController {
       const startDate = (q.startDate as string) || undefined;
       const endDate = (q.endDate as string) || undefined;
       const search = (q.search as string) || undefined;
+      const rawLimit = parseInt((q.limit as string) || '10000', 10);
+      const limit = Number.isNaN(rawLimit) ? 10000 : Math.min(Math.max(rawLimit, 1), 20000);
 
-      const csv = await AuditService.exportCsv(module, actionType, userId, startDate, endDate, search);
+      const csv = await AuditService.exportCsv(module, actionType, userId, startDate, endDate, search, limit);
       set.headers['Content-Type'] = 'text/csv; charset=utf-8';
       set.headers['Content-Disposition'] =
         `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.csv"`;
@@ -93,9 +95,9 @@ export class AuditController {
 
       const q = (query || {}) as Record<string, unknown>;
       const days = parseInt((q.days as string) || '200', 10);
-      if (days < 1) {
+      if (Number.isNaN(days) || days < 1) {
         set.status = 400;
-        return { error: 'Jumlah hari harus lebih dari 0.' };
+        return { error: 'Jumlah hari harus berupa angka lebih dari 0.' };
       }
 
       const deleted = await AuditService.purgeOlderThan(days);

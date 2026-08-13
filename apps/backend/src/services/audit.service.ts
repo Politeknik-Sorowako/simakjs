@@ -116,6 +116,7 @@ export class AuditService {
     startDate?: string,
     endDate?: string,
     search?: string,
+    limit = 10000,
   ): Promise<string> {
     const conditions: ReturnType<typeof and>[] = [];
 
@@ -150,7 +151,7 @@ export class AuditService {
       .from(auditLogs)
       .where(whereClause ?? undefined)
       .orderBy(desc(auditLogs.timestamp))
-      .limit(5000);
+      .limit(limit);
 
     const headers = [
       'Waktu',
@@ -188,7 +189,8 @@ export class AuditService {
   static async purgeOlderThan(days: number) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    const result = await db.delete(auditLogs).where(lte(auditLogs.timestamp, cutoff)).returning({ id: auditLogs.id });
-    return result.length;
+    const [before] = await db.select({ total: count() }).from(auditLogs).where(lte(auditLogs.timestamp, cutoff));
+    await db.delete(auditLogs).where(lte(auditLogs.timestamp, cutoff));
+    return Number(before?.total || 0);
   }
 }

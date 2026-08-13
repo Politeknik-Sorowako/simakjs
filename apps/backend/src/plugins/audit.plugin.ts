@@ -7,6 +7,10 @@ import { db } from '../utils/db';
 
 type EntityInfo = { entityId: string | null; entityName: string | null; module: string };
 
+// Cache resolved entity info per request (keyed by Request) so DELETE can resolve
+// the entity name BEFORE the row is removed, and onAfterResponse can reuse it.
+const entityCache = new WeakMap<Request, EntityInfo>();
+
 /**
  * Resolves the affected entity (id + human-readable name) for the main entities.
  * Returns generic info when the entity is not one of the known types.
@@ -71,61 +75,81 @@ function buildDescription(
   }
 }
 
-export const auditPlugin = new Elysia({ name: 'audit-plugin' }).use(authMiddleware).onAfterResponse(async (ctx) => {
-  const { request, set, getCurrentUser } = ctx;
-  const method = request.method.toUpperCase();
-
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-    return;
-  }
-
+function getPathMeta(request: Request) {
   const url = new URL(request.url);
   const path = url.pathname;
-
-  if (path.includes('/audit-logs')) {
-    return;
-  }
-
   const cleanPath = path.replace(/^\/api\/?/, '').replace(/^\//, '');
   const pathSegments = cleanPath.split('/').filter(Boolean);
   const module = pathSegments[0] || 'system';
-
-  let actionType = 'UPDATE';
-  if (method === 'POST') actionType = path.includes('/auth/login') ? 'LOGIN' : 'CREATE';
-  if (method === 'DELETE') actionType = 'DELETE';
-  if (path.includes('/auth/logout')) actionType = 'LOGOUT';
-
   const rawEntityId = pathSegments[1] && !Number.isNaN(Number(pathSegments[1])) ? pathSegments[1] : null;
+  return { path, module, rawEntityId };
+}
 
-  const user = await getCurrentUser().catch(() => null);
-  const userId = user?.id ?? null;
-  const userRole = user?.role ?? null;
+export const auditPlugin = new Elysia({ name: 'audit-plugin' })
+  .use(authMiddleware)
+  .onBeforeHandle(async ({ request }) => {
+    const method = request.method.toUpperCase();
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      return;
+    }
+    const { path, module, rawEntityId } = getPathMeta(request);
+    if (path.includes('/audit-logs')) {
+      return;
+    }
+    // Resolve entity before the mutation (so DELETE still has the row).
+    const info = await resolveEntity(module, rawEntityId);
+    entityCache.set(request, info);
+  })
+  .onAfterResponse(async (ctx) => {
+    const { request, set, getCurrentUser } = ctx;
+    const method = request.method.toUpperCase();
 
-  const ipAddress =
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    request.headers.get('cf-connecting-ip') ||
-    '127.0.0.1';
-  const userAgent = request.headers.get('user-agent') || 'Unknown';
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+      return;
+    }
 
-  const statusCode = typeof set.status === 'number' ? set.status : 200;
+    const { path, module } = getPathMeta(request);
 
-  const { entityId, entityName } = await resolveEntity(module, rawEntityId);
-  const description = buildDescription(method, module, actionType, entityName, statusCode);
+    if (path.includes('/audit-logs')) {
+      return;
+    }
 
-  void AuditService.log({
-    userId,
-    userRole,
-    ipAddress,
-    userAgent,
-    actionType,
-    module,
-    entityId,
-    entityName,
-    description,
-    metadata: {
-      method,
-      path,
-      statusCode,
-    },
+    let actionType = 'UPDATE';
+    if (method === 'POST') actionType = path.includes('/auth/login') ? 'LOGIN' : 'CREATE';
+    if (method === 'DELETE') actionType = 'DELETE';
+    if (path.includes('/auth/logout')) actionType = 'LOGOUT';
+
+    const user = await getCurrentUser().catch(() => null);
+    const userId = user?.id ?? null;
+    const userRole = user?.role ?? null;
+
+    const ipAddress =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      request.headers.get('cf-connecting-ip') ||
+      '127.0.0.1';
+    const userAgent = request.headers.get('user-agent') || 'Unknown';
+
+    const statusCode = typeof set.status === 'number' ? set.status : 200;
+
+    const cached = entityCache.get(request);
+    const entityId = cached?.entityId ?? null;
+    const entityName = cached?.entityName ?? null;
+    const description = buildDescription(method, module, actionType, entityName, statusCode);
+
+    void AuditService.log({
+      userId,
+      userRole,
+      ipAddress,
+      userAgent,
+      actionType,
+      module,
+      entityId,
+      entityName,
+      description,
+      metadata: {
+        method,
+        path,
+        statusCode,
+      },
+    });
   });
-});
