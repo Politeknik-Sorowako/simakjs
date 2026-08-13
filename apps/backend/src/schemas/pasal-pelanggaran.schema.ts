@@ -3,7 +3,6 @@ import { t } from 'elysia';
 export const pasalPelanggaranBody = t.Object({
   nomorPasal: t.String({ minLength: 1, maxLength: 50, default: 'Pasal 1' }),
   bunyiPasal: t.String({ minLength: 3, default: 'Berpakaian tidak rapi selama kegiatan akademik.' }),
-  bobotPoin: t.Integer({ minimum: 1, maximum: 100, default: 5 }),
   jenisSanksi: t.Integer({ minimum: 1, maximum: 4, default: 1 }),
   programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
 });
@@ -25,7 +24,6 @@ export const getAllPasalSchema = {
         id: t.Integer(),
         nomorPasal: t.String(),
         bunyiPasal: t.String(),
-        bobotPoin: t.Integer(),
         jenisSanksi: t.Integer(),
         programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
         prodiNama: t.Optional(t.Union([t.String(), t.Null()])),
@@ -49,7 +47,6 @@ export const createPasalSchema = {
       id: t.Integer(),
       nomorPasal: t.String(),
       bunyiPasal: t.String(),
-      bobotPoin: t.Integer(),
       jenisSanksi: t.Integer(),
       programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
       isActive: t.Boolean(),
@@ -76,7 +73,6 @@ export const updatePasalSchema = {
       id: t.Integer(),
       nomorPasal: t.String(),
       bunyiPasal: t.String(),
-      bobotPoin: t.Integer(),
       jenisSanksi: t.Integer(),
       programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
       isActive: t.Boolean(),
@@ -102,5 +98,22 @@ export const deletePasalSchema = {
     200: t.Object({ success: t.Boolean() }),
     403: t.Object({ error: t.String() }),
     404: t.Object({ error: t.String() }),
+  },
+};
+
+export const importPasalSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Impor Pasal BPA via CSV',
+    description:
+      'Mengimpor definisi pasal pelanggaran BPA melalui file CSV. Kolom: nomor_pasal, bunyi_pasal, jenis_sanksi (L=1 / T=4). Mode update akan menimpa pasal dengan nomor yang sama.',
+  },
+  response: {
+    200: t.Object({
+      successCount: t.Integer(),
+      errors: t.Array(t.Object({ line: t.Integer(), error: t.String() })),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
   },
 };

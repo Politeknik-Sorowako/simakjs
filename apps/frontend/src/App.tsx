@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { WorkspaceProvider } from './contexts/WorkspaceContext';
+import AdminPasalBpa from './routes/AdminPasalBpa';
 import AdmisiDaftar from './routes/AdmisiDaftar';
 import AdmisiDaftarUlang from './routes/AdmisiDaftarUlang';
 import AdmisiDashboard from './routes/AdmisiDashboard';
@@ -262,6 +263,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'instruktur', 'prodi']}>
             <Pelanggaran />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pelanggaran/pasal-bpa"
+        element={
+          <ProtectedRoute allowedRoles={['admin', 'prodi', 'super_admin']}>
+            <AdminPasalBpa />
           </ProtectedRoute>
         }
       />

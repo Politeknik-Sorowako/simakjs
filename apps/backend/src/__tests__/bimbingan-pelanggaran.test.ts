@@ -272,7 +272,6 @@ describe('Bimbingan & Pelanggaran API', () => {
             mahasiswaId: mhsId,
             tanggal: '2023-10-15',
             jenisPelanggaran: 'Merusak Fasilitas Lab',
-            bobotPoin: 15,
             keterangan: 'Memecahkan monitor kelas praktik.',
           }),
         }),
@@ -280,7 +279,7 @@ describe('Bimbingan & Pelanggaran API', () => {
       expect(response.status).toBe(201);
       const data = await response.json();
       expect(data.id).toBeDefined();
-      expect(data.bobotPoin).toBe(15);
+      expect(data.jenisSanksi).toBe(1);
     });
 
     it('mahasiswa dilarang keras mencatat pelanggaran', async () => {
@@ -295,7 +294,6 @@ describe('Bimbingan & Pelanggaran API', () => {
             mahasiswaId: mhs2Id,
             tanggal: '2023-10-15',
             jenisPelanggaran: 'Menuduh teman alpa',
-            bobotPoin: 5,
             keterangan: 'Keterangan palsu.',
           }),
         }),
@@ -316,7 +314,7 @@ describe('Bimbingan & Pelanggaran API', () => {
             mahasiswaId: mhsId,
             tanggal: '2023-10-15',
             jenisPelanggaran: 'Pelanggaran 1',
-            bobotPoin: 10,
+            jenisSanksi: 4,
             keterangan: 'Keterangan 1.',
           }),
         }),
@@ -332,7 +330,7 @@ describe('Bimbingan & Pelanggaran API', () => {
       );
       expect(response.status).toBe(200);
       const data = await response.json();
-      expect(data.totalPoin).toBe(10);
+      expect(data.totalPoin).toBe(4);
       expect(data.pelanggaranList).toBeArray();
       expect(data.pelanggaranList.length).toBe(1);
     });

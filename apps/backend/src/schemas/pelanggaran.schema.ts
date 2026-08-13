@@ -3,8 +3,7 @@ import { t } from 'elysia';
 export const pelanggaranBody = t.Object({
   mahasiswaId: t.Integer({ default: 1 }),
   tanggal: t.String({ pattern: '^\\d{4}-\\d{2}-\\d{2}$', default: '2026-06-27' }),
-  jenisPelanggaran: t.String({ minLength: 3, maxLength: 255, default: 'Keterlambatan masuk kelas praktikum' }),
-  bobotPoin: t.Integer({ minimum: 1, maximum: 100, default: 5 }),
+  jenisPelanggaran: t.Optional(t.String({ minLength: 3, maxLength: 255 })),
   keterangan: t.String({ minLength: 3, maxLength: 1000, default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' }),
   pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
   jenisSanksi: t.Optional(t.Integer({ minimum: 1, maximum: 4, default: 1 })),
@@ -14,7 +13,8 @@ export const createPelanggaranSchema = {
   detail: {
     tags: ['Kedisiplinan'],
     summary: 'Catat Tindakan Indisipliner',
-    description: 'Admin/Dosen mencatat tindakan indisipliner mahasiswa beserta bobot pelanggaran.',
+    description:
+      'Admin/Dosen/Instruktur mencatat tindakan indisipliner mahasiswa. Pilih pasal BPA, bobot poin otomatis mengikuti jenis sanksi (Lisan=1 / Tertulis=4).',
   },
   body: pelanggaranBody,
   response: {
@@ -23,7 +23,6 @@ export const createPelanggaranSchema = {
       mahasiswaId: t.Integer({ default: 1 }),
       tanggal: t.String({ default: '2026-06-27' }),
       jenisPelanggaran: t.String({ default: 'Keterlambatan masuk kelas praktikum' }),
-      bobotPoin: t.Integer({ default: 5 }),
       keterangan: t.String({ default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' }),
       pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
       jenisSanksi: t.Optional(t.Integer({ default: 1 })),
@@ -35,7 +34,7 @@ export const getPelanggaranMahasiswaSchema = {
   detail: {
     tags: ['Kedisiplinan'],
     summary: 'Riwayat Pelanggaran Mahasiswa',
-    description: 'Mengambil daftar riwayat tindakan indisipliner beserta akumulasi poin pelanggaran mahasiswa.',
+    description: 'Mengambil daftar riwayat tindakan indisipliner beserta akumulasi poin dan predikat TXLY.',
   },
   params: t.Object({
     mhsId: t.Numeric(),
@@ -43,13 +42,14 @@ export const getPelanggaranMahasiswaSchema = {
   response: {
     200: t.Object({
       totalPoin: t.Optional(t.Integer({ default: 5 })),
+      predikat: t.Optional(t.String({ default: 'T1L1' })),
       pelanggaranList: t.Optional(
         t.Array(
           t.Object({
             id: t.Optional(t.Integer({ default: 1 })),
             tanggal: t.Optional(t.String({ default: '2026-06-27' })),
             jenisPelanggaran: t.Optional(t.String({ default: 'Terlambat masuk kelas' })),
-            bobotPoin: t.Optional(t.Integer({ default: 5 })),
+            bobotPoin: t.Optional(t.Integer({ default: 1 })),
             keterangan: t.Optional(t.String({ default: 'Terlambat lebih dari 15 menit' })),
             pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
             jenisSanksi: t.Optional(t.Integer({ default: 1 })),
@@ -79,7 +79,7 @@ export const getAllPelanggaranSchema = {
         prodiNama: t.Optional(t.Union([t.String(), t.Null()], { default: 'Teknik Elektro' })),
         tanggal: t.Optional(t.String({ default: '2026-06-27' })),
         jenisPelanggaran: t.Optional(t.String({ default: 'Keterlambatan masuk kelas praktikum' })),
-        bobotPoin: t.Optional(t.Integer({ default: 5 })),
+        bobotPoin: t.Optional(t.Integer({ default: 1 })),
         keterangan: t.Optional(t.String({ default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' })),
         pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
         jenisSanksi: t.Optional(t.Integer({ default: 1 })),
@@ -95,7 +95,34 @@ export const getRekapPelanggaranSchema = {
   detail: {
     tags: ['Kedisiplinan'],
     summary: 'Rekapitulasi Pelanggaran',
-    description: 'Mengambil rekapitulasi pelanggaran per program studi untuk laporan BAAK/Kaprodi.',
+    description:
+      'Mengambil rekapitulasi pelanggaran per program studi beserta predikat TXLY (T=kali sanksi tertulis, L=sisa sanksi lisan).',
+  },
+  response: {
+    200: t.Object({
+      totalPelanggaran: t.Integer(),
+      totalMahasiswa: t.Integer(),
+      perJenis: t.Array(t.Object({ jenis: t.String(), jumlah: t.Integer(), totalPoin: t.Integer() })),
+      perProdi: t.Array(
+        t.Object({
+          prodiId: t.Optional(t.Union([t.Integer(), t.Null()])),
+          prodiNama: t.String(),
+          totalPelanggaran: t.Integer(),
+          totalPoin: t.Integer(),
+        }),
+      ),
+      topPelanggar: t.Array(
+        t.Object({
+          mahasiswaId: t.Integer(),
+          nim: t.String(),
+          nama: t.String(),
+          prodiNama: t.String(),
+          totalPoin: t.Integer(),
+          jumlahPelanggaran: t.Integer(),
+          predikat: t.String(),
+        }),
+      ),
+    }),
   },
 };
 
@@ -112,7 +139,6 @@ export const updatePelanggaranSchema = {
     t.Object({
       tanggal: t.Optional(t.String()),
       jenisPelanggaran: t.Optional(t.String()),
-      bobotPoin: t.Optional(t.Integer()),
       keterangan: t.Optional(t.String()),
       pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
       jenisSanksi: t.Optional(t.Integer()),
@@ -124,7 +150,6 @@ export const updatePelanggaranSchema = {
       mahasiswaId: t.Integer(),
       tanggal: t.String(),
       jenisPelanggaran: t.String(),
-      bobotPoin: t.Integer(),
       keterangan: t.String(),
       pasalId: t.Union([t.Integer(), t.Null()]),
       jenisSanksi: t.Integer(),
@@ -143,7 +168,7 @@ export const importPelanggaranSchema = {
     tags: ['Kedisiplinan'],
     summary: 'Impor Data Peringatan/Pelanggaran via CSV',
     description:
-      'Mengimpor data pelanggaran mahasiswa melalui file CSV. Kolom: nim, tanggal, nomor_pasal (opsional), jenis_pelanggaran, bobot_poin, jenis_sanksi (L=1 / T=4), keterangan.',
+      'Mengimpor data pelanggaran mahasiswa melalui file CSV. Kolom: nim, tanggal, nomor_pasal (opsional), jenis_pelanggaran, jenis_sanksi (L=1 / T=4), keterangan.',
   },
   response: {
     200: t.Object({
