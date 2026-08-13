@@ -5,6 +5,7 @@ import {
   createPasalSchema,
   deletePasalSchema,
   getAllPasalSchema,
+  importPasalSchema,
   updatePasalSchema,
 } from '../schemas/pasal-pelanggaran.schema';
 
@@ -12,5 +13,6 @@ export const pasalPelanggaranRoutes = new Elysia({ prefix: '/pasal-pelanggaran' 
   .use(authMiddleware)
   .get('/', PasalPelanggaranController.getAll, getAllPasalSchema)
   .post('/', PasalPelanggaranController.create, createPasalSchema)
+  .post('/import', PasalPelanggaranController.importCsv, importPasalSchema)
   .put('/:id', PasalPelanggaranController.update, updatePasalSchema)
   .delete('/:id', PasalPelanggaranController.remove, deletePasalSchema);

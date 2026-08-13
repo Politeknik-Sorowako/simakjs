@@ -100,3 +100,20 @@ export const deletePasalSchema = {
     404: t.Object({ error: t.String() }),
   },
 };
+
+export const importPasalSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Impor Pasal BPA via CSV',
+    description:
+      'Mengimpor definisi pasal pelanggaran BPA melalui file CSV. Kolom: nomor_pasal, bunyi_pasal, jenis_sanksi (L=1 / T=4). Mode update akan menimpa pasal dengan nomor yang sama.',
+  },
+  response: {
+    200: t.Object({
+      successCount: t.Integer(),
+      errors: t.Array(t.Object({ line: t.Integer(), error: t.String() })),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};

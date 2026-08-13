@@ -1,6 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,6 +14,7 @@ export default function AdminPasalBpa() {
 
   const [pasalList, { refetch }] = createResource(() => pasalController.getAll({ includeInactive: true }));
   const [search, setSearch] = createSignal('');
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   const filteredPasal = () => {
     const q = search().toLowerCase();
@@ -111,9 +113,14 @@ export default function AdminPasalBpa() {
             </p>
           </div>
           <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
-            <Button onClick={openAddModal} variant="primary">
-              + Tambah Pasal
-            </Button>
+            <div class="flex items-center gap-3">
+              <Button onClick={() => setShowImportModal(true)} variant="secondary">
+                Impor CSV
+              </Button>
+              <Button onClick={openAddModal} variant="primary">
+                + Tambah Pasal
+              </Button>
+            </div>
           </Show>
         </div>
 
@@ -260,6 +267,21 @@ export default function AdminPasalBpa() {
             </div>
           </form>
         </Modal>
+
+        {/* Import CSV Modal */}
+        <ImportCsvModal
+          show={showImportModal()}
+          onClose={() => setShowImportModal(false)}
+          title="Pasal BPA"
+          importUrl="/pasal-pelanggaran/import"
+          templateHeaders={['nomor_pasal', 'bunyi_pasal', 'jenis_sanksi']}
+          customTemplateRows={[
+            ['nomor_pasal', 'bunyi_pasal', 'jenis_sanksi'],
+            ['Pasal 1', 'Berpakaian tidak rapi / tidak sopan selama kegiatan akademik.', 'L'],
+            ['Pasal 4', 'Merusak fasilitas / sarana kampus.', 'T'],
+          ]}
+          onSuccess={refetch}
+        />
       </div>
     </MainLayout>
   );

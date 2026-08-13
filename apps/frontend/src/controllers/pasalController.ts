@@ -48,4 +48,17 @@ export const pasalController = {
       method: 'DELETE',
     });
   },
+
+  async importCsv(
+    file: File,
+    mode: string,
+  ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', mode);
+    return fetchApi<{ successCount: number; errors: { line: number; error: string }[] }>('/pasal-pelanggaran/import', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };
