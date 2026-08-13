@@ -471,6 +471,7 @@ export class ApelService {
     const [updated] = await db
       .update(presensiApel)
       .set({
+        status: (data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa') || found.status,
         verifiedStatus: data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa',
         verifiedBy: data.verifiedBy,
         verifiedAt: new Date(),

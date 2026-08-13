@@ -141,14 +141,15 @@ export interface KompensasiDetailResponse {
   };
   historyKompensasi: Array<{
     id: number;
-    bapId: number;
+    bapId: number | null;
     sumber: 'perkuliahan' | 'apel' | 'manual';
     status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown';
     verifiedStatus?: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown' | null;
+    keteranganAdmin?: string | null;
     durasiMangkir: number;
     createdAt: string;
-    bapPertemuan: number;
-    bapMateri: string;
+    bapPertemuan: number | null;
+    bapMateri: string | null;
     bapTanggal: string;
     poinKompensasi: number;
   }>;
@@ -316,7 +317,7 @@ export const presensiController = {
 
   async resolveUnknown(
     id: number,
-    data: { newStatus: 'sakit' | 'izin' | 'alpa'; keteranganAdmin?: string },
+    data: { newStatus: 'sakit' | 'izin' | 'alpa'; keteranganAdmin?: string; isAnulir?: boolean },
   ): Promise<PresensiUnknownItem> {
     return fetchApi<PresensiUnknownItem>(`/presensi/unknown/${id}/resolve`, {
       method: 'PUT',

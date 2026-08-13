@@ -23,6 +23,7 @@ export default function PresensiUnknown() {
   const [resolveModal, setResolveModal] = createSignal<PresensiUnknownItem | null>(null);
   const [resolveStatus, setResolveStatus] = createSignal<'sakit' | 'izin' | 'alpa'>('alpa');
   const [resolveNote, setResolveNote] = createSignal('');
+  const [isAnulir, setIsAnulir] = createSignal(false);
 
   const [data, { refetch }] = createResource(
     () => ({
@@ -46,6 +47,7 @@ export default function PresensiUnknown() {
     setResolveModal(item);
     setResolveStatus(item.status === 'unknown' ? 'alpa' : (item.status as 'sakit' | 'izin' | 'alpa'));
     setResolveNote(item.keteranganAdmin || '');
+    setIsAnulir(false);
   };
 
   const isResolved = (item: PresensiUnknownItem) => !!item.resolvedAt;
@@ -70,13 +72,23 @@ export default function PresensiUnknown() {
   const handleResolve = async () => {
     const item = resolveModal();
     if (!item) return;
+    if (isAnulir() && !resolveNote().trim()) {
+      toast.showToast('Alasan/keterangan wajib diisi saat menganulir', 'error');
+      return;
+    }
     setSubmitting(true);
     try {
       await presensiController.resolveUnknown(item.id, {
         newStatus: resolveStatus(),
         keteranganAdmin: resolveNote() || undefined,
+        isAnulir: isAnulir(),
       });
-      toast.showToast(`Status ${item.nama} berhasil dikonfirmasi menjadi ${resolveStatus()}`, 'success');
+      toast.showToast(
+        isAnulir()
+          ? `Presensi ${item.nama} berhasil dianulir (durasi 0)`
+          : `Status ${item.nama} berhasil dikonfirmasi menjadi ${resolveStatus()}`,
+        'success',
+      );
       setResolveModal(null);
       refetch();
     } catch (e: unknown) {
@@ -265,15 +277,39 @@ export default function PresensiUnknown() {
                   value={resolveStatus()}
                   onChange={(e) => setResolveStatus(e.currentTarget.value as 'sakit' | 'izin' | 'alpa')}
                 >
-                  <option value="alpa">Alpa (Tanpa Keterangan)</option>
-                  <option value="sakit">Sakit</option>
-                  <option value="izin">Izin</option>
+                  <Show when={!isAnulir()} fallback={null}>
+                    <option value="alpa">Alpa (Tanpa Keterangan)</option>
+                    <option value="sakit">Sakit</option>
+                    <option value="izin">Izin</option>
+                  </Show>
                 </select>
               </div>
 
+              <div class="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="anulir-checkbox"
+                  class="h-4 w-4 accent-rose-600"
+                  checked={isAnulir()}
+                  onChange={(e) => {
+                    const on = e.currentTarget.checked;
+                    setIsAnulir(on);
+                    if (on) setResolveStatus('alpa');
+                  }}
+                />
+                <label for="anulir-checkbox" class="text-sm font-medium text-rose-600 dark:text-rose-400">
+                  Anulir (Durasi = 0)
+                </label>
+              </div>
+              <Show when={isAnulir()}>
+                <p class="text-xs text-secondary-500 dark:text-secondary-300">
+                  Presensi ditetapkan hadir dengan durasi 0 menit sehingga tidak masuk dalam rekap kompensasi.
+                </p>
+              </Show>
+
               <div class="flex flex-col gap-1.5">
                 <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
-                  Catatan Konfirmasi (opsional)
+                  {isAnulir() ? 'Alasan/Keterangan (wajib)' : 'Catatan Konfirmasi (opsional)'}
                 </label>
                 <textarea
                   rows={3}
@@ -288,8 +324,12 @@ export default function PresensiUnknown() {
                 <Button variant="secondary" onClick={() => setResolveModal(null)}>
                   Batal
                 </Button>
-                <Button variant="primary" onClick={handleResolve} disabled={submitting()}>
-                  {submitting() ? 'Menyimpan...' : `Simpan sebagai ${statusWord(resolveStatus())}`}
+                <Button variant={isAnulir() ? 'danger' : 'primary'} onClick={handleResolve} disabled={submitting()}>
+                  {submitting()
+                    ? 'Menyimpan...'
+                    : isAnulir()
+                      ? 'Anulir Presensi'
+                      : `Simpan sebagai ${statusWord(resolveStatus())}`}
                 </Button>
               </div>
             </div>
