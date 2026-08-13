@@ -81,7 +81,7 @@ SELECT
   km."mahasiswa_id",
   km."tanggal",
   'MANUAL',
-  NULL,
+  km."id",
   CASE WHEN km."jenis_kompen" = 'telat' THEN 'TERLAMBAT' ELSE UPPER(km."jenis_kompen") END,
   km."durasi_menit",
   km."keterangan",
@@ -93,4 +93,4 @@ SELECT
   km."updated_at"
 FROM "kompensasi_manual" km
 WHERE km."jenis_kompen" <> 'unknown'
-  AND NOT EXISTS (SELECT 1 FROM "ketidakhadiran_mahasiswa" k WHERE k."sumber" = 'MANUAL' AND k."sumber_id" IS NULL AND k."mahasiswa_id" = km."mahasiswa_id" AND k."tanggal" = km."tanggal");
+  AND NOT EXISTS (SELECT 1 FROM "ketidakhadiran_mahasiswa" k WHERE k."sumber" = 'MANUAL' AND k."sumber_id" = km."id");

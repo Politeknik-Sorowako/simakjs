@@ -79,7 +79,7 @@ export default function ApelVerifikasi() {
       await apelController.verifikasiUnknown({
         sumber: 'APEL',
         sumberId: modal.id,
-        statusKonfirmasi: verifyStatus().toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA',
+        statusKonfirmasi: verifyStatus().toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR',
         durasiMenit: isAnulir() ? 0 : verifyStatus() !== 'hadir' ? verifyDuration() : 0,
         keterangan: verifyNote() || undefined,
       });

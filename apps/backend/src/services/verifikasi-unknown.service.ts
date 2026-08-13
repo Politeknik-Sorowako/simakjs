@@ -14,9 +14,9 @@ import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
 
 export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL';
-export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA';
+export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
 
-const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA'];
+const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'HADIR'];
 
 interface VerifyInput {
   sumber: KetidakhadiranSumber;
@@ -39,7 +39,7 @@ export class VerifikasiUnknownService {
    */
   static async verify(input: VerifyInput) {
     if (!STATUS_KONFIRMASI.includes(input.statusKonfirmasi)) {
-      throw new Error('Status konfirmasi harus SAKIT, IZIN, atau ALPA');
+      throw new Error('Status konfirmasi harus SAKIT, IZIN, ALPA, atau HADIR');
     }
 
     return await db.transaction(async (tx) => {
@@ -64,6 +64,51 @@ export class VerifikasiUnknownService {
 
       const lockKey = `kompen_${absence.mahasiswaId}_${absence.tanggal}`;
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
+
+      // HADIR = mahasiswa ternyata hadir -> bukan ketidakhadiran. Hapus baris terpusat
+      // dan tandai sumber asal sebagai hadir agar tidak masuk rekap kompensasi.
+      if (input.statusKonfirmasi === 'HADIR') {
+        const note = input.keterangan?.trim() || '';
+        const terkonfirmasi = `[terkonfirmasi] hadir${note ? ` — ${note}` : ''}`;
+
+        if (absence.sumber === 'BAP' && absence.sumberId != null) {
+          const [bapRow] = await tx
+            .select({ keteranganAdmin: presensi.keteranganAdmin })
+            .from(presensi)
+            .where(eq(presensi.id, absence.sumberId));
+          const prev = bapRow?.keteranganAdmin || '';
+          await tx
+            .update(presensi)
+            .set({
+              status: 'hadir' as 'hadir',
+              durasiMangkir: 0,
+              keteranganAdmin: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
+              resolvedBy: input.adminUserId,
+              resolvedAt: new Date(),
+            })
+            .where(eq(presensi.id, absence.sumberId));
+        } else if (absence.sumber === 'APEL' && absence.sumberId != null) {
+          const [apelRow] = await tx
+            .select({ verificationNote: presensiApel.verificationNote })
+            .from(presensiApel)
+            .where(eq(presensiApel.id, absence.sumberId));
+          const prev = apelRow?.verificationNote || '';
+          await tx
+            .update(presensiApel)
+            .set({
+              status: 'hadir' as 'hadir',
+              verifiedStatus: 'hadir' as 'hadir',
+              menitTerlambat: 0,
+              verificationNote: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
+              verifiedBy: input.adminUserId,
+              verifiedAt: new Date(),
+            })
+            .where(eq(presensiApel.id, absence.sumberId));
+        }
+
+        await tx.delete(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.id, absence.id));
+        return { ...absence, status: 'HADIR', isVerified: true, durasiMenit: 0, verifiedBy: input.adminUserId };
+      }
 
       if (durasi > 0) {
         const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');

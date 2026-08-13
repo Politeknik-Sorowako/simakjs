@@ -110,13 +110,14 @@ export class KompensasiManualService {
         .returning();
 
       // Sinkron ke tabel terpusat ketidakhadiran (single source of truth).
+      // sumber_id = id kompensasi_manual agar unik & bisa dedupe lewat idx (sumber, sumber_id).
       await tx
         .insert(ketidakhadiranMahasiswa)
         .values({
           mahasiswaId: data.mahasiswaId,
           tanggal: data.tanggal,
           sumber: 'MANUAL',
-          sumberId: null,
+          sumberId: record.id,
           status: data.jenisKompen.toUpperCase() as 'UNKNOWN' | 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
           durasiMenit,
           keterangan: data.keterangan || null,
@@ -200,14 +201,7 @@ export class KompensasiManualService {
             durasiMenit,
             keterangan: data.keterangan ?? existing.keterangan,
           })
-          .where(
-            and(
-              eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'),
-              eq(ketidakhadiranMahasiswa.mahasiswaId, mahasiswaId),
-              eq(ketidakhadiranMahasiswa.tanggal, tanggal),
-              eq(ketidakhadiranMahasiswa.durasiMenit, existing.durasiMenit),
-            ),
-          );
+          .where(and(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'), eq(ketidakhadiranMahasiswa.sumberId, existing.id)));
       }
 
       return updated || null;
@@ -219,17 +213,7 @@ export class KompensasiManualService {
     if (deleted) {
       await db
         .delete(ketidakhadiranMahasiswa)
-        .where(
-          and(
-            eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'),
-            eq(ketidakhadiranMahasiswa.mahasiswaId, deleted.mahasiswaId),
-            eq(ketidakhadiranMahasiswa.tanggal, deleted.tanggal),
-            eq(
-              ketidakhadiranMahasiswa.status,
-              deleted.jenisKompen.toUpperCase() as 'UNKNOWN' | 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
-            ),
-          ),
-        );
+        .where(and(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'), eq(ketidakhadiranMahasiswa.sumberId, deleted.id)));
     }
     return deleted || null;
   }

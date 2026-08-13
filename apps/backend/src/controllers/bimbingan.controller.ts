@@ -189,9 +189,28 @@ export class BimbinganController {
       return { error: 'ID Mahasiswa tidak valid.' };
     }
 
+    // Ownership check: mahasiswa hanya bisa menandai bimbingan miliknya sendiri.
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== targetMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat menandai bimbingan Anda sendiri.' };
+      }
+    } else if (hasRole(user, ['dosen'])) {
+      const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
+      const [mhs] = await db
+        .select({ dosenPaId: mahasiswa.dosenPaId })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, targetMhsId));
+      if (!myDosenId || !mhs || mhs.dosenPaId !== myDosenId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Dosen PA tidak cocok.' };
+      }
+    }
+
     try {
-      const bimbData = await BimbinganService.getOrCreateBimbingan(targetMhsId);
-      return await BimbinganService.markAsReadByMahasiswa(bimbData.id);
+      // Hanya menandai bimbingan yang sudah ada sebagai dibaca — tidak membuat record baru.
+      return await BimbinganService.markAllReadByMahasiswa(targetMhsId);
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memperbarui status dibaca.' };

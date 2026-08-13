@@ -282,6 +282,25 @@ export class BimbinganService {
     return { success: true, readAt: now };
   }
 
+  static async markAllReadByMahasiswa(mahasiswaId: number) {
+    const now = new Date();
+    const records = await db.select({ id: bimbingan.id }).from(bimbingan).where(eq(bimbingan.mahasiswaId, mahasiswaId));
+
+    const ids = records.map((r) => r.id);
+    if (ids.length === 0) {
+      return { success: true, readAt: now, updated: 0 };
+    }
+
+    await db.update(bimbingan).set({ isReadByMahasiswa: true, readAtMahasiswa: now }).where(inArray(bimbingan.id, ids));
+
+    await db
+      .update(bimbinganThread)
+      .set({ isReadByMahasiswa: true, readAtMahasiswa: now })
+      .where(inArray(bimbinganThread.bimbinganId, ids));
+
+    return { success: true, readAt: now, updated: ids.length };
+  }
+
   static async addAttachment(data: {
     bimbinganId: number;
     bimbinganThreadId?: number | null;

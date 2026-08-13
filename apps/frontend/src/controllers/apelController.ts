@@ -201,7 +201,7 @@ export const apelController = {
   verifikasiUnknown: (data: {
     sumber: 'BAP' | 'APEL' | 'MANUAL';
     sumberId: number;
-    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA';
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
     durasiMenit?: number;
     keterangan?: string;
   }) =>

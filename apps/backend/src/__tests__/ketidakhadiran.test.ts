@@ -247,4 +247,40 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     const body = await res.json();
     expect(body.error).toContain('melebihi batas');
   });
+
+  it('konfirmasi HADIR menghapus baris terpusat dan menandai sumber hadir', async () => {
+    const { presensiId } = await seedBapPresensi('2026-08-06', 'unknown', 0);
+
+    const res = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ sumber: 'BAP', sumberId: presensiId, statusKonfirmasi: 'HADIR' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('HADIR');
+
+    const rows = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(rows.length).toBe(0);
+
+    const [source] = await db.select().from(presensi).where(eq(presensi.id, presensiId));
+    expect(source.status).toBe('hadir');
+    expect(source.durasiMangkir).toBe(0);
+    expect(source.keteranganAdmin).toContain('[terkonfirmasi]');
+
+    const detailRes = await app.handle(
+      new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json();
+    expect(detail.summary.totalKompensasi).toBe(0);
+  });
 });
