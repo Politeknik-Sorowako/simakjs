@@ -44,11 +44,13 @@ export default function PresensiUnknown() {
 
   const openResolve = (item: PresensiUnknownItem) => {
     setResolveModal(item);
-    setResolveStatus((item.status as 'sakit' | 'izin' | 'alpa') || 'alpa');
+    setResolveStatus(item.status === 'unknown' ? 'alpa' : (item.status as 'sakit' | 'izin' | 'alpa'));
     setResolveNote(item.keteranganAdmin || '');
   };
 
   const isResolved = (item: PresensiUnknownItem) => !!item.resolvedAt;
+
+  const statusWord = (st: string) => (st === 'sakit' ? 'Sakit' : st === 'izin' ? 'Izin' : st === 'alpa' ? 'Alpa' : st);
 
   const konfirmasiBadge = (item: PresensiUnknownItem) => {
     if (isResolved(item)) {
@@ -83,8 +85,6 @@ export default function PresensiUnknown() {
       setSubmitting(false);
     }
   };
-
-  const statusWord = (st: string) => (st === 'sakit' ? 'Sakit' : st === 'izin' ? 'Izin' : st === 'alpa' ? 'Alpa' : st);
 
   return (
     <MainLayout>

@@ -103,14 +103,15 @@ export class PresensiService {
     prodiIds?: number[],
     statusFilter?: 'belum' | 'sudah',
   ) {
-    const conditions: SQL<unknown>[] = [or(eq(presensi.status, 'unknown'), isNotNull(presensi.resolvedAt))!];
+    let baseCondition: SQL<unknown>;
     if (statusFilter === 'belum') {
-      conditions.length = 0;
-      conditions.push(eq(presensi.status, 'unknown'));
+      baseCondition = eq(presensi.status, 'unknown');
     } else if (statusFilter === 'sudah') {
-      conditions.length = 0;
-      conditions.push(isNotNull(presensi.resolvedAt));
+      baseCondition = isNotNull(presensi.resolvedAt);
+    } else {
+      baseCondition = or(eq(presensi.status, 'unknown'), isNotNull(presensi.resolvedAt))!;
     }
+    const conditions: SQL<unknown>[] = [baseCondition];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
@@ -183,9 +184,6 @@ export class PresensiService {
     const [row] = await db.select().from(presensi).where(eq(presensi.id, presensiId));
     if (!row) {
       throw new Error('Data presensi tidak ditemukan');
-    }
-    if (row.status !== 'unknown') {
-      throw new Error('Status presensi bukan "unknown" sehingga tidak dapat di-resolve');
     }
     if (!['sakit', 'izin', 'alpa'].includes(newStatus)) {
       throw new Error('Status tujuan tidak valid; harus salah satu dari sakit, izin, atau alpa');
