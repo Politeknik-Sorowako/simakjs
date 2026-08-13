@@ -255,6 +255,7 @@ export const getUnknownPresensiSchema = {
     limit: t.Optional(t.String({ default: '20' })),
     search: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
+    statusFilter: t.Optional(t.Union([t.Literal('belum'), t.Literal('sudah')])),
   }),
 };
 

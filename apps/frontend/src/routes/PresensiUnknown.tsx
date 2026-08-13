@@ -14,6 +14,7 @@ export default function PresensiUnknown() {
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  const [statusFilter, setStatusFilter] = createSignal<'belum' | 'sudah' | ''>('');
   const [submitting, setSubmitting] = createSignal(false);
   let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -24,21 +25,46 @@ export default function PresensiUnknown() {
   const [resolveNote, setResolveNote] = createSignal('');
 
   const [data, { refetch }] = createResource(
-    () => ({ page: page(), search: debouncedSearch(), prodiId: workspace.selectedProdiId() }),
+    () => ({
+      page: page(),
+      search: debouncedSearch(),
+      prodiId: workspace.selectedProdiId(),
+      statusFilter: statusFilter(),
+    }),
     async (params) => {
       return presensiController.getUnknownList(
         params.page,
         20,
         params.search || undefined,
         params.prodiId ?? undefined,
+        params.statusFilter || undefined,
       );
     },
   );
 
   const openResolve = (item: PresensiUnknownItem) => {
     setResolveModal(item);
-    setResolveStatus('alpa');
-    setResolveNote('');
+    setResolveStatus(item.status === 'unknown' ? 'alpa' : (item.status as 'sakit' | 'izin' | 'alpa'));
+    setResolveNote(item.keteranganAdmin || '');
+  };
+
+  const isResolved = (item: PresensiUnknownItem) => !!item.resolvedAt;
+
+  const statusWord = (st: string) => (st === 'sakit' ? 'Sakit' : st === 'izin' ? 'Izin' : st === 'alpa' ? 'Alpa' : st);
+
+  const konfirmasiBadge = (item: PresensiUnknownItem) => {
+    if (isResolved(item)) {
+      return (
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+          ✓ Dikonfirmasi · {statusWord(item.status)}
+        </span>
+      );
+    }
+    return (
+      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+        ⏳ Belum ditindaklanjuti
+      </span>
+    );
   };
 
   const handleResolve = async () => {
@@ -60,16 +86,15 @@ export default function PresensiUnknown() {
     }
   };
 
-  const statusWord = (st: string) => (st === 'sakit' ? 'Sakit' : st === 'izin' ? 'Izin' : st === 'alpa' ? 'Alpa' : st);
-
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
         <div>
           <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Konfirmasi Presensi Unknown</h1>
           <p class="text-sm text-secondary-500 dark:text-secondary-200">
-            Kelola presensi perkuliahan (BAP) berstatus <strong>Unknown</strong> yang belum dikonfirmasi. Status unknown
-            tidak diperhitungkan ke dalam rekap kompensasi sampai dikonfirmasi menjadi Sakit / Izin / Alpa.
+            Kelola presensi perkuliahan (BAP) berstatus <strong>Unknown</strong>. Status konfirmasi ditampilkan untuk
+            mengidentifikasi presensi yang belum ditindaklanjuti (⏳ Belum) vs yang sudah dikonfirmasi (✓). Status
+            unknown tidak diperhitungkan ke dalam rekap kompensasi sampai dikonfirmasi menjadi Sakit / Izin / Alpa.
           </p>
         </div>
 
@@ -88,8 +113,21 @@ export default function PresensiUnknown() {
                 searchDebounceTimer = setTimeout(() => setDebouncedSearch(q), 350);
               }}
             />
+            <select
+              class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              value={statusFilter()}
+              onChange={(e) => {
+                setStatusFilter(e.currentTarget.value as 'belum' | 'sudah' | '');
+                setPage(1);
+                refetch();
+              }}
+            >
+              <option value="">Semua Status</option>
+              <option value="belum">Belum ditindaklanjuti</option>
+              <option value="sudah">Sudah dikonfirmasi</option>
+            </select>
             <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">
-              Total menunggu konfirmasi: <strong>{data()?.meta.total || 0}</strong>
+              Total: <strong>{data()?.meta.total || 0}</strong> data
             </span>
           </div>
 
@@ -105,6 +143,7 @@ export default function PresensiUnknown() {
                   <th class="py-3 px-4">Pertemuan & Tanggal</th>
                   <th class="py-3 px-4">Waktu Pencatatan</th>
                   <th class="py-3 px-4">Materi</th>
+                  <th class="py-3 px-4">Status Konfirmasi</th>
                   <th class="py-3 px-4 text-center">Aksi</th>
                 </tr>
               </thead>
@@ -135,9 +174,21 @@ export default function PresensiUnknown() {
                       <td class="py-3 px-4 text-xs max-w-xs truncate" title={item.bapMateri}>
                         {item.bapMateri}
                       </td>
+                      <td class="py-3 px-4">
+                        {konfirmasiBadge(item)}
+                        <Show when={isResolved(item)}>
+                          <div class="text-[11px] text-secondary-400 dark:text-secondary-200 mt-0.5">
+                            oleh {item.resolvedByName || `User #${item.resolvedBy || ''}`}
+                          </div>
+                        </Show>
+                      </td>
                       <td class="py-3 px-4 text-center">
-                        <Button variant="accent" class="py-1 px-3 text-xs" onClick={() => openResolve(item)}>
-                          Konfirmasi
+                        <Button
+                          variant={isResolved(item) ? 'secondary' : 'accent'}
+                          class="py-1 px-3 text-xs"
+                          onClick={() => openResolve(item)}
+                        >
+                          {isResolved(item) ? 'Koreksi' : 'Konfirmasi'}
                         </Button>
                       </td>
                     </tr>
@@ -145,8 +196,8 @@ export default function PresensiUnknown() {
                 </For>
                 <Show when={(data()?.data || []).length === 0}>
                   <tr>
-                    <td colspan="9" class="py-10 text-center text-secondary-400 text-sm">
-                      Tidak ada presensi unknown yang menunggu konfirmasi.
+                    <td colspan="10" class="py-10 text-center text-secondary-400 text-sm">
+                      Tidak ada data presensi unknown.
                     </td>
                   </tr>
                 </Show>

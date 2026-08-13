@@ -175,6 +175,7 @@ export interface PresensiUnknownItem {
   keteranganAdmin?: string | null;
   resolvedAt?: string | null;
   resolvedBy?: number | null;
+  resolvedByName?: string | null;
   createdAt?: string | null;
   bapTanggal: string;
   bapPertemuan: number;
@@ -301,12 +302,14 @@ export const presensiController = {
     limit?: number,
     search?: string,
     prodiId?: number,
+    statusFilter?: 'belum' | 'sudah',
   ): Promise<PaginatedResponse<PresensiUnknownItem>> {
     const params = new URLSearchParams();
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     if (search) params.append('search', search);
     if (prodiId) params.append('prodiId', String(prodiId));
+    if (statusFilter) params.append('statusFilter', statusFilter);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<PresensiUnknownItem>>(`/presensi/unknown-list${queryString}`);
   },
