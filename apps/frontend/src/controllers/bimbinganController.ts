@@ -76,7 +76,7 @@ export interface Pelanggaran {
   prodiNama?: string;
   tanggal: string;
   jenisPelanggaran: string;
-  bobotPoin: number;
+  bobotPoin?: number;
   keterangan: string;
   pasalId?: number | null;
   jenisSanksi?: number;
@@ -210,10 +210,7 @@ export const bimbinganController = {
   },
 
   async createPelanggaran(
-    data: Omit<Pelanggaran, 'id' | 'jenisPelanggaran' | 'bobotPoin'> & {
-      jenisPelanggaran?: string;
-      bobotPoin?: number;
-    },
+    data: Omit<Pelanggaran, 'id' | 'bobotPoin'> & { jenisPelanggaran?: string },
   ): Promise<Pelanggaran> {
     return fetchApi<Pelanggaran>('/pelanggaran', {
       method: 'POST',

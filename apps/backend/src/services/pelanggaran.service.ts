@@ -38,7 +38,9 @@ export class PelanggaranService {
     }
 
     if (!jenisPelanggaran) {
-      throw new Error('Jenis pelanggaran tidak boleh kosong. Pilih pasal BPA atau isi keterangan.');
+      throw new Error(
+        'Jenis pelanggaran tidak boleh kosong. Pilih pasal BPA atau tulis jenis pelanggaran secara manual.',
+      );
     }
     if (jenisSanksi !== 1 && jenisSanksi !== 4) {
       throw new Error('Jenis sanksi harus bernilai 1 (Lisan) atau 4 (Tertulis).');
@@ -81,14 +83,14 @@ export class PelanggaranService {
     const totalPoin = list.reduce((acc, item) => acc + Number(item.bobotPoin), 0);
 
     return {
-      pelanggaranList: list,
+      pelanggaranList: list.map((item) => ({ ...item, bobotPoin: Number(item.bobotPoin) })),
       totalPoin,
       predikat: hitungPredikatTxly(totalPoin),
     };
   }
 
   static async getAllPelanggaran() {
-    return await db
+    const rows = await db
       .select({
         id: pelanggaran.id,
         mahasiswaId: pelanggaran.mahasiswaId,
@@ -110,6 +112,8 @@ export class PelanggaranService {
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .leftJoin(pasalPelanggaran, eq(pelanggaran.pasalId, pasalPelanggaran.id))
       .orderBy(desc(pelanggaran.tanggal));
+
+    return rows.map((item) => ({ ...item, bobotPoin: Number(item.bobotPoin) }));
   }
 
   static async getRekap(programStudiId?: number) {
@@ -208,8 +212,8 @@ export class PelanggaranService {
     }
     if (data.pasalId !== undefined) {
       if (data.pasalId === null) {
-        data.jenisPelanggaran = undefined;
-        data.jenisSanksi = 1;
+        // Unlink pasal: only clear pasalId. Keep existing jenisPelanggaran/jenisSanksi
+        // unless the caller explicitly overrides them via the update payload.
       } else {
         const [pasal] = await db.select().from(pasalPelanggaran).where(eq(pasalPelanggaran.id, data.pasalId));
         if (!pasal) {

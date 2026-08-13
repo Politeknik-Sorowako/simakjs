@@ -116,6 +116,7 @@ export default function Pelanggaran() {
   const [showModal, setShowModal] = createSignal(false);
   const [mahasiswaId, setMahasiswaId] = createSignal(0);
   const [tanggal, setTanggal] = createSignal('');
+  const [jenisPelanggaran, setJenisPelanggaran] = createSignal('');
   const [keterangan, setKeterangan] = createSignal('');
   const [pasalId, setPasalId] = createSignal<number | null>(null);
   const [errorMsg, setErrorMsg] = createSignal('');
@@ -131,6 +132,7 @@ export default function Pelanggaran() {
     setTanggal(
       `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
     );
+    setJenisPelanggaran('');
     setKeterangan('');
     setPasalId(null);
     setErrorMsg('');
@@ -138,7 +140,12 @@ export default function Pelanggaran() {
   };
 
   const handlePasalChange = (val: string | number) => {
-    setPasalId(Number(val));
+    const id = Number(val);
+    setPasalId(id);
+    const pasal = pasalList()?.find((p) => p.id === id);
+    if (pasal) {
+      setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
+    }
   };
 
   const openEditModal = (item: IPelanggaran) => {
@@ -146,6 +153,7 @@ export default function Pelanggaran() {
     setMahasiswaId(item.mahasiswaId);
     ensureStudentLoaded(item.mahasiswaId);
     setTanggal(item.tanggal);
+    setJenisPelanggaran(item.jenisPelanggaran);
     setKeterangan(item.keterangan);
     setPasalId(item.pasalId ?? null);
     setErrorMsg('');
@@ -154,8 +162,12 @@ export default function Pelanggaran() {
 
   const handleSave = async (e: Event) => {
     e.preventDefault();
-    if (!mahasiswaId() || !tanggal() || !pasalId() || !keterangan()) {
-      setErrorMsg('Semua data wajib diisi (pilih pasal BPA dan tulis keterangan).');
+    if (!mahasiswaId() || !tanggal() || !keterangan()) {
+      setErrorMsg('Mahasiswa, tanggal, dan keterangan wajib diisi.');
+      return;
+    }
+    if (!jenisPelanggaran().trim()) {
+      setErrorMsg('Jenis pelanggaran wajib diisi. Pilih pasal BPA atau tulis jenis pelanggaran secara manual.');
       return;
     }
 
@@ -163,6 +175,7 @@ export default function Pelanggaran() {
       const payload = {
         mahasiswaId: mahasiswaId(),
         tanggal: tanggal(),
+        jenisPelanggaran: jenisPelanggaran(),
         keterangan: keterangan(),
         pasalId: pasalId(),
       };
@@ -331,7 +344,7 @@ export default function Pelanggaran() {
                             <td class="p-3">{item.jenisPelanggaran}</td>
                             <td class="p-3">
                               <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                                {item.bobotPoin} Poin
+                                {item.jenisSanksi ?? item.bobotPoin} Poin
                               </span>
                             </td>
                             <td class="p-3">
@@ -408,7 +421,7 @@ export default function Pelanggaran() {
                           <td class="p-3">{item.jenisPelanggaran}</td>
                           <td class="p-3">
                             <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                              {item.bobotPoin}
+                              {item.jenisSanksi ?? item.bobotPoin}
                             </span>
                           </td>
                           <td class="p-3">
@@ -640,11 +653,10 @@ export default function Pelanggaran() {
               onInput={(e) => setTanggal(e.currentTarget.value)}
             />
 
-            {/* Pasal BPA */}
+            {/* Pasal BPA (opsional) */}
             <SearchableSelect
               label="Pasal Pelanggaran (BPA)"
-              required
-              placeholder="Cari Nomor Pasal / Bunyi Pasal..."
+              placeholder="Pilih pasal BPA (opsional, otomatis mengisi jenis pelanggaran & poin)..."
               value={pasalId() ?? ''}
               options={(pasalList() || []).map((p) => ({
                 label: `${p.nomorPasal} - ${p.bunyiPasal.slice(0, 80)}${p.bunyiPasal.length > 80 ? '…' : ''}`,
@@ -671,6 +683,15 @@ export default function Pelanggaran() {
                 <p class="text-secondary-600 dark:text-secondary-300">{selectedPasal()?.bunyiPasal}</p>
               </div>
             </Show>
+
+            {/* Jenis Pelanggaran */}
+            <Input
+              label="Jenis Pelanggaran"
+              type="text"
+              placeholder="Contoh: Terlambat Kelas Praktik, Kerusakan Fasilitas (otomatis terisi bila memilih pasal)"
+              value={jenisPelanggaran()}
+              onInput={(e) => setJenisPelanggaran(e.currentTarget.value)}
+            />
 
             {/* Keterangan */}
             <div class="flex flex-col gap-1">
