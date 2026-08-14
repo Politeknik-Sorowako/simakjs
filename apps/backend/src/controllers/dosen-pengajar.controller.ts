@@ -1,16 +1,37 @@
 import { DosenPengajarService } from '../services/dosen-pengajar.service';
+import { getDosenIdByEmail } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
 export class DosenPengajarController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getAll({ query }: AuthContext<any, any>): Promise<any> {
+  static async getAll({ query, getCurrentUser }: AuthContext<any, any>): Promise<any> {
     const page = query?.page ? parseInt(query.page) : 1;
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const kelasKuliahId = query?.kelasKuliahId ? parseInt(query.kelasKuliahId) : undefined;
-    const dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+    let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
     const periodeId = query?.periodeId || undefined;
     const currentOnly = query?.currentOnly === true || query?.currentOnly === 'true';
+
+    if (getCurrentUser) {
+      const user = await getCurrentUser();
+      if (user && hasRole(user, ['dosen', 'instruktur'])) {
+        const userDosenId = await getDosenIdByEmail(user.email);
+        if (!userDosenId) {
+          return {
+            data: [],
+            meta: {
+              total: 0,
+              page,
+              limit,
+              totalPages: 0,
+            },
+          };
+        }
+        dosenId = userDosenId;
+      }
+    }
+
     return await DosenPengajarService.getAll(page, limit, kelasKuliahId, dosenId, periodeId, currentOnly);
   }
 

@@ -55,6 +55,9 @@ export interface PresensiItem {
   keteranganAdmin?: string | null;
   resolvedAt?: string | null;
   resolvedBy?: number | null;
+  isVerified?: boolean | null;
+  verifiedAt?: string | null;
+  verifiedByName?: string | null;
 }
 
 export interface KompensasiLaporanItem {
@@ -326,7 +329,7 @@ export const presensiController = {
   },
 
   async verifikasiUnknown(data: {
-    sumber: 'BAP' | 'APEL' | 'MANUAL';
+    sumber: 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
     sumberId: number;
     statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
     durasiMenit?: number;

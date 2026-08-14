@@ -1,18 +1,23 @@
 import { randomBytes } from 'node:crypto';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, isNotNull, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   bapPraktikum,
   dosen,
+  kelasKuliah,
+  ketidakhadiranMahasiswa,
   krs,
   mahasiswa,
+  mataKuliah,
   nilaiKomponenMahasiswa,
   nilaiPraktik,
   presensi,
   presensiPraktikum,
+  programStudi,
   rombelEnrollmentLog,
   rombelPraktikum,
   rombelPraktikumMahasiswa,
+  users,
 } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -345,34 +350,191 @@ export class RombelPraktikumService {
     bapPraktikumId: number,
     presensiList: {
       mahasiswaId: number;
-      status: 'hadir' | 'izin' | 'sakit' | 'alpa' | 'telat';
+      status: 'hadir' | 'izin' | 'sakit' | 'alpa' | 'telat' | 'unknown';
       durasiMangkir?: number;
       keterangan?: string;
     }[],
+    adminUserId?: number | null,
   ) {
-    await db.delete(presensiPraktikum).where(eq(presensiPraktikum.bapPraktikumId, bapPraktikumId));
-
-    if (presensiList.length > 0) {
-      await db.insert(presensiPraktikum).values(
-        presensiList.map((p) => ({
-          bapPraktikumId,
-          mahasiswaId: p.mahasiswaId,
-          status: p.status,
-          durasiMangkir: p.durasiMangkir || 0,
-          keterangan: p.keterangan || null,
-        })),
-      );
+    const [bapPrak] = await db
+      .select({ tanggal: bapPraktikum.tanggal })
+      .from(bapPraktikum)
+      .where(eq(bapPraktikum.id, bapPraktikumId));
+    if (!bapPrak) {
+      throw new Error('BAP praktikum tidak ditemukan');
     }
+
+    let inserted: Array<{ id: number; mahasiswaId: number; status: string; durasiMangkir: number }> = [];
+
+    await db.transaction(async (tx) => {
+      await tx.delete(presensiPraktikum).where(eq(presensiPraktikum.bapPraktikumId, bapPraktikumId));
+
+      if (presensiList.length > 0) {
+        inserted = await tx
+          .insert(presensiPraktikum)
+          .values(
+            presensiList.map((p) => ({
+              bapPraktikumId,
+              mahasiswaId: p.mahasiswaId,
+              status: p.status as 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'unknown',
+              durasiMangkir: p.durasiMangkir || 0,
+              keterangan: p.keterangan || null,
+            })),
+          )
+          .returning({
+            id: presensiPraktikum.id,
+            mahasiswaId: presensiPraktikum.mahasiswaId,
+            status: presensiPraktikum.status,
+            durasiMangkir: presensiPraktikum.durasiMangkir,
+          });
+      }
+
+      // Sinkron ke tabel terpusat ketidakhadiran (single source of truth).
+      const absentRows = inserted.filter((row) => row.status !== 'hadir');
+      if (absentRows.length > 0) {
+        const ketidakhadiranRows = absentRows.map((row) => ({
+          mahasiswaId: row.mahasiswaId,
+          tanggal: bapPrak.tanggal,
+          sumber: 'PRAKTIKUM' as const,
+          sumberId: row.id,
+          status: (row.status === 'telat' ? 'TERLAMBAT' : row.status.toUpperCase()) as
+            | 'UNKNOWN'
+            | 'SAKIT'
+            | 'IZIN'
+            | 'ALPA'
+            | 'TERLAMBAT'
+            | 'RUSAK',
+          durasiMenit: row.durasiMangkir,
+          keterangan: null,
+          isVerified: row.status !== 'unknown',
+          createdBy: adminUserId ?? null,
+        }));
+        await tx
+          .insert(ketidakhadiranMahasiswa)
+          .values(ketidakhadiranRows)
+          .onConflictDoUpdate({
+            target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+            set: {
+              status: sql`excluded.status`,
+              durasiMenit: sql`excluded.durasi_menit`,
+              isVerified: sql`excluded.is_verified`,
+              keterangan: sql`excluded.keterangan`,
+            },
+          });
+      }
+    });
+
     return true;
   }
 
   static async getPresensiByBap(bapPraktikumId: number) {
-    return await db.query.presensiPraktikum.findMany({
-      where: eq(presensiPraktikum.bapPraktikumId, bapPraktikumId),
-      with: {
-        mahasiswa: true,
-      },
-    });
+    const rows = await db
+      .select({
+        id: presensiPraktikum.id,
+        bapPraktikumId: presensiPraktikum.bapPraktikumId,
+        mahasiswaId: presensiPraktikum.mahasiswaId,
+        status: presensiPraktikum.status,
+        durasiMangkir: presensiPraktikum.durasiMangkir,
+        keterangan: presensiPraktikum.keterangan,
+        resolvedAt: presensiPraktikum.resolvedAt,
+        isVerified: ketidakhadiranMahasiswa.isVerified,
+        verifiedAt: ketidakhadiranMahasiswa.verifiedAt,
+        verifiedByName: users.nama,
+        mahasiswa: {
+          id: mahasiswa.id,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+        },
+      })
+      .from(presensiPraktikum)
+      .leftJoin(mahasiswa, eq(presensiPraktikum.mahasiswaId, mahasiswa.id))
+      .leftJoin(
+        ketidakhadiranMahasiswa,
+        and(
+          eq(ketidakhadiranMahasiswa.sumber, 'PRAKTIKUM'),
+          eq(ketidakhadiranMahasiswa.sumberId, presensiPraktikum.id),
+        ),
+      )
+      .leftJoin(users, eq(ketidakhadiranMahasiswa.verifiedBy, users.id))
+      .where(eq(presensiPraktikum.bapPraktikumId, bapPraktikumId));
+    return rows;
+  }
+
+  static async getUnknownPresensiPraktikum(
+    page = 1,
+    limit = 20,
+    search?: string,
+    prodiIds?: number[],
+    statusFilter?: 'belum' | 'sudah',
+  ) {
+    let baseCondition: SQL<unknown>;
+    if (statusFilter === 'belum') {
+      baseCondition = eq(presensiPraktikum.status, 'unknown');
+    } else if (statusFilter === 'sudah') {
+      baseCondition = isNotNull(presensiPraktikum.resolvedAt);
+    } else {
+      baseCondition = or(eq(presensiPraktikum.status, 'unknown'), isNotNull(presensiPraktikum.resolvedAt))!;
+    }
+    const conditions: SQL<unknown>[] = [baseCondition];
+    if (search) {
+      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      if (orCondition) conditions.push(orCondition);
+    }
+    if (prodiIds && prodiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, prodiIds));
+    }
+    const whereClause = and(...conditions);
+
+    const [totalResult] = await db
+      .select({ total: count() })
+      .from(presensiPraktikum)
+      .innerJoin(mahasiswa, eq(presensiPraktikum.mahasiswaId, mahasiswa.id))
+      .where(whereClause);
+    const total = totalResult?.total || 0;
+
+    const rows = await db
+      .select({
+        id: presensiPraktikum.id,
+        bapPraktikumId: presensiPraktikum.bapPraktikumId,
+        mahasiswaId: presensiPraktikum.mahasiswaId,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        programStudiId: mahasiswa.programStudiId,
+        prodiNama: programStudi.nama,
+        status: presensiPraktikum.status,
+        durasiMangkir: presensiPraktikum.durasiMangkir,
+        keterangan: presensiPraktikum.keterangan,
+        keteranganAdmin: presensiPraktikum.keteranganAdmin,
+        resolvedAt: presensiPraktikum.resolvedAt,
+        resolvedBy: presensiPraktikum.resolvedBy,
+        resolvedByName: users.nama,
+        createdAt: presensiPraktikum.createdAt,
+        bapPrakTanggal: bapPraktikum.tanggal,
+        bapPrakSesiKe: bapPraktikum.sesiKe,
+        bapPrakMateri: bapPraktikum.materi,
+        namaGroup: rombelPraktikum.namaGroup,
+        kelasKuliahId: kelasKuliah.id,
+        namaKelas: kelasKuliah.namaKelas,
+        mataKuliahKode: mataKuliah.kode,
+        mataKuliahNama: mataKuliah.nama,
+        dosenNama: dosen.nama,
+      })
+      .from(presensiPraktikum)
+      .innerJoin(mahasiswa, eq(presensiPraktikum.mahasiswaId, mahasiswa.id))
+      .innerJoin(bapPraktikum, eq(presensiPraktikum.bapPraktikumId, bapPraktikum.id))
+      .innerJoin(rombelPraktikum, eq(bapPraktikum.rombelPraktikumId, rombelPraktikum.id))
+      .leftJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .leftJoin(dosen, eq(rombelPraktikum.instrukturId, dosen.id))
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(users, eq(presensiPraktikum.resolvedBy, users.id))
+      .where(whereClause)
+      .limit(limit)
+      .offset((page - 1) * limit)
+      .orderBy(bapPraktikum.tanggal);
+
+    const totalPages = Math.ceil(total / limit);
+    return { data: rows, meta: { total, page, limit, totalPages } };
   }
 
   // --- SYNC ENGINE: PRAKTIKUM -> KELAS INDUK ---

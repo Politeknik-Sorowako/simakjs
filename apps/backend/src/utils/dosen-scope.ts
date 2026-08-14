@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, ilike, inArray } from 'drizzle-orm';
 import {
   bap,
   dosen,
@@ -15,7 +15,7 @@ import type { UserPayload } from './types';
 
 export async function getDosenIdByEmail(email?: string | null): Promise<number | null> {
   if (!email) return null;
-  const profile = await db.query.dosen.findFirst({ where: eq(dosen.email, email) });
+  const profile = await db.query.dosen.findFirst({ where: ilike(dosen.email, email.trim()) });
   return profile?.id ?? null;
 }
 

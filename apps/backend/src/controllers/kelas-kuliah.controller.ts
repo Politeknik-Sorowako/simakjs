@@ -14,10 +14,22 @@ export class KelasKuliahController {
     const periodeId = query?.periodeId || undefined;
     let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
 
-    if (!dosenId && getCurrentUser) {
+    if (getCurrentUser) {
       const user = await getCurrentUser();
       if (user && hasRole(user, ['dosen', 'instruktur'])) {
-        dosenId = (await getDosenIdByEmail(user.email)) ?? undefined;
+        const userDosenId = await getDosenIdByEmail(user.email);
+        if (!userDosenId) {
+          return {
+            data: [],
+            meta: {
+              total: 0,
+              page,
+              limit,
+              totalPages: 0,
+            },
+          };
+        }
+        dosenId = userDosenId;
       }
     }
 

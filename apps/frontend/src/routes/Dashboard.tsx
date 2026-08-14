@@ -257,8 +257,14 @@ function DosenWidgets() {
   const [kelasDiampu] = createResource(
     () => ({ dosenId: dosenProfile()?.id, periodeId: periodeAktif()?.id }),
     async (key) => {
-      if (!key.dosenId) return { data: [] };
-      return await dosenPengajarController.getAll(undefined, key.dosenId, 1, 50, key.periodeId || undefined, false);
+      return await dosenPengajarController.getAll(
+        undefined,
+        key.dosenId || undefined,
+        1,
+        50,
+        key.periodeId || undefined,
+        false,
+      );
     },
   );
 
@@ -286,7 +292,7 @@ function DosenWidgets() {
         <StatCard
           title="Kelas Diampu"
           value={kelasDiampu.loading ? '...' : (kelasDiampu() as { meta?: { total: number } })?.meta?.total || 0}
-          subtitle="Semester ini"
+          subtitle={periodeAktif()?.nama ? `Periode ${periodeAktif()?.nama}` : 'Semester ini'}
           icon={
             <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -318,7 +324,11 @@ function DosenWidgets() {
         />
         <StatCard
           title="Total SKS Mengajar"
-          value={kelasDiampu()?.data?.reduce((s, k) => s + (Number(k.sksBebanMengajar) || 0), 0) || '...'}
+          value={
+            kelasDiampu.loading
+              ? '...'
+              : (kelasDiampu()?.data?.reduce((s, k) => s + (Number(k.sksBebanMengajar) || 0), 0) ?? 0)
+          }
           icon={
             <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
@@ -335,37 +345,85 @@ function DosenWidgets() {
 
       {/* Daftar Kelas Diampu */}
       <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5 shadow-sm">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Kelas Aktif Semester Ini</h3>
-          <a href="/jurnal-presensi" class="text-xs font-bold text-brand-600 hover:text-brand-700 underline">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Kelas Aktif Semester Ini</h3>
+            <Show when={periodeAktif()}>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand-50 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+                {periodeAktif()?.nama}
+              </span>
+            </Show>
+          </div>
+          <a
+            href="/jurnal-presensi"
+            class="text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 underline"
+          >
             Isi BAP & Presensi →
           </a>
         </div>
         <Show
           when={!kelasDiampu.loading}
-          fallback={<p class="text-xs text-secondary-400 text-center py-6">Memuat...</p>}
+          fallback={
+            <div class="flex flex-col items-center justify-center py-10 text-secondary-400">
+              <svg
+                class="animate-spin h-6 w-6 text-brand-500 mb-2"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <p class="text-xs font-medium">Memuat data kelas aktif...</p>
+            </div>
+          }
         >
           <Show
             when={(kelasDiampu()?.data?.length || 0) > 0}
-            fallback={<p class="text-xs text-secondary-400 text-center py-6">Belum ada kelas yang diampu</p>}
+            fallback={
+              <div class="flex flex-col items-center justify-center py-12 px-4 text-center bg-secondary-50/50 dark:bg-secondary-800/30 rounded-xl border border-dashed border-secondary-200 dark:border-secondary-700">
+                <div class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800 flex items-center justify-center mb-3 text-brand-600 dark:text-brand-400">
+                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.75"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                    />
+                  </svg>
+                </div>
+                <h4 class="text-sm font-bold text-secondary-800 dark:text-white">Belum Ada Kelas yang Diampu</h4>
+                <p class="text-xs text-secondary-500 dark:text-secondary-400 max-w-sm mt-1">
+                  Belum ada kelas atau mata kuliah yang Anda ampu pada semester aktif ini (
+                  {periodeAktif()?.nama || 'Semester Berjalan'}).
+                </p>
+              </div>
+            }
           >
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <For each={kelasDiampu()?.data}>
                 {(item) => (
                   <a
                     href={`/jurnal-presensi?kelas=${item.kelasKuliahId}`}
-                    class="border border-secondary-100 dark:border-secondary-800 rounded-xl p-4 hover:shadow-md hover:border-brand-200 transition-all bg-secondary-50/40 dark:bg-secondary-800/40"
+                    class="group relative border border-secondary-100 dark:border-secondary-800 rounded-xl p-4 hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700 transition-all bg-secondary-50/40 dark:bg-secondary-800/40 hover:bg-white dark:hover:bg-secondary-800"
                   >
-                    <div class="text-xs font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
-                      {item.kelasKuliah?.namaKelas}
+                    <div class="flex items-center justify-between">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-brand-100/70 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 uppercase tracking-wider">
+                        {item.kelasKuliah?.namaKelas}
+                      </span>
+                      <span class="text-[10px] font-medium text-secondary-400 dark:text-secondary-500">
+                        {item.sksBebanMengajar || item.kelasKuliah?.mataKuliah?.sksTotal || 0} SKS
+                      </span>
                     </div>
-                    <div class="text-sm font-bold text-secondary-800 dark:text-white mt-1">
+                    <div class="text-sm font-bold text-secondary-800 dark:text-white mt-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
                       {item.kelasKuliah?.mataKuliah?.nama || 'Mata Kuliah'}
                     </div>
-                    <div class="text-[10px] text-secondary-400 mt-1 flex items-center gap-2">
-                      <span>{item.kelasKuliah?.mataKuliah?.kode}</span>
-                      <span>•</span>
-                      <span>{item.sksBebanMengajar || item.kelasKuliah?.mataKuliah?.sksTotal} SKS</span>
+                    <div class="text-[11px] text-secondary-500 dark:text-secondary-400 mt-1 flex items-center gap-2">
+                      <span class="font-mono">{item.kelasKuliah?.mataKuliah?.kode}</span>
                     </div>
                   </a>
                 )}

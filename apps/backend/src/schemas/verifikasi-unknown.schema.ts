@@ -2,8 +2,8 @@ import { t } from 'elysia';
 
 export const verifikasiUnknownSchema = {
   body: t.Object({
-    sumber: t.Union([t.Literal('BAP'), t.Literal('APEL'), t.Literal('MANUAL')], {
-      error: 'Sumber harus BAP, APEL, atau MANUAL',
+    sumber: t.Union([t.Literal('BAP'), t.Literal('APEL'), t.Literal('MANUAL'), t.Literal('PRAKTIKUM')], {
+      error: 'Sumber harus BAP, APEL, MANUAL, atau PRAKTIKUM',
     }),
     sumberId: t.Numeric(),
     statusKonfirmasi: t.Union([t.Literal('SAKIT'), t.Literal('IZIN'), t.Literal('ALPA'), t.Literal('HADIR')], {
