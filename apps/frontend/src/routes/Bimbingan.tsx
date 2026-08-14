@@ -71,7 +71,7 @@ export default function Bimbingan() {
         const t = parseInt(match[1], 10);
         const l = parseInt(match[2], 10);
         return {
-          label: `(T: ${t}, L: ${l})`,
+          label: `(Tertulis: ${t}, Lisan: ${l})`,
           predikat: `T${t}L${l}`,
           t,
           l,
@@ -82,7 +82,7 @@ export default function Bimbingan() {
     const t = Math.floor(p / 4);
     const l = p % 4;
     return {
-      label: `(T: ${t}, L: ${l})`,
+      label: `(Tertulis: ${t}, Lisan: ${l})`,
       predikat: `T${t}L${l}`,
       t,
       l,
