@@ -49,6 +49,47 @@ export default function Bimbingan() {
   const [newKatNama, setNewKatNama] = createSignal('');
   const [newKatDeskripsi, setNewKatDeskripsi] = createSignal('');
 
+  // Right panel toggle state (persisted to localStorage)
+  const [isRightPanelOpen, setIsRightPanelOpen] = createSignal<boolean>(
+    typeof window !== 'undefined' ? localStorage.getItem('simak_bimbingan_right_panel') !== 'false' : true,
+  );
+
+  const toggleRightPanel = () => {
+    const next = !isRightPanelOpen();
+    setIsRightPanelOpen(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('simak_bimbingan_right_panel', String(next));
+    }
+  };
+
+  // Helper formatting predikat pelanggaran TXLY
+  const formatPelanggaranTxly = (poin?: number, predikat?: string) => {
+    const p = poin || 0;
+    if (predikat && predikat.startsWith('T') && predikat.includes('L')) {
+      const match = predikat.match(/T(\d+)L(\d+)/);
+      if (match) {
+        const t = parseInt(match[1], 10);
+        const l = parseInt(match[2], 10);
+        return {
+          label: `(T: ${t}, L: ${l})`,
+          predikat: `T${t}L${l}`,
+          t,
+          l,
+          poin: p,
+        };
+      }
+    }
+    const t = Math.floor(p / 4);
+    const l = p % 4;
+    return {
+      label: `(T: ${t}, L: ${l})`,
+      predikat: `T${t}L${l}`,
+      t,
+      l,
+      poin: p,
+    };
+  };
+
   // Fetch Program Studi & Kategori List
   const [prodisList] = createResource(() => prodiController.getAll(undefined, 1, 100));
   const [kategoriList, { refetch: refetchKategori }] = createResource(() => kategoriBimbinganController.getAll());
@@ -697,7 +738,11 @@ export default function Bimbingan() {
                   </div>
                 }
               >
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-[600px]">
+                <div
+                  class={`grid gap-6 h-[600px] transition-all duration-300 ${
+                    isRightPanelOpen() ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
+                  }`}
+                >
                   {/* Panel Riwayat & Pengelolaan Sesi Bimbingan */}
                   <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
                     <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800 dark:border-secondary-700">
@@ -709,13 +754,35 @@ export default function Bimbingan() {
                           Riwayat asistensi, tugas akhir, skripsi & konsultasi akademik
                         </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleOpenAddSesi}
-                        class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
-                      >
-                        + Tambah Sesi
-                      </button>
+                      <div class="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleOpenAddSesi}
+                          class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                        >
+                          + Tambah Sesi
+                        </button>
+                        <button
+                          type="button"
+                          onClick={toggleRightPanel}
+                          class={`px-2.5 py-1.5 border rounded-xl text-xs transition-all flex items-center gap-1.5 font-bold active:scale-95 ${
+                            isRightPanelOpen()
+                              ? 'bg-white border-secondary-200 text-secondary-700 hover:bg-secondary-50 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200 dark:hover:bg-secondary-800'
+                              : 'bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-brand-900/40 dark:border-brand-800 dark:text-brand-300'
+                          }`}
+                          title={isRightPanelOpen() ? 'Sembunyikan Panel Resume' : 'Tampilkan Panel Resume'}
+                        >
+                          <svg
+                            class={`w-3.5 h-3.5 transition-transform duration-200 ${isRightPanelOpen() ? '' : 'rotate-180'}`}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                          </svg>
+                          <span class="text-[11px]">{isRightPanelOpen() ? 'Tutup Resume' : 'Buka Resume'}</span>
+                        </button>
+                      </div>
                     </div>
 
                     <div class="flex-1 p-4 overflow-y-auto flex flex-col gap-3 bg-secondary-50/30 dark:bg-secondary-800/50">
@@ -808,194 +875,238 @@ export default function Bimbingan() {
                   </div>
 
                   {/* Form Approval, Resume Akademik, & Timeline Sesi */}
-                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800">
-                    {/* Resume Akademik */}
-                    <div class="flex flex-col gap-3">
-                      <h3 class="font-extrabold text-secondary-800 text-sm border-b pb-2 dark:text-white">
-                        📊 Resume Akademik
-                      </h3>
-                      <div class="grid grid-cols-2 gap-3 text-xs">
-                        <div class="p-3 bg-red-50 border border-red-100 rounded-xl flex flex-col gap-0.5">
-                          <span class="text-[10px] text-red-600 font-bold uppercase">Pelanggaran</span>
-                          <span class="text-sm font-black text-red-700">
-                            {akademikSummary()?.poinPelanggaran || 0} Poin
-                          </span>
+                  <Show when={isRightPanelOpen()}>
+                    <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800 animate-fadeIn">
+                      {/* Resume Akademik */}
+                      <div class="flex flex-col gap-3">
+                        <div class="flex items-center justify-between border-b pb-2">
+                          <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">📊 Resume Akademik</h3>
+                          <button
+                            type="button"
+                            onClick={toggleRightPanel}
+                            class="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-200 text-xs px-2 py-0.5 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-all font-semibold"
+                            title="Sembunyikan Panel"
+                          >
+                            Tutup ✕
+                          </button>
                         </div>
-                        <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
-                          <span class="text-[10px] text-orange-600 font-bold uppercase">Jam Kompensasi</span>
-                          <span class="text-sm font-black text-orange-700">
-                            {akademikSummary()?.sisaKompensasi || 0} Menit
-                          </span>
-                        </div>
-                        <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl flex flex-col gap-0.5 dark:border-accent-800">
-                          <span class="text-[10px] text-accent-600 font-bold uppercase">IPK Kumulatif</span>
-                          <span class="text-sm font-black text-accent-700">{akademikSummary()?.ipk || '0.00'}</span>
-                        </div>
-                        <div class="p-3 bg-brand-50 border border-brand-100 rounded-xl flex flex-col gap-0.5 dark:border-brand-800">
-                          <span class="text-[10px] text-brand-600 font-bold uppercase">IPS Sem. Lalu</span>
-                          <span class="text-sm font-black text-brand-700">
-                            {akademikSummary()?.ipsSemesterLalu || '0.00'}
-                          </span>
+                        <div class="grid grid-cols-2 gap-3 text-xs">
+                          {/* Card Pelanggaran dengan Format TXLY BPA */}
+                          <div class="p-3 bg-rose-50/90 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
+                            <div class="flex items-center justify-between">
+                              <span class="text-[10px] text-rose-600 font-bold uppercase tracking-wider">
+                                Pelanggaran
+                              </span>
+                              <span class="text-[9px] font-black px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded border border-rose-200 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800">
+                                {
+                                  formatPelanggaranTxly(
+                                    akademikSummary()?.poinPelanggaran,
+                                    akademikSummary()?.pelanggaranPredikat,
+                                  ).predikat
+                                }
+                              </span>
+                            </div>
+                            <span class="text-sm font-black text-rose-700 dark:text-rose-400">
+                              {
+                                formatPelanggaranTxly(
+                                  akademikSummary()?.poinPelanggaran,
+                                  akademikSummary()?.pelanggaranPredikat,
+                                ).label
+                              }
+                            </span>
+                            <span class="text-[10px] text-rose-500 font-medium dark:text-rose-400/80">
+                              {akademikSummary()?.poinPelanggaran || 0} Poin (-
+                              {(
+                                akademikSummary()?.degradasiNilaiSikap ??
+                                formatPelanggaranTxly(akademikSummary()?.poinPelanggaran).t * 1.0 +
+                                  formatPelanggaranTxly(akademikSummary()?.poinPelanggaran).l * 0.25
+                              ).toFixed(2)}{' '}
+                              Mutu)
+                            </span>
+                          </div>
+                          <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
+                            <span class="text-[10px] text-orange-600 font-bold uppercase">Jam Kompensasi</span>
+                            <span class="text-sm font-black text-orange-700">
+                              {akademikSummary()?.sisaKompensasi || 0} Menit
+                            </span>
+                          </div>
+                          <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl flex flex-col gap-0.5 dark:border-accent-800">
+                            <span class="text-[10px] text-accent-600 font-bold uppercase">IPK Kumulatif</span>
+                            <span class="text-sm font-black text-accent-700">{akademikSummary()?.ipk || '0.00'}</span>
+                          </div>
+                          <div class="p-3 bg-brand-50 border border-brand-100 rounded-xl flex flex-col gap-0.5 dark:border-brand-800">
+                            <span class="text-[10px] text-brand-600 font-bold uppercase">IPS Sem. Lalu</span>
+                            <span class="text-sm font-black text-brand-700">
+                              {akademikSummary()?.ipsSemesterLalu || '0.00'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Ringkasan & Approval */}
-                    <form onSubmit={handleUpdateBimbingan} class="flex flex-col gap-4 border-t pt-4">
-                      <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">
-                        🔑 Status Kelayakan & Ringkasan
-                      </h3>
-
-                      <div class="flex items-center justify-between p-3 bg-secondary-50 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
-                        <div class="flex flex-col">
-                          <span class="text-xs font-bold text-secondary-700">Setujui Kelayakan Ujian</span>
-                          <span class="text-[10px] text-secondary-400">Persetujuan kelayakan UTS & UAS</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={isApprovedStatus()}
-                          onChange={(e) => setIsApprovedStatus(e.currentTarget.checked)}
-                          class="w-4 h-4 text-brand-600 border-secondary-300 rounded focus:ring-brand-500 dark:border-secondary-700"
-                        />
-                      </div>
-
-                      <div class="flex flex-col gap-1.5">
-                        <label class="text-xs font-bold text-secondary-700">Ringkasan Bimbingan / Masukan Global</label>
-                        <textarea
-                          rows="2"
-                          placeholder="Ringkasan bimbingan untuk satu semester..."
-                          value={ringkasanText()}
-                          onInput={(e) => setRingkasanText(e.currentTarget.value)}
-                          class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 resize-none dark:border-secondary-700"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                      {/* Ringkasan & Approval */}
+                      <form
+                        onSubmit={handleUpdateBimbingan}
+                        class="flex flex-col gap-4 border-t pt-4 dark:border-secondary-800"
                       >
-                        Update Kelayakan & Ringkasan
-                      </button>
-                    </form>
-                  </div>
-
-                  {/* --- MODAL TAMBAH / EDIT SESI BIMBINGAN --- */}
-                  <Show when={showSesiModal()}>
-                    <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
-                        <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">
-                          {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'}
+                        <h3 class="font-extrabold text-secondary-800 text-sm dark:text-white">
+                          🔑 Status Kelayakan & Ringkasan
                         </h3>
 
-                        <form onSubmit={handleSaveSesi} class="flex flex-col gap-4">
-                          <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-secondary-600">Pertemuan Ke</label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={pertemuanKeInput()}
-                              onInput={(e) => setPertemuanKeInput(parseInt(e.currentTarget.value) || 1)}
-                              class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                              required
-                            />
+                        <div class="flex items-center justify-between p-3 bg-secondary-50 rounded-xl border border-secondary-100 dark:bg-secondary-800 dark:border-secondary-800">
+                          <div class="flex flex-col">
+                            <span class="text-xs font-bold text-secondary-700 dark:text-secondary-300">
+                              Setujui Kelayakan Ujian
+                            </span>
+                            <span class="text-[10px] text-secondary-400">Persetujuan kelayakan UTS & UAS</span>
                           </div>
+                          <input
+                            type="checkbox"
+                            checked={isApprovedStatus()}
+                            onChange={(e) => setIsApprovedStatus(e.currentTarget.checked)}
+                            class="w-4 h-4 text-brand-600 border-secondary-300 rounded focus:ring-brand-500 dark:border-secondary-700"
+                          />
+                        </div>
 
-                          <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-secondary-600">Tanggal Pertemuan</label>
-                            <input
-                              type="date"
-                              value={tanggalInput()}
-                              onChange={(e) => setTanggalInput(e.currentTarget.value)}
-                              class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                              required
-                            />
-                          </div>
+                        <div class="flex flex-col gap-1.5">
+                          <label class="text-xs font-bold text-secondary-700 dark:text-secondary-300">
+                            Ringkasan Bimbingan / Masukan Global
+                          </label>
+                          <textarea
+                            rows="2"
+                            placeholder="Ringkasan bimbingan untuk satu semester..."
+                            value={ringkasanText()}
+                            onInput={(e) => setRingkasanText(e.currentTarget.value)}
+                            class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 resize-none dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                          />
+                        </div>
 
-                          <div class="flex flex-col gap-1">
-                            <div class="flex items-center justify-between">
-                              <label class="text-xs font-bold text-secondary-600 dark:text-secondary-300">
-                                Jenis / Kategori Bimbingan
-                              </label>
-                              <Show when={auth.hasRole(['admin', 'super_admin', 'prodi', 'dosen'])}>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowKategoriModal(true)}
-                                  class="text-[10px] font-bold text-brand-600 hover:underline dark:text-brand-400"
-                                >
-                                  + Kelola Kategori
-                                </button>
-                              </Show>
-                            </div>
-                            <select
-                              value={kategoriInput() || ''}
-                              onChange={(e) =>
-                                setKategoriInput(e.currentTarget.value ? Number(e.currentTarget.value) : null)
-                              }
-                              class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-                            >
-                              <option value="">-- Pilih Jenis Bimbingan (Opsional) --</option>
-                              <For each={kategoriList()?.data || []}>
-                                {(kat) => <option value={kat.id}>{kat.nama}</option>}
-                              </For>
-                            </select>
-                          </div>
-                          <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-secondary-600">Topik Bimbingan</label>
-                            <textarea
-                              rows="3"
-                              placeholder="Tulis topik bimbingan akademis/non-akademis..."
-                              value={permasalahanInput()}
-                              onInput={(e) => setPermasalahanInput(e.currentTarget.value)}
-                              class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                              required
-                            />
-                          </div>
-
-                          <div class="flex flex-col gap-1">
-                            <label class="text-xs font-bold text-secondary-600">Solusi / Rekomendasi</label>
-                            <textarea
-                              rows="3"
-                              placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
-                              value={solusiInput()}
-                              onInput={(e) => setSolusiInput(e.currentTarget.value)}
-                              class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                              required
-                            />
-                          </div>
-
-                          <div class="flex items-center justify-between p-3 bg-brand-50/50 rounded-xl border border-brand-100/50">
-                            <div class="flex flex-col">
-                              <span class="text-xs font-bold text-brand-800">Lapor Beban Kerja Dosen (BKD)</span>
-                              <span class="text-[10px] text-brand-600">Sertakan sesi ini ke laporan BKD resmi</span>
-                            </div>
-                            <input
-                              type="checkbox"
-                              checked={statusBkdInput()}
-                              onChange={(e) => setStatusBkdInput(e.currentTarget.checked)}
-                              class="w-4 h-4 text-brand-600 border-brand-300 rounded focus:ring-brand-500"
-                            />
-                          </div>
-
-                          <div class="flex justify-end gap-2 mt-2">
-                            <button
-                              type="button"
-                              onClick={() => setShowSesiModal(false)}
-                              class="px-4 py-2 border border-secondary-200 text-secondary-600 font-bold rounded-xl text-xs dark:border-secondary-700"
-                            >
-                              Batal
-                            </button>
-                            <button
-                              type="submit"
-                              class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
-                            >
-                              Simpan Sesi
-                            </button>
-                          </div>
-                        </form>
-                      </div>
+                        <button
+                          type="submit"
+                          class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                        >
+                          Update Kelayakan & Ringkasan
+                        </button>
+                      </form>
                     </div>
                   </Show>
                 </div>
+
+                {/* --- MODAL TAMBAH / EDIT SESI BIMBINGAN --- */}
+                <Show when={showSesiModal()}>
+                  <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
+                      <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">
+                        {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'}
+                      </h3>
+
+                      <form onSubmit={handleSaveSesi} class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-1">
+                          <label class="text-xs font-bold text-secondary-600">Pertemuan Ke</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={pertemuanKeInput()}
+                            onInput={(e) => setPertemuanKeInput(parseInt(e.currentTarget.value) || 1)}
+                            class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                            required
+                          />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                          <label class="text-xs font-bold text-secondary-600">Tanggal Pertemuan</label>
+                          <input
+                            type="date"
+                            value={tanggalInput()}
+                            onChange={(e) => setTanggalInput(e.currentTarget.value)}
+                            class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                            required
+                          />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                          <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-secondary-600 dark:text-secondary-300">
+                              Jenis / Kategori Bimbingan
+                            </label>
+                            <Show when={auth.hasRole(['admin', 'super_admin', 'prodi', 'dosen'])}>
+                              <button
+                                type="button"
+                                onClick={() => setShowKategoriModal(true)}
+                                class="text-[10px] font-bold text-brand-600 hover:underline dark:text-brand-400"
+                              >
+                                + Kelola Kategori
+                              </button>
+                            </Show>
+                          </div>
+                          <select
+                            value={kategoriInput() || ''}
+                            onChange={(e) =>
+                              setKategoriInput(e.currentTarget.value ? Number(e.currentTarget.value) : null)
+                            }
+                            class="border border-secondary-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                          >
+                            <option value="">-- Pilih Jenis Bimbingan (Opsional) --</option>
+                            <For each={kategoriList()?.data || []}>
+                              {(kat) => <option value={kat.id}>{kat.nama}</option>}
+                            </For>
+                          </select>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                          <label class="text-xs font-bold text-secondary-600">Topik Bimbingan</label>
+                          <textarea
+                            rows="3"
+                            placeholder="Tulis topik bimbingan akademis/non-akademis..."
+                            value={permasalahanInput()}
+                            onInput={(e) => setPermasalahanInput(e.currentTarget.value)}
+                            class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                            required
+                          />
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                          <label class="text-xs font-bold text-secondary-600">Solusi / Rekomendasi</label>
+                          <textarea
+                            rows="3"
+                            placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
+                            value={solusiInput()}
+                            onInput={(e) => setSolusiInput(e.currentTarget.value)}
+                            class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                            required
+                          />
+                        </div>
+
+                        <div class="flex items-center justify-between p-3 bg-brand-50/50 rounded-xl border border-brand-100/50">
+                          <div class="flex flex-col">
+                            <span class="text-xs font-bold text-brand-800">Lapor Beban Kerja Dosen (BKD)</span>
+                            <span class="text-[10px] text-brand-600">Sertakan sesi ini ke laporan BKD resmi</span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={statusBkdInput()}
+                            onChange={(e) => setStatusBkdInput(e.currentTarget.checked)}
+                            class="w-4 h-4 text-brand-600 border-brand-300 rounded focus:ring-brand-500"
+                          />
+                        </div>
+
+                        <div class="flex justify-end gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowSesiModal(false)}
+                            class="px-4 py-2 border border-secondary-200 text-secondary-600 font-bold rounded-xl text-xs dark:border-secondary-700"
+                          >
+                            Batal
+                          </button>
+                          <button
+                            type="submit"
+                            class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
+                          >
+                            Simpan Sesi
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </Show>
               </Show>
             </div>
           </div>
