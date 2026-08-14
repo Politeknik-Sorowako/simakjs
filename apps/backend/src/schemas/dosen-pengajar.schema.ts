@@ -26,6 +26,7 @@ export const getDosenPengajarSchema = {
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     kelasKuliahId: t.Optional(t.Numeric()),
+    dosenId: t.Optional(t.Numeric()),
     periodeId: t.Optional(t.String()),
     currentOnly: t.Optional(t.Boolean({ default: false })),
   }),
@@ -54,6 +55,17 @@ export const getDosenPengajarSchema = {
               id: t.Integer(),
               namaKelas: t.String(),
               periodeId: t.String(),
+              mataKuliah: t.Optional(
+                t.Union([
+                  t.Object({
+                    id: t.Integer(),
+                    kode: t.String(),
+                    nama: t.String(),
+                    sksTotal: t.Integer(),
+                  }),
+                  t.Null(),
+                ]),
+              ),
             }),
             t.Null(),
           ]),
