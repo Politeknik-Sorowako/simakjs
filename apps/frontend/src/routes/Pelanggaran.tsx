@@ -159,6 +159,9 @@ export default function Pelanggaran() {
       if (pasal) {
         setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
       }
+    } else {
+      // Pasal dibatalkan -> bersihkan teks hasil auto-fill agar tidak tersimpan data basi.
+      setJenisPelanggaran('');
     }
   };
 

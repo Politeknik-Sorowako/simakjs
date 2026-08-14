@@ -441,6 +441,50 @@ describe('Bimbingan & Pelanggaran API', () => {
       expect(list[0].tanggal).toBeDefined();
       expect(list[0].pelapor).toBe('Instruktur Budi');
     });
+
+    it('pasalId 0 / falsy harus disanitasi menjadi null saat menyimpan pelanggaran', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2023-10-19',
+            jenisPelanggaran: 'Terlambat masuk kelas tanpa alasan sah',
+            keterangan: 'Keterangan untuk kasus pasalId 0.',
+            pasalId: 0,
+          }),
+        }),
+      );
+      expect(response.status).toBe(201);
+      const data = await response.json();
+      expect(data.pasalId).toBeNull();
+    });
+
+    it('pasalId yang tidak valid (tidak ada di master) harus ditolak dengan 400', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2023-10-19',
+            jenisPelanggaran: 'Pelanggaran dengan pasal tidak dikenal',
+            keterangan: 'Keterangan untuk kasus pasalId tidak valid.',
+            pasalId: 999999,
+          }),
+        }),
+      );
+      expect(response.status).toBe(400);
+      const errData = await response.json();
+      expect(errData.error).toContain('Pasal pelanggaran tidak ditemukan');
+    });
   });
 
   describe('Pasal Pelanggaran & Bulk Delete API', () => {

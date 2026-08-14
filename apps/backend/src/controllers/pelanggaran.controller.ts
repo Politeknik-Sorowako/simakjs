@@ -6,6 +6,16 @@ import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
+const DB_ERROR_PATTERN = /Failed query|does not exist|violates .* constraint|syntax error/i;
+
+// Kembalikan pesan kesalahan bisnis yang bermakna, tetapi tutup detail DB/SQL agar tidak bocor ke client.
+function safeErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && !DB_ERROR_PATTERN.test(err.message)) {
+    return err.message;
+  }
+  return fallback;
+}
+
 export class PelanggaranController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
     const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
@@ -29,8 +39,9 @@ export class PelanggaranController {
       set.status = 201;
       return newViolation;
     } catch (err: unknown) {
+      console.error('[PelanggaranController.create]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+      return { error: safeErrorMessage(err, 'Gagal memproses permintaan') };
     }
   }
 
@@ -60,8 +71,9 @@ export class PelanggaranController {
     try {
       return await PelanggaranService.getPelanggaranByMahasiswa(targetMhsId);
     } catch (err: unknown) {
+      console.error('[PelanggaranController.getByMhsId]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+      return { error: safeErrorMessage(err, 'Gagal memproses permintaan') };
     }
   }
 
@@ -76,8 +88,9 @@ export class PelanggaranController {
     try {
       return await PelanggaranService.getAllPelanggaran();
     } catch (err: unknown) {
+      console.error('[PelanggaranController.getAll]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal mengambil data pelanggaran' };
+      return { error: safeErrorMessage(err, 'Gagal mengambil data pelanggaran') };
     }
   }
 
@@ -96,8 +109,9 @@ export class PelanggaranController {
       const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
       return await PelanggaranService.getRekap(prodiId);
     } catch (err: unknown) {
+      console.error('[PelanggaranController.getRekap]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal mengambil rekap pelanggaran' };
+      return { error: safeErrorMessage(err, 'Gagal mengambil rekap pelanggaran') };
     }
   }
 
@@ -117,8 +131,9 @@ export class PelanggaranController {
       }
       return updated;
     } catch (err: unknown) {
+      console.error('[PelanggaranController.update]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+      return { error: safeErrorMessage(err, 'Gagal memproses permintaan') };
     }
   }
 
@@ -143,8 +158,9 @@ export class PelanggaranController {
       const result = await CsvImportService.importPelanggaran(text, mode, user.id);
       return result;
     } catch (err: unknown) {
+      console.error('[PelanggaranController.importCsv]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal mengimpor data pelanggaran' };
+      return { error: safeErrorMessage(err, 'Gagal mengimpor data pelanggaran') };
     }
   }
 }
