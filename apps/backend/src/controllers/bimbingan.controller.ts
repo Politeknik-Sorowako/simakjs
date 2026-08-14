@@ -288,9 +288,13 @@ export class BimbinganController {
       } catch (e) {}
 
       let poinPelanggaran = 0;
+      let pelanggaranPredikat = 'T0L0';
+      let degradasiNilaiSikap = 0;
       try {
         const pelDetail = await PelanggaranService.getPelanggaranByMahasiswa(mhsId);
         poinPelanggaran = pelDetail.totalPoin;
+        pelanggaranPredikat = pelDetail.predikat;
+        degradasiNilaiSikap = pelDetail.degradasiNilaiSikap ?? 0;
       } catch (e) {}
 
       const activePeriode = await BimbinganService.getActivePeriode();
@@ -319,6 +323,8 @@ export class BimbinganController {
       return {
         sisaKompensasi,
         poinPelanggaran,
+        pelanggaranPredikat,
+        degradasiNilaiSikap,
         ipk,
         ipsSemesterLalu,
       };

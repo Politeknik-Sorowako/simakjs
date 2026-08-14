@@ -206,12 +206,22 @@ export const bimbinganController = {
     );
   },
 
-  async getAkademikSummary(
-    mhsId: number,
-  ): Promise<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }> {
-    return fetchApi<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }>(
-      `/bimbingan/mahasiswa/${mhsId}/akademik-summary`,
-    );
+  async getAkademikSummary(mhsId: number): Promise<{
+    sisaKompensasi: number;
+    poinPelanggaran: number;
+    pelanggaranPredikat?: string;
+    degradasiNilaiSikap?: number;
+    ipk: number;
+    ipsSemesterLalu: number;
+  }> {
+    return fetchApi<{
+      sisaKompensasi: number;
+      poinPelanggaran: number;
+      pelanggaranPredikat?: string;
+      degradasiNilaiSikap?: number;
+      ipk: number;
+      ipsSemesterLalu: number;
+    }>(`/bimbingan/mahasiswa/${mhsId}/akademik-summary`);
   },
 
   async addSesi(
