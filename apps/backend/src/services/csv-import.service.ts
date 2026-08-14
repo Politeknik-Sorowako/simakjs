@@ -847,6 +847,8 @@ export class CsvImportService {
     const keteranganIdx = headers.indexOf('keterangan');
     const pasalIdx = headers.indexOf('nomor_pasal');
     const sanksiIdx = headers.indexOf('jenis_sanksi');
+    let pelaporIdx = headers.indexOf('pelapor');
+    if (pelaporIdx === -1) pelaporIdx = headers.indexOf('reported_by');
 
     if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1) {
       return {
@@ -868,6 +870,7 @@ export class CsvImportService {
       const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : '';
       const pasalVal = pasalIdx !== -1 ? row[pasalIdx].trim() : '';
       const sanksiRaw = sanksiIdx !== -1 ? row[sanksiIdx].trim().toUpperCase() : '';
+      const pelaporVal = pelaporIdx !== -1 ? row[pelaporIdx].trim() : '';
 
       if (!nimVal || !tanggalVal || !jenisVal) {
         result.errors.push({
@@ -942,6 +945,7 @@ export class CsvImportService {
                 keterangan: keteranganVal || '-',
                 pasalId,
                 jenisSanksi,
+                pelapor: pelaporVal || undefined,
               })
               .where(eq(pelanggaran.id, existing.id));
             result.successCount++;
@@ -956,6 +960,7 @@ export class CsvImportService {
           keterangan: keteranganVal || '-',
           pasalId,
           jenisSanksi,
+          pelapor: pelaporVal || 'Petugas Kedisiplinan',
           dibuatOleh: userId ?? null,
         });
         result.successCount++;

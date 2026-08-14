@@ -49,6 +49,13 @@ export const pasalController = {
     });
   },
 
+  async bulkRemove(ids: number[]): Promise<{ success: boolean; deletedCount: number }> {
+    return fetchApi<{ success: boolean; deletedCount: number }>('/pasal-pelanggaran/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+  },
+
   async importCsv(
     file: File,
     mode: string,

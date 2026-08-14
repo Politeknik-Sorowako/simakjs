@@ -32,6 +32,7 @@ export default function LaporanPeringatan() {
     { header: 'Tanggal', accessor: 'tanggal' },
     { header: 'Jenis Pelanggaran', accessor: 'jenisPelanggaran' },
     { header: 'Bobot Poin', accessor: 'bobotPoin' },
+    { header: 'Pelapor', accessor: 'pelapor' },
     { header: 'Keterangan', accessor: 'keterangan' },
   ];
 
@@ -168,6 +169,7 @@ export default function LaporanPeringatan() {
                   <th class="py-3 px-5">Tanggal</th>
                   <th class="py-3 px-5">Jenis Pelanggaran</th>
                   <th class="py-3 px-5 text-center">Bobot Poin</th>
+                  <th class="py-3 px-5">Pelapor</th>
                   <th class="py-3 px-5">Keterangan</th>
                 </tr>
               </thead>
@@ -176,7 +178,7 @@ export default function LaporanPeringatan() {
                   each={rekapPelanggaran()?.data || []}
                   fallback={
                     <tr>
-                      <td colspan="4" class="text-center py-8 text-secondary-400">
+                      <td colspan="5" class="text-center py-8 text-secondary-400">
                         Belum ada data pelanggaran
                       </td>
                     </tr>
@@ -187,6 +189,7 @@ export default function LaporanPeringatan() {
                     jenisPelanggaran: string;
                     bobotPoin?: number;
                     jenisSanksi?: number;
+                    pelapor?: string | null;
                     keterangan: string;
                   }) => (
                     <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
@@ -196,6 +199,9 @@ export default function LaporanPeringatan() {
                       </td>
                       <td class="py-3 px-5 text-center font-bold text-rose-600">
                         {item.jenisSanksi ?? item.bobotPoin}
+                      </td>
+                      <td class="py-3 px-5 text-secondary-600 dark:text-secondary-300 font-medium">
+                        {item.pelapor || '-'}
                       </td>
                       <td class="py-3 px-5 text-secondary-500">{item.keterangan}</td>
                     </tr>

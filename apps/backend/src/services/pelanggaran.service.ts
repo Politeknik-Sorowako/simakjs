@@ -1,11 +1,28 @@
-import { and, count, desc, eq, SQL, sql, sum } from 'drizzle-orm';
-import { mahasiswa, pasalPelanggaran, pelanggaran, programStudi } from '../models/schema';
+import { and, count, desc, eq, inArray, SQL, sql, sum } from 'drizzle-orm';
+import {
+  dosen,
+  mahasiswa,
+  notifications,
+  pasalPelanggaran,
+  pelanggaran,
+  programStudi,
+  userProdiScopes,
+  userRoles,
+  users,
+} from '../models/schema';
 import { db } from '../utils/db';
 
 export function hitungPredikatTxly(totalPoin: number): string {
   const x = Math.floor(totalPoin / 4);
   const y = totalPoin % 4;
   return `T${x}L${y}`;
+}
+
+export function hitungDegradasiNilaiSikap(totalPoin: number): number {
+  const t = Math.floor(totalPoin / 4);
+  const l = totalPoin % 4;
+  // Sesuai BPA Politeknik Sorowako: Lisan = -0.25, Tertulis = -1.00
+  return Number((t * 1.0 + l * 0.25).toFixed(2));
 }
 
 export class PelanggaranService {
@@ -16,6 +33,7 @@ export class PelanggaranService {
     keterangan: string;
     pasalId?: number | null;
     jenisSanksi?: number;
+    pelapor?: string | null;
     dibuatOleh?: number;
   }) {
     const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, data.mahasiswaId));
@@ -26,6 +44,7 @@ export class PelanggaranService {
     let pasalId = data.pasalId ?? null;
     let jenisSanksi = data.jenisSanksi ?? 1;
     let jenisPelanggaran = data.jenisPelanggaran ?? '';
+    let namaPasal = jenisPelanggaran;
 
     // Auto-fill jenis pelanggaran & jenis sanksi dari master pasal BPA bila pasal dipilih.
     if (pasalId) {
@@ -33,7 +52,8 @@ export class PelanggaranService {
       if (!pasal) {
         throw new Error('Pasal pelanggaran tidak ditemukan.');
       }
-      jenisPelanggaran = `${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255);
+      namaPasal = `${pasal.nomorPasal} - ${pasal.bunyiPasal}`;
+      jenisPelanggaran = namaPasal.slice(0, 255);
       jenisSanksi = pasal.jenisSanksi;
     }
 
@@ -46,6 +66,14 @@ export class PelanggaranService {
       throw new Error('Jenis sanksi harus bernilai 1 (Lisan) atau 4 (Tertulis).');
     }
 
+    let namaPelapor = data.pelapor?.trim();
+    if (!namaPelapor && data.dibuatOleh) {
+      const [creator] = await db.select({ nama: users.nama }).from(users).where(eq(users.id, data.dibuatOleh));
+      namaPelapor = creator?.nama || 'Petugas Kedisiplinan';
+    } else if (!namaPelapor) {
+      namaPelapor = 'Petugas Kedisiplinan';
+    }
+
     const [newPelanggaran] = await db
       .insert(pelanggaran)
       .values({
@@ -55,10 +83,123 @@ export class PelanggaranService {
         keterangan: data.keterangan,
         pasalId,
         jenisSanksi,
+        pelapor: namaPelapor,
         dibuatOleh: data.dibuatOleh,
       })
       .returning();
+
+    // Trigger notifikasi peringatan pelanggaran (SP) ke Dosen PA & Kaprodi / Admin Prodi
+    try {
+      await this.sendPeringatanNotification({
+        mahasiswa: mhs,
+        pelanggaran: newPelanggaran,
+        namaPasal,
+        namaPelapor,
+      });
+    } catch (notifErr) {
+      console.error('[PelanggaranService] Gagal mengirim notifikasi peringatan:', notifErr);
+    }
+
     return newPelanggaran;
+  }
+
+  static async sendPeringatanNotification(ctx: {
+    mahasiswa: typeof mahasiswa.$inferSelect;
+    pelanggaran: typeof pelanggaran.$inferSelect;
+    namaPasal: string;
+    namaPelapor: string;
+  }) {
+    const { mahasiswa: mhs, pelanggaran: pel, namaPasal, namaPelapor } = ctx;
+
+    // Hitung total poin pelanggaran mahasiswa
+    const allViolations = await db
+      .select({ jenisSanksi: pelanggaran.jenisSanksi })
+      .from(pelanggaran)
+      .where(eq(pelanggaran.mahasiswaId, mhs.id));
+
+    const totalPoin = allViolations.reduce((acc, v) => acc + (v.jenisSanksi || 1), 0);
+
+    // Tentukan Tingkat Peringatan / SP sesuai ketentuan BPA
+    let tingkatSp = 'Peringatan Lisan';
+    if (totalPoin >= 75) {
+      tingkatSp = 'Surat Peringatan 3 (SP-3 / Diberhentikan)';
+    } else if (totalPoin >= 50) {
+      tingkatSp = 'Surat Peringatan 2 (SP-2 / Skorsing)';
+    } else if (totalPoin >= 25) {
+      tingkatSp = 'Surat Peringatan 1 (SP-1)';
+    } else if (pel.jenisSanksi === 4) {
+      tingkatSp = 'Peringatan Tertulis';
+    }
+
+    const title = `Notifikasi Peringatan Pelanggaran - ${mhs.nama} (${mhs.nim})`;
+    const message = `Telah diterbitkan ${tingkatSp} untuk mahasiswa ${mhs.nama} (NIM: ${mhs.nim}) atas pasal pelanggaran ${namaPasal}. Dilaporkan oleh: ${namaPelapor}.`;
+    const link = '/pelanggaran';
+
+    const recipientUserIds = new Set<number>();
+
+    // 1. Dosen PA
+    if (mhs.dosenPaId) {
+      const [dosenRow] = await db.select({ email: dosen.email }).from(dosen).where(eq(dosen.id, mhs.dosenPaId));
+      if (dosenRow?.email) {
+        const [dosenUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, dosenRow.email));
+        if (dosenUser) {
+          recipientUserIds.add(dosenUser.id);
+        }
+      }
+    }
+
+    // 2. Kaprodi & Admin Prodi yang memiliki scope program studi sama
+    if (mhs.programStudiId) {
+      // Ambil user yang memiliki role kaprodi atau prodi (baik via multi-role user_roles maupun primary users.role)
+      const prodiRoleUserIds = await db
+        .selectDistinct({ userId: userRoles.userId })
+        .from(userRoles)
+        .where(inArray(userRoles.role, ['kaprodi', 'prodi']));
+
+      const candidateIds = prodiRoleUserIds.map((r) => r.userId);
+
+      const prodiStaffUsers = await db
+        .select({
+          id: users.id,
+          role: users.role,
+          isGlobalScope: users.isGlobalScope,
+          prodiIds: users.prodiIds,
+        })
+        .from(users)
+        .where(
+          candidateIds.length > 0
+            ? sql`${users.id} IN (${sql.join(candidateIds, sql`, `)}) OR ${users.role} IN ('kaprodi', 'prodi')`
+            : inArray(users.role, ['kaprodi', 'prodi']),
+        );
+
+      // Ambil data userProdiScopes untuk prodi ini
+      const scopedRows = await db
+        .select({ userId: userProdiScopes.userId })
+        .from(userProdiScopes)
+        .where(eq(userProdiScopes.programStudiId, mhs.programStudiId));
+
+      const scopedUserIds = new Set(scopedRows.map((s) => s.userId));
+
+      for (const u of prodiStaffUsers) {
+        const isGlobal = u.isGlobalScope;
+        const inProdiIds = Array.isArray(u.prodiIds) && u.prodiIds.includes(mhs.programStudiId);
+        const inScopedTable = scopedUserIds.has(u.id);
+
+        if (isGlobal || inProdiIds || inScopedTable) {
+          recipientUserIds.add(u.id);
+        }
+      }
+    }
+
+    // Insert notifikasi ke database
+    for (const userId of recipientUserIds) {
+      await db.insert(notifications).values({
+        userId,
+        title,
+        message,
+        link,
+      });
+    }
   }
 
   static async getPelanggaranByMahasiswa(mahasiswaId: number) {
@@ -71,6 +212,7 @@ export class PelanggaranService {
         keterangan: pelanggaran.keterangan,
         pasalId: pelanggaran.pasalId,
         jenisSanksi: pelanggaran.jenisSanksi,
+        pelapor: pelanggaran.pelapor,
         nomorPasal: pasalPelanggaran.nomorPasal,
         bunyiPasal: pasalPelanggaran.bunyiPasal,
         createdAt: pelanggaran.createdAt,
@@ -86,6 +228,7 @@ export class PelanggaranService {
       pelanggaranList: list.map((item) => ({ ...item, bobotPoin: Number(item.bobotPoin) })),
       totalPoin,
       predikat: hitungPredikatTxly(totalPoin),
+      degradasiNilaiSikap: hitungDegradasiNilaiSikap(totalPoin),
     };
   }
 
@@ -97,12 +240,16 @@ export class PelanggaranService {
         nim: mahasiswa.nim,
         namaMahasiswa: mahasiswa.nama,
         prodiNama: programStudi.nama,
+        programStudiId: mahasiswa.programStudiId,
+        jenjang: programStudi.jenjang,
+        dosenPaId: mahasiswa.dosenPaId,
         tanggal: pelanggaran.tanggal,
         jenisPelanggaran: pelanggaran.jenisPelanggaran,
         bobotPoin: sql<number>`COALESCE(${pelanggaran.jenisSanksi}, 1)`,
         keterangan: pelanggaran.keterangan,
         pasalId: pelanggaran.pasalId,
         jenisSanksi: pelanggaran.jenisSanksi,
+        pelapor: pelanggaran.pelapor,
         nomorPasal: pasalPelanggaran.nomorPasal,
         bunyiPasal: pasalPelanggaran.bunyiPasal,
         createdAt: pelanggaran.createdAt,
@@ -193,6 +340,7 @@ export class PelanggaranService {
         totalPoin: Number(t.totalPoin || 0),
         jumlahPelanggaran: Number(t.jumlahPelanggaran),
         predikat: hitungPredikatTxly(Number(t.totalPoin || 0)),
+        degradasiNilaiSikap: hitungDegradasiNilaiSikap(Number(t.totalPoin || 0)),
       })),
     };
   }
@@ -205,6 +353,7 @@ export class PelanggaranService {
       keterangan: string;
       pasalId?: number | null;
       jenisSanksi?: number;
+      pelapor?: string | null;
     }>,
   ) {
     if (data.jenisSanksi !== undefined && data.jenisSanksi !== 1 && data.jenisSanksi !== 4) {
