@@ -29,10 +29,11 @@ describe('Bimbingan & Pelanggaran API', () => {
     mhs2Token = await getAuthToken('mhs2@test.com', 'mahasiswa');
 
     // Seed Prodi
+    const uniqueKode = `TI_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const [prodi] = await db
       .insert(programStudi)
       .values({
-        kode: 'TI',
+        kode: uniqueKode,
         nama: 'Teknik Informatika',
         jenjang: 'D4',
       })
@@ -345,6 +346,181 @@ describe('Bimbingan & Pelanggaran API', () => {
         }),
       );
       expect(response.status).toBe(403);
+    });
+
+    it('pencatatan pelanggaran dengan pelapor harus otomatis mengirim notifikasi ke Dosen PA', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2023-10-16',
+            jenisPelanggaran: 'Merokok di Gedung Kuliah',
+            keterangan: 'Tertangkap merokok di koridor lantai 2.',
+            jenisSanksi: 4,
+            pelapor: 'Satpam Irwan',
+          }),
+        }),
+      );
+      expect(response.status).toBe(201);
+      const data = await response.json();
+      expect(data.pelapor).toBe('Satpam Irwan');
+
+      // Verify Mahasiswa view contains pelapor & degradasi nilai sikap
+      const mhsViewRes = await app.handle(
+        new Request(`http://localhost/pelanggaran/mahasiswa/${mhsId}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${mhsToken}`,
+          },
+        }),
+      );
+      expect(mhsViewRes.status).toBe(200);
+      const mhsData = await mhsViewRes.json();
+      expect(mhsData.pelanggaranList[0].pelapor).toBe('Satpam Irwan');
+      expect(mhsData.degradasiNilaiSikap).toBe(1.0);
+
+      // Verify notification created in db for Dosen PA
+      const dsnUserRes = await app.handle(
+        new Request('http://localhost/notifications', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${dosenToken}`,
+          },
+        }),
+      );
+      expect(dsnUserRes.status).toBe(200);
+      const notifData = await dsnUserRes.json();
+      expect(notifData.length).toBeGreaterThan(0);
+      const targetNotif = notifData.find((n: { title: string }) =>
+        n.title.includes('Notifikasi Peringatan Pelanggaran'),
+      );
+      expect(targetNotif).toBeDefined();
+      expect(targetNotif.message).toContain('Satpam Irwan');
+    });
+  });
+
+  describe('Pasal Pelanggaran & Bulk Delete API', () => {
+    it('admin harus sukses membuat dan menghapus massal butir pasal (bulk delete)', async () => {
+      // 1. Create 3 pasals
+      const p1Res = await app.handle(
+        new Request('http://localhost/pasal-pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nomorPasal: 'Pasal 25A',
+            bunyiPasal: 'Mengabaikan instruksi K3L.',
+            jenisSanksi: 1,
+          }),
+        }),
+      );
+      const p1 = await p1Res.json();
+
+      const p2Res = await app.handle(
+        new Request('http://localhost/pasal-pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nomorPasal: 'Pasal 25B',
+            bunyiPasal: 'Makan di ruang laboratorium.',
+            jenisSanksi: 1,
+          }),
+        }),
+      );
+      const p2 = await p2Res.json();
+
+      // 2. Bulk delete both pasals
+      const bulkRes = await app.handle(
+        new Request('http://localhost/pasal-pelanggaran/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            ids: [p1.id, p2.id],
+          }),
+        }),
+      );
+      expect(bulkRes.status).toBe(200);
+      const bulkData = await bulkRes.json();
+      expect(bulkData.success).toBe(true);
+      expect(bulkData.deletedCount).toBe(2);
+    });
+
+    it('bulk delete dan single delete harus menolak jika butir pasal sudah terikat pada data pelanggaran', async () => {
+      // 1. Create pasal
+      const pRes = await app.handle(
+        new Request('http://localhost/pasal-pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            nomorPasal: 'Pasal 26',
+            bunyiPasal: 'Merusak alat ukur.',
+            jenisSanksi: 4,
+          }),
+        }),
+      );
+      const pasal = await pRes.json();
+
+      // 2. Reference in pelanggaran
+      await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2023-10-18',
+            jenisPelanggaran: 'Merusak Alat',
+            keterangan: 'Jatuh saat praktikum',
+            pasalId: pasal.id,
+          }),
+        }),
+      );
+
+      // 3. Try single delete -> 400
+      const singleDeleteRes = await app.handle(
+        new Request(`http://localhost/pasal-pelanggaran/${pasal.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
+      );
+      expect(singleDeleteRes.status).toBe(400);
+
+      // 4. Try bulk delete -> 400
+      const bulkDeleteRes = await app.handle(
+        new Request('http://localhost/pasal-pelanggaran/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            ids: [pasal.id],
+          }),
+        }),
+      );
+      expect(bulkDeleteRes.status).toBe(400);
+      const errData = await bulkDeleteRes.json();
+      expect(errData.error).toContain('catatan pelanggaran');
     });
   });
 });

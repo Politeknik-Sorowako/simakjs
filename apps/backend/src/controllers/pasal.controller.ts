@@ -78,6 +78,23 @@ export class PasalPelanggaranController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bulkRemove({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const ids = (body as { ids?: number[] })?.ids || [];
+      const result = await PasalPelanggaranService.bulkRemove(ids);
+      return result;
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal menghapus pasal terpilih.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'prodi'])) {

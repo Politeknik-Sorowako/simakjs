@@ -114,7 +114,7 @@ export const updateBimbinganSchema = {
       isApproved: t.Optional(t.Boolean({ default: true })),
       permasalahan: t.Optional(t.Union([t.String(), t.Null()])),
       solusi: t.Optional(t.Union([t.String(), t.Null()])),
-      tanggalBimbingan: t.Optional(t.String()),
+      tanggalBimbingan: t.Optional(t.Union([t.String(), t.Null()])),
       statusBkd: t.Optional(t.Boolean({ default: false })),
     }),
   },

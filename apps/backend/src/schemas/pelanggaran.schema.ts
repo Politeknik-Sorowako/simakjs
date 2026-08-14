@@ -7,6 +7,7 @@ export const pelanggaranBody = t.Object({
   keterangan: t.String({ minLength: 3, maxLength: 1000, default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' }),
   pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
   jenisSanksi: t.Optional(t.Integer({ minimum: 1, maximum: 4, default: 1 })),
+  pelapor: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
 });
 
 export const createPelanggaranSchema = {
@@ -26,6 +27,7 @@ export const createPelanggaranSchema = {
       keterangan: t.String({ default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' }),
       pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
       jenisSanksi: t.Optional(t.Integer({ default: 1 })),
+      pelapor: t.Optional(t.Union([t.String(), t.Null()])),
     }),
   },
 };
@@ -43,6 +45,7 @@ export const getPelanggaranMahasiswaSchema = {
     200: t.Object({
       totalPoin: t.Optional(t.Integer({ default: 5 })),
       predikat: t.Optional(t.String({ default: 'T1L1' })),
+      degradasiNilaiSikap: t.Optional(t.Number({ default: 1.25 })),
       pelanggaranList: t.Optional(
         t.Array(
           t.Object({
@@ -55,6 +58,7 @@ export const getPelanggaranMahasiswaSchema = {
             jenisSanksi: t.Optional(t.Integer({ default: 1 })),
             nomorPasal: t.Optional(t.Union([t.String(), t.Null()])),
             bunyiPasal: t.Optional(t.Union([t.String(), t.Null()])),
+            pelapor: t.Optional(t.Union([t.String(), t.Null()])),
             createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
           }),
         ),
@@ -85,6 +89,7 @@ export const getAllPelanggaranSchema = {
         jenisSanksi: t.Optional(t.Integer({ default: 1 })),
         nomorPasal: t.Optional(t.Union([t.String(), t.Null()])),
         bunyiPasal: t.Optional(t.Union([t.String(), t.Null()])),
+        pelapor: t.Optional(t.Union([t.String(), t.Null()])),
         createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
       }),
     ),
@@ -120,6 +125,7 @@ export const getRekapPelanggaranSchema = {
           totalPoin: t.Integer(),
           jumlahPelanggaran: t.Integer(),
           predikat: t.String(),
+          degradasiNilaiSikap: t.Optional(t.Number()),
         }),
       ),
     }),
@@ -142,6 +148,7 @@ export const updatePelanggaranSchema = {
       keterangan: t.Optional(t.String()),
       pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
       jenisSanksi: t.Optional(t.Integer()),
+      pelapor: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
     }),
   ),
   response: {
@@ -153,6 +160,7 @@ export const updatePelanggaranSchema = {
       keterangan: t.String(),
       pasalId: t.Union([t.Integer(), t.Null()]),
       jenisSanksi: t.Integer(),
+      pelapor: t.Union([t.String(), t.Null()]),
       dibuatOleh: t.Union([t.Integer(), t.Null()]),
       createdAt: t.Union([t.Date(), t.Null()], { default: null }),
       updatedAt: t.Union([t.Date(), t.Null()], { default: null }),

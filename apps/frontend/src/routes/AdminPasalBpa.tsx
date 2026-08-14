@@ -16,11 +16,48 @@ export default function AdminPasalBpa() {
   const [search, setSearch] = createSignal('');
   const [showImportModal, setShowImportModal] = createSignal(false);
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = createSignal(false);
+  const [isBulkDeleting, setIsBulkDeleting] = createSignal(false);
+
   const filteredPasal = () => {
     const q = search().toLowerCase();
     const list = pasalList() || [];
     if (!q) return list;
     return list.filter((p) => p.nomorPasal.toLowerCase().includes(q) || p.bunyiPasal.toLowerCase().includes(q));
+  };
+
+  const handleSearchInput = (val: string) => {
+    setSearch(val);
+    setSelectedIds([]);
+  };
+
+  const isAllSelected = () => {
+    const list = filteredPasal();
+    return list.length > 0 && list.every((p) => selectedIds().includes(p.id));
+  };
+
+  const toggleSelectAll = () => {
+    const list = filteredPasal();
+    if (isAllSelected()) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(list.map((p) => p.id));
+    }
+  };
+
+  const toggleSelectRow = (id: number) => {
+    if (selectedIds().includes(id)) {
+      setSelectedIds(selectedIds().filter((item) => item !== id));
+    } else {
+      setSelectedIds([...selectedIds(), id]);
+    }
+  };
+
+  const selectedPasalItems = () => {
+    const ids = new Set(selectedIds());
+    return (pasalList() || []).filter((p) => ids.has(p.id));
   };
 
   // Form state
@@ -92,9 +129,28 @@ export default function AdminPasalBpa() {
     try {
       await pasalController.remove(p.id);
       toast.showToast('Pasal berhasil dihapus', 'success');
+      setSelectedIds(selectedIds().filter((id) => id !== p.id));
       refetch();
     } catch (err: unknown) {
       toast.showToast(err instanceof Error ? err.message : 'Gagal menghapus pasal.', 'error');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = selectedIds();
+    if (ids.length === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+      const res = await pasalController.bulkRemove(ids);
+      toast.showToast(`Berhasil menghapus ${res.deletedCount || ids.length} butir pasal`, 'success');
+      setSelectedIds([]);
+      setShowBulkDeleteModal(false);
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal menghapus pasal terpilih.', 'error');
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
@@ -125,23 +181,61 @@ export default function AdminPasalBpa() {
         </div>
 
         <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
-          <div class="flex items-center gap-3">
-            <div class="relative flex-1">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="relative flex-1 w-full">
               <span class="absolute left-3.5 top-2.5 text-secondary-400 dark:text-secondary-200">🔍</span>
               <input
                 type="text"
                 placeholder="Cari nomor atau bunyi pasal..."
                 class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={search()}
-                onInput={(e) => setSearch(e.currentTarget.value)}
+                onInput={(e) => handleSearchInput(e.currentTarget.value)}
               />
             </div>
+
+            {/* Batch Action Button */}
+            <Show when={auth.hasRole(['admin', 'super_admin']) && selectedIds().length > 0}>
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <Button
+                  onClick={() => setShowBulkDeleteModal(true)}
+                  variant="danger"
+                  class="w-full sm:w-auto text-xs py-2 px-4 flex items-center justify-center gap-2 shadow-sm font-bold animate-fadeIn"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  Hapus Terpilih ({selectedIds().length})
+                </Button>
+                <button
+                  onClick={() => setSelectedIds([])}
+                  class="text-xs text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200 underline px-1"
+                >
+                  Batal
+                </button>
+              </div>
+            </Show>
           </div>
 
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
               <thead>
                 <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                  <Show when={auth.hasRole(['admin', 'super_admin'])}>
+                    <th class="p-3 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        class="h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer accent-brand-600"
+                        checked={isAllSelected()}
+                        onChange={toggleSelectAll}
+                        title="Pilih Semua"
+                      />
+                    </th>
+                  </Show>
                   <th class="p-3">No</th>
                   <th class="p-3">Nomor Pasal</th>
                   <th class="p-3">Bunyi Pasal</th>
@@ -151,48 +245,83 @@ export default function AdminPasalBpa() {
                 </tr>
               </thead>
               <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                <For each={filteredPasal()}>
-                  {(p, idx) => (
-                    <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                      <td class="p-3">{idx() + 1}</td>
-                      <td class="p-3 font-bold text-secondary-800 dark:text-white">{p.nomorPasal}</td>
-                      <td class="p-3 max-w-[400px]">{p.bunyiPasal}</td>
-                      <td class="p-3">
-                        <span
-                          class={`px-2 py-0.5 rounded border font-bold ${
-                            p.jenisSanksi === 4
-                              ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
-                              : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
-                          }`}
-                        >
-                          {sanksiLabel(p.jenisSanksi)}
-                        </span>
-                      </td>
-                      <td class="p-3">
-                        <span
-                          class={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.isActive
-                              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
-                              : 'bg-secondary-100 text-secondary-500 dark:bg-secondary-800 dark:text-secondary-400'
-                          }`}
-                        >
-                          {p.isActive ? 'Aktif' : 'Non-aktif'}
-                        </span>
-                      </td>
-                      <td class="p-3">
-                        <div class="flex items-center justify-center gap-2">
-                          <Button onClick={() => openEditModal(p)} variant="secondary" class="py-1 px-2.5 text-[10px]">
-                            Edit
-                          </Button>
-                          <Show when={auth.hasRole(['admin', 'super_admin'])}>
-                            <Button onClick={() => handleDelete(p)} variant="danger" class="py-1 px-2.5 text-[10px]">
-                              Hapus
-                            </Button>
-                          </Show>
-                        </div>
+                <For
+                  each={filteredPasal()}
+                  fallback={
+                    <tr>
+                      <td
+                        colspan={auth.hasRole(['admin', 'super_admin']) ? 7 : 6}
+                        class="p-8 text-center text-secondary-400"
+                      >
+                        Tidak ada pasal yang ditemukan.
                       </td>
                     </tr>
-                  )}
+                  }
+                >
+                  {(p, idx) => {
+                    const isSelected = () => selectedIds().includes(p.id);
+                    return (
+                      <tr
+                        class={`transition-colors ${
+                          isSelected()
+                            ? 'bg-brand-50/60 dark:bg-brand-900/20'
+                            : 'hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20'
+                        }`}
+                      >
+                        <Show when={auth.hasRole(['admin', 'super_admin'])}>
+                          <td class="p-3 text-center">
+                            <input
+                              type="checkbox"
+                              class="h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer accent-brand-600"
+                              checked={isSelected()}
+                              onChange={() => toggleSelectRow(p.id)}
+                            />
+                          </td>
+                        </Show>
+                        <td class="p-3">{idx() + 1}</td>
+                        <td class="p-3 font-bold text-secondary-800 dark:text-white">{p.nomorPasal}</td>
+                        <td class="p-3 max-w-[400px]">{p.bunyiPasal}</td>
+                        <td class="p-3">
+                          <span
+                            class={`px-2 py-0.5 rounded border font-bold ${
+                              p.jenisSanksi === 4
+                                ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                            }`}
+                          >
+                            {sanksiLabel(p.jenisSanksi)}
+                          </span>
+                        </td>
+                        <td class="p-3">
+                          <span
+                            class={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              p.isActive
+                                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                : 'bg-secondary-100 text-secondary-500 dark:bg-secondary-800 dark:text-secondary-400'
+                            }`}
+                          >
+                            {p.isActive ? 'Aktif' : 'Non-aktif'}
+                          </span>
+                        </td>
+                        <td class="p-3">
+                          <div class="flex items-center justify-center gap-2">
+                            <Button
+                              onClick={() => openEditModal(p)}
+                              variant="secondary"
+                              class="py-1 px-2.5 text-[10px]"
+                            >
+                              Edit
+                            </Button>
+                            <Show when={auth.hasRole(['admin', 'super_admin'])}>
+                              <Button onClick={() => handleDelete(p)} variant="danger" class="py-1 px-2.5 text-[10px]">
+                                Hapus
+                              </Button>
+                            </Show>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }}
                 </For>
               </tbody>
             </table>
@@ -266,6 +395,64 @@ export default function AdminPasalBpa() {
               </Button>
             </div>
           </form>
+        </Modal>
+
+        {/* Modal Konfirmasi Hapus Massal */}
+        <Modal
+          show={showBulkDeleteModal()}
+          onClose={() => setShowBulkDeleteModal(false)}
+          title="Konfirmasi Hapus Massal Butir Pasal"
+        >
+          <div class="flex flex-col gap-4">
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300">
+              <p class="font-bold mb-1">⚠️ Perhatian:</p>
+              <p>
+                Anda akan menghapus <strong>{selectedIds().length} butir pasal</strong> secara permanen. Pasal yang
+                sudah digunakan pada catatan pelanggaran aktif tidak dapat dihapus.
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs font-bold text-secondary-700 dark:text-secondary-300">
+                Daftar Butir Pasal yang Akan Dihapus:
+              </label>
+              <div class="max-h-52 overflow-y-auto border border-secondary-200 rounded-xl divide-y divide-secondary-100 dark:border-secondary-700 dark:divide-secondary-800">
+                <For each={selectedPasalItems()}>
+                  {(item) => (
+                    <div class="p-2.5 text-xs flex flex-col gap-0.5">
+                      <div class="flex items-center justify-between font-bold text-secondary-800 dark:text-white">
+                        <span>{item.nomorPasal}</span>
+                        <span class="text-[10px] font-normal text-secondary-400">{sanksiLabel(item.jenisSanksi)}</span>
+                      </div>
+                      <p class="text-[11px] text-secondary-500 dark:text-secondary-400 line-clamp-1">
+                        {item.bunyiPasal}
+                      </p>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-3 border-t pt-4 mt-2 dark:border-secondary-800">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowBulkDeleteModal(false)}
+                disabled={isBulkDeleting()}
+              >
+                Batal
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={handleBulkDelete}
+                disabled={isBulkDeleting()}
+                class="font-bold"
+              >
+                {isBulkDeleting() ? 'Menghapus...' : `Ya, Hapus (${selectedIds().length}) Pasal`}
+              </Button>
+            </div>
+          </div>
         </Modal>
 
         {/* Import CSV Modal */}
