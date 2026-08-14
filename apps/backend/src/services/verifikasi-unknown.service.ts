@@ -7,13 +7,14 @@ import {
   mataKuliah,
   presensi,
   presensiApel,
+  presensiPraktikum,
   sesiApel,
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
 
-export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL';
+export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
 export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
 
 const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'HADIR'];
@@ -106,6 +107,22 @@ export class VerifikasiUnknownService {
               verifiedAt: new Date(),
             })
             .where(eq(presensiApel.id, absence.sumberId));
+        } else if (absence.sumber === 'PRAKTIKUM' && absence.sumberId != null) {
+          const [prakRow] = await tx
+            .select({ keteranganAdmin: presensiPraktikum.keteranganAdmin })
+            .from(presensiPraktikum)
+            .where(eq(presensiPraktikum.id, absence.sumberId));
+          const prev = prakRow?.keteranganAdmin || '';
+          await tx
+            .update(presensiPraktikum)
+            .set({
+              status: 'hadir' as 'hadir',
+              durasiMangkir: 0,
+              keteranganAdmin: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
+              resolvedBy: input.adminUserId,
+              resolvedAt: new Date(),
+            })
+            .where(eq(presensiPraktikum.id, absence.sumberId));
         }
 
         await tx
@@ -216,6 +233,26 @@ export class VerifikasiUnknownService {
             verifiedAt: new Date(),
           })
           .where(eq(presensiApel.id, absence.sumberId));
+      } else if (absence.sumber === 'PRAKTIKUM' && absence.sumberId != null) {
+        const [prakRow] = await tx
+          .select({ keteranganAdmin: presensiPraktikum.keteranganAdmin })
+          .from(presensiPraktikum)
+          .where(eq(presensiPraktikum.id, absence.sumberId));
+
+        const terkonfirmasi = `[terkonfirmasi] ${lowerStatus}${note ? ` — ${note}` : ''}`;
+        const prev = prakRow?.keteranganAdmin || '';
+        const keteranganAdmin = prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi;
+
+        await tx
+          .update(presensiPraktikum)
+          .set({
+            status: lowerStatus as 'sakit' | 'izin' | 'alpa',
+            durasiMangkir: durasi,
+            keteranganAdmin,
+            resolvedBy: input.adminUserId,
+            resolvedAt: new Date(),
+          })
+          .where(eq(presensiPraktikum.id, absence.sumberId));
       }
 
       return updatedAbsence;

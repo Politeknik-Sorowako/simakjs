@@ -50,6 +50,7 @@ export const savePresensiPraktikumBody = t.Object({
         t.Literal('sakit'),
         t.Literal('alpa'),
         t.Literal('telat'),
+        t.Literal('unknown'),
       ]),
       durasiMangkir: t.Optional(t.Integer()),
       keterangan: t.Optional(t.String()),
@@ -104,5 +105,20 @@ export const getEnrollmentLogSchema = {
   },
   params: t.Object({
     id: t.Numeric(),
+  }),
+};
+
+export const getUnknownPresensiPraktikumSchema = {
+  detail: {
+    tags: ['Rombel Praktikum'],
+    summary: 'Daftar Presensi Praktikum Unknown',
+    description: 'Mengambil daftar presensi praktikum berstatus unknown (perlu verifikasi admin).',
+  },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '20' })),
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    statusFilter: t.Optional(t.Union([t.Literal('belum'), t.Literal('sudah')])),
   }),
 };

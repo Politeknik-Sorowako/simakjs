@@ -1,6 +1,7 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -627,39 +628,48 @@ export default function ApelKelola() {
                             <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
                             <td class="px-4 py-3 text-sm">{item.mahasiswaNama}</td>
                             <td class="px-4 py-3 text-center">
-                              <select
-                                class={`px-2 py-1 rounded text-xs font-bold border focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 ${
-                                  item.status === 'hadir'
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300'
-                                    : item.status === 'terlambat'
-                                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300'
-                                      : item.status === 'sakit'
-                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-300'
-                                        : item.status === 'izin'
-                                          ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 border-indigo-300'
-                                          : item.status === 'alpa'
-                                            ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-300'
-                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-300'
-                                }`}
-                                value={item.status}
-                                disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                onChange={(e) =>
-                                  handleStatusChange(
-                                    item.mahasiswaId,
-                                    e.currentTarget.value as
-                                      | 'hadir'
-                                      | 'terlambat'
-                                      | 'unknown'
-                                      | 'sakit'
-                                      | 'izin'
-                                      | 'alpa',
-                                  )
-                                }
-                              >
-                                <For each={statusOptions()}>
-                                  {(opt) => <option value={opt}>{APEL_STATUS_LABELS[opt]}</option>}
-                                </For>
-                              </select>
+                              <div class="flex items-center justify-center gap-2">
+                                <select
+                                  class={`px-2 py-1 rounded text-xs font-bold border focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 ${
+                                    item.status === 'hadir'
+                                      ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300'
+                                      : item.status === 'terlambat'
+                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 border-yellow-300'
+                                        : item.status === 'sakit'
+                                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 border-blue-300'
+                                          : item.status === 'izin'
+                                            ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300 border-indigo-300'
+                                            : item.status === 'alpa'
+                                              ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 border-red-300'
+                                              : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border-gray-300'
+                                  }`}
+                                  value={item.status}
+                                  disabled={
+                                    isSubmitting() ||
+                                    sesiPresensi()?.sesi.isClosed ||
+                                    (Boolean(item.verifiedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi']))
+                                  }
+                                  onChange={(e) =>
+                                    handleStatusChange(
+                                      item.mahasiswaId,
+                                      e.currentTarget.value as
+                                        | 'hadir'
+                                        | 'terlambat'
+                                        | 'unknown'
+                                        | 'sakit'
+                                        | 'izin'
+                                        | 'alpa',
+                                    )
+                                  }
+                                >
+                                  <For each={statusOptions()}>
+                                    {(opt) => <option value={opt}>{APEL_STATUS_LABELS[opt]}</option>}
+                                  </For>
+                                </select>
+                                <Show when={item.verifiedAt}>
+                                  <VerifiedBadge verifiedAt={item.verifiedAt} verifiedByName={item.verifiedByName} />
+                                </Show>
+                              </div>
                             </td>
                             <td class="px-4 py-3 text-center">
                               <Show when={item.status !== 'hadir'}>
@@ -669,7 +679,11 @@ export default function ApelKelola() {
                                     min={0}
                                     class="w-16 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                     value={item.menitTerlambat ?? 0}
-                                    disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
+                                    disabled={
+                                      isSubmitting() ||
+                                      sesiPresensi()?.sesi.isClosed ||
+                                      (Boolean(item.verifiedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi']))
+                                    }
                                     onInput={(e) => {
                                       const val = parseInt(e.currentTarget.value) || 0;
                                       item.menitTerlambat = val;

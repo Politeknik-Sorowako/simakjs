@@ -403,7 +403,7 @@ export const presensiStatusEnum = pgEnum('presensi_status', [
   'unknown',
 ]);
 
-export const ketidakhadiranSumberEnum = pgEnum('ketidakhadiran_sumber', ['BAP', 'APEL', 'MANUAL']);
+export const ketidakhadiranSumberEnum = pgEnum('ketidakhadiran_sumber', ['BAP', 'APEL', 'MANUAL', 'PRAKTIKUM']);
 
 export const ketidakhadiranStatusEnum = pgEnum('ketidakhadiran_status', [
   'UNKNOWN',
