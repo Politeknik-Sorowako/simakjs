@@ -605,5 +605,63 @@ describe('Bimbingan & Pelanggaran API', () => {
       const errData = await bulkDeleteRes.json();
       expect(errData.error).toContain('catatan pelanggaran');
     });
+
+    it('bulk delete harus melewati pasal terpakai dan menghapus sisanya (partial delete)', async () => {
+      // 1. Create 3 pasals
+      const createPasal = async (nomorPasal: string, bunyiPasal: string, jenisSanksi: number) => {
+        const res = await app.handle(
+          new Request('http://localhost/pasal-pelanggaran', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify({ nomorPasal, bunyiPasal, jenisSanksi }),
+          }),
+        );
+        expect(res.status).toBe(201);
+        return (await res.json()) as { id: number };
+      };
+
+      const p1 = await createPasal('Pasal 27', 'Melanggar kebersihan laboratorium.', 1);
+      const p2 = await createPasal('Pasal 28', 'Menggunakan gawai saat praktikum.', 1);
+      const p3 = await createPasal('Pasal 29', 'Berada di area terlarang tanpa izin.', 4);
+
+      // 2. Reference p2 in a violation (so it cannot be deleted)
+      await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2023-10-20',
+            jenisPelanggaran: 'Menggunakan gawai saat praktikum',
+            keterangan: 'Keterangan pelanggaran p2.',
+            pasalId: p2.id,
+          }),
+        }),
+      );
+
+      // 3. Bulk delete all 3 -> only p1 & p3 deleted, p2 skipped
+      const bulkRes = await app.handle(
+        new Request('http://localhost/pasal-pelanggaran/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({ ids: [p1.id, p2.id, p3.id] }),
+        }),
+      );
+      expect(bulkRes.status).toBe(200);
+      const data = await bulkRes.json();
+      expect(data.success).toBe(true);
+      expect(data.deletedCount).toBe(2);
+      expect(data.skippedCount).toBe(1);
+      expect(data.skippedPasal).toContain('Pasal 28');
+    });
   });
 });

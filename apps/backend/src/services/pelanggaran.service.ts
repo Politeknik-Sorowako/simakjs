@@ -207,6 +207,13 @@ export class PelanggaranService {
     const list = await db
       .select({
         id: pelanggaran.id,
+        mahasiswaId: pelanggaran.mahasiswaId,
+        nim: mahasiswa.nim,
+        namaMahasiswa: mahasiswa.nama,
+        prodiNama: programStudi.nama,
+        programStudiId: mahasiswa.programStudiId,
+        jenjang: programStudi.jenjang,
+        dosenPaId: mahasiswa.dosenPaId,
         tanggal: pelanggaran.tanggal,
         jenisPelanggaran: pelanggaran.jenisPelanggaran,
         bobotPoin: sql<number>`COALESCE(${pelanggaran.jenisSanksi}, 1)`,
@@ -219,6 +226,8 @@ export class PelanggaranService {
         createdAt: pelanggaran.createdAt,
       })
       .from(pelanggaran)
+      .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .leftJoin(pasalPelanggaran, eq(pelanggaran.pasalId, pasalPelanggaran.id))
       .where(eq(pelanggaran.mahasiswaId, mahasiswaId))
       .orderBy(desc(pelanggaran.tanggal));

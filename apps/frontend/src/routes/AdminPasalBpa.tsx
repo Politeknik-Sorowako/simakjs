@@ -143,7 +143,11 @@ export default function AdminPasalBpa() {
     setIsBulkDeleting(true);
     try {
       const res = await pasalController.bulkRemove(ids);
-      toast.showToast(`Berhasil menghapus ${res.deletedCount || ids.length} butir pasal`, 'success');
+      const msg =
+        res.skippedCount > 0
+          ? `Berhasil menghapus ${res.deletedCount} butir pasal. ${res.skippedCount} pasal terpakai dilewati (${res.skippedPasal.join(', ')}).`
+          : `Berhasil menghapus ${res.deletedCount} butir pasal`;
+      toast.showToast(msg, 'success');
       setSelectedIds([]);
       setShowBulkDeleteModal(false);
       refetch();
@@ -408,7 +412,7 @@ export default function AdminPasalBpa() {
               <p class="font-bold mb-1">⚠️ Perhatian:</p>
               <p>
                 Anda akan menghapus <strong>{selectedIds().length} butir pasal</strong> secara permanen. Pasal yang
-                sudah digunakan pada catatan pelanggaran aktif tidak dapat dihapus.
+                sudah digunakan pada catatan pelanggaran aktif akan <strong>dilewati</strong> (tidak dihapus).
               </p>
             </div>
 

@@ -320,9 +320,9 @@ export default function Pelanggaran() {
                   Batas Poin Kelayakan (BPA):
                 </p>
                 <ul class="text-[11px] text-secondary-500 list-disc pl-4 mt-1 flex flex-col gap-0.5 font-medium">
-                  <li>Total poin &gt; 25: Peringatan Keras (SP-1)</li>
-                  <li>Total poin &gt; 50: Skorsing Akademik (SP-2)</li>
-                  <li>Total poin &gt; 75: Drop Out / Diberhentikan (SP-3)</li>
+                  <li>Total poin &gt;= 25: Peringatan Keras (SP-1)</li>
+                  <li>Total poin &gt;= 50: Skorsing Akademik (SP-2)</li>
+                  <li>Total poin &gt;= 75: Drop Out / Diberhentikan (SP-3)</li>
                 </ul>
               </div>
             </div>

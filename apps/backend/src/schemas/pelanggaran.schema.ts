@@ -57,6 +57,13 @@ export const getPelanggaranMahasiswaSchema = {
       pelanggaranList: t.Array(
         t.Object({
           id: t.Integer(),
+          mahasiswaId: t.Integer(),
+          nim: t.String(),
+          namaMahasiswa: t.String(),
+          prodiNama: t.Union([t.String(), t.Null()]),
+          programStudiId: t.Union([t.Integer(), t.Null()]),
+          jenjang: t.Union([t.String(), t.Null()]),
+          dosenPaId: t.Union([t.Integer(), t.Null()]),
           tanggal: t.String(),
           jenisPelanggaran: t.String(),
           bobotPoin: t.Integer(),

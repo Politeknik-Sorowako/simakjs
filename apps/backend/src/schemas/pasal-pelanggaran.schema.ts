@@ -112,7 +112,12 @@ export const bulkDeletePasalSchema = {
     ids: t.Array(t.Integer({ minimum: 1 }), { minItems: 1 }),
   }),
   response: {
-    200: t.Object({ success: t.Boolean(), deletedCount: t.Integer() }),
+    200: t.Object({
+      success: t.Boolean(),
+      deletedCount: t.Integer(),
+      skippedCount: t.Integer(),
+      skippedPasal: t.Array(t.String()),
+    }),
     400: t.Object({ error: t.String() }),
     403: t.Object({ error: t.String() }),
   },

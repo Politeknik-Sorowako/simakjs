@@ -80,7 +80,7 @@ export class PasalPelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bulkRemove({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin'])) {
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
