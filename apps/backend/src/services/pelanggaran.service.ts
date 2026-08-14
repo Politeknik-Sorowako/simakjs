@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, SQL, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, or, SQL, sql, sum } from 'drizzle-orm';
 import {
   dosen,
   mahasiswa,
@@ -41,7 +41,8 @@ export class PelanggaranService {
       throw new Error('Mahasiswa tidak ditemukan.');
     }
 
-    let pasalId = data.pasalId ?? null;
+    const rawPasalId = data.pasalId !== undefined && data.pasalId !== null ? Number(data.pasalId) : null;
+    const pasalId = rawPasalId && rawPasalId > 0 ? rawPasalId : null;
     let jenisSanksi = data.jenisSanksi ?? 1;
     let jenisPelanggaran = data.jenisPelanggaran ?? '';
     let namaPasal = jenisPelanggaran;
@@ -168,7 +169,7 @@ export class PelanggaranService {
         .from(users)
         .where(
           candidateIds.length > 0
-            ? sql`${users.id} IN (${sql.join(candidateIds, sql`, `)}) OR ${users.role} IN ('kaprodi', 'prodi')`
+            ? or(inArray(users.id, candidateIds), inArray(users.role, ['kaprodi', 'prodi']))
             : inArray(users.role, ['kaprodi', 'prodi']),
         );
 

@@ -151,11 +151,17 @@ export default function Pelanggaran() {
   };
 
   const handlePasalChange = (val: string | number) => {
-    const id = Number(val);
-    setPasalId(id);
-    const pasal = pasalList()?.find((p) => p.id === id);
-    if (pasal) {
-      setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
+    const id = val ? Number(val) : null;
+    const cleanId = id && id > 0 ? id : null;
+    setPasalId(cleanId);
+    if (cleanId) {
+      const pasal = pasalList()?.find((p) => p.id === cleanId);
+      if (pasal) {
+        setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
+      }
+    } else {
+      // Pasal dibatalkan -> bersihkan teks hasil auto-fill agar tidak tersimpan data basi.
+      setJenisPelanggaran('');
     }
   };
 
@@ -166,7 +172,7 @@ export default function Pelanggaran() {
     setTanggal(item.tanggal);
     setJenisPelanggaran(item.jenisPelanggaran);
     setKeterangan(item.keterangan);
-    setPasalId(item.pasalId ?? null);
+    setPasalId(item.pasalId && item.pasalId > 0 ? item.pasalId : null);
     setPelapor(item.pelapor || '');
     setErrorMsg('');
     setShowModal(true);
@@ -189,7 +195,7 @@ export default function Pelanggaran() {
         tanggal: tanggal(),
         jenisPelanggaran: jenisPelanggaran(),
         keterangan: keterangan(),
-        pasalId: pasalId(),
+        pasalId: pasalId() && pasalId()! > 0 ? pasalId() : null,
         pelapor: pelapor().trim() || undefined,
       };
 
