@@ -87,6 +87,10 @@ export default function PresensiUnknown() {
   const handleResolve = async () => {
     const item = resolveModal();
     if (!item) return;
+    if (!resolveStatus()) {
+      toast.showToast('Pilih status konfirmasi terlebih dahulu', 'error');
+      return;
+    }
     if (isAnulir() && !resolveNote().trim()) {
       toast.showToast('Alasan/keterangan wajib diisi saat menganulir', 'error');
       return;
@@ -361,11 +365,9 @@ export default function PresensiUnknown() {
                     value={resolveStatus()}
                     onChange={(e) => setResolveStatus(e.currentTarget.value as 'sakit' | 'izin' | 'alpa')}
                   >
-                    <Show when={!isAnulir()} fallback={null}>
-                      <option value="alpa">Alpa (Tanpa Keterangan)</option>
-                      <option value="sakit">Sakit</option>
-                      <option value="izin">Izin</option>
-                    </Show>
+                    <option value="alpa">Alpa (Tanpa Keterangan)</option>
+                    <option value="sakit">Sakit</option>
+                    <option value="izin">Izin</option>
                   </select>
                 </div>
 
@@ -375,11 +377,7 @@ export default function PresensiUnknown() {
                     id="anulir-checkbox"
                     class="h-4 w-4 accent-rose-600"
                     checked={isAnulir()}
-                    onChange={(e) => {
-                      const on = e.currentTarget.checked;
-                      setIsAnulir(on);
-                      if (on) setResolveStatus('alpa');
-                    }}
+                    onChange={(e) => setIsAnulir(e.currentTarget.checked)}
                   />
                   <label for="anulir-checkbox" class="text-sm font-medium text-rose-600 dark:text-rose-400">
                     Anulir (Durasi = 0)
@@ -387,8 +385,8 @@ export default function PresensiUnknown() {
                 </div>
                 <Show when={isAnulir()}>
                   <p class="text-xs text-secondary-500 dark:text-secondary-300">
-                    Ketidakhadiran tetap dikonfirmasi namun dengan durasi 0 menit sehingga tidak masuk dalam rekap
-                    kompensasi.
+                    Ketidakhadiran dikonfirmasi sebagai <strong>{statusWord(resolveStatus())}</strong> dengan durasi 0
+                    menit sehingga tidak masuk dalam rekap kompensasi.
                   </p>
                 </Show>
 
@@ -414,7 +412,7 @@ export default function PresensiUnknown() {
                   <textarea
                     rows={3}
                     class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                    placeholder="Misal: keterangan dari dosen / mahasiswa..."
+                    placeholder="Misal: Surat Keterangan Dokter / Penjelasan dari Admin..."
                     value={resolveNote()}
                     onInput={(e) => setResolveNote(e.currentTarget.value)}
                   />
@@ -428,7 +426,7 @@ export default function PresensiUnknown() {
                     {submitting()
                       ? 'Menyimpan...'
                       : isAnulir()
-                        ? 'Anulir Presensi'
+                        ? `Anulir Presensi (${statusWord(resolveStatus())})`
                         : `Simpan sebagai ${statusWord(resolveStatus())}`}
                   </Button>
                 </div>
