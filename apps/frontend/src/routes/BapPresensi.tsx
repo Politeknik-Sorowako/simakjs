@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
+import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { dosenController, Dosen as IDosen } from '../controllers/dosenController';
@@ -94,7 +95,7 @@ export default function BapPresensi() {
   const [showPresensiPrakModal, setShowPresensiPrakModal] = createSignal(false);
   const [selectedBapPrak, setSelectedBapPrak] = createSignal<BapPraktikum | null>(null);
   const [presensiPrakSheet, setPresensiPrakSheet] = createSignal<
-    Record<number, { status: string; durasiMangkir: number; keterangan: string }>
+    Record<number, { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }>
   >({});
   const [isSavingPresensiPrak, setIsSavingPresensiPrak] = createSignal(false);
 
@@ -181,7 +182,18 @@ export default function BapPresensi() {
 
   // Attendance Sheet state (studentId -> { status, durasiMangkir, keterangan })
   const [attendanceSheet, setAttendanceSheet] = createSignal<
-    Record<number, { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }>
+    Record<
+      number,
+      {
+        status: string;
+        durasiMangkir: number;
+        keterangan: string;
+        resolvedAt?: string | null;
+        isVerified?: boolean | null;
+        verifiedAt?: string | null;
+        verifiedByName?: string | null;
+      }
+    >
   >({});
 
   // 1. Fetch Classes (server-side search + lazy loading / load more)
@@ -528,7 +540,10 @@ export default function BapPresensi() {
       const saved = await rombelPraktikumController.getPresensiByBap(bapPrak.id);
       const r = currentRombel();
       const mhsList = r?.mahasiswaList || [];
-      const sheet: Record<number, { status: string; durasiMangkir: number; keterangan: string }> = {};
+      const sheet: Record<
+        number,
+        { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }
+      > = {};
 
       for (const item of mhsList) {
         const existing = saved.find((p) => p.mahasiswaId === item.mahasiswaId);
@@ -536,6 +551,7 @@ export default function BapPresensi() {
           status: existing?.status || 'hadir',
           durasiMangkir: existing?.durasiMangkir || 0,
           keterangan: existing?.keterangan || '',
+          resolvedAt: existing?.resolvedAt || null,
         };
       }
       setPresensiPrakSheet(sheet);
@@ -634,7 +650,15 @@ export default function BapPresensi() {
 
     const initialSheet: Record<
       number,
-      { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }
+      {
+        status: string;
+        durasiMangkir: number;
+        keterangan: string;
+        resolvedAt?: string | null;
+        isVerified?: boolean | null;
+        verifiedAt?: string | null;
+        verifiedByName?: string | null;
+      }
     > = {};
 
     for (const k of listMhs) {
@@ -645,6 +669,9 @@ export default function BapPresensi() {
           durasiMangkir: existing.durasiMangkir,
           keterangan: existing.keterangan || '',
           resolvedAt: existing.resolvedAt || null,
+          isVerified: existing.isVerified ?? null,
+          verifiedAt: existing.verifiedAt || null,
+          verifiedByName: existing.verifiedByName || null,
         };
       } else {
         initialSheet[k.mahasiswaId] = {
@@ -652,6 +679,9 @@ export default function BapPresensi() {
           durasiMangkir: 0,
           keterangan: '',
           resolvedAt: null,
+          isVerified: null,
+          verifiedAt: null,
+          verifiedByName: null,
         };
       }
     }
@@ -1271,32 +1301,40 @@ export default function BapPresensi() {
                                 <div class="flex flex-col gap-2">
                                   <div class="flex items-center gap-2">
                                     <For each={kelasStatusOptions()}>
-                                      {(st) => (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleStatusChange(k.mahasiswaId, st)}
-                                          class={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                                            state().status === st
-                                              ? st === 'hadir'
-                                                ? 'bg-accent-50 text-accent-700 border-accent-200'
-                                                : st === 'alpa'
-                                                  ? 'bg-red-50 text-red-700 border-red-200'
-                                                  : st === 'unknown'
-                                                    ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300'
-                                                    : 'bg-accent-50 text-accent-700 border-accent-200'
-                                              : 'bg-transparent text-secondary-400 border-secondary-200 hover:bg-secondary-100'
-                                          }`}
-                                          title={statusFullLabel(st)}
-                                        >
-                                          {st === 'unknown' ? '? UNKNOWN' : statusLabel(st)}
-                                        </button>
-                                      )}
+                                      {(st) => {
+                                        const isVerified = Boolean(state().isVerified);
+                                        const locked = isVerified && !auth.hasRole(['admin', 'super_admin', 'prodi']);
+                                        return (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleStatusChange(k.mahasiswaId, st)}
+                                            disabled={locked}
+                                            class={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                              locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                                            } ${
+                                              state().status === st
+                                                ? st === 'hadir'
+                                                  ? 'bg-accent-50 text-accent-700 border-accent-200'
+                                                  : st === 'alpa'
+                                                    ? 'bg-red-50 text-red-700 border-red-200'
+                                                    : st === 'unknown'
+                                                      ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300'
+                                                      : 'bg-accent-50 text-accent-700 border-accent-200'
+                                                : 'bg-transparent text-secondary-400 border-secondary-200 hover:bg-secondary-100'
+                                            }`}
+                                            title={statusFullLabel(st)}
+                                          >
+                                            {st === 'unknown' ? '? UNKNOWN' : statusLabel(st)}
+                                          </button>
+                                        );
+                                      }}
                                     </For>
                                   </div>
-                                  <Show when={state().resolvedAt}>
-                                    <span class="inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                                      ✓ Diverifikasi Admin
-                                    </span>
+                                  <Show when={state().isVerified || state().resolvedAt}>
+                                    <VerifiedBadge
+                                      verifiedAt={state().verifiedAt ?? state().resolvedAt}
+                                      verifiedByName={state().verifiedByName}
+                                    />
                                   </Show>
                                 </div>
                               </td>
@@ -2344,42 +2382,53 @@ export default function BapPresensi() {
             <For each={currentRombel()?.mahasiswaList || []}>
               {(mhsItem) => {
                 const sheet = () =>
-                  presensiPrakSheet()[mhsItem.mahasiswaId] || { status: 'hadir', durasiMangkir: 0, keterangan: '' };
+                  presensiPrakSheet()[mhsItem.mahasiswaId] || {
+                    status: 'hadir',
+                    durasiMangkir: 0,
+                    keterangan: '',
+                    resolvedAt: null,
+                  };
                 return (
                   <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div>
                       <div class="font-bold text-secondary-800 dark:text-white">{mhsItem.mahasiswa?.nama}</div>
                       <div class="text-[11px] text-secondary-500">NIM: {mhsItem.mahasiswa?.nim}</div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <select
-                        class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
-                        value={sheet().status}
-                        onChange={(e) => {
-                          const val = e.currentTarget.value;
-                          setPresensiPrakSheet((prev) => ({
-                            ...prev,
-                            [mhsItem.mahasiswaId]: {
-                              ...prev[mhsItem.mahasiswaId],
-                              status: val,
-                              durasiMangkir: val === 'telat' ? (prev[mhsItem.mahasiswaId]?.durasiMangkir ?? 15) : 0,
-                            },
-                          }));
-                        }}
-                      >
-                        <For each={praktikumStatusOptions()}>
-                          {(opt) => (
-                            <option value={opt}>
-                              {opt === 'unknown' ? 'Unknown (?)' : `${statusLabel(opt)} - ${statusFullLabel(opt)}`}
-                            </option>
-                          )}
-                        </For>
-                      </select>
+                    <div class="flex flex-col items-end gap-1.5">
+                      <div class="flex items-center gap-2">
+                        <select
+                          class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          value={sheet().status}
+                          disabled={Boolean(sheet().resolvedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi'])}
+                          onChange={(e) => {
+                            const val = e.currentTarget.value;
+                            setPresensiPrakSheet((prev) => ({
+                              ...prev,
+                              [mhsItem.mahasiswaId]: {
+                                ...prev[mhsItem.mahasiswaId],
+                                status: val,
+                                durasiMangkir: val === 'telat' ? (prev[mhsItem.mahasiswaId]?.durasiMangkir ?? 15) : 0,
+                              },
+                            }));
+                          }}
+                        >
+                          <For each={praktikumStatusOptions()}>
+                            {(opt) => (
+                              <option value={opt}>
+                                {opt === 'unknown' ? 'Unknown (?)' : `${statusLabel(opt)} - ${statusFullLabel(opt)}`}
+                              </option>
+                            )}
+                          </For>
+                        </select>
+                        <Show when={sheet().resolvedAt}>
+                          <VerifiedBadge verifiedAt={sheet().resolvedAt} />
+                        </Show>
+                      </div>
                       <Show when={sheet().status === 'telat'}>
                         <input
                           type="number"
                           min={0}
-                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500"
+                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                           placeholder="Menit"
                           value={sheet().durasiMangkir}
                           onInput={(e) => {

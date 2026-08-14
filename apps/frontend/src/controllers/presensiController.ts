@@ -55,6 +55,9 @@ export interface PresensiItem {
   keteranganAdmin?: string | null;
   resolvedAt?: string | null;
   resolvedBy?: number | null;
+  isVerified?: boolean | null;
+  verifiedAt?: string | null;
+  verifiedByName?: string | null;
 }
 
 export interface KompensasiLaporanItem {

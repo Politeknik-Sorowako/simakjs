@@ -129,9 +129,17 @@ export class PresensiService {
         lampiranEvidens: presensi.lampiranEvidens,
         keteranganAdmin: presensi.keteranganAdmin,
         resolvedAt: presensi.resolvedAt,
+        isVerified: ketidakhadiranMahasiswa.isVerified,
+        verifiedAt: ketidakhadiranMahasiswa.verifiedAt,
+        verifiedByName: users.nama,
       })
       .from(presensi)
       .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .leftJoin(
+        ketidakhadiranMahasiswa,
+        and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensi.id)),
+      )
+      .leftJoin(users, eq(ketidakhadiranMahasiswa.verifiedBy, users.id))
       .where(eq(presensi.bapId, bapId));
     return rows;
   }

@@ -35,6 +35,7 @@ export interface PresensiPraktikumItem {
   status: string;
   durasiMangkir: number;
   keterangan?: string | null;
+  resolvedAt?: string | null;
   mahasiswa?: Mahasiswa;
 }
 

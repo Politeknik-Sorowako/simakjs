@@ -299,9 +299,16 @@ export class ApelService {
         verifiedStatus: presensiApel.verifiedStatus,
         verifiedAt: presensiApel.verifiedAt,
         verificationNote: presensiApel.verificationNote,
+        isVerified: ketidakhadiranMahasiswa.isVerified,
+        verifiedByName: users.nama,
       })
       .from(presensiApel)
       .leftJoin(mahasiswa, eq(presensiApel.mahasiswaId, mahasiswa.id))
+      .leftJoin(
+        ketidakhadiranMahasiswa,
+        and(eq(ketidakhadiranMahasiswa.sumber, 'APEL'), eq(ketidakhadiranMahasiswa.sumberId, presensiApel.id)),
+      )
+      .leftJoin(users, eq(ketidakhadiranMahasiswa.verifiedBy, users.id))
       .where(eq(presensiApel.sesiApelId, sesiId))
       .orderBy(mahasiswa.nim, mahasiswa.nama);
 

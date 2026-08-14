@@ -52,6 +52,8 @@ export interface PresensiApelItem {
   verifiedStatus?: string;
   verifiedAt?: string;
   verificationNote?: string;
+  isVerified?: boolean | null;
+  verifiedByName?: string | null;
 }
 
 export interface SesiPresensiResponse {
