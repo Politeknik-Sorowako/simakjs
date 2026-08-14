@@ -6,6 +6,7 @@ import {
   createBapPraktikumBody,
   createRombelBody,
   getEnrollmentLogSchema,
+  getUnknownPresensiPraktikumSchema,
   publicEnrollParamsSchema,
   publicRombelInfoSchema,
   savePresensiPraktikumBody,
@@ -40,5 +41,6 @@ export const rombelPraktikumRoutes = new Elysia({ prefix: '/rombel-praktikum' })
   .delete('/bap/:id', RombelPraktikumController.deleteBap)
   .post('/presensi', RombelPraktikumController.savePresensiBulk, { body: savePresensiPraktikumBody })
   .get('/bap/:id/presensi', RombelPraktikumController.getPresensiByBap)
+  .get('/unknown-list', RombelPraktikumController.getUnknownPresensiPraktikum, getUnknownPresensiPraktikumSchema)
   .post('/:id/sync-presensi', RombelPraktikumController.syncPresensi, { body: syncBapPraktikumBody })
   .post('/:id/sync-nilai', RombelPraktikumController.syncNilai);

@@ -647,7 +647,7 @@ export default function ApelKelola() {
                                   disabled={
                                     isSubmitting() ||
                                     sesiPresensi()?.sesi.isClosed ||
-                                    (Boolean(item.isVerified) && !auth.hasRole(['admin', 'super_admin']))
+                                    (Boolean(item.verifiedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi']))
                                   }
                                   onChange={(e) =>
                                     handleStatusChange(
@@ -666,7 +666,7 @@ export default function ApelKelola() {
                                     {(opt) => <option value={opt}>{APEL_STATUS_LABELS[opt]}</option>}
                                   </For>
                                 </select>
-                                <Show when={item.isVerified}>
+                                <Show when={item.verifiedAt}>
                                   <VerifiedBadge verifiedAt={item.verifiedAt} verifiedByName={item.verifiedByName} />
                                 </Show>
                               </div>
@@ -679,7 +679,11 @@ export default function ApelKelola() {
                                     min={0}
                                     class="w-16 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                     value={item.menitTerlambat ?? 0}
-                                    disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
+                                    disabled={
+                                      isSubmitting() ||
+                                      sesiPresensi()?.sesi.isClosed ||
+                                      (Boolean(item.verifiedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi']))
+                                    }
                                     onInput={(e) => {
                                       const val = parseInt(e.currentTarget.value) || 0;
                                       item.menitTerlambat = val;

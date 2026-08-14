@@ -1,5 +1,6 @@
 import { fetchApi } from '../utils/api';
 import { Mahasiswa } from './mahasiswaController';
+import { PaginatedResponse } from './prodiController';
 
 export interface RombelPraktikum {
   id: number;
@@ -35,8 +36,35 @@ export interface PresensiPraktikumItem {
   status: string;
   durasiMangkir: number;
   keterangan?: string | null;
-  resolvedAt?: string | null;
+  isVerified?: boolean | null;
+  verifiedAt?: string | null;
+  verifiedByName?: string | null;
   mahasiswa?: Mahasiswa;
+}
+
+export interface PresensiPraktikumUnknownItem {
+  id: number;
+  bapPraktikumId: number;
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  prodiNama?: string | null;
+  status: string;
+  durasiMangkir: number;
+  keterangan?: string | null;
+  keteranganAdmin?: string | null;
+  resolvedAt?: string | null;
+  resolvedBy?: number | null;
+  resolvedByName?: string | null;
+  createdAt?: string | null;
+  bapPrakTanggal?: string | null;
+  bapPrakSesiKe?: number | null;
+  bapPrakMateri?: string | null;
+  namaGroup?: string | null;
+  namaKelas?: string | null;
+  mataKuliahKode?: string | null;
+  mataKuliahNama?: string | null;
+  dosenNama?: string | null;
 }
 
 export const rombelPraktikumController = {
@@ -161,6 +189,23 @@ export const rombelPraktikumController = {
 
   async getPresensiByBap(bapPraktikumId: number): Promise<PresensiPraktikumItem[]> {
     return fetchApi<PresensiPraktikumItem[]>(`/rombel-praktikum/bap/${bapPraktikumId}/presensi`);
+  },
+
+  async getUnknownList(
+    page?: number,
+    limit?: number,
+    search?: string,
+    prodiId?: number,
+    statusFilter?: 'belum' | 'sudah',
+  ): Promise<PaginatedResponse<PresensiPraktikumUnknownItem>> {
+    const params = new URLSearchParams();
+    if (page) params.append('page', String(page));
+    if (limit) params.append('limit', String(limit));
+    if (search) params.append('search', search);
+    if (prodiId) params.append('prodiId', String(prodiId));
+    if (statusFilter) params.append('statusFilter', statusFilter);
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<PaginatedResponse<PresensiPraktikumUnknownItem>>(`/rombel-praktikum/unknown-list${queryString}`);
   },
 
   async syncPresensiToKelas(rombelId: number, bapPraktikumId: number): Promise<SyncResult> {

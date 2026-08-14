@@ -95,7 +95,16 @@ export default function BapPresensi() {
   const [showPresensiPrakModal, setShowPresensiPrakModal] = createSignal(false);
   const [selectedBapPrak, setSelectedBapPrak] = createSignal<BapPraktikum | null>(null);
   const [presensiPrakSheet, setPresensiPrakSheet] = createSignal<
-    Record<number, { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }>
+    Record<
+      number,
+      {
+        status: string;
+        durasiMangkir: number;
+        keterangan: string;
+        verifiedAt?: string | null;
+        verifiedByName?: string | null;
+      }
+    >
   >({});
   const [isSavingPresensiPrak, setIsSavingPresensiPrak] = createSignal(false);
 
@@ -542,7 +551,13 @@ export default function BapPresensi() {
       const mhsList = r?.mahasiswaList || [];
       const sheet: Record<
         number,
-        { status: string; durasiMangkir: number; keterangan: string; resolvedAt?: string | null }
+        {
+          status: string;
+          durasiMangkir: number;
+          keterangan: string;
+          verifiedAt?: string | null;
+          verifiedByName?: string | null;
+        }
       > = {};
 
       for (const item of mhsList) {
@@ -551,7 +566,8 @@ export default function BapPresensi() {
           status: existing?.status || 'hadir',
           durasiMangkir: existing?.durasiMangkir || 0,
           keterangan: existing?.keterangan || '',
-          resolvedAt: existing?.resolvedAt || null,
+          verifiedAt: existing?.verifiedAt || null,
+          verifiedByName: existing?.verifiedByName || null,
         };
       }
       setPresensiPrakSheet(sheet);
@@ -1302,8 +1318,9 @@ export default function BapPresensi() {
                                   <div class="flex items-center gap-2">
                                     <For each={kelasStatusOptions()}>
                                       {(st) => {
-                                        const isVerified = Boolean(state().isVerified);
-                                        const locked = isVerified && !auth.hasRole(['admin', 'super_admin', 'prodi']);
+                                        const locked =
+                                          Boolean(state().verifiedAt) &&
+                                          !auth.hasRole(['admin', 'super_admin', 'prodi']);
                                         return (
                                           <button
                                             type="button"
@@ -1330,9 +1347,9 @@ export default function BapPresensi() {
                                       }}
                                     </For>
                                   </div>
-                                  <Show when={state().isVerified || state().resolvedAt}>
+                                  <Show when={state().verifiedAt}>
                                     <VerifiedBadge
-                                      verifiedAt={state().verifiedAt ?? state().resolvedAt}
+                                      verifiedAt={state().verifiedAt}
                                       verifiedByName={state().verifiedByName}
                                     />
                                   </Show>
@@ -2386,7 +2403,8 @@ export default function BapPresensi() {
                     status: 'hadir',
                     durasiMangkir: 0,
                     keterangan: '',
-                    resolvedAt: null,
+                    verifiedAt: null,
+                    verifiedByName: null,
                   };
                 return (
                   <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
@@ -2399,7 +2417,7 @@ export default function BapPresensi() {
                         <select
                           class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                           value={sheet().status}
-                          disabled={Boolean(sheet().resolvedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi'])}
+                          disabled={Boolean(sheet().verifiedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi'])}
                           onChange={(e) => {
                             const val = e.currentTarget.value;
                             setPresensiPrakSheet((prev) => ({
@@ -2420,8 +2438,8 @@ export default function BapPresensi() {
                             )}
                           </For>
                         </select>
-                        <Show when={sheet().resolvedAt}>
-                          <VerifiedBadge verifiedAt={sheet().resolvedAt} />
+                        <Show when={sheet().verifiedAt}>
+                          <VerifiedBadge verifiedAt={sheet().verifiedAt} verifiedByName={sheet().verifiedByName} />
                         </Show>
                       </div>
                       <Show when={sheet().status === 'telat'}>

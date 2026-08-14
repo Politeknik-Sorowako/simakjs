@@ -1,3 +1,4 @@
+import { ProdiScopeService } from '../services/prodi-scope.service';
 import { RombelPraktikumService } from '../services/rombel-praktikum.service';
 import { hasRole } from '../utils/role';
 import { type AuthContext, type PublicContext } from '../utils/types';
@@ -179,7 +180,7 @@ export class RombelPraktikumController {
           return { error: 'Instruktur hanya dapat menetapkan status Hadir, Telat, atau Unknown.' };
         }
       }
-      await RombelPraktikumService.savePresensiBulk(body.bapPraktikumId, body.presensiList || []);
+      await RombelPraktikumService.savePresensiBulk(body.bapPraktikumId, body.presensiList || [], user!.id);
       return { success: true };
     } catch (e: unknown) {
       set.status = 400;
@@ -200,6 +201,28 @@ export class RombelPraktikumController {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };
     }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getUnknownPresensiPraktikum({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'super_admin', 'prodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+    }
+    const page = query?.page ? parseInt(query.page) : 1;
+    const limit = query?.limit ? parseInt(query.limit) : 20;
+    const search = query?.search;
+    const statusFilter =
+      query?.statusFilter === 'belum' || query?.statusFilter === 'sudah' ? query.statusFilter : undefined;
+    let prodiIds: number[] | undefined;
+    if (hasRole(user, ['admin', 'super_admin'])) {
+      const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+      prodiIds = prodiId ? [prodiId] : undefined;
+    } else {
+      prodiIds = (await ProdiScopeService.getUserAccessibleProdiIds(user)) || undefined;
+    }
+    return await RombelPraktikumService.getUnknownPresensiPraktikum(page, limit, search, prodiIds, statusFilter);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement

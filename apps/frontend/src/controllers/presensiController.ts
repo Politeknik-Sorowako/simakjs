@@ -329,7 +329,7 @@ export const presensiController = {
   },
 
   async verifikasiUnknown(data: {
-    sumber: 'BAP' | 'APEL' | 'MANUAL';
+    sumber: 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
     sumberId: number;
     statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
     durasiMenit?: number;
