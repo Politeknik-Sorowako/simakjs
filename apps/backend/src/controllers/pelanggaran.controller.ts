@@ -73,7 +73,12 @@ export class PelanggaranController {
       return { error: 'Akses ditolak.' };
     }
 
-    return await PelanggaranService.getAllPelanggaran();
+    try {
+      return await PelanggaranService.getAllPelanggaran();
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengambil data pelanggaran' };
+    }
   }
 
   static async getRekap({
@@ -87,8 +92,13 @@ export class PelanggaranController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
-    return await PelanggaranService.getRekap(prodiId);
+    try {
+      const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+      return await PelanggaranService.getRekap(prodiId);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengambil rekap pelanggaran' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -120,16 +130,21 @@ export class PelanggaranController {
       return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const mode = (formData.get('mode') as string) || 'skip';
-    if (!file) {
-      set.status = 400;
-      return { error: 'File CSV tidak ditemukan.' };
-    }
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      const mode = (formData.get('mode') as string) || 'skip';
+      if (!file) {
+        set.status = 400;
+        return { error: 'File CSV tidak ditemukan.' };
+      }
 
-    const text = await file.text();
-    const result = await CsvImportService.importPelanggaran(text, mode, user.id);
-    return result;
+      const text = await file.text();
+      const result = await CsvImportService.importPelanggaran(text, mode, user.id);
+      return result;
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengimpor data pelanggaran' };
+    }
   }
 }

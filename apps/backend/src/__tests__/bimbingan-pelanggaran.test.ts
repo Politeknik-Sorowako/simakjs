@@ -402,6 +402,45 @@ describe('Bimbingan & Pelanggaran API', () => {
       expect(targetNotif).toBeDefined();
       expect(targetNotif.message).toContain('Satpam Irwan');
     });
+
+    it('admin/staff harus sukses mengambil daftar semua pelanggaran (GET /pelanggaran)', async () => {
+      // Seed violation first
+      const createRes = await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2023-10-18',
+            jenisPelanggaran: 'Pelanggaran Disiplin Bengkel',
+            keterangan: 'Tidak memakai APD lengkap di bengkel mesin.',
+            jenisSanksi: 1,
+            pasalId: null,
+            pelapor: 'Instruktur Budi',
+          }),
+        }),
+      );
+      expect(createRes.status).toBe(201);
+
+      const response = await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
+      );
+      expect(response.status).toBe(200);
+      const list = await response.json();
+      expect(list).toBeArray();
+      expect(list.length).toBeGreaterThan(0);
+      expect(list[0].namaMahasiswa).toBeDefined();
+      expect(list[0].tanggal).toBeDefined();
+      expect(list[0].pelapor).toBe('Instruktur Budi');
+    });
   });
 
   describe('Pasal Pelanggaran & Bulk Delete API', () => {
