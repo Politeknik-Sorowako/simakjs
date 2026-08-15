@@ -96,8 +96,30 @@ export const deletePasalSchema = {
   }),
   response: {
     200: t.Object({ success: t.Boolean() }),
+    400: t.Object({ error: t.String() }),
     403: t.Object({ error: t.String() }),
     404: t.Object({ error: t.String() }),
+  },
+};
+
+export const bulkDeletePasalSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Hapus Sekaligus (Bulk Delete) Pasal Pelanggaran',
+    description: 'Menghapus daftar pasal pelanggaran berdasarkan array of ID.',
+  },
+  body: t.Object({
+    ids: t.Array(t.Integer({ minimum: 1 }), { minItems: 1 }),
+  }),
+  response: {
+    200: t.Object({
+      success: t.Boolean(),
+      deletedCount: t.Integer(),
+      skippedCount: t.Integer(),
+      skippedPasal: t.Array(t.String()),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
   },
 };
 

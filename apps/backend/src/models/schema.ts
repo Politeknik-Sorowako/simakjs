@@ -799,6 +799,7 @@ export const pelanggaran = pgTable('pelanggaran', {
   keterangan: text('keterangan').notNull(),
   pasalId: integer('pasal_id').references(() => pasalPelanggaran.id, { onDelete: 'set null' }),
   jenisSanksi: integer('jenis_sanksi').default(1).notNull(), // 1 = Lisan, 4 = Tertulis
+  pelapor: varchar('pelapor', { length: 255 }),
   dibuatOleh: integer('dibuat_oleh').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')

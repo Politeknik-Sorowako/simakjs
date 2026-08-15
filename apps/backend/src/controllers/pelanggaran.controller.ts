@@ -6,6 +6,16 @@ import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
+const DB_ERROR_PATTERN = /Failed query|does not exist|violates .* constraint|syntax error/i;
+
+// Kembalikan pesan kesalahan bisnis yang bermakna, tetapi tutup detail DB/SQL agar tidak bocor ke client.
+function safeErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof Error && !DB_ERROR_PATTERN.test(err.message)) {
+    return err.message;
+  }
+  return fallback;
+}
+
 export class PelanggaranController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
     const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
@@ -15,7 +25,7 @@ export class PelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin, Dosen, Prodi, atau Instruktur.' };
     }
@@ -29,8 +39,9 @@ export class PelanggaranController {
       set.status = 201;
       return newViolation;
     } catch (err: unknown) {
+      console.error('[PelanggaranController.create]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+      return { error: safeErrorMessage(err, 'Gagal memproses permintaan') };
     }
   }
 
@@ -60,20 +71,27 @@ export class PelanggaranController {
     try {
       return await PelanggaranService.getPelanggaranByMahasiswa(targetMhsId);
     } catch (err: unknown) {
+      console.error('[PelanggaranController.getByMhsId]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+      return { error: safeErrorMessage(err, 'Gagal memproses permintaan') };
     }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
 
-    return await PelanggaranService.getAllPelanggaran();
+    try {
+      return await PelanggaranService.getAllPelanggaran();
+    } catch (err: unknown) {
+      console.error('[PelanggaranController.getAll]', err);
+      set.status = 400;
+      return { error: safeErrorMessage(err, 'Gagal mengambil data pelanggaran') };
+    }
   }
 
   static async getRekap({
@@ -83,12 +101,18 @@ export class PelanggaranController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
-    return await PelanggaranService.getRekap(prodiId);
+    try {
+      const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+      return await PelanggaranService.getRekap(prodiId);
+    } catch (err: unknown) {
+      console.error('[PelanggaranController.getRekap]', err);
+      set.status = 400;
+      return { error: safeErrorMessage(err, 'Gagal mengambil rekap pelanggaran') };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -107,29 +131,36 @@ export class PelanggaranController {
       }
       return updated;
     } catch (err: unknown) {
+      console.error('[PelanggaranController.update]', err);
       set.status = 400;
-      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+      return { error: safeErrorMessage(err, 'Gagal memproses permintaan') };
     }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const mode = (formData.get('mode') as string) || 'skip';
-    if (!file) {
-      set.status = 400;
-      return { error: 'File CSV tidak ditemukan.' };
-    }
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      const mode = (formData.get('mode') as string) || 'skip';
+      if (!file) {
+        set.status = 400;
+        return { error: 'File CSV tidak ditemukan.' };
+      }
 
-    const text = await file.text();
-    const result = await CsvImportService.importPelanggaran(text, mode, user.id);
-    return result;
+      const text = await file.text();
+      const result = await CsvImportService.importPelanggaran(text, mode, user.id);
+      return result;
+    } catch (err: unknown) {
+      console.error('[PelanggaranController.importCsv]', err);
+      set.status = 400;
+      return { error: safeErrorMessage(err, 'Gagal mengimpor data pelanggaran') };
+    }
   }
 }

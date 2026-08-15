@@ -22,9 +22,9 @@ export class PasalPelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi/Super Admin.' };
     }
     try {
       const created = await PasalPelanggaranService.create(body);
@@ -39,9 +39,9 @@ export class PasalPelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi/Super Admin.' };
     }
     try {
       const id = parseInt(params.id);
@@ -60,9 +60,9 @@ export class PasalPelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async remove({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin'])) {
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin.' };
+      return { error: 'Akses ditolak. Hanya Admin/Super Admin.' };
     }
     try {
       const deleted = await PasalPelanggaranService.remove(parseInt(params.id));
@@ -78,11 +78,28 @@ export class PasalPelanggaranController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bulkRemove({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin/Super Admin.' };
+    }
+    try {
+      const ids = (body as { ids?: number[] })?.ids || [];
+      const result = await PasalPelanggaranService.bulkRemove(ids);
+      return result;
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal menghapus pasal terpilih.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi/Super Admin.' };
     }
 
     const formData = await request.formData();

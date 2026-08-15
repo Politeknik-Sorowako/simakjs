@@ -15,6 +15,7 @@ import {
 } from '../models/schema';
 import { db } from '../utils/db';
 import { JENIS_FULL_DAY, JENIS_KOMPEN } from './kompensasi-manual.service';
+import { PelanggaranService } from './pelanggaran.service';
 import { SystemParameterService } from './system-parameter.service';
 
 export interface ImportResult {
@@ -847,6 +848,8 @@ export class CsvImportService {
     const keteranganIdx = headers.indexOf('keterangan');
     const pasalIdx = headers.indexOf('nomor_pasal');
     const sanksiIdx = headers.indexOf('jenis_sanksi');
+    let pelaporIdx = headers.indexOf('pelapor');
+    if (pelaporIdx === -1) pelaporIdx = headers.indexOf('reported_by');
 
     if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1) {
       return {
@@ -868,6 +871,7 @@ export class CsvImportService {
       const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : '';
       const pasalVal = pasalIdx !== -1 ? row[pasalIdx].trim() : '';
       const sanksiRaw = sanksiIdx !== -1 ? row[sanksiIdx].trim().toUpperCase() : '';
+      const pelaporVal = pelaporIdx !== -1 ? row[pelaporIdx].trim() : '';
 
       if (!nimVal || !tanggalVal || !jenisVal) {
         result.errors.push({
@@ -921,7 +925,17 @@ export class CsvImportService {
       }
 
       try {
-        const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
+        const [mhs] = await db
+          .select({
+            id: mahasiswa.id,
+            nama: mahasiswa.nama,
+            nim: mahasiswa.nim,
+            dosenPaId: mahasiswa.dosenPaId,
+            programStudiId: mahasiswa.programStudiId,
+          })
+          .from(mahasiswa)
+          .where(eq(mahasiswa.nim, nimVal))
+          .limit(1);
         if (!mhs) {
           result.errors.push({ line: lineNum, error: `Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.` });
           continue;
@@ -942,6 +956,7 @@ export class CsvImportService {
                 keterangan: keteranganVal || '-',
                 pasalId,
                 jenisSanksi,
+                pelapor: pelaporVal || undefined,
               })
               .where(eq(pelanggaran.id, existing.id));
             result.successCount++;
@@ -949,16 +964,32 @@ export class CsvImportService {
           }
         }
 
-        await db.insert(pelanggaran).values({
-          mahasiswaId: mhs.id,
-          tanggal: tanggalVal,
-          jenisPelanggaran: jenisVal,
-          keterangan: keteranganVal || '-',
-          pasalId,
-          jenisSanksi,
-          dibuatOleh: userId ?? null,
-        });
+        const [newPelanggaran] = await db
+          .insert(pelanggaran)
+          .values({
+            mahasiswaId: mhs.id,
+            tanggal: tanggalVal,
+            jenisPelanggaran: jenisVal,
+            keterangan: keteranganVal || '-',
+            pasalId,
+            jenisSanksi,
+            pelapor: pelaporVal || 'Petugas Kedisiplinan',
+            dibuatOleh: userId ?? null,
+          })
+          .returning();
         result.successCount++;
+
+        // Kirim notifikasi peringatan SP ke Dosen PA & Kaprodi / Admin Prodi (setara jalur create per baris)
+        try {
+          await PelanggaranService.sendPeringatanNotification({
+            mahasiswa: mhs,
+            pelanggaran: newPelanggaran,
+            namaPasal: pasalVal || '-',
+            namaPelapor: pelaporVal || 'Petugas Kedisiplinan',
+          });
+        } catch (notifErr) {
+          console.error('[CsvImportService] Gagal mengirim notifikasi peringatan saat impor:', notifErr);
+        }
       } catch (err: unknown) {
         result.errors.push({
           line: lineNum,

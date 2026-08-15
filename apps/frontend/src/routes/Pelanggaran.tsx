@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onMount, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -7,14 +7,16 @@ import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
 
 export default function Pelanggaran() {
   const auth = useAuth();
+  const toast = useToast();
   const user = () => auth.user();
-  const isStaff = () => auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur']);
+  const isStaff = () => auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur', 'super_admin']);
 
   // Student Profile (if logged in as student)
   const [mhsProfile] = createResource(
@@ -48,6 +50,59 @@ export default function Pelanggaran() {
       return await bimbinganController.getAllPelanggaran();
     },
   );
+
+  // Client-side search + sort for the violations table
+  type SortField = 'tanggal' | 'namaMahasiswa' | 'nim' | 'prodiNama' | 'jenisPelanggaran' | 'pelapor' | 'jenisSanksi';
+  const [violationSearch, setViolationSearch] = createSignal('');
+  const [sortField, setSortField] = createSignal<SortField>('tanggal');
+  const [sortDir, setSortDir] = createSignal<'asc' | 'desc'>('desc');
+
+  const toggleSort = (field: SortField) => {
+    if (sortField() === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir(field === 'tanggal' ? 'desc' : 'asc');
+    }
+  };
+
+  const visibleViolations = createMemo(() => {
+    const list = allViolations() || [];
+    const q = violationSearch().trim().toLowerCase();
+    let rows = list;
+    if (q) {
+      rows = rows.filter((v) => {
+        const haystack = [
+          v.namaMahasiswa,
+          v.nim,
+          v.prodiNama,
+          v.jenisPelanggaran,
+          v.nomorPasal,
+          v.pelapor,
+          v.keterangan,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+    const field = sortField();
+    const dir = sortDir() === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      let cmp = 0;
+      if (field === 'tanggal') {
+        cmp = new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime();
+      } else if (field === 'jenisSanksi') {
+        cmp = (a.jenisSanksi || 0) - (b.jenisSanksi || 0);
+      } else {
+        const av = String(a[field] || '');
+        const bv = String(b[field] || '');
+        cmp = av.localeCompare(bv, 'id', { sensitivity: 'base' });
+      }
+      return cmp * dir;
+    });
+  });
 
   // Load master pasal BPA (global + prodi scoped)
   const [pasalList] = createResource(
@@ -119,8 +174,147 @@ export default function Pelanggaran() {
   const [jenisPelanggaran, setJenisPelanggaran] = createSignal('');
   const [keterangan, setKeterangan] = createSignal('');
   const [pasalId, setPasalId] = createSignal<number | null>(null);
+  const [pelapor, setPelapor] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
   const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
+
+  // Preview / Cetak SP State
+  const [selectedSpItem, setSelectedSpItem] = createSignal<IPelanggaran | null>(null);
+  const [showSpModal, setShowSpModal] = createSignal(false);
+
+  const openSpModal = (item: IPelanggaran) => {
+    setSelectedSpItem(item);
+    setShowSpModal(true);
+  };
+
+  const openSpPrint = (item: IPelanggaran) => {
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const isTertulis = item.jenisSanksi === 4;
+    const tanggal = new Date(item.tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' });
+
+    const namaMahasiswa = escapeHtml(item.namaMahasiswa || '-');
+    const nim = escapeHtml(item.nim || '-');
+    const prodiNama = escapeHtml(item.prodiNama || '-');
+    const jenisPelanggaran = escapeHtml(item.jenisPelanggaran);
+    const pelapor = escapeHtml(item.pelapor || 'Petugas Kedisiplinan');
+    const keterangan = escapeHtml(item.keterangan);
+    const pasal = item.nomorPasal ? `${escapeHtml(item.nomorPasal)} - ${escapeHtml(item.bunyiPasal || '')}` : '';
+
+    const body = `
+      <div id="printable-sp" class="sp-doc">
+        <div class="kop">
+          <h2>KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI</h2>
+          <h3>POLITEKNIK SOROWAKO</h3>
+          <p>Jl. Sorowako Raya No. 1, Luwu Timur, Sulawesi Selatan | SIMAK Kedisiplinan Mahasiswa</p>
+        </div>
+        <div class="judul">
+          <h4>SURAT PERINGATAN KEDISIPLINAN ${isTertulis ? 'TERTULIS (SP TERTULIS)' : 'LISAN (SP LISAN)'}</h4>
+          <p>Berdasarkan Buku Pedoman Akademik (BPA) Pasal 25, 26, & 28</p>
+        </div>
+        <div class="identitas">
+          <div class="row"><span>Nama Mahasiswa</span><span>: ${namaMahasiswa}</span></div>
+          <div class="row"><span>NIM</span><span>: ${nim}</span></div>
+          <div class="row"><span>Program Studi</span><span>: ${prodiNama}</span></div>
+        </div>
+        <p class="isi">
+          Dengan ini diberikan peringatan indisipliner kepada mahasiswa bersangkutan atas pelanggaran yang terjadi pada:
+        </p>
+        <div class="rincian">
+          <div class="row"><span>Tanggal Kejadian</span><span>: ${tanggal}</span></div>
+          ${pasal ? `<div class="row"><span>Pasal BPA</span><span>: ${pasal}</span></div>` : ''}
+          <div class="row"><span>Jenis Pelanggaran</span><span>: ${jenisPelanggaran}</span></div>
+          <div class="row">
+            <span>Tingkat Sanksi</span>
+            <span>: ${
+              isTertulis
+                ? 'Peringatan Tertulis (Degradasi Nilai Mutu Sikap -1.00)'
+                : 'Peringatan Lisan (Degradasi Nilai Mutu Sikap -0.25)'
+            }</span>
+          </div>
+          <div class="row"><span>Dilaporkan Oleh</span><span>: ${pelapor}</span></div>
+          <div class="row"><span>Keterangan / Kronologi</span><span>: "${keterangan}"</span></div>
+        </div>
+        <p class="catatan">
+          Mahasiswa diharapkan mematuhi Buku Pedoman Akademik Politeknik Sorowako. Apabila melakukan pelanggaran
+          berulang, akan dikenakan sanksi peringatan tingkat berikutnya hingga pemberhentian (Drop Out).
+        </p>
+        <div class="ttd">
+          <div>
+            <span>Mahasiswa Bersangkutan,</span>
+            <div>
+              <p class="tanda">${item.namaMahasiswa ? escapeHtml(item.namaMahasiswa) : '....................'}</p>
+              <p>NIM. ${item.nim ? escapeHtml(item.nim) : '...............'}</p>
+            </div>
+          </div>
+          <div>
+            <span>Mengetahui,<br />Dosen Pembimbing Akademik</span>
+            <div>
+              <p class="tanda">_________________________</p>
+              <p>NIP/NIDN Dosen PA</p>
+            </div>
+          </div>
+          <div>
+            <span>Menyetujui,<br />Ketua Program Studi</span>
+            <div>
+              <p class="tanda">_________________________</p>
+              <p>Ketua Program Studi</p>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    const win = window.open('', '_blank', 'width=900,height=1000');
+    if (!win) {
+      toast.showToast('Popup diblokir. Aktifkan popup untuk mencetak.', 'error');
+      return;
+    }
+    win.document.write(`<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Surat Peringatan - ${escapeHtml(item.namaMahasiswa || '')}</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 12px; line-height: 1.5; }
+  .sp-doc { max-width: 680px; margin: 0 auto; }
+  .kop { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 16px; }
+  .kop h2 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kop h3 { font-size: 18px; font-weight: 900; text-transform: uppercase; color: #14532d; }
+  .kop p { font-size: 10px; color: #555; }
+  .judul { text-align: center; margin: 12px 0; }
+  .judul h4 { font-size: 14px; font-weight: 800; text-decoration: underline; text-transform: uppercase; }
+  .judul p { font-size: 11px; color: #555; }
+  .identitas { margin: 12px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+  .row { display: grid; grid-template-columns: 200px 1fr; gap: 8px; padding: 2px 0; }
+  .row > span:first-child { font-weight: 600; color: #555; }
+  .isi { margin: 10px 0; line-height: 1.6; }
+  .rincian { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+  .catatan { font-size: 11px; color: #555; line-height: 1.6; margin: 10px 0; }
+  .ttd { margin-top: 28px; padding-top: 14px; border-top: 1px dashed #999; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; font-size: 12px; }
+  .ttd > div { display: flex; flex-direction: column; justify-content: space-between; height: 110px; }
+  .tanda { font-weight: 700; text-decoration: underline; }
+  .ttd p { font-size: 10px; }
+  @media print { .no-print { display: none; } }
+</style>
+</head>
+<body>
+  ${body}
+  <div class="no-print" style="margin-top:24px; text-align:center;">
+    <button onclick="window.print()" style="padding:10px 20px; font-size:14px;">Cetak Dokumen SP</button>
+  </div>
+  <script>window.onload = function(){ window.print(); };</script>
+</body>
+</html>`);
+    win.document.close();
+  };
 
   const selectedPasal = () => pasalList()?.find((p) => p.id === pasalId()) || null;
 
@@ -135,16 +329,23 @@ export default function Pelanggaran() {
     setJenisPelanggaran('');
     setKeterangan('');
     setPasalId(null);
+    setPelapor(user()?.nama || '');
     setErrorMsg('');
     setShowModal(true);
   };
 
   const handlePasalChange = (val: string | number) => {
-    const id = Number(val);
-    setPasalId(id);
-    const pasal = pasalList()?.find((p) => p.id === id);
-    if (pasal) {
-      setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
+    const id = val ? Number(val) : null;
+    const cleanId = id && id > 0 ? id : null;
+    setPasalId(cleanId);
+    if (cleanId) {
+      const pasal = pasalList()?.find((p) => p.id === cleanId);
+      if (pasal) {
+        setJenisPelanggaran(`${pasal.nomorPasal} - ${pasal.bunyiPasal}`.slice(0, 255));
+      }
+    } else {
+      // Pasal dibatalkan -> bersihkan teks hasil auto-fill agar tidak tersimpan data basi.
+      setJenisPelanggaran('');
     }
   };
 
@@ -155,7 +356,8 @@ export default function Pelanggaran() {
     setTanggal(item.tanggal);
     setJenisPelanggaran(item.jenisPelanggaran);
     setKeterangan(item.keterangan);
-    setPasalId(item.pasalId ?? null);
+    setPasalId(item.pasalId && item.pasalId > 0 ? item.pasalId : null);
+    setPelapor(item.pelapor || '');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -177,7 +379,8 @@ export default function Pelanggaran() {
         tanggal: tanggal(),
         jenisPelanggaran: jenisPelanggaran(),
         keterangan: keterangan(),
-        pasalId: pasalId(),
+        pasalId: pasalId() && pasalId()! > 0 ? pasalId() : null,
+        pelapor: pelapor().trim() || undefined,
       };
 
       const activeId = editPelanggaranId();
@@ -277,7 +480,7 @@ export default function Pelanggaran() {
               <div class="flex flex-col gap-2 items-center justify-center py-6">
                 <span
                   class={`text-6xl font-extrabold ${
-                    (studentViolations()?.totalPoin || 0) > 25 ? 'text-rose-600 animate-pulse' : 'text-accent-600'
+                    (studentViolations()?.totalPoin || 0) >= 25 ? 'text-rose-600 animate-pulse' : 'text-accent-600'
                   }`}
                 >
                   {studentViolations.loading ? '...' : studentViolations()?.totalPoin || 0}
@@ -286,9 +489,14 @@ export default function Pelanggaran() {
                   Total Poin Pelanggaran
                 </span>
                 <Show when={studentViolations()?.predikat}>
-                  <span class="px-3 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-extrabold text-sm dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
-                    Predikat: {studentViolations()?.predikat}
-                  </span>
+                  <div class="flex flex-col items-center gap-1 mt-1">
+                    <span class="px-3 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-extrabold text-sm dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                      Predikat: {studentViolations()?.predikat}
+                    </span>
+                    <span class="text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+                      Degradasi Mutu Sikap: -{studentViolations()?.degradasiNilaiSikap ?? 0}
+                    </span>
+                  </div>
                 </Show>
               </div>
               <div class="p-3.5 bg-secondary-50 border border-secondary-100 rounded-xl dark:bg-secondary-800 dark:border-secondary-800">
@@ -296,9 +504,9 @@ export default function Pelanggaran() {
                   Batas Poin Kelayakan (BPA):
                 </p>
                 <ul class="text-[11px] text-secondary-500 list-disc pl-4 mt-1 flex flex-col gap-0.5 font-medium">
-                  <li>Total poin &gt; 25: Peringatan Keras (SP-1)</li>
-                  <li>Total poin &gt; 50: Skorsing Akademik (SP-2)</li>
-                  <li>Total poin &gt; 75: Drop Out / Diberhentikan (SP-3)</li>
+                  <li>Total poin &gt;= 25: Peringatan Keras (SP-1)</li>
+                  <li>Total poin &gt;= 50: Skorsing Akademik (SP-2)</li>
+                  <li>Total poin &gt;= 75: Drop Out / Diberhentikan (SP-3)</li>
                 </ul>
               </div>
             </div>
@@ -321,9 +529,10 @@ export default function Pelanggaran() {
                         <th class="p-3">Tanggal</th>
                         <th class="p-3">Pasal</th>
                         <th class="p-3">Jenis Pelanggaran</th>
-                        <th class="p-3">Bobot Poin</th>
+                        <th class="p-3">Pelapor</th>
                         <th class="p-3">Sanksi</th>
                         <th class="p-3">Keterangan</th>
+                        <th class="p-3 text-center">Dokumen</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
@@ -342,9 +551,9 @@ export default function Pelanggaran() {
                               </Show>
                             </td>
                             <td class="p-3">{item.jenisPelanggaran}</td>
-                            <td class="p-3">
-                              <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                                {item.jenisSanksi ?? item.bobotPoin} Poin
+                            <td class="p-3 whitespace-nowrap">
+                              <span class="text-secondary-600 dark:text-secondary-300 font-medium">
+                                {item.pelapor || '-'}
                               </span>
                             </td>
                             <td class="p-3">
@@ -355,10 +564,19 @@ export default function Pelanggaran() {
                                     : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
                                 }`}
                               >
-                                {item.jenisSanksi === 4 ? 'Tertulis' : 'Lisan'}
+                                {item.jenisSanksi === 4 ? 'Tertulis (-1.00)' : 'Lisan (-0.25)'}
                               </span>
                             </td>
                             <td class="p-3">{item.keterangan}</td>
+                            <td class="p-3 text-center">
+                              <Button
+                                onClick={() => openSpModal(item)}
+                                variant="secondary"
+                                class="py-1 px-2.5 text-[10px]"
+                              >
+                                Preview SP
+                              </Button>
+                            </td>
                           </tr>
                         )}
                       </For>
@@ -374,6 +592,18 @@ export default function Pelanggaran() {
         <Show when={isStaff() && viewTab() === 'daftar'}>
           <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <Input
+                type="text"
+                placeholder="Cari nama, NIM, prodi, pasal, pelapor, atau keterangan..."
+                value={violationSearch()}
+                onInput={(e) => setViolationSearch(e.currentTarget.value)}
+                class="w-full sm:max-w-xs"
+              />
+              <span class="text-xs text-secondary-400">
+                {visibleViolations().length} dari {allViolations()?.length || 0} catatan
+              </span>
+            </div>
             <Show
               when={allViolations() && allViolations()!.length > 0}
               fallback={
@@ -382,77 +612,122 @@ export default function Pelanggaran() {
                 </div>
               }
             >
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
-                      <th class="p-3">Mahasiswa</th>
-                      <th class="p-3">NIM</th>
-                      <th class="p-3">Program Studi</th>
-                      <th class="p-3">Tanggal</th>
-                      <th class="p-3">Pasal</th>
-                      <th class="p-3">Jenis Pelanggaran</th>
-                      <th class="p-3">Bobot Poin</th>
-                      <th class="p-3">Sanksi</th>
-                      <th class="p-3">Keterangan</th>
-                      <Show when={auth.hasRole(['admin'])}>
+              <Show
+                when={visibleViolations().length > 0}
+                fallback={
+                  <div class="py-12 text-center text-secondary-400 text-sm">
+                    Tidak ada catatan yang cocok dengan pencarian.
+                  </div>
+                }
+              >
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('namaMahasiswa')}
+                        >
+                          Mahasiswa {sortField() === 'namaMahasiswa' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('nim')}
+                        >
+                          NIM {sortField() === 'nim' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('prodiNama')}
+                        >
+                          Program Studi {sortField() === 'prodiNama' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('tanggal')}
+                        >
+                          Tanggal {sortField() === 'tanggal' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th class="p-3">Pasal</th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('pelapor')}
+                        >
+                          Pelapor {sortField() === 'pelapor' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('jenisSanksi')}
+                        >
+                          Sanksi {sortField() === 'jenisSanksi' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th class="p-3">Keterangan</th>
                         <th class="p-3 text-center">Aksi</th>
-                      </Show>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                    <For each={allViolations()}>
-                      {(item) => (
-                        <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                          <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa}</td>
-                          <td class="p-3 whitespace-nowrap">{item.nim}</td>
-                          <td class="p-3">{item.prodiNama}</td>
-                          <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
-                          <td class="p-3">
-                            <Show when={item.nomorPasal} fallback={<span class="text-secondary-400">-</span>}>
-                              <span class="font-bold text-secondary-800 dark:text-white">{item.nomorPasal}</span>
-                              <Show when={item.bunyiPasal}>
-                                <div class="text-[11px] text-secondary-500 max-w-[220px] truncate">
-                                  {item.bunyiPasal}
-                                </div>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
+                      <For each={visibleViolations()}>
+                        {(item) => (
+                          <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                            <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa}</td>
+                            <td class="p-3 whitespace-nowrap">{item.nim}</td>
+                            <td class="p-3">{item.prodiNama}</td>
+                            <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
+                            <td class="p-3">
+                              <Show when={item.nomorPasal} fallback={<span class="text-secondary-400">-</span>}>
+                                <span class="font-bold text-secondary-800 dark:text-white">{item.nomorPasal}</span>
+                                <Show when={item.bunyiPasal}>
+                                  <div class="text-[11px] text-secondary-500 max-w-[220px] truncate">
+                                    {item.bunyiPasal}
+                                  </div>
+                                </Show>
                               </Show>
-                            </Show>
-                          </td>
-                          <td class="p-3">{item.jenisPelanggaran}</td>
-                          <td class="p-3">
-                            <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                              {item.jenisSanksi ?? item.bobotPoin}
-                            </span>
-                          </td>
-                          <td class="p-3">
-                            <span
-                              class={`px-2 py-0.5 rounded border font-bold ${
-                                item.jenisSanksi === 4
-                                  ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
-                                  : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
-                              }`}
-                            >
-                              {item.jenisSanksi === 4 ? 'Tertulis' : 'Lisan'}
-                            </span>
-                          </td>
-                          <td class="p-3">{item.keterangan}</td>
-                          <Show when={auth.hasRole(['admin'])}>
-                            <td class="p-3 text-center">
-                              <Button
-                                onClick={() => openEditModal(item)}
-                                variant="secondary"
-                                class="py-1 px-2.5 text-[10px]"
-                              >
-                                Edit
-                              </Button>
                             </td>
-                          </Show>
-                        </tr>
-                      )}
-                    </For>
-                  </tbody>
-                </table>
-              </div>
+                            <td class="p-3 whitespace-nowrap">
+                              <span class="text-secondary-600 dark:text-secondary-300 font-semibold">
+                                {item.pelapor || '-'}
+                              </span>
+                            </td>
+                            <td class="p-3">
+                              <span
+                                class={`px-2 py-0.5 rounded border font-bold ${
+                                  item.jenisSanksi === 4
+                                    ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                                }`}
+                              >
+                                {item.jenisSanksi === 4 ? 'Tertulis (-1.00)' : 'Lisan (-0.25)'}
+                              </span>
+                            </td>
+                            <td class="p-3 max-w-[200px] truncate">{item.keterangan}</td>
+                            <td class="p-3 text-center">
+                              <div class="flex items-center justify-center gap-1.5">
+                                <Button
+                                  onClick={() => openSpPrint(item)}
+                                  variant="secondary"
+                                  class="py-1 px-2 text-[10px]"
+                                  title="Cetak Dokumen SP di jendela baru"
+                                >
+                                  Cetak SP
+                                </Button>
+                                <Show when={auth.hasRole(['admin'])}>
+                                  <Button
+                                    onClick={() => openEditModal(item)}
+                                    variant="secondary"
+                                    class="py-1 px-2 text-[10px]"
+                                  >
+                                    Edit
+                                  </Button>
+                                </Show>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+              </Show>
             </Show>
           </div>
         </Show>
@@ -466,7 +741,8 @@ export default function Pelanggaran() {
                   Rekap Pelanggaran & Predikat TXLY
                 </h3>
                 <p class="text-xs text-secondary-500 mt-1">
-                  Predikat TXLY: X = kelipatan 4 dari total bobot (sanksi tertulis), Y = sisa bobot (sanksi lisan).
+                  Predikat TXLY: X = sanksi tertulis (pengurangan nilai mutu -1,00), Y = sanksi lisan (pengurangan nilai
+                  mutu -0,25).
                 </p>
               </div>
               <div class="flex items-center gap-3">
@@ -530,6 +806,7 @@ export default function Pelanggaran() {
                       <th class="p-3">Jumlah Pelanggaran</th>
                       <th class="p-3">Total Poin</th>
                       <th class="p-3">Predikat TXLY</th>
+                      <th class="p-3">Degradasi Mutu</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
@@ -550,6 +827,9 @@ export default function Pelanggaran() {
                             <span class="px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-extrabold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
                               {item.predikat}
                             </span>
+                          </td>
+                          <td class="p-3 font-bold text-rose-600 dark:text-rose-400">
+                            -{item.degradasiNilaiSikap ?? 0}
                           </td>
                         </tr>
                       )}
@@ -677,7 +957,7 @@ export default function Pelanggaran() {
                         : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
                     }`}
                   >
-                    {selectedPasal()?.jenisSanksi === 4 ? 'Tertulis (4 poin)' : 'Lisan (1 poin)'}
+                    {selectedPasal()?.jenisSanksi === 4 ? 'Tertulis (-1.00 Mutu)' : 'Lisan (-0.25 Mutu)'}
                   </span>
                 </div>
                 <p class="text-secondary-600 dark:text-secondary-300">{selectedPasal()?.bunyiPasal}</p>
@@ -691,6 +971,15 @@ export default function Pelanggaran() {
               placeholder="Contoh: Terlambat Kelas Praktik, Kerusakan Fasilitas (otomatis terisi bila memilih pasal)"
               value={jenisPelanggaran()}
               onInput={(e) => setJenisPelanggaran(e.currentTarget.value)}
+            />
+
+            {/* Pelapor / Reported By */}
+            <Input
+              label="Dilaporkan Oleh (Pelapor)"
+              type="text"
+              placeholder="Nama dosen, instruktur, staf, atau satpam pelapor..."
+              value={pelapor()}
+              onInput={(e) => setPelapor(e.currentTarget.value)}
             />
 
             {/* Keterangan */}
@@ -716,21 +1005,210 @@ export default function Pelanggaran() {
           </form>
         </Modal>
 
+        {/* Modal Preview & Cetak Surat Peringatan (SP) Sesuai BPA */}
+        <Modal
+          show={showSpModal()}
+          onClose={() => setShowSpModal(false)}
+          title="Dokumen Surat Peringatan (SP) Mahasiswa"
+        >
+          <Show when={selectedSpItem()}>
+            {(sp) => {
+              const isTertulis = () => sp().jenisSanksi === 4;
+              return (
+                <div class="flex flex-col gap-5 text-secondary-800 dark:text-secondary-100">
+                  {/* Printable Document Box */}
+                  <div
+                    id="printable-sp"
+                    class="p-6 bg-white border border-secondary-200 rounded-xl shadow-sm text-secondary-900 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                  >
+                    {/* Kop Surat Politeknik Sorowako */}
+                    <div class="text-center border-b-2 border-secondary-800 dark:border-white pb-3 mb-4">
+                      <h2 class="text-base font-extrabold uppercase tracking-wider">
+                        KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI
+                      </h2>
+                      <h3 class="text-lg font-black uppercase text-brand-700 dark:text-brand-400">
+                        POLITEKNIK SOROWAKO
+                      </h3>
+                      <p class="text-[10px] text-secondary-500 dark:text-secondary-400">
+                        Jl. Sorowako Raya No. 1, Luwu Timur, Sulawesi Selatan | SIMAK Kedisiplinan Mahasiswa
+                      </p>
+                    </div>
+
+                    {/* Judul Surat */}
+                    <div class="text-center my-3">
+                      <h4 class="text-sm font-extrabold underline uppercase">
+                        SURAT PERINGATAN KEDISIPLINAN {isTertulis() ? 'TERTULIS (SP TERTULIS)' : 'LISAN (SP LISAN)'}
+                      </h4>
+                      <p class="text-[11px] text-secondary-500 dark:text-secondary-400">
+                        Berdasarkan Buku Pedoman Akademik (BPA) Pasal 25, 26, & 28
+                      </p>
+                    </div>
+
+                    {/* Identitas Mahasiswa */}
+                    <div class="my-3 text-xs bg-secondary-50 p-3 rounded-lg border border-secondary-100 dark:bg-secondary-800/50 dark:border-secondary-700 flex flex-col gap-1">
+                      <div class="grid grid-cols-3">
+                        <span class="font-semibold text-secondary-500 dark:text-secondary-400">Nama Mahasiswa</span>
+                        <span class="col-span-2 font-bold">: {sp().namaMahasiswa || '-'}</span>
+                      </div>
+                      <div class="grid grid-cols-3">
+                        <span class="font-semibold text-secondary-500 dark:text-secondary-400">NIM</span>
+                        <span class="col-span-2 font-mono font-bold">: {sp().nim || '-'}</span>
+                      </div>
+                      <div class="grid grid-cols-3">
+                        <span class="font-semibold text-secondary-500 dark:text-secondary-400">Program Studi</span>
+                        <span class="col-span-2">: {sp().prodiNama || '-'}</span>
+                      </div>
+                    </div>
+
+                    {/* Rincian Pelanggaran */}
+                    <div class="my-3 text-xs flex flex-col gap-2">
+                      <p class="leading-relaxed">
+                        Dengan ini diberikan peringatan indisipliner kepada mahasiswa bersangkutan atas pelanggaran yang
+                        terjadi pada:
+                      </p>
+
+                      <div class="p-3 border border-secondary-200 rounded-lg dark:border-secondary-700 flex flex-col gap-1.5">
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">Tanggal Kejadian</span>
+                          <span class="col-span-2 font-medium">
+                            : {new Date(sp().tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' })}
+                          </span>
+                        </div>
+                        <Show when={sp().nomorPasal}>
+                          <div class="grid grid-cols-3">
+                            <span class="font-semibold text-secondary-500 dark:text-secondary-400">Pasal BPA</span>
+                            <span class="col-span-2 font-bold text-brand-600 dark:text-brand-400">
+                              : {sp().nomorPasal} - {sp().bunyiPasal}
+                            </span>
+                          </div>
+                        </Show>
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">
+                            Jenis Pelanggaran
+                          </span>
+                          <span class="col-span-2 font-bold">: {sp().jenisPelanggaran}</span>
+                        </div>
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">Tingkat Sanksi</span>
+                          <span class="col-span-2 font-bold">
+                            :{' '}
+                            {isTertulis()
+                              ? 'Peringatan Tertulis (Degradasi Nilai Mutu Sikap -1.00)'
+                              : 'Peringatan Lisan (Degradasi Nilai Mutu Sikap -0.25)'}
+                          </span>
+                        </div>
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">Dilaporkan Oleh</span>
+                          <span class="col-span-2 font-bold text-accent-700 dark:text-accent-400">
+                            : {sp().pelapor || 'Petugas Kedisiplinan'}
+                          </span>
+                        </div>
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">
+                            Keterangan / Kronologi
+                          </span>
+                          <span class="col-span-2 italic text-secondary-700 dark:text-secondary-300">
+                            : "{sp().keterangan}"
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sanksi & Pernyataan */}
+                    <p class="text-[11px] text-secondary-500 dark:text-secondary-400 leading-relaxed my-2">
+                      Mahasiswa diharapkan mematuhi Buku Pedoman Akademik Politeknik Sorowako. Apabila melakukan
+                      pelanggaran berulang, akan dikenakan sanksi peringatan tingkat berikutnya hingga pemberhentian
+                      (Drop Out).
+                    </p>
+
+                    {/* Kolom Tanda Tangan Resmi Sesuai BPA */}
+                    <div class="mt-8 pt-4 border-t border-dashed border-secondary-300 dark:border-secondary-700 grid grid-cols-3 text-center text-xs gap-4">
+                      <div class="flex flex-col justify-between h-28">
+                        <span class="font-semibold">Mahasiswa Bersangkutan,</span>
+                        <div>
+                          <p class="font-bold underline">{sp().namaMahasiswa || '....................'}</p>
+                          <p class="text-[10px] text-secondary-500">NIM. {sp().nim || '...............'}</p>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col justify-between h-28">
+                        <span class="font-semibold">
+                          Mengetahui,
+                          <br />
+                          Dosen Pembimbing Akademik
+                        </span>
+                        <div>
+                          <p class="font-bold underline">_________________________</p>
+                          <p class="text-[10px] text-secondary-500">NIP/NIDN Dosen PA</p>
+                        </div>
+                      </div>
+
+                      <div class="flex flex-col justify-between h-28">
+                        <span class="font-semibold">
+                          Menyetujui,
+                          <br />
+                          Ketua Program Studi
+                        </span>
+                        <div>
+                          <p class="font-bold underline">_________________________</p>
+                          <p class="text-[10px] text-secondary-500">Ketua Program Studi</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div class="flex justify-end gap-3 border-t pt-4 dark:border-secondary-800">
+                    <Button type="button" variant="secondary" onClick={() => setShowSpModal(false)}>
+                      Tutup
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={() => window.print()}
+                      class="flex items-center gap-2 font-bold"
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+                        />
+                      </svg>
+                      Cetak Surat Peringatan
+                    </Button>
+                  </div>
+                </div>
+              );
+            }}
+          </Show>
+        </Modal>
+
         {/* Import CSV Modal */}
         <ImportCsvModal
           show={showImportModal()}
           onClose={() => setShowImportModal(false)}
           title="Pelanggaran / Peringatan"
           importUrl="/pelanggaran/import"
-          templateHeaders={['nim', 'tanggal', 'nomor_pasal', 'jenis_pelanggaran', 'jenis_sanksi', 'keterangan']}
+          templateHeaders={[
+            'nim',
+            'tanggal',
+            'nomor_pasal',
+            'jenis_pelanggaran',
+            'jenis_sanksi',
+            'pelapor',
+            'keterangan',
+          ]}
           customTemplateRows={[
-            ['nim', 'tanggal', 'nomor_pasal', 'jenis_pelanggaran', 'jenis_sanksi', 'keterangan'],
+            ['nim', 'tanggal', 'nomor_pasal', 'jenis_pelanggaran', 'jenis_sanksi', 'pelapor', 'keterangan'],
             [
               '202301001',
               '2026-06-27',
               'Pasal 2',
               'Terlambat masuk kelas praktikum',
               'L',
+              'Budi Santoso, M.T.',
               'Terlambat lebih dari 30 menit tanpa alasan sah.',
             ],
             [
@@ -739,6 +1217,7 @@ export default function Pelanggaran() {
               '',
               'Merusak fasilitas laboratorium',
               'T',
+              'Satpam Kampus',
               'Melaporkan kerusakan keyboard praktikum.',
             ],
           ]}

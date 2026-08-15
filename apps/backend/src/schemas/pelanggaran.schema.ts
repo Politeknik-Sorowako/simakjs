@@ -7,6 +7,22 @@ export const pelanggaranBody = t.Object({
   keterangan: t.String({ minLength: 3, maxLength: 1000, default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' }),
   pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
   jenisSanksi: t.Optional(t.Integer({ minimum: 1, maximum: 4, default: 1 })),
+  pelapor: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
+});
+
+// Bentuk return tunggal (create & update) dari `.returning()` Drizzle.
+export const pelanggaranResponse = t.Object({
+  id: t.Integer(),
+  mahasiswaId: t.Integer(),
+  tanggal: t.String(),
+  jenisPelanggaran: t.String(),
+  keterangan: t.String(),
+  pasalId: t.Union([t.Integer(), t.Null()]),
+  jenisSanksi: t.Integer(),
+  pelapor: t.Union([t.String(), t.Null()]),
+  dibuatOleh: t.Union([t.Integer(), t.Null()]),
+  createdAt: t.Date(),
+  updatedAt: t.Date(),
 });
 
 export const createPelanggaranSchema = {
@@ -18,15 +34,9 @@ export const createPelanggaranSchema = {
   },
   body: pelanggaranBody,
   response: {
-    201: t.Object({
-      id: t.Integer({ default: 1 }),
-      mahasiswaId: t.Integer({ default: 1 }),
-      tanggal: t.String({ default: '2026-06-27' }),
-      jenisPelanggaran: t.String({ default: 'Keterlambatan masuk kelas praktikum' }),
-      keterangan: t.String({ default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' }),
-      pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
-      jenisSanksi: t.Optional(t.Integer({ default: 1 })),
-    }),
+    201: pelanggaranResponse,
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
   },
 };
 
@@ -41,25 +51,34 @@ export const getPelanggaranMahasiswaSchema = {
   }),
   response: {
     200: t.Object({
-      totalPoin: t.Optional(t.Integer({ default: 5 })),
-      predikat: t.Optional(t.String({ default: 'T1L1' })),
-      pelanggaranList: t.Optional(
-        t.Array(
-          t.Object({
-            id: t.Optional(t.Integer({ default: 1 })),
-            tanggal: t.Optional(t.String({ default: '2026-06-27' })),
-            jenisPelanggaran: t.Optional(t.String({ default: 'Terlambat masuk kelas' })),
-            bobotPoin: t.Optional(t.Integer({ default: 1 })),
-            keterangan: t.Optional(t.String({ default: 'Terlambat lebih dari 15 menit' })),
-            pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
-            jenisSanksi: t.Optional(t.Integer({ default: 1 })),
-            nomorPasal: t.Optional(t.Union([t.String(), t.Null()])),
-            bunyiPasal: t.Optional(t.Union([t.String(), t.Null()])),
-            createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
-          }),
-        ),
+      totalPoin: t.Integer(),
+      predikat: t.String(),
+      degradasiNilaiSikap: t.Number(),
+      pelanggaranList: t.Array(
+        t.Object({
+          id: t.Integer(),
+          mahasiswaId: t.Integer(),
+          nim: t.String(),
+          namaMahasiswa: t.String(),
+          prodiNama: t.Union([t.String(), t.Null()]),
+          programStudiId: t.Union([t.Integer(), t.Null()]),
+          jenjang: t.Union([t.String(), t.Null()]),
+          dosenPaId: t.Union([t.Integer(), t.Null()]),
+          tanggal: t.String(),
+          jenisPelanggaran: t.String(),
+          bobotPoin: t.Integer(),
+          keterangan: t.String(),
+          pasalId: t.Union([t.Integer(), t.Null()]),
+          jenisSanksi: t.Integer(),
+          nomorPasal: t.Union([t.String(), t.Null()]),
+          bunyiPasal: t.Union([t.String(), t.Null()]),
+          pelapor: t.Union([t.String(), t.Null()]),
+          createdAt: t.Date(),
+        }),
       ),
     }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
   },
 };
 
@@ -72,22 +91,28 @@ export const getAllPelanggaranSchema = {
   response: {
     200: t.Array(
       t.Object({
-        id: t.Optional(t.Integer({ default: 1 })),
-        mahasiswaId: t.Optional(t.Integer({ default: 1 })),
-        nim: t.Optional(t.String({ default: '202301001' })),
-        namaMahasiswa: t.Optional(t.String({ default: 'Andi Pratama' })),
-        prodiNama: t.Optional(t.Union([t.String(), t.Null()], { default: 'Teknik Elektro' })),
-        tanggal: t.Optional(t.String({ default: '2026-06-27' })),
-        jenisPelanggaran: t.Optional(t.String({ default: 'Keterlambatan masuk kelas praktikum' })),
-        bobotPoin: t.Optional(t.Integer({ default: 1 })),
-        keterangan: t.Optional(t.String({ default: 'Terlambat lebih dari 30 menit tanpa alasan sah.' })),
-        pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
-        jenisSanksi: t.Optional(t.Integer({ default: 1 })),
-        nomorPasal: t.Optional(t.Union([t.String(), t.Null()])),
-        bunyiPasal: t.Optional(t.Union([t.String(), t.Null()])),
-        createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
+        id: t.Integer(),
+        mahasiswaId: t.Integer(),
+        nim: t.String(),
+        namaMahasiswa: t.String(),
+        prodiNama: t.Union([t.String(), t.Null()]),
+        programStudiId: t.Union([t.Integer(), t.Null()]),
+        jenjang: t.Union([t.String(), t.Null()]),
+        dosenPaId: t.Union([t.Integer(), t.Null()]),
+        tanggal: t.String(),
+        jenisPelanggaran: t.String(),
+        bobotPoin: t.Integer(),
+        keterangan: t.String(),
+        pasalId: t.Union([t.Integer(), t.Null()]),
+        jenisSanksi: t.Integer(),
+        nomorPasal: t.Union([t.String(), t.Null()]),
+        bunyiPasal: t.Union([t.String(), t.Null()]),
+        pelapor: t.Union([t.String(), t.Null()]),
+        createdAt: t.Date(),
       }),
     ),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
   },
 };
 
@@ -105,7 +130,7 @@ export const getRekapPelanggaranSchema = {
       perJenis: t.Array(t.Object({ jenis: t.String(), jumlah: t.Integer(), totalPoin: t.Integer() })),
       perProdi: t.Array(
         t.Object({
-          prodiId: t.Optional(t.Union([t.Integer(), t.Null()])),
+          prodiId: t.Union([t.Integer(), t.Null()]),
           prodiNama: t.String(),
           totalPelanggaran: t.Integer(),
           totalPoin: t.Integer(),
@@ -120,9 +145,12 @@ export const getRekapPelanggaranSchema = {
           totalPoin: t.Integer(),
           jumlahPelanggaran: t.Integer(),
           predikat: t.String(),
+          degradasiNilaiSikap: t.Number(),
         }),
       ),
     }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
   },
 };
 
@@ -135,28 +163,9 @@ export const updatePelanggaranSchema = {
   params: t.Object({
     id: t.Numeric(),
   }),
-  body: t.Partial(
-    t.Object({
-      tanggal: t.Optional(t.String()),
-      jenisPelanggaran: t.Optional(t.String()),
-      keterangan: t.Optional(t.String()),
-      pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
-      jenisSanksi: t.Optional(t.Integer()),
-    }),
-  ),
+  body: t.Partial(t.Omit(pelanggaranBody, ['mahasiswaId'])),
   response: {
-    200: t.Object({
-      id: t.Integer(),
-      mahasiswaId: t.Integer(),
-      tanggal: t.String(),
-      jenisPelanggaran: t.String(),
-      keterangan: t.String(),
-      pasalId: t.Union([t.Integer(), t.Null()]),
-      jenisSanksi: t.Integer(),
-      dibuatOleh: t.Union([t.Integer(), t.Null()]),
-      createdAt: t.Union([t.Date(), t.Null()], { default: null }),
-      updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
-    }),
+    200: pelanggaranResponse,
     400: t.Object({ error: t.String() }),
     403: t.Object({ error: t.String() }),
     404: t.Object({ error: t.String() }),

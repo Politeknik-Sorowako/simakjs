@@ -105,12 +105,16 @@ export interface Pelanggaran {
   nim?: string;
   namaMahasiswa?: string;
   prodiNama?: string;
+  programStudiId?: number;
+  jenjang?: string;
+  dosenPaId?: number | null;
   tanggal: string;
   jenisPelanggaran: string;
   bobotPoin?: number;
   keterangan: string;
   pasalId?: number | null;
   jenisSanksi?: number;
+  pelapor?: string | null;
   nomorPasal?: string | null;
   bunyiPasal?: string | null;
   dibuatOleh?: number | null;
@@ -121,6 +125,7 @@ export interface PelanggaranRekap {
   pelanggaranList: Pelanggaran[];
   totalPoin: number;
   predikat: string;
+  degradasiNilaiSikap?: number;
 }
 
 export interface RekapPelanggaran {
@@ -136,6 +141,7 @@ export interface RekapPelanggaran {
     totalPoin: number;
     jumlahPelanggaran: number;
     predikat: string;
+    degradasiNilaiSikap?: number;
   }[];
 }
 
@@ -200,12 +206,22 @@ export const bimbinganController = {
     );
   },
 
-  async getAkademikSummary(
-    mhsId: number,
-  ): Promise<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }> {
-    return fetchApi<{ sisaKompensasi: number; poinPelanggaran: number; ipk: number; ipsSemesterLalu: number }>(
-      `/bimbingan/mahasiswa/${mhsId}/akademik-summary`,
-    );
+  async getAkademikSummary(mhsId: number): Promise<{
+    sisaKompensasi: number;
+    poinPelanggaran: number;
+    pelanggaranPredikat?: string;
+    degradasiNilaiSikap?: number;
+    ipk: number;
+    ipsSemesterLalu: number;
+  }> {
+    return fetchApi<{
+      sisaKompensasi: number;
+      poinPelanggaran: number;
+      pelanggaranPredikat?: string;
+      degradasiNilaiSikap?: number;
+      ipk: number;
+      ipsSemesterLalu: number;
+    }>(`/bimbingan/mahasiswa/${mhsId}/akademik-summary`);
   },
 
   async addSesi(
