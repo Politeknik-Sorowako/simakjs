@@ -93,7 +93,7 @@ export class PasalPelanggaranService {
 
   static async bulkRemove(ids: number[]) {
     if (!ids || ids.length === 0) {
-      return { success: true, deletedCount: 0 };
+      return { success: true, deletedCount: 0, skippedCount: 0, skippedPasal: [] };
     }
 
     return await db.transaction(async (tx) => {
@@ -103,24 +103,42 @@ export class PasalPelanggaranService {
         .from(pelanggaran)
         .where(and(inArray(pelanggaran.pasalId, ids)));
 
-      const usedPasalIds = Array.from(
-        new Set(usedViolations.map((v) => v.pasalId).filter((id): id is number => id !== null)),
-      );
+      const usedPasalIds = new Set(usedViolations.map((v) => v.pasalId).filter((id): id is number => id !== null));
 
-      if (usedPasalIds.length > 0) {
+      const safeIds = ids.filter((id) => !usedPasalIds.has(id));
+
+      if (safeIds.length === 0) {
         const usedPasalRows = await tx
           .select({ nomorPasal: pasalPelanggaran.nomorPasal })
           .from(pasalPelanggaran)
-          .where(inArray(pasalPelanggaran.id, usedPasalIds));
+          .where(inArray(pasalPelanggaran.id, Array.from(usedPasalIds)));
 
-        const names = usedPasalRows.map((p) => p.nomorPasal).join(', ');
-        throw new Error(
-          `Beberapa pasal tidak dapat dihapus karena sudah digunakan pada catatan pelanggaran aktif: ${names}`,
-        );
+        const skippedPasal = usedPasalRows.map((p) => p.nomorPasal);
+        return {
+          success: true,
+          deletedCount: 0,
+          skippedCount: usedPasalIds.size,
+          skippedPasal,
+        };
       }
 
-      const deletedRows = await tx.delete(pasalPelanggaran).where(inArray(pasalPelanggaran.id, ids)).returning();
-      return { success: true, deletedCount: deletedRows.length };
+      const deletedRows = await tx.delete(pasalPelanggaran).where(inArray(pasalPelanggaran.id, safeIds)).returning();
+
+      let skippedPasal: string[] = [];
+      if (usedPasalIds.size > 0) {
+        const usedPasalRows = await tx
+          .select({ nomorPasal: pasalPelanggaran.nomorPasal })
+          .from(pasalPelanggaran)
+          .where(inArray(pasalPelanggaran.id, Array.from(usedPasalIds)));
+        skippedPasal = usedPasalRows.map((p) => p.nomorPasal);
+      }
+
+      return {
+        success: true,
+        deletedCount: deletedRows.length,
+        skippedCount: usedPasalIds.size,
+        skippedPasal,
+      };
     });
   }
 }

@@ -34,6 +34,7 @@ import {
   mataKuliah,
   mataKuliahBahanKajian,
   nilaiKomponenMahasiswa,
+  notifications,
   pasalPelanggaran,
   pelanggaran,
   pengajuanCuti,
@@ -117,6 +118,7 @@ export async function clearDatabase() {
   await db.delete(skemaTarif);
   await db.delete(konversiNilai);
   await db.delete(skalaPredikatKelulusan);
+  await db.delete(notifications);
   await db.delete(pengajuanYudisium);
   await db.delete(nilaiKomponenMahasiswa);
   await db.delete(komponenNilai);
