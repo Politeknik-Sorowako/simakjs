@@ -7,14 +7,16 @@ import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
 
 export default function Pelanggaran() {
   const auth = useAuth();
+  const toast = useToast();
   const user = () => auth.user();
-  const isStaff = () => auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur']);
+  const isStaff = () => auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur', 'super_admin']);
 
   // Student Profile (if logged in as student)
   const [mhsProfile] = createResource(
@@ -186,8 +188,24 @@ export default function Pelanggaran() {
   };
 
   const openSpPrint = (item: IPelanggaran) => {
+    const escapeHtml = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
     const isTertulis = item.jenisSanksi === 4;
     const tanggal = new Date(item.tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' });
+
+    const namaMahasiswa = escapeHtml(item.namaMahasiswa || '-');
+    const nim = escapeHtml(item.nim || '-');
+    const prodiNama = escapeHtml(item.prodiNama || '-');
+    const jenisPelanggaran = escapeHtml(item.jenisPelanggaran);
+    const pelapor = escapeHtml(item.pelapor || 'Petugas Kedisiplinan');
+    const keterangan = escapeHtml(item.keterangan);
+    const pasal = item.nomorPasal ? `${escapeHtml(item.nomorPasal)} - ${escapeHtml(item.bunyiPasal || '')}` : '';
 
     const body = `
       <div id="printable-sp" class="sp-doc">
@@ -201,21 +219,17 @@ export default function Pelanggaran() {
           <p>Berdasarkan Buku Pedoman Akademik (BPA) Pasal 25, 26, & 28</p>
         </div>
         <div class="identitas">
-          <div class="row"><span>Nama Mahasiswa</span><span>: ${item.namaMahasiswa || '-'}</span></div>
-          <div class="row"><span>NIM</span><span>: ${item.nim || '-'}</span></div>
-          <div class="row"><span>Program Studi</span><span>: ${item.prodiNama || '-'}</span></div>
+          <div class="row"><span>Nama Mahasiswa</span><span>: ${namaMahasiswa}</span></div>
+          <div class="row"><span>NIM</span><span>: ${nim}</span></div>
+          <div class="row"><span>Program Studi</span><span>: ${prodiNama}</span></div>
         </div>
         <p class="isi">
           Dengan ini diberikan peringatan indisipliner kepada mahasiswa bersangkutan atas pelanggaran yang terjadi pada:
         </p>
         <div class="rincian">
           <div class="row"><span>Tanggal Kejadian</span><span>: ${tanggal}</span></div>
-          ${
-            item.nomorPasal
-              ? `<div class="row"><span>Pasal BPA</span><span>: ${item.nomorPasal} - ${item.bunyiPasal}</span></div>`
-              : ''
-          }
-          <div class="row"><span>Jenis Pelanggaran</span><span>: ${item.jenisPelanggaran}</span></div>
+          ${pasal ? `<div class="row"><span>Pasal BPA</span><span>: ${pasal}</span></div>` : ''}
+          <div class="row"><span>Jenis Pelanggaran</span><span>: ${jenisPelanggaran}</span></div>
           <div class="row">
             <span>Tingkat Sanksi</span>
             <span>: ${
@@ -224,8 +238,8 @@ export default function Pelanggaran() {
                 : 'Peringatan Lisan (Degradasi Nilai Mutu Sikap -0.25)'
             }</span>
           </div>
-          <div class="row"><span>Dilaporkan Oleh</span><span>: ${item.pelapor || 'Petugas Kedisiplinan'}</span></div>
-          <div class="row"><span>Keterangan / Kronologi</span><span>: "${item.keterangan}"</span></div>
+          <div class="row"><span>Dilaporkan Oleh</span><span>: ${pelapor}</span></div>
+          <div class="row"><span>Keterangan / Kronologi</span><span>: "${keterangan}"</span></div>
         </div>
         <p class="catatan">
           Mahasiswa diharapkan mematuhi Buku Pedoman Akademik Politeknik Sorowako. Apabila melakukan pelanggaran
@@ -235,8 +249,8 @@ export default function Pelanggaran() {
           <div>
             <span>Mahasiswa Bersangkutan,</span>
             <div>
-              <p class="tanda">${item.namaMahasiswa || '....................'}</p>
-              <p>NIM. ${item.nim || '...............'}</p>
+              <p class="tanda">${item.namaMahasiswa ? escapeHtml(item.namaMahasiswa) : '....................'}</p>
+              <p>NIM. ${item.nim ? escapeHtml(item.nim) : '...............'}</p>
             </div>
           </div>
           <div>
@@ -257,12 +271,15 @@ export default function Pelanggaran() {
       </div>`;
 
     const win = window.open('', '_blank', 'width=900,height=1000');
-    if (!win) return;
+    if (!win) {
+      toast.showToast('Popup diblokir. Aktifkan popup untuk mencetak.', 'error');
+      return;
+    }
     win.document.write(`<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="utf-8" />
-<title>Surat Peringatan - ${item.namaMahasiswa || ''}</title>
+<title>Surat Peringatan - ${escapeHtml(item.namaMahasiswa || '')}</title>
 <style>
   @page { size: A4; margin: 18mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
