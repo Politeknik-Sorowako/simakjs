@@ -25,7 +25,7 @@ export class PelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin, Dosen, Prodi, atau Instruktur.' };
     }
@@ -80,7 +80,7 @@ export class PelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -101,7 +101,7 @@ export class PelanggaranController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { programStudiId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -140,7 +140,7 @@ export class PelanggaranController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }

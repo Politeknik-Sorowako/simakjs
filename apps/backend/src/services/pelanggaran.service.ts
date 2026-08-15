@@ -105,7 +105,7 @@ export class PelanggaranService {
   }
 
   static async sendPeringatanNotification(ctx: {
-    mahasiswa: typeof mahasiswa.$inferSelect;
+    mahasiswa: Pick<typeof mahasiswa.$inferSelect, 'id' | 'nama' | 'nim' | 'dosenPaId' | 'programStudiId'>;
     pelanggaran: typeof pelanggaran.$inferSelect;
     namaPasal: string;
     namaPelapor: string;
@@ -194,12 +194,16 @@ export class PelanggaranService {
 
     // Insert notifikasi ke database
     for (const userId of recipientUserIds) {
-      await db.insert(notifications).values({
-        userId,
-        title,
-        message,
-        link,
-      });
+      try {
+        await db.insert(notifications).values({
+          userId,
+          title: title.slice(0, 255),
+          message,
+          link,
+        });
+      } catch (notifErr) {
+        console.error(`[PelanggaranService] Gagal membuat notifikasi untuk user ${userId}:`, notifErr);
+      }
     }
   }
 
