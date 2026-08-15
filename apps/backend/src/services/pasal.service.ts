@@ -113,10 +113,13 @@ export class PasalPelanggaranService {
           .from(pasalPelanggaran)
           .where(inArray(pasalPelanggaran.id, Array.from(usedPasalIds)));
 
-        const names = usedPasalRows.map((p) => p.nomorPasal).join(', ');
-        throw new Error(
-          `Pasal terpilih sudah digunakan pada catatan pelanggaran aktif sehingga tidak dapat dihapus: ${names}`,
-        );
+        const skippedPasal = usedPasalRows.map((p) => p.nomorPasal);
+        return {
+          success: true,
+          deletedCount: 0,
+          skippedCount: usedPasalIds.size,
+          skippedPasal,
+        };
       }
 
       const deletedRows = await tx.delete(pasalPelanggaran).where(inArray(pasalPelanggaran.id, safeIds)).returning();

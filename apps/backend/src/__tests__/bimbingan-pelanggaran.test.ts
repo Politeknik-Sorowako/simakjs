@@ -541,7 +541,7 @@ describe('Bimbingan & Pelanggaran API', () => {
       expect(bulkData.deletedCount).toBe(2);
     });
 
-    it('bulk delete dan single delete harus menolak jika butir pasal sudah terikat pada data pelanggaran', async () => {
+    it('single delete harus menolak pasal terpakai, bulk delete melewatinya tanpa menghapus apa pun', async () => {
       // 1. Create pasal
       const pRes = await app.handle(
         new Request('http://localhost/pasal-pelanggaran', {
@@ -588,7 +588,7 @@ describe('Bimbingan & Pelanggaran API', () => {
       );
       expect(singleDeleteRes.status).toBe(400);
 
-      // 4. Try bulk delete -> 400
+      // 4. Bulk delete with only the used pasal -> 200, nothing deleted, pasal skipped
       const bulkDeleteRes = await app.handle(
         new Request('http://localhost/pasal-pelanggaran/bulk-delete', {
           method: 'POST',
@@ -601,9 +601,12 @@ describe('Bimbingan & Pelanggaran API', () => {
           }),
         }),
       );
-      expect(bulkDeleteRes.status).toBe(400);
-      const errData = await bulkDeleteRes.json();
-      expect(errData.error).toContain('catatan pelanggaran');
+      expect(bulkDeleteRes.status).toBe(200);
+      const bulkData = await bulkDeleteRes.json();
+      expect(bulkData.success).toBe(true);
+      expect(bulkData.deletedCount).toBe(0);
+      expect(bulkData.skippedCount).toBe(1);
+      expect(bulkData.skippedPasal).toContain('Pasal 26');
     });
 
     it('bulk delete harus melewati pasal terpakai dan menghapus sisanya (partial delete)', async () => {

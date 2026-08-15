@@ -296,7 +296,7 @@ export default function Pelanggaran() {
               <div class="flex flex-col gap-2 items-center justify-center py-6">
                 <span
                   class={`text-6xl font-extrabold ${
-                    (studentViolations()?.totalPoin || 0) > 25 ? 'text-rose-600 animate-pulse' : 'text-accent-600'
+                    (studentViolations()?.totalPoin || 0) >= 25 ? 'text-rose-600 animate-pulse' : 'text-accent-600'
                   }`}
                 >
                   {studentViolations.loading ? '...' : studentViolations()?.totalPoin || 0}

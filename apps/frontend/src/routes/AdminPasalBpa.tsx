@@ -143,10 +143,12 @@ export default function AdminPasalBpa() {
     setIsBulkDeleting(true);
     try {
       const res = await pasalController.bulkRemove(ids);
+      const skippedInfo =
+        res.skippedCount > 0 ? ` ${res.skippedCount} pasal terpakai dilewati (${res.skippedPasal.join(', ')}).` : '';
       const msg =
-        res.skippedCount > 0
-          ? `Berhasil menghapus ${res.deletedCount} butir pasal. ${res.skippedCount} pasal terpakai dilewati (${res.skippedPasal.join(', ')}).`
-          : `Berhasil menghapus ${res.deletedCount} butir pasal`;
+        res.deletedCount === 0
+          ? `Tidak ada pasal yang dihapus.${skippedInfo}`
+          : `Berhasil menghapus ${res.deletedCount} butir pasal.${skippedInfo}`;
       toast.showToast(msg, 'success');
       setSelectedIds([]);
       setShowBulkDeleteModal(false);
