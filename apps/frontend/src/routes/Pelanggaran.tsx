@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onMount, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -48,6 +48,59 @@ export default function Pelanggaran() {
       return await bimbinganController.getAllPelanggaran();
     },
   );
+
+  // Client-side search + sort for the violations table
+  type SortField = 'tanggal' | 'namaMahasiswa' | 'nim' | 'prodiNama' | 'jenisPelanggaran' | 'pelapor' | 'jenisSanksi';
+  const [violationSearch, setViolationSearch] = createSignal('');
+  const [sortField, setSortField] = createSignal<SortField>('tanggal');
+  const [sortDir, setSortDir] = createSignal<'asc' | 'desc'>('desc');
+
+  const toggleSort = (field: SortField) => {
+    if (sortField() === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir(field === 'tanggal' ? 'desc' : 'asc');
+    }
+  };
+
+  const visibleViolations = createMemo(() => {
+    const list = allViolations() || [];
+    const q = violationSearch().trim().toLowerCase();
+    let rows = list;
+    if (q) {
+      rows = rows.filter((v) => {
+        const haystack = [
+          v.namaMahasiswa,
+          v.nim,
+          v.prodiNama,
+          v.jenisPelanggaran,
+          v.nomorPasal,
+          v.pelapor,
+          v.keterangan,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+    const field = sortField();
+    const dir = sortDir() === 'asc' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      let cmp = 0;
+      if (field === 'tanggal') {
+        cmp = new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime();
+      } else if (field === 'jenisSanksi') {
+        cmp = (a.jenisSanksi || 0) - (b.jenisSanksi || 0);
+      } else {
+        const av = String(a[field] || '');
+        const bv = String(b[field] || '');
+        cmp = av.localeCompare(bv, 'id', { sensitivity: 'base' });
+      }
+      return cmp * dir;
+    });
+  });
 
   // Load master pasal BPA (global + prodi scoped)
   const [pasalList] = createResource(
@@ -130,6 +183,120 @@ export default function Pelanggaran() {
   const openSpModal = (item: IPelanggaran) => {
     setSelectedSpItem(item);
     setShowSpModal(true);
+  };
+
+  const openSpPrint = (item: IPelanggaran) => {
+    const isTertulis = item.jenisSanksi === 4;
+    const tanggal = new Date(item.tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' });
+
+    const body = `
+      <div id="printable-sp" class="sp-doc">
+        <div class="kop">
+          <h2>KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI</h2>
+          <h3>POLITEKNIK SOROWAKO</h3>
+          <p>Jl. Sorowako Raya No. 1, Luwu Timur, Sulawesi Selatan | SIMAK Kedisiplinan Mahasiswa</p>
+        </div>
+        <div class="judul">
+          <h4>SURAT PERINGATAN KEDISIPLINAN ${isTertulis ? 'TERTULIS (SP TERTULIS)' : 'LISAN (SP LISAN)'}</h4>
+          <p>Berdasarkan Buku Pedoman Akademik (BPA) Pasal 25, 26, & 28</p>
+        </div>
+        <div class="identitas">
+          <div class="row"><span>Nama Mahasiswa</span><span>: ${item.namaMahasiswa || '-'}</span></div>
+          <div class="row"><span>NIM</span><span>: ${item.nim || '-'}</span></div>
+          <div class="row"><span>Program Studi</span><span>: ${item.prodiNama || '-'}</span></div>
+        </div>
+        <p class="isi">
+          Dengan ini diberikan peringatan indisipliner kepada mahasiswa bersangkutan atas pelanggaran yang terjadi pada:
+        </p>
+        <div class="rincian">
+          <div class="row"><span>Tanggal Kejadian</span><span>: ${tanggal}</span></div>
+          ${
+            item.nomorPasal
+              ? `<div class="row"><span>Pasal BPA</span><span>: ${item.nomorPasal} - ${item.bunyiPasal}</span></div>`
+              : ''
+          }
+          <div class="row"><span>Jenis Pelanggaran</span><span>: ${item.jenisPelanggaran}</span></div>
+          <div class="row">
+            <span>Tingkat Sanksi</span>
+            <span>: ${
+              isTertulis
+                ? 'Peringatan Tertulis (Degradasi Nilai Mutu Sikap -1.00)'
+                : 'Peringatan Lisan (Degradasi Nilai Mutu Sikap -0.25)'
+            }</span>
+          </div>
+          <div class="row"><span>Dilaporkan Oleh</span><span>: ${item.pelapor || 'Petugas Kedisiplinan'}</span></div>
+          <div class="row"><span>Keterangan / Kronologi</span><span>: "${item.keterangan}"</span></div>
+        </div>
+        <p class="catatan">
+          Mahasiswa diharapkan mematuhi Buku Pedoman Akademik Politeknik Sorowako. Apabila melakukan pelanggaran
+          berulang, akan dikenakan sanksi peringatan tingkat berikutnya hingga pemberhentian (Drop Out).
+        </p>
+        <div class="ttd">
+          <div>
+            <span>Mahasiswa Bersangkutan,</span>
+            <div>
+              <p class="tanda">${item.namaMahasiswa || '....................'}</p>
+              <p>NIM. ${item.nim || '...............'}</p>
+            </div>
+          </div>
+          <div>
+            <span>Mengetahui,<br />Dosen Pembimbing Akademik</span>
+            <div>
+              <p class="tanda">_________________________</p>
+              <p>NIP/NIDN Dosen PA</p>
+            </div>
+          </div>
+          <div>
+            <span>Menyetujui,<br />Ketua Program Studi</span>
+            <div>
+              <p class="tanda">_________________________</p>
+              <p>Ketua Program Studi</p>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    const win = window.open('', '_blank', 'width=900,height=1000');
+    if (!win) return;
+    win.document.write(`<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<title>Surat Peringatan - ${item.namaMahasiswa || ''}</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 12px; line-height: 1.5; }
+  .sp-doc { max-width: 680px; margin: 0 auto; }
+  .kop { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 16px; }
+  .kop h2 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+  .kop h3 { font-size: 18px; font-weight: 900; text-transform: uppercase; color: #14532d; }
+  .kop p { font-size: 10px; color: #555; }
+  .judul { text-align: center; margin: 12px 0; }
+  .judul h4 { font-size: 14px; font-weight: 800; text-decoration: underline; text-transform: uppercase; }
+  .judul p { font-size: 11px; color: #555; }
+  .identitas { margin: 12px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+  .row { display: grid; grid-template-columns: 200px 1fr; gap: 8px; padding: 2px 0; }
+  .row > span:first-child { font-weight: 600; color: #555; }
+  .isi { margin: 10px 0; line-height: 1.6; }
+  .rincian { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+  .catatan { font-size: 11px; color: #555; line-height: 1.6; margin: 10px 0; }
+  .ttd { margin-top: 28px; padding-top: 14px; border-top: 1px dashed #999; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; font-size: 12px; }
+  .ttd > div { display: flex; flex-direction: column; justify-content: space-between; height: 110px; }
+  .tanda { font-weight: 700; text-decoration: underline; }
+  .ttd p { font-size: 10px; }
+  @media print { .no-print { display: none; } }
+</style>
+</head>
+<body>
+  ${body}
+  <div class="no-print" style="margin-top:24px; text-align:center;">
+    <button onclick="window.print()" style="padding:10px 20px; font-size:14px;">Cetak Dokumen SP</button>
+  </div>
+  <script>window.onload = function(){ window.print(); };</script>
+</body>
+</html>`);
+    win.document.close();
   };
 
   const selectedPasal = () => pasalList()?.find((p) => p.id === pasalId()) || null;
@@ -408,6 +575,18 @@ export default function Pelanggaran() {
         <Show when={isStaff() && viewTab() === 'daftar'}>
           <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <Input
+                type="text"
+                placeholder="Cari nama, NIM, prodi, pasal, pelapor, atau keterangan..."
+                value={violationSearch()}
+                onInput={(e) => setViolationSearch(e.currentTarget.value)}
+                class="w-full sm:max-w-xs"
+              />
+              <span class="text-xs text-secondary-400">
+                {visibleViolations().length} dari {allViolations()?.length || 0} catatan
+              </span>
+            </div>
             <Show
               when={allViolations() && allViolations()!.length > 0}
               fallback={
@@ -416,83 +595,122 @@ export default function Pelanggaran() {
                 </div>
               }
             >
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
-                      <th class="p-3">Mahasiswa</th>
-                      <th class="p-3">NIM</th>
-                      <th class="p-3">Program Studi</th>
-                      <th class="p-3">Tanggal</th>
-                      <th class="p-3">Pasal</th>
-                      <th class="p-3">Pelapor</th>
-                      <th class="p-3">Sanksi</th>
-                      <th class="p-3">Keterangan</th>
-                      <th class="p-3 text-center">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                    <For each={allViolations()}>
-                      {(item) => (
-                        <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                          <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa}</td>
-                          <td class="p-3 whitespace-nowrap">{item.nim}</td>
-                          <td class="p-3">{item.prodiNama}</td>
-                          <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
-                          <td class="p-3">
-                            <Show when={item.nomorPasal} fallback={<span class="text-secondary-400">-</span>}>
-                              <span class="font-bold text-secondary-800 dark:text-white">{item.nomorPasal}</span>
-                              <Show when={item.bunyiPasal}>
-                                <div class="text-[11px] text-secondary-500 max-w-[220px] truncate">
-                                  {item.bunyiPasal}
-                                </div>
+              <Show
+                when={visibleViolations().length > 0}
+                fallback={
+                  <div class="py-12 text-center text-secondary-400 text-sm">
+                    Tidak ada catatan yang cocok dengan pencarian.
+                  </div>
+                }
+              >
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('namaMahasiswa')}
+                        >
+                          Mahasiswa {sortField() === 'namaMahasiswa' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('nim')}
+                        >
+                          NIM {sortField() === 'nim' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('prodiNama')}
+                        >
+                          Program Studi {sortField() === 'prodiNama' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('tanggal')}
+                        >
+                          Tanggal {sortField() === 'tanggal' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th class="p-3">Pasal</th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('pelapor')}
+                        >
+                          Pelapor {sortField() === 'pelapor' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th
+                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          onClick={() => toggleSort('jenisSanksi')}
+                        >
+                          Sanksi {sortField() === 'jenisSanksi' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
+                        </th>
+                        <th class="p-3">Keterangan</th>
+                        <th class="p-3 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
+                      <For each={visibleViolations()}>
+                        {(item) => (
+                          <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                            <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa}</td>
+                            <td class="p-3 whitespace-nowrap">{item.nim}</td>
+                            <td class="p-3">{item.prodiNama}</td>
+                            <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
+                            <td class="p-3">
+                              <Show when={item.nomorPasal} fallback={<span class="text-secondary-400">-</span>}>
+                                <span class="font-bold text-secondary-800 dark:text-white">{item.nomorPasal}</span>
+                                <Show when={item.bunyiPasal}>
+                                  <div class="text-[11px] text-secondary-500 max-w-[220px] truncate">
+                                    {item.bunyiPasal}
+                                  </div>
+                                </Show>
                               </Show>
-                            </Show>
-                          </td>
-                          <td class="p-3 whitespace-nowrap">
-                            <span class="text-secondary-600 dark:text-secondary-300 font-semibold">
-                              {item.pelapor || '-'}
-                            </span>
-                          </td>
-                          <td class="p-3">
-                            <span
-                              class={`px-2 py-0.5 rounded border font-bold ${
-                                item.jenisSanksi === 4
-                                  ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
-                                  : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
-                              }`}
-                            >
-                              {item.jenisSanksi === 4 ? 'Tertulis (-1.00)' : 'Lisan (-0.25)'}
-                            </span>
-                          </td>
-                          <td class="p-3 max-w-[200px] truncate">{item.keterangan}</td>
-                          <td class="p-3 text-center">
-                            <div class="flex items-center justify-center gap-1.5">
-                              <Button
-                                onClick={() => openSpModal(item)}
-                                variant="secondary"
-                                class="py-1 px-2 text-[10px]"
-                                title="Preview & Cetak Dokumen SP"
+                            </td>
+                            <td class="p-3 whitespace-nowrap">
+                              <span class="text-secondary-600 dark:text-secondary-300 font-semibold">
+                                {item.pelapor || '-'}
+                              </span>
+                            </td>
+                            <td class="p-3">
+                              <span
+                                class={`px-2 py-0.5 rounded border font-bold ${
+                                  item.jenisSanksi === 4
+                                    ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                                }`}
                               >
-                                Cetak SP
-                              </Button>
-                              <Show when={auth.hasRole(['admin'])}>
+                                {item.jenisSanksi === 4 ? 'Tertulis (-1.00)' : 'Lisan (-0.25)'}
+                              </span>
+                            </td>
+                            <td class="p-3 max-w-[200px] truncate">{item.keterangan}</td>
+                            <td class="p-3 text-center">
+                              <div class="flex items-center justify-center gap-1.5">
                                 <Button
-                                  onClick={() => openEditModal(item)}
+                                  onClick={() => openSpPrint(item)}
                                   variant="secondary"
                                   class="py-1 px-2 text-[10px]"
+                                  title="Cetak Dokumen SP di jendela baru"
                                 >
-                                  Edit
+                                  Cetak SP
                                 </Button>
-                              </Show>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </For>
-                  </tbody>
-                </table>
-              </div>
+                                <Show when={auth.hasRole(['admin'])}>
+                                  <Button
+                                    onClick={() => openEditModal(item)}
+                                    variant="secondary"
+                                    class="py-1 px-2 text-[10px]"
+                                  >
+                                    Edit
+                                  </Button>
+                                </Show>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+              </Show>
             </Show>
           </div>
         </Show>
