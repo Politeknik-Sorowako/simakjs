@@ -1159,90 +1159,107 @@ export class CsvImportService {
         const resolvedDurasi = (JENIS_FULL_DAY as readonly string[]).includes(jenisVal)
           ? maksHarian
           : Math.min(durasiMenit, maksHarian);
+        const statusKompensasi = jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK';
 
-        await db.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`kompen_import_${mhs.id}_${tanggalVal}`}))`);
+        // Seluruh operasi per-baris dibungkus transaksi agar penulisan ke
+        // kompensasi_manual + ketidakhadiran_mahasiswa bersifat atomik, dan
+        // pg_advisory_xact_lock benar-benar mengunci (kunci transaksi).
+        await db.transaction(async (tx) => {
+          await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`kompen_import_${mhs.id}_${tanggalVal}`}))`);
 
-        const [sumRow] = await db
-          .select({ total: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
-          .from(kompensasiManual)
-          .where(and(eq(kompensasiManual.mahasiswaId, mhs.id), eq(kompensasiManual.tanggal, tanggalVal)));
-        const totalHariIni = Number(sumRow?.total || 0);
-
-        if (totalHariIni + resolvedDurasi > maksHarian) {
-          result.errors.push({
-            line: lineNum,
-            error: `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat menambah ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
-          });
-          continue;
-        }
-
-        if (mode === 'update') {
-          const [existing] = await db
-            .select({ id: kompensasiManual.id })
+          const [sumRow] = await tx
+            .select({ total: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
             .from(kompensasiManual)
-            .where(
-              and(
-                eq(kompensasiManual.mahasiswaId, mhs.id),
-                eq(kompensasiManual.tanggal, tanggalVal),
-                eq(kompensasiManual.jenisKompen, jenisVal),
-              ),
-            )
-            .limit(1);
-          if (existing) {
-            await db
-              .update(kompensasiManual)
-              .set({ durasiMenit: resolvedDurasi, keterangan: keteranganVal })
-              .where(eq(kompensasiManual.id, existing.id));
-            await db
-              .update(ketidakhadiranMahasiswa)
-              .set({
-                status: jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
-                durasiMenit: resolvedDurasi,
-                keterangan: keteranganVal,
-              })
-              .where(
-                and(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'), eq(ketidakhadiranMahasiswa.sumberId, existing.id)),
-              );
-            result.successCount++;
-            continue;
+            .where(and(eq(kompensasiManual.mahasiswaId, mhs.id), eq(kompensasiManual.tanggal, tanggalVal)));
+          const totalHariIni = Number(sumRow?.total || 0);
+
+          if (totalHariIni + resolvedDurasi > maksHarian) {
+            throw new Error(
+              `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat menambah ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
+            );
           }
-        }
 
-        const [insertedRecord] = await db
-          .insert(kompensasiManual)
-          .values({
-            mahasiswaId: mhs.id,
-            tanggal: tanggalVal,
-            jenisKompen: jenisVal,
-            durasiMenit: resolvedDurasi,
-            keterangan: keteranganVal,
-            createdBy: userId ?? null,
-          })
-          .returning();
+          if (mode === 'update') {
+            const [existing] = await tx
+              .select({ id: kompensasiManual.id })
+              .from(kompensasiManual)
+              .where(
+                and(
+                  eq(kompensasiManual.mahasiswaId, mhs.id),
+                  eq(kompensasiManual.tanggal, tanggalVal),
+                  eq(kompensasiManual.jenisKompen, jenisVal),
+                ),
+              )
+              .limit(1);
+            if (existing) {
+              await tx
+                .update(kompensasiManual)
+                .set({ durasiMenit: resolvedDurasi, keterangan: keteranganVal })
+                .where(eq(kompensasiManual.id, existing.id));
+              // Upsert baris sinkron: buat jika belum ada, update jika sudah ada.
+              await tx
+                .insert(ketidakhadiranMahasiswa)
+                .values({
+                  mahasiswaId: mhs.id,
+                  tanggal: tanggalVal,
+                  sumber: 'MANUAL',
+                  sumberId: existing.id,
+                  status: statusKompensasi,
+                  durasiMenit: resolvedDurasi,
+                  keterangan: keteranganVal,
+                  isVerified: true,
+                  createdBy: userId ?? null,
+                })
+                .onConflictDoUpdate({
+                  target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+                  set: {
+                    status: sql`excluded.status`,
+                    durasiMenit: sql`excluded.durasi_menit`,
+                    isVerified: sql`excluded.is_verified`,
+                    keterangan: sql`excluded.keterangan`,
+                  },
+                });
+              result.successCount++;
+              return;
+            }
+          }
 
-        await db
-          .insert(ketidakhadiranMahasiswa)
-          .values({
-            mahasiswaId: mhs.id,
-            tanggal: tanggalVal,
-            sumber: 'MANUAL',
-            sumberId: insertedRecord.id,
-            status: jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
-            durasiMenit: resolvedDurasi,
-            keterangan: keteranganVal,
-            isVerified: true,
-            createdBy: userId ?? null,
-          })
-          .onConflictDoUpdate({
-            target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
-            set: {
-              status: sql`excluded.status`,
-              durasiMenit: sql`excluded.durasi_menit`,
-              isVerified: sql`excluded.is_verified`,
-              keterangan: sql`excluded.keterangan`,
-            },
-          });
-        result.successCount++;
+          const [insertedRecord] = await tx
+            .insert(kompensasiManual)
+            .values({
+              mahasiswaId: mhs.id,
+              tanggal: tanggalVal,
+              jenisKompen: jenisVal,
+              durasiMenit: resolvedDurasi,
+              keterangan: keteranganVal,
+              createdBy: userId ?? null,
+            })
+            .returning();
+
+          await tx
+            .insert(ketidakhadiranMahasiswa)
+            .values({
+              mahasiswaId: mhs.id,
+              tanggal: tanggalVal,
+              sumber: 'MANUAL',
+              sumberId: insertedRecord.id,
+              status: statusKompensasi,
+              durasiMenit: resolvedDurasi,
+              keterangan: keteranganVal,
+              isVerified: true,
+              createdBy: userId ?? null,
+            })
+            .onConflictDoUpdate({
+              target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+              set: {
+                status: sql`excluded.status`,
+                durasiMenit: sql`excluded.durasi_menit`,
+                isVerified: sql`excluded.is_verified`,
+                keterangan: sql`excluded.keterangan`,
+              },
+            });
+          result.successCount++;
+        });
       } catch (err: unknown) {
         result.errors.push({
           line: lineNum,
