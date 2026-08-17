@@ -3,6 +3,7 @@ import {
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
+  ketidakhadiranMahasiswa,
   kompensasiBayar,
   kompensasiManual,
   krs,
@@ -1192,19 +1193,55 @@ export class CsvImportService {
               .update(kompensasiManual)
               .set({ durasiMenit: resolvedDurasi, keterangan: keteranganVal })
               .where(eq(kompensasiManual.id, existing.id));
+            await db
+              .update(ketidakhadiranMahasiswa)
+              .set({
+                status: jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
+                durasiMenit: resolvedDurasi,
+                keterangan: keteranganVal,
+              })
+              .where(
+                and(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'), eq(ketidakhadiranMahasiswa.sumberId, existing.id)),
+              );
             result.successCount++;
             continue;
           }
         }
 
-        await db.insert(kompensasiManual).values({
-          mahasiswaId: mhs.id,
-          tanggal: tanggalVal,
-          jenisKompen: jenisVal,
-          durasiMenit: resolvedDurasi,
-          keterangan: keteranganVal,
-          createdBy: userId ?? null,
-        });
+        const [insertedRecord] = await db
+          .insert(kompensasiManual)
+          .values({
+            mahasiswaId: mhs.id,
+            tanggal: tanggalVal,
+            jenisKompen: jenisVal,
+            durasiMenit: resolvedDurasi,
+            keterangan: keteranganVal,
+            createdBy: userId ?? null,
+          })
+          .returning();
+
+        await db
+          .insert(ketidakhadiranMahasiswa)
+          .values({
+            mahasiswaId: mhs.id,
+            tanggal: tanggalVal,
+            sumber: 'MANUAL',
+            sumberId: insertedRecord.id,
+            status: jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
+            durasiMenit: resolvedDurasi,
+            keterangan: keteranganVal,
+            isVerified: true,
+            createdBy: userId ?? null,
+          })
+          .onConflictDoUpdate({
+            target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+            set: {
+              status: sql`excluded.status`,
+              durasiMenit: sql`excluded.durasi_menit`,
+              isVerified: sql`excluded.is_verified`,
+              keterangan: sql`excluded.keterangan`,
+            },
+          });
         result.successCount++;
       } catch (err: unknown) {
         result.errors.push({
