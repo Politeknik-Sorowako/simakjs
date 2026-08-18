@@ -97,7 +97,20 @@ function getRetryAfter(raw: unknown): number | null {
 
 function extractErrorText(raw: unknown): string {
   if (typeof raw === 'string') return raw;
-  if (raw instanceof Error) return raw.message || 'Terjadi kesalahan, silakan coba lagi';
+  if (raw instanceof Error) {
+    // Eden Treaty Error stores the raw HTTP body in .value, while .message may
+    // be corrupted to "[object Object]" via `super(value + "")` in its constructor.
+    const edenErr = raw as EdenError & { value?: unknown };
+    if (edenErr.value && typeof edenErr.value === 'object') {
+      const msg = getStringValue(edenErr.value as Record<string, unknown>, ['error', 'message']);
+      if (msg) return msg;
+    }
+    // Fall back to .message only if it looks like a real string
+    if (typeof raw.message === 'string' && raw.message !== '[object Object]' && raw.message.length > 0) {
+      return raw.message;
+    }
+    // Fall through to general object extraction (e.g. err.value / err.data / err.response)
+  }
   if (raw && typeof raw === 'object') {
     const err = raw as EdenError;
     // Nested error.value / error.data / error.response holds the HTTP body

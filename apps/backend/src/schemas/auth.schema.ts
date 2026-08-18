@@ -107,6 +107,7 @@ export const forgotPasswordSchema = {
     ]),
     429: t.Object({
       error: t.String({ default: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.' }),
+      retryAfter: t.Number({ default: 900 }),
     }),
   },
 };

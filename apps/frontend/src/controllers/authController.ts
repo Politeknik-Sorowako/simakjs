@@ -34,4 +34,10 @@ export const authController = {
   async validateResetToken(token: string): Promise<{ email: string }> {
     return unwrap<{ email: string }>(eden.auth['reset-password']['validate'].post({ token }));
   },
+
+  async clearRateLimit(email: string): Promise<{ message: string; loginCleared: boolean; forgotCleared: boolean }> {
+    return unwrap<{ message: string; loginCleared: boolean; forgotCleared: boolean }>(
+      eden.auth['clear-rate-limit'].post({ email }),
+    );
+  },
 };
