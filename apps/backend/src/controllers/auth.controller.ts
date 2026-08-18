@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { AuthService } from '../services/auth.service';
+import { isSuperAdminOrAdmin } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
 const loginRateLimit = new Map<string, { count: number; resetTime: number }>();
@@ -41,7 +42,8 @@ export class AuthController {
         if (now < loginRecord.resetTime) {
           if (loginRecord.count >= 5) {
             set.status = 429;
-            return { error: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.' };
+            const retryAfter = Math.max(1, Math.ceil((loginRecord.resetTime - now) / 1000));
+            return { error: 'Terlalu banyak percobaan login. Silakan coba lagi.', retryAfter };
           }
           loginRecord.count++;
         } else {
@@ -288,5 +290,35 @@ export class AuthController {
       set.status = 500;
       return { error: 'Gagal memverifikasi token reset password' };
     }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async clearRateLimit({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !isSuperAdminOrAdmin(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+
+    const email = (body as { email?: string })?.email;
+    if (!email) {
+      set.status = 400;
+      return { error: 'Email wajib diisi' };
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    const loginKey = `login:${emailLower}`;
+    const forgotKey = `forgot:${emailLower}`;
+    const loginCleared = loginRateLimit.delete(loginKey);
+    const forgotCleared = forgotRateLimit.delete(forgotKey);
+
+    return {
+      message:
+        loginCleared || forgotCleared
+          ? 'Rate limit berhasil dibersihkan.'
+          : 'Tidak ada rate limit untuk email tersebut.',
+      loginCleared,
+      forgotCleared,
+    };
   }
 }

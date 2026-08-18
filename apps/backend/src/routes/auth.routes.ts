@@ -3,6 +3,7 @@ import { AuthController } from '../controllers/auth.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { jwtPlugin } from '../plugins/jwt.plugin';
 import {
+  clearRateLimitSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
@@ -20,4 +21,5 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   })
   .post('/forgot-password', AuthController.forgotPassword, forgotPasswordSchema)
   .post('/reset-password', AuthController.resetPassword, resetPasswordSchema)
-  .post('/reset-password/validate', AuthController.validateResetToken, validateResetTokenSchema);
+  .post('/reset-password/validate', AuthController.validateResetToken, validateResetTokenSchema)
+  .post('/clear-rate-limit', AuthController.clearRateLimit, clearRateLimitSchema);

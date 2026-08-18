@@ -1,5 +1,5 @@
 import { A, useNavigate } from '@solidjs/router';
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
@@ -7,6 +7,14 @@ import { Input } from '../components/ui/Input';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
+import { RateLimitError } from '../utils/eden';
+
+function formatCountdown(totalSeconds: number): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const minutes = Math.floor(s / 60);
+  const seconds = s % 60;
+  return `${minutes} menit ${seconds.toString().padStart(2, '0')} detik`;
+}
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Format email tidak valid' }),
@@ -32,6 +40,43 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [loading, setLoading] = createSignal(false);
 
+  const [retryAfter, setRetryAfter] = createSignal<number | null>(null);
+  const [countdown, setCountdown] = createSignal(0);
+
+  let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+  const stopCountdown = () => {
+    if (countdownTimer) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+  };
+
+  onCleanup(stopCountdown);
+
+  // Runs a 1s interval while a rate limit is active, then releases the lock at 0.
+  createEffect(() => {
+    const seconds = retryAfter();
+    if (seconds === null || seconds <= 0) {
+      stopCountdown();
+      setCountdown(0);
+      return;
+    }
+    setCountdown(seconds);
+    stopCountdown();
+    countdownTimer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          stopCountdown();
+          setRetryAfter(null);
+          setCountdown(0);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  });
+
   // If already logged in, redirect (wrapped in createEffect to prevent render phase routing crashes)
   createEffect(() => {
     if (auth.isAuthenticated()) {
@@ -42,6 +87,11 @@ export default function Login() {
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!isRegister() && retryAfter() !== null) {
+      toast.showToast(`Tunggu ${formatCountdown(countdown())} sebelum mencoba lagi.`, 'error');
+      return;
+    }
 
     // Zod validation
     const formData = isRegister()
@@ -77,9 +127,15 @@ export default function Login() {
         }
       }
     } catch (e: unknown) {
-      const errText = (e as Error).message || 'Gagal terhubung ke server';
-      setErrorMsg(errText);
-      toast.showToast(errText, 'error');
+      if (e instanceof RateLimitError) {
+        setRetryAfter(e.retryAfter);
+        setErrorMsg(e.message);
+        toast.showToast(`Terlalu banyak percobaan. Coba lagi dalam ${formatCountdown(e.retryAfter)}.`, 'error');
+      } else {
+        const errText = (e as Error).message || 'Gagal terhubung ke server';
+        setErrorMsg(errText);
+        toast.showToast(errText, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -212,9 +268,18 @@ export default function Login() {
             </button>
           </div>
 
-          <Button type="submit" disabled={loading()} class="w-full mt-2 py-3">
-            {loading() ? 'Memproses...' : isRegister() ? 'Daftar Sekarang' : 'Masuk'}
-          </Button>
+          <Show
+            when={!isRegister() && retryAfter() !== null}
+            fallback={
+              <Button type="submit" disabled={loading()} class="w-full mt-2 py-3">
+                {loading() ? 'Memproses...' : isRegister() ? 'Daftar Sekarang' : 'Masuk'}
+              </Button>
+            }
+          >
+            <div class="mt-2 p-3 rounded-lg text-xs font-semibold text-center bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+              Percobaan login terlalu banyak. Coba lagi dalam {formatCountdown(countdown())}.
+            </div>
+          </Show>
         </form>
 
         <div class="text-center flex flex-col gap-2">
@@ -222,6 +287,7 @@ export default function Login() {
             onClick={() => {
               setIsRegister(!isRegister());
               setErrorMsg('');
+              setRetryAfter(null);
             }}
             disabled={loading()}
             class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
