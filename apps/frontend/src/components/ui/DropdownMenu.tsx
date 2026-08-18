@@ -40,13 +40,13 @@ export function DropdownMenu(props: DropdownMenuProps) {
     const preferred: 'left' | 'right' = local.position === 'left' ? 'left' : 'right';
     const panelWidth = 176;
     const gap = 8;
-    const fitsRight = rect.right + panelWidth + gap <= window.innerWidth;
+    const fitsRight = rect.left + panelWidth + gap <= window.innerWidth;
     const fitsLeft = rect.left - panelWidth - gap >= 0;
     if (preferred === 'left' ? fitsRight : fitsLeft) {
       setResolvedPos(preferred);
-    } else if (fitsLeft) {
-      setResolvedPos('left');
     } else if (fitsRight) {
+      setResolvedPos('left');
+    } else if (fitsLeft) {
       setResolvedPos('right');
     } else {
       setResolvedPos(preferred);
