@@ -30,11 +30,32 @@ interface DropdownMenuProps {
 
 export function DropdownMenu(props: DropdownMenuProps) {
   const [open, setOpen] = createSignal(false);
+  const [resolvedPos, setResolvedPos] = createSignal<'left' | 'right'>(props.position === 'left' ? 'left' : 'right');
   const [local] = splitProps(props, ['trigger', 'triggerClass', 'triggerAriaLabel', 'items', 'position']);
+  let triggerRef: HTMLButtonElement | undefined;
+
+  const resolvePosition = () => {
+    if (!triggerRef) return;
+    const rect = triggerRef.getBoundingClientRect();
+    const preferred: 'left' | 'right' = local.position === 'left' ? 'left' : 'right';
+    const panelWidth = 176;
+    const gap = 8;
+    const fitsRight = rect.left + panelWidth + gap <= window.innerWidth;
+    const fitsLeft = rect.left - panelWidth - gap >= 0;
+    if (preferred === 'left' ? fitsRight : fitsLeft) {
+      setResolvedPos(preferred);
+    } else if (fitsRight) {
+      setResolvedPos('left');
+    } else if (fitsLeft) {
+      setResolvedPos('right');
+    } else {
+      setResolvedPos(preferred);
+    }
+  };
 
   const panelClass = () =>
     `absolute mt-1 min-w-44 rounded-lg border border-secondary-200/80 bg-white py-1 shadow-xl dark:border-secondary-700 dark:bg-secondary-800 ${
-      local.position === 'left' ? 'left-0' : 'right-0'
+      resolvedPos() === 'left' ? 'left-0' : 'right-0'
     }`;
 
   const handleDocumentClick = (e: MouseEvent) => {
@@ -55,12 +76,15 @@ export function DropdownMenu(props: DropdownMenuProps) {
   return (
     <div data-dropdown class="relative inline-block text-left">
       <button
+        ref={triggerRef}
         type="button"
         aria-label={local.triggerAriaLabel || 'Aksi'}
         aria-expanded={open()}
         onClick={(e) => {
           e.stopPropagation();
-          setOpen((v) => !v);
+          const next = !open();
+          if (next) resolvePosition();
+          setOpen(next);
         }}
         class={`inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-secondary-900 active:scale-[0.98] ${
           local.triggerClass ||

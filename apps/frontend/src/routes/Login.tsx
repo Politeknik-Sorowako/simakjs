@@ -269,7 +269,7 @@ export default function Login() {
           </div>
 
           <Show
-            when={!isRegister() && retryAfter() !== null}
+            when={retryAfter() !== null}
             fallback={
               <Button type="submit" disabled={loading()} class="w-full mt-2 py-3">
                 {loading() ? 'Memproses...' : isRegister() ? 'Daftar Sekarang' : 'Masuk'}
@@ -277,7 +277,7 @@ export default function Login() {
             }
           >
             <div class="mt-2 p-3 rounded-lg text-xs font-semibold text-center bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
-              Percobaan login terlalu banyak. Coba lagi dalam {formatCountdown(countdown())}.
+              Terlalu banyak percobaan. Coba lagi dalam {formatCountdown(countdown())}.
             </div>
           </Show>
         </form>
