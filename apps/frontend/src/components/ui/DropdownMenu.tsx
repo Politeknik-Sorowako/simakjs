@@ -1,14 +1,24 @@
-import { type JSX, createSignal, For, onCleanup, onMount, Show, splitProps } from 'solid-js';
+import { createSignal, For, type JSX, onCleanup, onMount, Show, splitProps } from 'solid-js';
 
-export interface DropdownMenuItem {
-  label: string;
-  icon?: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  danger?: boolean;
-  loading?: boolean;
-  separator?: boolean;
-}
+export type DropdownMenuItem =
+  | {
+      separator: true;
+      label?: string;
+      icon?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+      danger?: boolean;
+      loading?: boolean;
+    }
+  | {
+      separator?: false;
+      label: string;
+      icon?: string;
+      onClick?: () => void;
+      disabled?: boolean;
+      danger?: boolean;
+      loading?: boolean;
+    };
 
 interface DropdownMenuProps {
   trigger: JSX.Element;
