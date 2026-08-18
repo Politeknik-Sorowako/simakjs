@@ -107,6 +107,7 @@ export const forgotPasswordSchema = {
     ]),
     429: t.Object({
       error: t.String({ default: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.' }),
+      retryAfter: t.Number({ default: 900 }),
     }),
   },
 };
@@ -139,7 +140,36 @@ export const loginSchema = {
       error: t.String({ default: 'Email atau password salah' }),
     }),
     429: t.Object({
-      error: t.String({ default: 'Terlalu banyak percobaan login. Silakan coba lagi dalam 15 menit.' }),
+      error: t.String({ default: 'Terlalu banyak percobaan login. Silakan coba lagi.' }),
+      retryAfter: t.Number({ default: 900 }),
+    }),
+  },
+};
+
+export const clearRateLimitSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Bersihkan Rate Limit Login',
+    description:
+      'Menghapus rate limit percobaan login dan forgot-password untuk sebuah email. Hanya dapat diakses oleh Admin/Super Admin.',
+  },
+  body: t.Object({
+    email: t.String({ format: 'email', description: 'Alamat email yang rate limit-nya akan dibersihkan' }),
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Rate limit berhasil dibersihkan.' }),
+      loginCleared: t.Boolean(),
+      forgotCleared: t.Boolean(),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'Email wajib diisi' }),
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Tidak ada rate limit aktif untuk email tersebut.' }),
     }),
   },
 };

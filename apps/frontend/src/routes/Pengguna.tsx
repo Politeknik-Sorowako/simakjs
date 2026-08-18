@@ -2,6 +2,7 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
+import { DropdownMenu } from '../components/ui/DropdownMenu';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
@@ -10,6 +11,7 @@ import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { authController } from '../controllers/authController';
 import { prodiController } from '../controllers/prodiController';
 import { rbacController, UserRoleType } from '../controllers/rbacController';
 import { UserItem, userController } from '../controllers/userController';
@@ -41,6 +43,7 @@ export default function Pengguna() {
 
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
   const [actionLoading, setActionLoading] = createSignal<number | null>(null);
+  const [clearingEmail, setClearingEmail] = createSignal<string | null>(null);
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   // New User Form Modal State
@@ -206,6 +209,19 @@ export default function Pengguna() {
       toast.showToast((e as Error).message || 'Gagal mengubah status wajib ganti password', 'error');
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleClearRateLimit = async (email: string) => {
+    if (!window.confirm(`Bersihkan rate limit login untuk ${email}?`)) return;
+    setClearingEmail(email);
+    try {
+      const res = await authController.clearRateLimit(email);
+      toast.showToast(res.message, 'success');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membersihkan rate limit', 'error');
+    } finally {
+      setClearingEmail(null);
     }
   };
 
@@ -384,39 +400,63 @@ export default function Pengguna() {
                       </div>
                     </td>
                     <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                      <div class="flex items-center gap-2">
-                        <Button
-                          variant={user.isActive ? 'danger' : 'success'}
-                          disabled={actionLoading() === user.id || user.id === currentUser()?.id}
-                          onClick={() => handleToggleActive(user)}
-                        >
-                          {actionLoading() === user.id ? 'Memproses...' : user.isActive ? 'Nonaktifkan' : 'Aktifkan'}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          disabled={actionLoading() === user.id || user.id === currentUser()?.id}
-                          onClick={() => handleForcePasswordChange(user)}
-                        >
-                          {user.mustChangePassword ? 'Batalkan Wajib PW' : 'Wajibkan Ganti PW'}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          disabled={user.id === currentUser()?.id}
-                          onClick={async () => {
-                            const newPw = prompt('Masukkan password baru (min 6 karakter):');
-                            if (!newPw || newPw.length < 6) return;
-                            try {
-                              const res = await userController.resetPassword(user.id, newPw);
-                              toast.showToast(res.message, 'success');
-                              refetch();
-                            } catch (err: unknown) {
-                              toast.showToast((err as Error).message, 'error');
-                            }
-                          }}
-                        >
-                          Reset Password
-                        </Button>
-                      </div>
+                      <DropdownMenu
+                        triggerAriaLabel={`Aksi untuk ${user.nama}`}
+                        trigger={
+                          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
+                            />
+                          </svg>
+                        }
+                        position="right"
+                        items={[
+                          {
+                            label: user.isActive ? 'Nonaktifkan' : 'Aktifkan',
+                            icon: '⏻',
+                            danger: user.isActive,
+                            disabled: actionLoading() === user.id || user.id === currentUser()?.id,
+                            loading: actionLoading() === user.id,
+                            onClick: () => handleToggleActive(user),
+                          },
+                          {
+                            label: user.mustChangePassword ? 'Batalkan Wajib PW' : 'Wajibkan Ganti PW',
+                            icon: '🔑',
+                            disabled: actionLoading() === user.id || user.id === currentUser()?.id,
+                            loading: actionLoading() === user.id,
+                            onClick: () => handleForcePasswordChange(user),
+                          },
+                          {
+                            separator: true,
+                          },
+                          {
+                            label: 'Reset Password',
+                            icon: '🔄',
+                            disabled: user.id === currentUser()?.id,
+                            onClick: async () => {
+                              const newPw = prompt('Masukkan password baru (min 6 karakter):');
+                              if (!newPw || newPw.length < 6) return;
+                              try {
+                                const res = await userController.resetPassword(user.id, newPw);
+                                toast.showToast(res.message, 'success');
+                                refetch();
+                              } catch (err: unknown) {
+                                toast.showToast((err as Error).message, 'error');
+                              }
+                            },
+                          },
+                          {
+                            label: 'Bersihkan Rate Limit',
+                            icon: '🧹',
+                            disabled: clearingEmail() === user.email,
+                            loading: clearingEmail() === user.email,
+                            onClick: () => handleClearRateLimit(user.email),
+                          },
+                        ]}
+                      />
                     </td>
                   </tr>
                 )}
