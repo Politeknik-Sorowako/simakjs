@@ -132,7 +132,11 @@ export default function Login() {
         setErrorMsg(e.message);
         toast.showToast(`Terlalu banyak percobaan. Coba lagi dalam ${formatCountdown(e.retryAfter)}.`, 'error');
       } else {
-        const errText = (e as Error).message || 'Gagal terhubung ke server';
+        const rawMsg = (e as Error).message;
+        const errText =
+          typeof rawMsg === 'string' && rawMsg !== '[object Object]' && rawMsg.length > 0
+            ? rawMsg
+            : 'Gagal terhubung ke server';
         setErrorMsg(errText);
         toast.showToast(errText, 'error');
       }
