@@ -312,11 +312,13 @@ export class AuthController {
     const loginCleared = loginRateLimit.delete(loginKey);
     const forgotCleared = forgotRateLimit.delete(forgotKey);
 
+    if (!loginCleared && !forgotCleared) {
+      set.status = 404;
+      return { error: 'Tidak ada rate limit aktif untuk email tersebut.' };
+    }
+
     return {
-      message:
-        loginCleared || forgotCleared
-          ? 'Rate limit berhasil dibersihkan.'
-          : 'Tidak ada rate limit untuk email tersebut.',
+      message: 'Rate limit berhasil dibersihkan.',
       loginCleared,
       forgotCleared,
     };

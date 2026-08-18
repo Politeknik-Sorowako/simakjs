@@ -167,5 +167,8 @@ export const clearRateLimitSchema = {
     403: t.Object({
       error: t.String({ default: 'Akses ditolak. Hanya Admin.' }),
     }),
+    404: t.Object({
+      error: t.String({ default: 'Tidak ada rate limit aktif untuk email tersebut.' }),
+    }),
   },
 };

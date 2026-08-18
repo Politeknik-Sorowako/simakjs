@@ -88,7 +88,7 @@ export default function Login() {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!isRegister() && retryAfter() !== null) {
+    if (retryAfter() !== null) {
       toast.showToast(`Tunggu ${formatCountdown(countdown())} sebelum mencoba lagi.`, 'error');
       return;
     }
@@ -287,7 +287,6 @@ export default function Login() {
             onClick={() => {
               setIsRegister(!isRegister());
               setErrorMsg('');
-              setRetryAfter(null);
             }}
             disabled={loading()}
             class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
