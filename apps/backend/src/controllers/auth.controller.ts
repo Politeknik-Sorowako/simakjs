@@ -40,12 +40,12 @@ export class AuthController {
       const loginRecord = loginRateLimit.get(limitKey);
       if (loginRecord) {
         if (now < loginRecord.resetTime) {
+          loginRecord.count++;
           if (loginRecord.count >= 5) {
             set.status = 429;
             const retryAfter = Math.max(1, Math.ceil((loginRecord.resetTime - now) / 1000));
             return { error: 'Terlalu banyak percobaan login. Silakan coba lagi.', retryAfter };
           }
-          loginRecord.count++;
         } else {
           loginRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
         }
@@ -119,7 +119,8 @@ export class AuthController {
         if (now < limitRecord.resetTime) {
           if (limitRecord.count >= 3) {
             set.status = 429;
-            return { error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.' };
+            const retryAfter = Math.max(1, Math.ceil((limitRecord.resetTime - now) / 1000));
+            return { error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.', retryAfter };
           }
           limitRecord.count++;
         } else {
