@@ -363,7 +363,10 @@ export default function BapPresensi() {
     setSyncLoadingPresensiId(bapPraktikumId);
     try {
       const res = await rombelPraktikumController.syncPresensiToKelas(rombelId, bapPraktikumId);
-      toast.showToast(`Presensi tersinkron ke kelas induk (${res.syncedCount} mahasiswa)`, 'success');
+      toast.showToast(
+        `Presensi & menit ketidakhadiran (kompensasi) berhasil direkap dan disinkronkan (${res.syncedCount} mahasiswa)`,
+        'success',
+      );
       refetchBap();
     } catch (e: unknown) {
       toast.showToast(e instanceof Error ? e.message : 'Gagal sinkronisasi presensi', 'error');
@@ -472,12 +475,7 @@ export default function BapPresensi() {
 
   const openEditBapPrakModal = (bapPrak: BapPraktikum) => {
     setEditBapPrakId(bapPrak.id);
-    const group = (bapPraktikumData() || []).filter((b) => b.tanggal === bapPrak.tanggal);
-    if (group.length > 1) {
-      setSelectedSesiIdsPrak(group.map((b) => b.sesiKe).sort((a, b) => a - b));
-    } else {
-      setSelectedSesiIdsPrak([bapPrak.sesiKe]);
-    }
+    setSelectedSesiIdsPrak([bapPrak.sesiKe]);
     setTanggalPrak(bapPrak.tanggal);
     setMateriPrak(bapPrak.materi);
     setTemaPrak(bapPrak.tema || '');
@@ -516,12 +514,11 @@ export default function BapPresensi() {
       };
       const editId = editBapPrakId();
       if (editId) {
-        await rombelPraktikumController.updateBapBulk({
-          bapPraktikumId: editId,
-          sesiIds: selectedSesiIdsPrak(),
+        await rombelPraktikumController.updateBap(editId, {
+          sesiKe: selectedSesiIdsPrak()[0],
           ...common,
         });
-        toast.showToast('BAP Praktikum berhasil diperbarui', 'success');
+        toast.showToast('Sesi BAP Praktikum berhasil diperbarui', 'success');
       } else {
         await rombelPraktikumController.createBap({
           rombelPraktikumId: rombelId,
@@ -587,9 +584,9 @@ export default function BapPresensi() {
       const sheet = presensiPrakSheet();
       const presensiList = Object.entries(sheet).map(([mhsIdStr, val]) => ({
         mahasiswaId: parseInt(mhsIdStr),
-        status: val.status as 'hadir' | 'izin' | 'sakit' | 'alpa' | 'telat',
-        durasiMangkir: val.durasiMangkir,
-        keterangan: val.keterangan,
+        status: val.status as 'hadir' | 'izin' | 'sakit' | 'alpa' | 'telat' | 'unknown',
+        durasiMangkir: val.status === 'telat' ? Number(val.durasiMangkir || 0) : 0,
+        keterangan: val.keterangan ? val.keterangan.trim() : null,
       }));
 
       await rombelPraktikumController.savePresensiBulk({
@@ -2223,7 +2220,7 @@ export default function BapPresensi() {
         onClose={() => setShowCreateBapPrakModal(false)}
         title={
           editBapPrakId()
-            ? `Edit Sesi BAP Praktikum — Sesi ${selectedSesiIdsPrak().join(', ')}`
+            ? `Edit Sesi BAP Praktikum — Sesi ${selectedSesiIdsPrak()[0] || ''}`
             : 'Tambah Sesi BAP Praktikum Baru'
         }
       >
@@ -2231,34 +2228,49 @@ export default function BapPresensi() {
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
-                Sesi Ke (Bisa Lebih Dari Satu)
+                {editBapPrakId() ? 'Pilih Sesi Ke' : 'Sesi Ke (Bisa Lebih Dari Satu)'}
               </label>
-              <div class="grid grid-cols-4 gap-1 max-h-32 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800">
-                <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]}>
-                  {(p) => {
-                    const isChecked = () => selectedSesiIdsPrak().includes(p);
-                    return (
-                      <label class="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-1.5 rounded-lg transition-colors">
-                        <input
-                          type="checkbox"
-                          checked={isChecked()}
-                          onChange={(e) => {
-                            let nextIds: number[];
-                            if (e.currentTarget.checked) {
-                              nextIds = [...selectedSesiIdsPrak(), p].sort((a, b) => a - b);
-                            } else {
-                              nextIds = selectedSesiIdsPrak().filter((id) => id !== p);
-                            }
-                            setSelectedSesiIdsPrak(nextIds);
-                          }}
-                          class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
-                        />
-                        <span class="font-bold text-brand-700 dark:text-brand-400">{p}</span>
-                      </label>
-                    );
-                  }}
-                </For>
-              </div>
+              <Show
+                when={!editBapPrakId()}
+                fallback={
+                  <select
+                    value={selectedSesiIdsPrak()[0] || 1}
+                    onChange={(e) => setSelectedSesiIdsPrak([Number(e.currentTarget.value)])}
+                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-3 py-2 text-sm text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]}>
+                      {(p) => <option value={p}>Sesi {p}</option>}
+                    </For>
+                  </select>
+                }
+              >
+                <div class="grid grid-cols-4 gap-1 max-h-32 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800">
+                  <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]}>
+                    {(p) => {
+                      const isChecked = () => selectedSesiIdsPrak().includes(p);
+                      return (
+                        <label class="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-1.5 rounded-lg transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={isChecked()}
+                            onChange={(e) => {
+                              let nextIds: number[];
+                              if (e.currentTarget.checked) {
+                                nextIds = [...selectedSesiIdsPrak(), p].sort((a, b) => a - b);
+                              } else {
+                                nextIds = selectedSesiIdsPrak().filter((id) => id !== p);
+                              }
+                              setSelectedSesiIdsPrak(nextIds);
+                            }}
+                            class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                          />
+                          <span class="font-bold text-brand-700 dark:text-brand-400">{p}</span>
+                        </label>
+                      );
+                    }}
+                  </For>
+                </div>
+              </Show>
             </div>
             <Input
               type="date"
