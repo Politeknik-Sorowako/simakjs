@@ -10,7 +10,11 @@ set -e
 #   ./rollback.sh backup-20240709-120000   # Rollback to specific backup
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/.deployment/deploy.config.sh"
+if [ -f "$SCRIPT_DIR/../.deployment/deploy.config.sh" ]; then
+  source "$SCRIPT_DIR/../.deployment/deploy.config.sh"
+elif [ -f "$SCRIPT_DIR/.deployment/deploy.config.sh" ]; then
+  source "$SCRIPT_DIR/.deployment/deploy.config.sh"
+fi
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -23,7 +27,7 @@ ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
 warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; }
 
-source "$SCRIPT_DIR/scripts/telegram-notify.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/telegram-notify.sh" 2>/dev/null || true
 
 list_backups() {
   echo ""

@@ -10,7 +10,11 @@
 #   ./dashboard.sh --help       # Show help
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/.deployment/deploy.config.sh"
+if [ -f "$SCRIPT_DIR/../.deployment/deploy.config.sh" ]; then
+  source "$SCRIPT_DIR/../.deployment/deploy.config.sh"
+elif [ -f "$SCRIPT_DIR/.deployment/deploy.config.sh" ]; then
+  source "$SCRIPT_DIR/.deployment/deploy.config.sh"
+fi
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

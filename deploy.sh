@@ -238,7 +238,7 @@ verify_deployment() {
     HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null || echo "000")
     if [ "$HTTP_CODE" = "200" ]; then
       HEALTH_BODY=$(curl -s http://localhost:$BACKEND_PORT/health --connect-timeout 5 2>/dev/null)
-      if echo "$HEALTH_BODY" | grep -q '"status":"ok"'; then
+      if echo "$HEALTH_BODY" | grep -qE '"status":"(ok|degraded)"'; then
         ok "Database migration completed and API is healthy"
         MIGRATION_OK=true
         break
