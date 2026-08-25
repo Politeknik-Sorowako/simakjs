@@ -1,3 +1,5 @@
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 import { and, count, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
@@ -18,9 +20,126 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { hasRole } from '../utils/role';
+import type { UserPayload } from '../utils/types';
 import { SystemParameterService } from './system-parameter.service';
 
+const SURAT_UPLOAD_DIR = 'uploads/surat-izin-sakit';
+const ALLOWED_SURAT_EXT = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp']);
+
+export function getSuratUploadDir(): string {
+  return process.env.SURAT_UPLOAD_DIR || SURAT_UPLOAD_DIR;
+}
+
 export class PresensiService {
+  static async getMahasiswaByEmail(email: string) {
+    const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.email, email)).limit(1);
+    return mhs || null;
+  }
+
+  static async uploadSuratIzin(input: {
+    presensiId: number;
+    mahasiswaId: number;
+    jenis: 'sakit' | 'izin';
+    keterangan?: string | null;
+    file: File;
+  }) {
+    const { presensiId, mahasiswaId, jenis, keterangan, file } = input;
+
+    const [row] = await db.select().from(presensi).where(eq(presensi.id, presensiId));
+    if (!row) throw new Error('Data presensi tidak ditemukan');
+    if (row.mahasiswaId !== mahasiswaId) {
+      throw new Error('Akses ditolak. Anda hanya dapat mengunggah surat untuk presensi Anda sendiri.');
+    }
+
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!ALLOWED_SURAT_EXT.has(ext)) {
+      throw new Error('Format berkas tidak didukung. Gunakan PDF, JPG, JPEG, PNG, atau WebP.');
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error('Ukuran berkas maksimal 5MB');
+    }
+
+    await mkdir(getSuratUploadDir(), { recursive: true });
+    const now = new Date();
+    const timestamp =
+      `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}` +
+      `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+    const filename = `surat_${jenis}_m${mahasiswaId}_p${presensiId}_${timestamp}.${ext}`;
+    const fullPath = join(getSuratUploadDir(), filename);
+    await Bun.write(fullPath, file);
+
+    const [updated] = await db
+      .update(presensi)
+      .set({
+        lampiranEvidens: filename,
+        keterangan: keterangan || row.keterangan,
+      })
+      .where(eq(presensi.id, presensiId))
+      .returning();
+    return updated || null;
+  }
+
+  static async getMahasiswaPresensiList(mahasiswaId: number, periodeId?: string) {
+    const conditions: SQL<unknown>[] = [eq(presensi.mahasiswaId, mahasiswaId)];
+    if (periodeId) conditions.push(eq(kelasKuliah.periodeId, periodeId));
+    const whereClause = and(...conditions);
+
+    const rows = await db
+      .select({
+        id: presensi.id,
+        bapId: presensi.bapId,
+        mahasiswaId: presensi.mahasiswaId,
+        status: presensi.status,
+        durasiMangkir: presensi.durasiMangkir,
+        keterangan: presensi.keterangan,
+        lampiranEvidens: presensi.lampiranEvidens,
+        keteranganAdmin: presensi.keteranganAdmin,
+        resolvedAt: presensi.resolvedAt,
+        resolvedByName: users.nama,
+        isVerified: ketidakhadiranMahasiswa.isVerified,
+        createdAt: presensi.createdAt,
+        bapTanggal: bap.tanggal,
+        bapPertemuan: bap.pertemuanKe,
+        bapMateri: bap.materi,
+        kelasKuliahId: kelasKuliah.id,
+        namaKelas: kelasKuliah.namaKelas,
+        periodeId: kelasKuliah.periodeId,
+        mataKuliahKode: mataKuliah.kode,
+        mataKuliahNama: mataKuliah.nama,
+        dosenNama: dosen.nama,
+      })
+      .from(presensi)
+      .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+      .innerJoin(bap, eq(presensi.bapId, bap.id))
+      .leftJoin(kelasKuliah, eq(bap.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .leftJoin(dosen, eq(bap.dosenId, dosen.id))
+      .leftJoin(users, eq(presensi.resolvedBy, users.id))
+      .leftJoin(
+        ketidakhadiranMahasiswa,
+        and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensi.id)),
+      )
+      .where(whereClause)
+      .orderBy(bap.tanggal, bap.pertemuanKe);
+
+    return rows;
+  }
+
+  static async canAccessLampiran(user: UserPayload, filename: string): Promise<boolean> {
+    if (hasRole(user, ['admin', 'super_admin', 'prodi'])) return true;
+    if (hasRole(user, ['mahasiswa'])) {
+      const mhs = await this.getMahasiswaByEmail(user.email);
+      if (!mhs) return false;
+      const rows = await db
+        .select({ id: presensi.id })
+        .from(presensi)
+        .where(and(eq(presensi.mahasiswaId, mhs.id), eq(presensi.lampiranEvidens, filename)))
+        .limit(1);
+      return rows.length > 0;
+    }
+    return false;
+  }
   static async saveBulkPresensi(
     bapId: number,
     presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number; keterangan?: string | null }>,

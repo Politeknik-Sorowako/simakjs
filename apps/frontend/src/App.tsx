@@ -71,6 +71,7 @@ import Pelanggaran from './routes/Pelanggaran';
 import Pengguna from './routes/Pengguna';
 import PeriodeAkademik from './routes/PeriodeAkademik';
 import PetaObe from './routes/PetaObe';
+import PresensiMahasiswa from './routes/PresensiMahasiswa';
 import PresensiUnknown from './routes/PresensiUnknown';
 import Profil from './routes/Profil';
 import ProfilLulusan from './routes/ProfilLulusan';
@@ -239,6 +240,14 @@ function AppContent() {
         element={
           <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi']}>
             <PresensiUnknown />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/presensi-saya"
+        element={
+          <ProtectedRoute allowedRoles={['mahasiswa', 'admin']}>
+            <PresensiMahasiswa />
           </ProtectedRoute>
         }
       />

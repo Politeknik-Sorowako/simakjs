@@ -29,6 +29,35 @@ export default function PresensiUnknown() {
   const [resolveDurasi, setResolveDurasi] = createSignal(0);
   const [isAnulir, setIsAnulir] = createSignal(false);
 
+  const [previewItem, setPreviewItem] = createSignal<PresensiUnknownItem | null>(null);
+  const [previewUrl, setPreviewUrl] = createSignal<string | null>(null);
+  const [previewLoading, setPreviewLoading] = createSignal(false);
+  const [previewFileType, setPreviewFileType] = createSignal('image/*');
+
+  const openPreview = async (item: PresensiUnknownItem) => {
+    if (!item.lampiranEvidens) return;
+    setPreviewItem(item);
+    setPreviewUrl(null);
+    setPreviewLoading(true);
+    setPreviewFileType(/\.pdf$/i.test(item.lampiranEvidens) ? 'application/pdf' : 'image/*');
+    try {
+      const url = await presensiController.getLampiranBlobUrl(item.lampiranEvidens);
+      setPreviewUrl(url);
+    } catch (e: unknown) {
+      toast.showToast(e instanceof Error ? e.message : 'Gagal memuat berkas surat', 'error');
+      setPreviewItem(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePreview = () => {
+    const url = previewUrl();
+    if (url) URL.revokeObjectURL(url);
+    setPreviewUrl(null);
+    setPreviewItem(null);
+  };
+
   const [data, { refetch }] = createResource(
     () => ({
       page: page(),
@@ -208,6 +237,7 @@ export default function PresensiUnknown() {
                   <th class="py-3 px-4">Pertemuan & Tanggal</th>
                   <th class="py-3 px-4">Waktu Pencatatan</th>
                   <th class="py-3 px-4">Materi</th>
+                  <th class="py-3 px-4 text-center">Surat Bukti</th>
                   <th class="py-3 px-4">Status Konfirmasi</th>
                   <th class="py-3 px-4 text-center">Aksi</th>
                 </tr>
@@ -252,6 +282,16 @@ export default function PresensiUnknown() {
                       <td class="py-3 px-4 text-xs max-w-xs truncate" title={item.bapPrakMateri || item.bapMateri}>
                         {tab() === 'praktikum' ? item.bapPrakMateri : item.bapMateri}
                       </td>
+                      <td class="py-3 px-4 text-center">
+                        <Show
+                          when={tab() === 'perkuliahan' && item.lampiranEvidens}
+                          fallback={<span class="text-xs text-secondary-300">-</span>}
+                        >
+                          <Button variant="secondary" size="sm" onClick={() => openPreview(item)}>
+                            Lihat Surat
+                          </Button>
+                        </Show>
+                      </td>
                       <td class="py-3 px-4">
                         {konfirmasiBadge(item)}
                         <Show when={isResolved(item)}>
@@ -274,7 +314,7 @@ export default function PresensiUnknown() {
                 </For>
                 <Show when={(data()?.data || []).length === 0}>
                   <tr>
-                    <td colspan="10" class="py-10 text-center text-secondary-400 text-sm">
+                    <td colspan="11" class="py-10 text-center text-secondary-400 text-sm">
                       Tidak ada data presensi unknown.
                     </td>
                   </tr>
@@ -434,6 +474,68 @@ export default function PresensiUnknown() {
             );
           }}
         </Show>
+      </Modal>
+
+      {/* Preview Surat Bukti Modal */}
+      <Modal
+        isOpen={!!previewItem()}
+        onClose={closePreview}
+        title={`Surat Bukti - ${previewItem()?.nama || ''}`}
+        maxWidth="xl"
+      >
+        <div class="flex flex-col gap-3">
+          <Show when={previewItem()}>
+            {(raw) => {
+              const item = () => raw();
+              return (
+                <div class="text-xs text-secondary-500 dark:text-secondary-200 flex items-center justify-between gap-2">
+                  <span>
+                    {item().mataKuliahNama || '-'} · Pertemuan {item().bapPertemuan} · {item().bapTanggal}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const url = previewUrl();
+                      if (url) {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = item().lampiranEvidens || 'surat';
+                        a.click();
+                      }
+                    }}
+                  >
+                    Download
+                  </Button>
+                </div>
+              );
+            }}
+          </Show>
+          <Show when={previewLoading()}>
+            <div class="flex items-center justify-center py-16 text-secondary-400">
+              <div class="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <span class="text-sm">Memuat berkas...</span>
+            </div>
+          </Show>
+          <Show when={previewUrl() && !previewLoading()}>
+            <Show
+              when={previewFileType() === 'application/pdf'}
+              fallback={
+                <img
+                  src={previewUrl()!}
+                  alt="Surat bukti"
+                  class="w-full max-h-[70vh] object-contain rounded-lg border border-secondary-200 dark:border-secondary-700"
+                />
+              }
+            >
+              <iframe
+                src={previewUrl()!}
+                title="Surat bukti"
+                class="w-full h-[70vh] rounded-lg border border-secondary-200 dark:border-secondary-700"
+              />
+            </Show>
+          </Show>
+        </div>
       </Modal>
     </MainLayout>
   );

@@ -53,8 +53,7 @@ bun.lockb
 *.pdf
 *.zip
 
-# Repomix outputs
-repomix-output.xml
-repomix-output.txt
-repomix-output.md
-docs/catatan pengembangan.md
+# Local-only scripts & development scratch
+apps/backend/src/scripts/seed-local-*.ts
+apps/backend/src/scripts/seed-kelas-krs.ts
+implementation_plan.md

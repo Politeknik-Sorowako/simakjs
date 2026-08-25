@@ -177,8 +177,8 @@ export const rombelPraktikumController = {
     presensiList: {
       mahasiswaId: number;
       status: string;
-      durasiMangkir?: number;
-      keterangan?: string;
+      durasiMangkir?: number | null;
+      keterangan?: string | null;
     }[];
   }): Promise<{ success: boolean }> {
     return fetchApi<{ success: boolean }>('/rombel-praktikum/presensi', {

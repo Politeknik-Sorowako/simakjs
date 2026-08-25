@@ -6,7 +6,9 @@ import {
   getByBapSchema,
   getKompensasiMahasiswaDetailSchema,
   getKompensasiStatsSchema,
+  getLampiranBerkasSchema,
   getLaporanKompensasiSchema,
+  getMahasiswaPresensiSchema,
   getRekapKehadiranMahasiswaSchema,
   getRekapKehadiranSchema,
   getUnknownPresensiSchema,
@@ -14,6 +16,7 @@ import {
   resolveUnknownPresensiSchema,
   saveBulkPresensiSchema,
   updateKompensasiBayarSchema,
+  uploadSuratIzinSchema,
 } from '../schemas/presensi.schema';
 
 export const presensiRoutes = new Elysia({ prefix: '/presensi' })
@@ -22,6 +25,9 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .get('/bap/:bapId', PresensiController.getByBap, getByBapSchema)
   .get('/unknown-list', PresensiController.getUnknownPresensi, getUnknownPresensiSchema)
   .put('/unknown/:id/resolve', PresensiController.resolveUnknown, resolveUnknownPresensiSchema)
+  .post('/upload-surat', PresensiController.uploadSuratIzin, uploadSuratIzinSchema)
+  .get('/mahasiswa/riwayat', PresensiController.getMahasiswaPresensiList, getMahasiswaPresensiSchema)
+  .get('/berkas/:filename', PresensiController.getLampiranBerkas, getLampiranBerkasSchema)
   .get('/kompensasi/stats', PresensiController.getLaporanKompensasiStats, getKompensasiStatsSchema)
   .get('/kompensasi/laporan', PresensiController.getLaporanKompensasi, getLaporanKompensasiSchema)
   .get('/rekap-kehadiran', PresensiController.getRekapKehadiran, getRekapKehadiranSchema)

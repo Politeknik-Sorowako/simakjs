@@ -1,5 +1,5 @@
 import { useSearchParams } from '@solidjs/router';
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -12,7 +12,7 @@ import { kurikulumController } from '../controllers/kurikulumController';
 import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
-import { Rps as IRps, RencanaEvaluasi, RpsTopik, rpsController } from '../controllers/rpsController';
+import { RencanaEvaluasi, RpsSource, RpsTopik, rpsController } from '../controllers/rpsController';
 import { usePagination } from '../hooks/usePagination';
 
 export default function Rps() {
@@ -68,6 +68,13 @@ export default function Rps() {
 
   // Load MK options from the selected curriculum
   const mkOptions = () => matkuls()?.kurikulumMataKuliah || [];
+
+  const selectedMkLabel = () => {
+    const mkId = selectedMk();
+    if (!mkId) return '';
+    const kmk = mkOptions().find((k) => k.mataKuliahId === mkId);
+    return kmk ? `${kmk.mataKuliah?.kode} - ${kmk.mataKuliah?.nama}` : `MK #${mkId}`;
+  };
 
   // RPS Data
   const [rps, { refetch: refetchRps }] = createResource(
@@ -136,37 +143,58 @@ export default function Rps() {
   const [deskripsi, setDeskripsi] = createSignal('');
   const [cplProdi, setCplProdi] = createSignal('');
 
-  // Copy RPS state
-  const [sourcePeriodeId, setSourcePeriodeId] = createSignal('');
-  const [sourceRps, setSourceRps] = createSignal<IRps | null>(null);
+  // Copy RPS (lintas prodi & periode) state
+  const [showCopyModal, setShowCopyModal] = createSignal(false);
+  const [sourceSearch, setSourceSearch] = createSignal('');
+  const [debouncedSourceSearch, setDebouncedSourceSearch] = createSignal('');
+  const [sourceProdiId, setSourceProdiId] = createSignal<number | undefined>(undefined);
+  const [sourcePeriode, setSourcePeriode] = createSignal('');
+  const [selectedSource, setSelectedSource] = createSignal<RpsSource | null>(null);
+  const [copyCpmk, setCopyCpmk] = createSignal(true);
+  const [copyRencanaEvaluasi, setCopyRencanaEvaluasi] = createSignal(true);
   const [copyLoading, setCopyLoading] = createSignal(false);
   const [copyError, setCopyError] = createSignal('');
+  let copySearchTimer: ReturnType<typeof setTimeout> | undefined;
 
-  const loadSourceRps = async (periodeId: string) => {
-    if (!periodeId || !selectedMk()) {
-      setSourceRps(null);
-      return;
-    }
-    try {
-      const data = await rpsController.getRps(selectedMk(), periodeId);
-      setSourceRps(data);
-    } catch {
-      setSourceRps(null);
-    }
+  const [sources, { refetch: refetchSources }] = createResource(
+    () => ({ search: debouncedSourceSearch(), prodiId: sourceProdiId(), periodeId: sourcePeriode() }),
+    ({ search, prodiId, periodeId }) =>
+      rpsController.getAvailableSources({
+        search: search || undefined,
+        prodiId,
+        periodeId: periodeId || undefined,
+      }),
+  );
+
+  const openCopyModal = () => {
+    setShowCopyModal(true);
+    setSelectedSource(null);
+    setCopyError('');
+    setCopyCpmk(true);
+    setCopyRencanaEvaluasi(true);
+    setSourceSearch('');
+    setDebouncedSourceSearch('');
+    setSourceProdiId(undefined);
+    setSourcePeriode('');
+    refetchSources();
   };
 
+  onCleanup(() => clearTimeout(copySearchTimer));
+
   const handleCopyRps = async () => {
-    if (!sourceRps() || !selectedPeriode() || !selectedMk()) return;
+    if (!selectedSource() || !selectedPeriode() || !selectedMk()) return;
     setCopyLoading(true);
     setCopyError('');
     try {
-      await rpsController.copyRps(sourceRps()!.id, selectedPeriode(), selectedMk());
+      await rpsController.copyRps(selectedSource()!.id, selectedPeriode(), selectedMk(), {
+        copyCpmk: copyCpmk(),
+        copyRencanaEvaluasi: copyRencanaEvaluasi(),
+      });
+      setShowCopyModal(false);
       refetchRps();
       refetchEvals();
-      setSourceRps(null);
-      setSourcePeriodeId('');
     } catch (e: unknown) {
-      setCopyError((e as Error).message || 'Gagal menyalin RPS');
+      setCopyError(e instanceof Error ? e.message : 'Gagal menyalin RPS');
     } finally {
       setCopyLoading(false);
     }
@@ -453,54 +481,16 @@ export default function Rps() {
 
         {/* Copy RPS Section */}
         <Show when={selectedMk() > 0 && selectedPeriode()}>
-          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
-            <details class="group">
-              <summary class="flex items-center gap-2 cursor-pointer list-none text-sm font-bold text-secondary-700 dark:text-secondary-200">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-                Copy RPS dari Periode Sebelumnya
-              </summary>
-              <div class="mt-3 flex flex-wrap items-end gap-3">
-                <div class="flex-1 min-w-[200px]">
-                  <label class="text-xs font-semibold text-secondary-500 block mb-1">Periode Sumber</label>
-                  <select
-                    class="w-full h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm"
-                    value={sourcePeriodeId()}
-                    onChange={(e) => {
-                      setSourcePeriodeId(e.currentTarget.value);
-                      loadSourceRps(e.currentTarget.value);
-                    }}
-                  >
-                    <option value="">-- Pilih Periode --</option>
-                    <For each={allPeriodes()?.filter((p) => p.id !== selectedPeriode())}>
-                      {(p) => <option value={p.id}>{p.nama}</option>}
-                    </For>
-                  </select>
-                </div>
-                <Button onClick={handleCopyRps} disabled={!sourceRps() || copyLoading()}>
-                  {copyLoading() ? 'Menyalin...' : 'Copy ke Periode Ini'}
-                </Button>
-              </div>
-              <Show when={sourceRps()}>
-                <div class="mt-2 p-2 bg-secondary-50 dark:bg-secondary-800 rounded text-xs text-secondary-600 dark:text-secondary-200">
-                  RPS ditemukan — {sourceRps()?.topik?.length || 0} topik akan disalin
-                </div>
-              </Show>
-              <Show when={!sourceRps() && sourcePeriodeId()}>
-                <div class="mt-2 p-2 bg-yellow-50 rounded text-xs text-yellow-700">
-                  Belum ada RPS untuk MK ini di periode sumber.
-                </div>
-              </Show>
-              <Show when={copyError()}>
-                <div class="mt-2 p-2 bg-red-50 rounded text-xs text-red-700">{copyError()}</div>
-              </Show>
-            </details>
+          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200">
+                Salin RPS Lintas Prodi & Periode
+              </h3>
+              <p class="text-xs text-secondary-500 dark:text-secondary-200">
+                Salin RPS dari mata kuliah lain (kode MK berbeda / prodi lain) lengkap dengan CPMK & rencana evaluasi.
+              </p>
+            </div>
+            <Button onClick={openCopyModal}>Cari Sumber & Salin</Button>
           </div>
         </Show>
 
@@ -789,6 +779,167 @@ export default function Rps() {
               <Button type="submit">Simpan</Button>
             </div>
           </form>
+        </Modal>
+
+        {/* Modal Copy RPS Lintas Prodi */}
+        <Modal
+          show={showCopyModal()}
+          onClose={() => setShowCopyModal(false)}
+          title="Salin RPS Lintas Prodi & Periode"
+          maxWidth="xl"
+        >
+          <div class="flex flex-col gap-4">
+            <div class="rounded-xl bg-secondary-50 dark:bg-secondary-800 p-3 text-xs text-secondary-600 dark:text-secondary-200">
+              Target: <strong>{selectedMkLabel()}</strong> · Periode <strong>{selectedPeriode()}</strong>
+            </div>
+
+            {/* Filter & Search */}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="flex flex-col gap-1 md:col-span-1">
+                <label class="text-xs font-semibold text-secondary-500">Cari MK Sumber (Kode/Nama)</label>
+                <Input
+                  type="text"
+                  placeholder="misal: Bahasa Inggris, K3..."
+                  value={sourceSearch()}
+                  onInput={(e) => {
+                    const q = e.currentTarget.value;
+                    setSourceSearch(q);
+                    setSelectedSource(null);
+                    clearTimeout(copySearchTimer);
+                    copySearchTimer = setTimeout(() => setDebouncedSourceSearch(q), 350);
+                  }}
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-secondary-500">Program Studi Sumber</label>
+                <select
+                  class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={sourceProdiId() || ''}
+                  onChange={(e) => {
+                    setSourceProdiId(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
+                    setSelectedSource(null);
+                  }}
+                >
+                  <option value="">Semua Prodi</option>
+                  <For each={prodis()?.data}>
+                    {(p) => (
+                      <option value={p.id}>
+                        {p.jenjang} - {p.nama}
+                      </option>
+                    )}
+                  </For>
+                </select>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-xs font-semibold text-secondary-500">Periode RPS Sumber</label>
+                <select
+                  class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={sourcePeriode()}
+                  onChange={(e) => {
+                    setSourcePeriode(e.currentTarget.value);
+                    setSelectedSource(null);
+                  }}
+                >
+                  <option value="">Semua Periode</option>
+                  <For each={allPeriodes()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                </select>
+              </div>
+            </div>
+
+            {/* Source List */}
+            <div class="border border-secondary-200 dark:border-secondary-700 rounded-xl divide-y divide-secondary-100 dark:divide-secondary-800 max-h-64 overflow-y-auto">
+              <Show when={sources.loading}>
+                <div class="flex items-center justify-center py-8 text-secondary-400">
+                  <div class="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+                  <span class="text-xs">Memuat sumber...</span>
+                </div>
+              </Show>
+              <Show when={!sources.loading && (sources()?.length || 0) === 0}>
+                <div class="py-8 text-center text-secondary-400 text-sm">
+                  Tidak ada RPS sumber dengan topik yang cocok.
+                </div>
+              </Show>
+              <For each={sources()}>
+                {(s) => (
+                  <button
+                    type="button"
+                    class={`w-full flex items-start justify-between gap-3 px-4 py-3 text-left text-sm transition-colors ${
+                      selectedSource()?.id === s.id
+                        ? 'bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-600'
+                        : 'hover:bg-secondary-50 dark:hover:bg-secondary-800/40 border-l-4 border-transparent'
+                    }`}
+                    onClick={() => setSelectedSource(s)}
+                  >
+                    <div>
+                      <div class="font-semibold text-secondary-800 dark:text-white">
+                        {s.kodeMataKuliah} - {s.namaMataKuliah}
+                      </div>
+                      <div class="text-xs text-secondary-500 dark:text-secondary-200">
+                        {s.prodiNama || '-'} · {s.periodeNama || s.periodeId} · {s.jumlahTopik} topik
+                      </div>
+                      <Show when={s.deskripsi}>
+                        <div class="text-xs text-secondary-400 line-clamp-1 mt-1">{s.deskripsi}</div>
+                      </Show>
+                    </div>
+                    <span class="text-xs text-brand-600 font-semibold shrink-0 mt-0.5">Pilih</span>
+                  </button>
+                )}
+              </For>
+            </div>
+
+            <Show when={selectedSource()}>
+              <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 p-3 text-xs text-emerald-700 dark:text-emerald-300 flex flex-col gap-1">
+                <span>
+                  <strong>Sumber terpilih:</strong> {selectedSource()?.kodeMataKuliah} -{' '}
+                  {selectedSource()?.namaMataKuliah} ({selectedSource()?.prodiNama || '-'})
+                </span>
+                <span>
+                  Akan menyalin <strong>{selectedSource()?.jumlahTopik} topik</strong> pertemuan ke target.
+                </span>
+              </div>
+            </Show>
+
+            {/* Options */}
+            <div class="flex flex-col gap-2">
+              <label class="flex items-center gap-2 text-sm font-medium text-secondary-700 dark:text-secondary-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 accent-brand-600"
+                  checked={copyRencanaEvaluasi()}
+                  onChange={(e) => setCopyRencanaEvaluasi(e.currentTarget.checked)}
+                />
+                Salin Rencana Evaluasi
+              </label>
+              <label class="flex items-center gap-2 text-sm font-medium text-secondary-700 dark:text-secondary-200 cursor-pointer">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 accent-brand-600"
+                  checked={copyCpmk()}
+                  onChange={(e) => setCopyCpmk(e.currentTarget.checked)}
+                />
+                Salin CPMK & Pemetaan Topik
+              </label>
+              <p class="text-xs text-secondary-500 dark:text-secondary-200">
+                Bila target MK belum memiliki CPMK, CPMK/Sub-CPMK sumber akan dibuat ulang dan dipetakan ke topik. Jika
+                tidak, topik tetap tersalin lengkap tanpa tautan CPMK.
+              </p>
+            </div>
+
+            <Show when={copyError()}>
+              <div class="p-3 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm">
+                {copyError()}
+              </div>
+            </Show>
+
+            <div class="flex justify-end gap-2 mt-2">
+              <Button variant="secondary" onClick={() => setShowCopyModal(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleCopyRps} disabled={!selectedSource() || copyLoading()}>
+                {copyLoading() ? 'Menyalin...' : 'Salin ke Target'}
+              </Button>
+            </div>
+          </div>
         </Modal>
       </div>
     </MainLayout>

@@ -31,6 +31,19 @@ export interface RencanaEvaluasi {
   idPddikti?: string | null;
 }
 
+export interface RpsSource {
+  id: number;
+  mataKuliahId: number;
+  kodeMataKuliah: string;
+  namaMataKuliah: string;
+  prodiNama: string | null;
+  prodiId: number | null;
+  periodeId: string;
+  periodeNama: string | null;
+  jumlahTopik: number;
+  deskripsi?: string | null;
+}
+
 export const rpsController = {
   async getRps(mataKuliahId: number, periodeId: string): Promise<Rps | null> {
     return fetchApi<Rps | null>(`/rps?mataKuliahId=${mataKuliahId}&periodeId=${periodeId}`);
@@ -98,11 +111,31 @@ export const rpsController = {
     return fetchApi<Rps>(`/rps/${sourceRpsId}`);
   },
 
-  async copyRps(sourceRpsId: number, targetPeriodeId: string, targetMataKuliahId: number): Promise<Rps> {
+  async copyRps(
+    sourceRpsId: number,
+    targetPeriodeId: string,
+    targetMataKuliahId: number,
+    options?: { copyCpmk?: boolean; copyRencanaEvaluasi?: boolean },
+  ): Promise<Rps> {
     return fetchApi<Rps>('/rps/copy', {
       method: 'POST',
-      body: JSON.stringify({ sourceRpsId, targetPeriodeId, targetMataKuliahId }),
+      body: JSON.stringify({
+        sourceRpsId,
+        targetPeriodeId,
+        targetMataKuliahId,
+        copyCpmk: options?.copyCpmk ?? true,
+        copyRencanaEvaluasi: options?.copyRencanaEvaluasi ?? true,
+      }),
     });
+  },
+
+  async getAvailableSources(params?: { search?: string; prodiId?: number; periodeId?: string }): Promise<RpsSource[]> {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.append('search', params.search);
+    if (params?.prodiId) sp.append('prodiId', String(params.prodiId));
+    if (params?.periodeId) sp.append('periodeId', params.periodeId);
+    const qs = sp.toString() ? `?${sp.toString()}` : '';
+    return fetchApi<RpsSource[]>(`/rps/available-sources${qs}`);
   },
 
   async bulkGenerate(

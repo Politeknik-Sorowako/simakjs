@@ -164,13 +164,16 @@ export const bulkGenerateRpsSchema = {
 export const copyRpsSchema = {
   detail: {
     tags: ['RPS'],
-    summary: 'Copy RPS dari Periode Lain',
-    description: 'Menyalin RPS beserta topik dari periode sebelumnya ke periode baru (Akses Admin atau Dosen).',
+    summary: 'Copy RPS Lintas Prodi & Periode',
+    description:
+      'Menyalin RPS beserta topik dari sumber ke mata kuliah/periode target. Mendukung mata kuliah berbeda (lintas prodi) dengan opsi penyalinan CPMK/Sub-CPMK dan Rencana Evaluasi.',
   },
   body: t.Object({
     sourceRpsId: t.Integer({ default: 1 }),
     targetPeriodeId: t.String({ default: '20251' }),
     targetMataKuliahId: t.Integer({ default: 1 }),
+    copyCpmk: t.Optional(t.Boolean({ default: true })),
+    copyRencanaEvaluasi: t.Optional(t.Boolean({ default: true })),
   }),
   response: {
     201: t.Object({
@@ -183,6 +186,36 @@ export const copyRpsSchema = {
     400: t.Object({
       error: t.String({ default: 'RPS sudah ada untuk mata kuliah dan periode target' }),
     }),
+  },
+};
+
+export const getRpsSourcesSchema = {
+  detail: {
+    tags: ['RPS'],
+    summary: 'Daftar Sumber RPS untuk Copy Lintas Prodi',
+    description:
+      'Mengambil daftar RPS yang sudah memiliki topik dari seluruh prodi untuk dijadikan sumber penyalinan, dilengkapi info prodi, mata kuliah, dan periode.',
+  },
+  query: t.Object({
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    periodeId: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Array(
+      t.Object({
+        id: t.Integer(),
+        mataKuliahId: t.Integer(),
+        kodeMataKuliah: t.String(),
+        namaMataKuliah: t.String(),
+        prodiNama: t.Union([t.String(), t.Null()]),
+        prodiId: t.Union([t.Integer(), t.Null()]),
+        periodeId: t.String(),
+        periodeNama: t.Union([t.String(), t.Null()]),
+        jumlahTopik: t.Integer(),
+        deskripsi: t.Union([t.String(), t.Null()]),
+      }),
+    ),
   },
 };
 
