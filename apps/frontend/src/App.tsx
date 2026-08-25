@@ -246,7 +246,7 @@ function AppContent() {
       <Route
         path="/presensi-saya"
         element={
-          <ProtectedRoute allowedRoles={['mahasiswa', 'admin']}>
+          <ProtectedRoute allowedRoles={['mahasiswa']}>
             <PresensiMahasiswa />
           </ProtectedRoute>
         }
