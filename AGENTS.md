@@ -7,7 +7,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 ## 1. Project Overview & CI/CD
 
 - **Stack**: Bun monorepo (`apps/backend`: Elysia + Drizzle ORM + Postgres, `apps/frontend`: SolidJS + Vite + Tailwind), Biome v2.5.2.
-- **CI/CD & Deployment Workflow**: Primary deployment MUST go through GitHub Actions workflows. NEVER push directly to `development` (staging) or `main` (production) branches. All changes MUST be submitted via a Pull Request (PR) targeting `development` or `main`.
+- **CI/CD & Deployment Workflow**: Primary deployment MUST go through GitHub Actions workflows. NEVER push directly to `development` (staging) or `main` (production) branches. **Staging-first rule**: ALL feature/hotfix changes MUST be submitted via a Pull Request (PR) targeting `development` first. Merging to `development` triggers the staging deploy (`deploy-staging.yml`). After staging is verified, promote to production ONLY via a separate PR `development -> main`; merging it triggers the production deploy (`deploy-production.yml`). Never open a feature/hotfix PR directly targeting `main` — `main` accepts only the `development -> main` promotion PR.
 - **NEVER delete `development` or `main` branches**: NEVER merge PRs with `--delete-branch` when the head branch is `development` or `main` (e.g. deploy-style PRs `development -> main`). These branches are the permanent source of truth for staging/production and MUST always exist on the remote. Only delete short-lived feature/hotfix branches. To merge a PR whose head is a protected branch, use `gh pr merge <N> --merge` WITHOUT `--delete-branch`.
 - **Pre-commit Checks**: Always run linting and strict type checks before committing:
   ```bash
@@ -54,7 +54,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 ## 5. Database, Git & Security
 
 - **Database**: Never alter existing migration files or execute `drizzle-kit push` in production. Generate and apply migrations via `bun run db:generate` and `bun run db:safe-migrate`. All migration SQL files MUST be idempotent to prevent deployment crashes (always use `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and safe constraint checks). **ALWAYS perform a full database backup (`pg_dump` / automated snapshot) before deploying to staging or production environments.**
-- **Git & Deployment Operations**: Follow conventional commits (`type(scope): description`). ALWAYS create a Pull Request (PR) towards `development` (for staging) or `main` (for production) before deploying. Direct pushes to `development` or `main` are strictly prohibited. Always clear sandbox tokens using `env -u GITHUB_TOKEN git ...` before any remote git operation.
+- **Git & Deployment Operations**: Follow conventional commits (`type(scope): description`). ALWAYS create a Pull Request (PR) towards `development` (staging) FIRST for features/hotfixes; promote to `main` (production) ONLY via a follow-up PR `development -> main` after staging is verified. Direct pushes to `development` or `main` are strictly prohibited. Always clear sandbox tokens using `env -u GITHUB_TOKEN git ...` before any remote git operation.
 - **Security**: Never commit `.env` or secrets. Enforce password hashing (bcrypt, cost 12), and use explicit CORS origin lists instead of wildcards.
 
 ---
@@ -64,7 +64,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 1. Provide direct answers focused on the core issue without pleasantries.
 2. Show patched diff code snippets instead of reprinting whole files. Keep explanations to 2–3 sentences.
 3. Target file inspection tools specifically to required paths.
-4. ALWAYS create a new Pull Request (PR) towards `development` (staging) or `main` (production) branch when implementing features or hotfixes. Never push directly to target deployment branches.
+4. ALWAYS create a new Pull Request (PR) towards `development` (staging) when implementing features or hotfixes. After staging verification, promote to `main` (production) ONLY via a `development -> main` promotion PR. Never push directly to target deployment branches.
 5. Ensure `bun run lint` and `bunx biome ci .` pass before committing, pushing, or opening a PR.
 
 # Agent Roles & Workflow Policy
