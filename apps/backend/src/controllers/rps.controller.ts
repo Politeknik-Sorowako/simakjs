@@ -226,12 +226,33 @@ export class RpsController {
       return { error: scopeError };
     }
     try {
-      const newRps = await RpsService.copyRps(body.sourceRpsId, body.targetPeriodeId, body.targetMataKuliahId);
+      const newRps = await RpsService.copyRps(body.sourceRpsId, body.targetPeriodeId, body.targetMataKuliahId, {
+        copyCpmk: body.copyCpmk,
+        copyRencanaEvaluasi: body.copyRencanaEvaluasi,
+      });
       set.status = 201;
       return newRps;
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getAvailableSources({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur', 'prodi', 'super_admin'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      const search = query?.search;
+      const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+      const periodeId = query?.periodeId;
+      return await RpsService.getAvailableSources({ search, prodiId, periodeId });
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memuat daftar sumber RPS' };
     }
   }
 

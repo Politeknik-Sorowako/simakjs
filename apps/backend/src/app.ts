@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
@@ -61,6 +62,9 @@ import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Direktori penyimpanan berkas surat izin/sakit (dibuat aman di awal startup).
+mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursive: true });
 
 export const app = new Elysia()
   .use(

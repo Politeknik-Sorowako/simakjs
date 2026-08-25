@@ -250,6 +250,77 @@ export const updateKompensasiBayarSchema = {
   },
 };
 
+export const uploadSuratIzinSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Upload Surat Sakit/Izin oleh Mahasiswa',
+    description:
+      'Mengunggah berkas bukti surat sakit (dokter) atau surat izin untuk presensi mahasiswa sendiri. Berkas multipart: file, presensiId, jenis (sakit|izin), keterangan (opsional).',
+  },
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Surat berhasil diunggah dan menunggu verifikasi admin' }),
+      presensiId: t.Integer(),
+      lampiranEvidens: t.Union([t.String(), t.Null()]),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  },
+};
+
+export const getMahasiswaPresensiSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Riwayat Presensi Mahasiswa (Self-Service)',
+    description:
+      'Mengambil riwayat kehadiran mahasiswa beserta status (hadir/sakit/izin/telat/alpa/unknown) dan link lampiran surat.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+    mahasiswaId: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Array(
+      t.Object({
+        id: t.Integer({ default: 1 }),
+        bapId: t.Integer({ default: 1 }),
+        mahasiswaId: t.Integer({ default: 1 }),
+        status: t.String({ default: 'unknown' }),
+        durasiMangkir: t.Integer({ default: 0 }),
+        keterangan: t.Union([t.String(), t.Null()], { default: null }),
+        lampiranEvidens: t.Union([t.String(), t.Null()], { default: null }),
+        keteranganAdmin: t.Union([t.String(), t.Null()], { default: null }),
+        resolvedAt: t.Union([t.Date(), t.Null()], { default: null }),
+        resolvedByName: t.Union([t.String(), t.Null()], { default: null }),
+        isVerified: t.Union([t.Boolean(), t.Null()], { default: null }),
+        createdAt: t.Date(),
+        bapTanggal: t.Union([t.String(), t.Null()], { default: null }),
+        bapPertemuan: t.Union([t.Integer(), t.Null()], { default: null }),
+        bapMateri: t.Union([t.String(), t.Null()], { default: null }),
+        kelasKuliahId: t.Union([t.Integer(), t.Null()], { default: null }),
+        namaKelas: t.Union([t.String(), t.Null()], { default: null }),
+        periodeId: t.Union([t.String(), t.Null()], { default: null }),
+        mataKuliahKode: t.Union([t.String(), t.Null()], { default: null }),
+        mataKuliahNama: t.Union([t.String(), t.Null()], { default: null }),
+        dosenNama: t.Union([t.String(), t.Null()], { default: null }),
+      }),
+    ),
+  },
+};
+
+export const getLampiranBerkasSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Pratinjau Berkas Surat Bukti',
+    description:
+      'Menyajikan berkas surat izin/sakit yang terautentikasi. Hanya mahasiswa pemilik dan Admin/Prodi yang dapat mengakses.',
+  },
+  params: t.Object({
+    filename: t.String(),
+  }),
+};
+
 export const getUnknownPresensiSchema = {
   detail: {
     tags: ['Presensi'],

@@ -1,5 +1,6 @@
+import { basename, join } from 'node:path';
 import { CsvImportService } from '../services/csv-import.service';
-import { PresensiService } from '../services/presensi.service';
+import { getSuratUploadDir, PresensiService } from '../services/presensi.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
 import { getBapKelasId, guardKelasScope } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
@@ -259,6 +260,125 @@ export class PresensiController {
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async uploadSuratIzin({ request, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      const mhs = await PresensiService.getMahasiswaByEmail(user.email);
+      if (!mhs) {
+        set.status = 403;
+        return { error: 'Profil mahasiswa tidak ditemukan. Hubungi admin.' };
+      }
+
+      const formData = await request.formData();
+      const presensiId = Number(formData.get('presensiId'));
+      const jenis = (formData.get('jenis') as string) || '';
+      const keterangan = (formData.get('keterangan') as string) || undefined;
+      const file = formData.get('file') as File | null;
+
+      if (!presensiId || !file) {
+        set.status = 400;
+        return { error: 'presensiId dan file wajib diisi.' };
+      }
+      if (jenis !== 'sakit' && jenis !== 'izin') {
+        set.status = 400;
+        return { error: 'Jenis surat harus sakit atau izin.' };
+      }
+
+      const updated = await PresensiService.uploadSuratIzin({
+        presensiId,
+        mahasiswaId: mhs.id,
+        jenis,
+        keterangan,
+        file,
+      });
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Data presensi tidak ditemukan.' };
+      }
+      return {
+        message: 'Surat berhasil diunggah dan menunggu verifikasi admin',
+        presensiId: updated.id,
+        lampiranEvidens: updated.lampiranEvidens,
+      };
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memproses permintaan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMahasiswaPresensiList({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      const periodeId = query?.periodeId || undefined;
+
+      if (hasRole(user, ['mahasiswa'])) {
+        const mhs = await PresensiService.getMahasiswaByEmail(user.email);
+        if (!mhs) {
+          set.status = 403;
+          return { error: 'Profil mahasiswa tidak ditemukan. Hubungi admin.' };
+        }
+        return await PresensiService.getMahasiswaPresensiList(mhs.id, periodeId);
+      }
+
+      if (!hasRole(user, ['admin', 'super_admin', 'prodi', 'dosen', 'instruktur'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
+      if (!mahasiswaId) {
+        set.status = 400;
+        return { error: 'Parameter mahasiswaId diperlukan untuk akses non-mahasiswa.' };
+      }
+      return await PresensiService.getMahasiswaPresensiList(mahasiswaId, periodeId);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memuat riwayat presensi' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getLampiranBerkas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      const raw = String(params.filename || '');
+      const filename = basename(raw);
+      if (filename !== raw || !filename.startsWith('surat_')) {
+        set.status = 404;
+        return { error: 'Berkas tidak ditemukan' };
+      }
+      const allowed = await PresensiService.canAccessLampiran(user, filename);
+      if (!allowed) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      const file = Bun.file(join(getSuratUploadDir(), filename));
+      if (!(await file.exists())) {
+        set.status = 404;
+        return { error: 'Berkas tidak ditemukan' };
+      }
+      set.headers['Content-Type'] = file.type || 'application/octet-stream';
+      set.headers['Content-Disposition'] = `inline; filename="${filename}"`;
+      return file;
+    } catch (err: unknown) {
+      set.status = 404;
+      return { error: err instanceof Error ? err.message : 'Berkas tidak ditemukan' };
     }
   }
 }

@@ -529,6 +529,17 @@ function MahasiswaWidgets() {
     return res;
   });
 
+  const [presensiSaya] = createResource(mhsId, async (id) => {
+    if (!id) return [];
+    try {
+      return await presensiController.getMahasiswaPresensi();
+    } catch {
+      return [];
+    }
+  });
+
+  const unknownCount = () => (presensiSaya() || []).filter((p) => p.status === 'unknown').length;
+
   const ipsData = () => {
     const t = transkrip();
     if (!t?.transkripList) return { labels: [], data: [] };
@@ -718,6 +729,33 @@ function MahasiswaWidgets() {
           </a>
         </div>
       </div>
+
+      {/* Perlu Bukti Surat - Shortcut ke Presensi Saya */}
+      <Show when={unknownCount() > 0}>
+        <a
+          href="/presensi-saya"
+          class="flex items-center justify-between gap-4 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-2xl p-5 shadow-sm hover:opacity-90 transition-opacity"
+        >
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold opacity-90">Presensi Butuh Bukti / Surat</h3>
+              <p class="text-2xl font-extrabold">{unknownCount()} pertemuan</p>
+              <p class="text-xs opacity-80">Unggah surat sakit/izin agar diverifikasi Admin</p>
+            </div>
+          </div>
+          <span class="px-4 py-2 text-xs font-bold bg-white/20 hover:bg-white/30 rounded-xl shrink-0">Kelola →</span>
+        </a>
+      </Show>
     </div>
   );
 }
