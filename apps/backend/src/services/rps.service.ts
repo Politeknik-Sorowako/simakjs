@@ -1,12 +1,16 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
 import {
+  cpmk,
   kurikulumMataKuliah,
   mataKuliah,
   mataKuliahBahanKajian,
+  periodeAkademik,
+  programStudi,
   rencanaEvaluasi,
   rencanaEvaluasiSubCpmk,
   rps,
   rpsTopik,
+  subCpmk,
 } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -201,11 +205,19 @@ export class RpsService {
     };
   }
 
-  static async copyRps(sourceRpsId: number, targetPeriodeId: string, targetMataKuliahId: number) {
+  static async copyRps(
+    sourceRpsId: number,
+    targetPeriodeId: string,
+    targetMataKuliahId: number,
+    options?: { copyCpmk?: boolean; copyRencanaEvaluasi?: boolean },
+  ) {
+    const copyCpmk = options?.copyCpmk ?? true;
+    const copyRencanaEvaluasi = options?.copyRencanaEvaluasi ?? true;
+
     return await db.transaction(async (tx) => {
       const source = await tx.query.rps.findFirst({
         where: eq(rps.id, sourceRpsId),
-        with: { topik: true },
+        with: { topik: { with: { cpmk: true, subCpmk: true } } },
       });
       if (!source) throw new Error('RPS sumber tidak ditemukan');
 
@@ -224,41 +236,167 @@ export class RpsService {
         })
         .returning();
 
+      // Penanganan relasi CPMK / Sub-CPMK untuk penyalinan lintas prodi (kode MK berbeda).
+      const isCrossMk = source.mataKuliahId !== targetMataKuliahId;
+      const cpmkMap = new Map<number, number>();
+      const subCpmkMap = new Map<number, number>();
+
+      if (isCrossMk && copyCpmk) {
+        const targetCpmks = await tx.select().from(cpmk).where(eq(cpmk.mataKuliahId, targetMataKuliahId));
+        if (targetCpmks.length === 0) {
+          const sourceCpmks = await tx
+            .select()
+            .from(cpmk)
+            .where(eq(cpmk.mataKuliahId, source.mataKuliahId))
+            .orderBy(cpmk.id);
+          for (const srcCpmk of sourceCpmks) {
+            const [newCpmk] = await tx
+              .insert(cpmk)
+              .values({
+                mataKuliahId: targetMataKuliahId,
+                kode: srcCpmk.kode,
+                deskripsi: srcCpmk.deskripsi,
+                bobotMk: srcCpmk.bobotMk,
+              })
+              .returning();
+            cpmkMap.set(srcCpmk.id, newCpmk.id);
+
+            const sourceSubCpmks = await tx
+              .select()
+              .from(subCpmk)
+              .where(eq(subCpmk.cpmkId, srcCpmk.id))
+              .orderBy(subCpmk.urutan, subCpmk.id);
+            for (const srcSub of sourceSubCpmks) {
+              const [newSub] = await tx
+                .insert(subCpmk)
+                .values({
+                  cpmkId: newCpmk.id,
+                  kode: srcSub.kode,
+                  deskripsi: srcSub.deskripsi,
+                  urutan: srcSub.urutan,
+                })
+                .returning();
+              subCpmkMap.set(srcSub.id, newSub.id);
+            }
+          }
+        }
+      }
+
       if (source.topik.length > 0) {
         await tx.insert(rpsTopik).values(
-          source.topik.map((t) => ({
-            rpsId: newRps.id,
-            pertemuanKe: t.pertemuanKe,
-            topik: t.topik,
-            subTopik: t.subTopik,
-            metode: t.metode,
-            cpmkId: t.cpmkId,
-            subCpmkId: t.subCpmkId,
-          })),
+          source.topik.map((t) => {
+            let cpmkId: number | null = t.cpmkId;
+            let subCpmkId: number | null = t.subCpmkId;
+            if (isCrossMk) {
+              cpmkId = (t.cpmkId && cpmkMap.get(t.cpmkId)) || null;
+              subCpmkId = (t.subCpmkId && subCpmkMap.get(t.subCpmkId)) || null;
+            }
+            return {
+              rpsId: newRps.id,
+              pertemuanKe: t.pertemuanKe,
+              topik: t.topik,
+              subTopik: t.subTopik,
+              metode: t.metode,
+              cpmkId,
+              subCpmkId,
+            };
+          }),
         );
       }
 
-      const sourceEvals = await tx.query.rencanaEvaluasi.findMany({
-        where: eq(rencanaEvaluasi.mataKuliahId, source.mataKuliahId),
-      });
-      const targetEvals = await tx.query.rencanaEvaluasi.findMany({
-        where: eq(rencanaEvaluasi.mataKuliahId, targetMataKuliahId),
-      });
-      const targetEvalNames = new Set(targetEvals.map((e) => e.namaEvaluasi));
-      const newEvals = sourceEvals.filter((e) => !targetEvalNames.has(e.namaEvaluasi));
-      if (newEvals.length > 0) {
-        await tx.insert(rencanaEvaluasi).values(
-          newEvals.map((e) => ({
-            mataKuliahId: targetMataKuliahId,
-            namaEvaluasi: e.namaEvaluasi,
-            bobotEvaluasi: e.bobotEvaluasi,
-            deskripsi: e.deskripsi,
-          })),
-        );
+      if (copyRencanaEvaluasi) {
+        const sourceEvals = await tx.query.rencanaEvaluasi.findMany({
+          where: eq(rencanaEvaluasi.mataKuliahId, source.mataKuliahId),
+        });
+        const targetEvals = await tx.query.rencanaEvaluasi.findMany({
+          where: eq(rencanaEvaluasi.mataKuliahId, targetMataKuliahId),
+        });
+        const targetEvalNames = new Set(targetEvals.map((e) => e.namaEvaluasi));
+        const newEvals = sourceEvals.filter((e) => !targetEvalNames.has(e.namaEvaluasi));
+
+        for (const e of newEvals) {
+          const [newEval] = await tx
+            .insert(rencanaEvaluasi)
+            .values({
+              mataKuliahId: targetMataKuliahId,
+              namaEvaluasi: e.namaEvaluasi,
+              bobotEvaluasi: e.bobotEvaluasi,
+              deskripsi: e.deskripsi,
+            })
+            .returning();
+
+          // Petakan link Sub-CPMK evaluasi hanya bila CPMK/Sub-CPMK baru berhasil dibuat.
+          if (isCrossMk && copyCpmk && subCpmkMap.size > 0) {
+            const links = await tx
+              .select()
+              .from(rencanaEvaluasiSubCpmk)
+              .where(eq(rencanaEvaluasiSubCpmk.rencanaEvaluasiId, e.id));
+            const newLinks = links
+              .map((l) => ({
+                rencanaEvaluasiId: newEval.id,
+                subCpmkId: subCpmkMap.get(l.subCpmkId),
+                bobot: l.bobot,
+              }))
+              .filter(
+                (l): l is { rencanaEvaluasiId: number; subCpmkId: number; bobot: string | null } => l.subCpmkId != null,
+              );
+            if (newLinks.length > 0) {
+              await tx.insert(rencanaEvaluasiSubCpmk).values(newLinks);
+            }
+          }
+        }
       }
 
       return newRps;
     });
+  }
+
+  static async getAvailableSources(filters: { search?: string; prodiId?: number; periodeId?: string }) {
+    const conditions: SQL<unknown>[] = [sql`EXISTS (SELECT 1 FROM rps_topik rt WHERE rt.rps_id = rps.id)`];
+    if (filters.search) {
+      const orCondition = or(
+        ilike(mataKuliah.kode, `%${filters.search}%`),
+        ilike(mataKuliah.nama, `%${filters.search}%`),
+      );
+      if (orCondition) conditions.push(orCondition);
+    }
+    if (filters.prodiId) conditions.push(eq(mataKuliah.programStudiId, filters.prodiId));
+    if (filters.periodeId) conditions.push(eq(rps.periodeId, filters.periodeId));
+
+    const whereClause = and(...conditions);
+    const rows = await db
+      .select({
+        id: rps.id,
+        mataKuliahId: rps.mataKuliahId,
+        kodeMataKuliah: mataKuliah.kode,
+        namaMataKuliah: mataKuliah.nama,
+        prodiNama: programStudi.nama,
+        prodiId: mataKuliah.programStudiId,
+        periodeId: rps.periodeId,
+        periodeNama: periodeAkademik.nama,
+        jumlahTopik: sql<number>`COUNT(${rpsTopik.id})`,
+        deskripsi: rps.deskripsi,
+      })
+      .from(rps)
+      .innerJoin(mataKuliah, eq(rps.mataKuliahId, mataKuliah.id))
+      .leftJoin(programStudi, eq(mataKuliah.programStudiId, programStudi.id))
+      .innerJoin(periodeAkademik, eq(rps.periodeId, periodeAkademik.id))
+      .leftJoin(rpsTopik, eq(rpsTopik.rpsId, rps.id))
+      .where(whereClause)
+      .groupBy(
+        rps.id,
+        rps.mataKuliahId,
+        rps.periodeId,
+        rps.deskripsi,
+        mataKuliah.kode,
+        mataKuliah.nama,
+        mataKuliah.programStudiId,
+        programStudi.nama,
+        periodeAkademik.nama,
+      )
+      .orderBy(mataKuliah.nama, rps.periodeId);
+
+    return rows.map((r) => ({ ...r, jumlahTopik: Number(r.jumlahTopik) }));
   }
 
   static async getEvaluasiSubCpmk(evaluasiId: number) {

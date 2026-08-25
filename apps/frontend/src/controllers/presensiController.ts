@@ -1,4 +1,4 @@
-import { fetchApi } from '../utils/api';
+import { API_URL, fetchApi } from '../utils/api';
 import { PaginatedResponse } from './prodiController';
 
 export interface CPMK {
@@ -184,6 +184,30 @@ export interface PresensiUnknownItem {
   bapTanggal: string;
   bapPertemuan: number;
   bapMateri: string;
+  kelasKuliahId?: number | null;
+  namaKelas?: string | null;
+  periodeId?: string | null;
+  mataKuliahKode?: string | null;
+  mataKuliahNama?: string | null;
+  dosenNama?: string | null;
+}
+
+export interface PresensiMahasiswaRiwayatItem {
+  id: number;
+  bapId: number;
+  mahasiswaId: number;
+  status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'unknown';
+  durasiMangkir: number;
+  keterangan?: string | null;
+  lampiranEvidens?: string | null;
+  keteranganAdmin?: string | null;
+  resolvedAt?: string | null;
+  resolvedByName?: string | null;
+  isVerified?: boolean | null;
+  createdAt?: string | null;
+  bapTanggal?: string | null;
+  bapPertemuan?: number | null;
+  bapMateri?: string | null;
   kelasKuliahId?: number | null;
   namaKelas?: string | null;
   periodeId?: string | null;
@@ -416,5 +440,42 @@ export const presensiController = {
 
   async getMonitoringRpsDetail(kelasKuliahId: number): Promise<MonitoringRpsDetailResponse> {
     return fetchApi<MonitoringRpsDetailResponse>(`/bap/monitoring-rps/kelas/${kelasKuliahId}`);
+  },
+
+  // Self-service: riwayat presensi mahasiswa & upload surat izin/sakit
+  async getMahasiswaPresensi(periodeId?: string): Promise<PresensiMahasiswaRiwayatItem[]> {
+    const params = new URLSearchParams();
+    if (periodeId) params.append('periodeId', periodeId);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<PresensiMahasiswaRiwayatItem[]>(`/presensi/mahasiswa/riwayat${qs}`);
+  },
+
+  async uploadSuratIzin(data: {
+    presensiId: number;
+    jenis: 'sakit' | 'izin';
+    keterangan?: string;
+    file: File;
+  }): Promise<{ message: string; presensiId: number; lampiranEvidens: string | null }> {
+    const formData = new FormData();
+    formData.append('presensiId', String(data.presensiId));
+    formData.append('jenis', data.jenis);
+    if (data.keterangan) formData.append('keterangan', data.keterangan);
+    formData.append('file', data.file);
+    return fetchApi<{ message: string; presensiId: number; lampiranEvidens: string | null }>('/presensi/upload-surat', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async getLampiranBlobUrl(filename: string): Promise<string> {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/presensi/berkas/${encodeURIComponent(filename)}`, {
+      credentials: 'include' as const,
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!res.ok) {
+      throw new Error(res.status === 403 ? 'Akses ditolak untuk berkas ini.' : 'Gagal memuat berkas surat.');
+    }
+    return URL.createObjectURL(await res.blob());
   },
 };

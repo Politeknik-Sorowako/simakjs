@@ -56,3 +56,4 @@ bun.lockb
 # Local-only scripts & development scratch
 apps/backend/src/scripts/seed-local-*.ts
 apps/backend/src/scripts/seed-kelas-krs.ts
+implementation_plan.md

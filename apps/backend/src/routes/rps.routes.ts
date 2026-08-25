@@ -14,6 +14,7 @@ import {
   getEvaluasiSubCpmkSchema,
   getRencanaEvaluasiSchema,
   getRpsSchema,
+  getRpsSourcesSchema,
   updateRencanaEvaluasiSchema,
   updateRpsSchema,
   updateTopikSchema,
@@ -22,6 +23,7 @@ import {
 export const rpsRoutes = new Elysia()
   .use(authMiddleware)
   .get('/rps', RpsController.getRps, getRpsSchema)
+  .get('/rps/available-sources', RpsController.getAvailableSources, getRpsSourcesSchema)
   .post('/rps', RpsController.createRps, createRpsSchema)
   .post('/rps/bulk-generate', RpsController.bulkGenerate, bulkGenerateRpsSchema)
   .post('/rps/copy', RpsController.copyRps, copyRpsSchema)
