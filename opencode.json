@@ -1,0 +1,10 @@
+{
+  "instructions": [
+    "@AGENTS.md",
+    "@CODEBASE_CONTEXT.md"
+  ],
+  "model": {
+    "planner": "opencode/deepseek-v4-pro",
+    "builder": "opencode/deepseek-v4-flash"
+  }
+}
