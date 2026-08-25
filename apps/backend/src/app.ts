@@ -198,9 +198,9 @@ export const app = new Elysia()
     const memPercent = (memUsage.heapUsed / memUsage.heapTotal) * 100;
     checks.memory = memPercent < 98 ? 'ok' : 'warning';
 
-    const allOk = Object.values(checks).every((c) => c === 'ok');
+    const isDbError = checks.database === 'error';
     return {
-      status: allOk ? 'ok' : 'degraded',
+      status: isDbError ? 'error' : 'ok',
       timestamp: new Date().toISOString(),
       checks,
     };
