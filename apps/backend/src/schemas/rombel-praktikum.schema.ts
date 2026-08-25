@@ -52,8 +52,8 @@ export const savePresensiPraktikumBody = t.Object({
         t.Literal('telat'),
         t.Literal('unknown'),
       ]),
-      durasiMangkir: t.Optional(t.Integer()),
-      keterangan: t.Optional(t.String()),
+      durasiMangkir: t.Optional(t.Nullable(t.Integer())),
+      keterangan: t.Optional(t.Nullable(t.String())),
     }),
   ),
 });

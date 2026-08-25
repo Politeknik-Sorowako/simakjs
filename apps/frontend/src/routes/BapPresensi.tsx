@@ -584,9 +584,9 @@ export default function BapPresensi() {
       const sheet = presensiPrakSheet();
       const presensiList = Object.entries(sheet).map(([mhsIdStr, val]) => ({
         mahasiswaId: parseInt(mhsIdStr),
-        status: val.status as 'hadir' | 'izin' | 'sakit' | 'alpa' | 'telat',
-        durasiMangkir: val.durasiMangkir,
-        keterangan: val.keterangan,
+        status: val.status as 'hadir' | 'izin' | 'sakit' | 'alpa' | 'telat' | 'unknown',
+        durasiMangkir: val.status === 'telat' ? Number(val.durasiMangkir || 0) : 0,
+        keterangan: val.keterangan ? val.keterangan.trim() : null,
       }));
 
       await rombelPraktikumController.savePresensiBulk({
