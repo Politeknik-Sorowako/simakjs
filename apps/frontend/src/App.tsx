@@ -197,7 +197,7 @@ function AppContent() {
       <Route
         path="/kompensasi-manual"
         element={
-          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'instruktur']}>
+          <ProtectedRoute allowedRoles={['admin', 'super_admin', 'instruktur', 'dosen']}>
             <KompensasiManual />
           </ProtectedRoute>
         }
