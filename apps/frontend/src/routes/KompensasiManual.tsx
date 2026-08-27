@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, type JSX, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -17,6 +17,7 @@ import {
   kompensasiManualController,
 } from '../controllers/kompensasiManualController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
+import { type ExportColumn, exportToExcel } from '../utils/export';
 import { fmtWaktu } from '../utils/format';
 
 const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([value, label]) => ({
@@ -32,7 +33,8 @@ export default function KompensasiManual() {
   const user = () => auth.user();
 
   const isAdminRole = () => ['admin', 'super_admin'].includes(user()?.role || '');
-  const tableColumnCount = () => (isAdminRole() ? 9 : 8);
+  const isManagerRole = () => ['admin', 'super_admin', 'dosen', 'prodi'].includes(user()?.role || '');
+  const tableColumnCount = () => (isManagerRole() ? 1 : 0) + 8 + (isAdminRole() ? 1 : 0);
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Filters state
@@ -78,6 +80,150 @@ export default function KompensasiManual() {
     (KompensasiManualRecord & { mahasiswaNama?: string }) | null
   >(null);
   const [isDeleting, setIsDeleting] = createSignal(false);
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = createSignal<Set<number>>(new Set());
+  const [showBulkJenisModal, setShowBulkJenisModal] = createSignal(false);
+  const [bulkJenis, setBulkJenis] = createSignal('');
+  const [showBulkDurasiModal, setShowBulkDurasiModal] = createSignal(false);
+  const [bulkDurasi, setBulkDurasi] = createSignal('');
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = createSignal(false);
+  const [isBulkProcessing, setIsBulkProcessing] = createSignal(false);
+  const [isExporting, setIsExporting] = createSignal(false);
+
+  const clearSelection = () => setSelectedIds(new Set<number>());
+
+  const toggleRowSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAllPage = () => {
+    const rows = kompensasiList()?.data || [];
+    const pageIds = rows.map((r) => r.id);
+    const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds().has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const isAllPageSelected = () => {
+    const rows = kompensasiList()?.data || [];
+    return rows.length > 0 && rows.every((r) => selectedIds().has(r.id));
+  };
+
+  const isRowSelected = (id: number) => selectedIds().has(id);
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds()];
+    if (ids.length === 0) return;
+    setIsBulkProcessing(true);
+    try {
+      const res = await kompensasiManualController.bulkDelete(ids);
+      toast.showToast(`${res.deleted} data kompensasi berhasil dihapus`, 'success');
+      setShowBulkDeleteModal(false);
+      clearSelection();
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal menghapus data massal', 'error');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkJenisChange = async () => {
+    const ids = [...selectedIds()];
+    if (ids.length === 0 || !bulkJenis()) {
+      toast.showToast('Silakan pilih jenis kompensasi terlebih dahulu', 'error');
+      return;
+    }
+    setIsBulkProcessing(true);
+    try {
+      const res = await kompensasiManualController.bulkUpdate(ids, { jenisKompen: bulkJenis() as JenisKompen });
+      toast.showToast(`${res.updated} data kompensasi berhasil diperbarui`, 'success');
+      setShowBulkJenisModal(false);
+      setBulkJenis('');
+      clearSelection();
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal mengubah jenis massal', 'error');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkDurasiChange = async () => {
+    const ids = [...selectedIds()];
+    const dur = parseInt(bulkDurasi());
+    if (ids.length === 0 || isNaN(dur) || dur <= 0) {
+      toast.showToast('Durasi menit harus berupa angka positif', 'error');
+      return;
+    }
+    setIsBulkProcessing(true);
+    try {
+      const res = await kompensasiManualController.bulkUpdate(ids, { durasiMenit: dur });
+      toast.showToast(`${res.updated} data kompensasi berhasil diperbarui`, 'success');
+      setShowBulkDurasiModal(false);
+      setBulkDurasi('');
+      clearSelection();
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal mengubah durasi massal', 'error');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const res = await kompensasiManualController.getAll({
+        search: filterSearch() || undefined,
+        tanggal: filterTanggal() || undefined,
+        jenisKompen: filterJenis() || undefined,
+        sortBy: sortBy() || undefined,
+        sortOrder: sortBy() ? sortOrder() : undefined,
+        page: 1,
+        limit: 99999,
+      });
+      const cols: ExportColumn[] = [
+        { header: 'NIM', accessor: 'mahasiswaNim' },
+        { header: 'Nama Mahasiswa', accessor: 'mahasiswaNama' },
+        { header: 'Tanggal', accessor: 'tanggal' },
+        {
+          header: 'Jenis Kompensasi',
+          accessor: (r) => JENIS_KOMPEN_LABEL[(r as { jenisKompen: JenisKompen }).jenisKompen] || '-',
+        },
+        { header: 'Durasi (menit)', accessor: 'durasiMenit' },
+        { header: 'Keterangan', accessor: 'keterangan' },
+        { header: 'Waktu Pencatatan', accessor: (r) => fmtWaktu((r as { createdAt?: string }).createdAt) },
+      ];
+      const n = new Date();
+      exportToExcel(
+        res.data,
+        cols,
+        `Kompensasi_Manual_${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`,
+      );
+      toast.showToast('Data kompensasi manual berhasil diunduh (.xlsx)', 'success');
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal mengunduh excel', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Resources
   const [allMhs, setAllMhs] = createSignal<Mahasiswa[]>([]);
@@ -146,7 +292,7 @@ export default function KompensasiManual() {
 
   const handleJenisChange = (value: string) => {
     setJenisKompen(value);
-    if (JENIS_FULL_DAY.includes(value as JenisKompen)) {
+    if (JENIS_FULL_DAY.includes(value as JenisKompen) && durasiMenit() <= 0) {
       setDurasiMenit(480);
     }
   };
@@ -315,6 +461,9 @@ export default function KompensasiManual() {
               <Button onClick={() => setShowImportModal(true)} variant="secondary">
                 Impor CSV
               </Button>
+              <Button onClick={handleExportExcel} disabled={isExporting()} variant="success">
+                {isExporting() ? 'Mengunduh...' : 'Ekspor Excel (.xlsx)'}
+              </Button>
               <Button onClick={openCreateModal} variant="primary">
                 + Tambah Kompensasi
               </Button>
@@ -373,56 +522,81 @@ export default function KompensasiManual() {
           </Show>
         </div>
 
+        {/* Bulk Action Bar */}
+        <Show when={selectedIds().size > 0}>
+          <div class="bg-primary-50 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-900/60 rounded-2xl px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <span class="text-xs font-bold text-primary-800 dark:text-primary-300">
+              {selectedIds().size} data terpilih
+            </span>
+            <div class="flex flex-wrap items-center gap-2">
+              <Button onClick={() => setShowBulkJenisModal(true)} variant="secondary" class="text-xs py-1.5 px-3">
+                Ubah Jenis Massal
+              </Button>
+              <Button onClick={() => setShowBulkDurasiModal(true)} variant="secondary" class="text-xs py-1.5 px-3">
+                Ubah Durasi Massal
+              </Button>
+              <Button onClick={() => setShowBulkDeleteModal(true)} variant="danger" class="text-xs py-1.5 px-3">
+                Hapus Massal
+              </Button>
+              <Button onClick={clearSelection} variant="ghost" class="text-xs py-1.5 px-3">
+                Batal
+              </Button>
+            </div>
+          </div>
+        </Show>
+
         {/* Data Table */}
         <Table
           headers={
-            isAdminRole()
-              ? [
-                  'No',
-                  <SortableHeader field="mahasiswaNim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    NIM
-                  </SortableHeader>,
-                  <SortableHeader field="mahasiswaNama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Nama Mahasiswa
-                  </SortableHeader>,
-                  <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Tanggal
-                  </SortableHeader>,
-                  <SortableHeader field="jenisKompen" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Jenis
-                  </SortableHeader>,
-                  <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Durasi
-                  </SortableHeader>,
-                  'Waktu Pencatatan',
-                  'Keterangan',
-                  'Aksi',
-                ]
-              : [
-                  'No',
-                  <SortableHeader field="mahasiswaNim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    NIM
-                  </SortableHeader>,
-                  <SortableHeader field="mahasiswaNama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Nama Mahasiswa
-                  </SortableHeader>,
-                  <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Tanggal
-                  </SortableHeader>,
-                  <SortableHeader field="jenisKompen" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Jenis
-                  </SortableHeader>,
-                  <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                    Durasi
-                  </SortableHeader>,
-                  'Waktu Pencatatan',
-                  'Keterangan',
-                ]
+            [
+              ...(isManagerRole()
+                ? [
+                    <input
+                      type="checkbox"
+                      checked={isAllPageSelected()}
+                      onChange={() => toggleSelectAllPage()}
+                      title="Pilih semua baris di halaman ini"
+                      class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                    />,
+                  ]
+                : []),
+              'No',
+              <SortableHeader field="mahasiswaNim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                NIM
+              </SortableHeader>,
+              <SortableHeader field="mahasiswaNama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama Mahasiswa
+              </SortableHeader>,
+              <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Tanggal
+              </SortableHeader>,
+              <SortableHeader field="jenisKompen" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Jenis
+              </SortableHeader>,
+              <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Durasi
+              </SortableHeader>,
+              <SortableHeader field="createdAt" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Waktu Pencatatan
+              </SortableHeader>,
+              'Keterangan',
+              ...(isAdminRole() ? ['Aksi'] : []),
+            ] as (string | JSX.Element)[]
           }
         >
           <For each={kompensasiList()?.data || []}>
             {(rec, idx) => (
               <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40 transition-colors">
+                <Show when={isManagerRole()}>
+                  <td class="py-3 px-4">
+                    <input
+                      type="checkbox"
+                      checked={isRowSelected(rec.id)}
+                      onChange={() => toggleRowSelect(rec.id)}
+                      class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
+                </Show>
                 <td class="py-3 px-4 font-mono text-secondary-500">
                   {((kompensasiList()?.meta?.page || 1) - 1) * 20 + idx() + 1}
                 </td>
@@ -626,11 +800,93 @@ export default function KompensasiManual() {
           templateHeaders={['nim', 'tanggal', 'jenis_kompen', 'durasi_menit', 'keterangan']}
           customTemplateRows={[
             ['nim', 'tanggal', 'jenis_kompen', 'durasi_menit', 'keterangan'],
-            ['202301001', '2026-06-27', 'terlambat', '30', 'Terlambat masuk praktikum'],
+            ['202301001', '2026-06-27', 'T', '30', 'Terlambat masuk praktikum'],
             ['202301002', '2026-06-27', 'rusak', '60', 'Kerusakan alat laboratorium'],
           ]}
+          description="Jenis kompensasi mendukung kode singkatan A (Alpa), S (Sakit), I (Izin), R (Rusak), dan T/Telat (Terlambat), atau nama lengkapnya. Durasi menit hanya wajib untuk Terlambat/Rusak; untuk Sakit/Izin/Alpa durasi kosong akan dihitung 480 menit."
           onSuccess={refetch}
         />
+
+        {/* Bulk Delete Confirmation Modal */}
+        <Modal
+          isOpen={showBulkDeleteModal()}
+          onClose={() => setShowBulkDeleteModal(false)}
+          title="Konfirmasi Hapus Massal"
+        >
+          <div class="flex flex-col gap-4">
+            <p class="text-xs text-secondary-600 dark:text-secondary-300">
+              Apakah Anda yakin ingin menghapus{' '}
+              <strong class="text-secondary-900 dark:text-white">{selectedIds().size} data kompensasi</strong> yang
+              terpilih? Data akan dihapus beserta sinkronisasi di tabel ketidakhadiran. Tindakan ini tidak dapat
+              dibatalkan.
+            </p>
+            <div class="flex justify-end gap-2 mt-2">
+              <Button type="button" onClick={() => setShowBulkDeleteModal(false)} variant="secondary">
+                Batal
+              </Button>
+              <Button onClick={handleBulkDelete} variant="danger" disabled={isBulkProcessing()}>
+                {isBulkProcessing() ? 'Menghapus...' : 'Ya, Hapus Data Terpilih'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Bulk Update Jenis Modal */}
+        <Modal
+          isOpen={showBulkJenisModal()}
+          onClose={() => setShowBulkJenisModal(false)}
+          title="Ubah Jenis Kompensasi Massal"
+        >
+          <div class="flex flex-col gap-4">
+            <p class="text-xs text-secondary-600 dark:text-secondary-300">
+              Ubah jenis kompensasi untuk{' '}
+              <strong class="text-secondary-900 dark:text-white">{selectedIds().size}</strong> data terpilih menjadi:
+            </p>
+            <Input
+              type="select"
+              isSelect
+              label="Jenis Kompensasi"
+              selectOptions={[{ value: '', label: '-- Pilih Jenis --' }, ...JENIS_OPTIONS]}
+              value={bulkJenis()}
+              onChange={(e: Event) => setBulkJenis((e.currentTarget as HTMLSelectElement).value)}
+            />
+            <div class="flex justify-end gap-2 mt-2">
+              <Button type="button" onClick={() => setShowBulkJenisModal(false)} variant="secondary">
+                Batal
+              </Button>
+              <Button onClick={handleBulkJenisChange} variant="primary" disabled={isBulkProcessing()}>
+                {isBulkProcessing() ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Bulk Update Durasi Modal */}
+        <Modal isOpen={showBulkDurasiModal()} onClose={() => setShowBulkDurasiModal(false)} title="Ubah Durasi Massal">
+          <div class="flex flex-col gap-4">
+            <p class="text-xs text-secondary-600 dark:text-secondary-300">
+              Ubah durasi (menit) untuk <strong class="text-secondary-900 dark:text-white">{selectedIds().size}</strong>{' '}
+              data terpilih:
+            </p>
+            <Input
+              type="number"
+              min={1}
+              max={480}
+              label="Durasi (menit)"
+              placeholder="Contoh: 60"
+              value={bulkDurasi()}
+              onInput={(e: Event) => setBulkDurasi((e.currentTarget as HTMLInputElement).value)}
+            />
+            <div class="flex justify-end gap-2 mt-2">
+              <Button type="button" onClick={() => setShowBulkDurasiModal(false)} variant="secondary">
+                Batal
+              </Button>
+              <Button onClick={handleBulkDurasiChange} variant="primary" disabled={isBulkProcessing()}>
+                {isBulkProcessing() ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </MainLayout>
   );

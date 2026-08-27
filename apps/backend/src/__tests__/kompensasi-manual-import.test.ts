@@ -124,7 +124,7 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
     expect(body.data[0].totalKompensasi).toBe(300);
   });
 
-  it('tidak boleh menghasilkan baris duplikat di ketidakhadiran_mahasiswa saat import berulang', async () => {
+  it('mode skip melewati baris dengan data key (NIM+Tgl+Jenis) yang sudah ada', async () => {
     const csv = 'nim,tanggal,jenis_kompen,durasi_menit,keterangan\n20239999,2026-08-20,rusak,40,alat rusak\n';
     await app.handle(
       new Request('http://localhost/kompensasi-manual/import', {
@@ -133,9 +133,9 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
         body: kompensasiFormData(csv),
       }),
     );
-    // Import baris berbeda di tanggal/jenis yang sama untuk memicu onConflict update path.
+    // Import ulang data key yang sama dengan mode skip → baris dilewati.
     const csv2 = 'nim,tanggal,jenis_kompen,durasi_menit,keterangan\n20239999,2026-08-20,rusak,50,alat rusak kedua\n';
-    await app.handle(
+    const res = await app.handle(
       new Request('http://localhost/kompensasi-manual/import', {
         method: 'POST',
         headers: { Authorization: `Bearer ${adminToken}` },
@@ -143,9 +143,52 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
       }),
     );
 
+    expect(res.status).toBe(200);
+    const result = await res.json();
+    expect(result.successCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+
+    // Data tidak berubah & tetap satu baris di ketidakhadiran_mahasiswa.
     const synced = await db.select().from(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'));
-    // Dua baris kompensasi_manual terpisah → dua baris sinkron terpisah (bukan kolaps).
-    expect(synced).toHaveLength(2);
-    expect(new Set(synced.map((s) => s.sumberId)).size).toBe(2);
+    expect(synced).toHaveLength(1);
+    expect(synced[0].durasiMenit).toBe(40);
+  });
+
+  it('mendukung kode singkatan A/S/I/R/T dan durasi kustom pada impor', async () => {
+    const csv =
+      'nim,tanggal,jenis_kompen,durasi_menit,keterangan\n' +
+      '20239999,2026-08-21,A,,alpa tanpa durasi\n' +
+      '20239999,2026-08-22,S,240,sakit durasi kustom\n' +
+      '20239999,2026-08-23,I,,izin tanpa durasi\n' +
+      '20239999,2026-08-24,R,45,alat rusak\n' +
+      '20239999,2026-08-25,T,30,terlambat\n';
+
+    const res = await app.handle(
+      new Request('http://localhost/kompensasi-manual/import', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+        body: kompensasiFormData(csv),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const result = await res.json();
+    expect(result.successCount).toBe(5);
+    expect(result.errors).toHaveLength(0);
+
+    const synced = await db.select().from(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'));
+    expect(synced).toHaveLength(5);
+
+    const byStatus = new Map(synced.map((s) => [s.status, s.durasiMenit]));
+    // A (alpa) tanpa durasi → default full-day 480.
+    expect(byStatus.get('ALPA')).toBe(480);
+    // S (sakit) dengan durasi kustom 240 → dipakai (bukan dipaksa 480).
+    expect(byStatus.get('SAKIT')).toBe(240);
+    // I (izin) tanpa durasi → default full-day 480.
+    expect(byStatus.get('IZIN')).toBe(480);
+    // R (rusak) durasi kustom.
+    expect(byStatus.get('RUSAK')).toBe(45);
+    // T (terlambat) durasi kustom.
+    expect(byStatus.get('TERLAMBAT')).toBe(30);
   });
 });

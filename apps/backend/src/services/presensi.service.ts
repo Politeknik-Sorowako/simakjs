@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { and, count, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   dosen,
@@ -445,7 +445,8 @@ export class PresensiService {
           ne(ketidakhadiranMahasiswa.status, 'UNKNOWN'),
           eq(ketidakhadiranMahasiswa.isVerified, true),
         ),
-      );
+      )
+      .orderBy(desc(ketidakhadiranMahasiswa.tanggal), desc(ketidakhadiranMahasiswa.id));
 
     const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
     const pengaliIzinSakit = await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
@@ -496,7 +497,11 @@ export class PresensiService {
 
     const totalKompensasi = historyKompensasi.reduce((sum, item) => sum + item.poinKompensasi, 0);
 
-    const payments = await db.select().from(kompensasiBayar).where(eq(kompensasiBayar.mahasiswaId, mahasiswaId));
+    const payments = await db
+      .select()
+      .from(kompensasiBayar)
+      .where(eq(kompensasiBayar.mahasiswaId, mahasiswaId))
+      .orderBy(desc(kompensasiBayar.tanggal), desc(kompensasiBayar.id));
 
     const totalDibayar = payments.reduce((sum, p) => sum + p.jumlahMenit, 0);
     const sisaKompensasi = Math.max(0, totalKompensasi - totalDibayar);

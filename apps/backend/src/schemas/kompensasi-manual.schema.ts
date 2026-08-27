@@ -89,6 +89,45 @@ export const deleteKompensasiManualSchema = {
   },
 };
 
+export const bulkDeleteKompensasiManualSchema = {
+  detail: {
+    tags: ['Kompensasi Manual'],
+    summary: 'Hapus Massal Kompensasi Manual',
+    description: 'Menghapus beberapa catatan kompensasi manual sekaligus beserta sinkronisasi tabel ketidakhadiran.',
+  },
+  body: t.Object({ ids: t.Array(t.Integer()) }),
+  response: {
+    200: t.Object({
+      success: t.Boolean(),
+      deleted: t.Integer(),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
+export const bulkUpdateKompensasiManualSchema = {
+  detail: {
+    tags: ['Kompensasi Manual'],
+    summary: 'Ubah Massal Kompensasi Manual',
+    description:
+      'Memperbarui jenis kompensasi dan/atau durasi menit pada beberapa catatan sekaligus dengan validasi batas harian.',
+  },
+  body: t.Object({
+    ids: t.Array(t.Integer()),
+    jenisKompen: t.Optional(jenisKompenEnum),
+    durasiMenit: t.Optional(t.Integer({ minimum: 1 })),
+  }),
+  response: {
+    200: t.Object({
+      success: t.Boolean(),
+      updated: t.Integer(),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
 export const getRiwayatKompensasiManualSchema = {
   detail: {
     tags: ['Kompensasi Manual'],
@@ -219,11 +258,12 @@ export const importKompensasiManualSchema = {
     tags: ['Kompensasi Manual'],
     summary: 'Impor Data Kompensasi Mahasiswa via CSV',
     description:
-      'Mengimpor data kompensasi manual melalui file CSV. Kolom: nim, tanggal, jenis_kompen (sakit/izin/alpa/terlambat/rusak), durasi_menit, keterangan.',
+      'Mengimpor data kompensasi manual melalui file CSV. Kolom: nim, tanggal, jenis_kompen (alpa/sakit/izin/rusak/terlambat atau kode A/S/I/R/T), durasi_menit, keterangan.',
   },
   response: {
     200: t.Object({
       successCount: t.Integer(),
+      skippedCount: t.Integer(),
       errors: t.Array(t.Object({ line: t.Integer(), error: t.String() })),
     }),
     400: t.Object({ error: t.String() }),
