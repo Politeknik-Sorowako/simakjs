@@ -99,6 +99,11 @@ export class FeedbackController {
         return { error: 'Akses ditolak. Hanya pengirim atau admin yang dapat mengedit masukan.' };
       }
 
+      if (!body.kategori && !body.judul && !body.pesan && body.rating === undefined) {
+        set.status = 400;
+        return { error: 'Minimal satu field harus diisi.' };
+      }
+
       const updated = await FeedbackService.update(id, {
         kategori: body.kategori ?? undefined,
         judul: body.judul ?? undefined,

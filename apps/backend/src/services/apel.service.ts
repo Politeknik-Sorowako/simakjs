@@ -137,9 +137,16 @@ export class ApelService {
     tanggal: string;
     shift: string;
     dosenId: number;
-    jamMulai: string;
+    jamMulai?: string;
     catatan?: string | null;
   }) {
+    // Fallback: jika jamMulai tidak dikirim, gunakan waktu server saat ini.
+    let jamMulai = data.jamMulai?.trim();
+    if (!jamMulai) {
+      const now = new Date();
+      jamMulai = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
+    const sesiData = { ...data, jamMulai };
     const [existing] = await db
       .select({ id: sesiApel.id })
       .from(sesiApel)
@@ -157,7 +164,7 @@ export class ApelService {
       );
     }
 
-    const [sesi] = await db.insert(sesiApel).values(data).returning();
+    const [sesi] = await db.insert(sesiApel).values(sesiData).returning();
 
     const anggota = await db
       .select({ mahasiswaId: kelompokApelAnggota.mahasiswaId })

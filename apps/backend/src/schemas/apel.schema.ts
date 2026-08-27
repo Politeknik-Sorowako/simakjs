@@ -12,7 +12,9 @@ const validStatus = t.Union(
   { error: 'Status presensi tidak valid' },
 );
 
-const validShift = t.Union([t.Literal('pagi'), t.Literal('sore')], { error: 'Shift harus pagi atau sore' });
+const validShift = t.Union([t.Literal('pagi'), t.Literal('sore'), t.Literal('UKM'), t.Literal('lainnya')], {
+  error: 'Shift harus salah satu dari: pagi, sore, UKM, lainnya',
+});
 
 export const createKelompokSchema = {
   body: t.Object({
@@ -75,7 +77,7 @@ export const bukaSesiSchema = {
     kelompokApelId: t.Number({ error: 'Kelompok apel harus dipilih' }),
     tanggal: t.String({ minLength: 10, error: 'Tanggal harus diisi (YYYY-MM-DD)' }),
     shift: validShift,
-    jamMulai: t.String({ error: 'Jam mulai harus diisi' }),
+    jamMulai: t.Optional(t.String({ error: 'Jam mulai tidak valid' })),
     dosenId: t.Optional(t.Nullable(t.Number({ error: 'Dosen PJ tidak valid' }))),
     catatan: t.Optional(
       t.Nullable(t.String({ maxLength: 1000, error: 'Catatan terlalu panjang (maks 1000 karakter)' })),
