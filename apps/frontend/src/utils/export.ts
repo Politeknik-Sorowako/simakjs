@@ -39,6 +39,29 @@ export function exportToExcel(data: SafeAny[], columns: ExportColumn[], filename
   XLSX.writeFile(wb, `${filename}.xlsx`);
 }
 
+export interface ExportSheet {
+  name: string;
+  columns: ExportColumn[];
+  data: SafeAny[];
+}
+
+export function exportToExcelMultipleSheets(sheets: ExportSheet[], filename: string) {
+  const wb = XLSX.utils.book_new();
+  sheets.forEach((sheet, index) => {
+    const rows = sheet.data.map((row) => {
+      const obj: Record<string, SafeAny> = {};
+      sheet.columns.forEach((col) => {
+        obj[col.header] = getValue(row, col.accessor);
+      });
+      return obj;
+    });
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const sheetName = sheet.name.slice(0, 31) || `Sheet${index + 1}`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+  XLSX.writeFile(wb, `${filename}.xlsx`);
+}
+
 export function exportToPDF(
   data: SafeAny[],
   columns: ExportColumn[],

@@ -84,6 +84,23 @@ export const kompensasiManualController = {
     });
   },
 
+  async bulkDelete(ids: number[]): Promise<{ success: boolean; deleted: number }> {
+    return fetchApi<{ success: boolean; deleted: number }>('/kompensasi-manual/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+  },
+
+  async bulkUpdate(
+    ids: number[],
+    data: { jenisKompen?: JenisKompen; durasiMenit?: number },
+  ): Promise<{ success: boolean; updated: number }> {
+    return fetchApi<{ success: boolean; updated: number }>('/kompensasi-manual/bulk-update', {
+      method: 'POST',
+      body: JSON.stringify({ ids, ...data }),
+    });
+  },
+
   async getRiwayat(mahasiswaId: number): Promise<KompensasiManualRecord[]> {
     return fetchApi<KompensasiManualRecord[]>(`/kompensasi-manual/riwayat/${mahasiswaId}`);
   },

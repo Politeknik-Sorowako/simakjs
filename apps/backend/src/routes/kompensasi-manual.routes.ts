@@ -2,6 +2,8 @@ import { Elysia } from 'elysia';
 import { KompensasiManualController } from '../controllers/kompensasi-manual.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  bulkDeleteKompensasiManualSchema,
+  bulkUpdateKompensasiManualSchema,
   createKompensasiManualSchema,
   deleteKompensasiManualSchema,
   getAllKompensasiManualSchema,
@@ -20,5 +22,7 @@ export const kompensasiManualRoutes = new Elysia({ prefix: '/kompensasi-manual' 
   .get('/stats', KompensasiManualController.getStats, getKompensasiManualStatsSchema)
   .post('/', KompensasiManualController.createKompensasi, createKompensasiManualSchema)
   .post('/import', KompensasiManualController.importCsv, importKompensasiManualSchema)
+  .post('/bulk-delete', KompensasiManualController.bulkDelete, bulkDeleteKompensasiManualSchema)
+  .post('/bulk-update', KompensasiManualController.bulkUpdate, bulkUpdateKompensasiManualSchema)
   .put('/:id', KompensasiManualController.updateKompensasi, updateKompensasiManualSchema)
   .delete('/:id', KompensasiManualController.deleteKompensasi, deleteKompensasiManualSchema);

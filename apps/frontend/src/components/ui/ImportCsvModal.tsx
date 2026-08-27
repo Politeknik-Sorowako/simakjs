@@ -11,6 +11,7 @@ interface ImportCsvModalProps {
   templateHeaders: string[];
   customTemplateRows?: string[][];
   title: string;
+  description?: string;
   onSuccess: () => void;
   onImport?: (
     rows: string[][],
@@ -148,6 +149,12 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
             Unduh Template
           </Button>
         </div>
+
+        <Show when={props.description}>
+          <div class="p-3 bg-secondary-50 dark:bg-secondary-800/50 border border-secondary-200 dark:border-secondary-800 rounded-lg text-xs text-secondary-600 dark:text-secondary-300 leading-relaxed">
+            {props.description}
+          </div>
+        </Show>
 
         <form onSubmit={handleSubmit} class="flex flex-col gap-4">
           <div class="flex flex-col gap-1.5">
