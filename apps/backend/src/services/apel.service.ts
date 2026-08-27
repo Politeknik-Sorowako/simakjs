@@ -141,10 +141,11 @@ export class ApelService {
     catatan?: string | null;
   }) {
     // Fallback: jika jamMulai tidak dikirim, gunakan waktu server saat ini.
-    const jamMulai = data.jamMulai?.trim() || (() => {
+    let jamMulai = data.jamMulai?.trim();
+    if (!jamMulai) {
       const now = new Date();
-      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    })();
+      jamMulai = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
     const sesiData = { ...data, jamMulai };
     const [existing] = await db
       .select({ id: sesiApel.id })
