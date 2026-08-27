@@ -711,7 +711,6 @@ export default function KompensasiManual() {
               <Input
                 type="number"
                 min={1}
-                max={480}
                 label="Durasi (menit)"
                 required={isDurasiRequired()}
                 placeholder={isFullDay() ? '480' : 'Contoh: 60'}
@@ -721,6 +720,11 @@ export default function KompensasiManual() {
               <Show when={isFullDay()}>
                 <p class="text-xs text-secondary-500 dark:text-secondary-400">
                   Default 480 menit (satu hari penuh) untuk Sakit/Izin/Alpa — dapat diubah.
+                </p>
+              </Show>
+              <Show when={jenisKompen() === 'rusak'}>
+                <p class="text-xs text-secondary-500 dark:text-secondary-400">
+                  Durasi RUSAK (kerusakan fasilitas) tidak dibatasi 480 menit/hari.
                 </p>
               </Show>
             </div>
@@ -871,7 +875,6 @@ export default function KompensasiManual() {
             <Input
               type="number"
               min={1}
-              max={480}
               label="Durasi (menit)"
               placeholder="Contoh: 60"
               value={bulkDurasi()}

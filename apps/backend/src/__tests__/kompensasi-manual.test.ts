@@ -117,7 +117,7 @@ describe('Kompensasi Manual API', () => {
     expect(body.meta.total).toBe(1);
   });
 
-  it('harus merekap kompensasi manual jenis rusak x 5 pada laporan kompensasi', async () => {
+  it('harus merekap kompensasi manual jenis rusak = durasi (tanpa pengali) pada laporan kompensasi', async () => {
     await app.handle(
       new Request('http://localhost/kompensasi-manual', {
         method: 'POST',
@@ -147,7 +147,7 @@ describe('Kompensasi Manual API', () => {
     const body = await res.json();
     expect(body.data).toBeArray();
     expect(body.data.length).toBe(1);
-    expect(body.data[0].totalKompensasi).toBe(200); // 40 * 5 = 200
+    expect(body.data[0].totalKompensasi).toBe(40); // Poin RUSAK = durasi (tanpa pengali)
   });
 
   it('harus mendukung edit jenis sakit dengan durasi kustom (tidak dipaksa 480)', async () => {
