@@ -1,3 +1,16 @@
+/**
+ * Mengembalikan tanggal kalender hari ini dalam format `YYYY-MM-DD` berbasis waktu
+ * lokal perangkat/browser pengguna. Timezone-safe: tidak melalui konversi UTC agar
+ * tidak bergeser satu hari (misal 07:00 WITA = 23:00 UTC hari sebelumnya).
+ */
+export function getTodayString(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function fmtWaktu(iso?: string | null): string {
   if (!iso) return '-';
   const d = new Date(iso);
