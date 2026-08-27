@@ -640,7 +640,7 @@ export class PresensiService {
 
     const totalKompensasiSql = sql<number>`COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0)`;
     const totalDibayarSql = sql<number>`COALESCE(bayar_mangkir.total_dibayar, 0)`;
-    const sisaKompensasiSql = sql<number>`GREATEST(0, COALESCE(presensi_mangkir.poin, 0) - COALESCE(bayar_mangkir.total_dibayar, 0))`;
+    const sisaKompensasiSql = sql<number>`GREATEST(0, COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0) - COALESCE(bayar_mangkir.total_dibayar, 0))`;
 
     const conditions: SQL<unknown>[] = [sql`${totalKompensasiSql} > 0`];
     if (search) {
