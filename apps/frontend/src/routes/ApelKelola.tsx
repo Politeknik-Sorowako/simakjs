@@ -15,6 +15,7 @@ import {
 import { Dosen, dosenController } from '../controllers/dosenController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { Prodi, prodiController } from '../controllers/prodiController';
+import { getTodayString } from '../utils/format';
 
 export default function ApelKelola() {
   const auth = useAuth();
@@ -23,7 +24,7 @@ export default function ApelKelola() {
 
   const [selectedKelompok, setSelectedKelompok] = createSignal<number | null>(null);
   const [selectedSesi, setSelectedSesi] = createSignal<number | null>(null);
-  const [tanggal, setTanggal] = createSignal(new Date().toISOString().slice(0, 10));
+  const [tanggal, setTanggal] = createSignal(getTodayString());
   const [shift, setShift] = createSignal('pagi');
   const [jamMulai, setJamMulai] = createSignal('');
   const [catatanSesi, setCatatanSesi] = createSignal('');
@@ -89,12 +90,14 @@ export default function ApelKelola() {
     if (!selectedKelompok()) {
       if ((kelompokList() || []).length > 0) {
         setSelectedKelompok(kelompokList()![0].id);
+        setTanggal(getTodayString());
         setShowBukaSesiModal(true);
       } else {
         toast.showToast('Pilih atau buat kelompok apel terlebih dahulu', 'error');
       }
       return;
     }
+    setTanggal(getTodayString());
     setShowBukaSesiModal(true);
   };
 

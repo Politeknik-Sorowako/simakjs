@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { and, count, desc, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
+  bapPraktikum,
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
@@ -15,6 +16,7 @@ import {
   mataKuliah,
   presensi,
   presensiApel,
+  presensiPraktikum,
   programStudi,
   sesiApel,
   users,
@@ -431,14 +433,40 @@ export class PresensiService {
         resolvedBy: ketidakhadiranMahasiswa.verifiedBy,
         resolvedAt: ketidakhadiranMahasiswa.verifiedAt,
         createdAt: ketidakhadiranMahasiswa.createdAt,
-        bapPertemuan: sql<number>`NULL`,
-        bapMateri: sql<string>`CASE WHEN ${ketidakhadiranMahasiswa.sumber} = 'MANUAL' THEN 'Kompensasi Manual' ELSE NULL END`,
+        bapPertemuan: sql<number | null>`CASE
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN ${bap.pertemuanKe}
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${bapPraktikum.sesiKe}
+          ELSE NULL END`,
+        bapMateri: sql<string | null>`CASE
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'MANUAL' THEN 'Kompensasi Manual'
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN 'Presensi Apel'
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN ${bap.materi}
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${bapPraktikum.materi}
+          ELSE NULL END`,
         bapTanggal: ketidakhadiranMahasiswa.tanggal,
         sumber: sql<
           'perkuliahan' | 'apel' | 'manual'
         >`CASE WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN 'perkuliahan' WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN 'apel' ELSE 'manual' END`,
       })
       .from(ketidakhadiranMahasiswa)
+      .leftJoin(
+        presensi,
+        and(eq(ketidakhadiranMahasiswa.sumberId, presensi.id), eq(ketidakhadiranMahasiswa.sumber, 'BAP')),
+      )
+      .leftJoin(bap, eq(presensi.bapId, bap.id))
+      .leftJoin(
+        presensiApel,
+        and(eq(ketidakhadiranMahasiswa.sumberId, presensiApel.id), eq(ketidakhadiranMahasiswa.sumber, 'APEL')),
+      )
+      .leftJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))
+      .leftJoin(
+        presensiPraktikum,
+        and(
+          eq(ketidakhadiranMahasiswa.sumberId, presensiPraktikum.id),
+          eq(ketidakhadiranMahasiswa.sumber, 'PRAKTIKUM'),
+        ),
+      )
+      .leftJoin(bapPraktikum, eq(presensiPraktikum.bapPraktikumId, bapPraktikum.id))
       .where(
         and(
           eq(ketidakhadiranMahasiswa.mahasiswaId, mahasiswaId),

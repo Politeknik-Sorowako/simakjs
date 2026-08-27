@@ -179,6 +179,20 @@ export default function LaporanKompensasi() {
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const sumberLabel = (sumber: string) =>
         sumber === 'perkuliahan' ? 'Perkuliahan' : sumber === 'apel' ? 'Apel' : 'Kompensasi Manual';
+      const resolveKeterangan = (r: Record<string, unknown>): string => {
+        const adminNote =
+          typeof r.keteranganAdmin === 'string' && r.keteranganAdmin.trim() ? r.keteranganAdmin.trim() : '';
+        if (adminNote) return adminNote;
+        const sumber = String(r.sumber ?? '');
+        const materi = typeof r.bapMateri === 'string' && r.bapMateri.trim() ? r.bapMateri.trim() : '';
+        if (sumber === 'apel') return materi || 'Presensi Apel';
+        if (sumber === 'perkuliahan') {
+          const pertemuan = r.bapPertemuan != null ? ` (Pertemuan ${r.bapPertemuan})` : '';
+          return materi ? `${materi}${pertemuan}` : `Perkuliahan${pertemuan}`;
+        }
+        if (sumber === 'manual') return materi || 'Kompensasi Manual';
+        return '-';
+      };
 
       exportToExcelMultipleSheets(
         [
@@ -194,7 +208,7 @@ export default function LaporanKompensasi() {
               { header: 'Poin Kompensasi', accessor: 'poinKompensasi' },
               {
                 header: 'Keterangan',
-                accessor: (r) => (r as { keteranganAdmin?: string | null }).keteranganAdmin || '-',
+                accessor: (r) => resolveKeterangan(r as Record<string, unknown>),
               },
             ],
             data: detail.historyKompensasi.map((h) => ({

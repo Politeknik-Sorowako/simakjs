@@ -3,12 +3,13 @@ import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, MonitorResponse } from '../controllers/apelController';
+import { getTodayString } from '../utils/format';
 
 export default function ApelMonitor() {
   const auth = useAuth();
   const ws = useWorkspace();
 
-  const [tanggal, setTanggal] = createSignal(new Date().toISOString().slice(0, 10));
+  const [tanggal, setTanggal] = createSignal(getTodayString());
   const [autoRefresh, setAutoRefresh] = createSignal(true);
 
   const [selectedDetailSesiId, setSelectedDetailSesiId] = createSignal<number | null>(null);
