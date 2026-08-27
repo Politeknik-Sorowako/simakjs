@@ -33,17 +33,187 @@ export class FeedbackController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
-  static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
+  static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
       if (!user) {
         set.status = 401;
         return { error: 'Unauthorized' };
       }
-      if (hasRole(user, ['admin', 'super_admin'])) {
-        return await FeedbackService.getAll();
+      // Semua user yang terautentikasi dapat melihat seluruh saran pengembangan
+      // (papan saran kolaboratif), dengan sorting & pagination.
+      return await FeedbackService.getAll({
+        page: query?.page ? Number(query.page) : undefined,
+        limit: query?.limit ? Number(query.limit) : undefined,
+        sortBy: query?.sortBy,
+        sortOrder: query?.sortOrder === 'asc' ? 'asc' : query?.sortOrder === 'desc' ? 'desc' : undefined,
+      });
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
       }
-      return await FeedbackService.getByUserId(user.id);
+      const id = parseInt(params.id);
+      const feedback = await FeedbackService.getById(id, user.id);
+
+      if (!feedback) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+
+      return feedback;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+
+      const id = parseInt(params.id);
+      const existing = await FeedbackService.findByIdBasic(id);
+      if (!existing) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+
+      const isAuthor = existing.userId === user.id;
+      if (!isAuthor && !hasRole(user, ['admin', 'super_admin'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya pengirim atau admin yang dapat mengedit masukan.' };
+      }
+
+      const updated = await FeedbackService.update(id, {
+        kategori: body.kategori ?? undefined,
+        judul: body.judul ?? undefined,
+        pesan: body.pesan ?? undefined,
+        rating: body.rating !== undefined ? body.rating : undefined,
+      });
+
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+      return updated;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async remove({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+
+      const id = parseInt(params.id);
+      const existing = await FeedbackService.findByIdBasic(id);
+      if (!existing) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+
+      const isAuthor = existing.userId === user.id;
+      if (!isAuthor && !hasRole(user, ['admin', 'super_admin'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya pengirim atau admin yang dapat menghapus masukan.' };
+      }
+
+      const deleted = await FeedbackService.delete(id);
+      if (!deleted) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+      return { success: true };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getComments({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      const id = parseInt(params.id);
+      const feedback = await FeedbackService.findByIdBasic(id);
+      if (!feedback) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+      return await FeedbackService.getComments(id);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async addComment({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      const id = parseInt(params.id);
+      const feedback = await FeedbackService.findByIdBasic(id);
+      if (!feedback) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+      if (!body.pesan?.trim()) {
+        set.status = 400;
+        return { error: 'Isi komentar tidak boleh kosong.' };
+      }
+      const newComment = await FeedbackService.addComment(id, user.id, body.pesan.trim());
+      return newComment;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async toggleLike({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+      const id = parseInt(params.id);
+      const feedback = await FeedbackService.findByIdBasic(id);
+      if (!feedback) {
+        set.status = 404;
+        return { error: 'Masukan tidak ditemukan.' };
+      }
+      const result = await FeedbackService.toggleLike(id, user.id);
+      return { ...result, likeCount: await FeedbackService.getLikeCount(id) };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

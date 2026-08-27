@@ -2637,9 +2637,74 @@ export const systemFeedback = pgTable('system_feedback', {
     .$onUpdate(() => new Date()),
 });
 
-export const systemFeedbackRelations = relations(systemFeedback, ({ one }) => ({
+export const systemFeedbackRelations = relations(systemFeedback, ({ one, many }) => ({
   user: one(users, {
     fields: [systemFeedback.userId],
+    references: [users.id],
+  }),
+  comments: many(feedbackComments),
+  likes: many(feedbackLikes),
+}));
+
+export const feedbackComments = pgTable(
+  'feedback_comments',
+  {
+    id: serial('id').primaryKey(),
+    feedbackId: integer('feedback_id')
+      .notNull()
+      .references(() => systemFeedback.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    pesan: text('pesan').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    feedbackIdIdx: index('idx_feedback_comments_feedback_id').on(table.feedbackId),
+    userIdIdx: index('idx_feedback_comments_user_id').on(table.userId),
+  }),
+);
+
+export const feedbackCommentsRelations = relations(feedbackComments, ({ one }) => ({
+  feedback: one(systemFeedback, {
+    fields: [feedbackComments.feedbackId],
+    references: [systemFeedback.id],
+  }),
+  user: one(users, {
+    fields: [feedbackComments.userId],
+    references: [users.id],
+  }),
+}));
+
+export const feedbackLikes = pgTable(
+  'feedback_likes',
+  {
+    id: serial('id').primaryKey(),
+    feedbackId: integer('feedback_id')
+      .notNull()
+      .references(() => systemFeedback.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    feedbackUserIdUnique: unique('feedback_likes_feedback_user_unique').on(table.feedbackId, table.userId),
+    feedbackIdIdx: index('idx_feedback_likes_feedback_id').on(table.feedbackId),
+  }),
+);
+
+export const feedbackLikesRelations = relations(feedbackLikes, ({ one }) => ({
+  feedback: one(systemFeedback, {
+    fields: [feedbackLikes.feedbackId],
+    references: [systemFeedback.id],
+  }),
+  user: one(users, {
+    fields: [feedbackLikes.userId],
     references: [users.id],
   }),
 }));
