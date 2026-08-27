@@ -105,18 +105,6 @@ export class FeedbackService {
     }
   }
 
-  static async getByUserId(userId: number) {
-    try {
-      return await db.query.systemFeedback.findMany({
-        where: eq(systemFeedback.userId, userId),
-        orderBy: (feedback, { desc: descFn }) => [descFn(feedback.createdAt)],
-      });
-    } catch (err: unknown) {
-      console.warn('[FeedbackService] Failed to query getByUserId:', err instanceof Error ? err.message : err);
-      return [];
-    }
-  }
-
   static async findByIdBasic(id: number) {
     const [row] = await db
       .select({ id: systemFeedback.id, userId: systemFeedback.userId, status: systemFeedback.status })
@@ -233,19 +221,24 @@ export class FeedbackService {
   }
 
   static async toggleLike(feedbackId: number, userId: number) {
-    const [existing] = await db
-      .select({ id: feedbackLikes.id })
-      .from(feedbackLikes)
-      .where(and(eq(feedbackLikes.feedbackId, feedbackId), eq(feedbackLikes.userId, userId)))
-      .limit(1);
+    const lockKey = `fb_like_${feedbackId}_${userId}`;
+    return await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
 
-    if (existing) {
-      await db.delete(feedbackLikes).where(eq(feedbackLikes.id, existing.id));
-      return { liked: false };
-    }
+      const [existing] = await tx
+        .select({ id: feedbackLikes.id })
+        .from(feedbackLikes)
+        .where(and(eq(feedbackLikes.feedbackId, feedbackId), eq(feedbackLikes.userId, userId)))
+        .limit(1);
 
-    await db.insert(feedbackLikes).values({ feedbackId, userId });
-    return { liked: true };
+      if (existing) {
+        await tx.delete(feedbackLikes).where(eq(feedbackLikes.id, existing.id));
+        return { liked: false };
+      }
+
+      await tx.insert(feedbackLikes).values({ feedbackId, userId });
+      return { liked: true };
+    });
   }
 
   static async getLikeCount(feedbackId: number) {

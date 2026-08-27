@@ -21,12 +21,12 @@ export const updateFeedbackStatusBody = t.Object({
 });
 
 export const addCommentBody = t.Object({
-  pesan: t.String(),
+  pesan: t.String({ minLength: 1, maxLength: 2000 }),
 });
 
 export const getAllFeedbackQuery = t.Object({
-  page: t.Optional(t.Numeric()),
-  limit: t.Optional(t.Numeric()),
+  page: t.Optional(t.Integer({ minimum: 1 })),
+  limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
   sortBy: t.Optional(
     t.Union([
       t.Literal('createdAt'),

@@ -11,6 +11,17 @@ export function getTodayString(): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Mengembalikan waktu saat ini dalam format `HH:MM` berbasis waktu lokal
+ * perangkat/browser pengguna. Timezone-safe: tidak melalui konversi UTC.
+ */
+export function getCurrentTimeString(): string {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 export function fmtWaktu(iso?: string | null): string {
   if (!iso) return '-';
   const d = new Date(iso);
