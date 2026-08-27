@@ -136,11 +136,22 @@ docker compose -f "$COMPOSE_FILE" build 2>&1 | tee -a "$LOG_FILE" || {
 }
 ok "Docker images built"
 
-docker compose -f "$COMPOSE_FILE" up -d 2>&1 | tee -a "$LOG_FILE" || {
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate 2>&1 | tee -a "$LOG_FILE" || {
   fail "Docker compose up failed"
   exit 1
 }
 ok "Containers started"
+
+# Tunggu semua service (termasuk db_staging) mencapai status healthy
+if docker compose -f "$COMPOSE_FILE" up -d --wait 2>&1 | tee -a "$LOG_FILE"; then
+  ok "All services are healthy"
+else
+  warn "Some services may not be healthy yet; proceeding"
+fi
+
+# Pre-flight: verifikasi backend container dapat me-resolve hostname db_staging
+log "Verifying db_staging DNS resolution from backend container..."
+docker exec "$BACKEND_CONTAINER" sh -c 'getent hosts db_staging 2>/dev/null || echo "DNS check inconclusive"' 2>&1 | tee -a "$LOG_FILE" || true
 
 # Step 4b: Ensure database schema is up-to-date (idempotent)
 log "Step 4b: Running database migration..."
@@ -172,8 +183,14 @@ done
 
 if [ "$HEALTHY" != "true" ]; then
   fail "Staging backend did not become healthy within ${MAX_WAIT}s"
+  echo "=== Container Status ==="
+  docker compose -f "$COMPOSE_FILE" ps 2>/dev/null || true
+  echo "=== Staging Networks ==="
+  docker network ls --format '{{.Name}}' 2>/dev/null | grep -i staging || true
   echo "=== Backend Log ==="
   docker compose -f "$COMPOSE_FILE" logs backend_staging --tail=50 2>/dev/null || docker logs simak_backend_staging --tail 50 2>/dev/null || true
+  echo "=== Database Log ==="
+  docker compose -f "$COMPOSE_FILE" logs db_staging --tail=30 2>/dev/null || docker logs simak_db_staging --tail 30 2>/dev/null || true
   exit 1
 fi
 
