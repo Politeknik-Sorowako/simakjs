@@ -117,7 +117,7 @@ describe('Kompensasi Manual API', () => {
     expect(body.meta.total).toBe(1);
   });
 
-  it('harus merekap kompensasi manual jenis rusak x 5 pada laporan kompensasi', async () => {
+  it('harus merekap kompensasi manual jenis rusak = durasi (tanpa pengali) pada laporan kompensasi', async () => {
     await app.handle(
       new Request('http://localhost/kompensasi-manual', {
         method: 'POST',
@@ -147,7 +147,46 @@ describe('Kompensasi Manual API', () => {
     const body = await res.json();
     expect(body.data).toBeArray();
     expect(body.data.length).toBe(1);
-    expect(body.data[0].totalKompensasi).toBe(200); // 40 * 5 = 200
+    expect(body.data[0].totalKompensasi).toBe(40); // Poin RUSAK = durasi (tanpa pengali)
+  });
+
+  it('harus menerima durasi RUSAK lebih dari 480 menit dan merekapnya sebagai sisa tanggungan', async () => {
+    const createRes = await app.handle(
+      new Request('http://localhost/kompensasi-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          mahasiswaId: mhsId,
+          tanggal: '2026-08-05',
+          jenisKompen: 'rusak',
+          durasiMenit: 600,
+        }),
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const created = await createRes.json();
+    expect(created.durasiMenit).toBe(600);
+
+    const res = await app.handle(
+      new Request('http://localhost/presensi/kompensasi/laporan?search=20230001', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBe(1);
+    // Poin RUSAK = durasi mentah (600), tanpa cap 480 & tanpa pengali.
+    expect(body.data[0].totalKompensasi).toBe(600);
+    // Sisa tanggungan harus mencakup poin RUSAK (600 - 0 dibayar = 600).
+    expect(body.data[0].sisaKompensasi).toBe(600);
   });
 
   it('harus mendukung edit jenis sakit dengan durasi kustom (tidak dipaksa 480)', async () => {

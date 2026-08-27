@@ -1213,7 +1213,14 @@ export class CsvImportService {
         const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
         // Gunakan durasi_menit dari CSV jika bernilai valid (> 0). Nilai default
         // 480 menit (full-day) hanya berlaku bila durasi dikosongkan pada jenis full-day.
-        const resolvedDurasi = !isNaN(durasiMenit) && durasiMenit > 0 ? Math.min(durasiMenit, maksHarian) : maksHarian;
+        // RUSAK (kerusakan fasilitas) tidak dibatasi cap harian (480 menit).
+        const isRusak = jenisVal === 'rusak';
+        const resolvedDurasi =
+          !isNaN(durasiMenit) && durasiMenit > 0
+            ? isRusak
+              ? durasiMenit
+              : Math.min(durasiMenit, maksHarian)
+            : maksHarian;
         const statusKompensasi = jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK';
 
         // Seluruh operasi per-baris dibungkus transaksi agar penulisan ke
@@ -1249,7 +1256,7 @@ export class CsvImportService {
                 );
               const totalHariIni = Number(sumRow?.total || 0);
 
-              if (totalHariIni + resolvedDurasi > maksHarian) {
+              if (!isRusak && totalHariIni + resolvedDurasi > maksHarian) {
                 throw new Error(
                   `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat mengubah menjadi ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
                 );
@@ -1300,7 +1307,7 @@ export class CsvImportService {
             .where(and(eq(kompensasiManual.mahasiswaId, mhs.id), eq(kompensasiManual.tanggal, tanggalVal)));
           const totalHariIni = Number(sumRow?.total || 0);
 
-          if (totalHariIni + resolvedDurasi > maksHarian) {
+          if (!isRusak && totalHariIni + resolvedDurasi > maksHarian) {
             throw new Error(
               `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat menambah ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
             );
