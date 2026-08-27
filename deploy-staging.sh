@@ -136,7 +136,7 @@ docker compose -f "$COMPOSE_FILE" build 2>&1 | tee -a "$LOG_FILE" || {
 }
 ok "Docker images built"
 
-docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend_staging frontend_staging 2>&1 | tee -a "$LOG_FILE" || {
+docker compose -f "$COMPOSE_FILE" up -d 2>&1 | tee -a "$LOG_FILE" || {
   fail "Docker compose up failed"
   exit 1
 }
@@ -173,7 +173,7 @@ done
 if [ "$HEALTHY" != "true" ]; then
   fail "Staging backend did not become healthy within ${MAX_WAIT}s"
   echo "=== Backend Log ==="
-  docker compose -f "$COMPOSE_FILE" logs backend --tail=50 2>/dev/null || docker logs simak_backend_staging --tail 50 2>/dev/null || true
+  docker compose -f "$COMPOSE_FILE" logs backend_staging --tail=50 2>/dev/null || docker logs simak_backend_staging --tail 50 2>/dev/null || true
   exit 1
 fi
 
