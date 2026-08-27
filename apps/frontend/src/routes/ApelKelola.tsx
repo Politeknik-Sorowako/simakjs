@@ -15,6 +15,7 @@ import {
 import { Dosen, dosenController } from '../controllers/dosenController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { Prodi, prodiController } from '../controllers/prodiController';
+import { getCurrentTimeString, getTodayString } from '../utils/format';
 
 export default function ApelKelola() {
   const auth = useAuth();
@@ -23,9 +24,9 @@ export default function ApelKelola() {
 
   const [selectedKelompok, setSelectedKelompok] = createSignal<number | null>(null);
   const [selectedSesi, setSelectedSesi] = createSignal<number | null>(null);
-  const [tanggal, setTanggal] = createSignal(new Date().toISOString().slice(0, 10));
+  const [tanggal, setTanggal] = createSignal(getTodayString());
   const [shift, setShift] = createSignal('pagi');
-  const [jamMulai, setJamMulai] = createSignal('');
+  const [jamMulai, setJamMulai] = createSignal(getCurrentTimeString());
   const [catatanSesi, setCatatanSesi] = createSignal('');
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
@@ -89,12 +90,16 @@ export default function ApelKelola() {
     if (!selectedKelompok()) {
       if ((kelompokList() || []).length > 0) {
         setSelectedKelompok(kelompokList()![0].id);
+        setTanggal(getTodayString());
+        setJamMulai(getCurrentTimeString());
         setShowBukaSesiModal(true);
       } else {
         toast.showToast('Pilih atau buat kelompok apel terlebih dahulu', 'error');
       }
       return;
     }
+    setTanggal(getTodayString());
+    setJamMulai(getCurrentTimeString());
     setShowBukaSesiModal(true);
   };
 
@@ -226,8 +231,8 @@ export default function ApelKelola() {
   };
 
   const handleBukaSesi = async () => {
-    if (!selectedKelompok() || !tanggal() || !jamMulai()) {
-      toast.showToast('Lengkapi data sesi (kelompok, tanggal, jam mulai)', 'error');
+    if (!selectedKelompok() || !tanggal()) {
+      toast.showToast('Lengkapi data sesi (kelompok, tanggal)', 'error');
       return;
     }
     try {
@@ -945,6 +950,8 @@ export default function ApelKelola() {
                   >
                     <option value="pagi">Pagi</option>
                     <option value="sore">Sore</option>
+                    <option value="UKM">UKM</option>
+                    <option value="lainnya">Lainnya</option>
                   </select>
                 </div>
 
@@ -1090,6 +1097,8 @@ export default function ApelKelola() {
                   >
                     <option value="pagi">Pagi</option>
                     <option value="sore">Sore</option>
+                    <option value="UKM">UKM</option>
+                    <option value="lainnya">Lainnya</option>
                   </select>
                 </div>
                 <div>
@@ -1105,14 +1114,14 @@ export default function ApelKelola() {
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Jam Mulai *</label>
+                  <label class="block text-sm font-medium mb-1">Jam Mulai (Opsional)</label>
                   <input
                     type="time"
-                    required
                     class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     value={jamMulai()}
                     onChange={(e) => setJamMulai(e.target.value)}
                   />
+                  <p class="text-xs text-gray-500 mt-1">Default mengikuti waktu perangkat saat ini bila dikosongkan.</p>
                 </div>
                 <div>
                   <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>

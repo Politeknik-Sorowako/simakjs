@@ -26,6 +26,10 @@ export class KompensasiManualService {
     if (durasi <= 0) {
       throw new Error('Durasi menit wajib diisi untuk jenis kompensasi terlambat/rusak');
     }
+    if (jenisKompen === 'rusak') {
+      // RUSAK (kerusakan fasilitas) tidak dibatasi cap harian (480 menit).
+      return durasi;
+    }
     return Math.min(durasi, maksHarian);
   }
 
@@ -87,7 +91,7 @@ export class KompensasiManualService {
       const totalHariIni = await this.hitungTotalHariIni(data.mahasiswaId, data.tanggal, undefined, tx);
       const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
 
-      if (totalHariIni + durasiMenit > maksHarian) {
+      if (data.jenisKompen !== 'rusak' && totalHariIni + durasiMenit > maksHarian) {
         throw new Error(
           `Total durasi kompensasi pada tanggal ${data.tanggal} sudah mencapai ${totalHariIni} menit. ` +
             `Tidak dapat menambah ${durasiMenit} menit (maks ${maksHarian} menit/hari).`,
@@ -180,7 +184,7 @@ export class KompensasiManualService {
       const totalHariIni = await this.hitungTotalHariIni(mahasiswaId, tanggal, id, tx);
       const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
 
-      if (totalHariIni + durasiMenit > maksHarian) {
+      if (jenisKompen !== 'rusak' && totalHariIni + durasiMenit > maksHarian) {
         throw new Error(
           `Total durasi kompensasi pada tanggal ${tanggal} akan melebihi batas ${maksHarian} menit/hari.`,
         );
@@ -278,7 +282,7 @@ export class KompensasiManualService {
         const durasiMenit = await this.resolveDurasiMenit(jenisKompen, data.durasiMenit ?? row.durasiMenit);
 
         const totalHariIni = await this.hitungTotalHariIni(row.mahasiswaId, row.tanggal, row.id, tx);
-        if (totalHariIni + durasiMenit > maksHarian) {
+        if (jenisKompen !== 'rusak' && totalHariIni + durasiMenit > maksHarian) {
           throw new Error(
             `Total durasi kompensasi pada tanggal ${row.tanggal} akan melebihi batas ${maksHarian} menit/hari (mahasiswa ID ${row.mahasiswaId}).`,
           );

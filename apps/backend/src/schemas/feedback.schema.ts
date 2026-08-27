@@ -7,6 +7,34 @@ export const createFeedbackBody = t.Object({
   rating: t.Optional(t.Nullable(t.Number({ minimum: 1, maximum: 5 }))),
 });
 
+export const updateFeedbackBody = t.Partial(
+  t.Object({
+    kategori: t.String(),
+    judul: t.String(),
+    pesan: t.String(),
+    rating: t.Nullable(t.Number({ minimum: 1, maximum: 5 })),
+  }),
+);
+
 export const updateFeedbackStatusBody = t.Object({
   status: t.String({ default: 'in_review' }),
+});
+
+export const addCommentBody = t.Object({
+  pesan: t.String({ minLength: 1, maxLength: 2000 }),
+});
+
+export const getAllFeedbackQuery = t.Object({
+  page: t.Optional(t.Integer({ minimum: 1 })),
+  limit: t.Optional(t.Integer({ minimum: 1, maximum: 100 })),
+  sortBy: t.Optional(
+    t.Union([
+      t.Literal('createdAt'),
+      t.Literal('rating'),
+      t.Literal('kategori'),
+      t.Literal('judul'),
+      t.Literal('likeCount'),
+    ]),
+  ),
+  sortOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')])),
 });

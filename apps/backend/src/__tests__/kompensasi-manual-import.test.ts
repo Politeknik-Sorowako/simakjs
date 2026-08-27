@@ -66,7 +66,7 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
     expect(synced[0].durasiMenit).toBe(40);
     expect(synced[0].isVerified).toBe(true);
 
-    // Rekap kompensasi harus menghitung data CSV import (40 * 5 = 200).
+    // Rekap kompensasi harus menghitung data CSV import (poin RUSAK = durasi = 40).
     const laporan = await app.handle(
       new Request('http://localhost/presensi/kompensasi/laporan?search=20239999', {
         method: 'GET',
@@ -76,7 +76,7 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
     expect(laporan.status).toBe(200);
     const body = await laporan.json();
     expect(body.data).toHaveLength(1);
-    expect(body.data[0].totalKompensasi).toBe(200);
+    expect(body.data[0].totalKompensasi).toBe(40);
   });
 
   it('mode update harus menyinkronkan perubahan durasi ke ketidakhadiran_mahasiswa', async () => {
@@ -112,7 +112,7 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
     expect(synced[0].durasiMenit).toBe(60);
     expect(synced[0].keterangan).toBe('alat rusak diperbarui');
 
-    // Rekap harus mencerminkan nilai terbaru (60 * 5 = 300).
+    // Rekap harus mencerminkan nilai terbaru (poin RUSAK = durasi = 60).
     const laporan = await app.handle(
       new Request('http://localhost/presensi/kompensasi/laporan?search=20239999', {
         method: 'GET',
@@ -121,7 +121,7 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
     );
     expect(laporan.status).toBe(200);
     const body = await laporan.json();
-    expect(body.data[0].totalKompensasi).toBe(300);
+    expect(body.data[0].totalKompensasi).toBe(60);
   });
 
   it('mode skip melewati baris dengan data key (NIM+Tgl+Jenis) yang sudah ada', async () => {

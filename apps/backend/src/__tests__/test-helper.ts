@@ -19,6 +19,8 @@ import {
   documentRequirements,
   dosen,
   dosenPengajarKelas,
+  feedbackComments,
+  feedbackLikes,
   kelasKuliah,
   kelompokApel,
   kelompokApelAnggota,
@@ -53,6 +55,7 @@ import {
   skalaPredikatKelulusan,
   skemaTarif,
   subCpmk,
+  systemFeedback,
   tagihan,
   transaksiPembayaran,
   users,
@@ -139,6 +142,9 @@ export async function clearDatabase() {
   await db.delete(kompensasiBayar);
   await db.delete(presensi);
   await db.delete(bap);
+  await db.delete(feedbackLikes);
+  await db.delete(feedbackComments);
+  await db.delete(systemFeedback);
   await db.delete(subCpmk);
   await db.delete(cpmkCpl);
   await db.delete(cpmk);
