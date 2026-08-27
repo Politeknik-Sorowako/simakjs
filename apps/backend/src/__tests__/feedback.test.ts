@@ -77,6 +77,30 @@ describe('Feedback & Evaluasi Sistem API', () => {
     expect(json.meta.totalPages).toBe(1);
   });
 
+  it('sortBy yang tidak valid (SQL injection attempt) harus ditolak', async () => {
+    await createFeedback(mhsToken);
+
+    const res = await app.handle(
+      new Request('http://localhost/feedback?sortBy=createdAt%3B%20DROP%20TABLE%20system_feedback&sortOrder=asc', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    // Elysia query schema (whitelist union) menolak sortBy non-literal.
+    expect(res.status).toBe(422);
+
+    const listRes = await app.handle(
+      new Request('http://localhost/feedback', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    expect(listRes.status).toBe(200);
+    const json = await listRes.json();
+    expect(json.data).toBeArray();
+    expect(json.data.length).toBe(1);
+  });
+
   it('getById harus mengembalikan detail dengan likeCount, commentCount, isLiked, dan comments', async () => {
     const createRes = await createFeedback(mhsToken);
     const created = await createRes.json();

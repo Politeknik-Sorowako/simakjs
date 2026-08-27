@@ -4,6 +4,14 @@ import { db } from '../utils/db';
 
 export type FeedbackSortBy = 'createdAt' | 'rating' | 'kategori' | 'judul' | 'likeCount';
 
+const ALLOWED_SORT_BY: ReadonlySet<string> = new Set<FeedbackSortBy>([
+  'createdAt',
+  'rating',
+  'kategori',
+  'judul',
+  'likeCount',
+]);
+
 export class FeedbackService {
   static async create(data: {
     userId: number;
@@ -35,7 +43,11 @@ export class FeedbackService {
         .where(whereClause);
 
       const sortOrder = options?.sortOrder === 'asc' ? sql`ASC` : sql`DESC`;
-      const sortBy = options?.sortBy || 'createdAt';
+      // Validasi whitelist agar kolom sorting tidak dapat disuntikkan dari input user.
+      const requestedSortBy = options?.sortBy;
+      const sortBy: FeedbackSortBy = ALLOWED_SORT_BY.has(requestedSortBy || '')
+        ? (requestedSortBy as FeedbackSortBy)
+        : 'createdAt';
       const orderExpr =
         sortBy === 'rating'
           ? sql`${systemFeedback.rating} ${sortOrder} NULLS LAST`
@@ -105,57 +117,71 @@ export class FeedbackService {
     }
   }
 
-  static async getById(id: number, viewerUserId?: number) {
-    const likeCountExpr = sql<number>`(SELECT COUNT(*) FROM ${feedbackLikes} WHERE ${feedbackLikes.feedbackId} = ${systemFeedback.id})`;
-    const commentCountExpr = sql<number>`(SELECT COUNT(*) FROM ${feedbackComments} WHERE ${feedbackComments.feedbackId} = ${systemFeedback.id})`;
-
+  static async findByIdBasic(id: number) {
     const [row] = await db
-      .select({
-        id: systemFeedback.id,
-        userId: systemFeedback.userId,
-        kategori: systemFeedback.kategori,
-        judul: systemFeedback.judul,
-        pesan: systemFeedback.pesan,
-        rating: systemFeedback.rating,
-        status: systemFeedback.status,
-        createdAt: systemFeedback.createdAt,
-        updatedAt: systemFeedback.updatedAt,
-        likeCount: likeCountExpr,
-        commentCount: commentCountExpr,
-        user: {
-          id: users.id,
-          nama: users.nama,
-          email: users.email,
-          role: users.role,
-        },
-      })
+      .select({ id: systemFeedback.id, userId: systemFeedback.userId, status: systemFeedback.status })
       .from(systemFeedback)
-      .leftJoin(users, eq(systemFeedback.userId, users.id))
-      .where(eq(systemFeedback.id, id));
+      .where(eq(systemFeedback.id, id))
+      .limit(1);
+    return row || null;
+  }
 
-    if (!row) {
+  static async getById(id: number, viewerUserId?: number) {
+    try {
+      const likeCountExpr = sql<number>`(SELECT COUNT(*) FROM ${feedbackLikes} WHERE ${feedbackLikes.feedbackId} = ${systemFeedback.id})`;
+      const commentCountExpr = sql<number>`(SELECT COUNT(*) FROM ${feedbackComments} WHERE ${feedbackComments.feedbackId} = ${systemFeedback.id})`;
+
+      const [row] = await db
+        .select({
+          id: systemFeedback.id,
+          userId: systemFeedback.userId,
+          kategori: systemFeedback.kategori,
+          judul: systemFeedback.judul,
+          pesan: systemFeedback.pesan,
+          rating: systemFeedback.rating,
+          status: systemFeedback.status,
+          createdAt: systemFeedback.createdAt,
+          updatedAt: systemFeedback.updatedAt,
+          likeCount: likeCountExpr,
+          commentCount: commentCountExpr,
+          user: {
+            id: users.id,
+            nama: users.nama,
+            email: users.email,
+            role: users.role,
+          },
+        })
+        .from(systemFeedback)
+        .leftJoin(users, eq(systemFeedback.userId, users.id))
+        .where(eq(systemFeedback.id, id));
+
+      if (!row) {
+        return null;
+      }
+
+      let isLiked = false;
+      if (viewerUserId) {
+        const [like] = await db
+          .select({ id: feedbackLikes.id })
+          .from(feedbackLikes)
+          .where(and(eq(feedbackLikes.feedbackId, id), eq(feedbackLikes.userId, viewerUserId)))
+          .limit(1);
+        isLiked = !!like;
+      }
+
+      const comments = await this.getComments(id);
+
+      return {
+        ...row,
+        likeCount: Number(row.likeCount || 0),
+        commentCount: Number(row.commentCount || 0),
+        isLiked,
+        comments,
+      };
+    } catch (err: unknown) {
+      console.warn('[FeedbackService] Failed to query getById:', err instanceof Error ? err.message : err);
       return null;
     }
-
-    let isLiked = false;
-    if (viewerUserId) {
-      const [like] = await db
-        .select({ id: feedbackLikes.id })
-        .from(feedbackLikes)
-        .where(and(eq(feedbackLikes.feedbackId, id), eq(feedbackLikes.userId, viewerUserId)))
-        .limit(1);
-      isLiked = !!like;
-    }
-
-    const comments = await this.getComments(id);
-
-    return {
-      ...row,
-      likeCount: Number(row.likeCount || 0),
-      commentCount: Number(row.commentCount || 0),
-      isLiked,
-      comments,
-    };
   }
 
   static async update(

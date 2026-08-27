@@ -87,7 +87,7 @@ export class FeedbackController {
       }
 
       const id = parseInt(params.id);
-      const existing = await FeedbackService.getById(id, user.id);
+      const existing = await FeedbackService.findByIdBasic(id);
       if (!existing) {
         set.status = 404;
         return { error: 'Masukan tidak ditemukan.' };
@@ -127,7 +127,7 @@ export class FeedbackController {
       }
 
       const id = parseInt(params.id);
-      const existing = await FeedbackService.getById(id, user.id);
+      const existing = await FeedbackService.findByIdBasic(id);
       if (!existing) {
         set.status = 404;
         return { error: 'Masukan tidak ditemukan.' };
@@ -160,7 +160,7 @@ export class FeedbackController {
         return { error: 'Unauthorized' };
       }
       const id = parseInt(params.id);
-      const feedback = await FeedbackService.getById(id, user.id);
+      const feedback = await FeedbackService.findByIdBasic(id);
       if (!feedback) {
         set.status = 404;
         return { error: 'Masukan tidak ditemukan.' };
@@ -181,7 +181,7 @@ export class FeedbackController {
         return { error: 'Unauthorized' };
       }
       const id = parseInt(params.id);
-      const feedback = await FeedbackService.getById(id, user.id);
+      const feedback = await FeedbackService.findByIdBasic(id);
       if (!feedback) {
         set.status = 404;
         return { error: 'Masukan tidak ditemukan.' };
@@ -207,7 +207,7 @@ export class FeedbackController {
         return { error: 'Unauthorized' };
       }
       const id = parseInt(params.id);
-      const feedback = await FeedbackService.getById(id, user.id);
+      const feedback = await FeedbackService.findByIdBasic(id);
       if (!feedback) {
         set.status = 404;
         return { error: 'Masukan tidak ditemukan.' };

@@ -27,6 +27,14 @@ export const addCommentBody = t.Object({
 export const getAllFeedbackQuery = t.Object({
   page: t.Optional(t.Numeric()),
   limit: t.Optional(t.Numeric()),
-  sortBy: t.Optional(t.String()),
+  sortBy: t.Optional(
+    t.Union([
+      t.Literal('createdAt'),
+      t.Literal('rating'),
+      t.Literal('kategori'),
+      t.Literal('judul'),
+      t.Literal('likeCount'),
+    ]),
+  ),
   sortOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')])),
 });
