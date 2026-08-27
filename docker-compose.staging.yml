@@ -16,6 +16,11 @@ services:
       timeout: 5s
       retries: 15
       start_period: 20s
+    networks:
+      default:
+        aliases:
+          - db_staging
+          - db
 
   backend_staging:
     build:
@@ -26,7 +31,7 @@ services:
     ports:
       - "${BACKEND_PORT:-3001}:3000"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-simak_user_staging}:${POSTGRES_PASSWORD:-simak_password_staging}@db_staging:5432/${POSTGRES_DB:-simak_vokasi_staging}
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: "http://localhost:8082,http://localhost:3001,https://staging-simak.politekniksorowako.ac.id"
@@ -39,6 +44,7 @@ services:
     volumes:
       - backup_data_staging:/app/apps/backend/backups
       - app_logs_staging:/app/apps/backend/logs
+      - upload_data_staging:/app/apps/backend/uploads
     networks:
       default:
         aliases:
@@ -65,4 +71,9 @@ volumes:
   pgdata_staging:
   backup_data_staging:
   app_logs_staging:
+  upload_data_staging:
+
+networks:
+  default:
+    name: simak_staging_network
 

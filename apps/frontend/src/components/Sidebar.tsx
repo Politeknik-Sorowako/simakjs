@@ -1059,7 +1059,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Jam Kompensasi
                   </A>
                 </Show>
-                <Show when={isAdmin() || isInstruktur()}>
+                <Show when={isAdmin() || isInstruktur() || isDosen()}>
                   <A
                     href="/kompensasi-manual"
                     onClick={() => props.onClose()}
@@ -1330,7 +1330,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     Pengajuan Cuti
                   </A>
                 </Show>
-                <Show when={isAdmin() || isMahasiswa()}>
+                <Show when={isMahasiswa()}>
                   <A
                     href="/presensi-saya"
                     onClick={() => props.onClose()}

@@ -15,6 +15,11 @@ export class KompensasiManualService {
   static async resolveDurasiMenit(jenisKompen: JenisKompen, durasiMenit?: number): Promise<number> {
     const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
     if (JENIS_FULL_DAY.includes(jenisKompen)) {
+      // Gunakan durasi kustom jika bernilai valid (> 0). Default 480 (full-day)
+      // hanya berlaku jika durasi tidak dikirim / dikosongkan.
+      if (durasiMenit !== undefined && durasiMenit > 0) {
+        return Math.min(durasiMenit, maksHarian);
+      }
       return maksHarian;
     }
     const durasi = durasiMenit || 0;
@@ -218,6 +223,82 @@ export class KompensasiManualService {
     return deleted || null;
   }
 
+  static async bulkDelete(ids: number[]): Promise<number> {
+    if (!ids || ids.length === 0) {
+      return 0;
+    }
+    return await db.transaction(async (tx) => {
+      const existing = await tx
+        .select({ id: kompensasiManual.id })
+        .from(kompensasiManual)
+        .where(sql`${kompensasiManual.id} IN (${sql.join(ids, sql`, `)})`);
+      const existingIds = existing.map((r) => r.id);
+      if (existingIds.length === 0) {
+        return 0;
+      }
+
+      await tx
+        .delete(ketidakhadiranMahasiswa)
+        .where(
+          and(
+            eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'),
+            sql`${ketidakhadiranMahasiswa.sumberId} IN (${sql.join(existingIds, sql`, `)})`,
+          ),
+        );
+      const deleted = await tx
+        .delete(kompensasiManual)
+        .where(sql`${kompensasiManual.id} IN (${sql.join(existingIds, sql`, `)})`)
+        .returning({ id: kompensasiManual.id });
+      return deleted.length;
+    });
+  }
+
+  static async bulkUpdate(ids: number[], data: { jenisKompen?: JenisKompen; durasiMenit?: number }): Promise<number> {
+    if (!ids || ids.length === 0) {
+      return 0;
+    }
+    if (data.jenisKompen !== undefined && !JENIS_KOMPEN.includes(data.jenisKompen)) {
+      throw new Error('Jenis kompensasi tidak valid');
+    }
+
+    return await db.transaction(async (tx) => {
+      const rows = await tx
+        .select()
+        .from(kompensasiManual)
+        .where(sql`${kompensasiManual.id} IN (${sql.join(ids, sql`, `)})`);
+      if (rows.length === 0) {
+        return 0;
+      }
+
+      const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
+      let updatedCount = 0;
+
+      for (const row of rows) {
+        const jenisKompen = (data.jenisKompen ?? row.jenisKompen) as JenisKompen;
+        const durasiMenit = await this.resolveDurasiMenit(jenisKompen, data.durasiMenit ?? row.durasiMenit);
+
+        const totalHariIni = await this.hitungTotalHariIni(row.mahasiswaId, row.tanggal, row.id, tx);
+        if (totalHariIni + durasiMenit > maksHarian) {
+          throw new Error(
+            `Total durasi kompensasi pada tanggal ${row.tanggal} akan melebihi batas ${maksHarian} menit/hari (mahasiswa ID ${row.mahasiswaId}).`,
+          );
+        }
+
+        await tx.update(kompensasiManual).set({ jenisKompen, durasiMenit }).where(eq(kompensasiManual.id, row.id));
+        await tx
+          .update(ketidakhadiranMahasiswa)
+          .set({
+            status: jenisKompen.toUpperCase() as 'UNKNOWN' | 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK',
+            durasiMenit,
+          })
+          .where(and(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'), eq(ketidakhadiranMahasiswa.sumberId, row.id)));
+        updatedCount++;
+      }
+
+      return updatedCount;
+    });
+  }
+
   static async getRiwayatMahasiswa(mahasiswaId: number) {
     return await db
       .select()
@@ -387,6 +468,7 @@ export class KompensasiManualService {
       mahasiswaNama: mahasiswa.nama,
       jenisKompen: kompensasiManual.jenisKompen,
       durasiMenit: kompensasiManual.durasiMenit,
+      createdAt: kompensasiManual.createdAt,
     };
     const sortColumn = options?.sortBy ? sortMap[options.sortBy] : undefined;
     const sortOrderClause = options?.sortOrder === 'asc' ? asc : desc;

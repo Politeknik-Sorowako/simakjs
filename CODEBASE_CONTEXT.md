@@ -221,7 +221,7 @@ Setiap AI Agent yang bekerja pada repositori ini **WAJIB** mematuhi aturan berik
 
 4. **Git & CI/CD Workflow**:
    - **Dilarang Direct Push**: Jangan pernah melakukan push langsung ke cabang `development` atau `main`.
-   - **Pull Request (PR)**: Semua perubahan wajib dikirim via Pull Request menyasar cabang `development` (staging) atau `main` (production).
+   - **Pull Request (PR) — Staging-First**: Semua perubahan fitur/hotfix WAJIB dikirim via Pull Request menyasar cabang `development` (staging) terlebih dahulu. Merge ke `development` memicu staging deploy. Setelah verifikasi staging, promot ke produksi HANYA melalui PR lanjutan `development -> main`; `main` tidak menerima PR fitur/hotfix langsung.
    - **Sandbox Token Clean**: Selalu jalankan `env -u GITHUB_TOKEN git ...` sebelum operasi git remote.
 
 5. **Pre-commit Verification Checklist**:

@@ -57,6 +57,7 @@ export const importKompensasiBayarSchema = {
   response: {
     200: t.Object({
       successCount: t.Integer(),
+      skippedCount: t.Integer(),
       errors: t.Array(t.Object({ line: t.Integer(), error: t.String() })),
     }),
     400: t.Object({ error: t.String() }),

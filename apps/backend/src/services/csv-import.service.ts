@@ -15,14 +15,31 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
-import { JENIS_FULL_DAY, JENIS_KOMPEN } from './kompensasi-manual.service';
+import { JENIS_FULL_DAY, JENIS_KOMPEN, type JenisKompen } from './kompensasi-manual.service';
 import { PelanggaranService } from './pelanggaran.service';
 import { SystemParameterService } from './system-parameter.service';
 
 export interface ImportResult {
   successCount: number;
+  skippedCount: number;
   errors: { line: number; error: string }[];
 }
+
+// Normalisasi kode singkatan / nama status kompensasi pada impor CSV.
+// Mendukung huruf singkatan A/S/I/R/T maupun nama lengkap.
+const STATUS_KOMPEN_MAP: Record<string, string> = {
+  a: 'alpa',
+  alpa: 'alpa',
+  s: 'sakit',
+  sakit: 'sakit',
+  i: 'izin',
+  izin: 'izin',
+  r: 'rusak',
+  rusak: 'rusak',
+  t: 'terlambat',
+  telat: 'terlambat',
+  terlambat: 'terlambat',
+};
 
 export class CsvImportService {
   private static parseCsvLines(csvText: string): string[][] {
@@ -71,11 +88,15 @@ export class CsvImportService {
   static async importMahasiswa(csvText: string, mode: string = 'skip'): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
     // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
@@ -239,11 +260,15 @@ export class CsvImportService {
   static async importDosen(csvText: string, mode: string = 'skip'): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
     // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
@@ -332,11 +357,11 @@ export class CsvImportService {
   static async importMataKuliah(csvText: string, mode: string = 'skip'): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV is empty' }] };
+      return { successCount: 0, skippedCount: 0, errors: [{ line: 1, error: 'CSV is empty' }] };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
     // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
@@ -424,11 +449,11 @@ export class CsvImportService {
   static async importProgramStudi(csvText: string, mode: string = 'skip'): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV is empty' }] };
+      return { successCount: 0, skippedCount: 0, errors: [{ line: 1, error: 'CSV is empty' }] };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
     // biome-ignore lint/suspicious/noExplicitAny: Drizzle dynamic insert type
     const batchData: any[] = [];
 
@@ -497,11 +522,15 @@ export class CsvImportService {
   static async importDosenPaMapping(csvText: string): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
 
     const nimIdx = headers.indexOf('nim');
     let nipIdx = headers.indexOf('nip_dosen_pa');
@@ -511,6 +540,7 @@ export class CsvImportService {
     if (nimIdx === -1 || nipIdx === -1) {
       return {
         successCount: 0,
+        skippedCount: 0,
         errors: [
           { line: 1, error: 'CSV harus memiliki kolom header "nim" dan "nip_dosen_pa" (atau "nip_dosen" / "nip").' },
         ],
@@ -563,11 +593,15 @@ export class CsvImportService {
   static async importUsers(csvText: string): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
 
     const emailIdx = headers.indexOf('email');
     const namaIdx = headers.indexOf('nama');
@@ -577,6 +611,7 @@ export class CsvImportService {
     if (emailIdx === -1 || namaIdx === -1 || roleIdx === -1) {
       return {
         successCount: 0,
+        skippedCount: 0,
         errors: [{ line: 1, error: 'CSV harus memiliki kolom header: email, nama, role' }],
       };
     }
@@ -718,11 +753,15 @@ export class CsvImportService {
   static async importKrs(csvText: string): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
 
     const nimIdx = headers.indexOf('nim');
     const kodeMkIdx = headers.indexOf('kode_mata_kuliah');
@@ -732,6 +771,7 @@ export class CsvImportService {
     if (nimIdx === -1 || kodeMkIdx === -1 || namaKelasIdx === -1 || periodeIdx === -1) {
       return {
         successCount: 0,
+        skippedCount: 0,
         errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, kode_mata_kuliah, nama_kelas, periode_id' }],
       };
     }
@@ -837,11 +877,15 @@ export class CsvImportService {
   static async importPelanggaran(csvText: string, mode: string = 'skip', userId?: number): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
 
     const nimIdx = headers.indexOf('nim');
     const tanggalIdx = headers.indexOf('tanggal');
@@ -855,6 +899,7 @@ export class CsvImportService {
     if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1) {
       return {
         successCount: 0,
+        skippedCount: 0,
         errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_pelanggaran' }],
       };
     }
@@ -1005,11 +1050,15 @@ export class CsvImportService {
   static async importPasalPelanggaran(csvText: string, mode: string = 'skip'): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
 
     const nomorIdx = headers.indexOf('nomor_pasal');
     const bunyiIdx = headers.indexOf('bunyi_pasal');
@@ -1018,6 +1067,7 @@ export class CsvImportService {
     if (nomorIdx === -1 || bunyiIdx === -1) {
       return {
         successCount: 0,
+        skippedCount: 0,
         errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nomor_pasal, bunyi_pasal' }],
       };
     }
@@ -1088,11 +1138,15 @@ export class CsvImportService {
   static async importKompensasiManual(csvText: string, mode: string = 'skip', userId?: number): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
 
     const nimIdx = headers.indexOf('nim');
     const tanggalIdx = headers.indexOf('tanggal');
@@ -1103,6 +1157,7 @@ export class CsvImportService {
     if (nimIdx === -1 || tanggalIdx === -1 || jenisIdx === -1 || durasiIdx === -1) {
       return {
         successCount: 0,
+        skippedCount: 0,
         errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jenis_kompen, durasi_menit' }],
       };
     }
@@ -1114,12 +1169,13 @@ export class CsvImportService {
 
       const nimVal = row[nimIdx].trim();
       const tanggalVal = row[tanggalIdx].trim();
-      const jenisVal = row[jenisIdx].trim().toLowerCase();
+      const jenisRaw = row[jenisIdx].trim().toLowerCase();
+      const jenisVal = STATUS_KOMPEN_MAP[jenisRaw] || '';
       const durasiRaw = row[durasiIdx].trim();
       const keteranganVal = keteranganIdx !== -1 ? row[keteranganIdx].trim() : null;
 
-      if (!nimVal || !tanggalVal || !jenisVal || !durasiRaw) {
-        result.errors.push({ line: lineNum, error: 'Kolom NIM, Tanggal, Jenis Kompen, dan Durasi Menit wajib diisi.' });
+      if (!nimVal || !tanggalVal || !jenisVal) {
+        result.errors.push({ line: lineNum, error: 'Kolom NIM, Tanggal, dan Jenis Kompen wajib diisi.' });
         continue;
       }
 
@@ -1128,16 +1184,15 @@ export class CsvImportService {
         continue;
       }
 
-      // biome-ignore lint/suspicious/noExplicitAny: Drizzle enum type requirement
-      if (!JENIS_KOMPEN.includes(jenisVal as any)) {
+      if (!JENIS_KOMPEN.includes(jenisVal as JenisKompen)) {
         result.errors.push({
           line: lineNum,
-          error: `Jenis kompen "${jenisVal}" tidak valid. Pilihan: ${JENIS_KOMPEN.join(', ')}`,
+          error: `Jenis kompen "${jenisRaw}" tidak valid. Pilihan: alpa/sakit/izin/rusak/terlambat (atau kode A/S/I/R/T).`,
         });
         continue;
       }
 
-      const durasiMenit = parseInt(durasiRaw);
+      const durasiMenit = durasiRaw !== '' ? parseInt(durasiRaw) : NaN;
       const isFullDay = (JENIS_FULL_DAY as readonly string[]).includes(jenisVal);
       if (isNaN(durasiMenit) && !isFullDay) {
         result.errors.push({ line: lineNum, error: 'Durasi menit harus berupa angka positif.' });
@@ -1156,9 +1211,9 @@ export class CsvImportService {
         }
 
         const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
-        const resolvedDurasi = (JENIS_FULL_DAY as readonly string[]).includes(jenisVal)
-          ? maksHarian
-          : Math.min(durasiMenit, maksHarian);
+        // Gunakan durasi_menit dari CSV jika bernilai valid (> 0). Nilai default
+        // 480 menit (full-day) hanya berlaku bila durasi dikosongkan pada jenis full-day.
+        const resolvedDurasi = !isNaN(durasiMenit) && durasiMenit > 0 ? Math.min(durasiMenit, maksHarian) : maksHarian;
         const statusKompensasi = jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK';
 
         // Seluruh operasi per-baris dibungkus transaksi agar penulisan ke
@@ -1167,34 +1222,46 @@ export class CsvImportService {
         await db.transaction(async (tx) => {
           await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`kompen_import_${mhs.id}_${tanggalVal}`}))`);
 
-          const [sumRow] = await tx
-            .select({ total: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
+          // Cek data key deduplikasi (mahasiswa_id, tanggal, jenis_kompen).
+          const [existing] = await tx
+            .select({ id: kompensasiManual.id, durasiMenit: kompensasiManual.durasiMenit })
             .from(kompensasiManual)
-            .where(and(eq(kompensasiManual.mahasiswaId, mhs.id), eq(kompensasiManual.tanggal, tanggalVal)));
-          const totalHariIni = Number(sumRow?.total || 0);
+            .where(
+              and(
+                eq(kompensasiManual.mahasiswaId, mhs.id),
+                eq(kompensasiManual.tanggal, tanggalVal),
+                eq(kompensasiManual.jenisKompen, jenisVal),
+              ),
+            )
+            .limit(1);
 
-          if (totalHariIni + resolvedDurasi > maksHarian) {
-            throw new Error(
-              `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat menambah ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
-            );
-          }
+          if (existing) {
+            if (mode === 'update') {
+              const [sumRow] = await tx
+                .select({ total: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
+                .from(kompensasiManual)
+                .where(
+                  and(
+                    eq(kompensasiManual.mahasiswaId, mhs.id),
+                    eq(kompensasiManual.tanggal, tanggalVal),
+                    sql`${kompensasiManual.id} != ${existing.id}`,
+                  ),
+                );
+              const totalHariIni = Number(sumRow?.total || 0);
 
-          if (mode === 'update') {
-            const [existing] = await tx
-              .select({ id: kompensasiManual.id })
-              .from(kompensasiManual)
-              .where(
-                and(
-                  eq(kompensasiManual.mahasiswaId, mhs.id),
-                  eq(kompensasiManual.tanggal, tanggalVal),
-                  eq(kompensasiManual.jenisKompen, jenisVal),
-                ),
-              )
-              .limit(1);
-            if (existing) {
+              if (totalHariIni + resolvedDurasi > maksHarian) {
+                throw new Error(
+                  `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat mengubah menjadi ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
+                );
+              }
+
               await tx
                 .update(kompensasiManual)
-                .set({ durasiMenit: resolvedDurasi, keterangan: keteranganVal })
+                .set({
+                  jenisKompen: jenisVal,
+                  durasiMenit: resolvedDurasi,
+                  keterangan: keteranganVal,
+                })
                 .where(eq(kompensasiManual.id, existing.id));
               // Upsert baris sinkron: buat jika belum ada, update jika sudah ada.
               await tx
@@ -1220,8 +1287,23 @@ export class CsvImportService {
                   },
                 });
               result.successCount++;
-              return;
+            } else {
+              // Mode skip: baris dengan data key yang sama dilewati.
+              result.skippedCount++;
             }
+            return;
+          }
+
+          const [sumRow] = await tx
+            .select({ total: sql<number>`COALESCE(SUM(${kompensasiManual.durasiMenit}), 0)` })
+            .from(kompensasiManual)
+            .where(and(eq(kompensasiManual.mahasiswaId, mhs.id), eq(kompensasiManual.tanggal, tanggalVal)));
+          const totalHariIni = Number(sumRow?.total || 0);
+
+          if (totalHariIni + resolvedDurasi > maksHarian) {
+            throw new Error(
+              `Total durasi kompensasi ${tanggalVal} mencapai ${totalHariIni} menit, tidak dapat menambah ${resolvedDurasi} menit (maks ${maksHarian} menit/hari).`,
+            );
           }
 
           const [insertedRecord] = await tx
@@ -1274,11 +1356,15 @@ export class CsvImportService {
   static async importKompensasiBayar(csvText: string, mode: string = 'skip', userId?: number): Promise<ImportResult> {
     const rows = this.parseCsvLines(csvText);
     if (rows.length <= 1) {
-      return { successCount: 0, errors: [{ line: 1, error: 'CSV file is empty or only has headers' }] };
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
     }
 
     const headers = rows[0].map((h) => h.toLowerCase().trim());
-    const result: ImportResult = { successCount: 0, errors: [] };
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
 
     const nimIdx = headers.indexOf('nim');
     const tanggalIdx = headers.indexOf('tanggal');
@@ -1288,6 +1374,7 @@ export class CsvImportService {
     if (nimIdx === -1 || tanggalIdx === -1 || jumlahIdx === -1) {
       return {
         successCount: 0,
+        skippedCount: 0,
         errors: [{ line: 1, error: 'CSV harus memiliki kolom header: nim, tanggal, jumlah_menit' }],
       };
     }

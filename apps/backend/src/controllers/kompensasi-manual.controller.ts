@@ -33,9 +33,9 @@ export class KompensasiManualController {
   static async updateKompensasi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin'])) {
+      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
         set.status = 403;
-        return { error: 'Akses ditolak. Hanya Admin.' };
+        return { error: 'Akses ditolak. Hanya Admin/Dosen.' };
       }
       const updated = await KompensasiManualService.updateKompensasi(parseInt(params.id), body);
       if (!updated) {
@@ -43,6 +43,43 @@ export class KompensasiManualController {
         return { error: 'Data kompensasi tidak ditemukan.' };
       }
       return updated;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async bulkDelete({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin/Dosen.' };
+      }
+      const ids: number[] = Array.isArray(body?.ids) ? body.ids.map((id: number) => Number(id)) : [];
+      const deleted = await KompensasiManualService.bulkDelete(ids);
+      return { success: true, deleted };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Unknown error' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async bulkUpdate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'super_admin', 'dosen', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin/Dosen.' };
+      }
+      const ids: number[] = Array.isArray(body?.ids) ? body.ids.map((id: number) => Number(id)) : [];
+      const updated = await KompensasiManualService.bulkUpdate(ids, {
+        jenisKompen: body?.jenisKompen as JenisKompen | undefined,
+        durasiMenit: body?.durasiMenit !== undefined ? Number(body.durasiMenit) : undefined,
+      });
+      return { success: true, updated };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

@@ -7,7 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { useToast } from '../contexts/ToastContext';
 import { presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
-import { type ExportColumn, exportToExcel } from '../utils/export';
+import { type ExportColumn, exportToExcel, exportToExcelMultipleSheets } from '../utils/export';
 import { fmtTanggal } from '../utils/format';
 
 const PER_PAGE = 20;
@@ -37,6 +37,7 @@ export default function LaporanKompensasi() {
   const [page, setPage] = createSignal(1);
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [isExporting, setIsExporting] = createSignal(false);
+  const [isExportingDetail, setIsExportingDetail] = createSignal(false);
   const [showImportModal, setShowImportModal] = createSignal(false);
 
   // Debounce search input
@@ -165,6 +166,66 @@ export default function LaporanKompensasi() {
       toast.showToast('Gagal mengunduh laporan excel', 'error');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportRiwayat = async () => {
+    const detail = mhsDetail();
+    if (!detail) return;
+    setIsExportingDetail(true);
+    try {
+      const mhs = detail.mahasiswa;
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const sumberLabel = (sumber: string) =>
+        sumber === 'perkuliahan' ? 'Perkuliahan' : sumber === 'apel' ? 'Apel' : 'Kompensasi Manual';
+
+      exportToExcelMultipleSheets(
+        [
+          {
+            name: 'Log Ketidakhadiran',
+            columns: [
+              { header: 'NIM', accessor: 'nim' },
+              { header: 'Nama Mahasiswa', accessor: 'nama' },
+              { header: 'Tanggal', accessor: 'bapTanggal' },
+              { header: 'Sumber', accessor: (r) => sumberLabel(String((r as { sumber: string }).sumber)) },
+              { header: 'Status', accessor: (r) => String((r as { status: string }).status || '').toUpperCase() },
+              { header: 'Durasi (Menit)', accessor: 'durasiMangkir' },
+              { header: 'Poin Kompensasi', accessor: 'poinKompensasi' },
+              {
+                header: 'Keterangan',
+                accessor: (r) => (r as { keteranganAdmin?: string | null }).keteranganAdmin || '-',
+              },
+            ],
+            data: detail.historyKompensasi.map((h) => ({
+              ...h,
+              nim: mhs.nim,
+              nama: mhs.nama,
+            })),
+          },
+          {
+            name: 'Riwayat Pembayaran',
+            columns: [
+              { header: 'NIM', accessor: 'nim' },
+              { header: 'Nama Mahasiswa', accessor: 'nama' },
+              { header: 'Tanggal Pembayaran', accessor: 'tanggal' },
+              { header: 'Jumlah Menit', accessor: 'jumlahMenit' },
+              { header: 'Keterangan', accessor: 'keterangan' },
+            ],
+            data: detail.payments.map((p) => ({
+              ...p,
+              nim: mhs.nim,
+              nama: mhs.nama,
+            })),
+          },
+        ],
+        `Riwayat_Kompensasi_${mhs.nim}_${dateStr}`,
+      );
+      toast.showToast('Riwayat mahasiswa berhasil diunduh (.xlsx)', 'success');
+    } catch (e: unknown) {
+      toast.showToast('Gagal mengunduh riwayat mahasiswa', 'error');
+    } finally {
+      setIsExportingDetail(false);
     }
   };
 
@@ -429,10 +490,18 @@ export default function LaporanKompensasi() {
         >
           {(detail) => (
             <div class="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-2">
-              <div class="bg-secondary-50 rounded-2xl p-5 border border-secondary-100 flex items-center justify-between dark:bg-secondary-800 dark:border-secondary-800">
+              <div class="bg-secondary-50 rounded-2xl p-5 border border-secondary-100 flex items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-800">
                 <div>
                   <h3 class="font-bold text-secondary-800 text-lg dark:text-white">{detail().mahasiswa.nama}</h3>
                   <p class="text-sm text-secondary-500 dark:text-secondary-200">NIM: {detail().mahasiswa.nim}</p>
+                  <Button
+                    onClick={handleExportRiwayat}
+                    disabled={isExportingDetail()}
+                    variant="secondary"
+                    class="mt-3 !px-3 !py-1.5 text-[11px] font-bold"
+                  >
+                    {isExportingDetail() ? 'Mengunduh...' : '📥 Ekspor Riwayat Mahasiswa (.xlsx)'}
+                  </Button>
                 </div>
                 <div class="text-right">
                   <div class="text-xs text-secondary-400 uppercase font-semibold dark:text-secondary-200">
