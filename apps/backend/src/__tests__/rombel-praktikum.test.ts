@@ -1,6 +1,18 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { dosen, kelasKuliah, mahasiswa, mataKuliah, periodeAkademik, programStudi } from '../models/schema';
+import {
+  bapPraktikum,
+  dosen,
+  kelasKuliah,
+  mahasiswa,
+  mataKuliah,
+  periodeAkademik,
+  presensiPraktikum,
+  programStudi,
+  rombelPraktikum,
+  rombelPraktikumMahasiswa,
+} from '../models/schema';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -142,5 +154,116 @@ describe('Rombel Praktikum & BAP Praktikum API', () => {
       }),
     );
     expect(presPrakRes.status).toBe(200);
+  });
+
+  it('harus menghapus rombel beserta data terkait (cascade) oleh admin', async () => {
+    // Buat rombel + anggota + BAP praktikum + presensi
+    const createRes = await app.handle(
+      new Request('http://localhost/rombel-praktikum', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          kelasKuliahId: kelasId,
+          namaGroup: 'Kelompok Hapus',
+          instrukturId: dosenId,
+        }),
+      }),
+    );
+    expect(createRes.status).toBe(200);
+    const rombel = await createRes.json();
+    expect(rombel.id).toBeDefined();
+
+    await app.handle(
+      new Request(`http://localhost/rombel-praktikum/${rombel.id}/mahasiswa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ mahasiswaIds: [mhsId] }),
+      }),
+    );
+
+    const bapPrakRes = await app.handle(
+      new Request('http://localhost/rombel-praktikum/bap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          rombelPraktikumId: rombel.id,
+          tanggal: '2026-04-11',
+          sesiKe: 1,
+          materi: 'Troubleshooting Jaringan',
+          durasiMenit: 120,
+          instrukturId: dosenId,
+        }),
+      }),
+    );
+    expect(bapPrakRes.status).toBe(200);
+    const bapPrak = await bapPrakRes.json();
+
+    await app.handle(
+      new Request('http://localhost/rombel-praktikum/presensi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          bapPraktikumId: bapPrak.id,
+          presensiList: [{ mahasiswaId: mhsId, status: 'hadir' }],
+        }),
+      }),
+    );
+
+    // Hapus rombel
+    const deleteRes = await app.handle(
+      new Request(`http://localhost/rombel-praktikum/${rombel.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(deleteRes.status).toBe(200);
+
+    // Rombel hilang dari daftar
+    const getRes = await app.handle(
+      new Request(`http://localhost/rombel-praktikum/kelas/${kelasId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const list = await getRes.json();
+    expect(list.find((r: { id: number }) => r.id === rombel.id)).toBeUndefined();
+
+    // Cascade: anggota, BAP, dan presensi praktikum ikut terhapus
+    const members = await db
+      .select()
+      .from(rombelPraktikumMahasiswa)
+      .where(eq(rombelPraktikumMahasiswa.rombelPraktikumId, rombel.id));
+    expect(members).toHaveLength(0);
+
+    const baps = await db.select().from(bapPraktikum).where(eq(bapPraktikum.rombelPraktikumId, rombel.id));
+    expect(baps).toHaveLength(0);
+
+    const presensis = await db.select().from(presensiPraktikum).where(eq(presensiPraktikum.bapPraktikumId, bapPrak.id));
+    expect(presensis).toHaveLength(0);
+
+    const direct = await db.select().from(rombelPraktikum).where(eq(rombelPraktikum.id, rombel.id));
+    expect(direct).toHaveLength(0);
+  });
+
+  it('harus menolak hapus rombel untuk role dosen (403)', async () => {
+    const createRes = await app.handle(
+      new Request('http://localhost/rombel-praktikum', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ kelasKuliahId: kelasId, namaGroup: 'Kelompok Dosen' }),
+      }),
+    );
+    expect(createRes.status).toBe(200);
+    const rombel = await createRes.json();
+
+    const deleteRes = await app.handle(
+      new Request(`http://localhost/rombel-praktikum/${rombel.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(deleteRes.status).toBe(403);
+
+    const stillExists = await db.select().from(rombelPraktikum).where(eq(rombelPraktikum.id, rombel.id));
+    expect(stillExists).toHaveLength(1);
   });
 });

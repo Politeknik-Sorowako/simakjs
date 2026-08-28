@@ -14,7 +14,7 @@ export const createKompensasiManualBody = t.Object({
   mahasiswaId: t.Integer(),
   tanggal: t.String({ description: 'Format YYYY-MM-DD' }),
   jenisKompen: jenisKompenEnum,
-  durasiMenit: t.Optional(t.Integer({ minimum: 1 })),
+  durasiMenit: t.Optional(t.Integer({ minimum: 0 })),
   keterangan: t.Optional(t.Nullable(t.String())),
 });
 
@@ -116,7 +116,7 @@ export const bulkUpdateKompensasiManualSchema = {
   body: t.Object({
     ids: t.Array(t.Integer()),
     jenisKompen: t.Optional(jenisKompenEnum),
-    durasiMenit: t.Optional(t.Integer({ minimum: 1 })),
+    durasiMenit: t.Optional(t.Integer({ minimum: 0 })),
   }),
   response: {
     200: t.Object({

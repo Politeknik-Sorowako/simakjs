@@ -284,7 +284,9 @@ export class BimbinganController {
       let sisaKompensasi = 0;
       try {
         const komDetail = await PresensiService.getKompensasiDetail(mhsId);
-        sisaKompensasi = komDetail.summary.sisaKompensasi;
+        sisaKompensasi = hasRole(user, ['mahasiswa'])
+          ? Math.max(0, komDetail.summary.sisaKompensasi)
+          : komDetail.summary.sisaKompensasi;
       } catch (e) {}
 
       let poinPelanggaran = 0;

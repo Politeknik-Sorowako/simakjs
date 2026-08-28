@@ -74,6 +74,8 @@ export default function BapPresensi() {
   const [showCpmkModal, setShowCpmkModal] = createSignal(false);
   const [showRombelModal, setShowRombelModal] = createSignal(false);
   const [showEnrollmentQrModal, setShowEnrollmentQrModal] = createSignal(false);
+  const [showDeleteRombelModal, setShowDeleteRombelModal] = createSignal(false);
+  const [isDeletingRombel, setIsDeletingRombel] = createSignal(false);
   const [namaGroupRombel, setNamaGroupRombel] = createSignal('');
   const [keteranganRombel, setKeteranganRombel] = createSignal('');
   const [isSubmittingRombel, setIsSubmittingRombel] = createSignal(false);
@@ -419,6 +421,24 @@ export default function BapPresensi() {
   };
 
   const currentRombel = () => (rombelData() || []).find((r) => r.id === selectedRombelId());
+
+  const handleDeleteRombel = async () => {
+    const rombelId = selectedRombelId();
+    if (!rombelId || isDeletingRombel()) return;
+    setIsDeletingRombel(true);
+    try {
+      await rombelPraktikumController.deleteRombel(rombelId);
+      toast.showToast('Rombel Praktikum berhasil dihapus', 'success');
+      setShowDeleteRombelModal(false);
+      setSelectedRombelId(null);
+      setSelectedBapId(null);
+      await refetchRombel();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menghapus rombel', 'error');
+    } finally {
+      setIsDeletingRombel(false);
+    }
+  };
 
   const openAssignModal = () => {
     const r = currentRombel();
@@ -1111,7 +1131,7 @@ export default function BapPresensi() {
               Isi Berita Acara Perkuliahan (BAP) dan Presensi kehadiran mahasiswa
             </p>
           </div>
-          <Show when={selectedKelasId()}>
+          <Show when={selectedKelasId() && mainTab() === 'teori'}>
             <Button onClick={openAddBap} variant="primary">
               + Buat Pertemuan / BAP
             </Button>
@@ -1129,7 +1149,7 @@ export default function BapPresensi() {
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
-            Perkuliahan & Presensi Teori
+            Kelas Teori
           </button>
           <button
             type="button"
@@ -1140,7 +1160,7 @@ export default function BapPresensi() {
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
-            Kelas Praktikum (Rombel)
+            Rombel / Praktik
           </button>
           <button
             type="button"
@@ -1491,6 +1511,18 @@ export default function BapPresensi() {
                     >
                       Sync Nilai ke Kelas Induk
                     </Button>
+                    <Show when={auth.hasRole(['admin', 'super_admin'])}>
+                      <Button
+                        onClick={() => {
+                          refetchBapPraktikum();
+                          setShowDeleteRombelModal(true);
+                        }}
+                        variant="danger"
+                        aria-label="Hapus rombel praktikum"
+                      >
+                        Hapus Rombel
+                      </Button>
+                    </Show>
                   </div>
                 </div>
 
@@ -2074,6 +2106,46 @@ export default function BapPresensi() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Konfirmasi Hapus Rombel Praktikum */}
+      <Modal
+        isOpen={showDeleteRombelModal()}
+        onClose={() => setShowDeleteRombelModal(false)}
+        title="Konfirmasi Hapus Rombel Praktikum"
+      >
+        <div class="flex flex-col gap-4">
+          <p class="text-sm text-secondary-600 dark:text-secondary-300">
+            Apakah Anda yakin ingin menghapus rombel{' '}
+            <strong class="text-secondary-900 dark:text-white">{currentRombel()?.namaGroup || ''}</strong>?
+          </p>
+          <Show when={(bapPraktikumData()?.length || 0) > 0}>
+            <div class="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300 text-xs leading-relaxed">
+              Rombel ini memiliki{' '}
+              <strong class="font-bold">{bapPraktikumData()?.length || 0} sesi BAP Praktikum</strong>. Jika Anda
+              melanjutkan, seluruh BAP Praktikum, presensi praktikum, nilai praktikum, dan data anggota di dalamnya akan
+              ikut terhapus secara permanen.
+            </div>
+          </Show>
+          <Show when={(bapPraktikumData()?.length || 0) === 0}>
+            <p class="text-xs text-secondary-500 dark:text-secondary-400">
+              Semua data terkait (anggota rombel, presensi, dan nilai praktikum) akan ikut terhapus secara permanen.
+            </p>
+          </Show>
+          <div class="flex justify-end gap-2 mt-2">
+            <Button
+              type="button"
+              onClick={() => setShowDeleteRombelModal(false)}
+              variant="secondary"
+              disabled={isDeletingRombel()}
+            >
+              Batal
+            </Button>
+            <Button onClick={handleDeleteRombel} variant="danger" loading={isDeletingRombel()}>
+              {isDeletingRombel() ? 'Menghapus...' : 'Ya, Hapus Rombel'}
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* Modal Enrollment QR Mahasiswa */}

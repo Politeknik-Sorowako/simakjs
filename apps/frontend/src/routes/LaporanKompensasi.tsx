@@ -521,9 +521,20 @@ export default function LaporanKompensasi() {
                   <div class="text-xs text-secondary-400 uppercase font-semibold dark:text-secondary-200">
                     Sisa Tanggungan
                   </div>
-                  <div class="text-2xl font-black text-red-600 dark:text-red-400">
+                  <div
+                    class={`px-3 py-1 rounded-full text-xl font-black inline-block mt-1 ${
+                      detail().summary.sisaKompensasi > 0
+                        ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+                        : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'
+                    }`}
+                  >
                     {detail().summary.sisaKompensasi} Menit
                   </div>
+                  <Show when={detail().summary.sisaKompensasi < 0}>
+                    <div class="text-[10px] font-bold text-green-600 dark:text-green-400 mt-1">
+                      Kelebihan jam / deposit kompensasi mahasiswa
+                    </div>
+                  </Show>
                 </div>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -1195,11 +1195,11 @@ export class CsvImportService {
       const durasiMenit = durasiRaw !== '' ? parseInt(durasiRaw) : NaN;
       const isFullDay = (JENIS_FULL_DAY as readonly string[]).includes(jenisVal);
       if (isNaN(durasiMenit) && !isFullDay) {
-        result.errors.push({ line: lineNum, error: 'Durasi menit harus berupa angka positif.' });
+        result.errors.push({ line: lineNum, error: 'Durasi menit harus berupa angka.' });
         continue;
       }
-      if (!isFullDay && durasiMenit <= 0) {
-        result.errors.push({ line: lineNum, error: 'Durasi menit harus berupa angka positif.' });
+      if (!isFullDay && durasiMenit < 0) {
+        result.errors.push({ line: lineNum, error: 'Durasi menit tidak boleh bernilai negatif.' });
         continue;
       }
 
@@ -1211,16 +1211,19 @@ export class CsvImportService {
         }
 
         const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
-        // Gunakan durasi_menit dari CSV jika bernilai valid (> 0). Nilai default
-        // 480 menit (full-day) hanya berlaku bila durasi dikosongkan pada jenis full-day.
+        // Gunakan durasi_menit dari CSV jika bernilai valid (> 0). Nilai 0 (anulir)
+        // kompensasi dipertahankan. Nilai default 480 menit (full-day) hanya berlaku
+        // bila durasi dikosongkan pada jenis full-day.
         // RUSAK (kerusakan fasilitas) tidak dibatasi cap harian (480 menit).
         const isRusak = jenisVal === 'rusak';
         const resolvedDurasi =
-          !isNaN(durasiMenit) && durasiMenit > 0
-            ? isRusak
-              ? durasiMenit
-              : Math.min(durasiMenit, maksHarian)
-            : maksHarian;
+          durasiMenit === 0
+            ? 0
+            : !isNaN(durasiMenit) && durasiMenit > 0
+              ? isRusak
+                ? durasiMenit
+                : Math.min(durasiMenit, maksHarian)
+              : maksHarian;
         const statusKompensasi = jenisVal.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'RUSAK';
 
         // Seluruh operasi per-baris dibungkus transaksi agar penulisan ke

@@ -168,8 +168,8 @@ export default function KompensasiManual() {
   const handleBulkDurasiChange = async () => {
     const ids = [...selectedIds()];
     const dur = parseInt(bulkDurasi());
-    if (ids.length === 0 || isNaN(dur) || dur <= 0) {
-      toast.showToast('Durasi menit harus berupa angka positif', 'error');
+    if (ids.length === 0 || isNaN(dur) || dur < 0) {
+      toast.showToast('Durasi menit tidak boleh bernilai negatif', 'error');
       return;
     }
     setIsBulkProcessing(true);
@@ -289,6 +289,7 @@ export default function KompensasiManual() {
 
   const isDurasiRequired = () => jenisKompen() !== '';
   const isFullDay = () => JENIS_FULL_DAY.includes(jenisKompen() as JenisKompen);
+  const isDurasiManual = () => ['terlambat', 'rusak'].includes(jenisKompen() as JenisKompen);
 
   const handleJenisChange = (value: string) => {
     setJenisKompen(value);
@@ -340,8 +341,8 @@ export default function KompensasiManual() {
       toast.showToast('Silakan pilih jenis kompensasi', 'error');
       return;
     }
-    if (isDurasiRequired() && (!durasiMenit() || durasiMenit() <= 0)) {
-      toast.showToast('Durasi menit wajib diisi untuk jenis terlambat/rusak', 'error');
+    if (isDurasiRequired() && durasiMenit() < 0) {
+      toast.showToast('Durasi menit tidak boleh bernilai negatif', 'error');
       return;
     }
 
@@ -380,7 +381,7 @@ export default function KompensasiManual() {
         jenisKompen: jenisKompen() as JenisKompen,
         keterangan: keterangan() || undefined,
       };
-      if (durasiMenit() && durasiMenit() > 0) {
+      if (durasiMenit() !== undefined && durasiMenit() !== null && !isNaN(durasiMenit())) {
         payload.durasiMenit = durasiMenit();
       }
 
@@ -710,7 +711,7 @@ export default function KompensasiManual() {
             <div class="flex flex-col gap-1.5">
               <Input
                 type="number"
-                min={1}
+                min={0}
                 label="Durasi (menit)"
                 required={isDurasiRequired()}
                 placeholder={isFullDay() ? '480' : 'Contoh: 60'}
@@ -720,6 +721,16 @@ export default function KompensasiManual() {
               <Show when={isFullDay()}>
                 <p class="text-xs text-secondary-500 dark:text-secondary-400">
                   Default 480 menit (satu hari penuh) untuk Sakit/Izin/Alpa — dapat diubah.
+                </p>
+              </Show>
+              <Show when={durasiMenit() === 0}>
+                <p class="text-xs text-emerald-600 dark:text-emerald-400">
+                  Durasi 0 menit = anulir kompensasi (tetap tercatat, tanpa denda jam kompensasi).
+                </p>
+              </Show>
+              <Show when={isDurasiManual() && durasiMenit() === 0}>
+                <p class="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Durasi 0 untuk Terlambat/Rusak = anulir kompensasi. Pastikan ini sesuai kebijakan kampus.
                 </p>
               </Show>
               <Show when={jenisKompen() === 'rusak'}>
@@ -807,7 +818,7 @@ export default function KompensasiManual() {
             ['202301001', '2026-06-27', 'T', '30', 'Terlambat masuk praktikum'],
             ['202301002', '2026-06-27', 'rusak', '60', 'Kerusakan alat laboratorium'],
           ]}
-          description="Jenis kompensasi mendukung kode singkatan A (Alpa), S (Sakit), I (Izin), R (Rusak), dan T/Telat (Terlambat), atau nama lengkapnya. Durasi menit hanya wajib untuk Terlambat/Rusak; untuk Sakit/Izin/Alpa durasi kosong akan dihitung 480 menit."
+          description="Jenis kompensasi mendukung kode singkatan A (Alpa), S (Sakit), I (Izin), R (Rusak), dan T/Telat (Terlambat), atau nama lengkapnya. Durasi menit hanya wajib untuk Terlambat/Rusak; untuk Sakit/Izin/Alpa durasi kosong akan dihitung 480 menit. Durasi 0 menit berarti anulir kompensasi (tetap tercatat tanpa denda)."
           onSuccess={refetch}
         />
 
@@ -874,7 +885,7 @@ export default function KompensasiManual() {
             </p>
             <Input
               type="number"
-              min={1}
+              min={0}
               label="Durasi (menit)"
               placeholder="Contoh: 60"
               value={bulkDurasi()}
