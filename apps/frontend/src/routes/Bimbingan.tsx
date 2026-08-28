@@ -103,7 +103,10 @@ export default function Bimbingan() {
     },
   );
 
-  const sisaKompensasiMhs = () => Math.max(0, akademikSummary()?.sisaKompensasi || 0);
+  const sisaKompensasiMhs = () => {
+    const raw = akademikSummary()?.sisaKompensasi || 0;
+    return auth.hasRole(['mahasiswa']) ? Math.max(0, raw) : raw;
+  };
 
   // Load profiles
   const [mhsProfile] = createResource(

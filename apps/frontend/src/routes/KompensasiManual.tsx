@@ -289,6 +289,7 @@ export default function KompensasiManual() {
 
   const isDurasiRequired = () => jenisKompen() !== '';
   const isFullDay = () => JENIS_FULL_DAY.includes(jenisKompen() as JenisKompen);
+  const isDurasiManual = () => ['terlambat', 'rusak'].includes(jenisKompen() as JenisKompen);
 
   const handleJenisChange = (value: string) => {
     setJenisKompen(value);
@@ -725,6 +726,11 @@ export default function KompensasiManual() {
               <Show when={durasiMenit() === 0}>
                 <p class="text-xs text-emerald-600 dark:text-emerald-400">
                   Durasi 0 menit = anulir kompensasi (tetap tercatat, tanpa denda jam kompensasi).
+                </p>
+              </Show>
+              <Show when={isDurasiManual() && durasiMenit() === 0}>
+                <p class="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Durasi 0 untuk Terlambat/Rusak = anulir kompensasi. Pastikan ini sesuai kebijakan kampus.
                 </p>
               </Show>
               <Show when={jenisKompen() === 'rusak'}>
