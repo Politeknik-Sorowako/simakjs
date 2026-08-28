@@ -75,6 +75,7 @@ export default function BapPresensi() {
   const [showRombelModal, setShowRombelModal] = createSignal(false);
   const [showEnrollmentQrModal, setShowEnrollmentQrModal] = createSignal(false);
   const [showDeleteRombelModal, setShowDeleteRombelModal] = createSignal(false);
+  const [isDeletingRombel, setIsDeletingRombel] = createSignal(false);
   const [namaGroupRombel, setNamaGroupRombel] = createSignal('');
   const [keteranganRombel, setKeteranganRombel] = createSignal('');
   const [isSubmittingRombel, setIsSubmittingRombel] = createSignal(false);
@@ -423,7 +424,8 @@ export default function BapPresensi() {
 
   const handleDeleteRombel = async () => {
     const rombelId = selectedRombelId();
-    if (!rombelId) return;
+    if (!rombelId || isDeletingRombel()) return;
+    setIsDeletingRombel(true);
     try {
       await rombelPraktikumController.deleteRombel(rombelId);
       toast.showToast('Rombel Praktikum berhasil dihapus', 'success');
@@ -433,6 +435,8 @@ export default function BapPresensi() {
       await refetchRombel();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menghapus rombel', 'error');
+    } finally {
+      setIsDeletingRombel(false);
     }
   };
 
@@ -1514,6 +1518,7 @@ export default function BapPresensi() {
                           setShowDeleteRombelModal(true);
                         }}
                         variant="danger"
+                        aria-label="Hapus rombel praktikum"
                       >
                         Hapus Rombel
                       </Button>
@@ -2128,11 +2133,16 @@ export default function BapPresensi() {
             </p>
           </Show>
           <div class="flex justify-end gap-2 mt-2">
-            <Button type="button" onClick={() => setShowDeleteRombelModal(false)} variant="secondary">
+            <Button
+              type="button"
+              onClick={() => setShowDeleteRombelModal(false)}
+              variant="secondary"
+              disabled={isDeletingRombel()}
+            >
               Batal
             </Button>
-            <Button onClick={handleDeleteRombel} variant="danger">
-              Ya, Hapus Rombel
+            <Button onClick={handleDeleteRombel} variant="danger" loading={isDeletingRombel()}>
+              {isDeletingRombel() ? 'Menghapus...' : 'Ya, Hapus Rombel'}
             </Button>
           </div>
         </div>
