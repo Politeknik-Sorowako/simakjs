@@ -540,7 +540,7 @@ export class PresensiService {
       .orderBy(desc(kompensasiBayar.tanggal), desc(kompensasiBayar.id));
 
     const totalDibayar = payments.reduce((sum, p) => sum + p.jumlahMenit, 0);
-    const sisaKompensasi = Math.max(0, totalKompensasi - totalDibayar);
+    const sisaKompensasi = totalKompensasi - totalDibayar;
 
     return {
       mahasiswa: mhs,
@@ -640,9 +640,9 @@ export class PresensiService {
 
     const totalKompensasiSql = sql<number>`COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0)`;
     const totalDibayarSql = sql<number>`COALESCE(bayar_mangkir.total_dibayar, 0)`;
-    const sisaKompensasiSql = sql<number>`GREATEST(0, COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0) - COALESCE(bayar_mangkir.total_dibayar, 0))`;
+    const sisaKompensasiSql = sql<number>`COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0) - COALESCE(bayar_mangkir.total_dibayar, 0)`;
 
-    const conditions: SQL<unknown>[] = [sql`${totalKompensasiSql} > 0`];
+    const conditions: SQL<unknown>[] = [sql`(${totalKompensasiSql} > 0 OR ${totalDibayarSql} > 0)`];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
@@ -824,7 +824,7 @@ export class PresensiService {
     const mhsAgg = perMhs.map((mhs) => {
       const tk = Number(mhs.totalKompensasi);
       const td = mapPayments.get(mhs.id) || 0;
-      const sisa = Math.max(0, tk - td);
+      const sisa = tk - td;
 
       totalKomp += tk;
       totalDby += td;
@@ -866,7 +866,7 @@ export class PresensiService {
         totalMahasiswa: perMhs.length,
         totalKompensasi: totalKomp,
         totalDibayar: totalDby,
-        totalSisa: Math.max(0, totalKomp - totalDby),
+        totalSisa: totalKomp - totalDby,
       },
       rekapProdi,
       top10,

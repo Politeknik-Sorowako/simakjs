@@ -191,4 +191,30 @@ describe('Impor Kompensasi Manual via CSV → Rekap Kompensasi', () => {
     // T (terlambat) durasi kustom.
     expect(byStatus.get('TERLAMBAT')).toBe(30);
   });
+
+  it('harus menerima durasi 0 menit (anulir) pada impor CSV dan tersinkron dengan durasi 0', async () => {
+    const csv =
+      'nim,tanggal,jenis_kompen,durasi_menit,keterangan\n' +
+      '20239999,2026-08-22,terlambat,0,anulir kompensasi terlambat\n' +
+      '20239999,2026-08-23,sakit,0,anulir kompensasi sakit\n';
+
+    const res = await app.handle(
+      new Request('http://localhost/kompensasi-manual/import', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+        body: kompensasiFormData(csv),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const result = await res.json();
+    expect(result.successCount).toBe(2);
+    expect(result.errors).toHaveLength(0);
+
+    const synced = await db.select().from(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'));
+    expect(synced).toHaveLength(2);
+    const byStatus = new Map(synced.map((s) => [s.status, s.durasiMenit]));
+    expect(byStatus.get('TERLAMBAT')).toBe(0);
+    expect(byStatus.get('SAKIT')).toBe(0);
+  });
 });

@@ -110,6 +110,9 @@ export class PresensiController {
       set.status = 403;
       return { error: 'Akses ditolak. Anda hanya dapat melihat data Anda sendiri.' };
     }
+    if (hasRole(user, ['mahasiswa']) && detail?.summary) {
+      detail.summary.sisaKompensasi = Math.max(0, detail.summary.sisaKompensasi);
+    }
     return detail;
   }
 
