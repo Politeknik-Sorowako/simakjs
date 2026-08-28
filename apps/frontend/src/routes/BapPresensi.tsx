@@ -1145,7 +1145,7 @@ export default function BapPresensi() {
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
-            Perkuliahan & Presensi Teori
+            Kelas Teori
           </button>
           <button
             type="button"
@@ -1156,7 +1156,7 @@ export default function BapPresensi() {
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
-            Kelas Praktikum (Rombel)
+            Rombel / Praktik
           </button>
           <button
             type="button"
