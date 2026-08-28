@@ -57,9 +57,9 @@ export class RombelPraktikumController {
   static async deleteRombel({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!hasRole(user, ['admin', 'super_admin', 'dosen', 'prodi', 'instruktur'])) {
+      if (!hasRole(user, ['admin', 'super_admin'])) {
         set.status = 403;
-        return { error: 'Akses ditolak.' };
+        return { error: 'Akses ditolak. Hanya admin yang dapat menghapus rombel.' };
       }
       return await RombelPraktikumService.deleteRombel(parseInt(params.id));
     } catch (e: unknown) {
