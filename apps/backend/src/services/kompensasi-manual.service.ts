@@ -14,23 +14,26 @@ type KompensasiExecutor = { select: typeof db.select };
 export class KompensasiManualService {
   static async resolveDurasiMenit(jenisKompen: JenisKompen, durasiMenit?: number): Promise<number> {
     const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
-    if (JENIS_FULL_DAY.includes(jenisKompen)) {
-      // Gunakan durasi kustom jika bernilai valid (> 0). Default 480 (full-day)
-      // hanya berlaku jika durasi tidak dikirim / dikosongkan.
-      if (durasiMenit !== undefined && durasiMenit > 0) {
+    if (durasiMenit !== undefined) {
+      if (durasiMenit < 0) {
+        throw new Error('Durasi menit tidak boleh bernilai negatif');
+      }
+      if (durasiMenit === 0) {
+        return 0; // Anulir kompensasi untuk seluruh jenis kompen
+      }
+      if (JENIS_FULL_DAY.includes(jenisKompen)) {
         return Math.min(durasiMenit, maksHarian);
       }
+      if (jenisKompen === 'rusak') {
+        // RUSAK (kerusakan fasilitas) tidak dibatasi cap harian (480 menit).
+        return durasiMenit;
+      }
+      return Math.min(durasiMenit, maksHarian);
+    }
+    if (JENIS_FULL_DAY.includes(jenisKompen)) {
       return maksHarian;
     }
-    const durasi = durasiMenit || 0;
-    if (durasi <= 0) {
-      throw new Error('Durasi menit wajib diisi untuk jenis kompensasi terlambat/rusak');
-    }
-    if (jenisKompen === 'rusak') {
-      // RUSAK (kerusakan fasilitas) tidak dibatasi cap harian (480 menit).
-      return durasi;
-    }
-    return Math.min(durasi, maksHarian);
+    throw new Error('Durasi menit wajib diisi untuk jenis kompensasi terlambat/rusak');
   }
 
   static async hitungTotalHariIni(

@@ -514,6 +514,8 @@ function MahasiswaWidgets() {
     }
   });
 
+  const sisaKompensasiMhs = () => Math.max(0, akademikSummary()?.sisaKompensasi || 0);
+
   const [transkrip] = createResource(mhsId, async (id) => {
     if (!id) return null;
     try {
@@ -605,8 +607,8 @@ function MahasiswaWidgets() {
         />
         <StatCard
           title="Kompensasi"
-          value={akademikSummary.loading ? '...' : `${akademikSummary()?.sisaKompensasi || 0} Menit`}
-          color={(akademikSummary()?.sisaKompensasi || 0) > 0 ? 'rose' : 'green'}
+          value={akademikSummary.loading ? '...' : `${sisaKompensasiMhs()} Menit`}
+          color={sisaKompensasiMhs() > 0 ? 'rose' : 'green'}
           icon={
             <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path

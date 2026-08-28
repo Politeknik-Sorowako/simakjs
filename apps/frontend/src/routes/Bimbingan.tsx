@@ -103,6 +103,8 @@ export default function Bimbingan() {
     },
   );
 
+  const sisaKompensasiMhs = () => Math.max(0, akademikSummary()?.sisaKompensasi || 0);
+
   // Load profiles
   const [mhsProfile] = createResource(
     () => {
@@ -926,9 +928,7 @@ export default function Bimbingan() {
                           </div>
                           <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
                             <span class="text-[10px] text-orange-600 font-bold uppercase">Jam Kompensasi</span>
-                            <span class="text-sm font-black text-orange-700">
-                              {akademikSummary()?.sisaKompensasi || 0} Menit
-                            </span>
+                            <span class="text-sm font-black text-orange-700">{sisaKompensasiMhs()} Menit</span>
                           </div>
                           <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl flex flex-col gap-0.5 dark:border-accent-800">
                             <span class="text-[10px] text-accent-600 font-bold uppercase">IPK Kumulatif</span>

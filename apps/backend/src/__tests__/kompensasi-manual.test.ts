@@ -298,4 +298,149 @@ describe('Kompensasi Manual API', () => {
     const synced = await db.select().from(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'));
     expect(synced).toHaveLength(0);
   });
+
+  it('harus menerima durasi 0 menit (anulir) untuk jenis terlambat dan tersinkron dengan durasi 0', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/kompensasi-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          mahasiswaId: mhsId,
+          tanggal: '2026-08-07',
+          jenisKompen: 'terlambat',
+          durasiMenit: 0,
+          keterangan: 'anulir kompensasi',
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const data = await res.json();
+    expect(data.durasiMenit).toBe(0);
+
+    const synced = await db.select().from(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'));
+    expect(synced).toHaveLength(1);
+    expect(synced[0].mahasiswaId).toBe(mhsId);
+    expect(synced[0].durasiMenit).toBe(0);
+  });
+
+  it('harus menerima durasi 0 menit (anulir) pada bulk-update', async () => {
+    const createRes = await app.handle(
+      new Request('http://localhost/kompensasi-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          mahasiswaId: mhsId,
+          tanggal: '2026-08-05',
+          jenisKompen: 'terlambat',
+          durasiMenit: 30,
+        }),
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const rec = await createRes.json();
+
+    const bulkRes = await app.handle(
+      new Request('http://localhost/kompensasi-manual/bulk-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ ids: [rec.id], durasiMenit: 0 }),
+      }),
+    );
+
+    expect(bulkRes.status).toBe(200);
+    const bulk = await bulkRes.json();
+    expect(bulk.success).toBe(true);
+    expect(bulk.updated).toBe(1);
+
+    const updated = await db.select().from(kompensasiManual).where(eq(kompensasiManual.id, rec.id));
+    expect(updated[0].durasiMenit).toBe(0);
+
+    const synced = await db.select().from(ketidakhadiranMahasiswa).where(eq(ketidakhadiranMahasiswa.sumber, 'MANUAL'));
+    expect(synced[0].durasiMenit).toBe(0);
+  });
+
+  it('harus menghitung sisa kompensasi minus pada laporan & detail (clamp 0 untuk mahasiswa)', async () => {
+    const createRes = await app.handle(
+      new Request('http://localhost/kompensasi-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          mahasiswaId: mhsId,
+          tanggal: '2026-08-05',
+          jenisKompen: 'sakit',
+          durasiMenit: 200,
+        }),
+      }),
+    );
+    expect(createRes.status).toBe(201);
+
+    const payRes = await app.handle(
+      new Request('http://localhost/presensi/kompensasi/bayar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          mahasiswaId: mhsId,
+          jumlahMenit: 300,
+          tanggal: '2026-08-10',
+          keterangan: 'pelunasan kompensasi',
+        }),
+      }),
+    );
+    expect(payRes.status).toBe(201);
+
+    // Laporan (sisi admin/dosen) menampilkan nilai minus.
+    const laporan = await app.handle(
+      new Request('http://localhost/presensi/kompensasi/laporan?search=20230001', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(laporan.status).toBe(200);
+    const body = await laporan.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0].totalKompensasi).toBe(200);
+    expect(body.data[0].totalDibayar).toBe(300);
+    expect(body.data[0].sisaKompensasi).toBe(-100);
+
+    // Detail dari akun admin/dosen tetap menampilkan nilai minus.
+    const detailAdmin = await app.handle(
+      new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(detailAdmin.status).toBe(200);
+    const adminBody = await detailAdmin.json();
+    expect(adminBody.summary.totalKompensasi).toBe(200);
+    expect(adminBody.summary.totalDibayar).toBe(300);
+    expect(adminBody.summary.sisaKompensasi).toBe(-100);
+
+    // Detail dari akun mahasiswa sendiri di-clamp menjadi 0.
+    const mhsToken = await getAuthToken('mhs_kompen@test.com', 'mahasiswa');
+    const detailMhs = await app.handle(
+      new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    expect(detailMhs.status).toBe(200);
+    const mhsBody = await detailMhs.json();
+    expect(mhsBody.summary.sisaKompensasi).toBe(0);
+  });
 });
