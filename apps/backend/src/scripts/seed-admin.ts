@@ -16,26 +16,18 @@ async function seed() {
   });
 
   if (existing) {
-    await db
-      .update(users)
-      .set({
-        nama: 'Admin SIMAK',
-        password: hashedPassword,
-        role: 'admin',
-        isActive: true,
-      })
-      .where(eq(users.id, existing.id));
-    console.log('Updated existing admin to active.');
-  } else {
-    await db.insert(users).values({
-      email,
-      password: hashedPassword,
-      nama: 'Admin SIMAK',
-      role: 'admin',
-      isActive: true,
-    });
-    console.log('Created new active admin.');
+    console.log('Admin already exists, skipping seed to preserve password.');
+    process.exit(0);
   }
+
+  await db.insert(users).values({
+    email,
+    password: hashedPassword,
+    nama: 'Admin SIMAK',
+    role: 'admin',
+    isActive: true,
+  });
+  console.log('Created new active admin.');
 
   process.exit(0);
 }
