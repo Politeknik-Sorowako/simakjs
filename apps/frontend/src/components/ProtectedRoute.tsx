@@ -23,7 +23,8 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
 
   createEffect(() => {
     if (!auth.isAuthenticated()) {
-      navigate('/login', { replace: true });
+      const currentPath = window.location.pathname + window.location.search;
+      navigate(`/login?redirect=${encodeURIComponent(currentPath)}`, { replace: true });
       return;
     }
     if (auth.user()?.mustChangePassword) {

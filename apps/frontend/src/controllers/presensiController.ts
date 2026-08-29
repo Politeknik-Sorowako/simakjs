@@ -148,6 +148,7 @@ export interface KompensasiDetailResponse {
     sumber: 'perkuliahan' | 'apel' | 'manual';
     status: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown';
     verifiedStatus?: 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'terlambat' | 'unknown' | null;
+    keterangan?: string | null;
     keteranganAdmin?: string | null;
     durasiMangkir: number;
     createdAt: string;

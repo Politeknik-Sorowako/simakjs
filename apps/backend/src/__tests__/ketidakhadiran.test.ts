@@ -66,7 +66,7 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
   });
 
   // Simulasikan saveBulk BAP -> source presensi + sinkron ke ketidakhadiran.
-  async function seedBapPresensi(tanggal: string, status: string, durasi: number) {
+  async function seedBapPresensi(tanggal: string, status: string, durasi: number, keterangan?: string) {
     const [bapRow] = await db
       .insert(bap)
       .values({ kelasKuliahId: kelasId, tanggal, pertemuanKe: 1, materi: 'Materi', durasiMenit: durasi, dosenId })
@@ -74,7 +74,13 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
 
     const [p] = await db
       .insert(presensi)
-      .values({ bapId: bapRow.id, mahasiswaId: mhsId, status: status as never, durasiMangkir: durasi })
+      .values({
+        bapId: bapRow.id,
+        mahasiswaId: mhsId,
+        status: status as never,
+        durasiMangkir: durasi,
+        keterangan,
+      })
       .returning();
 
     const [abs] = await db
@@ -315,5 +321,20 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     expect(rows.length).toBe(1);
     expect(rows[0].status).toBe('ALPA');
     expect(rows[0].durasiMenit).toBe(120);
+  });
+
+  it('detail kompensasi mengekspos kolom keterangan dari sumber presensi', async () => {
+    await seedBapPresensi('2026-08-10', 'alpa', 100, 'Izin karena kecelakaan');
+
+    const detailRes = await app.handle(
+      new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json();
+    expect(detail.historyKompensasi.length).toBe(1);
+    expect(detail.historyKompensasi[0].keterangan).toBe('Izin karena kecelakaan');
   });
 });

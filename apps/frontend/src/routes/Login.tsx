@@ -1,4 +1,4 @@
-import { A, useNavigate } from '@solidjs/router';
+import { A, useNavigate, useSearchParams } from '@solidjs/router';
 import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
@@ -26,10 +26,20 @@ const registerSchema = loginSchema.extend({
   role: z.enum(['admin', 'dosen', 'mahasiswa'], { message: 'Peran tidak valid' }),
 });
 
+const getSafeRedirectUrl = (url?: string): string | null => {
+  if (!url) return null;
+  // Hanya izinkan path relatif berawalan '/', tidak boleh '//' (protocol-relative) atau membawa skema eksternal
+  if (url.startsWith('/') && !url.startsWith('//') && !url.includes('://')) {
+    return url;
+  }
+  return null;
+};
+
 export default function Login() {
   const auth = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
 
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
@@ -80,7 +90,8 @@ export default function Login() {
   // If already logged in, redirect (wrapped in createEffect to prevent render phase routing crashes)
   createEffect(() => {
     if (auth.isAuthenticated()) {
-      navigate('/dashboard', { replace: true });
+      const redirectUrl = getSafeRedirectUrl(searchParams.redirect);
+      navigate(redirectUrl || '/dashboard', { replace: true });
     }
   });
 
@@ -120,7 +131,10 @@ export default function Login() {
         const response = await authController.login(email(), password());
         auth.login(response.token, response.user);
         toast.showToast('Login berhasil! Selamat datang.', 'success');
-        if (response.user.role === 'calon_mahasiswa') {
+        const redirectUrl = getSafeRedirectUrl(searchParams.redirect);
+        if (redirectUrl) {
+          navigate(redirectUrl, { replace: true });
+        } else if (response.user.role === 'calon_mahasiswa') {
           navigate('/admisi/dashboard', { replace: true });
         } else {
           navigate('/dashboard', { replace: true });

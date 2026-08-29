@@ -430,6 +430,11 @@ export class PresensiService {
         status: sql<string>`LOWER(${ketidakhadiranMahasiswa.status}::text)`,
         durasiMangkir: ketidakhadiranMahasiswa.durasiMenit,
         keteranganAdmin: ketidakhadiranMahasiswa.keterangan,
+        keterangan: sql<string | null>`CASE
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN ${presensi.keterangan}
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN ${presensiApel.keterangan}
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${presensiPraktikum.keterangan}
+          ELSE ${ketidakhadiranMahasiswa.keterangan} END`,
         resolvedBy: ketidakhadiranMahasiswa.verifiedBy,
         resolvedAt: ketidakhadiranMahasiswa.verifiedAt,
         createdAt: ketidakhadiranMahasiswa.createdAt,
