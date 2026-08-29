@@ -20,7 +20,6 @@ interface SettingsResponse {
     key: string;
     value: string | null;
     description: string | null;
-    createdAt: Date | null;
     updatedAt: Date | null;
   }[];
 }
@@ -29,7 +28,6 @@ interface UpdateResponse {
   data: {
     key: string;
     value: string | null;
-    createdAt: Date | null;
     updatedAt: Date | null;
     description: string | null;
   };

@@ -188,6 +188,13 @@ export class PresensiService {
     });
 
     await db.transaction(async (tx) => {
+      const oldPresensi = await tx.select({ id: presensi.id }).from(presensi).where(eq(presensi.bapId, bapId));
+      if (oldPresensi.length > 0) {
+        const oldIds = oldPresensi.map((p) => p.id);
+        await tx
+          .delete(ketidakhadiranMahasiswa)
+          .where(and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), inArray(ketidakhadiranMahasiswa.sumberId, oldIds)));
+      }
       await tx.delete(presensi).where(eq(presensi.bapId, bapId));
       let inserted: Array<{ id: number; mahasiswaId: number; status: string; durasiMangkir: number }> = [];
       if (itemsToInsert.length > 0) {
@@ -430,6 +437,11 @@ export class PresensiService {
         status: sql<string>`LOWER(${ketidakhadiranMahasiswa.status}::text)`,
         durasiMangkir: ketidakhadiranMahasiswa.durasiMenit,
         keteranganAdmin: ketidakhadiranMahasiswa.keterangan,
+        keterangan: sql<string | null>`CASE
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN ${presensi.keterangan}
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN ${presensiApel.keterangan}
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${presensiPraktikum.keterangan}
+          ELSE ${ketidakhadiranMahasiswa.keterangan} END`,
         resolvedBy: ketidakhadiranMahasiswa.verifiedBy,
         resolvedAt: ketidakhadiranMahasiswa.verifiedAt,
         createdAt: ketidakhadiranMahasiswa.createdAt,
