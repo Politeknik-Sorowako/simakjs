@@ -6,6 +6,7 @@ import {
   bimbingan,
   cpmk,
   dosen,
+  dosenPengajarKelas,
   kelasKuliah,
   krs,
   mahasiswa,
@@ -122,6 +123,14 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       })
       .returning();
     kelasId = kelas.id;
+
+    await db.insert(dosenPengajarKelas).values({
+      dosenId,
+      kelasKuliahId: kelasId,
+      rencanaTatapMuka: 16,
+      realisasiTatapMuka: 0,
+      jenisEvaluasi: 'UTS',
+    });
 
     // 6. Seed KRS
     const [k] = await db

@@ -188,6 +188,13 @@ export class PresensiService {
     });
 
     await db.transaction(async (tx) => {
+      const oldPresensi = await tx.select({ id: presensi.id }).from(presensi).where(eq(presensi.bapId, bapId));
+      if (oldPresensi.length > 0) {
+        const oldIds = oldPresensi.map((p) => p.id);
+        await tx
+          .delete(ketidakhadiranMahasiswa)
+          .where(and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), inArray(ketidakhadiranMahasiswa.sumberId, oldIds)));
+      }
       await tx.delete(presensi).where(eq(presensi.bapId, bapId));
       let inserted: Array<{ id: number; mahasiswaId: number; status: string; durasiMangkir: number }> = [];
       if (itemsToInsert.length > 0) {
