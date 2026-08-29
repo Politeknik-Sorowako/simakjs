@@ -107,7 +107,7 @@ export default function RombelEnroll() {
                       <p class="text-sm text-secondary-500 dark:text-secondary-300 mb-4">
                         Silakan masuk sebagai mahasiswa terlebih dahulu untuk mendaftar.
                       </p>
-                      <a href="/login">
+                      <a href={`/login?redirect=${encodeURIComponent(`/rombel/enroll/${token()}`)}`}>
                         <Button>Masuk / Login</Button>
                       </a>
                     </div>

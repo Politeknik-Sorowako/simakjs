@@ -1,7 +1,17 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { kelasKuliah, krs, mahasiswa, mataKuliah, periodeAkademik, programStudi, tagihan } from '../models/schema';
+import {
+  dosen,
+  dosenPengajarKelas,
+  kelasKuliah,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  periodeAkademik,
+  programStudi,
+  tagihan,
+} from '../models/schema';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -16,6 +26,7 @@ describe('KHS, Grade Components & Yudisium API', () => {
   let mkId: number;
   let kelasId: number;
   let krsId: number;
+  let dosenId: number;
 
   beforeEach(async () => {
     await clearDatabase();
@@ -34,6 +45,19 @@ describe('KHS, Grade Components & Yudisium API', () => {
       })
       .returning();
     prodiId = prodi.id;
+
+    // Seed Dosen
+    const [dsn] = await db
+      .insert(dosen)
+      .values({
+        nidn: '12345678',
+        nip: '123456789012345678',
+        nama: 'Dosen Test',
+        email: 'dosen@test.com',
+        programStudiId: prodiId,
+      })
+      .returning();
+    dosenId = dsn.id;
 
     // Seed Mahasiswa
     const [mhs] = await db
@@ -81,6 +105,14 @@ describe('KHS, Grade Components & Yudisium API', () => {
       })
       .returning();
     kelasId = kelas.id;
+
+    await db.insert(dosenPengajarKelas).values({
+      dosenId,
+      kelasKuliahId: kelasId,
+      rencanaTatapMuka: 16,
+      realisasiTatapMuka: 0,
+      jenisEvaluasi: 'UTS',
+    });
 
     // Seed KRS (Student Contracts Class)
     const [krsRecord] = await db

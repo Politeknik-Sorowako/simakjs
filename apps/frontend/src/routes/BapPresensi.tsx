@@ -1,3 +1,4 @@
+import { useSearchParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import EnrollmentQrModal from '../components/EnrollmentQrModal';
 import { MainLayout } from '../components/MainLayout';
@@ -55,12 +56,21 @@ export default function BapPresensi() {
   const statusLabel = (st: string) => STATUS_SHORT[st] || st;
   const statusFullLabel = (st: string) => STATUS_FULL[st] || st;
 
+  const [searchParams] = useSearchParams();
+  const initialKelasId =
+    searchParams.kelas || searchParams.kelasId ? Number(searchParams.kelas || searchParams.kelasId) : null;
+  const initialBapId = searchParams.bapId ? Number(searchParams.bapId) : null;
+  const initialMainTab =
+    searchParams.tab === 'teori' || searchParams.tab === 'praktikum' || searchParams.tab === 'monitoring'
+      ? searchParams.tab
+      : 'teori';
+
   // Selected state
-  const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
-  const [selectedBapId, setSelectedBapId] = createSignal<number | null>(null);
+  const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(initialKelasId);
+  const [selectedBapId, setSelectedBapId] = createSignal<number | null>(initialBapId);
 
   // Main Tabs: 'teori' | 'praktikum' | 'monitoring'
-  const [mainTab, setMainTab] = createSignal<'teori' | 'praktikum' | 'monitoring'>('teori');
+  const [mainTab, setMainTab] = createSignal<'teori' | 'praktikum' | 'monitoring'>(initialMainTab);
   const [selectedDetailKelasId, setSelectedDetailKelasId] = createSignal<number | null>(null);
   const [searchMonitoring, setSearchMonitoring] = createSignal('');
   const [selectedPeriodeId, setSelectedPeriodeId] = createSignal<number | null>(null);
@@ -262,6 +272,13 @@ export default function BapPresensi() {
   );
 
   const selectedKelas = () => kelasList().find((k) => k.id === selectedKelasId()) || selectedKelasDetail() || null;
+
+  const kelasOptions = () => {
+    const list = kelasList() || [];
+    const detail = selectedKelasDetail();
+    if (!detail) return list;
+    return list.some((k) => k.id === detail.id) ? list : [detail, ...list];
+  };
 
   // 2. Fetch BAPs for selected Class
   const [bapData, { refetch: refetchBap }] = createResource(selectedKelasId, async (kelasId) => {
@@ -1183,7 +1200,7 @@ export default function BapPresensi() {
                 label="Pilih Kelas Kuliah"
                 placeholder="-- Cari & Pilih Kelas Kuliah --"
                 value={selectedKelasId()}
-                options={(kelasList() || []).map((kelas) => ({
+                options={kelasOptions().map((kelas) => ({
                   label: `${kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}${kelas.mataKuliah?.nama} (Kelas ${kelas.namaKelas})`,
                   value: kelas.id,
                 }))}
@@ -1435,7 +1452,7 @@ export default function BapPresensi() {
                   label="Pilih Kelas Kuliah"
                   placeholder="-- Cari & Pilih Kelas Kuliah --"
                   value={selectedKelasId()}
-                  options={(kelasList() || []).map((kelas) => ({
+                  options={kelasOptions().map((kelas) => ({
                     label: `${kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}${kelas.mataKuliah?.nama} (Kelas ${kelas.namaKelas})`,
                     value: kelas.id,
                   }))}

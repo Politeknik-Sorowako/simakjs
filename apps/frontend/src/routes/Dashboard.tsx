@@ -425,6 +425,9 @@ function DosenWidgets() {
                     <div class="text-[11px] text-secondary-500 dark:text-secondary-400 mt-1 flex items-center gap-2">
                       <span class="font-mono">{item.kelasKuliah?.mataKuliah?.kode}</span>
                     </div>
+                    <span class="mt-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-brand-600 dark:text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Buka BAP →
+                    </span>
                   </a>
                 )}
               </For>

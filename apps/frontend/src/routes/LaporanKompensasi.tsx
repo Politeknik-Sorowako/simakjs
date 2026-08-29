@@ -179,20 +179,6 @@ export default function LaporanKompensasi() {
       const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
       const sumberLabel = (sumber: string) =>
         sumber === 'perkuliahan' ? 'Perkuliahan' : sumber === 'apel' ? 'Apel' : 'Kompensasi Manual';
-      const resolveKeterangan = (r: Record<string, unknown>): string => {
-        const adminNote =
-          typeof r.keteranganAdmin === 'string' && r.keteranganAdmin.trim() ? r.keteranganAdmin.trim() : '';
-        if (adminNote) return adminNote;
-        const sumber = String(r.sumber ?? '');
-        const materi = typeof r.bapMateri === 'string' && r.bapMateri.trim() ? r.bapMateri.trim() : '';
-        if (sumber === 'apel') return materi || 'Presensi Apel';
-        if (sumber === 'perkuliahan') {
-          const pertemuan = r.bapPertemuan != null ? ` (Pertemuan ${r.bapPertemuan})` : '';
-          return materi ? `${materi}${pertemuan}` : `Perkuliahan${pertemuan}`;
-        }
-        if (sumber === 'manual') return materi || 'Kompensasi Manual';
-        return '-';
-      };
 
       exportToExcelMultipleSheets(
         [
@@ -207,8 +193,24 @@ export default function LaporanKompensasi() {
               { header: 'Durasi (Menit)', accessor: 'durasiMangkir' },
               { header: 'Poin Kompensasi', accessor: 'poinKompensasi' },
               {
-                header: 'Keterangan',
-                accessor: (r) => resolveKeterangan(r as Record<string, unknown>),
+                header: 'Keterangan / Alasan',
+                accessor: (r) => (r as { keterangan?: string | null }).keterangan || '-',
+              },
+              {
+                header: 'Catatan Admin',
+                accessor: (r) => (r as { keteranganAdmin?: string | null }).keteranganAdmin || '-',
+              },
+              {
+                header: 'Materi / Aktivitas',
+                accessor: (r) => {
+                  const item = r as { bapMateri?: string | null; bapPertemuan?: number | null; sumber?: string };
+                  if (item.sumber === 'perkuliahan') {
+                    return item.bapMateri
+                      ? `${item.bapMateri}${item.bapPertemuan ? ` (Pertemuan ${item.bapPertemuan})` : ''}`
+                      : 'Perkuliahan';
+                  }
+                  return item.bapMateri || '-';
+                },
               },
             ],
             data: detail.historyKompensasi.map((h) => ({
@@ -563,6 +565,11 @@ export default function LaporanKompensasi() {
                             <span class="font-semibold text-accent-600 dark:text-accent-400">
                               Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
                             </span>
+                            <Show when={log.keterangan}>
+                              <span class="text-secondary-500 dark:text-secondary-300">
+                                Keterangan: {log.keterangan}
+                              </span>
+                            </Show>
                             <Show when={log.keteranganAdmin}>
                               <span class="text-secondary-500 dark:text-secondary-300">
                                 Catatan admin: {log.keteranganAdmin}

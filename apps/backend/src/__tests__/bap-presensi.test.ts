@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import {
   dosen,
+  dosenPengajarKelas,
   kelasKuliah,
   mahasiswa,
   mataKuliah,
@@ -96,6 +97,14 @@ describe('BAP, Presensi & Kompensasi API', () => {
       })
       .returning();
     kelasId = kelas.id;
+
+    await db.insert(dosenPengajarKelas).values({
+      dosenId,
+      kelasKuliahId: kelasId,
+      rencanaTatapMuka: 16,
+      realisasiTatapMuka: 0,
+      jenisEvaluasi: 'UTS',
+    });
   });
 
   describe('CPMK API', () => {
@@ -216,13 +225,13 @@ describe('BAP, Presensi & Kompensasi API', () => {
       expect(compDetail.summary.totalKompensasi).toBe(100); // 20 * 5
       expect(compDetail.summary.sisaKompensasi).toBe(100);
 
-      // 3. Dosen mengubah presensi mahasiswa: status 'alpa' (durasiMangkir = class duration = 100 menit)
+      // 3. Admin mengubah presensi mahasiswa: status 'alpa' (durasiMangkir = class duration = 100 menit)
       const presRes2 = await app.handle(
         new Request('http://localhost/presensi/bulk', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             bapId: bapId,
@@ -250,13 +259,13 @@ describe('BAP, Presensi & Kompensasi API', () => {
       expect(compDetail.summary.totalKompensasi).toBe(500); // 100 * 5
       expect(compDetail.summary.sisaKompensasi).toBe(500);
 
-      // 4. Dosen mengubah presensi mahasiswa: status 'sakit' (durasiMangkir = class duration = 100 menit, multiplier = 1x)
+      // 4. Admin mengubah presensi mahasiswa: status 'sakit' (durasiMangkir = class duration = 100 menit, multiplier = 1x)
       const presRes3 = await app.handle(
         new Request('http://localhost/presensi/bulk', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             bapId: bapId,
@@ -395,7 +404,7 @@ describe('BAP, Presensi & Kompensasi API', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${dosenToken}`,
+            Authorization: `Bearer ${adminToken}`,
           },
           body: JSON.stringify({
             bapId: bapObj.id,
