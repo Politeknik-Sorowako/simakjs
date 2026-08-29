@@ -18,7 +18,7 @@ import {
 } from '../controllers/kompensasiManualController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { type ExportColumn, exportToExcel } from '../utils/export';
-import { fmtWaktu } from '../utils/format';
+import { fmtWaktu, getTodayString } from '../utils/format';
 
 const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([value, label]) => ({
   value,
@@ -59,10 +59,7 @@ export default function KompensasiManual() {
   const [showFormModal, setShowFormModal] = createSignal(false);
   const [editingId, setEditingId] = createSignal<number | null>(null);
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | string | null>(null);
-  const now = new Date();
-  const [tanggal, setTanggal] = createSignal(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-  );
+  const [tanggal, setTanggal] = createSignal(getTodayString());
   const [jenisKompen, setJenisKompen] = createSignal<string | number>('');
   const [durasiMenit, setDurasiMenit] = createSignal(0);
   const [keterangan, setKeterangan] = createSignal('');
@@ -211,12 +208,7 @@ export default function KompensasiManual() {
         { header: 'Keterangan', accessor: 'keterangan' },
         { header: 'Waktu Pencatatan', accessor: (r) => fmtWaktu((r as { createdAt?: string }).createdAt) },
       ];
-      const n = new Date();
-      exportToExcel(
-        res.data,
-        cols,
-        `Kompensasi_Manual_${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`,
-      );
+      exportToExcel(res.data, cols, `Kompensasi_Manual_${getTodayString()}`);
       toast.showToast('Data kompensasi manual berhasil diunduh (.xlsx)', 'success');
     } catch (err: unknown) {
       toast.showToast(err instanceof Error ? err.message : 'Gagal mengunduh excel', 'error');
@@ -301,10 +293,7 @@ export default function KompensasiManual() {
   const resetForm = () => {
     setEditingId(null);
     setSelectedMhsId(null);
-    const now = new Date();
-    setTanggal(
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-    );
+    setTanggal(getTodayString());
     setJenisKompen('');
     setDurasiMenit(0);
     setKeterangan('');

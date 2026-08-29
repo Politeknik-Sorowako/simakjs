@@ -8,7 +8,7 @@ import { useToast } from '../contexts/ToastContext';
 import { presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
 import { type ExportColumn, exportToExcel, exportToExcelMultipleSheets } from '../utils/export';
-import { fmtTanggal } from '../utils/format';
+import { fmtTanggal, getTodayString } from '../utils/format';
 
 const PER_PAGE = 20;
 
@@ -25,10 +25,7 @@ export default function LaporanKompensasi() {
   } | null>(null);
   const [jumlahMenit, setJumlahMenit] = createSignal(60);
   const [keterangan, setKeterangan] = createSignal('');
-  const now = new Date();
-  const [tanggal, setTanggal] = createSignal(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-  );
+  const [tanggal, setTanggal] = createSignal(getTodayString());
   const [search, setSearch] = createSignal('');
   const [filterProdiId, setFilterProdiId] = createSignal<number | string | undefined>();
   const [sortBy, setSortBy] = createSignal('sisa');
@@ -90,10 +87,7 @@ export default function LaporanKompensasi() {
     setEditingPay(null);
     setJumlahMenit(60);
     setKeterangan('');
-    const now = new Date();
-    setTanggal(
-      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`,
-    );
+    setTanggal(getTodayString());
     setShowPayModal(true);
   };
   const openEditPaymentModal = (pay: { id: number; jumlahMenit: number; keterangan: string; tanggal: string }) => {
@@ -153,14 +147,7 @@ export default function LaporanKompensasi() {
           accessor: (r: Record<string, unknown>) => (Number(r.sisaKompensasi) > 0 ? 'Belum Lunas' : 'Lunas'),
         },
       ];
-      exportToExcel(
-        res.data,
-        cols,
-        `Laporan_Kompensasi_${(() => {
-          const n = new Date();
-          return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
-        })()}`,
-      );
+      exportToExcel(res.data, cols, `Laporan_Kompensasi_${getTodayString()}`);
       toast.showToast('Laporan kompensasi berhasil diunduh (.xlsx)', 'success');
     } catch (e: unknown) {
       toast.showToast('Gagal mengunduh laporan excel', 'error');
@@ -175,8 +162,7 @@ export default function LaporanKompensasi() {
     setIsExportingDetail(true);
     try {
       const mhs = detail.mahasiswa;
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const dateStr = getTodayString();
       const sumberLabel = (sumber: string) =>
         sumber === 'perkuliahan' ? 'Perkuliahan' : sumber === 'apel' ? 'Apel' : 'Kompensasi Manual';
 

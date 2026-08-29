@@ -3,6 +3,7 @@ import { MainLayout } from '../../components/MainLayout';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../contexts/ToastContext';
 import { admisiAdminController } from '../../controllers/admisiAdminController';
+import { getTodayString } from '../../utils/format';
 
 export default function AdmisiLaporan() {
   const toast = useToast();
@@ -35,7 +36,7 @@ export default function AdmisiLaporan() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `export-pmb-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `export-pmb-${getTodayString()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
       toast.showToast('Export berhasil!', 'success');

@@ -11,6 +11,7 @@ import { useToast } from '../contexts/ToastContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
+import { getTodayString } from '../utils/format';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -322,10 +323,7 @@ export default function Pelanggaran() {
     setEditPelanggaranId(null);
     const firstStudent = mahasiswaList()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
-    const today = new Date();
-    setTanggal(
-      `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`,
-    );
+    setTanggal(getTodayString());
     setJenisPelanggaran('');
     setKeterangan('');
     setPasalId(null);

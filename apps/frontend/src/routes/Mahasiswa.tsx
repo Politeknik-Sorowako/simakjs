@@ -18,6 +18,7 @@ import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
+import { getTodayString } from '../utils/format';
 
 export default function Mahasiswa() {
   const toast = useToast();
@@ -369,7 +370,7 @@ export default function Mahasiswa() {
                 return res.data;
               }}
               columns={exportColumns}
-              filename={`Mahasiswa_${new Date().toISOString().split('T')[0]}`}
+              filename={`Mahasiswa_${getTodayString()}`}
               title="Daftar Mahasiswa"
               subtitle="Data Mahasiswa SIMAK Vokasi"
             />

@@ -12,6 +12,13 @@ const TYPE_LABEL: Record<string, string> = {
   string: 'Teks',
 };
 
+const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'Asia/Makassar', label: 'Asia/Makassar (WITA - UTC+8) [Default]' },
+  { value: 'Asia/Jakarta', label: 'Asia/Jakarta (WIB - UTC+7)' },
+  { value: 'Asia/Jayapura', label: 'Asia/Jayapura (WIT - UTC+9)' },
+  { value: 'UTC', label: 'UTC (Universal Coordinated Time)' },
+];
+
 export default function KonfigurasiParameter() {
   const [params, { refetch }] = createResource(() => systemController.getParameters());
   const [edits, setEdits] = createSignal<Record<string, string>>({});
@@ -83,12 +90,25 @@ export default function KonfigurasiParameter() {
                     <Show
                       when={p.paramType === 'boolean'}
                       fallback={
-                        <Input
-                          type="number"
-                          value={valueFor(p)}
-                          onInput={(e) => setField(p.key, e.currentTarget.value)}
-                          class="w-28"
-                        />
+                        <Show
+                          when={p.key === 'TIMEZONE'}
+                          fallback={
+                            <Input
+                              type="number"
+                              value={valueFor(p)}
+                              onInput={(e) => setField(p.key, e.currentTarget.value)}
+                              class="w-28"
+                            />
+                          }
+                        >
+                          <select
+                            value={valueFor(p)}
+                            onChange={(e) => setField(p.key, e.currentTarget.value)}
+                            class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+                          >
+                            <For each={TIMEZONE_OPTIONS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
+                          </select>
+                        </Show>
                       }
                     >
                       <select

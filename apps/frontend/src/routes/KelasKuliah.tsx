@@ -21,6 +21,7 @@ import { periodeAkademikController } from '../controllers/periodeAkademikControl
 import { usePagination } from '../hooks/usePagination';
 import { isHeaderRow, parseCsv } from '../utils/csv';
 import { ExportColumn } from '../utils/export';
+import { getTodayString } from '../utils/format';
 
 export default function KelasKuliah() {
   const navigate = useNavigate();
@@ -364,7 +365,7 @@ export default function KelasKuliah() {
                 return res.data;
               }}
               columns={exportColumns}
-              filename={`Kelas_Kuliah_${new Date().toISOString().split('T')[0]}`}
+              filename={`Kelas_Kuliah_${getTodayString()}`}
               title="Daftar Kelas Kuliah"
               subtitle="Data Kelas Kuliah SIMAK Vokasi"
             />
