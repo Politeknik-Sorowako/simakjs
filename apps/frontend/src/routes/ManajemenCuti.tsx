@@ -13,6 +13,7 @@ import { CutiRequest, cutiController, MahasiswaCuti } from '../controllers/cutiC
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
+import { getTodayString } from '../utils/format';
 
 type Tab = 'input' | 'approval' | 'aktif';
 
@@ -131,7 +132,7 @@ export default function ManajemenCuti() {
     setAutoBerakhir(true);
     setAlasan('');
     setNoSuratIzin('');
-    setTanggalSuratIzin(new Date().toISOString().split('T')[0]);
+    setTanggalSuratIzin(getTodayString());
     setInputError('');
     setShowInputModal(true);
     try {

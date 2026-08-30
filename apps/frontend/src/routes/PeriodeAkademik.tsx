@@ -12,6 +12,7 @@ import { useToast } from '../contexts/ToastContext';
 import { PeriodeAkademik as IPeriode, periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
+import { getTodayString } from '../utils/format';
 
 const periodeSchema = z.object({
   id: z
@@ -150,7 +151,7 @@ export default function PeriodeAkademik() {
                 return res.data;
               }}
               columns={exportColumns}
-              filename={`Periode_Akademik_${new Date().toISOString().split('T')[0]}`}
+              filename={`Periode_Akademik_${getTodayString()}`}
               title="Daftar Periode Akademik"
               subtitle="Data Periode Akademik SIMAK Vokasi"
             />

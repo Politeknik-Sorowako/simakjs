@@ -16,6 +16,7 @@ import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
+import { getTodayString } from '../utils/format';
 
 export default function Dosen() {
   const toast = useToast();
@@ -216,7 +217,7 @@ export default function Dosen() {
                 return res.data;
               }}
               columns={exportColumns}
-              filename={`Dosen_${new Date().toISOString().split('T')[0]}`}
+              filename={`Dosen_${getTodayString()}`}
               title="Daftar Dosen"
               subtitle="Data Dosen Pengajar SIMAK Vokasi"
             />

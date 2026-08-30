@@ -8,6 +8,11 @@ const CACHE_TTL_MS = 10_000;
 type ParamType = 'string' | 'number' | 'boolean';
 
 const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; description: string }> = {
+  TIMEZONE: {
+    value: 'Asia/Makassar',
+    type: 'string',
+    description: 'Zona waktu aplikasi (misal: Asia/Makassar [WITA], Asia/Jakarta [WIB], Asia/Jayapura [WIT], UTC)',
+  },
   DURASI_HARIAN_MENIT: { value: '480', type: 'number', description: 'Durasi harian kompensasi dalam menit (8 jam)' },
   PENGALI_DENDA_MANGKIR: { value: '5', type: 'number', description: 'Pengali denda Alpa/Terlambat/Rusak' },
   PENGALI_DENDA_IZIN_SAKIT: { value: '1', type: 'number', description: 'Pengali denda Izin/Sakit' },
@@ -54,6 +59,10 @@ export class SystemParameterService {
   static async getBoolean(key: string): Promise<boolean> {
     const raw = await SystemParameterService.getRaw(key);
     return raw === 'true' || raw === '1';
+  }
+
+  static async getTimezone(): Promise<string> {
+    return (await SystemParameterService.getRaw('TIMEZONE')) || 'Asia/Makassar';
   }
 
   static async getAll() {

@@ -12,6 +12,7 @@ import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaControll
 import { mahasiswaKeluarController } from '../controllers/mahasiswaKeluarController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
+import { getTodayString } from '../utils/format';
 
 export default function MahasiswaKeluarPage() {
   const toast = useToast();
@@ -85,7 +86,7 @@ export default function MahasiswaKeluarPage() {
     const active = periodes()?.data?.find((p) => p.aktif);
     setPeriodeId(active?.id || periodes()?.data?.[0]?.id || '');
     setStatusBaru('keluar');
-    setTanggalKeluar(new Date().toISOString().split('T')[0]);
+    setTanggalKeluar(getTodayString());
     setAlasanKeluar('');
     setNoSk('');
     setTanggalSk('');

@@ -11,6 +11,7 @@ import { Table } from '../components/ui/Table';
 import { Prodi, prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
+import { getTodayString } from '../utils/format';
 
 export default function ProgramStudi() {
   const [search, setSearch] = createSignal('');
@@ -122,7 +123,7 @@ export default function ProgramStudi() {
                 return res.data;
               }}
               columns={exportColumns}
-              filename={`Program_Studi_${new Date().toISOString().split('T')[0]}`}
+              filename={`Program_Studi_${getTodayString()}`}
               title="Daftar Program Studi"
               subtitle="Data Program Studi SIMAK Vokasi"
             />

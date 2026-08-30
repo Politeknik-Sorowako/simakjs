@@ -17,6 +17,7 @@ import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
 import { fetchApi } from '../utils/api';
 import { ExportColumn } from '../utils/export';
+import { getTodayString } from '../utils/format';
 
 type SortField = 'nama' | 'kode' | 'sks' | 'semester' | 'programStudi' | 'kurikulum';
 
@@ -254,7 +255,7 @@ export default function MataKuliah() {
                 return res.data;
               }}
               columns={exportColumns}
-              filename={`Mata_Kuliah_${new Date().toISOString().split('T')[0]}`}
+              filename={`Mata_Kuliah_${getTodayString()}`}
               title="Daftar Mata Kuliah"
               subtitle="Data Mata Kuliah SIMAK Vokasi"
             />
