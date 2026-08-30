@@ -20,6 +20,7 @@ import { periodeAkademikController } from '../controllers/periodeAkademikControl
 import { BAP, CPMK, MonitoringRpsItem, PresensiItem, presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
 import { BapPraktikum, RombelPraktikum, rombelPraktikumController } from '../controllers/rombelPraktikumController';
+import { getTodayString } from '../utils/format';
 
 export default function BapPresensi() {
   const auth = useAuth();
@@ -94,7 +95,7 @@ export default function BapPresensi() {
   const [showCreateBapPrakModal, setShowCreateBapPrakModal] = createSignal(false);
   const [editBapPrakId, setEditBapPrakId] = createSignal<number | null>(null);
   const [selectedSesiIdsPrak, setSelectedSesiIdsPrak] = createSignal<number[]>([]);
-  const [tanggalPrak, setTanggalPrak] = createSignal(new Date().toISOString().split('T')[0]);
+  const [tanggalPrak, setTanggalPrak] = createSignal(getTodayString());
   const [materiPrak, setMateriPrak] = createSignal('');
   const [temaPrak, setTemaPrak] = createSignal('');
   const [durasiPrak, setDurasiPrak] = createSignal(100);
@@ -135,7 +136,7 @@ export default function BapPresensi() {
   const [isSavingMembers, setIsSavingMembers] = createSignal(false);
 
   // Form states
-  const [tanggal, setTanggal] = createSignal(new Date().toISOString().split('T')[0]);
+  const [tanggal, setTanggal] = createSignal(getTodayString());
   const [selectedPertemuanIds, setSelectedPertemuanIds] = createSignal<number[]>([]);
   const [materi, setMateri] = createSignal('');
   const [catatan, setCatatan] = createSignal('');
@@ -501,7 +502,7 @@ export default function BapPresensi() {
     setEditBapPrakId(null);
     const maxSesi = (bapPraktikumData() || []).reduce((max, b) => Math.max(max, b.sesiKe || 0), 0);
     setSelectedSesiIdsPrak(maxSesi > 0 ? [maxSesi + 1] : [1]);
-    setTanggalPrak(new Date().toISOString().split('T')[0]);
+    setTanggalPrak(getTodayString());
     setMateriPrak('');
     setCatatanPrak('');
     setDurasiPrak(100);
@@ -742,7 +743,7 @@ export default function BapPresensi() {
   // Handlers
   const openAddBap = () => {
     setEditBapId(null);
-    setTanggal(new Date().toISOString().split('T')[0]);
+    setTanggal(getTodayString());
     const maxPertemuan = (bapData() || []).reduce((max, b) => Math.max(max, b.pertemuanKe || 0), 0);
     setSelectedPertemuanIds(maxPertemuan > 0 ? [maxPertemuan + 1] : [1]);
     setSelectedSesiIdsPrak([]);
@@ -758,7 +759,7 @@ export default function BapPresensi() {
     const activeBap = bapData()?.find((b) => b.id === selectedBapId());
     if (!activeBap) return;
     setEditBapId(activeBap.id);
-    setTanggal(new Date(activeBap.tanggal).toISOString().split('T')[0]);
+    setTanggal(activeBap.tanggal);
     setSelectedPertemuanIds([activeBap.pertemuanKe]);
     setMateri(activeBap.materi);
     setCatatan(activeBap.catatan || '');

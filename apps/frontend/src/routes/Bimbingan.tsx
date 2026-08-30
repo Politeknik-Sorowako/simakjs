@@ -6,6 +6,7 @@ import { dosenController } from '../controllers/dosenController';
 import { kategoriBimbinganController } from '../controllers/kategoriBimbinganController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
+import { getTodayString } from '../utils/format';
 
 export default function Bimbingan() {
   const auth = useAuth();
@@ -38,7 +39,7 @@ export default function Bimbingan() {
   const [showSesiModal, setShowSesiModal] = createSignal(false);
   const [editingSesiId, setEditingSesiId] = createSignal<number | null>(null);
   const [pertemuanKeInput, setPertemuanKeInput] = createSignal(1);
-  const [tanggalInput, setTanggalInput] = createSignal(new Date().toISOString().split('T')[0]);
+  const [tanggalInput, setTanggalInput] = createSignal(getTodayString());
   const [permasalahanInput, setPermasalahanInput] = createSignal('');
   const [solusiInput, setSolusiInput] = createSignal('');
   const [statusBkdInput, setStatusBkdInput] = createSignal(true);
@@ -308,7 +309,7 @@ export default function Bimbingan() {
     const activeBimb = selectedBimbingan();
     const currentCount = activeBimb?.sesi?.length || 0;
     setPertemuanKeInput(currentCount + 1);
-    setTanggalInput(new Date().toISOString().split('T')[0]);
+    setTanggalInput(getTodayString());
     setPermasalahanInput('');
     setSolusiInput('');
     setStatusBkdInput(true);
@@ -319,7 +320,7 @@ export default function Bimbingan() {
   const handleOpenEditSesi = (sesi: SesiBimbingan) => {
     setEditingSesiId(sesi.id);
     setPertemuanKeInput(sesi.pertemuanKe);
-    setTanggalInput(new Date(sesi.tanggalBimbingan).toISOString().split('T')[0]);
+    setTanggalInput(sesi.tanggalBimbingan);
     setPermasalahanInput(sesi.permasalahan ?? '');
     setSolusiInput(sesi.solusi);
     setStatusBkdInput(sesi.statusBkd);

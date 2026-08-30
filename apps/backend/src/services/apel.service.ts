@@ -11,6 +11,8 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { getNowTimeString } from '../utils/timezone';
+import { SystemParameterService } from './system-parameter.service';
 
 export class ApelService {
   static async createKelompok(data: {
@@ -140,11 +142,10 @@ export class ApelService {
     jamMulai?: string;
     catatan?: string | null;
   }) {
-    // Fallback: jika jamMulai tidak dikirim, gunakan waktu server saat ini.
+    // Fallback: jika jamMulai tidak dikirim, gunakan waktu saat ini sesuai timezone aplikasi.
     let jamMulai = data.jamMulai?.trim();
     if (!jamMulai) {
-      const now = new Date();
-      jamMulai = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      jamMulai = await getNowTimeString(await SystemParameterService.getTimezone());
     }
     const sesiData = { ...data, jamMulai };
     const [existing] = await db

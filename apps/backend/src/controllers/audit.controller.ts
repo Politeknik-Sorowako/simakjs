@@ -1,5 +1,7 @@
 import { AuditService } from '../services/audit.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { hasRole } from '../utils/role';
+import { getNowDateString } from '../utils/timezone';
 import type { AuthContext } from '../utils/types';
 
 export class AuditController {
@@ -76,7 +78,7 @@ export class AuditController {
       const csv = await AuditService.exportCsv(module, actionType, userId, startDate, endDate, search, limit);
       set.headers['Content-Type'] = 'text/csv; charset=utf-8';
       set.headers['Content-Disposition'] =
-        `attachment; filename="audit-logs-${new Date().toISOString().split('T')[0]}.csv"`;
+        `attachment; filename="audit-logs-${await getNowDateString(await SystemParameterService.getTimezone())}.csv"`;
       return csv;
     } catch (error: unknown) {
       set.status = 500;

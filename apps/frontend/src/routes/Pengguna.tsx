@@ -17,6 +17,7 @@ import { rbacController, UserRoleType } from '../controllers/rbacController';
 import { UserItem, userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
+import { getTodayString } from '../utils/format';
 
 const fallbackRoleOptions: { value: string; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -266,7 +267,7 @@ export default function Pengguna() {
                 return res.data;
               }}
               columns={exportColumns}
-              filename={`Pengguna_${new Date().toISOString().split('T')[0]}`}
+              filename={`Pengguna_${getTodayString()}`}
               title="Daftar Pengguna"
               subtitle="Data Pengguna SIMAK Vokasi"
             />
