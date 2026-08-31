@@ -341,7 +341,7 @@ export class KompensasiManualService {
 
     const mhsIds = grouped.map((g) => g.mahasiswaId);
     const mhsList = await db
-      .select({ id: mahasiswa.id, nim: mahasiswa.nim, nama: mahasiswa.nama })
+      .select({ id: mahasiswa.id, nim: mahasiswa.nim, nama: mahasiswa.nama, foto: mahasiswa.foto })
       .from(mahasiswa)
       .where(sql`${mahasiswa.id} IN (${sql.join(mhsIds, sql`, `)})`);
 
@@ -492,6 +492,7 @@ export class KompensasiManualService {
         mahasiswaId: kompensasiManual.mahasiswaId,
         mahasiswaNim: mahasiswa.nim,
         mahasiswaNama: mahasiswa.nama,
+        mahasiswaFoto: mahasiswa.foto,
         tanggal: kompensasiManual.tanggal,
         jenisKompen: kompensasiManual.jenisKompen,
         durasiMenit: kompensasiManual.durasiMenit,

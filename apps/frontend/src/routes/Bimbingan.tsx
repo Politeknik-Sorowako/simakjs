@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { BimbinganThread, bimbinganController, SesiBimbingan } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
@@ -685,7 +686,12 @@ export default function Bimbingan() {
                           class={`w-full p-4 text-left flex flex-col gap-1 transition-all hover:bg-brand-50/30 ${selectedMhsId() === item.id ? 'bg-brand-50/60 border-l-4 border-brand-600' : ''}`}
                         >
                           <div class="flex items-center justify-between">
-                            <span class="font-bold text-secondary-800 text-sm dark:text-white">{item.nama}</span>
+                            <div class="flex items-center gap-2 min-w-0">
+                              <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                              <span class="font-bold text-secondary-800 text-sm dark:text-white truncate">
+                                {item.nama}
+                              </span>
+                            </div>
                             <div class="flex items-center gap-1.5">
                               <span class="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-[10px] font-bold dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
                                 {item.totalSesi || 0}x Bimbingan (Semester Ini)

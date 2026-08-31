@@ -98,6 +98,7 @@ export interface NilaiMahasiswa {
   mahasiswaId: number;
   nim: string;
   nama: string;
+  foto?: string | null;
   nilaiAngka: string | null;
   nilaiHuruf: string | null;
   nilaiIndeks: string | null;

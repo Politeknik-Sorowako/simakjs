@@ -426,6 +426,7 @@ export class BimbinganService {
           id: mahasiswa.id,
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
+          foto: mahasiswa.foto,
           angkatan: mahasiswa.angkatan,
           prodiId: mahasiswa.programStudiId,
           prodiNama: programStudi.nama,
@@ -543,6 +544,7 @@ export class BimbinganService {
         mahasiswa: {
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
+          foto: mahasiswa.foto,
         },
       })
       .from(bimbingan)
@@ -613,6 +615,7 @@ export class BimbinganService {
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         prodiId: mahasiswa.programStudiId,
         dosenPaId: mahasiswa.dosenPaId,
         dosenPaNama: dosen.nama,

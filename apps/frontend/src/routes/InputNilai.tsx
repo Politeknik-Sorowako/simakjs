@@ -1,6 +1,7 @@
 import { createEffect, createResource, createSignal, For, Index, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
@@ -548,9 +549,12 @@ export default function InputNilai() {
                       {(stud) => (
                         <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                           <td class="p-3">
-                            <div class="flex flex-col">
-                              <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
-                              <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
+                            <div class="flex items-center gap-2">
+                              <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
+                              <div class="flex flex-col">
+                                <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
+                                <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
+                              </div>
                             </div>
                           </td>
                           <For each={components()}>

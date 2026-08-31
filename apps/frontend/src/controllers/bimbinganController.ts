@@ -62,6 +62,7 @@ export interface BimbinganMonitoring {
   id: number;
   nim: string;
   nama: string;
+  foto?: string | null;
   angkatan?: string;
   prodiId?: number;
   prodiNama?: string;
@@ -83,6 +84,7 @@ export interface MonitoringBimbinganLengkapItem {
   mahasiswaId: number;
   nim: string;
   namaMahasiswa: string;
+  foto?: string | null;
   prodiId: number | null;
   dosenPaId: number | null;
   dosenPaNama: string;
@@ -104,6 +106,7 @@ export interface Pelanggaran {
   mahasiswaId: number;
   nim?: string;
   namaMahasiswa?: string;
+  foto?: string | null;
   prodiNama?: string;
   programStudiId?: number;
   jenjang?: string;
@@ -137,6 +140,7 @@ export interface RekapPelanggaran {
     mahasiswaId: number;
     nim: string;
     nama: string;
+    foto?: string | null;
     prodiNama: string;
     totalPoin: number;
     jumlahPelanggaran: number;

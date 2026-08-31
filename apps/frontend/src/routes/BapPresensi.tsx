@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { useAuth } from '../contexts/AuthContext';
@@ -1345,8 +1346,20 @@ export default function BapPresensi() {
                           return (
                             <tr class="border-b border-secondary-50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                               <td class="py-4 px-4">
-                                <div class="font-bold text-secondary-800 dark:text-white">{k.mahasiswa?.nama}</div>
-                                <div class="text-xs text-secondary-400 dark:text-secondary-200">{k.mahasiswa?.nim}</div>
+                                <div class="flex items-center gap-2">
+                                  <StudentAvatar
+                                    foto={k.mahasiswa?.foto}
+                                    nama={k.mahasiswa?.nama || '-'}
+                                    nim={k.mahasiswa?.nim}
+                                    size="sm"
+                                  />
+                                  <div>
+                                    <div class="font-bold text-secondary-800 dark:text-white">{k.mahasiswa?.nama}</div>
+                                    <div class="text-xs text-secondary-400 dark:text-secondary-200">
+                                      {k.mahasiswa?.nim}
+                                    </div>
+                                  </div>
+                                </div>
                               </td>
                               <td class="py-4 px-4">
                                 <div class="flex flex-col gap-2">

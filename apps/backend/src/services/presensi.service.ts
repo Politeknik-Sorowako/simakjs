@@ -251,6 +251,7 @@ export class PresensiService {
         mahasiswaId: presensi.mahasiswaId,
         mahasiswaNim: mahasiswa.nim,
         mahasiswaNama: mahasiswa.nama,
+        mahasiswaFoto: mahasiswa.foto,
         status: presensi.status,
         durasiMangkir: presensi.durasiMangkir,
         keterangan: presensi.keterangan,
@@ -420,6 +421,7 @@ export class PresensiService {
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         email: mahasiswa.email,
         programStudiId: mahasiswa.programStudiId,
       })
@@ -686,6 +688,7 @@ export class PresensiService {
         id: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         prodiNama: sql<string>`${programStudi.nama}`.as('nama_prodi'),
         totalKompensasi: totalKompensasiSql.as('total_kompensasi'),
         totalDibayar: totalDibayarSql.as('total_dibayar'),
@@ -934,6 +937,7 @@ export class PresensiService {
         mahasiswaId: presensi.mahasiswaId,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
         sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
         izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
@@ -943,7 +947,7 @@ export class PresensiService {
       .from(presensi)
       .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
       .where(sql`${presensi.bapId} IN (${sql.join(bapIds, sql`, `)})`)
-      .groupBy(presensi.mahasiswaId, mahasiswa.nim, mahasiswa.nama)
+      .groupBy(presensi.mahasiswaId, mahasiswa.nim, mahasiswa.nama, mahasiswa.foto)
       .orderBy(mahasiswa.nama);
 
     const pt = totalPertemuan?.count || 0;
