@@ -1,5 +1,57 @@
-import { fetchApi } from '../utils/api';
+import { API_URL, fetchApi } from '../utils/api';
 import { PaginatedResponse, Prodi } from './prodiController';
+
+export async function uploadFormDataWithProgress<T>(
+  endpoint: string,
+  formData: FormData,
+  onProgress?: (percent: number) => void,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}${endpoint}`);
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      const isJson = xhr.getResponseHeader('content-type')?.includes('application/json');
+      let data: unknown;
+      try {
+        data = isJson ? JSON.parse(xhr.responseText) : xhr.responseText;
+      } catch {
+        data = xhr.responseText;
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(data as T);
+        return;
+      }
+
+      if (xhr.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        reject(new Error('Sesi Anda telah berakhir. Silakan login kembali.'));
+        return;
+      }
+
+      const errObj = data as { error?: string; message?: string } | undefined;
+      const errorMessage = errObj?.error || errObj?.message || `HTTP ${xhr.status}`;
+      reject(new Error(errorMessage));
+    };
+
+    xhr.onerror = () => reject(new Error('Gagal mengunggah file. Periksa koneksi Anda.'));
+    xhr.send(formData);
+  });
+}
 
 export interface MahasiswaBaruProdiItem {
   prodiNama: string;
@@ -38,10 +90,26 @@ export interface Mahasiswa {
   rw?: string | null;
   kodePos?: string | null;
   kewarganegaraan?: string | null;
+  foto?: string | null;
   programStudi?: Prodi | null;
   dosenPa?: { id: number; nama: string; nip: string; email: string } | null;
   idPddikti?: string | null;
   isSynced?: boolean;
+}
+
+export interface BulkUploadFotoDetail {
+  nim: string;
+  filename: string;
+  status: 'success' | 'failed';
+  error?: string;
+}
+
+export interface BulkUploadFotoResponse {
+  message: string;
+  total: number;
+  successCount: number;
+  failedCount: number;
+  details: BulkUploadFotoDetail[];
 }
 
 export const mahasiswaController = {
@@ -119,6 +187,19 @@ export const mahasiswaController = {
     return fetchApi<{ message: string }>('/mahasiswa/bulk-set-dosen-pa', {
       method: 'PUT',
       body: JSON.stringify({ mahasiswaIds, dosenPaId }),
+    });
+  },
+
+  async bulkUploadFoto(formData: FormData, onProgress?: (percent: number) => void): Promise<BulkUploadFotoResponse> {
+    return uploadFormDataWithProgress<BulkUploadFotoResponse>('/mahasiswa/bulk-foto', formData, onProgress);
+  },
+
+  async uploadFoto(id: number, file: File): Promise<{ message: string; foto: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi<{ message: string; foto: string }>(`/mahasiswa/${id}/foto`, {
+      method: 'POST',
+      body: formData,
     });
   },
 };

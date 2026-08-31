@@ -1,5 +1,6 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { BulkUploadFotoModal } from '../components/mahasiswa/BulkUploadFotoModal';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -17,6 +18,7 @@ import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mah
 import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
+import { API_URL } from '../utils/api';
 import { ExportColumn } from '../utils/export';
 import { getTodayString } from '../utils/format';
 
@@ -27,6 +29,7 @@ export default function Mahasiswa() {
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [showImportPaModal, setShowImportPaModal] = createSignal(false);
   const [showBulkPaModal, setShowBulkPaModal] = createSignal(false);
+  const [showBulkFotoModal, setShowBulkFotoModal] = createSignal(false);
   const [selectedBulkDosenPaId, setSelectedBulkDosenPaId] = createSignal<number | null>(null);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
   const [bulkLoading, setBulkLoading] = createSignal(false);
@@ -380,6 +383,9 @@ export default function Mahasiswa() {
             <Button variant="secondary" onClick={() => setShowImportPaModal(true)}>
               📥 Impor Relasi PA
             </Button>
+            <Button variant="secondary" onClick={() => setShowBulkFotoModal(true)}>
+              🖼️ Upload Foto Massal
+            </Button>
             <Button onClick={openAddModal}>+ Tambah Mahasiswa</Button>
           </div>
         </div>
@@ -416,6 +422,12 @@ export default function Mahasiswa() {
           importUrl="/mahasiswa/import-pa"
           templateHeaders={['nim', 'nip_dosen_pa']}
           title="Relasi Pembimbing Akademik"
+          onSuccess={() => refetch()}
+        />
+
+        <BulkUploadFotoModal
+          show={showBulkFotoModal()}
+          onClose={() => setShowBulkFotoModal(false)}
           onSuccess={() => refetch()}
         />
 
@@ -493,6 +505,7 @@ export default function Mahasiswa() {
                 onChange={toggleSelectAll}
                 class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
               />,
+              'Foto',
               <div class="flex flex-col gap-2 w-full">
                 <SortableHeader field="nim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                   NIM
@@ -574,6 +587,23 @@ export default function Mahasiswa() {
                       class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
                     />
                   </td>
+                  <td class="px-6 py-4">
+                    {item.foto ? (
+                      <img
+                        src={`${API_URL}${item.foto}`}
+                        alt={item.nama}
+                        class="w-10 h-10 rounded-full object-cover border border-secondary-200 dark:border-secondary-700"
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div class="w-10 h-10 rounded-full bg-secondary-100 dark:bg-secondary-800 flex items-center justify-center text-secondary-400 text-xs font-semibold border border-secondary-200 dark:border-secondary-700">
+                        {item.nama.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </td>
                   <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">
                     {item.nim}
                   </td>
@@ -605,7 +635,7 @@ export default function Mahasiswa() {
             </For>
             <Show when={mahasiswas()?.data.length === 0}>
               <tr>
-                <td colspan="7" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                <td colspan="9" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data mahasiswa ditemukan.
                 </td>
               </tr>
