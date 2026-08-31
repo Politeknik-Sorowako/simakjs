@@ -26,6 +26,7 @@
     "@elysiajs/swagger": "^1.0.0",
     "drizzle-orm": "^0.45.0",
     "elysia": "^1.0.0",
+    "jszip": "^3.10.1",
     "pg": "^8.11.0",
     "resend": "^6.16.0"
   },

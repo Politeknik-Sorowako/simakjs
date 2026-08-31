@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
@@ -206,6 +207,33 @@ export const app = new Elysia()
     };
   })
   .use(jwtPlugin)
+  .get('/storage/photos/mahasiswa/:filename', async ({ params, set, headers, cookie, jwt }) => {
+    const authHeader = headers['authorization'];
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
+    const token = headerToken || cookieToken;
+
+    if (!token || !(await jwt.verify(token))) {
+      set.status = 401;
+      return { error: 'Unauthorized: Silakan login terlebih dahulu' };
+    }
+
+    const raw = String(params.filename || '');
+    const filename = basename(raw);
+    if (filename !== raw || !/\.(jpg|jpeg|png|webp)$/i.test(filename)) {
+      set.status = 404;
+      return { error: 'Foto tidak ditemukan' };
+    }
+    const filePath = join(process.cwd(), 'storage', 'photos', 'mahasiswa', filename);
+    const file = Bun.file(filePath);
+    if (!(await file.exists())) {
+      set.status = 404;
+      return { error: 'Foto tidak ditemukan' };
+    }
+    set.headers['Content-Type'] = file.type || 'image/jpeg';
+    set.headers['Cache-Control'] = 'public, max-age=86400';
+    return file;
+  })
   .ws('/bimbingan/ws/:bimbinganId', {
     async open(ws) {
       try {

@@ -1,3 +1,5 @@
+import { mkdir, stat, writeFile } from 'node:fs/promises';
+import { extname, join, parse } from 'node:path';
 import { and, asc, count, desc, eq, ilike, inArray, notExists, or, SQL, sql } from 'drizzle-orm';
 import { dosen, mahasiswa, programStudi, users } from '../models/schema';
 import { db } from '../utils/db';
@@ -250,5 +252,160 @@ export class MahasiswaService {
     if (mahasiswaIds.length === 0) return { updated: 0 };
     await db.update(mahasiswa).set({ dosenPaId, updatedAt: new Date() }).where(inArray(mahasiswa.id, mahasiswaIds));
     return { updated: mahasiswaIds.length };
+  }
+
+  static async updateFoto(mahasiswaId: number, fotoPath: string) {
+    const [updated] = await db
+      .update(mahasiswa)
+      .set({ foto: fotoPath, updatedAt: new Date() })
+      .where(eq(mahasiswa.id, mahasiswaId))
+      .returning();
+    return updated || null;
+  }
+
+  private static sanitizeNim(filename: string): string {
+    const { name } = parse(filename);
+    return name.replace(/[^a-zA-Z0-9]/g, '').trim();
+  }
+
+  private static getStoragePath(): string {
+    return join(process.cwd(), 'storage', 'photos', 'mahasiswa');
+  }
+
+  static async saveFileToStorage(
+    filename: string,
+    buffer: Uint8Array | ArrayBuffer,
+  ): Promise<{ filePath: string; relativePath: string }> {
+    const storageDir = this.getStoragePath();
+    await mkdir(storageDir, { recursive: true });
+
+    const ext = extname(filename).toLowerCase() || '.jpg';
+    const nim = this.sanitizeNim(filename);
+    const safeFilename = `${nim}${ext}`;
+    const filePath = join(storageDir, safeFilename);
+
+    await writeFile(filePath, buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer);
+
+    const relativePath = `/storage/photos/mahasiswa/${safeFilename}`;
+    return { filePath, relativePath };
+  }
+
+  static async bulkProcessPhotos(
+    files: Array<{ filename: string; buffer: Uint8Array | ArrayBuffer }>,
+    overwrite = false,
+  ): Promise<{
+    total: number;
+    successCount: number;
+    failedCount: number;
+    details: Array<{ nim: string; filename: string; status: 'success' | 'failed'; error?: string }>;
+  }> {
+    const storageDir = this.getStoragePath();
+    await mkdir(storageDir, { recursive: true });
+
+    const details: Array<{ nim: string; filename: string; status: 'success' | 'failed'; error?: string }> = [];
+    let successCount = 0;
+    let failedCount = 0;
+
+    const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
+
+    for (const file of files) {
+      const ext = extname(file.filename).toLowerCase();
+      const nim = this.sanitizeNim(file.filename);
+
+      if (!ALLOWED_EXTENSIONS.includes(ext)) {
+        details.push({
+          nim,
+          filename: file.filename,
+          status: 'failed',
+          error: `Ekstensi file tidak didukung: ${ext}`,
+        });
+        failedCount++;
+        continue;
+      }
+
+      if (!nim) {
+        details.push({
+          nim: '',
+          filename: file.filename,
+          status: 'failed',
+          error: 'Nama file tidak mengandung NIM yang valid',
+        });
+        failedCount++;
+        continue;
+      }
+
+      try {
+        const [existing] = await db
+          .select({ id: mahasiswa.id, foto: mahasiswa.foto })
+          .from(mahasiswa)
+          .where(eq(mahasiswa.nim, nim))
+          .limit(1);
+
+        if (!existing) {
+          details.push({
+            nim,
+            filename: file.filename,
+            status: 'failed',
+            error: `Mahasiswa dengan NIM ${nim} tidak ditemukan di database`,
+          });
+          failedCount++;
+          continue;
+        }
+
+        if (!overwrite && existing.foto) {
+          details.push({
+            nim,
+            filename: file.filename,
+            status: 'failed',
+            error: `Foto untuk NIM ${nim} sudah ada. Centang opsi "Timpa" untuk mengganti.`,
+          });
+          failedCount++;
+          continue;
+        }
+
+        const safeFilename = `${nim}${ext}`;
+        const filePath = join(storageDir, safeFilename);
+        await writeFile(filePath, file.buffer instanceof ArrayBuffer ? new Uint8Array(file.buffer) : file.buffer);
+
+        const relativePath = `/storage/photos/mahasiswa/${safeFilename}`;
+
+        await db
+          .update(mahasiswa)
+          .set({ foto: relativePath, updatedAt: new Date() })
+          .where(eq(mahasiswa.id, existing.id));
+
+        details.push({
+          nim,
+          filename: file.filename,
+          status: 'success',
+        });
+        successCount++;
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Terjadi kesalahan saat memproses file';
+        details.push({
+          nim,
+          filename: file.filename,
+          status: 'failed',
+          error: msg,
+        });
+        failedCount++;
+      }
+    }
+
+    return {
+      total: files.length,
+      successCount,
+      failedCount,
+      details,
+    };
+  }
+
+  static async fileExists(filePath: string): Promise<boolean> {
+    try {
+      await stat(filePath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

@@ -737,4 +737,338 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
       expect(checkedMhs.dosenPaId).toBe(dosenData.id);
     });
   });
+
+  describe('POST /mahasiswa/bulk-foto', () => {
+    it('harus gagal melakukan bulk upload foto jika diakses oleh role mahasiswa (RBAC)', async () => {
+      const mhsToken = await getAuthToken('mhs-mhs@test.com', 'mahasiswa');
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]); // JPEG magic bytes
+      const file = new File([dummyImage], '12345678.jpg', { type: 'image/jpeg' });
+      formData.append('files', file);
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/bulk-foto', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${mhsToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(403);
+    });
+
+    it('harus berhasil melakukan bulk upload foto oleh role prodi', async () => {
+      const prodiToken = await getAuthToken('prodi-bulk@test.com', 'prodi' as Parameters<typeof getAuthToken>[1]);
+
+      // Tambah mahasiswa sebagai admin terlebih dahulu
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+      await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            nim: 'BULKPRODI01',
+            nama: 'Mhs Bulk Prodi',
+            email: 'bulk-prodi@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Bulk Prodi',
+            nik: '1234567890123463',
+            jenisKelamin: 'L',
+            tanggalLahir: '2000-01-01',
+          }),
+        }),
+      );
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+      const file = new File([dummyImage], 'BULKPRODI01.jpg', { type: 'image/jpeg' });
+      formData.append('files', file);
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/bulk-foto', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${prodiToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        total: number;
+        successCount: number;
+        failedCount: number;
+        details: Array<{ nim: string; status: string }>;
+      };
+      expect(body.successCount).toBe(1);
+      expect(body.failedCount).toBe(0);
+      expect(body.details[0].nim).toBe('BULKPRODI01');
+    });
+
+    it('harus berhasil melakukan bulk upload foto untuk mahasiswa yang ada di database', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      // Tambah mahasiswa terlebih dahulu
+      await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            nim: 'BULKFOTO01',
+            nama: 'Mhs Bulk Foto',
+            email: 'bulk-foto@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Bulk',
+            nik: '1234567890123460',
+            jenisKelamin: 'L',
+            tanggalLahir: '2000-01-01',
+          }),
+        }),
+      );
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]); // JPEG
+      const file = new File([dummyImage], 'BULKFOTO01.jpg', { type: 'image/jpeg' });
+      formData.append('files', file);
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/bulk-foto', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        total: number;
+        successCount: number;
+        failedCount: number;
+        details: Array<{ nim: string; status: string }>;
+      };
+      expect(body.total).toBe(1);
+      expect(body.successCount).toBe(1);
+      expect(body.failedCount).toBe(0);
+      expect(body.details[0].status).toBe('success');
+      expect(body.details[0].nim).toBe('BULKFOTO01');
+    });
+
+    it('harus melaporkan gagal untuk NIM yang tidak terdaftar di database', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+      const file = new File([dummyImage], 'NONTIDAKADA.jpg', { type: 'image/jpeg' });
+      formData.append('files', file);
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/bulk-foto', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        total: number;
+        successCount: number;
+        failedCount: number;
+        details: Array<{ nim: string; status: string; error?: string }>;
+      };
+      expect(body.total).toBe(1);
+      expect(body.successCount).toBe(0);
+      expect(body.failedCount).toBe(1);
+      expect(body.details[0].status).toBe('failed');
+      expect(body.details[0].error).toContain('tidak ditemukan');
+    });
+
+    it('harus menolak file dengan ekstensi yang tidak didukung', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      const formData = new FormData();
+      const dummyFile = new Uint8Array([0x00, 0x00, 0x00]);
+      const file = new File([dummyFile], '12345678.txt', { type: 'text/plain' });
+      formData.append('files', file);
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/bulk-foto', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        failedCount: number;
+        details: Array<{ error?: string }>;
+      };
+      expect(body.failedCount).toBe(1);
+      expect(body.details[0].error).toContain('tidak didukung');
+    });
+  });
+
+  describe('POST /mahasiswa/:id/foto', () => {
+    let mhsId: number;
+
+    beforeEach(async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+      const res = await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            nim: 'FOTO00001',
+            nama: 'Mhs Upload Foto',
+            email: 'upload-foto@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Foto',
+            nik: '1234567890123461',
+            jenisKelamin: 'L',
+            tanggalLahir: '2000-01-01',
+          }),
+        }),
+      );
+      const data = (await res.json()) as { id: number };
+      mhsId = data.id;
+    });
+
+    it('harus berhasil mengunggah foto untuk mahasiswa', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+      const file = new File([dummyImage], 'FOTO00001.jpg', { type: 'image/jpeg' });
+      formData.append('file', file);
+
+      const response = await app.handle(
+        new Request(`http://localhost/mahasiswa/${mhsId}/foto`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { message: string; foto: string };
+      expect(body.message).toContain('berhasil');
+      expect(body.foto).toContain('storage/photos/mahasiswa');
+    });
+
+    it('harus gagal mengunggah foto jika mahasiswa tidak ditemukan', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+      const file = new File([dummyImage], 'foto.jpg', { type: 'image/jpeg' });
+      formData.append('file', file);
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/999999/foto', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('GET /mahasiswa/:id/foto', () => {
+    let mhsId: number;
+
+    beforeEach(async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+      const res = await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            nim: 'GETFOTO01',
+            nama: 'Mhs Get Foto',
+            email: 'get-foto@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu GetFoto',
+            nik: '1234567890123462',
+            jenisKelamin: 'L',
+            tanggalLahir: '2000-01-01',
+          }),
+        }),
+      );
+      const data = (await res.json()) as { id: number };
+      mhsId = data.id;
+    });
+
+    it('harus mengembalikan error 404 jika foto belum diunggah', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      const response = await app.handle(
+        new Request(`http://localhost/mahasiswa/${mhsId}/foto`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
+      );
+
+      expect(response.status).toBe(404);
+    });
+
+    it('harus berhasil mengambil file foto setelah diunggah via endpoint dan route storage', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+      const file = new File([dummyImage], 'getfoto.jpg', { type: 'image/jpeg' });
+      formData.append('file', file);
+
+      const uploadRes = await app.handle(
+        new Request(`http://localhost/mahasiswa/${mhsId}/foto`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: formData,
+        }),
+      );
+      expect(uploadRes.status).toBe(200);
+
+      // Test GET /mahasiswa/:id/foto
+      const getRes = await app.handle(
+        new Request(`http://localhost/mahasiswa/${mhsId}/foto`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
+      );
+      expect(getRes.status).toBe(200);
+
+      // Test GET /storage/photos/mahasiswa/:filename
+      const storageRes = await app.handle(
+        new Request('http://localhost/storage/photos/mahasiswa/getfoto.jpg', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
+      );
+      expect(storageRes.status).toBe(200);
+    });
+  });
 });

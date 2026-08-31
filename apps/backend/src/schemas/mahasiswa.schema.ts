@@ -19,6 +19,7 @@ export const mahasiswaBody = t.Object({
   rw: t.Optional(t.Union([t.String(), t.Null()])),
   kodePos: t.Optional(t.Union([t.String(), t.Null()])),
   kewarganegaraan: t.Optional(t.Union([t.String(), t.Null()])),
+  foto: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const updateMahasiswaBody = t.Object({
@@ -40,6 +41,7 @@ export const updateMahasiswaBody = t.Object({
   rw: t.Optional(t.Union([t.String(), t.Null()])),
   kodePos: t.Optional(t.Union([t.String(), t.Null()])),
   kewarganegaraan: t.Optional(t.Union([t.String(), t.Null()])),
+  foto: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const getMahasiswaSchema = {
@@ -84,6 +86,7 @@ export const getMahasiswaSchema = {
           rw: t.Union([t.String(), t.Null()], { default: null }),
           kodePos: t.Union([t.String(), t.Null()], { default: null }),
           kewarganegaraan: t.Union([t.String(), t.Null()], { default: null }),
+          foto: t.Union([t.String(), t.Null()], { default: null }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
           isSynced: t.Union([t.Boolean(), t.Null()], { default: false }),
           lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -149,6 +152,7 @@ export const createMahasiswaSchema = {
       rw: t.Optional(t.Union([t.String(), t.Null()])),
       kodePos: t.Optional(t.Union([t.String(), t.Null()])),
       kewarganegaraan: t.Optional(t.Union([t.String(), t.Null()])),
+      foto: t.Union([t.String(), t.Null()], { default: null }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -198,6 +202,7 @@ export const getMahasiswaByIdSchema = {
       rw: t.Optional(t.Union([t.String(), t.Null()])),
       kodePos: t.Optional(t.Union([t.String(), t.Null()])),
       kewarganegaraan: t.Optional(t.Union([t.String(), t.Null()])),
+      foto: t.Union([t.String(), t.Null()], { default: null }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -260,6 +265,7 @@ export const updateMahasiswaSchema = {
       rw: t.Optional(t.Union([t.String(), t.Null()])),
       kodePos: t.Optional(t.Union([t.String(), t.Null()])),
       kewarganegaraan: t.Optional(t.Union([t.String(), t.Null()])),
+      foto: t.Union([t.String(), t.Null()], { default: null }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -339,4 +345,78 @@ export const bulkSetDosenPaSchema = {
     mahasiswaIds: t.Array(t.Integer()),
     dosenPaId: t.Nullable(t.Integer()),
   }),
+};
+
+export const uploadFotoMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Upload Foto Mahasiswa',
+    description: 'Mengunggah foto profil mahasiswa berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Foto berhasil diunggah' }),
+      foto: t.String({ default: '/storage/photos/mahasiswa/12345678.jpg' }),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'File tidak valid' }),
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak.' }),
+    }),
+    404: t.Object({
+      error: t.String({ default: 'Data tidak ditemukan' }),
+    }),
+  },
+};
+
+export const bulkUploadFotoSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Upload Foto Massal Mahasiswa',
+    description:
+      'Mengunggah foto mahasiswa secara massal dari file ZIP atau multiple image files. Nama file harus sesuai dengan NIM mahasiswa.',
+  },
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Proses upload foto massal selesai' }),
+      total: t.Integer({ default: 0 }),
+      successCount: t.Integer({ default: 0 }),
+      failedCount: t.Integer({ default: 0 }),
+      details: t.Array(
+        t.Object({
+          nim: t.String({ default: '12345678' }),
+          filename: t.String({ default: '12345678.jpg' }),
+          status: t.Union([t.Literal('success'), t.Literal('failed')], { default: 'success' }),
+          error: t.Optional(t.Union([t.String(), t.Null()])),
+        }),
+      ),
+    }),
+    400: t.Object({
+      error: t.String({ default: 'File tidak valid' }),
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak.' }),
+    }),
+  },
+};
+
+export const getFotoMahasiswaSchema = {
+  detail: {
+    tags: ['Mahasiswa'],
+    summary: 'Ambil Foto Mahasiswa',
+    description: 'Mengambil file foto mahasiswa berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  response: {
+    200: t.File({ type: 'image/*' }),
+    404: t.Object({
+      error: t.String({ default: 'Foto tidak ditemukan' }),
+    }),
+  },
 };
