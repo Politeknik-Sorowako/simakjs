@@ -232,6 +232,7 @@ export const getAllKompensasiManualSchema = {
           mahasiswaId: t.Integer(),
           mahasiswaNim: t.String(),
           mahasiswaNama: t.String(),
+          mahasiswaFoto: t.Optional(t.Union([t.String(), t.Null()])),
           tanggal: t.String(),
           jenisKompen: t.String(),
           durasiMenit: t.Integer(),

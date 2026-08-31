@@ -1,6 +1,7 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -631,7 +632,17 @@ export default function ApelKelola() {
                           <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
                             <td class="px-4 py-3 text-sm">{idx() + 1}</td>
                             <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
-                            <td class="px-4 py-3 text-sm">{item.mahasiswaNama}</td>
+                            <td class="px-4 py-3 text-sm">
+                              <div class="flex items-center gap-2">
+                                <StudentAvatar
+                                  foto={item.mahasiswaFoto}
+                                  nama={item.mahasiswaNama}
+                                  nim={item.mahasiswaNim}
+                                  size="sm"
+                                />
+                                {item.mahasiswaNama}
+                              </div>
+                            </td>
                             <td class="px-4 py-3 text-center">
                               <div class="flex items-center justify-center gap-2">
                                 <select
@@ -823,9 +834,12 @@ export default function ApelKelola() {
                     <For each={kelompokDetail()?.anggota}>
                       {(mhs) => (
                         <div class="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-700/50 text-xs">
-                          <div>
-                            <div class="font-semibold">{mhs.nama}</div>
-                            <div class="text-gray-500 font-mono">{mhs.nim}</div>
+                          <div class="flex items-center gap-2">
+                            <StudentAvatar foto={mhs.foto} nama={mhs.nama} nim={mhs.nim} size="sm" />
+                            <div>
+                              <div class="font-semibold">{mhs.nama}</div>
+                              <div class="text-gray-500 font-mono">{mhs.nim}</div>
+                            </div>
                           </div>
                           <button
                             class="text-red-600 hover:text-red-800 dark:text-red-400 font-medium px-2 py-1"
