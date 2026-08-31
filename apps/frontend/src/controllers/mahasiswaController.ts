@@ -38,10 +38,26 @@ export interface Mahasiswa {
   rw?: string | null;
   kodePos?: string | null;
   kewarganegaraan?: string | null;
+  foto?: string | null;
   programStudi?: Prodi | null;
   dosenPa?: { id: number; nama: string; nip: string; email: string } | null;
   idPddikti?: string | null;
   isSynced?: boolean;
+}
+
+export interface BulkUploadFotoDetail {
+  nim: string;
+  filename: string;
+  status: 'success' | 'failed';
+  error?: string;
+}
+
+export interface BulkUploadFotoResponse {
+  message: string;
+  total: number;
+  successCount: number;
+  failedCount: number;
+  details: BulkUploadFotoDetail[];
 }
 
 export const mahasiswaController = {
@@ -119,6 +135,22 @@ export const mahasiswaController = {
     return fetchApi<{ message: string }>('/mahasiswa/bulk-set-dosen-pa', {
       method: 'PUT',
       body: JSON.stringify({ mahasiswaIds, dosenPaId }),
+    });
+  },
+
+  async bulkUploadFoto(formData: FormData): Promise<BulkUploadFotoResponse> {
+    return fetchApi<BulkUploadFotoResponse>('/mahasiswa/bulk-foto', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async uploadFoto(id: number, file: File): Promise<{ message: string; foto: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi<{ message: string; foto: string }>(`/mahasiswa/${id}/foto`, {
+      method: 'POST',
+      body: formData,
     });
   },
 };

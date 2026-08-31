@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { CsvImportService } from '../services/csv-import.service';
 import { MahasiswaService } from '../services/mahasiswa.service';
 import { hasRole } from '../utils/role';
@@ -230,5 +232,149 @@ export class MahasiswaController {
 
     const result = await MahasiswaService.bulkSetDosenPa(mahasiswaIds, dosenPaId);
     return { message: `Berhasil menetapkan Dosen PA untuk ${result.updated} mahasiswa.`, data: result };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bulkUploadFoto({ request, set, getCurrentUser }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin dan Kaprodi yang dapat mengunggah foto mahasiswa.' };
+    }
+
+    try {
+      const formData = await request.formData();
+      const overwrite = formData.get('overwrite') === 'true';
+      const files: Array<{ filename: string; buffer: Uint8Array | ArrayBuffer }> = [];
+
+      // Process ZIP file
+      const zipFile = formData.get('zip') as File | null;
+      if (zipFile && zipFile.size > 0) {
+        const zipBuffer = await zipFile.arrayBuffer();
+        // Dynamic import for JSZip
+        const JSZip = (await import('jszip')).default;
+        const zip = await JSZip.loadAsync(zipBuffer);
+
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+        for (const [filename, zipEntry] of Object.entries(zip.files)) {
+          if (zipEntry.dir) continue;
+          const ext = extname(filename).toLowerCase();
+          if (imageExtensions.includes(ext)) {
+            const buffer = await zipEntry.async('uint8array');
+            files.push({ filename, buffer });
+          }
+        }
+      }
+
+      // Process multiple image files
+      const imageFiles = formData.getAll('files') as File[];
+      for (const file of imageFiles) {
+        if (file && file.size > 0) {
+          const buffer = await file.arrayBuffer();
+          files.push({ filename: file.name, buffer });
+        }
+      }
+
+      if (files.length === 0) {
+        set.status = 400;
+        return { error: 'Tidak ada file gambar yang valid ditemukan dalam request.' };
+      }
+
+      const result = await MahasiswaService.bulkProcessPhotos(files, overwrite);
+      return {
+        message: 'Proses upload foto massal selesai',
+        ...result,
+      };
+    } catch (e: unknown) {
+      set.status = 400;
+      const msg = e instanceof Error ? e.message : 'Gagal memproses file';
+      return { error: msg };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async uploadFoto({ params, request, set, getCurrentUser }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin dan Kaprodi yang dapat mengunggah foto mahasiswa.' };
+    }
+
+    const targetId = parseInt(params.id);
+    const mhs = await MahasiswaService.getById(targetId);
+    if (!mhs) {
+      set.status = 404;
+      return { error: 'Data mahasiswa tidak ditemukan' };
+    }
+
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+
+      if (!file || file.size === 0) {
+        set.status = 400;
+        return { error: 'File foto tidak ditemukan.' };
+      }
+
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        set.status = 400;
+        return { error: 'Tipe file tidak didukung. Hanya JPEG, PNG, dan WebP yang diizinkan.' };
+      }
+
+      const buffer = await file.arrayBuffer();
+      const { relativePath } = await MahasiswaService.saveFileToStorage(file.name, buffer);
+      const updated = await MahasiswaService.updateFoto(targetId, relativePath);
+
+      return {
+        message: 'Foto berhasil diunggah',
+        foto: updated?.foto || relativePath,
+      };
+    } catch (e: unknown) {
+      set.status = 400;
+      const msg = e instanceof Error ? e.message : 'Gagal mengunggah foto';
+      return { error: msg };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getFoto({ params, set }: AuthContext): Promise<any> {
+    const targetId = parseInt(params.id);
+    const mhs = await MahasiswaService.getById(targetId);
+    if (!mhs) {
+      set.status = 404;
+      return { error: 'Data mahasiswa tidak ditemukan' };
+    }
+
+    if (!mhs.foto) {
+      set.status = 404;
+      return { error: 'Foto tidak ditemukan untuk mahasiswa ini' };
+    }
+
+    const storageDir = join(process.cwd(), 'storage', 'photos', 'mahasiswa');
+    const fotoFilename = mhs.foto.split('/').pop() || '';
+    const filePath = join(storageDir, fotoFilename);
+
+    if (!(await MahasiswaService.fileExists(filePath))) {
+      set.status = 404;
+      return { error: 'File foto tidak ditemukan di server' };
+    }
+
+    const buffer = await readFile(filePath);
+    const ext = extname(fotoFilename).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+    };
+    const contentType = mimeMap[ext] || 'application/octet-stream';
+
+    return new Response(buffer, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=86400',
+      },
+    });
   }
 }

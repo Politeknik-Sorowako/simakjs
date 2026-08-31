@@ -136,6 +136,7 @@ export const mahasiswa = pgTable('mahasiswa', {
   rw: varchar('rw', { length: 5 }),
   kodePos: varchar('kode_pos', { length: 10 }),
   kewarganegaraan: varchar('kewarganegaraan', { length: 5 }).default('ID'),
+  foto: text('foto'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
