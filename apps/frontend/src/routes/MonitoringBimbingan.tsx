@@ -3,6 +3,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { bimbinganController, MonitoringBimbinganLengkapItem } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
@@ -193,7 +194,10 @@ export default function MonitoringBimbingan() {
                         {item.nim}
                       </td>
                       <td class="px-6 py-4 text-xs font-semibold text-secondary-800 dark:text-white">
-                        {item.namaMahasiswa}
+                        <div class="flex items-center gap-2">
+                          <StudentAvatar foto={item.foto} nama={item.namaMahasiswa} nim={item.nim} size="sm" />
+                          {item.namaMahasiswa}
+                        </div>
                       </td>
                       <td class="px-6 py-4 text-xs text-secondary-700 dark:text-secondary-300">{item.dosenPaNama}</td>
                       <td class="px-6 py-4 text-xs font-mono text-secondary-600 dark:text-secondary-400">

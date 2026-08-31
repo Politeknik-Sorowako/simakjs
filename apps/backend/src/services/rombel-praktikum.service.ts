@@ -499,6 +499,7 @@ export class RombelPraktikumService {
         mahasiswaId: presensiPraktikum.mahasiswaId,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         programStudiId: mahasiswa.programStudiId,
         prodiNama: programStudi.nama,
         status: presensiPraktikum.status,

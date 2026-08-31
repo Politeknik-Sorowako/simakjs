@@ -64,6 +64,7 @@ export interface KompensasiLaporanItem {
   id: number;
   nim: string;
   nama: string;
+  foto?: string | null;
   prodiNama: string;
   totalKompensasi: number;
   totalDibayar: number;
@@ -139,6 +140,7 @@ export interface KompensasiDetailResponse {
     id: number;
     nim: string;
     nama: string;
+    foto?: string | null;
     email: string;
     programStudiId: number;
   };
@@ -171,6 +173,7 @@ export interface PresensiUnknownItem {
   mahasiswaId: number;
   nim: string;
   nama: string;
+  foto?: string | null;
   programStudiId?: number | null;
   prodiNama?: string | null;
   status: string;

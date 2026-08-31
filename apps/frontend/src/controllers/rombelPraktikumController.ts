@@ -48,6 +48,7 @@ export interface PresensiPraktikumUnknownItem {
   mahasiswaId: number;
   nim: string;
   nama: string;
+  foto?: string | null;
   prodiNama?: string | null;
   status: string;
   durasiMangkir: number;

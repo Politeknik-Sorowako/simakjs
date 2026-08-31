@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useToast } from '../contexts/ToastContext';
 import { presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
@@ -420,8 +421,13 @@ export default function LaporanKompensasi() {
                     {(item) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
                         <td class="py-4 px-6">
-                          <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
-                          <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
+                          <div class="flex items-center gap-2">
+                            <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                            <div>
+                              <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
+                              <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
+                            </div>
+                          </div>
                         </td>
                         <td class="py-4 px-6 text-secondary-600 font-semibold dark:text-secondary-200">
                           {item.prodiNama || '-'}
@@ -483,7 +489,6 @@ export default function LaporanKompensasi() {
           </Show>
         </div>
       </div>
-
       {/* Modal Detail Mahasiswa */}
       <Modal isOpen={selectedMhsId() !== null} onClose={handleCloseDetail} title="Detail Riwayat Jam Kompensasi">
         <Show
@@ -493,17 +498,25 @@ export default function LaporanKompensasi() {
           {(detail) => (
             <div class="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-2">
               <div class="bg-secondary-50 rounded-2xl p-5 border border-secondary-100 flex items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-800">
-                <div>
-                  <h3 class="font-bold text-secondary-800 text-lg dark:text-white">{detail().mahasiswa.nama}</h3>
-                  <p class="text-sm text-secondary-500 dark:text-secondary-200">NIM: {detail().mahasiswa.nim}</p>
-                  <Button
-                    onClick={handleExportRiwayat}
-                    disabled={isExportingDetail()}
-                    variant="secondary"
-                    class="mt-3 !px-3 !py-1.5 text-[11px] font-bold"
-                  >
-                    {isExportingDetail() ? 'Mengunduh...' : '📥 Ekspor Riwayat Mahasiswa (.xlsx)'}
-                  </Button>
+                <div class="flex items-center gap-3">
+                  <StudentAvatar
+                    foto={detail().mahasiswa.foto}
+                    nama={detail().mahasiswa.nama}
+                    nim={detail().mahasiswa.nim}
+                    size="lg"
+                  />
+                  <div>
+                    <h3 class="font-bold text-secondary-800 text-lg dark:text-white">{detail().mahasiswa.nama}</h3>
+                    <p class="text-sm text-secondary-500 dark:text-secondary-200">NIM: {detail().mahasiswa.nim}</p>
+                    <Button
+                      onClick={handleExportRiwayat}
+                      disabled={isExportingDetail()}
+                      variant="secondary"
+                      class="mt-3 !px-3 !py-1.5 text-[11px] font-bold"
+                    >
+                      {isExportingDetail() ? 'Mengunduh...' : '📥 Ekspor Riwayat Mahasiswa (.xlsx)'}
+                    </Button>
+                  </div>
                 </div>
                 <div class="text-right">
                   <div class="text-xs text-secondary-400 uppercase font-semibold dark:text-secondary-200">
@@ -621,7 +634,6 @@ export default function LaporanKompensasi() {
           )}
         </Show>
       </Modal>
-
       {/* Modal Input Payment */}
       <Modal
         isOpen={showPayModal()}
@@ -667,7 +679,6 @@ export default function LaporanKompensasi() {
           </div>
         </form>
       </Modal>
-
       {/* Import CSV Modal */}
       <ImportCsvModal
         show={showImportModal()}

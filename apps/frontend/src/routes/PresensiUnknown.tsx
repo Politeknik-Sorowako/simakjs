@@ -2,6 +2,7 @@ import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { PresensiUnknownItem, presensiController } from '../controllers/presensiController';
@@ -248,8 +249,13 @@ export default function PresensiUnknown() {
                     <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
                       <td class="py-3 px-4">{idx() + 1}</td>
                       <td class="py-3 px-4">
-                        <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
-                        <div class="text-xs text-secondary-400 dark:text-secondary-200 font-mono">{item.nim}</div>
+                        <div class="flex items-center gap-2">
+                          <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                          <div>
+                            <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
+                            <div class="text-xs text-secondary-400 dark:text-secondary-200 font-mono">{item.nim}</div>
+                          </div>
+                        </div>
                       </td>
                       <td class="py-3 px-4 text-xs">{item.prodiNama || '-'}</td>
                       <td class="py-3 px-4 text-xs">
