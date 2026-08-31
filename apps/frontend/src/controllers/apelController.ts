@@ -18,6 +18,7 @@ export interface KelompokApelDetail extends KelompokApel {
     mahasiswaId: number;
     nim: string;
     nama: string;
+    foto?: string | null;
   }>;
 }
 
@@ -46,6 +47,7 @@ export interface PresensiApelItem {
   mahasiswaId: number;
   mahasiswaNim: string;
   mahasiswaNama: string;
+  mahasiswaFoto?: string | null;
   status: 'hadir' | 'terlambat' | 'sakit' | 'izin' | 'alpa' | 'unknown';
   menitTerlambat?: number;
   keterangan?: string | null;
@@ -67,6 +69,7 @@ export interface UnknownPresensiItem {
   mahasiswaId: number;
   mahasiswaNim: string;
   mahasiswaNama: string;
+  mahasiswaFoto?: string | null;
   mahasiswaProdiId: number;
   prodiNama: string;
   tanggal: string;

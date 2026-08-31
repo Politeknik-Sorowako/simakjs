@@ -96,6 +96,7 @@ export class ApelService {
         mahasiswaId: kelompokApelAnggota.mahasiswaId,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
       })
       .from(kelompokApelAnggota)
       .leftJoin(mahasiswa, eq(kelompokApelAnggota.mahasiswaId, mahasiswa.id))
@@ -301,6 +302,7 @@ export class ApelService {
         mahasiswaId: presensiApel.mahasiswaId,
         mahasiswaNim: mahasiswa.nim,
         mahasiswaNama: mahasiswa.nama,
+        mahasiswaFoto: mahasiswa.foto,
         status: presensiApel.status,
         menitTerlambat: presensiApel.menitTerlambat,
         keterangan: presensiApel.keterangan,
@@ -481,6 +483,7 @@ export class ApelService {
         mahasiswaId: presensiApel.mahasiswaId,
         mahasiswaNim: mahasiswa.nim,
         mahasiswaNama: mahasiswa.nama,
+        mahasiswaFoto: mahasiswa.foto,
         mahasiswaProdiId: mahasiswa.programStudiId,
         prodiNama: programStudi.nama,
         tanggal: sesiApel.tanggal,
@@ -584,6 +587,7 @@ export class ApelService {
         mahasiswaId: mahasiswa.id,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         totalHadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensiApel.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
         totalTerlambat: sql<number>`COALESCE(SUM(CASE WHEN ${presensiApel.status} = 'terlambat' THEN 1 ELSE 0 END), 0)`,
         totalUnknown: sql<number>`COALESCE(SUM(CASE WHEN ${presensiApel.status} = 'unknown' THEN 1 ELSE 0 END), 0)`,
@@ -597,7 +601,7 @@ export class ApelService {
       )
       .leftJoin(sesiApel, eq(sesiApel.kelompokApelId, kelompokApelAnggota.kelompokApelId))
       .where(eq(kelompokApelAnggota.kelompokApelId, kelompokId))
-      .groupBy(mahasiswa.id, mahasiswa.nim, mahasiswa.nama)
+      .groupBy(mahasiswa.id, mahasiswa.nim, mahasiswa.nama, mahasiswa.foto)
       .orderBy(mahasiswa.nama);
 
     return rows;

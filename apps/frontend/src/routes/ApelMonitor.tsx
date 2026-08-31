@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, MonitorResponse } from '../controllers/apelController';
@@ -208,7 +209,17 @@ export default function ApelMonitor() {
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
                           <td class="px-3 py-2 text-xs">{idx() + 1}</td>
                           <td class="px-3 py-2 text-xs font-mono">{p.mahasiswaNim}</td>
-                          <td class="px-3 py-2 text-xs font-semibold">{p.mahasiswaNama}</td>
+                          <td class="px-3 py-2 text-xs font-semibold">
+                            <div class="flex items-center gap-2">
+                              <StudentAvatar
+                                foto={p.mahasiswaFoto}
+                                nama={p.mahasiswaNama}
+                                nim={p.mahasiswaNim}
+                                size="sm"
+                              />
+                              {p.mahasiswaNama}
+                            </div>
+                          </td>
                           <td class="px-3 py-2 text-center text-xs">
                             <span
                               class={`px-2 py-0.5 rounded text-[11px] font-bold ${

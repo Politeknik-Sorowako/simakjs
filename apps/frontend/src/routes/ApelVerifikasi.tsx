@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -222,7 +223,17 @@ export default function ApelVerifikasi() {
                     >
                       <td class="px-4 py-3 text-sm">{idx() + 1}</td>
                       <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
-                      <td class="px-4 py-3 text-sm">{item.mahasiswaNama}</td>
+                      <td class="px-4 py-3 text-sm">
+                        <div class="flex items-center gap-2">
+                          <StudentAvatar
+                            foto={item.mahasiswaFoto}
+                            nama={item.mahasiswaNama}
+                            nim={item.mahasiswaNim}
+                            size="sm"
+                          />
+                          {item.mahasiswaNama}
+                        </div>
+                      </td>
                       <td class="px-4 py-3 text-sm">{item.prodiNama}</td>
                       <td class="px-4 py-3 text-sm">{item.kelompokNama}</td>
                       <td class="px-4 py-3 text-sm">{item.tanggal}</td>
