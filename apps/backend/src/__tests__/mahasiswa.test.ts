@@ -1014,6 +1014,9 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
       const storageRes = await app.handle(
         new Request('http://localhost/storage/photos/mahasiswa/getfoto.jpg', {
           method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
         }),
       );
       expect(storageRes.status).toBe(200);
