@@ -679,7 +679,7 @@ export default function LaporanKompensasi() {
           </div>
         </form>
       </Modal>
-      ;{/* Import CSV Modal */}
+      {/* Import CSV Modal */}
       <ImportCsvModal
         show={showImportModal()}
         onClose={() => setShowImportModal(false)}
@@ -693,7 +693,6 @@ export default function LaporanKompensasi() {
         ]}
         onSuccess={refetchLaporan}
       />
-      ;
     </MainLayout>
   );
 }

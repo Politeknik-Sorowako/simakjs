@@ -314,6 +314,7 @@ export class PresensiService {
         mahasiswaId: presensi.mahasiswaId,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         programStudiId: mahasiswa.programStudiId,
         prodiNama: programStudi.nama,
         status: presensi.status,
