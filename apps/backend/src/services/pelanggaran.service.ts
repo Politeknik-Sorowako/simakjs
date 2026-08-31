@@ -214,6 +214,7 @@ export class PelanggaranService {
         mahasiswaId: pelanggaran.mahasiswaId,
         nim: mahasiswa.nim,
         namaMahasiswa: mahasiswa.nama,
+        foto: mahasiswa.foto,
         prodiNama: programStudi.nama,
         programStudiId: mahasiswa.programStudiId,
         jenjang: programStudi.jenjang,
@@ -253,6 +254,7 @@ export class PelanggaranService {
         mahasiswaId: pelanggaran.mahasiswaId,
         nim: mahasiswa.nim,
         namaMahasiswa: mahasiswa.nama,
+        foto: mahasiswa.foto,
         prodiNama: programStudi.nama,
         programStudiId: mahasiswa.programStudiId,
         jenjang: programStudi.jenjang,
@@ -320,6 +322,7 @@ export class PelanggaranService {
         mahasiswaId: pelanggaran.mahasiswaId,
         nim: mhs.nim,
         nama: mhs.nama,
+        foto: mhs.foto,
         prodiNama: ps.nama,
         totalPoin: sum(sql`COALESCE(${pelanggaran.jenisSanksi}, 1)`),
         jumlahPelanggaran: count(),
@@ -328,7 +331,7 @@ export class PelanggaranService {
       .innerJoin(mhs, eq(pelanggaran.mahasiswaId, mhs.id))
       .leftJoin(ps, eq(mhs.programStudiId, ps.id))
       .where(whereClause)
-      .groupBy(pelanggaran.mahasiswaId, mhs.nim, mhs.nama, ps.nama)
+      .groupBy(pelanggaran.mahasiswaId, mhs.nim, mhs.nama, mhs.foto, ps.nama)
       .orderBy(sql`SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)) DESC`)
       .limit(10);
 

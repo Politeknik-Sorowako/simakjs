@@ -123,6 +123,7 @@ export class KrsService {
           id: mahasiswa.id,
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
+          foto: mahasiswa.foto,
           email: mahasiswa.email,
           status: mahasiswa.status,
         },

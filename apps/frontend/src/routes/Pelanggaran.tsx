@@ -5,6 +5,7 @@ import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -667,7 +668,17 @@ export default function Pelanggaran() {
                       <For each={visibleViolations()}>
                         {(item) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                            <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa}</td>
+                            <td class="p-3 font-bold text-secondary-800 dark:text-white">
+                              <div class="flex items-center gap-2">
+                                <StudentAvatar
+                                  foto={item.foto}
+                                  nama={item.namaMahasiswa || '-'}
+                                  nim={item.nim}
+                                  size="sm"
+                                />
+                                {item.namaMahasiswa}
+                              </div>
+                            </td>
                             <td class="p-3 whitespace-nowrap">{item.nim}</td>
                             <td class="p-3">{item.prodiNama}</td>
                             <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
@@ -813,7 +824,12 @@ export default function Pelanggaran() {
                         <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                           <td class="p-3">{idx() + 1}</td>
                           <td class="p-3 font-mono">{item.nim}</td>
-                          <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.nama}</td>
+                          <td class="p-3 font-bold text-secondary-800 dark:text-white">
+                            <div class="flex items-center gap-2">
+                              <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                              {item.nama}
+                            </div>
+                          </td>
                           <td class="p-3">{item.prodiNama}</td>
                           <td class="p-3">{item.jumlahPelanggaran}</td>
                           <td class="p-3">
@@ -1043,18 +1059,21 @@ export default function Pelanggaran() {
                     </div>
 
                     {/* Identitas Mahasiswa */}
-                    <div class="my-3 text-xs bg-secondary-50 p-3 rounded-lg border border-secondary-100 dark:bg-secondary-800/50 dark:border-secondary-700 flex flex-col gap-1">
-                      <div class="grid grid-cols-3">
-                        <span class="font-semibold text-secondary-500 dark:text-secondary-400">Nama Mahasiswa</span>
-                        <span class="col-span-2 font-bold">: {sp().namaMahasiswa || '-'}</span>
-                      </div>
-                      <div class="grid grid-cols-3">
-                        <span class="font-semibold text-secondary-500 dark:text-secondary-400">NIM</span>
-                        <span class="col-span-2 font-mono font-bold">: {sp().nim || '-'}</span>
-                      </div>
-                      <div class="grid grid-cols-3">
-                        <span class="font-semibold text-secondary-500 dark:text-secondary-400">Program Studi</span>
-                        <span class="col-span-2">: {sp().prodiNama || '-'}</span>
+                    <div class="my-3 text-xs bg-secondary-50 p-3 rounded-lg border border-secondary-100 dark:bg-secondary-800/50 dark:border-secondary-700 flex items-center gap-4">
+                      <StudentAvatar foto={sp().foto} nama={sp().namaMahasiswa || '-'} nim={sp().nim} size="lg" />
+                      <div class="flex flex-col gap-1 flex-1">
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">Nama Mahasiswa</span>
+                          <span class="col-span-2 font-bold">: {sp().namaMahasiswa || '-'}</span>
+                        </div>
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">NIM</span>
+                          <span class="col-span-2 font-mono font-bold">: {sp().nim || '-'}</span>
+                        </div>
+                        <div class="grid grid-cols-3">
+                          <span class="font-semibold text-secondary-500 dark:text-secondary-400">Program Studi</span>
+                          <span class="col-span-2">: {sp().prodiNama || '-'}</span>
+                        </div>
                       </div>
                     </div>
 

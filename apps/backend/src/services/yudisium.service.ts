@@ -241,6 +241,7 @@ export class YudisiumService {
         mahasiswaId: krs.mahasiswaId,
         nim: mahasiswa.nim,
         nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
         nilaiAngka: krs.nilaiAngka,
         nilaiHuruf: krs.nilaiHuruf,
         nilaiIndeks: krs.nilaiIndeks,

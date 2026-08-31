@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -591,7 +592,12 @@ export default function KompensasiManual() {
                   {((kompensasiList()?.meta?.page || 1) - 1) * 20 + idx() + 1}
                 </td>
                 <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-secondary-100">{rec.mahasiswaNim}</td>
-                <td class="py-3 px-4 font-bold text-secondary-900 dark:text-white">{rec.mahasiswaNama}</td>
+                <td class="py-3 px-4 font-bold text-secondary-900 dark:text-white">
+                  <div class="flex items-center gap-2">
+                    <StudentAvatar foto={rec.mahasiswaFoto} nama={rec.mahasiswaNama} nim={rec.mahasiswaNim} size="sm" />
+                    {rec.mahasiswaNama}
+                  </div>
+                </td>
                 <td class="py-3 px-4 text-secondary-700 dark:text-secondary-300">{rec.tanggal}</td>
                 <td class="py-3 px-4">
                   <Badge variant={getJenisBadgeVariant(rec.jenisKompen)}>

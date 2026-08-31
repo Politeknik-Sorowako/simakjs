@@ -130,6 +130,7 @@ export const kompensasiManualController = {
       KompensasiManualRecord & {
         mahasiswaNim: string;
         mahasiswaNama: string;
+        mahasiswaFoto?: string | null;
       }
     >;
     meta: {

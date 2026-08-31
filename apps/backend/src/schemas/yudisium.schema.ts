@@ -226,6 +226,7 @@ export const getNilaiMahasiswaYudisiumSchema = {
         mahasiswaId: t.Optional(t.Integer({ default: 1 })),
         nim: t.Optional(t.String({ default: '202301001' })),
         nama: t.Optional(t.String({ default: 'Andi Pratama' })),
+        foto: t.Optional(t.Union([t.String(), t.Null()])),
         nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: '85.5' })),
         nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: 'A' })),
         nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: '4.0' })),
