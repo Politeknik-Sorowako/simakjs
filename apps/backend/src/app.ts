@@ -205,6 +205,24 @@ export const app = new Elysia()
       checks,
     };
   })
+  .get('/storage/photos/mahasiswa/:filename', async ({ params, set }) => {
+    const { basename, join } = await import('node:path');
+    const raw = String(params.filename || '');
+    const filename = basename(raw);
+    if (filename !== raw || !/\.(jpg|jpeg|png|webp)$/i.test(filename)) {
+      set.status = 404;
+      return { error: 'Foto tidak ditemukan' };
+    }
+    const filePath = join(process.cwd(), 'storage', 'photos', 'mahasiswa', filename);
+    const file = Bun.file(filePath);
+    if (!(await file.exists())) {
+      set.status = 404;
+      return { error: 'Foto tidak ditemukan' };
+    }
+    set.headers['Content-Type'] = file.type || 'image/jpeg';
+    set.headers['Cache-Control'] = 'public, max-age=86400';
+    return file;
+  })
   .use(jwtPlugin)
   .ws('/bimbingan/ws/:bimbinganId', {
     async open(ws) {

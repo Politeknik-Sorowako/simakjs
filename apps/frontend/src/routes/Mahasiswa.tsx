@@ -635,7 +635,7 @@ export default function Mahasiswa() {
             </For>
             <Show when={mahasiswas()?.data.length === 0}>
               <tr>
-                <td colspan="8" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                <td colspan="9" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data mahasiswa ditemukan.
                 </td>
               </tr>

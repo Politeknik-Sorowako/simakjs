@@ -979,5 +979,44 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it('harus berhasil mengambil file foto setelah diunggah via endpoint dan route storage', async () => {
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
+      const file = new File([dummyImage], 'getfoto.jpg', { type: 'image/jpeg' });
+      formData.append('file', file);
+
+      const uploadRes = await app.handle(
+        new Request(`http://localhost/mahasiswa/${mhsId}/foto`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: formData,
+        }),
+      );
+      expect(uploadRes.status).toBe(200);
+
+      // Test GET /mahasiswa/:id/foto
+      const getRes = await app.handle(
+        new Request(`http://localhost/mahasiswa/${mhsId}/foto`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }),
+      );
+      expect(getRes.status).toBe(200);
+
+      // Test GET /storage/photos/mahasiswa/:filename
+      const storageRes = await app.handle(
+        new Request('http://localhost/storage/photos/mahasiswa/getfoto.jpg', {
+          method: 'GET',
+        }),
+      );
+      expect(storageRes.status).toBe(200);
+    });
   });
 });
