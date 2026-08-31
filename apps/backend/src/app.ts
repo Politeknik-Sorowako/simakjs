@@ -207,9 +207,11 @@ export const app = new Elysia()
     };
   })
   .use(jwtPlugin)
-  .get('/storage/photos/mahasiswa/:filename', async ({ params, set, headers, jwt }) => {
+  .get('/storage/photos/mahasiswa/:filename', async ({ params, set, headers, cookie, jwt }) => {
     const authHeader = headers['authorization'];
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
+    const token = headerToken || cookieToken;
 
     if (!token || !(await jwt.verify(token))) {
       set.status = 401;
