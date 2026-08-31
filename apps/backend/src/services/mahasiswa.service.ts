@@ -272,16 +272,6 @@ export class MahasiswaService {
     return join(process.cwd(), 'storage', 'photos', 'mahasiswa');
   }
 
-  private static getMimeFromExt(ext: string): string {
-    const map: Record<string, string> = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.webp': 'image/webp',
-    };
-    return map[ext.toLowerCase()] || 'application/octet-stream';
-  }
-
   static async saveFileToStorage(
     filename: string,
     buffer: Uint8Array | ArrayBuffer,

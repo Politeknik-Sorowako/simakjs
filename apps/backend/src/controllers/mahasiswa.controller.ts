@@ -323,7 +323,9 @@ export class MahasiswaController {
       }
 
       const buffer = await file.arrayBuffer();
-      const { relativePath } = await MahasiswaService.saveFileToStorage(file.name, buffer);
+      const ext = extname(file.name).toLowerCase() || '.jpg';
+      const filename = `${mhs.nim}${ext}`;
+      const { relativePath } = await MahasiswaService.saveFileToStorage(filename, buffer);
       const updated = await MahasiswaService.updateFoto(targetId, relativePath);
 
       return {

@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
@@ -206,7 +207,6 @@ export const app = new Elysia()
     };
   })
   .get('/storage/photos/mahasiswa/:filename', async ({ params, set }) => {
-    const { basename, join } = await import('node:path');
     const raw = String(params.filename || '');
     const filename = basename(raw);
     if (filename !== raw || !/\.(jpg|jpeg|png|webp)$/i.test(filename)) {
