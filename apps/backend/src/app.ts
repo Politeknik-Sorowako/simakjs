@@ -206,7 +206,16 @@ export const app = new Elysia()
       checks,
     };
   })
-  .get('/storage/photos/mahasiswa/:filename', async ({ params, set }) => {
+  .use(jwtPlugin)
+  .get('/storage/photos/mahasiswa/:filename', async ({ params, set, headers, jwt }) => {
+    const authHeader = headers['authorization'];
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+    if (!token || !(await jwt.verify(token))) {
+      set.status = 401;
+      return { error: 'Unauthorized: Silakan login terlebih dahulu' };
+    }
+
     const raw = String(params.filename || '');
     const filename = basename(raw);
     if (filename !== raw || !/\.(jpg|jpeg|png|webp)$/i.test(filename)) {
@@ -223,7 +232,6 @@ export const app = new Elysia()
     set.headers['Cache-Control'] = 'public, max-age=86400';
     return file;
   })
-  .use(jwtPlugin)
   .ws('/bimbingan/ws/:bimbinganId', {
     async open(ws) {
       try {
