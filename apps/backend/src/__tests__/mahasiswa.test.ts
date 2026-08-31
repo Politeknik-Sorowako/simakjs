@@ -759,6 +759,55 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
       expect(response.status).toBe(403);
     });
 
+    it('harus berhasil melakukan bulk upload foto oleh role prodi', async () => {
+      const prodiToken = await getAuthToken('prodi-bulk@test.com', 'prodi' as Parameters<typeof getAuthToken>[1]);
+
+      // Tambah mahasiswa sebagai admin terlebih dahulu
+      const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
+      await app.handle(
+        new Request('http://localhost/mahasiswa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            nim: 'BULKPRODI01',
+            nama: 'Mhs Bulk Prodi',
+            email: 'bulk-prodi@test.com',
+            programStudiId: prodiId,
+            namaIbuKandung: 'Ibu Bulk Prodi',
+            nik: '1234567890123463',
+            jenisKelamin: 'L',
+            tanggalLahir: '2000-01-01',
+          }),
+        }),
+      );
+
+      const formData = new FormData();
+      const dummyImage = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]);
+      const file = new File([dummyImage], 'BULKPRODI01.jpg', { type: 'image/jpeg' });
+      formData.append('files', file);
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/bulk-foto', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${prodiToken}`,
+          },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        total: number;
+        successCount: number;
+        failedCount: number;
+        details: Array<{ nim: string; status: string }>;
+      };
+      expect(body.successCount).toBe(1);
+      expect(body.failedCount).toBe(0);
+      expect(body.details[0].nim).toBe('BULKPRODI01');
+    });
+
     it('harus berhasil melakukan bulk upload foto untuk mahasiswa yang ada di database', async () => {
       const adminToken = await getAuthToken('admin-mhs@test.com', 'admin');
 

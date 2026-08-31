@@ -84,8 +84,7 @@ export function BulkUploadFotoModal(props: BulkUploadFotoModalProps) {
         }
       }
 
-      setProgress(30);
-      const response = await mahasiswaController.bulkUploadFoto(formData);
+      const response = await mahasiswaController.bulkUploadFoto(formData, (p) => setProgress(p));
       setProgress(100);
       setResults(response);
 
