@@ -501,4 +501,58 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
     expect(source.verifiedBy).toBeNull();
   });
+
+  it('verifikasi unknown mempertahankan tanggal asli kegiatan (tidak mengubah menjadi tanggal hari ini)', async () => {
+    const historicalDate = '2026-07-15';
+    const { presensiId } = await seedBapPresensi(historicalDate, 'unknown', 0);
+
+    const res = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          sumber: 'BAP',
+          sumberId: presensiId,
+          statusKonfirmasi: 'IZIN',
+          durasiMenit: 60,
+          keterangan: 'Izin kegiatan masa lalu',
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.tanggal).toBe(historicalDate);
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.tanggal).toBe(historicalDate);
+    expect(row.status).toBe('IZIN');
+    expect(row.durasiMenit).toBe(60);
+
+    // Cek juga untuk sumber APEL dengan tanggal historis
+    const apelHistDate = '2026-07-20';
+    const { presensiId: apelId } = await seedApelPresensi(apelHistDate, 'unknown', 30, 'Apel historis');
+    const apelRes = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          sumber: 'APEL',
+          sumberId: apelId,
+          statusKonfirmasi: 'ALPA',
+          durasiMenit: 30,
+          keterangan: 'Alpa apel historis',
+        }),
+      }),
+    );
+    expect(apelRes.status).toBe(200);
+    const [apelRow] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'APEL'), eq(ketidakhadiranMahasiswa.sumberId, apelId)));
+    expect(apelRow.tanggal).toBe(apelHistDate);
+  });
 });

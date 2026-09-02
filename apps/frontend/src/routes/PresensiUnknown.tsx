@@ -7,7 +7,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { PresensiUnknownItem, presensiController } from '../controllers/presensiController';
 import { PresensiPraktikumUnknownItem, rombelPraktikumController } from '../controllers/rombelPraktikumController';
-import { fmtWaktu } from '../utils/format';
+import { fmtTanggal, fmtWaktu } from '../utils/format';
 
 export default function PresensiUnknown() {
   const toast = useToast();
@@ -376,7 +376,13 @@ export default function PresensiUnknown() {
                           <strong>Mata kuliah:</strong> {item().mataKuliahNama || '-'} (Kelas {item().namaKelas})
                         </span>
                         <span>
-                          <strong>Sesi:</strong> {item().bapPrakSesiKe ?? '-'} · {item().bapPrakTanggal}
+                          <strong>Tanggal Praktikum:</strong>{' '}
+                          {item().bapPrakTanggal
+                            ? `${fmtTanggal(item().bapPrakTanggal!)} (${item().bapPrakTanggal})`
+                            : '-'}
+                        </span>
+                        <span>
+                          <strong>Sesi:</strong> {item().bapPrakSesiKe ?? '-'}
                         </span>
                         <span>
                           <strong>Rombel:</strong> {item().namaGroup || '-'}
@@ -391,7 +397,11 @@ export default function PresensiUnknown() {
                       <strong>Mata kuliah:</strong> {item().mataKuliahNama || '-'} (Kelas {item().namaKelas})
                     </span>
                     <span>
-                      <strong>Pertemuan:</strong> {item().bapPertemuan} · {item().bapTanggal}
+                      <strong>Tanggal Perkuliahan:</strong>{' '}
+                      {item().bapTanggal ? `${fmtTanggal(item().bapTanggal!)} (${item().bapTanggal})` : '-'}
+                    </span>
+                    <span>
+                      <strong>Pertemuan:</strong> {item().bapPertemuan}
                     </span>
                     <span>
                       <strong>Dosen pengampu:</strong> {item().dosenNama || '-'}
