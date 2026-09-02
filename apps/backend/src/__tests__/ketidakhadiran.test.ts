@@ -476,4 +476,29 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     expect(source.menitTerlambat).toBe(0);
     expect(source.verificationNote).toContain('[terkonfirmasi]');
   });
+
+  it('verifikasi dengan adminUserId tidak ada (user terhapus) tetap berhasil dengan verifiedBy null', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-06', 'unknown', 10, 'tes stale user');
+    // Panggil service langsung dengan adminUserId yang tidak ada di tabel users
+    const { VerifikasiUnknownService: Svc } = await import('../services/verifikasi-unknown.service');
+    const result = await Svc.verify({
+      sumber: 'APEL',
+      sumberId: presensiId,
+      statusKonfirmasi: 'IZIN',
+      durasiMenit: 10,
+      keterangan: 'tes',
+      adminUserId: 999999,
+    });
+    expect(result.status).toBe('IZIN');
+    expect(result.isVerified).toBe(true);
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'APEL'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.verifiedBy).toBeNull();
+
+    const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
+    expect(source.verifiedBy).toBeNull();
+  });
 });
