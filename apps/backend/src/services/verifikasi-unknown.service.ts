@@ -45,6 +45,17 @@ export class VerifikasiUnknownService {
 
     const adminUserId = Number(input.adminUserId) > 0 ? input.adminUserId : null;
 
+    try {
+      return await VerifikasiUnknownService._executeVerify(input, adminUserId);
+    } catch (e: unknown) {
+      if (adminUserId !== null && isVerifiedByFkViolation(e)) {
+        return await VerifikasiUnknownService._executeVerify(input, null);
+      }
+      throw e;
+    }
+  }
+
+  private static async _executeVerify(input: VerifyInput, adminUserId: number | null) {
     return await db.transaction(async (tx) => {
       const [absence] = await tx
         .select()
@@ -290,4 +301,29 @@ export class VerifikasiUnknownService {
 
     return rows;
   }
+}
+
+function isVerifiedByFkViolation(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  const err = e as Record<string, unknown>;
+  const msg = e instanceof Error ? e.message : String(e);
+  const causeRaw = err.cause as unknown;
+  const causeMsg =
+    typeof causeRaw === 'string'
+      ? causeRaw
+      : causeRaw instanceof Error
+        ? causeRaw.message
+        : (causeRaw as Record<string, unknown> | undefined)?.message
+          ? String((causeRaw as Record<string, unknown>).message)
+          : '';
+  const code =
+    (causeRaw as Record<string, unknown> | undefined)?.code ??
+    err.code ??
+    (e as unknown as Record<string, unknown>)?.code;
+  if (code === '23503') return true;
+  const combined = `${msg} ${causeMsg}`.toLowerCase();
+  return (
+    combined.includes('ketidakhadiran_mahasiswa_verified_by_fkey') ||
+    (combined.includes('violates foreign key') && combined.includes('verified_by'))
+  );
 }
