@@ -539,7 +539,7 @@ export class PresensiService {
         // Poin RUSAK = durasi mentah (tanpa pengali & tanpa proporsional cap).
         poinKompensasi = p.durasiMangkir;
       } else {
-        poinKompensasi = (p.rawMangkir * pengaliMangkir + p.rawRingan * pengaliIzinSakit) * factor;
+        poinKompensasi = Math.round((p.rawMangkir * pengaliMangkir + p.rawRingan * pengaliIzinSakit) * factor);
       }
       const { rawMangkir: _rm, rawRingan: _rr, dayKey: _dk, ...rest } = p;
       return { ...rest, poinKompensasi };
@@ -622,8 +622,8 @@ export class PresensiService {
           mahasiswaId: dailyRawSubquery.mahasiswaId,
           poin: sql<number>`SUM(CASE
               WHEN (raw_mangkir + raw_ringan) <= ${maksHarian}
-                THEN raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit}
-                ELSE (raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit}) * (${maksHarian}::numeric / NULLIF(raw_mangkir + raw_ringan, 0))
+                THEN ROUND(raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit})
+                ELSE ROUND((raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit}) * (${maksHarian}::numeric / NULLIF(raw_mangkir + raw_ringan, 0)))
               END)`.as('poin'),
         })
         .from(dailyRawSubquery)
@@ -730,9 +730,9 @@ export class PresensiService {
 
     const data = listMahasiswa.map((mhs) => ({
       ...mhs,
-      totalKompensasi: Number(mhs.totalKompensasi),
-      totalDibayar: Number(mhs.totalDibayar),
-      sisaKompensasi: Number(mhs.sisaKompensasi),
+      totalKompensasi: Math.round(Number(mhs.totalKompensasi)),
+      totalDibayar: Math.round(Number(mhs.totalDibayar)),
+      sisaKompensasi: Math.round(Number(mhs.sisaKompensasi)),
     }));
 
     const totalPages = Math.ceil(total / limit);
@@ -776,8 +776,8 @@ export class PresensiService {
           mahasiswaId: dailyRawSubquery.mahasiswaId,
           poin: sql<number>`SUM(CASE
               WHEN (raw_mangkir + raw_ringan) <= ${maksHarian}
-                THEN raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit}
-                ELSE (raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit}) * (${maksHarian}::numeric / NULLIF(raw_mangkir + raw_ringan, 0))
+                THEN ROUND(raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit})
+                ELSE ROUND((raw_mangkir * ${pengaliMangkir} + raw_ringan * ${pengaliIzinSakit}) * (${maksHarian}::numeric / NULLIF(raw_mangkir + raw_ringan, 0)))
               END)`.as('poin'),
         })
         .from(dailyRawSubquery)
@@ -838,7 +838,7 @@ export class PresensiService {
     >();
 
     const mhsAgg = perMhs.map((mhs) => {
-      const tk = Number(mhs.totalKompensasi);
+      const tk = Math.round(Number(mhs.totalKompensasi));
       const td = mapPayments.get(mhs.id) || 0;
       const sisa = tk - td;
 

@@ -5,12 +5,16 @@ import {
   bap,
   dosen,
   kelasKuliah,
+  kelompokApel,
+  kelompokApelAnggota,
   ketidakhadiranMahasiswa,
   mahasiswa,
   mataKuliah,
   periodeAkademik,
   presensi,
+  presensiApel,
   programStudi,
+  sesiApel,
 } from '../models/schema';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
@@ -89,6 +93,44 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
         mahasiswaId: mhsId,
         tanggal,
         sumber: 'BAP',
+        sumberId: p.id,
+        status: status.toUpperCase() as never,
+        durasiMenit: durasi,
+        isVerified: status !== 'unknown',
+      })
+      .returning();
+    return { presensiId: p.id, absenceId: abs.id };
+  }
+
+  // Simulasikan alur presensi apel -> sinkron ke ketidakhadiran (sumber='APEL').
+  async function seedApelPresensi(tanggal: string, status: string, durasi: number, keterangan?: string) {
+    const [kelompok] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok A', dosenId, shift: 'pagi' })
+      .returning();
+    await db.insert(kelompokApelAnggota).values({ kelompokApelId: kelompok.id, mahasiswaId: mhsId }).returning();
+    const [sesi] = await db
+      .insert(sesiApel)
+      .values({ kelompokApelId: kelompok.id, tanggal, shift: 'pagi', dosenId, jamMulai: '06:30:00' })
+      .returning();
+
+    const [p] = await db
+      .insert(presensiApel)
+      .values({
+        sesiApelId: sesi.id,
+        mahasiswaId: mhsId,
+        status: 'unknown' as never,
+        menitTerlambat: durasi,
+        keterangan,
+      })
+      .returning();
+
+    const [abs] = await db
+      .insert(ketidakhadiranMahasiswa)
+      .values({
+        mahasiswaId: mhsId,
+        tanggal,
+        sumber: 'APEL',
         sumberId: p.id,
         status: status.toUpperCase() as never,
         durasiMenit: durasi,
@@ -336,5 +378,127 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     const detail = await detailRes.json();
     expect(detail.historyKompensasi.length).toBe(1);
     expect(detail.historyKompensasi[0].keterangan).toBe('Izin karena kecelakaan');
+  });
+
+  it('verifikasi UNKNOWN APEL dengan status IZIN (10 menit) menyinkronkan presensi_apel', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-02', 'unknown', 10, 'tes');
+
+    const res = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ sumber: 'APEL', sumberId: presensiId, statusKonfirmasi: 'IZIN', durasiMenit: 10 }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('IZIN');
+    expect(body.isVerified).toBe(true);
+    expect(body.durasiMenit).toBe(10);
+
+    const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
+    expect(source.status).toBe('izin');
+    expect(source.verifiedStatus).toBe('izin');
+    expect(source.menitTerlambat).toBe(10);
+    expect(source.verificationNote).toContain('[terkonfirmasi]');
+    expect(source.verifiedAt).not.toBeNull();
+  });
+
+  it('verifikasi UNKNOWN APEL dengan status SAKIT', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-03', 'unknown', 0);
+
+    const res = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ sumber: 'APEL', sumberId: presensiId, statusKonfirmasi: 'SAKIT', durasiMenit: 60 }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('SAKIT');
+    expect(body.isVerified).toBe(true);
+    expect(body.durasiMenit).toBe(60);
+
+    const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
+    expect(source.status).toBe('sakit');
+    expect(source.verifiedStatus).toBe('sakit');
+    expect(source.menitTerlambat).toBe(60);
+  });
+
+  it('verifikasi UNKNOWN APEL dengan status ALPA', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-04', 'unknown', 0);
+
+    const res = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ sumber: 'APEL', sumberId: presensiId, statusKonfirmasi: 'ALPA', durasiMenit: 120 }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('ALPA');
+
+    const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
+    expect(source.status).toBe('alpa');
+    expect(source.verifiedStatus).toBe('alpa');
+  });
+
+  it('verifikasi UNKNOWN APEL dengan status HADIR mempertahankan baris & menandai hadir', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-05', 'unknown', 10);
+
+    const res = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ sumber: 'APEL', sumberId: presensiId, statusKonfirmasi: 'HADIR' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('HADIR');
+    expect(body.isVerified).toBe(true);
+    expect(body.durasiMenit).toBe(0);
+
+    const rows = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'APEL'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(rows.length).toBe(1);
+    expect(rows[0].status).toBe('UNKNOWN');
+    expect(rows[0].isVerified).toBe(true);
+    expect(rows[0].durasiMenit).toBe(0);
+
+    const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
+    expect(source.status).toBe('hadir');
+    expect(source.verifiedStatus).toBe('hadir');
+    expect(source.menitTerlambat).toBe(0);
+    expect(source.verificationNote).toContain('[terkonfirmasi]');
+  });
+
+  it('verifikasi dengan adminUserId tidak ada (user terhapus) tetap berhasil dengan verifiedBy null', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-06', 'unknown', 10, 'tes stale user');
+    // Panggil service langsung dengan adminUserId yang tidak ada di tabel users
+    const { VerifikasiUnknownService: Svc } = await import('../services/verifikasi-unknown.service');
+    const result = await Svc.verify({
+      sumber: 'APEL',
+      sumberId: presensiId,
+      statusKonfirmasi: 'IZIN',
+      durasiMenit: 10,
+      keterangan: 'tes',
+      adminUserId: 999999,
+    });
+    expect(result.status).toBe('IZIN');
+    expect(result.isVerified).toBe(true);
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'APEL'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.verifiedBy).toBeNull();
+
+    const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
+    expect(source.verifiedBy).toBeNull();
   });
 });

@@ -176,4 +176,37 @@ describe('Kompensasi Cap 480 Menit/Hari', () => {
     expect(detail.historyKompensasi.length).toBe(2);
     expect(detail.summary.sisaKompensasi).toBe(1440);
   });
+
+  it('membulatkan cap proporsional pecahan agar laporan & detail tidak memicu 422', async () => {
+    // raw mangkir 400 + ringan 90 = 490 > 480 → factor 480/490 ≈ 0.97959
+    // (400*5 + 90*1) * (480/490) ≈ 2047.35 → harus dibulatkan ROUND → 2047
+    await seedPresensi('2026-08-10', 1, [
+      { status: 'telat', durasiMangkir: 400 },
+      { status: 'sakit', durasiMangkir: 90 },
+    ]);
+
+    const res = await app.handle(
+      new Request('http://localhost/presensi/kompensasi/laporan?search=20239901', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toBeArray();
+    expect(body.data.length).toBe(1);
+    expect(Number.isInteger(body.data[0].totalKompensasi)).toBe(true);
+    expect(body.data[0].totalKompensasi).toBe(2047);
+
+    const detailRes = await app.handle(
+      new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(detailRes.status).toBe(200);
+    const detail = await detailRes.json();
+    expect(Number.isInteger(detail.summary.totalKompensasi)).toBe(true);
+    expect(detail.summary.totalKompensasi).toBe(2047);
+  });
 });

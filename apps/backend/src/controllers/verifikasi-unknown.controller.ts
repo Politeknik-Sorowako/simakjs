@@ -19,6 +19,12 @@ export class VerifikasiUnknownController {
         adminUserId: user!.id,
       });
     } catch (e: unknown) {
+      console.error('[VerifikasiUnknownController.verify]', {
+        error: e instanceof Error ? e.message : 'Unknown error',
+        stack: e instanceof Error ? e.stack : undefined,
+        cause: e instanceof Error && e.cause ? String(e.cause) : undefined,
+        body,
+      });
       if (e instanceof Error && e.message.includes('tidak ditemukan')) {
         set.status = 404;
       } else {
