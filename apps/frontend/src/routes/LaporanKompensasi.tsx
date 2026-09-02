@@ -398,14 +398,37 @@ export default function LaporanKompensasi() {
                 </tr>
               </thead>
               <tbody>
+                <Show when={laporan.error}>
+                  <tr>
+                    <td colspan="6" class="text-center py-12">
+                      <div class="flex flex-col items-center gap-3 px-6">
+                        <div class="text-red-600 dark:text-red-400 font-bold text-sm">
+                          Gagal memuat data laporan kompensasi.
+                        </div>
+                        <div class="text-xs text-secondary-400 dark:text-secondary-200 max-w-md break-words">
+                          {laporan.error instanceof Error ? laporan.error.message : String(laporan.error)}
+                        </div>
+                        <Button
+                          onClick={() => refetchLaporan()}
+                          variant="primary"
+                          class="!px-4 !py-1.5 text-xs font-bold"
+                        >
+                          🔄 Coba Lagi
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                </Show>
                 <Show
-                  when={!laporan.loading}
+                  when={!laporan.loading && !laporan.error}
                   fallback={
-                    <tr>
-                      <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
-                        Memuat data laporan kompensasi...
-                      </td>
-                    </tr>
+                    !laporan.error ? (
+                      <tr>
+                        <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
+                          Memuat data laporan kompensasi...
+                        </td>
+                      </tr>
+                    ) : null
                   }
                 >
                   <For
