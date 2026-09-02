@@ -6,7 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, UnknownPresensiItem } from '../controllers/apelController';
 import { PaginatedResponse, prodiController } from '../controllers/prodiController';
-import { fmtWaktu } from '../utils/format';
+import { fmtTanggal, fmtWaktu } from '../utils/format';
 
 export default function ApelVerifikasi() {
   const auth = useAuth();
@@ -29,7 +29,12 @@ export default function ApelVerifikasi() {
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
-  const [verifyModal, setVerifyModal] = createSignal<{ id: number; nama: string; menit: number | null } | null>(null);
+  const [verifyModal, setVerifyModal] = createSignal<{
+    id: number;
+    nama: string;
+    menit: number | null;
+    tanggal: string;
+  } | null>(null);
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
   const [verifyNote, setVerifyNote] = createSignal('');
   const [verifyDuration, setVerifyDuration] = createSignal(0);
@@ -266,6 +271,7 @@ export default function ApelVerifikasi() {
                               id: item.id,
                               nama: item.mahasiswaNama,
                               menit: item.menitTerlambat ?? null,
+                              tanggal: item.tanggal,
                             });
                             setVerifyStatus(item.verifiedStatus || 'alpa');
                             setVerifyDuration(item.menitTerlambat || 0);
@@ -322,12 +328,20 @@ export default function ApelVerifikasi() {
           <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md mx-4">
               <h2 class="text-lg font-semibold mb-2">Verifikasi - {verifyModal()?.nama}</h2>
-              <p class="text-sm text-gray-500 mb-4">
-                Durasi tercatat:{' '}
-                <span class="font-semibold text-gray-700 dark:text-gray-200">
-                  {verifyModal()?.menit != null ? `${verifyModal()?.menit} menit` : '-'}
-                </span>
-              </p>
+              <div class="rounded-lg bg-gray-50 dark:bg-gray-700/50 p-3 mb-4 text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                <div>
+                  <strong>Tanggal Pelaksanaan:</strong>{' '}
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">
+                    {verifyModal()?.tanggal ? `${fmtTanggal(verifyModal()!.tanggal)} (${verifyModal()!.tanggal})` : '-'}
+                  </span>
+                </div>
+                <div>
+                  <strong>Durasi tercatat:</strong>{' '}
+                  <span class="font-semibold text-gray-800 dark:text-gray-100">
+                    {verifyModal()?.menit != null ? `${verifyModal()?.menit} menit` : '-'}
+                  </span>
+                </div>
+              </div>
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium mb-1">Ubah status menjadi</label>
