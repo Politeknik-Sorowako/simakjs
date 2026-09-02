@@ -379,6 +379,13 @@
       "when": 1786600000004,
       "tag": "0053_add_mahasiswa_foto",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1786600000005,
+      "tag": "0054_ensure_ketidakhadiran_columns",
+      "breakpoints": true
     }
   ]
 }

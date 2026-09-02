@@ -21,6 +21,7 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'ketidakhadiran_sumber', value: 'BAP' },
   { name: 'ketidakhadiran_sumber', value: 'APEL' },
   { name: 'ketidakhadiran_sumber', value: 'MANUAL' },
+  { name: 'ketidakhadiran_sumber', value: 'PRAKTIKUM' },
   { name: 'ketidakhadiran_status', value: 'UNKNOWN' },
   { name: 'ketidakhadiran_status', value: 'SAKIT' },
   { name: 'ketidakhadiran_status', value: 'IZIN' },
@@ -279,6 +280,22 @@ async function ensureEnums() {
         "updated_at" timestamp DEFAULT now() NOT NULL
       );
     `);
+    await pool.query(
+      `ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "durasi_menit" integer DEFAULT 0 NOT NULL;`,
+    );
+    await pool.query(`ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "keterangan" text;`);
+    await pool.query(
+      `ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "is_verified" boolean DEFAULT false NOT NULL;`,
+    );
+    await pool.query(`ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "verified_by" integer;`);
+    await pool.query(`ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "verified_at" timestamp;`);
+    await pool.query(`ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "created_by" integer;`);
+    await pool.query(
+      `ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "created_at" timestamp DEFAULT now() NOT NULL;`,
+    );
+    await pool.query(
+      `ALTER TABLE "ketidakhadiran_mahasiswa" ADD COLUMN IF NOT EXISTS "updated_at" timestamp DEFAULT now() NOT NULL;`,
+    );
     await pool.query(
       `CREATE UNIQUE INDEX IF NOT EXISTS "idx_ketidakhadiran_sumber" ON "ketidakhadiran_mahasiswa" ("sumber", "sumber_id");`,
     );
