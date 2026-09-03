@@ -225,6 +225,7 @@ export default function KompensasiManual() {
     async ({ search, page }) => {
       const res = await mahasiswaController.getAll(search || undefined, page, 50, undefined, {
         filterStatus: 'aktif',
+        allStudents: true,
       });
       if (page === 1) {
         setAllMhs(res.data || []);
@@ -239,8 +240,23 @@ export default function KompensasiManual() {
     const list = allMhs();
     return [...list]
       .sort((a, b) => String(a.nim).localeCompare(String(b.nim), 'id', { numeric: true }))
-      .map((m) => ({ value: m.id, label: `${m.nim} — ${m.nama}` }));
+      .map((m) => ({
+        value: m.id,
+        label: `${m.nama} (${m.nim})${m.programStudi?.nama ? ` - ${m.programStudi.nama}` : ''}`,
+      }));
   });
+
+  const ensureStudentLoaded = async (id: number) => {
+    if (!id || allMhs().some((m) => m.id === id)) return;
+    try {
+      const m = await mahasiswaController.getById(id, true);
+      if (m && !allMhs().some((x) => x.id === m.id)) {
+        setAllMhs((prev) => [m, ...prev]);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const mhsHasMore = () => {
     const meta = mhsData()?.meta;
@@ -308,6 +324,7 @@ export default function KompensasiManual() {
   const openEditModal = (rec: KompensasiManualRecord & { mahasiswaNama?: string }) => {
     setEditingId(rec.id);
     setSelectedMhsId(rec.mahasiswaId);
+    ensureStudentLoaded(rec.mahasiswaId);
     setTanggal(rec.tanggal);
     setJenisKompen(rec.jenisKompen);
     setDurasiMenit(rec.durasiMenit);
