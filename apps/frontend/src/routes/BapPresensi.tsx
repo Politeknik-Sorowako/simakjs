@@ -1203,7 +1203,7 @@ export default function BapPresensi() {
                 placeholder="-- Cari & Pilih Kelas Kuliah --"
                 value={selectedKelasId()}
                 options={kelasOptions().map((kelas) => ({
-                  label: `${kelas.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}${kelas.mataKuliah?.nama} (Kelas ${kelas.namaKelas})`,
+                  label: `${kelas.mataKuliah?.kode ? `[${kelas.namaKelas}] ` : ''}${kelas.mataKuliah?.nama}`,
                   value: kelas.id,
                 }))}
                 onChange={(val) => {
