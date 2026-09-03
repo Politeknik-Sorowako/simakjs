@@ -49,7 +49,8 @@ export default function InputNilai() {
   const [studentsGrades, { refetch: refetchStudentsGrades }] = createResource(selectedKelasId, async (kelasId) => {
     if (!kelasId) return [];
     try {
-      return await khsController.getNilaiMahasiswa(kelasId);
+      const list = await khsController.getNilaiMahasiswa(kelasId);
+      return (list || []).sort((a, b) => (a.nim || '').localeCompare(b.nim || '', 'id'));
     } catch (e) {
       return [];
     }

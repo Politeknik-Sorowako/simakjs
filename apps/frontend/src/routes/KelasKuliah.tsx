@@ -81,7 +81,7 @@ export default function KelasKuliah() {
   const [matkuls] = createResource(
     () => workspace.activeProdiId(),
     (prodiId) =>
-      mataKuliahController.getAll(undefined, 1, 100, undefined, undefined, undefined, undefined, prodiId || undefined),
+      mataKuliahController.getAll(undefined, 1, 1000, undefined, undefined, undefined, undefined, prodiId || undefined),
   );
   const [periodes] = createResource(() => periodeAkademikController.getAll(undefined, 1, 100));
   const [dosens] = createResource(() => dosenController.getAll(undefined, 1, 100));
@@ -501,19 +501,19 @@ export default function KelasKuliah() {
                 {errorMsg()}
               </div>
             </Show>
-            <Input
-              isSelect
+            <SearchableSelect
               label="Mata Kuliah"
               value={matkulId()}
-              onChange={(e) => setMatkulId(Number(e.currentTarget.value))}
-              selectOptions={matkuls()?.data.map((m) => ({ label: `${m.kode} - ${m.nama}`, value: m.id })) || []}
+              onChange={(val) => setMatkulId(Number(val))}
+              options={matkuls()?.data.map((m) => ({ label: `${m.kode} - ${m.nama}`, value: m.id })) || []}
+              placeholder="Cari Kode atau Nama Mata Kuliah..."
             />
-            <Input
-              isSelect
+            <SearchableSelect
               label="Periode Akademik"
               value={periodeId()}
-              onChange={(e) => setPeriodeId(e.currentTarget.value)}
-              selectOptions={periodes()?.data.map((p) => ({ label: p.nama, value: p.id })) || []}
+              onChange={(val) => setPeriodeId(String(val))}
+              options={periodes()?.data.map((p) => ({ label: p.nama, value: p.id })) || []}
+              placeholder="Cari Periode Akademik..."
             />
             <Input
               label="Nama Kelas"

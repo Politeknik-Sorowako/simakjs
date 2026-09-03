@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import {
   angkatanKurikulum,
   capaianCpmk,
@@ -248,7 +248,8 @@ export class YudisiumService {
       })
       .from(krs)
       .innerJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
-      .where(eq(krs.kelasKuliahId, kelasKuliahId));
+      .where(eq(krs.kelasKuliahId, kelasKuliahId))
+      .orderBy(asc(mahasiswa.nim));
 
     const components = await this.getKomponen(kelasKuliahId);
     const componentIds = components.map((c) => c.id);
