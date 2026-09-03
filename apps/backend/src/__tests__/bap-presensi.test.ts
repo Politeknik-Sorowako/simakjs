@@ -536,5 +536,63 @@ describe('BAP, Presensi & Kompensasi API', () => {
       expect(listUnknown.length).toBe(1);
       expect(listUnknown[0].status).toBe('unknown');
     });
+
+    it('getPresensiByBap mengembalikan daftar presensi terurut berdasarkan NIM (asc)', async () => {
+      const { PresensiService } = await import('../services/presensi.service');
+      const { krs } = await import('../models/schema');
+
+      // Seed 2 mahasiswa tambahan dengan NIM acak
+      const [mhsB] = await db
+        .insert(mahasiswa)
+        .values({
+          nim: '202309002',
+          nama: 'Budi Santoso',
+          email: 'budi@test.com',
+          programStudiId: prodiId,
+          jenisKelamin: 'L',
+        })
+        .returning();
+
+      const [mhsA] = await db
+        .insert(mahasiswa)
+        .values({
+          nim: '202309001',
+          nama: 'Andi Wijaya',
+          email: 'andi@test.com',
+          programStudiId: prodiId,
+          jenisKelamin: 'L',
+        })
+        .returning();
+
+      // Seed BAP
+      const bapRes = await app.handle(
+        new Request('http://localhost/bap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+          body: JSON.stringify({ kelasKuliahId: kelasId, pertemuanKe: 2, tanggal: '2026-09-01', materi: 'Materi 2' }),
+        }),
+      );
+      const bapData = await bapRes.json();
+
+      // Save presensi untuk mhsB lalu mhsA (sengaja urutan insert dibalik)
+      await app.handle(
+        new Request('http://localhost/presensi/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+          body: JSON.stringify({
+            bapId: bapData.id,
+            presensiList: [
+              { mahasiswaId: mhsB.id, status: 'hadir', durasiMangkir: 0 },
+              { mahasiswaId: mhsA.id, status: 'hadir', durasiMangkir: 0 },
+            ],
+          }),
+        }),
+      );
+
+      const rows = await PresensiService.getPresensiByBap(bapData.id);
+      expect(rows.length).toBe(2);
+      expect(rows[0].mahasiswaNim).toBe('202309001');
+      expect(rows[1].mahasiswaNim).toBe('202309002');
+    });
   });
 });

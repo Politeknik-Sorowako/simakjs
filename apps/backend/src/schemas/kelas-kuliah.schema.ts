@@ -29,6 +29,8 @@ export const getKelasSchema = {
     search: t.Optional(t.String({ default: '' })),
     programStudiId: t.Optional(t.Numeric()),
     periodeId: t.Optional(t.String()),
+    mataKuliahId: t.Optional(t.Numeric()),
+    dosenId: t.Optional(t.Numeric()),
   }),
   response: {
     200: t.Object({

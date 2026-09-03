@@ -27,6 +27,8 @@ export const kelasKuliahController = {
     limit?: number,
     programStudiId?: number,
     periodeId?: string,
+    mataKuliahId?: number,
+    dosenId?: number,
   ): Promise<PaginatedResponse<KelasKuliah>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
@@ -34,6 +36,8 @@ export const kelasKuliahController = {
     if (limit) params.append('limit', String(limit));
     if (programStudiId) params.append('programStudiId', String(programStudiId));
     if (periodeId) params.append('periodeId', String(periodeId));
+    if (mataKuliahId) params.append('mataKuliahId', String(mataKuliahId));
+    if (dosenId) params.append('dosenId', String(dosenId));
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<KelasKuliah>>(`/kelas-kuliah${queryString}`);
   },

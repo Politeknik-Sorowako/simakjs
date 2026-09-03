@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { and, count, eq, ilike, inArray, isNotNull, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, inArray, isNotNull, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   bapPraktikum,
@@ -34,7 +34,12 @@ export class RombelPraktikumService {
         },
       },
     });
-    return list;
+    return list.map((r) => ({
+      ...r,
+      mahasiswaList: [...r.mahasiswaList].sort((a, b) =>
+        (a.mahasiswa?.nim || '').localeCompare(b.mahasiswa?.nim || '', 'id'),
+      ),
+    }));
   }
 
   static async createRombel(data: {
@@ -456,7 +461,8 @@ export class RombelPraktikumService {
         ),
       )
       .leftJoin(users, eq(ketidakhadiranMahasiswa.verifiedBy, users.id))
-      .where(eq(presensiPraktikum.bapPraktikumId, bapPraktikumId));
+      .where(eq(presensiPraktikum.bapPraktikumId, bapPraktikumId))
+      .orderBy(asc(mahasiswa.nim));
     return rows;
   }
 

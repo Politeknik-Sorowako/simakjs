@@ -232,6 +232,23 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
       expect(body.data[0].nim).toBe('12345678');
     });
 
+    it('harus sukses mengambil mahasiswa aktif lintas prodi dan non-PA bagi dosen ketika allStudents=true dan filterStatus=aktif', async () => {
+      const dosenToken = await getAuthToken('dosen-allstudents@test.com', 'dosen');
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa?filterStatus=aktif&allStudents=true', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${dosenToken}`,
+          },
+        }),
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
+      expect(body.data.every((m: { status?: string }) => m.status === 'aktif')).toBe(true);
+    });
+
     it('harus gagal mengambil list mahasiswa jika diakses oleh Guest (RBAC)', async () => {
       // Guest is not supported directly by getAuthToken type definition helper but since we updated the enum and schemas it will register and authenticate correctly
       const guestToken = await getAuthToken('guest-mhs@test.com', 'guest' as Parameters<typeof getAuthToken>[1]);
@@ -1047,6 +1064,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
         }),
       );
       expect(uploadRes.status).toBe(200);
+      const uploadBody = (await uploadRes.json()) as { foto: string };
 
       // Test GET /mahasiswa/:id/foto
       const getRes = await app.handle(
@@ -1061,7 +1079,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
       // Test GET /storage/photos/mahasiswa/:filename
       const storageRes = await app.handle(
-        new Request('http://localhost/storage/photos/mahasiswa/getfoto.jpg', {
+        new Request(`http://localhost${uploadBody.foto}`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${adminToken}`,

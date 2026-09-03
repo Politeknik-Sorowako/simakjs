@@ -3,7 +3,11 @@ import { getDosenAllowedKelasIds, getDosenIdByEmail } from '../utils/dosen-scope
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
-type KelasKuliahQuery = PaginationQuery & { periodeId?: string; dosenId?: string };
+type KelasKuliahQuery = PaginationQuery & {
+  periodeId?: string;
+  dosenId?: number | string;
+  mataKuliahId?: number | string;
+};
 
 export class KelasKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -12,7 +16,8 @@ export class KelasKuliahController {
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
     const periodeId = query?.periodeId || undefined;
-    let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+    let dosenId = query?.dosenId ? parseInt(String(query.dosenId)) : undefined;
+    const mataKuliahId = query?.mataKuliahId ? parseInt(String(query.mataKuliahId)) : undefined;
 
     if (getCurrentUser) {
       const user = await getCurrentUser();
@@ -33,7 +38,7 @@ export class KelasKuliahController {
       }
     }
 
-    return await KelasKuliahService.getAll(page, limit, search, periodeId, dosenId);
+    return await KelasKuliahService.getAll(page, limit, search, periodeId, dosenId, mataKuliahId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
