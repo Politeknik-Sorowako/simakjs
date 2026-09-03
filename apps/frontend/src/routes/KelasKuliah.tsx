@@ -62,6 +62,8 @@ export default function KelasKuliah() {
   const workspace = useWorkspace();
 
   const [search, setSearch] = createSignal('');
+  const [selectedMatkulFilter, setSelectedMatkulFilter] = createSignal<number | undefined>(undefined);
+  const [selectedDosenFilter, setSelectedDosenFilter] = createSignal<number | undefined>(undefined);
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
   // Fetch Kelas Data
@@ -72,9 +74,19 @@ export default function KelasKuliah() {
       limit: limit(),
       prodiId: workspace.activeProdiId(),
       periodeId: workspace.activePeriodeId(),
+      mataKuliahId: selectedMatkulFilter(),
+      dosenId: selectedDosenFilter(),
     }),
-    ({ search, page, limit, prodiId, periodeId }) =>
-      kelasKuliahController.getAll(search, page, limit, prodiId || undefined, periodeId || undefined),
+    ({ search, page, limit, prodiId, periodeId, mataKuliahId, dosenId }) =>
+      kelasKuliahController.getAll(
+        search,
+        page,
+        limit,
+        prodiId || undefined,
+        periodeId || undefined,
+        mataKuliahId,
+        dosenId,
+      ),
   );
 
   // Fetch Dropdown Data
@@ -361,6 +373,8 @@ export default function KelasKuliah() {
                   10000,
                   workspace.activeProdiId() || undefined,
                   workspace.activePeriodeId() || undefined,
+                  selectedMatkulFilter(),
+                  selectedDosenFilter(),
                 );
                 return res.data;
               }}
@@ -376,15 +390,59 @@ export default function KelasKuliah() {
           </div>
         </div>
 
-        <div class="max-w-xs">
+        {/* Filter Toolbar */}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
           <Input
-            placeholder="Cari nama kelas..."
+            label="Pencarian"
+            placeholder="Cari kelas, MK, atau dosen..."
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
               resetPage();
             }}
           />
+          <SearchableSelect
+            label="Filter Mata Kuliah"
+            placeholder="-- Semua Mata Kuliah --"
+            value={selectedMatkulFilter() || ''}
+            options={[
+              { label: '-- Semua Mata Kuliah --', value: '' },
+              ...(matkuls()?.data.map((m) => ({ label: `${m.kode} - ${m.nama}`, value: m.id })) || []),
+            ]}
+            onChange={(val) => {
+              setSelectedMatkulFilter(val ? Number(val) : undefined);
+              resetPage();
+            }}
+          />
+          <SearchableSelect
+            label="Filter Dosen Pengajar"
+            placeholder="-- Semua Dosen --"
+            value={selectedDosenFilter() || ''}
+            options={[
+              { label: '-- Semua Dosen --', value: '' },
+              ...(dosens()?.data.map((d) => ({ label: `${d.nip ? `${d.nip} - ` : ''}${d.nama}`, value: d.id })) || []),
+            ]}
+            onChange={(val) => {
+              setSelectedDosenFilter(val ? Number(val) : undefined);
+              resetPage();
+            }}
+          />
+          <Show when={search() || selectedMatkulFilter() !== undefined || selectedDosenFilter() !== undefined}>
+            <div class="md:col-span-3 flex justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setSearch('');
+                  setSelectedMatkulFilter(undefined);
+                  setSelectedDosenFilter(undefined);
+                  resetPage();
+                }}
+                class="!py-1 !px-3 text-xs"
+              >
+                Reset Filter
+              </Button>
+            </div>
+          </Show>
         </div>
 
         <Show
