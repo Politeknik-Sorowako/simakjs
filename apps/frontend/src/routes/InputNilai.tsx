@@ -1,6 +1,7 @@
 import { createEffect, createResource, createSignal, For, Index, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -340,25 +341,18 @@ export default function InputNilai() {
         <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <h3 class="font-bold text-secondary-700 text-sm">Pilih Kelas Kuliah</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-secondary-500">Kelas Kuliah</label>
-              <select
-                onChange={(e) => {
-                  const id = e.currentTarget.value ? parseInt(e.currentTarget.value) : null;
-                  setSelectedKelasId(id);
-                }}
-                class="border border-secondary-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-              >
-                <option value="">-- Pilih Kelas Kuliah --</option>
-                <For each={classes()}>
-                  {(item) => (
-                    <option value={item.id} selected={selectedKelasId() === item.id}>
-                      {item.periodeId} - {item.mataKuliah?.nama} ({item.namaKelas})
-                    </option>
-                  )}
-                </For>
-              </select>
-            </div>
+            <SearchableSelect
+              label="Kelas Kuliah"
+              value={selectedKelasId() || ''}
+              onChange={(val) => setSelectedKelasId(val ? Number(val) : null)}
+              options={
+                classes()?.map((item) => ({
+                  label: `${item.mataKuliah?.kode ? `${item.mataKuliah.kode} - ` : ''}${item.mataKuliah?.nama || 'Mata Kuliah'} (${item.namaKelas}) - Periode ${item.periodeId}`,
+                  value: item.id,
+                })) || []
+              }
+              placeholder="-- Pilih / Cari Kelas Kuliah --"
+            />
           </div>
         </div>
 

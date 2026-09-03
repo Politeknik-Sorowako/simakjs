@@ -155,6 +155,23 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
       const body = await response.json();
       expect(body.data.length).toBeGreaterThan(0);
     });
+
+    it('harus sukses memfilter list kelas berdasarkan mataKuliahId', async () => {
+      const response = await app.handle(
+        new Request(`http://localhost/kelas-kuliah?mataKuliahId=${mkId}`, { method: 'GET' }),
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data.length).toBeGreaterThan(0);
+      expect(body.data[0].mataKuliahId).toBe(mkId);
+
+      const nonExistentResponse = await app.handle(
+        new Request('http://localhost/kelas-kuliah?mataKuliahId=999999', { method: 'GET' }),
+      );
+      expect(nonExistentResponse.status).toBe(200);
+      const nonExistentBody = await nonExistentResponse.json();
+      expect(nonExistentBody.data.length).toBe(0);
+    });
   });
 
   describe('GET /kelas-kuliah/:id', () => {

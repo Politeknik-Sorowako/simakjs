@@ -26,7 +26,7 @@ export interface ImportKelasResult {
 }
 
 export class KelasKuliahService {
-  static async getAll(page = 1, limit = 10, search = '', periodeId?: string, dosenId?: number) {
+  static async getAll(page = 1, limit = 10, search = '', periodeId?: string, dosenId?: number, mataKuliahId?: number) {
     const offset = (page - 1) * limit;
     const conditions = [];
 
@@ -36,16 +36,26 @@ export class KelasKuliahService {
         .from(mataKuliah)
         .where(or(ilike(mataKuliah.nama, `%${search}%`), ilike(mataKuliah.kode, `%${search}%`)));
 
+      const dosenSubquery = db
+        .select({ kelasKuliahId: dosenPengajarKelas.kelasKuliahId })
+        .from(dosenPengajarKelas)
+        .innerJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
+        .where(or(ilike(dosen.nama, `%${search}%`), ilike(dosen.nip, `%${search}%`)));
+
       conditions.push(
         or(
           ilike(kelasKuliah.namaKelas, `%${search}%`),
           ilike(kelasKuliah.periodeId, `%${search}%`),
           inArray(kelasKuliah.mataKuliahId, mkSubquery),
+          inArray(kelasKuliah.id, dosenSubquery),
         ),
       );
     }
     if (periodeId) {
       conditions.push(eq(kelasKuliah.periodeId, periodeId));
+    }
+    if (mataKuliahId !== undefined) {
+      conditions.push(eq(kelasKuliah.mataKuliahId, mataKuliahId));
     }
     if (dosenId !== undefined) {
       const kelasSubquery = db
