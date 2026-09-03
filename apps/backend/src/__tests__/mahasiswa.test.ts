@@ -1064,6 +1064,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
         }),
       );
       expect(uploadRes.status).toBe(200);
+      const uploadBody = (await uploadRes.json()) as { foto: string };
 
       // Test GET /mahasiswa/:id/foto
       const getRes = await app.handle(
@@ -1078,7 +1079,7 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
 
       // Test GET /storage/photos/mahasiswa/:filename
       const storageRes = await app.handle(
-        new Request('http://localhost/storage/photos/mahasiswa/getfoto.jpg', {
+        new Request(`http://localhost${uploadBody.foto}`, {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${adminToken}`,
