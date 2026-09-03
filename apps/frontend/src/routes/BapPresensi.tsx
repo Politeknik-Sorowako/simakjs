@@ -325,7 +325,7 @@ export default function BapPresensi() {
       try {
         // Load KRS entries for this class (server-side filter)
         const res = await krsController.getAll(undefined, 1, 1000, kelasId);
-        return res.data;
+        return (res.data || []).sort((a, b) => (a.mahasiswa?.nim || '').localeCompare(b.mahasiswa?.nim || '', 'id'));
       } catch (e: unknown) {
         toast.showToast('Gagal memuat mahasiswa kelas', 'error');
         return [];

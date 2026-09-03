@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
@@ -364,91 +365,62 @@ export default function Rps() {
         </div>
 
         {/* Cascading Filter Selection */}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-semibold text-secondary-500">Periode Akademik</label>
-            <select
-              class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-              value={selectedPeriode()}
-              onChange={(e) => {
-                setSelectedPeriode(e.currentTarget.value);
-                setSelectedProdi(undefined);
-                setSelectedKurikulum(undefined);
-                setSelectedMk(0);
-              }}
-            >
-              <option value="">-- Pilih Periode --</option>
-              <For each={allPeriodes()}>
-                {(p) => (
-                  <option value={p.id}>
-                    {p.nama}
-                    {p.aktif ? ' (Aktif)' : ''}
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-semibold text-secondary-500">Program Studi</label>
-            <select
-              class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-              value={selectedProdi() || ''}
-              onChange={(e) => {
-                setSelectedProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
-                setSelectedKurikulum(undefined);
-                setSelectedMk(0);
-              }}
-            >
-              <option value="">-- Pilih Prodi --</option>
-              <For each={prodis()?.data}>
-                {(p) => (
-                  <option value={p.id}>
-                    {p.jenjang} - {p.nama}
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-semibold text-secondary-500">Kurikulum</label>
-            <select
-              class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-              value={selectedKurikulum() || ''}
-              onChange={(e) => {
-                setSelectedKurikulum(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
-                setSelectedMk(0);
-              }}
-            >
-              <option value="">-- Pilih Kurikulum --</option>
-              <For each={kurikulums()?.data}>
-                {(k) => (
-                  <option value={k.id}>
-                    {k.nama} ({k.kode})
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-semibold text-secondary-500">Mata Kuliah</label>
-            <select
-              class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-              value={selectedMk()}
-              onChange={(e) => {
-                setSelectedMk(Number(e.currentTarget.value));
-                setSearchParams({}, { replace: true });
-              }}
-            >
-              <option value={0}>-- Pilih MK --</option>
-              <For each={mkOptions()}>
-                {(kmk) => (
-                  <option value={kmk.mataKuliahId}>
-                    {kmk.mataKuliah?.kode} - {kmk.mataKuliah?.nama} (Sem {kmk.semester})
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
+          <SearchableSelect
+            label="Periode Akademik"
+            value={selectedPeriode()}
+            placeholder="-- Pilih Periode --"
+            options={(allPeriodes() || []).map((p) => ({
+              label: `${p.nama}${p.aktif ? ' (Aktif)' : ''}`,
+              value: p.id,
+            }))}
+            onChange={(val) => {
+              setSelectedPeriode(String(val));
+              setSelectedProdi(undefined);
+              setSelectedKurikulum(undefined);
+              setSelectedMk(0);
+            }}
+          />
+          <SearchableSelect
+            label="Program Studi"
+            value={selectedProdi() || ''}
+            placeholder="-- Pilih Prodi --"
+            options={(prodis()?.data || []).map((p) => ({
+              label: `${p.jenjang} - ${p.nama}`,
+              value: p.id,
+            }))}
+            onChange={(val) => {
+              setSelectedProdi(val ? Number(val) : undefined);
+              setSelectedKurikulum(undefined);
+              setSelectedMk(0);
+            }}
+          />
+          <SearchableSelect
+            label="Kurikulum"
+            value={selectedKurikulum() || ''}
+            placeholder="-- Pilih Kurikulum --"
+            options={(kurikulums()?.data || []).map((k) => ({
+              label: `${k.nama} (${k.kode})`,
+              value: k.id,
+            }))}
+            onChange={(val) => {
+              setSelectedKurikulum(val ? Number(val) : undefined);
+              setSelectedMk(0);
+            }}
+          />
+          <SearchableSelect
+            label="Mata Kuliah"
+            value={selectedMk()}
+            placeholder="-- Cari Kode / Nama MK --"
+            options={(mkOptions() || []).map((kmk) => ({
+              label: `${kmk.mataKuliah?.kode || ''} - ${kmk.mataKuliah?.nama || ''} (Sem ${kmk.semester})`,
+              value: kmk.mataKuliahId,
+            }))}
+            onChange={(val) => {
+              setSelectedMk(Number(val));
+              setSearchParams({}, { replace: true });
+            }}
+          />
         </div>
 
         {/* Daftar Kelas */}
@@ -810,40 +782,36 @@ export default function Rps() {
                   }}
                 />
               </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold text-secondary-500">Program Studi Sumber</label>
-                <select
-                  class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  value={sourceProdiId() || ''}
-                  onChange={(e) => {
-                    setSourceProdiId(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
-                    setSelectedSource(null);
-                  }}
-                >
-                  <option value="">Semua Prodi</option>
-                  <For each={prodis()?.data}>
-                    {(p) => (
-                      <option value={p.id}>
-                        {p.jenjang} - {p.nama}
-                      </option>
-                    )}
-                  </For>
-                </select>
-              </div>
-              <div class="flex flex-col gap-1">
-                <label class="text-xs font-semibold text-secondary-500">Periode RPS Sumber</label>
-                <select
-                  class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  value={sourcePeriode()}
-                  onChange={(e) => {
-                    setSourcePeriode(e.currentTarget.value);
-                    setSelectedSource(null);
-                  }}
-                >
-                  <option value="">Semua Periode</option>
-                  <For each={allPeriodes()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
-                </select>
-              </div>
+              <SearchableSelect
+                label="Program Studi Sumber"
+                value={sourceProdiId() || ''}
+                placeholder="Semua Prodi"
+                options={[{ label: 'Semua Prodi', value: '' }].concat(
+                  (prodis()?.data || []).map((p) => ({
+                    label: `${p.jenjang} - ${p.nama}`,
+                    value: String(p.id),
+                  })),
+                )}
+                onChange={(val) => {
+                  setSourceProdiId(val ? Number(val) : undefined);
+                  setSelectedSource(null);
+                }}
+              />
+              <SearchableSelect
+                label="Periode RPS Sumber"
+                value={sourcePeriode()}
+                placeholder="Semua Periode"
+                options={[{ label: 'Semua Periode', value: '' }].concat(
+                  (allPeriodes() || []).map((p) => ({
+                    label: p.nama,
+                    value: p.id,
+                  })),
+                )}
+                onChange={(val) => {
+                  setSourcePeriode(String(val));
+                  setSelectedSource(null);
+                }}
+              />
             </div>
 
             {/* Source List */}

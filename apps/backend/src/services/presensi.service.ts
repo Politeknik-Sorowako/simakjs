@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { and, count, desc, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
 import {
   bap,
   bapPraktikum,
@@ -269,7 +269,8 @@ export class PresensiService {
         and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensi.id)),
       )
       .leftJoin(users, eq(ketidakhadiranMahasiswa.verifiedBy, users.id))
-      .where(eq(presensi.bapId, bapId));
+      .where(eq(presensi.bapId, bapId))
+      .orderBy(asc(mahasiswa.nim));
     return rows;
   }
 
