@@ -928,7 +928,7 @@ export default function Pelanggaran() {
                 placeholder="Cari NIM atau Nama Mahasiswa Aktif..."
                 value={mahasiswaId()}
                 options={mahasiswaList().map((m) => ({
-                  label: `${m.nama} (${m.nim})`,
+                  label: `${m.nama} (${m.nim})${m.programStudi?.nama ? ` - ${m.programStudi.nama}` : ''}`,
                   value: m.id,
                 }))}
                 onChange={(val) => setMahasiswaId(Number(val))}
