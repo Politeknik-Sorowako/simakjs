@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from '@solidjs/router';
 import { QueryClientProvider } from '@tanstack/solid-query';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import OfflineBanner from './components/pwa/OfflineBanner';
+import PwaInstallPrompt from './components/pwa/PwaInstallPrompt';
+import ReloadPrompt from './components/pwa/ReloadPrompt';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -752,10 +755,6 @@ function AppContent() {
     </Routes>
   );
 }
-
-import OfflineBanner from './components/pwa/OfflineBanner';
-import PwaInstallPrompt from './components/pwa/PwaInstallPrompt';
-import ReloadPrompt from './components/pwa/ReloadPrompt';
 
 export default function App() {
   return (
