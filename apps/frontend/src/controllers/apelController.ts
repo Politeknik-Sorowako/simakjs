@@ -85,20 +85,24 @@ export interface UnknownPresensiItem {
 
 export interface MonitorResponse {
   summary: {
+    totalKelompok?: number;
     totalSesiAktif: number;
+    totalBelumBuka?: number;
+    totalDitutup?: number;
     totalHadir: number;
     totalTerlambat: number;
     totalUnknown: number;
   };
   detail: Array<{
-    id: number;
+    id: number | null;
     kelompokApelId: number;
     kelompokNama: string;
     tanggal: string;
     shift: string;
-    dosenId: number;
+    dosenId?: number | null;
     dosenNama: string;
     jamMulai: string;
+    statusSesi?: 'belum_buka' | 'berlangsung' | 'ditutup' | string;
     totalMahasiswa: number;
     hadir: number;
     terlambat: number;

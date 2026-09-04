@@ -545,39 +545,63 @@ export class ApelService {
   }
 
   static async getMonitorRealtime(dosenId?: number, tanggal?: string) {
-    const conditions = [eq(sesiApel.isClosed, false)];
-    if (dosenId) conditions.push(eq(sesiApel.dosenId, dosenId));
-    if (tanggal) conditions.push(eq(sesiApel.tanggal, tanggal));
+    const targetTanggal = tanggal || (await getNowTimeString(await SystemParameterService.getTimezone()));
 
-    const sesiAktif = await db
+    const conditions = [eq(kelompokApel.isActive, true)];
+    if (dosenId) {
+      conditions.push(or(eq(kelompokApel.dosenId, dosenId), eq(sesiApel.dosenId, dosenId))!);
+    }
+
+    const rows = await db
       .select({
         id: sesiApel.id,
-        kelompokApelId: sesiApel.kelompokApelId,
+        kelompokApelId: kelompokApel.id,
         kelompokNama: kelompokApel.namaKelompok,
-        tanggal: sesiApel.tanggal,
-        shift: sesiApel.shift,
-        dosenId: sesiApel.dosenId,
+        tanggal: sql<string>`COALESCE(${sesiApel.tanggal}, ${targetTanggal})`,
+        shift: sql<string>`COALESCE(${sesiApel.shift}, ${kelompokApel.shift})`,
+        dosenId: sql<number | null>`COALESCE(${sesiApel.dosenId}, ${kelompokApel.dosenId})`,
         dosenNama: dosen.nama,
         jamMulai: sesiApel.jamMulai,
-        totalMahasiswa: sql<number>`(SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id})`,
-        hadir: sql<number>`(SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'hadir')`,
-        terlambat: sql<number>`(SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'terlambat')`,
-        unknown: sql<number>`(SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'unknown')`,
+        isClosed: sesiApel.isClosed,
+        statusSesi: sql<string>`CASE 
+          WHEN ${sesiApel.id} IS NULL THEN 'belum_buka'
+          WHEN ${sesiApel.isClosed} = true THEN 'ditutup'
+          ELSE 'berlangsung'
+        END`,
+        totalMahasiswa: sql<number>`(SELECT COUNT(*) FROM ${kelompokApelAnggota} WHERE ${kelompokApelAnggota.kelompokApelId} = ${kelompokApel.id})`,
+        hadir: sql<number>`CASE WHEN ${sesiApel.id} IS NOT NULL THEN (SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'hadir') ELSE 0 END`,
+        terlambat: sql<number>`CASE WHEN ${sesiApel.id} IS NOT NULL THEN (SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'terlambat') ELSE 0 END`,
+        unknown: sql<number>`CASE WHEN ${sesiApel.id} IS NOT NULL THEN (SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'unknown') ELSE (SELECT COUNT(*) FROM ${kelompokApelAnggota} WHERE ${kelompokApelAnggota.kelompokApelId} = ${kelompokApel.id}) END`,
       })
-      .from(sesiApel)
-      .leftJoin(kelompokApel, eq(sesiApel.kelompokApelId, kelompokApel.id))
-      .leftJoin(dosen, eq(sesiApel.dosenId, dosen.id))
+      .from(kelompokApel)
+      .leftJoin(sesiApel, and(eq(sesiApel.kelompokApelId, kelompokApel.id), eq(sesiApel.tanggal, targetTanggal)))
+      .leftJoin(dosen, eq(dosen.id, sql`COALESCE(${sesiApel.dosenId}, ${kelompokApel.dosenId})`))
       .where(and(...conditions))
-      .orderBy(sql`${sesiApel.tanggal} DESC, ${sesiApel.jamMulai} DESC`);
+      .orderBy(kelompokApel.namaKelompok);
 
-    const totalSesiAktif = sesiAktif.length;
-    const totalHadir = sesiAktif.reduce((s, r) => s + Number(r.hadir), 0);
-    const totalTerlambat = sesiAktif.reduce((s, r) => s + Number(r.terlambat), 0);
-    const totalUnknown = sesiAktif.reduce((s, r) => s + Number(r.unknown), 0);
+    const totalKelompok = rows.length;
+    const totalSesiAktif = rows.filter((r) => r.statusSesi === 'berlangsung').length;
+    const totalBelumBuka = rows.filter((r) => r.statusSesi === 'belum_buka').length;
+    const totalDitutup = rows.filter((r) => r.statusSesi === 'ditutup').length;
+    const totalHadir = rows.reduce((s, r) => s + Number(r.hadir), 0);
+    const totalTerlambat = rows.reduce((s, r) => s + Number(r.terlambat), 0);
+    const totalUnknown = rows.reduce((s, r) => s + Number(r.unknown), 0);
 
     return {
-      summary: { totalSesiAktif, totalHadir, totalTerlambat, totalUnknown },
-      detail: sesiAktif,
+      summary: {
+        totalKelompok,
+        totalSesiAktif,
+        totalBelumBuka,
+        totalDitutup,
+        totalHadir,
+        totalTerlambat,
+        totalUnknown,
+      },
+      detail: rows.map((r) => ({
+        ...r,
+        dosenNama: r.dosenNama || 'Belum Ada Dosen PJ',
+        jamMulai: r.jamMulai || '-',
+      })),
     };
   }
 
