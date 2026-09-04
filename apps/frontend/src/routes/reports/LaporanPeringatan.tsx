@@ -3,34 +3,45 @@ import { PieChart, StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { bimbinganController } from '../../controllers/bimbinganController';
-import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import { ExportColumn } from '../../utils/export';
 
 export default function LaporanPeringatan() {
-  const [selectedPeriode] = createSignal('');
+  const [page, setPage] = createSignal(1);
+  const [search, setSearch] = createSignal('');
 
-  const [rekapPelanggaran] = createResource(async () => {
+  const [rekapPasal] = createResource(async () => {
     try {
-      const data = await bimbinganController.getAllPelanggaran();
-      const rekap: Record<string, { jenis: string; jumlah: number; totalPoin: number }> = {};
-      let totalPoin = 0;
-      for (const p of data) {
-        const poin = p.jenisSanksi ?? p.bobotPoin ?? 0;
-        totalPoin += poin;
-        const existing = rekap[p.jenisPelanggaran] || { jenis: p.jenisPelanggaran, jumlah: 0, totalPoin: 0 };
-        existing.jumlah++;
-        existing.totalPoin += poin;
-        rekap[p.jenisPelanggaran] = existing;
-      }
-      return { total: data.length, totalPoin, perJenis: Object.values(rekap), data };
+      return await bimbinganController.getRekapPasal();
     } catch {
-      return { total: 0, totalPoin: 0, perJenis: [], data: [] };
+      return { total: 0, totalPoin: 0, perPasal: [] };
     }
   });
 
+  const [riwayatData] = createResource(
+    () => ({ page: page(), search: search() }),
+    async (params) => {
+      try {
+        const res = await bimbinganController.getAllPelanggaran({
+          page: params.page,
+          limit: 20,
+          search: params.search,
+        });
+        if (Array.isArray(res)) {
+          return { data: res, pagination: { total: res.length, page: 1, totalPages: 1 } };
+        }
+        return res;
+      } catch {
+        return { data: [], pagination: { total: 0, page: 1, totalPages: 1 } };
+      }
+    },
+  );
+
   const columns: ExportColumn[] = [
     { header: 'Tanggal', accessor: 'tanggal' },
+    { header: 'NIM', accessor: 'nim' },
+    { header: 'Mahasiswa', accessor: 'namaMahasiswa' },
     { header: 'Jenis Pelanggaran', accessor: 'jenisPelanggaran' },
+    { header: 'Pasal', accessor: (r: Record<string, unknown>) => `${r.nomorPasal || '-'}` },
     { header: 'Bobot Poin', accessor: 'bobotPoin' },
     { header: 'Pelapor', accessor: 'pelapor' },
     { header: 'Keterangan', accessor: 'keterangan' },
@@ -43,15 +54,15 @@ export default function LaporanPeringatan() {
           <div>
             <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Status & Riwayat Peringatan</h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
-              Rekapitulasi pelanggaran dan kedisiplinan mahasiswa
+              Rekapitulasi pelanggaran dan kedisiplinan mahasiswa berdasarkan pasal
             </p>
           </div>
           <ExportButtonGroup
-            data={() => rekapPelanggaran()?.data || []}
+            data={() => riwayatData()?.data || []}
             columns={columns}
             filename="Laporan_Peringatan"
             title="Laporan Peringatan & Kedisiplinan Mahasiswa"
-            subtitle={`Total: ${rekapPelanggaran()?.total || 0} pelanggaran`}
+            subtitle={`Total: ${rekapPasal()?.total || 0} pelanggaran`}
           />
         </div>
 
@@ -59,7 +70,7 @@ export default function LaporanPeringatan() {
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard
             title="Total Pelanggaran"
-            value={rekapPelanggaran()?.total || '...'}
+            value={rekapPasal()?.total ?? '...'}
             color="rose"
             icon={
               <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,7 +85,7 @@ export default function LaporanPeringatan() {
           />
           <StatCard
             title="Total Poin"
-            value={rekapPelanggaran()?.totalPoin || '...'}
+            value={rekapPasal()?.totalPoin ?? '...'}
             color="yellow"
             icon={
               <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -89,9 +100,7 @@ export default function LaporanPeringatan() {
           />
           <StatCard
             title="Rata-rata Poin"
-            value={
-              rekapPelanggaran()?.total ? (rekapPelanggaran()!.totalPoin / rekapPelanggaran()!.total).toFixed(1) : '0'
-            }
+            value={rekapPasal()?.total ? (rekapPasal()!.totalPoin / rekapPasal()!.total).toFixed(1) : '0'}
             subtitle="per pelanggaran"
             color="brand"
             icon={
@@ -107,67 +116,79 @@ export default function LaporanPeringatan() {
           />
         </div>
 
-        {/* Distribution Chart */}
-        <Show when={(rekapPelanggaran()?.perJenis?.length || 0) > 0}>
+        {/* Distribution Chart (Top 10 Pasal + Lainnya) */}
+        <Show when={(rekapPasal()?.perPasal?.length || 0) > 0}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">
-                Distribusi Pelanggaran per Jenis
+                Agregasi Top 10 Pasal Pelanggaran (Terbanyak)
               </h3>
               <PieChart
                 labels={
-                  rekapPelanggaran()?.perJenis.map(
-                    (j: { jenis: string; jumlah: number; totalPoin: number }) => j.jenis,
+                  rekapPasal()?.perPasal.map((p) =>
+                    p.nomorPasal !== 'Lainnya' && p.nomorPasal !== 'N/A' ? `Pasal ${p.nomorPasal}` : p.nomorPasal,
                   ) || []
                 }
-                data={
-                  rekapPelanggaran()?.perJenis.map(
-                    (j: { jenis: string; jumlah: number; totalPoin: number }) => j.jumlah,
-                  ) || []
-                }
-                height={250}
+                data={rekapPasal()?.perPasal.map((p) => p.jumlah) || []}
+                height={260}
                 donut
               />
             </div>
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Detail Pelanggaran</h3>
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                  <thead>
-                    <tr class="border-b border-secondary-100 dark:border-secondary-800">
-                      <th class="py-2 font-semibold text-secondary-400">Jenis Pelanggaran</th>
-                      <th class="py-2 text-center font-semibold text-secondary-400">Jumlah</th>
-                      <th class="py-2 text-center font-semibold text-secondary-400">Total Poin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <For each={rekapPelanggaran()?.perJenis || []}>
-                      {(j: { jenis: string; jumlah: number; totalPoin: number }) => (
-                        <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                          <td class="py-2 font-semibold text-secondary-800 dark:text-white">{j.jenis}</td>
-                          <td class="py-2 text-center">{j.jumlah}</td>
-                          <td class="py-2 text-center font-bold text-rose-600">{j.totalPoin}</td>
-                        </tr>
-                      )}
-                    </For>
-                  </tbody>
-                </table>
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Detail Agregasi Pasal</h3>
+                <div class="overflow-x-auto max-h-[260px] overflow-y-auto">
+                  <table class="w-full text-left text-xs">
+                    <thead class="sticky top-0 bg-white dark:bg-secondary-900">
+                      <tr class="border-b border-secondary-100 dark:border-secondary-800">
+                        <th class="py-2 font-semibold text-secondary-400">Pasal / Jenis</th>
+                        <th class="py-2 text-center font-semibold text-secondary-400">Jumlah</th>
+                        <th class="py-2 text-center font-semibold text-secondary-400">Total Poin</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <For each={rekapPasal()?.perPasal || []}>
+                        {(p) => (
+                          <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                            <td class="py-2 font-semibold text-secondary-800 dark:text-white">
+                              {p.nomorPasal !== 'Lainnya' && p.nomorPasal !== 'N/A' ? `Pasal ${p.nomorPasal}: ` : ''}
+                              {p.bunyiPasal}
+                            </td>
+                            <td class="py-2 text-center font-bold">{p.jumlah}</td>
+                            <td class="py-2 text-center font-bold text-rose-600">{p.totalPoin}</td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
         </Show>
 
-        {/* Table */}
+        {/* Table Riwayat with Search & Pagination */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
-          <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-            <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Riwayat Pelanggaran</h3>
+          <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Riwayat Pelanggaran Detail</h3>
+            <input
+              type="text"
+              placeholder="Cari NIM, Nama, atau Pelanggaran..."
+              class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white w-full sm:w-64"
+              value={search()}
+              onInput={(e) => {
+                setSearch(e.currentTarget.value);
+                setPage(1);
+              }}
+            />
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
               <thead>
                 <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                   <th class="py-3 px-5">Tanggal</th>
-                  <th class="py-3 px-5">Jenis Pelanggaran</th>
+                  <th class="py-3 px-5">Mahasiswa</th>
+                  <th class="py-3 px-5">Jenis Pelanggaran & Pasal</th>
                   <th class="py-3 px-5 text-center">Bobot Poin</th>
                   <th class="py-3 px-5">Pelapor</th>
                   <th class="py-3 px-5">Keterangan</th>
@@ -175,10 +196,10 @@ export default function LaporanPeringatan() {
               </thead>
               <tbody>
                 <For
-                  each={rekapPelanggaran()?.data || []}
+                  each={riwayatData()?.data || []}
                   fallback={
                     <tr>
-                      <td colspan="5" class="text-center py-8 text-secondary-400">
+                      <td colspan="6" class="text-center py-8 text-secondary-400">
                         Belum ada data pelanggaran
                       </td>
                     </tr>
@@ -186,16 +207,28 @@ export default function LaporanPeringatan() {
                 >
                   {(item: {
                     tanggal: string;
+                    nim?: string;
+                    namaMahasiswa?: string;
                     jenisPelanggaran: string;
+                    nomorPasal?: string | null;
                     bobotPoin?: number;
                     jenisSanksi?: number;
                     pelapor?: string | null;
                     keterangan: string;
                   }) => (
                     <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                      <td class="py-3 px-5">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                      <td class="py-3 px-5 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
+                      <td class="py-3 px-5">
+                        <div class="font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa || '-'}</div>
+                        <div class="text-[10px] text-secondary-400">{item.nim}</div>
+                      </td>
                       <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">
-                        {item.jenisPelanggaran}
+                        <div>{item.jenisPelanggaran}</div>
+                        <Show when={item.nomorPasal}>
+                          <span class="inline-block text-[10px] text-brand-600 dark:text-brand-400 font-normal">
+                            Pasal {item.nomorPasal}
+                          </span>
+                        </Show>
                       </td>
                       <td class="py-3 px-5 text-center font-bold text-rose-600">
                         {item.jenisSanksi ?? item.bobotPoin}
@@ -210,6 +243,29 @@ export default function LaporanPeringatan() {
               </tbody>
             </table>
           </div>
+          <Show when={riwayatData()?.pagination && riwayatData()!.pagination.totalPages > 1}>
+            <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
+              <span class="text-secondary-500">
+                Halaman {riwayatData()?.pagination.page} dari {riwayatData()?.pagination.totalPages}
+              </span>
+              <div class="flex gap-2">
+                <button
+                  disabled={page() <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                >
+                  Sebelumnya
+                </button>
+                <button
+                  disabled={page() >= (riwayatData()?.pagination.totalPages || 1)}
+                  onClick={() => setPage((p) => p + 1)}
+                  class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                >
+                  Selanjutnya
+                </button>
+              </div>
+            </div>
+          </Show>
         </div>
       </div>
     </MainLayout>

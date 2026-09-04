@@ -285,13 +285,8 @@ export class ApelController {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
-      const u = user!;
-      let dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
+      const dosenId = query?.dosenId ? parseInt(query.dosenId) : undefined;
       const tanggal = query?.tanggal || undefined;
-      if (hasRole(u, ['dosen']) && !dosenId) {
-        const dosenUser = await ApelService.getDosenByEmail(u.email);
-        if (dosenUser) dosenId = dosenUser.id;
-      }
       return await ApelService.getMonitorRealtime(dosenId, tanggal);
     } catch (e: unknown) {
       set.status = 400;

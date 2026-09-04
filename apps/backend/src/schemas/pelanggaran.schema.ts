@@ -88,29 +88,43 @@ export const getAllPelanggaranSchema = {
     summary: 'Daftar Semua Pelanggaran',
     description: 'Mengambil semua data pelanggaran mahasiswa untuk keperluan rekap BAAK/Kaprodi.',
   },
+  query: t.Object({
+    page: t.Optional(t.String()),
+    limit: t.Optional(t.String()),
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+  }),
   response: {
-    200: t.Array(
-      t.Object({
-        id: t.Integer(),
-        mahasiswaId: t.Integer(),
-        nim: t.String(),
-        namaMahasiswa: t.String(),
-        prodiNama: t.Union([t.String(), t.Null()]),
-        programStudiId: t.Union([t.Integer(), t.Null()]),
-        jenjang: t.Union([t.String(), t.Null()]),
-        dosenPaId: t.Union([t.Integer(), t.Null()]),
-        tanggal: t.String(),
-        jenisPelanggaran: t.String(),
-        bobotPoin: t.Integer(),
-        keterangan: t.String(),
-        pasalId: t.Union([t.Integer(), t.Null()]),
-        jenisSanksi: t.Integer(),
-        nomorPasal: t.Union([t.String(), t.Null()]),
-        bunyiPasal: t.Union([t.String(), t.Null()]),
-        pelapor: t.Union([t.String(), t.Null()]),
-        createdAt: t.Date(),
-      }),
-    ),
+    200: t.Any(),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
+export const getRekapPasalSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Rekapitulasi Pasal Pelanggaran Top 10',
+    description: 'Mengambil agregasi pelanggaran berdasarkan pasal (Top 10 + Lainnya).',
+  },
+  query: t.Object({
+    programStudiId: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Object({
+      total: t.Number(),
+      totalPoin: t.Number(),
+      perPasal: t.Array(
+        t.Object({
+          pasalId: t.Union([t.Number(), t.Null()]),
+          nomorPasal: t.String(),
+          bunyiPasal: t.String(),
+          jenisPelanggaran: t.String(),
+          jumlah: t.Number(),
+          totalPoin: t.Number(),
+        }),
+      ),
+    }),
     400: t.Object({ error: t.String() }),
     403: t.Object({ error: t.String() }),
   },

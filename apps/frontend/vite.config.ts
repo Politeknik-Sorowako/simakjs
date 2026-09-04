@@ -9,8 +9,9 @@ export default defineConfig({
     solidPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'version.json'],
       manifest: {
+        id: '/',
         name: 'SIMAK Vokasi - Politeknik Sorowako',
         short_name: 'SIMAK Vokasi',
         description: 'Sistem Informasi Akademik Politeknik Sorowako',
@@ -18,6 +19,10 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
+        lang: 'id-ID',
+        categories: ['education', 'productivity'],
         icons: [
           {
             src: '/pwa-192x192.png',
@@ -30,12 +35,28 @@ export default defineConfig({
             type: 'image/png',
           },
           {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+          {
             src: '/pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
           },
+          {
+            src: '/apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png',
+          },
         ],
+      },
+      workbox: {
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        navigateFallbackDenylist: [/^\/api/, /^\/docs/, /^\/swagger/],
+        cleanupOutdatedCaches: true,
       },
     }),
   ],

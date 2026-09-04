@@ -190,6 +190,19 @@ export const getRekapPerProdiSchema = {
   },
 };
 
+export const getMatriksNilaiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Matriks Nilai Mata Kuliah (A-E)',
+    description: 'Mengambil matriks sebaran nilai A-E per mata kuliah.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    search: t.Optional(t.String()),
+  }),
+};
+
 export const getAllKonversiSchema = {
   detail: {
     tags: ['KHS & Transkrip'],

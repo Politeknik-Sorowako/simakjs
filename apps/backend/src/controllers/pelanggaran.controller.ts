@@ -78,7 +78,7 @@ export class PelanggaranController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getAll({ set, getCurrentUser }: AuthContext): Promise<any> {
+  static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
       set.status = 403;
@@ -86,11 +86,34 @@ export class PelanggaranController {
     }
 
     try {
-      return await PelanggaranService.getAllPelanggaran();
+      const page = query?.page ? parseInt(query.page) : undefined;
+      const limit = query?.limit ? parseInt(query.limit) : undefined;
+      const search = query?.search;
+      const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+
+      return await PelanggaranService.getAllPelanggaran(page, limit, search, prodiId);
     } catch (err: unknown) {
       console.error('[PelanggaranController.getAll]', err);
       set.status = 400;
       return { error: safeErrorMessage(err, 'Gagal mengambil data pelanggaran') };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getRekapPasal({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+      return await PelanggaranService.getRekapPasalTop10(prodiId);
+    } catch (err: unknown) {
+      console.error('[PelanggaranController.getRekapPasal]', err);
+      set.status = 400;
+      return { error: safeErrorMessage(err, 'Gagal mengambil rekap pasal pelanggaran') };
     }
   }
 

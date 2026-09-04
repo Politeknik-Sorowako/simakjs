@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import {
   bap,
   bimbingan,
@@ -472,51 +472,111 @@ export class KhsService {
   }
 
   static async getRekapPerProdi(periodeId?: string) {
-    const prodis = await db.select({ id: programStudi.id, nama: programStudi.nama }).from(programStudi);
+    const prodiStats = await db
+      .select({
+        prodiId: programStudi.id,
+        prodiNama: programStudi.nama,
+        totalMahasiswa: sql<number>`(SELECT COUNT(DISTINCT ${mahasiswa.id}) FROM ${mahasiswa} WHERE ${mahasiswa.programStudiId} = ${programStudi.id})`,
+        avgIp: sql<number>`COALESCE((
+          SELECT AVG(mhs_gpa.ip) FROM (
+            SELECT 
+              ${mahasiswa.id} AS mhs_id,
+              SUM(CAST(${krs.nilaiIndeks} AS NUMERIC) * ${mataKuliah.sksTotal}) / NULLIF(SUM(${mataKuliah.sksTotal}), 0) AS ip
+            FROM ${mahasiswa}
+            INNER JOIN ${krs} ON ${krs.mahasiswaId} = ${mahasiswa.id}
+            INNER JOIN ${kelasKuliah} ON ${krs.kelasKuliahId} = ${kelasKuliah.id}
+            INNER JOIN ${mataKuliah} ON ${kelasKuliah.mataKuliahId} = ${mataKuliah.id}
+            WHERE ${mahasiswa.programStudiId} = ${programStudi.id}
+              ${periodeId ? sql`AND ${kelasKuliah.periodeId} = ${periodeId}` : sql``}
+              AND ${krs.nilaiIndeks} IS NOT NULL
+            GROUP BY ${mahasiswa.id}
+          ) mhs_gpa
+        ), 0)`,
+      })
+      .from(programStudi)
+      .orderBy(programStudi.nama);
 
-    const result = [];
-    for (const p of prodis) {
-      const mhsList = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.programStudiId, p.id));
-
-      if (mhsList.length === 0) {
-        result.push({ prodiId: p.id, prodiNama: p.nama, totalMahasiswa: 0, rataIP: 0 });
-        continue;
-      }
-
-      const mhsIds = mhsList.map((m) => m.id);
-      let totalIpk = 0;
-      let mhsWithIpk = 0;
-
-      for (const mhsId of mhsIds) {
-        const rs = await db
-          .select({ nilaiIndeks: krs.nilaiIndeks, sks: mataKuliah.sksTotal })
-          .from(krs)
-          .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-          .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-          .where(and(eq(krs.mahasiswaId, mhsId), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
-
-        let bobot = 0;
-        let sks = 0;
-        for (const r of rs) {
-          if (r.nilaiIndeks && r.sks) {
-            bobot += parseFloat(r.nilaiIndeks) * r.sks;
-            sks += r.sks;
-          }
-        }
-        if (sks > 0) {
-          totalIpk += bobot / sks;
-          mhsWithIpk++;
-        }
-      }
-
-      result.push({
-        prodiId: p.id,
-        prodiNama: p.nama,
-        totalMahasiswa: mhsList.length,
-        rataIP: mhsWithIpk > 0 ? Math.round((totalIpk / mhsWithIpk) * 100) / 100 : 0,
-      });
-    }
+    const result = prodiStats.map((p) => ({
+      prodiId: p.prodiId,
+      prodiNama: p.prodiNama,
+      totalMahasiswa: Number(p.totalMahasiswa),
+      rataIP: Math.round(Number(p.avgIp) * 100) / 100,
+    }));
 
     return { periode: periodeId ? { id: periodeId } : null, prodi: result };
+  }
+
+  static async getMatriksNilaiMataKuliah(options: { periodeId?: string; prodiId?: number; search?: string }) {
+    const conditions = [];
+    if (options.periodeId) {
+      conditions.push(eq(kelasKuliah.periodeId, options.periodeId));
+    }
+    if (options.prodiId) {
+      conditions.push(eq(mataKuliah.programStudiId, options.prodiId));
+    }
+    if (options.search && options.search.trim()) {
+      const s = `%${options.search.trim()}%`;
+      conditions.push(or(ilike(mataKuliah.kode, s), ilike(mataKuliah.nama, s)));
+    }
+
+    const rows = await db
+      .select({
+        mataKuliahId: mataKuliah.id,
+        kodeMk: mataKuliah.kode,
+        namaMk: mataKuliah.nama,
+        sks: mataKuliah.sksTotal,
+        prodiId: mataKuliah.programStudiId,
+        prodiNama: programStudi.nama,
+        totalPeserta: count(krs.id),
+        gradeA: sql<number>`SUM(CASE WHEN ${krs.nilaiHuruf} IN ('A', 'A+', 'A-') THEN 1 ELSE 0 END)`,
+        gradeB: sql<number>`SUM(CASE WHEN ${krs.nilaiHuruf} IN ('B', 'B+', 'B-') THEN 1 ELSE 0 END)`,
+        gradeC: sql<number>`SUM(CASE WHEN ${krs.nilaiHuruf} IN ('C', 'C+', 'C-') THEN 1 ELSE 0 END)`,
+        gradeD: sql<number>`SUM(CASE WHEN ${krs.nilaiHuruf} IN ('D', 'D+', 'D-') THEN 1 ELSE 0 END)`,
+        gradeE: sql<number>`SUM(CASE WHEN ${krs.nilaiHuruf} = 'E' THEN 1 ELSE 0 END)`,
+        gradeNull: sql<number>`SUM(CASE WHEN ${krs.nilaiHuruf} IS NULL OR ${krs.nilaiHuruf} = '' THEN 1 ELSE 0 END)`,
+      })
+      .from(mataKuliah)
+      .leftJoin(programStudi, eq(mataKuliah.programStudiId, programStudi.id))
+      .innerJoin(kelasKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .innerJoin(krs, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(
+        mataKuliah.id,
+        mataKuliah.kode,
+        mataKuliah.nama,
+        mataKuliah.sksTotal,
+        mataKuliah.programStudiId,
+        programStudi.nama,
+      )
+      .orderBy(mataKuliah.kode);
+
+    return rows.map((r) => {
+      const total = Number(r.totalPeserta);
+      const gradeA = Number(r.gradeA);
+      const gradeB = Number(r.gradeB);
+      const gradeC = Number(r.gradeC);
+      const gradeD = Number(r.gradeD);
+      const gradeE = Number(r.gradeE);
+      const gradeNull = Number(r.gradeNull);
+      const lulus = gradeA + gradeB + gradeC + gradeD;
+      const persenLulus = total > 0 ? Math.round((lulus / total) * 100) : 0;
+
+      return {
+        mataKuliahId: r.mataKuliahId,
+        kodeMk: r.kodeMk,
+        namaMk: r.namaMk,
+        sks: r.sks,
+        prodiId: r.prodiId,
+        prodiNama: r.prodiNama || '-',
+        totalPeserta: total,
+        gradeA,
+        gradeB,
+        gradeC,
+        gradeD,
+        gradeE,
+        gradeNull,
+        persenLulus,
+      };
+    });
   }
 }

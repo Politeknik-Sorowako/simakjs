@@ -14,6 +14,8 @@ export default function ApelMonitor() {
   const [autoRefresh, setAutoRefresh] = createSignal(true);
 
   const [selectedDetailSesiId, setSelectedDetailSesiId] = createSignal<number | null>(null);
+  const [searchTerm, setSearchTerm] = createSignal('');
+  const [statusFilter, setStatusFilter] = createSignal('all');
 
   const [sesiDetailData] = createResource(
     () => selectedDetailSesiId(),
@@ -24,15 +26,23 @@ export default function ApelMonitor() {
   );
 
   const [data, { refetch }] = createResource(
-    () => ({ tanggal: tanggal(), role: auth.user()?.role }),
+    () => ({ tanggal: tanggal() }),
     async (params) => {
-      let dosenId: number | undefined;
-      if (params.role === 'dosen') {
-        dosenId = auth.user()!.id as unknown as number;
-      }
-      return apelController.getMonitorRealtime({ dosenId, tanggal: params.tanggal || undefined });
+      return apelController.getMonitorRealtime({ tanggal: params.tanggal || undefined });
     },
   );
+
+  const filteredDetail = () => {
+    const list = data()?.detail || [];
+    const q = searchTerm().trim().toLowerCase();
+    const sf = statusFilter();
+    return list.filter((item) => {
+      const matchStatus = sf === 'all' || item.statusSesi === sf;
+      if (!matchStatus) return false;
+      if (!q) return true;
+      return item.kelompokNama.toLowerCase().includes(q) || (item.dosenNama || '').toLowerCase().includes(q);
+    });
+  };
 
   // Auto-refresh every 30 seconds
   let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -51,9 +61,9 @@ export default function ApelMonitor() {
     const monitorData = data();
     if (!monitorData) return;
 
-    let csv = 'Kelompok,Tanggal,Shift,Dosen,Jam Mulai,Total Mahasiswa,Hadir,Terlambat,Unknown\n';
+    let csv = 'Kelompok,Tanggal,Shift,Dosen,Status Sesi,Jam Mulai,Total Mahasiswa,Hadir,Terlambat,Unknown\n';
     for (const d of monitorData.detail) {
-      csv += `${d.kelompokNama},${d.tanggal},${d.shift},${d.dosenNama},${d.jamMulai},${d.totalMahasiswa},${d.hadir},${d.terlambat},${d.unknown}\n`;
+      csv += `${d.kelompokNama},${d.tanggal},${d.shift},${d.dosenNama},${d.statusSesi || 'belum_buka'},${d.jamMulai},${d.totalMahasiswa},${d.hadir},${d.terlambat},${d.unknown}\n`;
     }
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -102,10 +112,16 @@ export default function ApelMonitor() {
 
         {/* Summary Cards */}
         <Show when={data()}>
-          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div class="text-sm text-gray-500">Sesi Aktif</div>
-              <div class="text-3xl font-bold">{data()?.summary.totalSesiAktif || 0}</div>
+              <div class="text-sm text-gray-500">Total Kelompok Aktif</div>
+              <div class="text-3xl font-bold">{data()?.summary.totalKelompok || data()?.detail.length || 0}</div>
+            </div>
+            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow p-4">
+              <div class="text-sm text-blue-600 dark:text-blue-400">Sesi Berlangsung</div>
+              <div class="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                {data()?.summary.totalSesiAktif || 0}
+              </div>
             </div>
             <div class="bg-green-50 dark:bg-green-900/20 rounded-lg shadow p-4">
               <div class="text-sm text-green-600 dark:text-green-400">Hadir</div>
@@ -125,6 +141,28 @@ export default function ApelMonitor() {
 
           {/* Detail Table */}
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="p-4 border-b dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h3 class="text-sm font-bold">Daftar Pemantauan Sesi Apel</h3>
+              <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="Cari kelompok / dosen..."
+                  class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600 w-full sm:w-56"
+                  value={searchTerm()}
+                  onInput={(e) => setSearchTerm(e.currentTarget.value)}
+                />
+                <select
+                  class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  value={statusFilter()}
+                  onChange={(e) => setStatusFilter(e.currentTarget.value)}
+                >
+                  <option value="all">Semua Status</option>
+                  <option value="berlangsung">Sedang Berlangsung</option>
+                  <option value="belum_buka">Belum Dibuka</option>
+                  <option value="ditutup">Selesai</option>
+                </select>
+              </div>
+            </div>
             <div class="overflow-x-auto">
               <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-700">
@@ -132,7 +170,8 @@ export default function ApelMonitor() {
                     <th class="px-4 py-3 text-left text-xs font-medium uppercase">Kelompok</th>
                     <th class="px-4 py-3 text-left text-xs font-medium uppercase">Tanggal</th>
                     <th class="px-4 py-3 text-center text-xs font-medium uppercase">Shift</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium uppercase">Dosen</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium uppercase">Dosen PJ</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status Sesi</th>
                     <th class="px-4 py-3 text-center text-xs font-medium uppercase">Jam Mulai</th>
                     <th class="px-4 py-3 text-center text-xs font-medium uppercase">Total</th>
                     <th class="px-4 py-3 text-center text-xs font-medium uppercase">Hadir</th>
@@ -142,25 +181,50 @@ export default function ApelMonitor() {
                   </tr>
                 </thead>
                 <tbody class="divide-y dark:divide-gray-700">
-                  <For each={data()?.detail}>
+                  <For each={filteredDetail()}>
                     {(item) => (
                       <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
                         <td class="px-4 py-3 text-sm font-medium">{item.kelompokNama}</td>
                         <td class="px-4 py-3 text-sm">{item.tanggal}</td>
-                        <td class="px-4 py-3 text-center text-sm">{item.shift}</td>
+                        <td class="px-4 py-3 text-center text-sm capitalize">{item.shift}</td>
                         <td class="px-4 py-3 text-sm">{item.dosenNama}</td>
+                        <td class="px-4 py-3 text-center text-xs">
+                          <Show
+                            when={item.statusSesi === 'berlangsung'}
+                            fallback={
+                              <Show
+                                when={item.statusSesi === 'ditutup'}
+                                fallback={
+                                  <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-semibold">
+                                    Belum Dibuka
+                                  </span>
+                                }
+                              >
+                                <span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-semibold">
+                                  Selesai
+                                </span>
+                              </Show>
+                            }
+                          >
+                            <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-semibold">
+                              Berlangsung
+                            </span>
+                          </Show>
+                        </td>
                         <td class="px-4 py-3 text-center text-sm font-mono">{item.jamMulai}</td>
                         <td class="px-4 py-3 text-center text-sm font-bold">{item.totalMahasiswa}</td>
                         <td class="px-4 py-3 text-center text-sm text-green-600 font-semibold">{item.hadir}</td>
                         <td class="px-4 py-3 text-center text-sm text-yellow-600 font-semibold">{item.terlambat}</td>
                         <td class="px-4 py-3 text-center text-sm text-gray-500 font-semibold">{item.unknown}</td>
                         <td class="px-4 py-3 text-center">
-                          <button
-                            class="bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-100 px-3 py-1 rounded text-xs font-semibold"
-                            onClick={() => setSelectedDetailSesiId(item.id)}
-                          >
-                            Detail
-                          </button>
+                          <Show when={item.id} fallback={<span class="text-xs text-gray-400 italic">Belum Sesi</span>}>
+                            <button
+                              class="bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-100 px-3 py-1 rounded text-xs font-semibold"
+                              onClick={() => setSelectedDetailSesiId(item.id)}
+                            >
+                              Detail
+                            </button>
+                          </Show>
                         </td>
                       </tr>
                     )}
