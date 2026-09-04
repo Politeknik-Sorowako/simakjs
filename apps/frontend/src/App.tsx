@@ -753,6 +753,10 @@ function AppContent() {
   );
 }
 
+import OfflineBanner from './components/pwa/OfflineBanner';
+import PwaInstallPrompt from './components/pwa/PwaInstallPrompt';
+import ReloadPrompt from './components/pwa/ReloadPrompt';
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -760,7 +764,10 @@ export default function App() {
         <ToastProvider>
           <AuthProvider>
             <WorkspaceProvider>
+              <OfflineBanner />
               <AppContent />
+              <ReloadPrompt />
+              <PwaInstallPrompt />
             </WorkspaceProvider>
           </AuthProvider>
         </ToastProvider>
