@@ -11,7 +11,7 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
-import { getNowTimeString } from '../utils/timezone';
+import { getNowDateString, getNowTimeString } from '../utils/timezone';
 import { SystemParameterService } from './system-parameter.service';
 
 export class ApelService {
@@ -545,7 +545,7 @@ export class ApelService {
   }
 
   static async getMonitorRealtime(dosenId?: number, tanggal?: string) {
-    const targetTanggal = tanggal || (await getNowTimeString(await SystemParameterService.getTimezone()));
+    const targetTanggal = tanggal || getNowDateString(await SystemParameterService.getTimezone());
 
     const conditions = [eq(kelompokApel.isActive, true)];
     if (dosenId) {

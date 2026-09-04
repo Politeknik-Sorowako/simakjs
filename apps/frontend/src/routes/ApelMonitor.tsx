@@ -14,6 +14,8 @@ export default function ApelMonitor() {
   const [autoRefresh, setAutoRefresh] = createSignal(true);
 
   const [selectedDetailSesiId, setSelectedDetailSesiId] = createSignal<number | null>(null);
+  const [searchTerm, setSearchTerm] = createSignal('');
+  const [statusFilter, setStatusFilter] = createSignal('all');
 
   const [sesiDetailData] = createResource(
     () => selectedDetailSesiId(),
@@ -29,6 +31,18 @@ export default function ApelMonitor() {
       return apelController.getMonitorRealtime({ tanggal: params.tanggal || undefined });
     },
   );
+
+  const filteredDetail = () => {
+    const list = data()?.detail || [];
+    const q = searchTerm().trim().toLowerCase();
+    const sf = statusFilter();
+    return list.filter((item) => {
+      const matchStatus = sf === 'all' || item.statusSesi === sf;
+      if (!matchStatus) return false;
+      if (!q) return true;
+      return item.kelompokNama.toLowerCase().includes(q) || (item.dosenNama || '').toLowerCase().includes(q);
+    });
+  };
 
   // Auto-refresh every 30 seconds
   let intervalId: ReturnType<typeof setInterval> | undefined;
@@ -127,6 +141,28 @@ export default function ApelMonitor() {
 
           {/* Detail Table */}
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div class="p-4 border-b dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h3 class="text-sm font-bold">Daftar Pemantauan Sesi Apel</h3>
+              <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="Cari kelompok / dosen..."
+                  class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600 w-full sm:w-56"
+                  value={searchTerm()}
+                  onInput={(e) => setSearchTerm(e.currentTarget.value)}
+                />
+                <select
+                  class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  value={statusFilter()}
+                  onChange={(e) => setStatusFilter(e.currentTarget.value)}
+                >
+                  <option value="all">Semua Status</option>
+                  <option value="berlangsung">Sedang Berlangsung</option>
+                  <option value="belum_buka">Belum Dibuka</option>
+                  <option value="ditutup">Selesai</option>
+                </select>
+              </div>
+            </div>
             <div class="overflow-x-auto">
               <table class="w-full">
                 <thead class="bg-gray-50 dark:bg-gray-700">
@@ -145,7 +181,7 @@ export default function ApelMonitor() {
                   </tr>
                 </thead>
                 <tbody class="divide-y dark:divide-gray-700">
-                  <For each={data()?.detail}>
+                  <For each={filteredDetail()}>
                     {(item) => (
                       <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
                         <td class="px-4 py-3 text-sm font-medium">{item.kelompokNama}</td>
