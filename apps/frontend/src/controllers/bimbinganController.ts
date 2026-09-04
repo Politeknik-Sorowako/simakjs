@@ -289,8 +289,37 @@ export const bimbinganController = {
     return fetchApi<PelanggaranRekap>(`/pelanggaran/mahasiswa/${mhsId}`);
   },
 
-  async getAllPelanggaran(): Promise<Pelanggaran[]> {
-    return fetchApi<Pelanggaran[]>('/pelanggaran');
+  async getAllPelanggaran(params?: { page?: number; limit?: number; search?: string; prodiId?: number }): Promise<
+    | {
+        data: Pelanggaran[];
+        pagination: { total: number; page: number; totalPages: number; limit: number };
+      }
+    | Pelanggaran[]
+  > {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.limit) searchParams.append('limit', String(params.limit));
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.prodiId) searchParams.append('prodiId', String(params.prodiId));
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+    return fetchApi<any>(`/pelanggaran${qs}`);
+  },
+
+  async getRekapPasal(prodiId?: number): Promise<{
+    total: number;
+    totalPoin: number;
+    perPasal: Array<{
+      pasalId: number | null;
+      nomorPasal: string;
+      bunyiPasal: string;
+      jenisPelanggaran: string;
+      jumlah: number;
+      totalPoin: number;
+    }>;
+  }> {
+    const qs = prodiId ? `?programStudiId=${prodiId}` : '';
+    return fetchApi(`/pelanggaran/rekap-pasal${qs}`);
   },
 
   async getRekapPelanggaran(programStudiId?: number): Promise<RekapPelanggaran> {

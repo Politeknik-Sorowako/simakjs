@@ -49,7 +49,8 @@ export default function Pelanggaran() {
       return null;
     },
     async () => {
-      return await bimbinganController.getAllPelanggaran();
+      const res = await bimbinganController.getAllPelanggaran();
+      return Array.isArray(res) ? res : res?.data || [];
     },
   );
 

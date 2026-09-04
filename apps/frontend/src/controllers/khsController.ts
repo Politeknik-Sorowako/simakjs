@@ -282,6 +282,32 @@ export const khsController = {
     return fetchApi<RekapPerProdi>(url);
   },
 
+  async getMatriksNilaiMK(periodeId?: string, prodiId?: number, search?: string) {
+    const params = new URLSearchParams();
+    if (periodeId) params.append('periodeId', periodeId);
+    if (prodiId) params.append('prodiId', String(prodiId));
+    if (search) params.append('search', search);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<
+      Array<{
+        mataKuliahId: number;
+        kodeMk: string;
+        namaMk: string;
+        sks: number;
+        prodiId?: number | null;
+        prodiNama: string;
+        totalPeserta: number;
+        gradeA: number;
+        gradeB: number;
+        gradeC: number;
+        gradeD: number;
+        gradeE: number;
+        gradeNull: number;
+        persenLulus: number;
+      }>
+    >(`/khs/matriks-nilai${qs}`);
+  },
+
   async getYudisiumStats(periodeId?: string) {
     const qs = periodeId ? `?periodeId=${periodeId}` : '';
     return fetchApi<YudisiumStats>(`/yudisium/stats${qs}`);

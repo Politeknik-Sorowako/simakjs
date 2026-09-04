@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, or, SQL, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, or, SQL, sql, sum } from 'drizzle-orm';
 import {
   dosen,
   mahasiswa,
@@ -247,8 +247,15 @@ export class PelanggaranService {
     };
   }
 
-  static async getAllPelanggaran() {
-    const rows = await db
+  static async getAllPelanggaran(page?: number, limit?: number, search?: string, prodiId?: number) {
+    const conditions = [];
+    if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
+    if (search && search.trim()) {
+      const s = `%${search.trim()}%`;
+      conditions.push(or(ilike(mahasiswa.nama, s), ilike(mahasiswa.nim, s), ilike(pelanggaran.jenisPelanggaran, s)));
+    }
+
+    const baseQuery = db
       .select({
         id: pelanggaran.id,
         mahasiswaId: pelanggaran.mahasiswaId,
@@ -274,9 +281,94 @@ export class PelanggaranService {
       .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .leftJoin(pasalPelanggaran, eq(pelanggaran.pasalId, pasalPelanggaran.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(desc(pelanggaran.tanggal));
 
+    if (page && limit) {
+      const offset = (page - 1) * limit;
+      const rows = await baseQuery.limit(limit).offset(offset);
+      const [{ countVal }] = await db
+        .select({ countVal: count(pelanggaran.id) })
+        .from(pelanggaran)
+        .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+      return {
+        data: rows.map((item) => ({ ...item, bobotPoin: Number(item.bobotPoin) })),
+        pagination: {
+          total: Number(countVal),
+          page,
+          limit,
+          totalPages: Math.ceil(Number(countVal) / limit),
+        },
+      };
+    }
+
+    const rows = await baseQuery;
     return rows.map((item) => ({ ...item, bobotPoin: Number(item.bobotPoin) }));
+  }
+
+  static async getRekapPasalTop10(programStudiId?: number) {
+    const conditions = [];
+    if (programStudiId) {
+      conditions.push(eq(mahasiswa.programStudiId, programStudiId));
+    }
+
+    const rows = await db
+      .select({
+        pasalId: pelanggaran.pasalId,
+        nomorPasal: sql<string>`COALESCE(${pasalPelanggaran.nomorPasal}, 'N/A')`,
+        bunyiPasal: sql<string>`COALESCE(${pasalPelanggaran.bunyiPasal}, ${pelanggaran.jenisPelanggaran})`,
+        jenisPelanggaran: pelanggaran.jenisPelanggaran,
+        jumlah: count(pelanggaran.id),
+        totalPoin: sql<number>`COALESCE(SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)), 0)`,
+      })
+      .from(pelanggaran)
+      .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
+      .leftJoin(pasalPelanggaran, eq(pelanggaran.pasalId, pasalPelanggaran.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .groupBy(
+        pelanggaran.pasalId,
+        pasalPelanggaran.nomorPasal,
+        pasalPelanggaran.bunyiPasal,
+        pelanggaran.jenisPelanggaran,
+      )
+      .orderBy(desc(count(pelanggaran.id)));
+
+    const totalPelanggaran = rows.reduce((acc, r) => acc + Number(r.jumlah), 0);
+    const totalPoin = rows.reduce((acc, r) => acc + Number(r.totalPoin), 0);
+
+    let perPasal = rows.map((r) => ({
+      pasalId: r.pasalId,
+      nomorPasal: r.nomorPasal,
+      bunyiPasal: r.bunyiPasal,
+      jenisPelanggaran: r.jenisPelanggaran,
+      jumlah: Number(r.jumlah),
+      totalPoin: Number(r.totalPoin),
+    }));
+
+    if (perPasal.length > 10) {
+      const top10 = perPasal.slice(0, 10);
+      const rest = perPasal.slice(10);
+      const restJumlah = rest.reduce((acc, r) => acc + r.jumlah, 0);
+      const restPoin = rest.reduce((acc, r) => acc + r.totalPoin, 0);
+
+      top10.push({
+        pasalId: null,
+        nomorPasal: 'Lainnya',
+        bunyiPasal: 'Pasal Pelanggaran Lainnya',
+        jenisPelanggaran: 'Lainnya',
+        jumlah: restJumlah,
+        totalPoin: restPoin,
+      });
+      perPasal = top10;
+    }
+
+    return {
+      total: totalPelanggaran,
+      totalPoin,
+      perPasal,
+    };
   }
 
   static async getRekap(programStudiId?: number) {

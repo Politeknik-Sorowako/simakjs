@@ -244,4 +244,23 @@ export class KhsController {
       return { error: err instanceof Error ? err.message : 'Gagal mengambil rekap per prodi.' };
     }
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMatriksNilaiMK({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login.' };
+    }
+    const q = (query || {}) as Record<string, string | undefined>;
+    const periodeId = q.periodeId;
+    const prodiId = q.prodiId ? parseInt(q.prodiId) : undefined;
+    const search = q.search;
+    try {
+      return await KhsService.getMatriksNilaiMataKuliah({ periodeId, prodiId, search });
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengambil matriks nilai mata kuliah.' };
+    }
+  }
 }
