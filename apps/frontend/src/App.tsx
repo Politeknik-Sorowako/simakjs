@@ -49,6 +49,7 @@ import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
 import EvaluasiSistem from './routes/EvaluasiSistem';
 import ForceChangePassword from './routes/ForceChangePassword';
 import ForgotPassword from './routes/ForgotPassword';
+import GoogleCallback from './routes/GoogleCallback';
 import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
@@ -107,6 +108,7 @@ function AppContent() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/ganti-password" component={ForceChangePassword} />
       <Route path="/rombel/enroll/:token" component={RombelEnroll} />
+      <Route path="/auth/google/callback" component={GoogleCallback} />
 
       {/* Protected Routes */}
       <Route

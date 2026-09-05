@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { AuthService } from '../services/auth.service';
+import { SsoService } from '../services/sso.service';
 import { isSuperAdminOrAdmin } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -100,6 +101,73 @@ export class AuthController {
       token,
       user: userResponse,
     };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async googleAuthUrl({ set }: AuthContext): Promise<any> {
+    try {
+      const url = SsoService.getGoogleAuthUrl();
+      set.status = 200;
+      return { url };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghasilkan Auth URL Google SSO' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async googleCallback({ body, jwt, set, cookie }: AuthContext & { jwt: any }): Promise<any> {
+    try {
+      const code = (body as { code?: string })?.code;
+      if (!code) {
+        set.status = 400;
+        return { error: 'Authorization code wajib diisi' };
+      }
+
+      const user = await SsoService.handleGoogleCallback(code);
+
+      const token = await jwt.sign({
+        id: user.id,
+        email: user.email,
+        nama: user.nama,
+        role: user.role,
+        roles: user.roles,
+        mustChangePassword: user.mustChangePassword,
+        isGlobalScope: user.isGlobalScope,
+      });
+
+      if (cookie?.access_token) {
+        cookie.access_token.set({
+          value: token,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60,
+        });
+      }
+
+      set.status = 200;
+      const userResponse: Record<string, unknown> = {
+        id: user.id,
+        email: user.email,
+        nama: user.nama,
+        role: user.role,
+        roles: user.roles,
+        mustChangePassword: user.mustChangePassword,
+      };
+      if (user.theme) userResponse.theme = user.theme;
+      if (user.avatar) userResponse.avatar = user.avatar;
+
+      return {
+        message: 'Login Google berhasil',
+        token,
+        user: userResponse,
+      };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memproses autentikasi Google SSO' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

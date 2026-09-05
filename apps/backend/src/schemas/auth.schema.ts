@@ -173,3 +173,14 @@ export const clearRateLimitSchema = {
     }),
   },
 };
+
+export const googleCallbackSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Pertukaran authorization code Google SSO untuk sesi login',
+    description: 'Menukar authorization code yang dikirim oleh Google OAuth consent screen dengan sesi JWT.',
+  },
+  body: t.Object({
+    code: t.String({ description: 'Google OAuth authorization code' }),
+  }),
+};

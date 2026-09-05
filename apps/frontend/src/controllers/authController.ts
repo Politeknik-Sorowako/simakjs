@@ -35,6 +35,16 @@ export const authController = {
     return unwrap<{ email: string }>(eden.auth['reset-password']['validate'].post({ token }));
   },
 
+  async getGoogleAuthUrl(): Promise<{ url: string }> {
+    return unwrap<{ url: string }>(
+      eden.auth.google.url.get() as unknown as Promise<{ data?: { url: string }; error?: unknown }>,
+    );
+  },
+
+  async handleGoogleCallback(code: string): Promise<AuthResponse> {
+    return unwrap<AuthResponse>(eden.auth.google.callback.post({ code }) as unknown as AuthEden);
+  },
+
   async clearRateLimit(email: string): Promise<{ message: string; loginCleared: boolean; forgotCleared: boolean }> {
     return unwrap<{ message: string; loginCleared: boolean; forgotCleared: boolean }>(
       eden.auth['clear-rate-limit'].post({ email }),
