@@ -1,5 +1,5 @@
 import { A, useNavigate, useSearchParams } from '@solidjs/router';
-import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
+import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
@@ -64,6 +64,7 @@ export default function Login() {
   const [ssoLoading, setSsoLoading] = createSignal(false);
 
   let countdownTimer: ReturnType<typeof setInterval> | null = null;
+  let ssoTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
   const stopCountdown = () => {
     if (countdownTimer) {
@@ -72,7 +73,42 @@ export default function Login() {
     }
   };
 
-  onCleanup(stopCountdown);
+  const resetSSOLoading = () => {
+    setSsoLoading(false);
+    setLoading(false);
+    if (ssoTimeoutTimer) {
+      clearTimeout(ssoTimeoutTimer);
+      ssoTimeoutTimer = null;
+    }
+  };
+
+  onCleanup(() => {
+    stopCountdown();
+    resetSSOLoading();
+  });
+
+  onMount(() => {
+    // Reset SSO loading state when page restored from BFCache (e.g. back button in standalone PWA)
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted || document.visibilityState === 'visible') {
+        resetSSOLoading();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        resetSSOLoading();
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    onCleanup(() => {
+      window.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    });
+  });
 
   createEffect(() => {
     const seconds = retryAfter();
@@ -119,18 +155,23 @@ export default function Login() {
     try {
       setSsoLoading(true);
       setLoading(true);
+
+      // Auto dismiss overlay after 10s if redirect is cancelled/stuck
+      if (ssoTimeoutTimer) clearTimeout(ssoTimeoutTimer);
+      ssoTimeoutTimer = setTimeout(() => {
+        resetSSOLoading();
+      }, 10000);
+
       const res = await authController.getGoogleAuthUrl();
       if (res?.url) {
         window.location.href = res.url;
       } else {
         toast.showToast('Gagal memuat URL login Google SSO', 'error');
-        setSsoLoading(false);
-        setLoading(false);
+        resetSSOLoading();
       }
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal memulai login Google SSO', 'error');
-      setSsoLoading(false);
-      setLoading(false);
+      resetSSOLoading();
     }
   };
 
@@ -265,6 +306,13 @@ export default function Login() {
             <p class="text-xs text-secondary-500 dark:text-secondary-400">
               Mengarahkan ke portal otentikasi Politeknik Sorowako...
             </p>
+            <button
+              type="button"
+              onClick={resetSSOLoading}
+              class="mt-2 text-xs font-medium text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200 underline focus:outline-none"
+            >
+              Batal / Kembali
+            </button>
           </div>
         </div>
       </Show>
