@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import { AuthService } from '../services/auth.service';
+import { SsoService } from '../services/sso.service';
 import { isSuperAdminOrAdmin } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -323,5 +324,17 @@ export class AuthController {
       loginCleared,
       forgotCleared,
     };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async googleAuthUrl({ set }: AuthContext): Promise<any> {
+    try {
+      const url = SsoService.getGoogleAuthUrl();
+      set.status = 200;
+      return { url };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghasilkan Auth URL Google SSO' };
+    }
   }
 }

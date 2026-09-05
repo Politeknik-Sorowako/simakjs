@@ -40,4 +40,10 @@ export const authController = {
       eden.auth['clear-rate-limit'].post({ email }),
     );
   },
+
+  async getGoogleAuthUrl(): Promise<{ url: string }> {
+    return unwrap<{ url: string }>(
+      eden.auth.google.url.get() as unknown as Promise<{ data?: { url: string }; error?: unknown }>,
+    );
+  },
 };
