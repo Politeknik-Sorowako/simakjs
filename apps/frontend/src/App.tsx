@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from '@solidjs/router';
 import { QueryClientProvider } from '@tanstack/solid-query';
-import { lazy, Suspense } from 'solid-js';
+import { ErrorBoundary, lazy, Suspense } from 'solid-js';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import OfflineBanner from './components/pwa/OfflineBanner';
 import PwaInstallPrompt from './components/pwa/PwaInstallPrompt';
@@ -112,670 +112,708 @@ function RouteLoadingFallback() {
   );
 }
 
+function RouteErrorFallback(props: { error: unknown; reset: () => void }) {
+  const errMessage = props.error instanceof Error ? props.error.message : 'Gagal memuat komponen halaman';
+  return (
+    <div class="min-h-screen flex flex-col items-center justify-center bg-secondary-50 dark:bg-secondary-950 text-secondary-800 dark:text-secondary-100 p-6 text-center">
+      <div class="w-14 h-14 mb-4 rounded-2xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-inner">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+      </div>
+      <h2 class="text-lg font-bold mb-2">Terjadi Kendala Memuat Halaman</h2>
+      <p class="text-sm text-secondary-500 dark:text-secondary-400 max-w-md mb-6">{errMessage}</p>
+      <div class="flex gap-3">
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          class="px-4 py-2 text-sm font-semibold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow-md transition-all active:scale-95"
+        >
+          Muat Ulang Halaman
+        </button>
+        <button
+          type="button"
+          onClick={() => props.reset()}
+          class="px-4 py-2 text-sm font-semibold rounded-xl border border-secondary-300 dark:border-secondary-700 hover:bg-secondary-100 dark:hover:bg-secondary-800 text-secondary-700 dark:text-secondary-200 transition-all active:scale-95"
+        >
+          Coba Lagi
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const auth = useAuth();
 
   return (
-    <Suspense fallback={<RouteLoadingFallback />}>
-      <Routes>
-        {/* Public Route */}
-        <Route path="/login" component={Login} />
-        <Route path="/forgot-password" component={ForgotPassword} />
-        <Route path="/reset-password" component={ResetPassword} />
-        <Route path="/ganti-password" component={ForceChangePassword} />
-        <Route path="/aktivasi-akun" component={AktivasiAkun} />
-        <Route path="/auth/google/callback" component={GoogleCallback} />
-        <Route path="/rombel/enroll/:token" component={RombelEnroll} />
+    <ErrorBoundary fallback={(err, reset) => <RouteErrorFallback error={err} reset={reset} />}>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          {/* Public Route */}
+          <Route path="/login" component={Login} />
+          <Route path="/forgot-password" component={ForgotPassword} />
+          <Route path="/reset-password" component={ResetPassword} />
+          <Route path="/ganti-password" component={ForceChangePassword} />
+          <Route path="/aktivasi-akun" component={AktivasiAkun} />
+          <Route path="/auth/google/callback" component={GoogleCallback} />
+          <Route path="/rombel/enroll/:token" component={RombelEnroll} />
 
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/program-studi"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <ProgramStudi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mahasiswa"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <Mahasiswa />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dosen"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <Dosen />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/periode-akademik"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <PeriodeAkademik />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/mata-kuliah"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <MataKuliah />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/kelas-kuliah"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <KelasKuliah />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/krs"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
-              <Krs />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/keuangan"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'mahasiswa']}>
-              <KeuanganDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/jurnal-presensi"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
-              <BapPresensi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan-kompensasi"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <LaporanKompensasi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/kompensasi-manual"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'instruktur', 'dosen']}>
-              <KompensasiManual />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/input-kompensasi-manual" element={<Navigate href="/kompensasi-manual" />} />
-        <Route
-          path="/duplicate-risk-kompensasi"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <DuplicateRiskKompensasi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/presensi-apel"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
-              <ApelKelola />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/apel/verifikasi"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <ApelVerifikasi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/apel/monitor"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
-              <ApelMonitor />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/presensi-unknown"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi']}>
-              <PresensiUnknown />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/presensi-saya"
-          element={
-            <ProtectedRoute allowedRoles={['mahasiswa']}>
-              <PresensiMahasiswa />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/bimbingan"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
-              <Bimbingan />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/monitoring-bimbingan"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
-              <MonitoringBimbingan />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pelanggaran"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'instruktur', 'prodi']}>
-              <Pelanggaran />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pelanggaran/pasal-bpa"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'super_admin']}>
-              <AdminPasalBpa />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/evaluasi-sistem"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan']}>
-              <EvaluasiSistem />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/khs"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
-              <Khs />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/input-nilai"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
-              <InputNilai />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/yudisium"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
-              <Yudisium />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pddikti"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen']}>
-              <PddiktiSync />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pengguna"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <Pengguna />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/audit-log"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-              <AuditLog />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/konfigurasi/akses-role"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-              <KonfigurasiAksesRole />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/konfigurasi/scope-prodi"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-              <KonfigurasiScopeProdi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/konfigurasi/parameter"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-              <KonfigurasiParameter />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/konfigurasi/about"
-          element={
-            <ProtectedRoute>
-              <KonfigurasiAbout />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profil"
-          element={
-            <ProtectedRoute>
-              <Profil />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/kurikulum"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <Kurikulum />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/angkatan-kurikulum"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AngkatanKurikulum />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/profil-lulusan"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <ProfilLulusan />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/visi-misi-prodi"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <VisiMisiProdi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/bahan-kajian"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <BahanKajian />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cpl"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <Cpl />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cpmk"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
-              <Cpmk />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/peta-obe"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
-              <PetaObe />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/rps"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'instruktur']}>
-              <Rps />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/pengajuan-cuti"
-          element={
-            <ProtectedRoute allowedRoles={['mahasiswa']}>
-              <CutiMahasiswa />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/manajemen-cuti"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'keuangan']}>
-              <ManajemenCuti />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/penonaktifan"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <MahasiswaKeluar />
-            </ProtectedRoute>
-          }
-        />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/program-studi"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ProgramStudi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mahasiswa"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Mahasiswa />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dosen"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Dosen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/periode-akademik"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <PeriodeAkademik />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mata-kuliah"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <MataKuliah />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kelas-kuliah"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <KelasKuliah />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/krs"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+                <Krs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/keuangan"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'mahasiswa']}>
+                <KeuanganDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/jurnal-presensi"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
+                <BapPresensi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan-kompensasi"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <LaporanKompensasi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kompensasi-manual"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'instruktur', 'dosen']}>
+                <KompensasiManual />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/input-kompensasi-manual" element={<Navigate href="/kompensasi-manual" />} />
+          <Route
+            path="/duplicate-risk-kompensasi"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DuplicateRiskKompensasi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/presensi-apel"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
+                <ApelKelola />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/apel/verifikasi"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <ApelVerifikasi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/apel/monitor"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+                <ApelMonitor />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/presensi-unknown"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi']}>
+                <PresensiUnknown />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/presensi-saya"
+            element={
+              <ProtectedRoute allowedRoles={['mahasiswa']}>
+                <PresensiMahasiswa />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bimbingan"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
+                <Bimbingan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/monitoring-bimbingan"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+                <MonitoringBimbingan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pelanggaran"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'instruktur', 'prodi']}>
+                <Pelanggaran />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pelanggaran/pasal-bpa"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'super_admin']}>
+                <AdminPasalBpa />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/evaluasi-sistem"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi', 'keuangan']}>
+                <EvaluasiSistem />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/khs"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+                <Khs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/input-nilai"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'instruktur']}>
+                <InputNilai />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/yudisium"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa', 'prodi']}>
+                <Yudisium />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pddikti"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen']}>
+                <PddiktiSync />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pengguna"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Pengguna />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit-log"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                <AuditLog />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/konfigurasi/akses-role"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                <KonfigurasiAksesRole />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/konfigurasi/scope-prodi"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                <KonfigurasiScopeProdi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/konfigurasi/parameter"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                <KonfigurasiParameter />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/konfigurasi/about"
+            element={
+              <ProtectedRoute>
+                <KonfigurasiAbout />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profil"
+            element={
+              <ProtectedRoute>
+                <Profil />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kurikulum"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <Kurikulum />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/angkatan-kurikulum"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AngkatanKurikulum />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profil-lulusan"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <ProfilLulusan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/visi-misi-prodi"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <VisiMisiProdi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bahan-kajian"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <BahanKajian />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cpl"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <Cpl />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cpmk"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+                <Cpmk />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/peta-obe"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+                <PetaObe />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rps"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'instruktur']}>
+                <Rps />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pengajuan-cuti"
+            element={
+              <ProtectedRoute allowedRoles={['mahasiswa']}>
+                <CutiMahasiswa />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/manajemen-cuti"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi', 'keuangan']}>
+                <ManajemenCuti />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/penonaktifan"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <MahasiswaKeluar />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Report Pages */}
-        <Route
-          path="/laporan/rekap-nilai"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
-              <LaporanRekapNilai />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/peringatan"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen', 'instruktur']}>
-              <LaporanPeringatan />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/obe"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <LaporanObe />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/obe/bobot-penilaian"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <BobotPenilaianObe />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/obe/evaluasi-kurikulum"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <EvaluasiKurikulum />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/mahasiswa-baru"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <LaporanMahasiswaBaru />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/presensi-kelas"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
-              <LaporanPresensiKelas />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/akademik"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
-              <LaporanAkademik />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/bkd"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
-              <LaporanBKD />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/krs"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
-              <LaporanKRS />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/keuangan"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'keuangan']}>
-              <LaporanKeuangan />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/yudisium"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
-              <LaporanYudisium />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/laporan/mahasiswa-keluar"
-          element={
-            <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-              <LaporanMahasiswaKeluar />
-            </ProtectedRoute>
-          }
-        />
+          {/* Report Pages */}
+          <Route
+            path="/laporan/rekap-nilai"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+                <LaporanRekapNilai />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/peringatan"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen', 'instruktur']}>
+                <LaporanPeringatan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/obe"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <LaporanObe />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/obe/bobot-penilaian"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <BobotPenilaianObe />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/obe/evaluasi-kurikulum"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <EvaluasiKurikulum />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/mahasiswa-baru"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <LaporanMahasiswaBaru />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/presensi-kelas"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
+                <LaporanPresensiKelas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/akademik"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+                <LaporanAkademik />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/bkd"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+                <LaporanBKD />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/krs"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+                <LaporanKRS />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/keuangan"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'keuangan']}>
+                <LaporanKeuangan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/yudisium"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+                <LaporanYudisium />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/laporan/mahasiswa-keluar"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
+                <LaporanMahasiswaKeluar />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Admisi Routes */}
-        <Route path="/daftar" component={AdmisiDaftar} />
-        <Route
-          path="/admisi/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
-              <AdmisiDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/sesi"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
-              <AdmisiSesi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/pendaftaran/baru"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
-              <AdmisiPendaftaranBaru />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/pendaftaran/:id"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa', 'admin']}>
-              <AdmisiDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/pendaftaran/:id/edit"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
-              <AdmisiEditPendaftaran />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/pendaftaran/:id/dokumen"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
-              <AdmisiDokumen />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/pendaftaran/:id/daftar-ulang"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa', 'admin']}>
-              <AdmisiDaftarUlang />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/pembayaran/:id"
-          element={
-            <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
-              <AdmisiPembayaran />
-            </ProtectedRoute>
-          }
-        />
+          {/* Admisi Routes */}
+          <Route path="/daftar" component={AdmisiDaftar} />
+          <Route
+            path="/admisi/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+                <AdmisiDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/sesi"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+                <AdmisiSesi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/pendaftaran/baru"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+                <AdmisiPendaftaranBaru />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/pendaftaran/:id"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa', 'admin']}>
+                <AdmisiDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/pendaftaran/:id/edit"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+                <AdmisiEditPendaftaran />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/pendaftaran/:id/dokumen"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+                <AdmisiDokumen />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/pendaftaran/:id/daftar-ulang"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa', 'admin']}>
+                <AdmisiDaftarUlang />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/pembayaran/:id"
+            element={
+              <ProtectedRoute allowedRoles={['calon_mahasiswa']}>
+                <AdmisiPembayaran />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Admin PMB Routes */}
-        <Route
-          path="/admisi/manajemen"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiManajemenDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/sesi"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiSesiList />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/sesi/:id"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiSesiDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/verifikasi"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiVerifikasi />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/penilaian"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiPenilaian />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/jadwal"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiJadwal />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/daftar-ulang"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiDaftarUlangNIM />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/import-ujian"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiImportUjian />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/seleksi-massal"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiSeleksiMassal />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/laporan"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiLaporan />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/pengumuman"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiPengumuman />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admisi/manajemen/va-banks"
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <AdmisiVABanks />
-            </ProtectedRoute>
-          }
-        />
+          {/* Admin PMB Routes */}
+          <Route
+            path="/admisi/manajemen"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiManajemenDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/sesi"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiSesiList />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/sesi/:id"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiSesiDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/verifikasi"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiVerifikasi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/penilaian"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiPenilaian />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/jadwal"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiJadwal />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/daftar-ulang"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiDaftarUlangNIM />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/import-ujian"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiImportUjian />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/seleksi-massal"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiSeleksiMassal />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/laporan"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiLaporan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/pengumuman"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiPengumuman />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admisi/manajemen/va-banks"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdmisiVABanks />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Catch-all redirect */}
-        <Route
-          path="*"
-          element={auth.isAuthenticated() ? <Navigate href="/dashboard" /> : <Navigate href="/login" />}
-        />
-      </Routes>
-    </Suspense>
+          {/* Catch-all redirect */}
+          <Route
+            path="*"
+            element={auth.isAuthenticated() ? <Navigate href="/dashboard" /> : <Navigate href="/login" />}
+          />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
