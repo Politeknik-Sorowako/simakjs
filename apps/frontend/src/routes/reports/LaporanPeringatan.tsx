@@ -1,30 +1,46 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { PieChart, StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { bimbinganController } from '../../controllers/bimbinganController';
+import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import { ExportColumn } from '../../utils/export';
 
 export default function LaporanPeringatan() {
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
+  const [selectedPeriode, setSelectedPeriode] = createSignal('');
 
-  const [rekapPasal] = createResource(async () => {
-    try {
-      return await bimbinganController.getRekapPasal();
-    } catch {
-      return { total: 0, totalPoin: 0, perPasal: [] };
+  const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
+
+  createEffect(() => {
+    const list = periodes()?.data;
+    if (list && list.length > 0 && !selectedPeriode()) {
+      const active = list.find((p) => p.aktif);
+      if (active) setSelectedPeriode(active.id);
     }
   });
 
+  const [rekapPasal] = createResource(
+    () => selectedPeriode(),
+    async (periodeId) => {
+      try {
+        return await bimbinganController.getRekapPasal(undefined, periodeId || undefined);
+      } catch {
+        return { total: 0, totalPoin: 0, perPasal: [] };
+      }
+    },
+  );
+
   const [riwayatData] = createResource(
-    () => ({ page: page(), search: search() }),
+    () => ({ page: page(), search: search(), periode: selectedPeriode() }),
     async (params) => {
       try {
         const res = await bimbinganController.getAllPelanggaran({
           page: params.page,
           limit: 20,
           search: params.search,
+          periodeId: params.periode || undefined,
         });
         if (Array.isArray(res)) {
           return { data: res, pagination: { total: res.length, page: 1, totalPages: 1 } };
@@ -64,6 +80,42 @@ export default function LaporanPeringatan() {
             title="Laporan Peringatan & Kedisiplinan Mahasiswa"
             subtitle={`Total: ${rekapPasal()?.total || 0} pelanggaran`}
           />
+        </div>
+
+        {/* Filter Periode */}
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div class="w-full sm:w-72">
+            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+              Periode Semester
+            </label>
+            <select
+              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+              value={selectedPeriode()}
+              onChange={(e) => {
+                setSelectedPeriode(e.currentTarget.value);
+                setPage(1);
+              }}
+            >
+              <option value="">Semua Periode</option>
+              <For each={periodes()?.data || []}>
+                {(p) => (
+                  <option value={p.id}>
+                    {p.nama} {p.aktif ? '(Aktif)' : ''}
+                  </option>
+                )}
+              </For>
+            </select>
+          </div>
+          <div class="text-xs text-secondary-500 dark:text-secondary-400">
+            <Show when={selectedPeriode()} fallback={<span>Menampilkan akumulasi seluruh periode</span>}>
+              <span>
+                Menampilkan data periode:{' '}
+                <strong class="text-brand-600 dark:text-brand-400">
+                  {periodes()?.data?.find((p) => p.id === selectedPeriode())?.nama || selectedPeriode()}
+                </strong>
+              </span>
+            </Show>
+          </div>
         </div>
 
         {/* Summary Cards */}

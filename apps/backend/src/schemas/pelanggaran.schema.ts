@@ -8,6 +8,7 @@ export const pelanggaranBody = t.Object({
   pasalId: t.Optional(t.Union([t.Integer(), t.Null()])),
   jenisSanksi: t.Optional(t.Integer({ minimum: 1, maximum: 4, default: 1 })),
   pelapor: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
+  periodeId: t.Optional(t.Union([t.String({ maxLength: 5 }), t.Null()])),
 });
 
 // Bentuk return tunggal (create & update) dari `.returning()` Drizzle.
@@ -21,6 +22,7 @@ export const pelanggaranResponse = t.Object({
   jenisSanksi: t.Integer(),
   pelapor: t.Union([t.String(), t.Null()]),
   dibuatOleh: t.Union([t.Integer(), t.Null()]),
+  periodeId: t.Union([t.String(), t.Null()]),
   createdAt: t.Date(),
   updatedAt: t.Date(),
 });
@@ -93,6 +95,7 @@ export const getAllPelanggaranSchema = {
     limit: t.Optional(t.String()),
     search: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
+    periodeId: t.Optional(t.String()),
   }),
   response: {
     200: t.Any(),
@@ -109,6 +112,7 @@ export const getRekapPasalSchema = {
   },
   query: t.Object({
     programStudiId: t.Optional(t.String()),
+    periodeId: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({

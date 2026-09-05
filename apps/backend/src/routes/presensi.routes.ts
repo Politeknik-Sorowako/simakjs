@@ -11,6 +11,8 @@ import {
   getMahasiswaPresensiSchema,
   getRekapKehadiranMahasiswaSchema,
   getRekapKehadiranSchema,
+  getRekapKelasListSchema,
+  getRekapMahasiswaListSchema,
   getUnknownPresensiSchema,
   importKompensasiBayarSchema,
   resolveUnknownPresensiSchema,
@@ -32,6 +34,8 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .get('/kompensasi/laporan', PresensiController.getLaporanKompensasi, getLaporanKompensasiSchema)
   .get('/rekap-kehadiran', PresensiController.getRekapKehadiran, getRekapKehadiranSchema)
   .get('/rekap-kehadiran-mahasiswa', PresensiController.getRekapKehadiranMahasiswa, getRekapKehadiranMahasiswaSchema)
+  .get('/rekap-kelas-list', PresensiController.getRekapKelasList, getRekapKelasListSchema)
+  .get('/rekap-mahasiswa-list', PresensiController.getRekapMahasiswaList, getRekapMahasiswaListSchema)
   .get('/kompensasi/mahasiswa/:mahasiswaId', PresensiController.getKompensasiDetail, getKompensasiMahasiswaDetailSchema)
   .post('/kompensasi/bayar', PresensiController.bayarKompensasi, bayarKompensasiSchema)
   .post('/kompensasi/bayar/import', PresensiController.importKompensasiBayar, importKompensasiBayarSchema)

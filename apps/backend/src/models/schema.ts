@@ -802,6 +802,7 @@ export const pelanggaran = pgTable('pelanggaran', {
   jenisSanksi: integer('jenis_sanksi').default(1).notNull(), // 1 = Lisan, 4 = Tertulis
   pelapor: varchar('pelapor', { length: 255 }),
   dibuatOleh: integer('dibuat_oleh').references(() => users.id, { onDelete: 'set null' }),
+  periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -860,6 +861,10 @@ export const pelanggaranRelations = relations(pelanggaran, ({ one }) => ({
   pasal: one(pasalPelanggaran, {
     fields: [pelanggaran.pasalId],
     references: [pasalPelanggaran.id],
+  }),
+  periodeAkademik: one(periodeAkademik, {
+    fields: [pelanggaran.periodeId],
+    references: [periodeAkademik.id],
   }),
 }));
 

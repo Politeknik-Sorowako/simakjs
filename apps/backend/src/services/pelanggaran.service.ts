@@ -5,6 +5,7 @@ import {
   notifications,
   pasalPelanggaran,
   pelanggaran,
+  periodeAkademik,
   programStudi,
   userProdiScopes,
   userRoles,
@@ -35,6 +36,7 @@ export class PelanggaranService {
     jenisSanksi?: number;
     pelapor?: string | null;
     dibuatOleh?: number;
+    periodeId?: string | null;
   }) {
     const [mhs] = await db.select().from(mahasiswa).where(eq(mahasiswa.id, data.mahasiswaId));
     if (!mhs) {
@@ -75,6 +77,17 @@ export class PelanggaranService {
       namaPelapor = 'Petugas Kedisiplinan';
     }
 
+    let targetPeriodeId = data.periodeId?.trim() || null;
+    if (!targetPeriodeId) {
+      const [activePeriod] = await db
+        .select({ id: periodeAkademik.id })
+        .from(periodeAkademik)
+        .where(eq(periodeAkademik.aktif, true));
+      if (activePeriod) {
+        targetPeriodeId = activePeriod.id;
+      }
+    }
+
     const [newPelanggaran] = await db
       .insert(pelanggaran)
       .values({
@@ -86,6 +99,7 @@ export class PelanggaranService {
         jenisSanksi,
         pelapor: namaPelapor,
         dibuatOleh: data.dibuatOleh,
+        periodeId: targetPeriodeId,
       })
       .returning();
 
@@ -247,9 +261,10 @@ export class PelanggaranService {
     };
   }
 
-  static async getAllPelanggaran(page?: number, limit?: number, search?: string, prodiId?: number) {
+  static async getAllPelanggaran(page?: number, limit?: number, search?: string, prodiId?: number, periodeId?: string) {
     const conditions = [];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
+    if (periodeId && periodeId.trim()) conditions.push(eq(pelanggaran.periodeId, periodeId.trim()));
     if (search && search.trim()) {
       const s = `%${search.trim()}%`;
       conditions.push(or(ilike(mahasiswa.nama, s), ilike(mahasiswa.nim, s), ilike(pelanggaran.jenisPelanggaran, s)));
@@ -275,6 +290,7 @@ export class PelanggaranService {
         pelapor: pelanggaran.pelapor,
         nomorPasal: pasalPelanggaran.nomorPasal,
         bunyiPasal: pasalPelanggaran.bunyiPasal,
+        periodeId: pelanggaran.periodeId,
         createdAt: pelanggaran.createdAt,
       })
       .from(pelanggaran)
@@ -308,10 +324,13 @@ export class PelanggaranService {
     return rows.map((item) => ({ ...item, bobotPoin: Number(item.bobotPoin) }));
   }
 
-  static async getRekapPasalTop10(programStudiId?: number) {
+  static async getRekapPasalTop10(programStudiId?: number, periodeId?: string) {
     const conditions = [];
     if (programStudiId) {
       conditions.push(eq(mahasiswa.programStudiId, programStudiId));
+    }
+    if (periodeId && periodeId.trim()) {
+      conditions.push(eq(pelanggaran.periodeId, periodeId.trim()));
     }
 
     const rows = await db
