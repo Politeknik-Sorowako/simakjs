@@ -61,6 +61,7 @@ export default function Login() {
 
   const [retryAfter, setRetryAfter] = createSignal<number | null>(null);
   const [countdown, setCountdown] = createSignal(0);
+  const [ssoLoading, setSsoLoading] = createSignal(false);
 
   let countdownTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -98,9 +99,9 @@ export default function Login() {
   // Check 2FA step from Google SSO redirect or URL
   createEffect(() => {
     if (searchParams.step === '2fa' || sessionStorage.getItem('2fa_token')) {
-      const tokenFromSession = sessionStorage.getItem('2fa_token');
-      if (tokenFromSession) {
-        setTwoFactorToken(tokenFromSession);
+      const storedToken = sessionStorage.getItem('2fa_token');
+      if (storedToken) {
+        setTwoFactorToken(storedToken);
         setIs2FAStep(true);
       }
     }
@@ -116,16 +117,19 @@ export default function Login() {
 
   const handleGoogleSSO = async () => {
     try {
+      setSsoLoading(true);
       setLoading(true);
       const res = await authController.getGoogleAuthUrl();
       if (res?.url) {
         window.location.href = res.url;
       } else {
         toast.showToast('Gagal memuat URL login Google SSO', 'error');
+        setSsoLoading(false);
+        setLoading(false);
       }
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal memulai login Google SSO', 'error');
-    } finally {
+      setSsoLoading(false);
       setLoading(false);
     }
   };
@@ -253,6 +257,18 @@ export default function Login() {
 
   return (
     <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-secondary-100 via-secondary-50 to-brand-50 dark:from-secondary-950 dark:via-primary-950 dark:to-secondary-950 overflow-hidden px-4 transition-colors duration-200">
+      <Show when={ssoLoading()}>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-secondary-900/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div class="bg-white dark:bg-secondary-900 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-secondary-100 dark:border-secondary-800 flex flex-col items-center gap-4">
+            <div class="w-12 h-12 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+            <h3 class="text-base font-bold text-secondary-800 dark:text-white">Menghubungkan ke Google Workspace</h3>
+            <p class="text-xs text-secondary-500 dark:text-secondary-400">
+              Mengarahkan ke portal otentikasi Politeknik Sorowako...
+            </p>
+          </div>
+        </div>
+      </Show>
+
       {/* Floating Theme Toggle in Top Right */}
       <div class="absolute top-4 right-4 z-50">
         <button

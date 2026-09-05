@@ -57,3 +57,4 @@ bun.lockb
 apps/backend/src/scripts/seed-local-*.ts
 apps/backend/src/scripts/seed-kelas-krs.ts
 implementation_plan.md
+improvement_plan.md
