@@ -666,5 +666,70 @@ describe('Bimbingan & Pelanggaran API', () => {
       expect(data.skippedCount).toBe(1);
       expect(data.skippedPasal).toContain('Pasal 28');
     });
+
+    it('harus dapat memfilter daftar pelanggaran dan rekap pasal berdasarkan periodeId', async () => {
+      await db.insert(periodeAkademik).values({
+        id: '20241',
+        nama: 'Ganjil 2024/2025',
+        aktif: false,
+      });
+
+      // 1. Catat 2 pelanggaran pada periode '20231' dan 1 pada '20241'
+      await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2023-10-10',
+            jenisPelanggaran: 'Terlambat Masuk Kelas',
+            keterangan: 'Terlambat 15 menit',
+            periodeId: '20231',
+          }),
+        }),
+      );
+
+      await app.handle(
+        new Request('http://localhost/pelanggaran', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify({
+            mahasiswaId: mhsId,
+            tanggal: '2024-03-10',
+            jenisPelanggaran: 'Merokok di Area Terlarang',
+            keterangan: 'Pelanggaran area',
+            periodeId: '20241',
+          }),
+        }),
+      );
+
+      // 2. Fetch list dengan filter periodeId=20231
+      const resFilter = await app.handle(
+        new Request('http://localhost/pelanggaran?periodeId=20231', {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resFilter.status).toBe(200);
+      const dataFilter = await resFilter.json();
+      const items = Array.isArray(dataFilter) ? dataFilter : dataFilter.data;
+      expect(items.length).toBe(1);
+      expect(items[0].jenisPelanggaran).toBe('Terlambat Masuk Kelas');
+
+      // 3. Fetch rekap pasal dengan filter periodeId=20241
+      const resRekap = await app.handle(
+        new Request('http://localhost/pelanggaran/rekap-pasal?periodeId=20241', {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resRekap.status).toBe(200);
+      const dataRekap = await resRekap.json();
+      expect(dataRekap.total).toBe(1);
+    });
   });
 });

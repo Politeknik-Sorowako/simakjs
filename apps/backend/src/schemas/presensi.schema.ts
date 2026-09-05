@@ -223,6 +223,32 @@ export const getRekapKehadiranMahasiswaSchema = {
   },
 };
 
+export const getRekapKelasListSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Daftar Rekapitulasi Kehadiran per Kelas Kuliah',
+    description: 'Mengambil ringkasan rekapitulasi persentase kehadiran seluruh kelas pada periode tertentu.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    search: t.Optional(t.String()),
+  }),
+};
+
+export const getRekapMahasiswaListSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Daftar Rekapitulasi Kehadiran per Mahasiswa',
+    description: 'Mengambil ringkasan rekapitulasi persentase kehadiran seluruh mahasiswa pada periode tertentu.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    search: t.Optional(t.String()),
+  }),
+};
+
 export const updateKompensasiBayarSchema = {
   detail: {
     tags: ['Kompensasi'],

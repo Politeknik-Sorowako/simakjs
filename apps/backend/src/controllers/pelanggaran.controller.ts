@@ -90,8 +90,9 @@ export class PelanggaranController {
       const limit = query?.limit ? parseInt(query.limit) : undefined;
       const search = query?.search;
       const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+      const periodeId = query?.periodeId;
 
-      return await PelanggaranService.getAllPelanggaran(page, limit, search, prodiId);
+      return await PelanggaranService.getAllPelanggaran(page, limit, search, prodiId, periodeId);
     } catch (err: unknown) {
       console.error('[PelanggaranController.getAll]', err);
       set.status = 400;
@@ -109,7 +110,8 @@ export class PelanggaranController {
 
     try {
       const prodiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
-      return await PelanggaranService.getRekapPasalTop10(prodiId);
+      const periodeId = query?.periodeId;
+      return await PelanggaranService.getRekapPasalTop10(prodiId, periodeId);
     } catch (err: unknown) {
       console.error('[PelanggaranController.getRekapPasal]', err);
       set.status = 400;
