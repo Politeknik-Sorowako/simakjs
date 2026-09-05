@@ -21,6 +21,7 @@ export interface User {
   mustChangePassword?: boolean;
   theme?: string;
   avatar?: string;
+  twoFactorEnabled?: boolean;
 }
 
 export type UserRole = User['role'];

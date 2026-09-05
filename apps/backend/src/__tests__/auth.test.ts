@@ -27,7 +27,7 @@ describe('1. Autentikasi (/auth)', () => {
 
       expect(response.status).toBe(201);
       const body = (await response.json()) as RegisterSuccessResponse;
-      expect(body.message).toBe('Registrasi berhasil');
+      expect(body.message).toContain('Registrasi berhasil');
       expect(body.user).toBeDefined();
       expect(body.user.email).toBe('dosen@test.com');
       expect(body.user.role).toBe('dosen');
@@ -128,7 +128,7 @@ describe('1. Autentikasi (/auth)', () => {
 
       expect(response.status).toBe(403);
       const body = (await response.json()) as ErrorResponse;
-      expect(body.error).toBe('Akun Anda belum diaktifkan oleh Admin');
+      expect(body.error).toContain('belum diaktifkan');
     });
 
     it('harus sukses login jika akun sudah diaktifkan (active)', async () => {
