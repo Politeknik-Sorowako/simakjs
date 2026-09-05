@@ -38,6 +38,11 @@ services:
       PGPORT: "5432"
       BACKUP_DIR: ./backups
       BACKUP_RETENTION: "10"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+      GOOGLE_ALLOWED_DOMAINS: ${GOOGLE_ALLOWED_DOMAINS:-politekniksorowako.ac.id}
+      RESEND_API_KEY: ${RESEND_API_KEY}
     volumes:
       - ./apps/backend:/app/apps/backend
       - /app/apps/backend/node_modules

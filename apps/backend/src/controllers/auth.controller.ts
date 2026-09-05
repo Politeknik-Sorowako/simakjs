@@ -124,9 +124,14 @@ export class AuthController {
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async googleAuthUrl({ set }: AuthContext): Promise<any> {
-    const url = SsoService.getGoogleAuthUrl();
-    set.status = 200;
-    return { url };
+    try {
+      const url = SsoService.getGoogleAuthUrl();
+      set.status = 200;
+      return { url };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghasilkan URL autentikasi Google' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

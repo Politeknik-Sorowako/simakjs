@@ -15,7 +15,10 @@ export interface GoogleUserProfile {
 
 export class SsoService {
   static getGoogleAuthUrl(state = 'sso'): string {
-    const clientId = process.env.GOOGLE_CLIENT_ID || '';
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId || clientId.trim() === '' || clientId.includes('dummy-client-id')) {
+      throw new Error('Google OAuth Client ID belum dikonfigurasi pada server (GOOGLE_CLIENT_ID).');
+    }
     const redirectUri = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8080/auth/google/callback';
     const allowedDomain = process.env.GOOGLE_ALLOWED_DOMAINS || 'politekniksorowako.ac.id';
 
