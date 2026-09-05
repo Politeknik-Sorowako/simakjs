@@ -83,9 +83,19 @@ export default function LaporanAkademik() {
                 subtitle={`Periode: ${selectedPeriode()}`}
               />
             </Show>
-            <Show when={(matriksNilai() || []).length > 0}>
+            <Show
+              when={
+                (Array.isArray(matriksNilai())
+                  ? (matriksNilai() as unknown[]).length
+                  : (matriksNilai() as { data: unknown[] })?.data?.length || 0) > 0
+              }
+            >
               <ExportButtonGroup
-                data={() => matriksNilai() || []}
+                data={() =>
+                  Array.isArray(matriksNilai())
+                    ? (matriksNilai() as unknown[])
+                    : (matriksNilai() as { data: unknown[] })?.data || []
+                }
                 columns={matriksColumns}
                 filename={`Matriks_Nilai_MK_${selectedPeriode()}`}
                 title="Matriks Sebaran Nilai Mata Kuliah (A-E)"
@@ -214,7 +224,12 @@ export default function LaporanAkademik() {
             <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
               Matriks Mata Kuliah $\times$ Jumlah Mahasiswa Nilai (A - E)
             </h3>
-            <span class="text-xs text-secondary-500">Total MK: {(matriksNilai() || []).length}</span>
+            <span class="text-xs text-secondary-500">
+              Total MK:{' '}
+              {Array.isArray(matriksNilai())
+                ? (matriksNilai() as unknown[]).length
+                : (matriksNilai() as { data: unknown[] })?.data?.length || 0}
+            </span>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
@@ -236,7 +251,11 @@ export default function LaporanAkademik() {
               </thead>
               <tbody>
                 <For
-                  each={matriksNilai() || []}
+                  each={
+                    Array.isArray(matriksNilai())
+                      ? (matriksNilai() as Record<string, unknown>[])
+                      : (matriksNilai() as { data: Record<string, unknown>[] })?.data || []
+                  }
                   fallback={
                     <tr>
                       <td colspan="12" class="text-center py-8 text-secondary-400">

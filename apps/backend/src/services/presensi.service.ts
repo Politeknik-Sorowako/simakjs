@@ -1050,7 +1050,7 @@ export class PresensiService {
     };
   }
 
-  static async getRekapKelasList(periodeId?: string, prodiId?: number, search?: string) {
+  static async getRekapKelasList(periodeId?: string, prodiId?: number, search?: string, page?: number, limit?: number) {
     const conditions: SQL<unknown>[] = [];
     if (periodeId && periodeId.trim()) conditions.push(eq(kelasKuliah.periodeId, periodeId.trim()));
     if (prodiId) conditions.push(eq(mataKuliah.programStudiId, prodiId));
@@ -1107,10 +1107,31 @@ export class PresensiService {
     }
 
     result.sort((a, b) => b.rataPersentaseHadir - a.rataPersentaseHadir);
+
+    if (page && limit) {
+      const total = result.length;
+      const offset = (page - 1) * limit;
+      return {
+        data: result.slice(offset, offset + limit),
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
     return result;
   }
 
-  static async getRekapMahasiswaList(periodeId?: string, prodiId?: number, search?: string) {
+  static async getRekapMahasiswaList(
+    periodeId?: string,
+    prodiId?: number,
+    search?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const conditions: SQL<unknown>[] = [];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
     if (search && search.trim()) {
@@ -1181,6 +1202,21 @@ export class PresensiService {
     }
 
     result.sort((a, b) => b.rataPersentaseHadir - a.rataPersentaseHadir);
+
+    if (page && limit) {
+      const total = result.length;
+      const offset = (page - 1) * limit;
+      return {
+        data: result.slice(offset, offset + limit),
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
     return result;
   }
 }

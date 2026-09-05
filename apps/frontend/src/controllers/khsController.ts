@@ -282,30 +282,75 @@ export const khsController = {
     return fetchApi<RekapPerProdi>(url);
   },
 
-  async getMatriksNilaiMK(periodeId?: string, prodiId?: number, search?: string) {
+  async getMatriksNilaiMK(periodeId?: string, prodiId?: number, search?: string, page = 1, limit = 20) {
     const params = new URLSearchParams();
     if (periodeId) params.append('periodeId', periodeId);
     if (prodiId) params.append('prodiId', String(prodiId));
     if (search) params.append('search', search);
+    params.append('page', String(page));
+    params.append('limit', String(limit));
     const qs = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<
-      Array<{
-        mataKuliahId: number;
-        kodeMk: string;
-        namaMk: string;
-        sks: number;
-        prodiId?: number | null;
-        prodiNama: string;
-        totalPeserta: number;
-        gradeA: number;
-        gradeB: number;
-        gradeC: number;
-        gradeD: number;
-        gradeE: number;
-        gradeNull: number;
-        persenLulus: number;
-      }>
+      | Array<{
+          mataKuliahId: number;
+          kodeMk: string;
+          namaMk: string;
+          sks: number;
+          prodiId?: number | null;
+          prodiNama: string;
+          totalPeserta: number;
+          gradeA: number;
+          gradeB: number;
+          gradeC: number;
+          gradeD: number;
+          gradeE: number;
+          gradeNull: number;
+          persenLulus: number;
+        }>
+      | {
+          data: Array<{
+            mataKuliahId: number;
+            kodeMk: string;
+            namaMk: string;
+            sks: number;
+            prodiId?: number | null;
+            prodiNama: string;
+            totalPeserta: number;
+            gradeA: number;
+            gradeB: number;
+            gradeC: number;
+            gradeD: number;
+            gradeE: number;
+            gradeNull: number;
+            persenLulus: number;
+          }>;
+          pagination: { total: number; page: number; limit: number; totalPages: number };
+        }
     >(`/khs/matriks-nilai${qs}`);
+  },
+
+  async getDetailNilaiMK(mataKuliahId: number, periodeId?: string) {
+    const qs = periodeId ? `?periodeId=${periodeId}` : '';
+    return fetchApi<{
+      mataKuliah: { id: number; kode: string; nama: string; sksTotal: number; prodiNama: string };
+      dosenPengampu: string[];
+      bapList: Array<{
+        id: number;
+        pertemuanKe: number;
+        tanggal: string;
+        materi: string;
+        durasiMenit: number;
+        dosenNama: string;
+      }>;
+      peserta: Array<{
+        mahasiswaId: number;
+        nim: string;
+        nama: string;
+        nilaiAngka: string | null;
+        nilaiHuruf: string | null;
+        nilaiIndeks: string | null;
+      }>;
+    }>(`/khs/mata-kuliah/${mataKuliahId}/detail-nilai${qs}`);
   },
 
   async getYudisiumStats(periodeId?: string) {
