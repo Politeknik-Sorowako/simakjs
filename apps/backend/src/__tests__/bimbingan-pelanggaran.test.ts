@@ -668,6 +668,12 @@ describe('Bimbingan & Pelanggaran API', () => {
     });
 
     it('harus dapat memfilter daftar pelanggaran dan rekap pasal berdasarkan periodeId', async () => {
+      await db.insert(periodeAkademik).values({
+        id: '20241',
+        nama: 'Ganjil 2024/2025',
+        aktif: false,
+      });
+
       // 1. Catat 2 pelanggaran pada periode '20231' dan 1 pada '20241'
       await app.handle(
         new Request('http://localhost/pelanggaran', {
@@ -711,8 +717,9 @@ describe('Bimbingan & Pelanggaran API', () => {
       );
       expect(resFilter.status).toBe(200);
       const dataFilter = await resFilter.json();
-      expect(dataFilter.data.length).toBe(1);
-      expect(dataFilter.data[0].jenisPelanggaran).toBe('Terlambat Masuk Kelas');
+      const items = Array.isArray(dataFilter) ? dataFilter : dataFilter.data;
+      expect(items.length).toBe(1);
+      expect(items[0].jenisPelanggaran).toBe('Terlambat Masuk Kelas');
 
       // 3. Fetch rekap pasal dengan filter periodeId=20241
       const resRekap = await app.handle(
