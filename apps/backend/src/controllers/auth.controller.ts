@@ -112,6 +112,7 @@ export class AuthController {
       role: user.role,
       roles: user.roles,
       mustChangePassword: user.mustChangePassword,
+      twoFactorEnabled: user.twoFactorEnabled ?? false,
     };
     if (user.theme) userResponse.theme = user.theme;
     if (user.avatar) userResponse.avatar = user.avatar;
@@ -198,6 +199,7 @@ export class AuthController {
           mustChangePassword: user.mustChangePassword,
           theme: user.theme,
           avatar: user.avatar,
+          twoFactorEnabled: user.twoFactorEnabled ?? false,
         },
       };
     } catch (err: unknown) {
@@ -436,6 +438,7 @@ export class AuthController {
         role: user.role,
         roles,
         mustChangePassword: user.mustChangePassword,
+        twoFactorEnabled: true,
       };
       if (user.theme) userResponse.theme = user.theme;
       if (user.avatar) userResponse.avatar = user.avatar;

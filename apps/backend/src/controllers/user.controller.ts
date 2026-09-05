@@ -439,6 +439,7 @@ export class UserController {
           mustChangePassword: updated.mustChangePassword,
           theme: updated.theme,
           avatar: updated.avatar,
+          twoFactorEnabled: updated.twoFactorEnabled ?? false,
         },
       };
     } catch (error: unknown) {
