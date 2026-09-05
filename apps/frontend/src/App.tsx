@@ -18,6 +18,7 @@ import AdmisiEditPendaftaran from './routes/AdmisiEditPendaftaran';
 import AdmisiPembayaran from './routes/AdmisiPembayaran';
 import AdmisiPendaftaranBaru from './routes/AdmisiPendaftaranBaru';
 import AdmisiSesi from './routes/AdmisiSesi';
+import AktivasiAkun from './routes/AktivasiAkun';
 import AngkatanKurikulum from './routes/AngkatanKurikulum';
 import ApelKelola from './routes/ApelKelola';
 import ApelMonitor from './routes/ApelMonitor';
@@ -49,6 +50,7 @@ import EvaluasiKurikulum from './routes/EvaluasiKurikulum';
 import EvaluasiSistem from './routes/EvaluasiSistem';
 import ForceChangePassword from './routes/ForceChangePassword';
 import ForgotPassword from './routes/ForgotPassword';
+import GoogleCallback from './routes/GoogleCallback';
 import InputNilai from './routes/InputNilai';
 import KelasKuliah from './routes/KelasKuliah';
 import KeuanganDashboard from './routes/KeuanganDashboard';
@@ -106,6 +108,8 @@ function AppContent() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/ganti-password" component={ForceChangePassword} />
+      <Route path="/aktivasi-akun" component={AktivasiAkun} />
+      <Route path="/auth/google/callback" component={GoogleCallback} />
       <Route path="/rombel/enroll/:token" component={RombelEnroll} />
 
       {/* Protected Routes */}

@@ -47,6 +47,15 @@ export class AuthService {
 
     await db.insert(userRoles).values({ userId: newUser.id, role: effectiveRole });
 
+    // Generate activation token & send activation email
+    try {
+      const { AccountActivationService } = await import('./account-activation.service');
+      const activationToken = await AccountActivationService.createActivationToken(newUser.id, newUser.email);
+      await AccountActivationService.sendActivationEmail(newUser.email, newUser.nama, activationToken);
+    } catch (err) {
+      console.error('Failed to trigger activation email:', err);
+    }
+
     return {
       id: newUser.id,
       email: newUser.email,
@@ -80,6 +89,7 @@ export class AuthService {
       mustChangePassword: user.mustChangePassword,
       theme: user.theme,
       avatar: user.avatar,
+      twoFactorEnabled: user.twoFactorEnabled,
     };
   }
 

@@ -60,6 +60,11 @@ export const users = pgTable('users', {
   mustChangePassword: boolean('must_change_password').default(false).notNull(),
   theme: varchar('theme', { length: 20 }).default('light').notNull(),
   avatar: text('avatar'),
+  googleId: varchar('google_id', { length: 255 }).unique(),
+  authProvider: varchar('auth_provider', { length: 50 }).default('local').notNull(),
+  twoFactorEnabled: boolean('two_factor_enabled').default(false).notNull(),
+  twoFactorSecret: text('two_factor_secret'),
+  twoFactorRecoveryCodes: jsonb('two_factor_recovery_codes').$type<string[]>().default([]),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
@@ -956,6 +961,17 @@ export const pengajuanYudisiumRelations = relations(pengajuanYudisium, ({ one })
 
 export const passwordResets = pgTable('password_resets', {
   id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull(),
+  token: varchar('token', { length: 255 }).notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const accountActivations = pgTable('account_activations', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
   email: varchar('email', { length: 255 }).notNull(),
   token: varchar('token', { length: 255 }).notNull().unique(),
   expiresAt: timestamp('expires_at').notNull(),
