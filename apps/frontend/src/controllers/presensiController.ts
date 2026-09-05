@@ -220,6 +220,57 @@ export interface PresensiMahasiswaRiwayatItem {
   dosenNama?: string | null;
 }
 
+export interface RekapKelasListItem {
+  kelasKuliahId: number;
+  namaKelas: string;
+  periodeId: string;
+  kodeMk: string;
+  namaMk: string;
+  sks: number;
+  prodiNama: string;
+  dosenPengajar: string;
+  totalMahasiswa: number;
+  totalPertemuan: number;
+  rataPersentaseHadir: number;
+}
+
+export interface RekapMahasiswaListItem {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  foto?: string | null;
+  prodiNama: string;
+  totalKelas: number;
+  rataPersentaseHadir: number;
+}
+
+export interface RekapMahasiswaDetailResponse {
+  mahasiswa?: {
+    id: number;
+    nim: string;
+    nama: string;
+    foto?: string | null;
+    programStudi?: { nama: string } | null;
+  } | null;
+  detail: Array<{
+    kelasKuliahId: number;
+    namaKelas: string;
+    kodeMk: string;
+    namaMk: string;
+    totalPertemuan: number;
+    hadir: number;
+    sakit: number;
+    izin: number;
+    alpa: number;
+    telat: number;
+    persentaseHadir: number;
+  }>;
+  summary: {
+    totalKelas: number;
+    rataPersentaseHadir: number;
+  };
+}
+
 export const presensiController = {
   // CPMK
   async getCpmkByMataKuliah(mataKuliahId: number): Promise<CPMK[]> {
@@ -374,10 +425,68 @@ export const presensiController = {
     return fetchApi<RekapKehadiranKelasResponse>(`/presensi/rekap-kehadiran?kelasKuliahId=${kelasKuliahId}`);
   },
 
-  async getRekapKehadiranMahasiswa(mahasiswaId: number, periodeId?: string): Promise<Record<string, unknown>> {
+  async getRekapKehadiranMahasiswa(mahasiswaId: number, periodeId?: string): Promise<RekapMahasiswaDetailResponse> {
     const params = new URLSearchParams({ mahasiswaId: String(mahasiswaId) });
     if (periodeId) params.append('periodeId', periodeId);
-    return fetchApi<Record<string, unknown>>(`/presensi/rekap-kehadiran-mahasiswa?${params.toString()}`);
+    return fetchApi<RekapMahasiswaDetailResponse>(`/presensi/rekap-kehadiran-mahasiswa?${params.toString()}`);
+  },
+
+  async getRekapKelasList(
+    periodeId?: string,
+    prodiId?: number,
+    search?: string,
+    page = 1,
+    limit = 20,
+  ): Promise<
+    | RekapKelasListItem[]
+    | {
+        data: RekapKelasListItem[];
+        pagination: { total: number; page: number; limit: number; totalPages: number };
+      }
+  > {
+    const params = new URLSearchParams();
+    if (periodeId) params.append('periodeId', periodeId);
+    if (prodiId) params.append('prodiId', String(prodiId));
+    if (search) params.append('search', search);
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<
+      | RekapKelasListItem[]
+      | {
+          data: RekapKelasListItem[];
+          pagination: { total: number; page: number; limit: number; totalPages: number };
+        }
+    >(`/presensi/rekap-kelas-list${qs}`);
+  },
+
+  async getRekapMahasiswaList(
+    periodeId?: string,
+    prodiId?: number,
+    search?: string,
+    page = 1,
+    limit = 20,
+  ): Promise<
+    | RekapMahasiswaListItem[]
+    | {
+        data: RekapMahasiswaListItem[];
+        pagination: { total: number; page: number; limit: number; totalPages: number };
+      }
+  > {
+    const params = new URLSearchParams();
+    if (periodeId) params.append('periodeId', periodeId);
+    if (prodiId) params.append('prodiId', String(prodiId));
+    if (search) params.append('search', search);
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<
+      | RekapMahasiswaListItem[]
+      | {
+          data: RekapMahasiswaListItem[];
+          pagination: { total: number; page: number; limit: number; totalPages: number };
+        }
+    >(`/presensi/rekap-mahasiswa-list${qs}`);
   },
 
   // Kompensasi

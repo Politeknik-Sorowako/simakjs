@@ -2,6 +2,8 @@ import { and, count, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'driz
 import {
   bap,
   bimbingan,
+  dosen,
+  dosenPengajarKelas,
   kelasKuliah,
   konversiNilai,
   krs,
@@ -506,7 +508,13 @@ export class KhsService {
     return { periode: periodeId ? { id: periodeId } : null, prodi: result };
   }
 
-  static async getMatriksNilaiMataKuliah(options: { periodeId?: string; prodiId?: number; search?: string }) {
+  static async getMatriksNilaiMataKuliah(options: {
+    periodeId?: string;
+    prodiId?: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const conditions = [];
     if (options.periodeId) {
       conditions.push(eq(kelasKuliah.periodeId, options.periodeId));
@@ -550,7 +558,7 @@ export class KhsService {
       )
       .orderBy(mataKuliah.kode);
 
-    return rows.map((r) => {
+    const data = rows.map((r) => {
       const total = Number(r.totalPeserta);
       const gradeA = Number(r.gradeA);
       const gradeB = Number(r.gradeB);
@@ -578,5 +586,121 @@ export class KhsService {
         persenLulus,
       };
     });
+
+    if (options.page && options.limit) {
+      const page = options.page;
+      const limit = options.limit;
+      const total = data.length;
+      const offset = (page - 1) * limit;
+      const paginatedData = data.slice(offset, offset + limit);
+
+      return {
+        data: paginatedData,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
+    return data;
+  }
+
+  static async getDetailNilaiMataKuliah(mataKuliahId: number, periodeId?: string) {
+    const mk = await db.query.mataKuliah.findFirst({
+      where: eq(mataKuliah.id, mataKuliahId),
+      with: { programStudi: true },
+    });
+    if (!mk) throw new Error('Mata kuliah tidak ditemukan');
+
+    const kelasConditions = [eq(kelasKuliah.mataKuliahId, mataKuliahId)];
+    if (periodeId) kelasConditions.push(eq(kelasKuliah.periodeId, periodeId));
+
+    const kelasList = await db
+      .select({
+        id: kelasKuliah.id,
+        namaKelas: kelasKuliah.namaKelas,
+        periodeId: kelasKuliah.periodeId,
+      })
+      .from(kelasKuliah)
+      .where(and(...kelasConditions));
+
+    const kelasIds = kelasList.map((k) => k.id);
+    const mkData = {
+      id: mk.id,
+      kode: mk.kode,
+      nama: mk.nama,
+      sksTotal: mk.sksTotal,
+      prodiNama: mk.programStudi?.nama || '-',
+    };
+
+    if (kelasIds.length === 0) {
+      return {
+        mataKuliah: mkData,
+        dosenPengajar: [],
+        dosenPengampu: [],
+        mahasiswa: [],
+        peserta: [],
+        bapList: [],
+      };
+    }
+
+    const dosenList = await db
+      .select({
+        dosenId: dosen.id,
+        nama: dosen.nama,
+        nip: dosen.nip,
+      })
+      .from(dosenPengajarKelas)
+      .leftJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
+      .where(inArray(dosenPengajarKelas.kelasKuliahId, kelasIds));
+
+    const mhsList = await db
+      .select({
+        krsId: krs.id,
+        mahasiswaId: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
+        namaKelas: kelasKuliah.namaKelas,
+        nilaiAngka: krs.nilaiAngka,
+        nilaiHuruf: krs.nilaiHuruf,
+        nilaiIndeks: krs.nilaiIndeks,
+        isApproved: krs.isApproved,
+      })
+      .from(krs)
+      .innerJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(inArray(krs.kelasKuliahId, kelasIds))
+      .orderBy(mahasiswa.nim);
+
+    const bapRows = await db
+      .select({
+        id: bap.id,
+        kelasKuliahId: bap.kelasKuliahId,
+        pertemuanKe: bap.pertemuanKe,
+        tanggal: bap.tanggal,
+        materi: bap.materi,
+        tema: bap.tema,
+        durasiMenit: bap.durasiMenit,
+        dosenNama: dosen.nama,
+      })
+      .from(bap)
+      .leftJoin(dosen, eq(bap.dosenId, dosen.id))
+      .where(inArray(bap.kelasKuliahId, kelasIds))
+      .orderBy(bap.pertemuanKe);
+
+    const dosenPengampu = Array.from(new Set(dosenList.map((d) => d.nama).filter((n): n is string => Boolean(n))));
+
+    return {
+      mataKuliah: mkData,
+      dosenPengajar: dosenList,
+      dosenPengampu,
+      mahasiswa: mhsList,
+      peserta: mhsList,
+      bapList: bapRows,
+    };
   }
 }

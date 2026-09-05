@@ -12,6 +12,7 @@ import {
   ketidakhadiranMahasiswa,
   kompensasiBayar,
   kompensasiManual,
+  krs,
   mahasiswa,
   mataKuliah,
   presensi,
@@ -979,14 +980,19 @@ export class PresensiService {
       with: { programStudi: true },
     });
 
-    const kelasConditions: SQL<unknown>[] = [];
+    const kelasConditions: SQL<unknown>[] = [eq(krs.mahasiswaId, mahasiswaId)];
     if (periodeId) kelasConditions.push(eq(kelasKuliah.periodeId, periodeId));
-    const kelasWhere = kelasConditions.length > 0 ? and(...kelasConditions) : undefined;
 
-    const kelasList = await db.query.kelasKuliah.findMany({
-      where: kelasWhere,
-      with: { mataKuliah: true },
-    });
+    const kelasList = await db
+      .select({
+        id: kelasKuliah.id,
+        namaKelas: kelasKuliah.namaKelas,
+        namaMataKuliah: mataKuliah.nama,
+      })
+      .from(kelasKuliah)
+      .innerJoin(krs, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .where(and(...kelasConditions));
 
     const hasil = [];
     for (const k of kelasList) {
@@ -996,7 +1002,7 @@ export class PresensiService {
       if (bapIds.length === 0) {
         hasil.push({
           kelasKuliahId: k.id,
-          namaMataKuliah: k.mataKuliah?.nama || k.namaKelas,
+          namaMataKuliah: k.namaMataKuliah || k.namaKelas,
           totalPertemuan: 0,
           hadir: 0,
           sakit: 0,
@@ -1022,7 +1028,7 @@ export class PresensiService {
       const pt = bapIds.length;
       hasil.push({
         kelasKuliahId: k.id,
-        namaMataKuliah: k.mataKuliah?.nama || k.namaKelas,
+        namaMataKuliah: k.namaMataKuliah || k.namaKelas,
         totalPertemuan: pt,
         hadir: Number(p?.hadir || 0),
         sakit: Number(p?.sakit || 0),
@@ -1034,12 +1040,183 @@ export class PresensiService {
       });
     }
 
-    const rataHadir = hasil.reduce((s, h) => s + h.persentaseHadir, 0) / (hasil.length || 1);
+    const totalPersentase = hasil.reduce((s, h) => s + h.persentaseHadir, 0);
+    const rataHadir = hasil.length > 0 ? totalPersentase / hasil.length : 0;
 
     return {
       mahasiswa: mhsInfo,
       detail: hasil,
       summary: { totalKelas: hasil.length, rataPersentaseHadir: Math.round(rataHadir) },
     };
+  }
+
+  static async getRekapKelasList(periodeId?: string, prodiId?: number, search?: string, page?: number, limit?: number) {
+    const conditions: SQL<unknown>[] = [];
+    if (periodeId && periodeId.trim()) conditions.push(eq(kelasKuliah.periodeId, periodeId.trim()));
+    if (prodiId) conditions.push(eq(mataKuliah.programStudiId, prodiId));
+    if (search && search.trim()) {
+      const s = `%${search.trim()}%`;
+      const searchCond = or(ilike(mataKuliah.nama, s), ilike(mataKuliah.kode, s), ilike(kelasKuliah.namaKelas, s));
+      if (searchCond) conditions.push(searchCond);
+    }
+
+    const kelasRows = await db
+      .select({
+        kelasKuliahId: kelasKuliah.id,
+        namaKelas: kelasKuliah.namaKelas,
+        periodeId: kelasKuliah.periodeId,
+        kodeMk: mataKuliah.kode,
+        namaMk: mataKuliah.nama,
+        sks: mataKuliah.sksTotal,
+        prodiNama: programStudi.nama,
+        prodiId: mataKuliah.programStudiId,
+      })
+      .from(kelasKuliah)
+      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .leftJoin(programStudi, eq(mataKuliah.programStudiId, programStudi.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    const result = [];
+    for (const k of kelasRows) {
+      const rekapData = await this.getRekapKehadiran(k.kelasKuliahId);
+      const mhsList = rekapData.mahasiswa || [];
+      const totalMahasiswa = mhsList.length;
+      const pt = rekapData.totalPertemuan || 0;
+      const rataHadir =
+        totalMahasiswa > 0 ? Math.round(mhsList.reduce((s, m) => s + (m.persentaseHadir || 0), 0) / totalMahasiswa) : 0;
+
+      const dosenNames =
+        (rekapData.dosenPengajar || [])
+          .map((d) => d.dosen?.nama)
+          .filter(Boolean)
+          .join(', ') || '-';
+
+      result.push({
+        kelasKuliahId: k.kelasKuliahId,
+        namaKelas: k.namaKelas,
+        periodeId: k.periodeId,
+        kodeMk: k.kodeMk,
+        namaMk: k.namaMk,
+        sks: k.sks,
+        prodiNama: k.prodiNama || '-',
+        dosenPengajar: dosenNames,
+        totalMahasiswa,
+        totalPertemuan: pt,
+        rataPersentaseHadir: rataHadir,
+      });
+    }
+
+    result.sort((a, b) => b.rataPersentaseHadir - a.rataPersentaseHadir);
+
+    if (page && limit) {
+      const total = result.length;
+      const offset = (page - 1) * limit;
+      return {
+        data: result.slice(offset, offset + limit),
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
+    return result;
+  }
+
+  static async getRekapMahasiswaList(
+    periodeId?: string,
+    prodiId?: number,
+    search?: string,
+    page?: number,
+    limit?: number,
+  ) {
+    const conditions: SQL<unknown>[] = [];
+    if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
+    if (search && search.trim()) {
+      const s = `%${search.trim()}%`;
+      const searchCond = or(ilike(mahasiswa.nama, s), ilike(mahasiswa.nim, s));
+      if (searchCond) conditions.push(searchCond);
+    }
+
+    let mhsRows: Array<{
+      id: number;
+      nim: string;
+      nama: string;
+      foto: string | null;
+      prodiNama: string | null;
+      prodiId: number | null;
+    }>;
+
+    if (periodeId && periodeId.trim()) {
+      mhsRows = await db
+        .select({
+          id: mahasiswa.id,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          foto: mahasiswa.foto,
+          prodiNama: programStudi.nama,
+          prodiId: mahasiswa.programStudiId,
+        })
+        .from(mahasiswa)
+        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+        .innerJoin(krs, eq(krs.mahasiswaId, mahasiswa.id))
+        .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+        .where(and(eq(kelasKuliah.periodeId, periodeId.trim()), conditions.length > 0 ? and(...conditions) : undefined))
+        .groupBy(
+          mahasiswa.id,
+          mahasiswa.nim,
+          mahasiswa.nama,
+          mahasiswa.foto,
+          programStudi.nama,
+          mahasiswa.programStudiId,
+        );
+    } else {
+      mhsRows = await db
+        .select({
+          id: mahasiswa.id,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          foto: mahasiswa.foto,
+          prodiNama: programStudi.nama,
+          prodiId: mahasiswa.programStudiId,
+        })
+        .from(mahasiswa)
+        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+        .where(conditions.length > 0 ? and(...conditions) : undefined);
+    }
+
+    const result = [];
+    for (const m of mhsRows) {
+      const mhsRekap = await this.getRekapKehadiranMahasiswa(m.id, periodeId);
+      result.push({
+        mahasiswaId: m.id,
+        nim: m.nim,
+        nama: m.nama,
+        foto: m.foto,
+        prodiNama: m.prodiNama || '-',
+        totalKelas: mhsRekap.summary.totalKelas,
+        rataPersentaseHadir: mhsRekap.summary.rataPersentaseHadir,
+      });
+    }
+
+    result.sort((a, b) => b.rataPersentaseHadir - a.rataPersentaseHadir);
+
+    if (page && limit) {
+      const total = result.length;
+      const offset = (page - 1) * limit;
+      return {
+        data: result.slice(offset, offset + limit),
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
+    return result;
   }
 }

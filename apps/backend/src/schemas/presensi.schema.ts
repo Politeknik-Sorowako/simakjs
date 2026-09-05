@@ -213,6 +213,9 @@ export const getRekapKehadiranSchema = {
     summary: 'Rekapitulasi Kehadiran',
     description: 'Mengambil rekapitulasi kehadiran per kelas kuliah untuk periode tertentu.',
   },
+  query: t.Object({
+    kelasKuliahId: t.String(),
+  }),
 };
 
 export const getRekapKehadiranMahasiswaSchema = {
@@ -221,6 +224,40 @@ export const getRekapKehadiranMahasiswaSchema = {
     summary: 'Rekapitulasi Kehadiran Mahasiswa',
     description: 'Mengambil rekapitulasi kehadiran per mahasiswa untuk seluruh kelas perkuliahan.',
   },
+  query: t.Object({
+    mahasiswaId: t.String(),
+    periodeId: t.Optional(t.String()),
+  }),
+};
+
+export const getRekapKelasListSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Daftar Rekapitulasi Kehadiran per Kelas Kuliah',
+    description: 'Mengambil ringkasan rekapitulasi persentase kehadiran seluruh kelas pada periode tertentu.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    search: t.Optional(t.String()),
+    page: t.Optional(t.String()),
+    limit: t.Optional(t.String()),
+  }),
+};
+
+export const getRekapMahasiswaListSchema = {
+  detail: {
+    tags: ['Presensi'],
+    summary: 'Daftar Rekapitulasi Kehadiran per Mahasiswa',
+    description: 'Mengambil ringkasan rekapitulasi persentase kehadiran seluruh mahasiswa pada periode tertentu.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    search: t.Optional(t.String()),
+    page: t.Optional(t.String()),
+    limit: t.Optional(t.String()),
+  }),
 };
 
 export const updateKompensasiBayarSchema = {

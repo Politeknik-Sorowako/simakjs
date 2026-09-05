@@ -159,6 +159,48 @@ export class PresensiController {
     return await PresensiService.getRekapKehadiranMahasiswa(mahasiswaId, query?.periodeId);
   }
 
+  static async getRekapKelasList({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+    any,
+    { periodeId?: string; prodiId?: string; search?: string; page?: string; limit?: string }
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  >): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+    const page = query?.page ? parseInt(query.page) : undefined;
+    const limit = query?.limit ? parseInt(query.limit) : undefined;
+    return await PresensiService.getRekapKelasList(query?.periodeId, prodiId, query?.search, page, limit);
+  }
+
+  static async getRekapMahasiswaList({
+    query,
+    set,
+    getCurrentUser,
+  }: AuthContext<
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+    any,
+    { periodeId?: string; prodiId?: string; search?: string; page?: string; limit?: string }
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  >): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
+    const page = query?.page ? parseInt(query.page) : undefined;
+    const limit = query?.limit ? parseInt(query.limit) : undefined;
+    return await PresensiService.getRekapMahasiswaList(query?.periodeId, prodiId, query?.search, page, limit);
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();

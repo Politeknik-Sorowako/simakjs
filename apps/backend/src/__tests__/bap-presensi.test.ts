@@ -594,5 +594,25 @@ describe('BAP, Presensi & Kompensasi API', () => {
       expect(rows[0].mahasiswaNim).toBe('202309001');
       expect(rows[1].mahasiswaNim).toBe('202309002');
     });
+
+    it('harus mengembalikan daftar rekap presensi kelas dan mahasiswa', async () => {
+      const resKelasList = await app.handle(
+        new Request(`http://localhost/presensi/rekap-kelas-list?periodeId=${periodeId}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resKelasList.status).toBe(200);
+      const kelasList = await resKelasList.json();
+      expect(Array.isArray(kelasList)).toBe(true);
+
+      const resMhsList = await app.handle(
+        new Request(`http://localhost/presensi/rekap-mahasiswa-list?periodeId=${periodeId}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resMhsList.status).toBe(200);
+      const mhsList = await resMhsList.json();
+      expect(Array.isArray(mhsList)).toBe(true);
+    });
   });
 });
