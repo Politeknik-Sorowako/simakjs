@@ -213,6 +213,9 @@ export const getRekapKehadiranSchema = {
     summary: 'Rekapitulasi Kehadiran',
     description: 'Mengambil rekapitulasi kehadiran per kelas kuliah untuk periode tertentu.',
   },
+  query: t.Object({
+    kelasKuliahId: t.String(),
+  }),
 };
 
 export const getRekapKehadiranMahasiswaSchema = {
@@ -221,6 +224,10 @@ export const getRekapKehadiranMahasiswaSchema = {
     summary: 'Rekapitulasi Kehadiran Mahasiswa',
     description: 'Mengambil rekapitulasi kehadiran per mahasiswa untuk seluruh kelas perkuliahan.',
   },
+  query: t.Object({
+    mahasiswaId: t.String(),
+    periodeId: t.Optional(t.String()),
+  }),
 };
 
 export const getRekapKelasListSchema = {
@@ -233,6 +240,8 @@ export const getRekapKelasListSchema = {
     periodeId: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
     search: t.Optional(t.String()),
+    page: t.Optional(t.String()),
+    limit: t.Optional(t.String()),
   }),
 };
 
@@ -246,6 +255,8 @@ export const getRekapMahasiswaListSchema = {
     periodeId: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
     search: t.Optional(t.String()),
+    page: t.Optional(t.String()),
+    limit: t.Optional(t.String()),
   }),
 };
 

@@ -6,6 +6,7 @@ import {
   deletePredikatSchema,
   getAllKonversiSchema,
   getAllPredikatSchema,
+  getDetailNilaiMKSchema,
   getExamEligibilitySchema,
   getKhsSchema,
   getMatriksNilaiSchema,
@@ -26,6 +27,7 @@ export const khsRoutes = new Elysia({ prefix: '/khs' })
   .get('/rekap-nilai/:mhsId', KhsController.getRekapNilai, getRekapNilaiSchema)
   .get('/rekap-per-prodi', KhsController.getRekapPerProdi, getRekapPerProdiSchema)
   .get('/matriks-nilai', KhsController.getMatriksNilaiMK, getMatriksNilaiSchema)
+  .get('/mata-kuliah/:mataKuliahId/detail-nilai', KhsController.getDetailNilaiMK, getDetailNilaiMKSchema)
 
   // Konfigurasi Konversi Nilai
   .get('/konversi', KhsController.getAllKonversi, getAllKonversiSchema)

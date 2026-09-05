@@ -431,26 +431,62 @@ export const presensiController = {
     return fetchApi<RekapMahasiswaDetailResponse>(`/presensi/rekap-kehadiran-mahasiswa?${params.toString()}`);
   },
 
-  async getRekapKelasList(periodeId?: string, prodiId?: number, search?: string): Promise<RekapKelasListItem[]> {
+  async getRekapKelasList(
+    periodeId?: string,
+    prodiId?: number,
+    search?: string,
+    page = 1,
+    limit = 20,
+  ): Promise<
+    | RekapKelasListItem[]
+    | {
+        data: RekapKelasListItem[];
+        pagination: { total: number; page: number; limit: number; totalPages: number };
+      }
+  > {
     const params = new URLSearchParams();
     if (periodeId) params.append('periodeId', periodeId);
     if (prodiId) params.append('prodiId', String(prodiId));
     if (search) params.append('search', search);
+    params.append('page', String(page));
+    params.append('limit', String(limit));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<RekapKelasListItem[]>(`/presensi/rekap-kelas-list${qs}`);
+    return fetchApi<
+      | RekapKelasListItem[]
+      | {
+          data: RekapKelasListItem[];
+          pagination: { total: number; page: number; limit: number; totalPages: number };
+        }
+    >(`/presensi/rekap-kelas-list${qs}`);
   },
 
   async getRekapMahasiswaList(
     periodeId?: string,
     prodiId?: number,
     search?: string,
-  ): Promise<RekapMahasiswaListItem[]> {
+    page = 1,
+    limit = 20,
+  ): Promise<
+    | RekapMahasiswaListItem[]
+    | {
+        data: RekapMahasiswaListItem[];
+        pagination: { total: number; page: number; limit: number; totalPages: number };
+      }
+  > {
     const params = new URLSearchParams();
     if (periodeId) params.append('periodeId', periodeId);
     if (prodiId) params.append('prodiId', String(prodiId));
     if (search) params.append('search', search);
+    params.append('page', String(page));
+    params.append('limit', String(limit));
     const qs = params.toString() ? `?${params.toString()}` : '';
-    return fetchApi<RekapMahasiswaListItem[]>(`/presensi/rekap-mahasiswa-list${qs}`);
+    return fetchApi<
+      | RekapMahasiswaListItem[]
+      | {
+          data: RekapMahasiswaListItem[];
+          pagination: { total: number; page: number; limit: number; totalPages: number };
+        }
+    >(`/presensi/rekap-mahasiswa-list${qs}`);
   },
 
   // Kompensasi

@@ -12,6 +12,12 @@ export default function LaporanPresensiKelas() {
   const [selectedProdi, setSelectedProdi] = createSignal('');
   const [search, setSearch] = createSignal('');
 
+  // Pagination signals
+  const [kelasPage, setKelasPage] = createSignal(1);
+  const [kelasLimit, setKelasLimit] = createSignal(20);
+  const [mhsPage, setMhsPage] = createSignal(1);
+  const [mhsLimit, setMhsLimit] = createSignal(20);
+
   // Sorting signals (default: rataPersentaseHadir desc)
   const [sortField, setSortField] = createSignal<string>('rataPersentaseHadir');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
@@ -34,25 +40,57 @@ export default function LaporanPresensiKelas() {
 
   // Resources for list data
   const [rekapKelasData] = createResource(
-    () => ({ periodeId: selectedPeriode(), prodiId: selectedProdi(), search: search() }),
-    async ({ periodeId, prodiId, search }) => {
+    () => ({
+      periodeId: selectedPeriode(),
+      prodiId: selectedProdi(),
+      search: search(),
+      page: kelasPage(),
+      limit: kelasLimit(),
+    }),
+    async ({ periodeId, prodiId, search, page, limit }) => {
       try {
         const pId = prodiId ? parseInt(prodiId) : undefined;
-        return await presensiController.getRekapKelasList(periodeId || undefined, pId, search || undefined);
+        const res = await presensiController.getRekapKelasList(
+          periodeId || undefined,
+          pId,
+          search || undefined,
+          page,
+          limit,
+        );
+        if (Array.isArray(res)) {
+          return { data: res, pagination: { total: res.length, page: 1, limit: res.length, totalPages: 1 } };
+        }
+        return res;
       } catch {
-        return [];
+        return { data: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
       }
     },
   );
 
   const [rekapMahasiswaData] = createResource(
-    () => ({ periodeId: selectedPeriode(), prodiId: selectedProdi(), search: search() }),
-    async ({ periodeId, prodiId, search }) => {
+    () => ({
+      periodeId: selectedPeriode(),
+      prodiId: selectedProdi(),
+      search: search(),
+      page: mhsPage(),
+      limit: mhsLimit(),
+    }),
+    async ({ periodeId, prodiId, search, page, limit }) => {
       try {
         const pId = prodiId ? parseInt(prodiId) : undefined;
-        return await presensiController.getRekapMahasiswaList(periodeId || undefined, pId, search || undefined);
+        const res = await presensiController.getRekapMahasiswaList(
+          periodeId || undefined,
+          pId,
+          search || undefined,
+          page,
+          limit,
+        );
+        if (Array.isArray(res)) {
+          return { data: res, pagination: { total: res.length, page: 1, limit: res.length, totalPages: 1 } };
+        }
+        return res;
       } catch {
-        return [];
+        return { data: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
       }
     },
   );
@@ -84,7 +122,9 @@ export default function LaporanPresensiKelas() {
 
   // Sorted data memos
   const sortedKelasList = createMemo(() => {
-    const data = [...(rekapKelasData() || [])];
+    const raw = rekapKelasData();
+    const list = Array.isArray(raw) ? raw : raw?.data || [];
+    const data = [...list];
     const field = sortField();
     const order = sortOrder();
 
@@ -102,7 +142,9 @@ export default function LaporanPresensiKelas() {
   });
 
   const sortedMahasiswaList = createMemo(() => {
-    const data = [...(rekapMahasiswaData() || [])];
+    const raw = rekapMahasiswaData();
+    const list = Array.isArray(raw) ? raw : raw?.data || [];
+    const data = [...list];
     const field = sortField();
     const order = sortOrder();
 
@@ -279,11 +321,26 @@ export default function LaporanPresensiKelas() {
         {/* Tab 1 Content: Rekap per Kelas */}
         <Show when={activeTab() === 'kelas'}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
                 Daftar Persentase Kehadiran per Kelas Kuliah
               </h3>
-              <span class="text-xs text-secondary-400">Default urutan: % Kehadiran tertinggi</span>
+              <div class="flex items-center gap-2">
+                <select
+                  class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+                  value={kelasLimit()}
+                  onChange={(e) => {
+                    setKelasLimit(Number(e.currentTarget.value));
+                    setKelasPage(1);
+                  }}
+                >
+                  <option value={10}>10 Data / Hal</option>
+                  <option value={20}>20 Data / Hal</option>
+                  <option value={50}>50 Data / Hal</option>
+                  <option value={100}>100 Data / Hal</option>
+                </select>
+                <span class="text-xs text-secondary-400">Default: % Kehadiran tertinggi</span>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs border-collapse">
@@ -370,17 +427,65 @@ export default function LaporanPresensiKelas() {
                 </tbody>
               </table>
             </div>
+            <Show
+              when={
+                !Array.isArray(rekapKelasData()) &&
+                (rekapKelasData() as { pagination?: { totalPages: number; page: number } })?.pagination &&
+                ((rekapKelasData() as { pagination?: { totalPages: number } }).pagination?.totalPages || 0) > 1
+              }
+            >
+              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
+                <span class="text-secondary-500">
+                  Halaman {(rekapKelasData() as { pagination: { page: number } }).pagination.page} dari{' '}
+                  {(rekapKelasData() as { pagination: { totalPages: number } }).pagination.totalPages}
+                </span>
+                <div class="flex gap-2">
+                  <button
+                    disabled={kelasPage() <= 1}
+                    onClick={() => setKelasPage((p) => Math.max(1, p - 1))}
+                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                  >
+                    Sebelumnya
+                  </button>
+                  <button
+                    disabled={
+                      kelasPage() >=
+                      ((rekapKelasData() as { pagination: { totalPages: number } }).pagination?.totalPages || 1)
+                    }
+                    onClick={() => setKelasPage((p) => p + 1)}
+                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                  >
+                    Selanjutnya
+                  </button>
+                </div>
+              </div>
+            </Show>
           </div>
         </Show>
 
         {/* Tab 2 Content: Rekap per Mahasiswa */}
         <Show when={activeTab() === 'mahasiswa'}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
                 Daftar Persentase Kehadiran per Mahasiswa
               </h3>
-              <span class="text-xs text-secondary-400">Default urutan: % Kehadiran tertinggi</span>
+              <div class="flex items-center gap-2">
+                <select
+                  class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+                  value={mhsLimit()}
+                  onChange={(e) => {
+                    setMhsLimit(Number(e.currentTarget.value));
+                    setMhsPage(1);
+                  }}
+                >
+                  <option value={10}>10 Data / Hal</option>
+                  <option value={20}>20 Data / Hal</option>
+                  <option value={50}>50 Data / Hal</option>
+                  <option value={100}>100 Data / Hal</option>
+                </select>
+                <span class="text-xs text-secondary-400">Default: % Kehadiran tertinggi</span>
+              </div>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-xs border-collapse">
@@ -455,6 +560,39 @@ export default function LaporanPresensiKelas() {
                 </tbody>
               </table>
             </div>
+            <Show
+              when={
+                !Array.isArray(rekapMahasiswaData()) &&
+                (rekapMahasiswaData() as { pagination?: { totalPages: number; page: number } })?.pagination &&
+                ((rekapMahasiswaData() as { pagination?: { totalPages: number } }).pagination?.totalPages || 0) > 1
+              }
+            >
+              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
+                <span class="text-secondary-500">
+                  Halaman {(rekapMahasiswaData() as { pagination: { page: number } }).pagination.page} dari{' '}
+                  {(rekapMahasiswaData() as { pagination: { totalPages: number } }).pagination.totalPages}
+                </span>
+                <div class="flex gap-2">
+                  <button
+                    disabled={mhsPage() <= 1}
+                    onClick={() => setMhsPage((p) => Math.max(1, p - 1))}
+                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                  >
+                    Sebelumnya
+                  </button>
+                  <button
+                    disabled={
+                      mhsPage() >=
+                      ((rekapMahasiswaData() as { pagination: { totalPages: number } }).pagination?.totalPages || 1)
+                    }
+                    onClick={() => setMhsPage((p) => p + 1)}
+                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                  >
+                    Selanjutnya
+                  </button>
+                </div>
+              </div>
+            </Show>
           </div>
         </Show>
 
@@ -469,12 +607,84 @@ export default function LaporanPresensiKelas() {
                     {kelasDetailData()?.kelas?.mataKuliah?.nama || ''} ({kelasDetailData()?.kelas?.namaKelas || ''})
                   </p>
                 </div>
-                <button
-                  onClick={() => setDetailKelasId(null)}
-                  class="text-secondary-400 hover:text-secondary-600 dark:hover:text-white p-1"
-                >
-                  ✕
-                </button>
+                <div class="flex items-center gap-2">
+                  <Show when={kelasDetailData()}>
+                    <button
+                      onClick={() => {
+                        const data = kelasDetailData()!;
+                        const printWin = window.open('', '_blank');
+                        if (!printWin) return;
+                        const html = `
+                          <!DOCTYPE html>
+                          <html>
+                          <head>
+                            <title>Rekap Presensi Kelas - ${data.kelas?.mataKuliah?.nama || ''}</title>
+                            <style>
+                              body { font-family: sans-serif; padding: 20px; color: #333; }
+                              h2 { text-align: center; margin-bottom: 5px; }
+                              p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
+                              table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
+                              th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+                              th { background-color: #f4f4f4; text-align: center; }
+                              .center { text-align: center; }
+                            </style>
+                          </head>
+                          <body>
+                            <h2>REKAPITULASI PRESENSI KELAS</h2>
+                            <p><strong>${data.kelas?.mataKuliah?.nama || ''}</strong> (${data.kelas?.namaKelas || ''})<br>Total Pertemuan: ${data.totalPertemuan} | Total Peserta: ${data.mahasiswa.length}</p>
+                            <table>
+                              <thead>
+                                <tr>
+                                  <th width="4%">No</th>
+                                  <th width="15%">NIM</th>
+                                  <th>Nama Mahasiswa</th>
+                                  <th width="8%">Hadir</th>
+                                  <th width="8%">Sakit</th>
+                                  <th width="8%">Izin</th>
+                                  <th width="8%">Alpa</th>
+                                  <th width="8%">Telat</th>
+                                  <th width="10%">% Hadir</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                ${(data.mahasiswa || [])
+                                  .map(
+                                    (m, idx) => `
+                                  <tr>
+                                    <td class="center">${idx + 1}</td>
+                                    <td class="center">${m.nim}</td>
+                                    <td>${m.nama}</td>
+                                    <td class="center">${m.hadir}</td>
+                                    <td class="center">${m.sakit}</td>
+                                    <td class="center">${m.izin}</td>
+                                    <td class="center">${m.alpa}</td>
+                                    <td class="center">${m.telat}</td>
+                                    <td class="center"><strong>${m.persentaseHadir}%</strong></td>
+                                  </tr>
+                                `,
+                                  )
+                                  .join('')}
+                              </tbody>
+                            </table>
+                            <script>window.onload = () => { window.print(); };</script>
+                          </body>
+                          </html>
+                        `;
+                        printWin.document.write(html);
+                        printWin.document.close();
+                      }}
+                      class="px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-lg shadow-sm"
+                    >
+                      🖨️ Cetak Presensi Kelas
+                    </button>
+                  </Show>
+                  <button
+                    onClick={() => setDetailKelasId(null)}
+                    class="text-secondary-400 hover:text-secondary-600 dark:hover:text-white p-1 ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               <div class="p-6 overflow-y-auto space-y-4">

@@ -13,11 +13,30 @@ export default function LaporanRekapNilai() {
   const auth = useAuth();
   const toast = useToast();
 
+  const [page, setPage] = createSignal(1);
+  const [limit, setLimit] = createSignal(20);
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedProdi, setSelectedProdi] = createSignal('');
   const [mkSearch, setMkSearch] = createSignal('');
   const [mhsSearch, setMhsSearch] = createSignal('');
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
+
+  const [selectedMkDetail, setSelectedMkDetail] = createSignal<{
+    mataKuliahId: number;
+    kodeMk: string;
+    namaMk: string;
+  } | null>(null);
+  const [detailData] = createResource(
+    () => ({ mkId: selectedMkDetail()?.mataKuliahId, periodeId: selectedPeriode() }),
+    async ({ mkId, periodeId }) => {
+      if (!mkId) return null;
+      try {
+        return await khsController.getDetailNilaiMK(mkId, periodeId || undefined);
+      } catch {
+        return null;
+      }
+    },
+  );
 
   const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
   const [prodis] = createResource(() => prodiController.getAll('', 1, 100));
@@ -44,13 +63,29 @@ export default function LaporanRekapNilai() {
   );
 
   const [matriksNilai] = createResource(
-    () => ({ periodeId: selectedPeriode(), prodiId: selectedProdi(), search: mkSearch() }),
-    async ({ periodeId, prodiId, search }) => {
+    () => ({
+      periodeId: selectedPeriode(),
+      prodiId: selectedProdi(),
+      search: mkSearch(),
+      page: page(),
+      limit: limit(),
+    }),
+    async ({ periodeId, prodiId, search, page, limit }) => {
       try {
         const pId = prodiId ? parseInt(prodiId) : undefined;
-        return await khsController.getMatriksNilaiMK(periodeId || undefined, pId, search || undefined);
+        const res = await khsController.getMatriksNilaiMK(
+          periodeId || undefined,
+          pId,
+          search || undefined,
+          page,
+          limit,
+        );
+        if (Array.isArray(res)) {
+          return { data: res, pagination: { total: res.length, page: 1, limit: res.length, totalPages: 1 } };
+        }
+        return res;
       } catch {
-        return [];
+        return { data: [], pagination: { total: 0, page: 1, limit: 20, totalPages: 1 } };
       }
     },
   );
@@ -106,9 +141,9 @@ export default function LaporanRekapNilai() {
               Rekapitulasi sebaran nilai mata kuliah (A s.d. E) dan evaluasi akademik per semester
             </p>
           </div>
-          <Show when={(matriksNilai()?.length || 0) > 0}>
+          <Show when={(matriksNilai()?.data?.length || 0) > 0}>
             <ExportButtonGroup
-              data={() => (matriksNilai() || []) as unknown as Record<string, unknown>[]}
+              data={() => (matriksNilai()?.data || []) as unknown as Record<string, unknown>[]}
               columns={matriksColumns}
               filename={`Matriks_Nilai_MK_${selectedPeriode()}`}
               title="Matriks Sebaran Nilai Mata Kuliah (A - E)"
@@ -167,7 +202,7 @@ export default function LaporanRekapNilai() {
 
         {/* Matriks Sebaran Nilai Mata Kuliah (A s.d. E) */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
-          <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center">
+          <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
                 Matriks Sebaran Nilai Mata Kuliah (A s.d. E)
@@ -176,9 +211,24 @@ export default function LaporanRekapNilai() {
                 Jumlah mahasiswa yang memperoleh grade nilai A, B, C, D, E pada tiap mata kuliah
               </p>
             </div>
-            <span class="text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
-              {matriksNilai()?.length || 0} Mata Kuliah
-            </span>
+            <div class="flex items-center gap-2">
+              <select
+                class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+                value={limit()}
+                onChange={(e) => {
+                  setLimit(Number(e.currentTarget.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10 Data / Hal</option>
+                <option value={20}>20 Data / Hal</option>
+                <option value={50}>50 Data / Hal</option>
+                <option value={100}>100 Data / Hal</option>
+              </select>
+              <span class="text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
+                {matriksNilai()?.pagination?.total || 0} Mata Kuliah
+              </span>
+            </div>
           </div>
 
           <div class="overflow-x-auto">
@@ -203,14 +253,15 @@ export default function LaporanRekapNilai() {
                   <th class="py-3 px-3 text-center text-secondary-400">Belum Ada</th>
                   <th class="py-3 px-4 text-center font-bold">Total Peserta</th>
                   <th class="py-3 px-4 text-center font-bold">% Kelulusan</th>
+                  <th class="py-3 px-4 text-center font-bold">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 <For
-                  each={matriksNilai() || []}
+                  each={matriksNilai()?.data || []}
                   fallback={
                     <tr>
-                      <td colspan="12" class="text-center py-8 text-secondary-400">
+                      <td colspan="13" class="text-center py-8 text-secondary-400">
                         Tidak ada data matriks nilai untuk periode yang dipilih
                       </td>
                     </tr>
@@ -256,12 +307,49 @@ export default function LaporanRekapNilai() {
                           {row.persenLulus}%
                         </span>
                       </td>
+                      <td class="py-3 px-4 text-center">
+                        <button
+                          onClick={() =>
+                            setSelectedMkDetail({
+                              mataKuliahId: row.mataKuliahId,
+                              kodeMk: row.kodeMk,
+                              namaMk: row.namaMk,
+                            })
+                          }
+                          class="px-2.5 py-1 text-[11px] font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg dark:bg-brand-900/40 dark:text-brand-300"
+                        >
+                          Detail
+                        </button>
+                      </td>
                     </tr>
                   )}
                 </For>
               </tbody>
             </table>
           </div>
+          <Show when={matriksNilai()?.pagination && (matriksNilai()?.pagination.totalPages || 0) > 1}>
+            <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
+              <span class="text-secondary-500">
+                Halaman {matriksNilai()?.pagination.page} dari {matriksNilai()?.pagination.totalPages}
+              </span>
+              <div class="flex gap-2">
+                <button
+                  disabled={page() <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                >
+                  Sebelumnya
+                </button>
+                <button
+                  disabled={page() >= (matriksNilai()?.pagination.totalPages || 1)}
+                  onClick={() => setPage((p) => p + 1)}
+                  class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                >
+                  Selanjutnya
+                </button>
+              </div>
+            </div>
+          </Show>
         </div>
 
         {/* Rekap per Prodi */}
@@ -413,6 +501,226 @@ export default function LaporanRekapNilai() {
               </div>
             );
           })()}
+        </Show>
+        {/* Modal Detail Nilai Mata Kuliah & Cetak */}
+        <Show when={selectedMkDetail()}>
+          <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl max-w-4xl w-full p-6 space-y-6 shadow-2xl">
+              <div class="flex justify-between items-start border-b border-secondary-100 dark:border-secondary-800 pb-4">
+                <div>
+                  <h2 class="text-lg font-bold text-secondary-800 dark:text-white">
+                    Detail Nilai & BAP: {selectedMkDetail()?.namaMk}
+                  </h2>
+                  <p class="text-xs text-secondary-500 font-mono">
+                    Kode: {selectedMkDetail()?.kodeMk} | Periode: {selectedPeriode() || 'Aktif'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedMkDetail(null)}
+                  class="text-secondary-400 hover:text-secondary-600 dark:hover:text-white text-xl font-bold"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <Show
+                when={detailData()}
+                fallback={<div class="py-8 text-center text-xs text-secondary-400">Memuat detail nilai...</div>}
+              >
+                {(() => {
+                  const d = detailData()!;
+                  return (
+                    <div class="space-y-6">
+                      <div class="flex flex-wrap gap-3 justify-end border-b border-secondary-100 dark:border-secondary-800 pb-4">
+                        <button
+                          onClick={() => {
+                            const printWin = window.open('', '_blank');
+                            if (!printWin) return;
+                            const html = `
+                              <!DOCTYPE html>
+                              <html>
+                              <head>
+                                <title>Daftar Nilai - ${d.mataKuliah.nama}</title>
+                                <style>
+                                  body { font-family: sans-serif; padding: 20px; color: #333; }
+                                  h2 { text-align: center; margin-bottom: 5px; }
+                                  p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
+                                  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                  th { background-color: #f4f4f4; text-align: center; }
+                                  .center { text-align: center; }
+                                  .ttd { margin-top: 40px; float: right; width: 250px; text-align: center; font-size: 12px; }
+                                </style>
+                              </head>
+                              <body>
+                                <h2>DAFTAR NILAI KULIAH</h2>
+                                <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode}) - ${d.mataKuliah.sksTotal} SKS<br>Program Studi: ${d.mataKuliah.prodiNama} | Periode: ${selectedPeriode()}</p>
+                                <table>
+                                  <thead>
+                                    <tr>
+                                      <th width="5%">No</th>
+                                      <th width="20%">NIM</th>
+                                      <th>Nama Mahasiswa</th>
+                                      <th width="15%">Nilai Angka</th>
+                                      <th width="15%">Nilai Huruf</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    ${(d.peserta || [])
+                                      .map(
+                                        (p, idx) => `
+                                      <tr>
+                                        <td class="center">${idx + 1}</td>
+                                        <td class="center">${p.nim}</td>
+                                        <td>${p.nama}</td>
+                                        <td class="center">${p.nilaiAngka || '-'}</td>
+                                        <td class="center"><strong>${p.nilaiHuruf || '-'}</strong></td>
+                                      </tr>
+                                    `,
+                                      )
+                                      .join('')}
+                                  </tbody>
+                                </table>
+                                <div class="ttd">
+                                  <p>Dosen Pengampu,<br><br><br><br><strong>${(d.dosenPengampu || []).join(', ') || '(...........................)'}</strong></p>
+                                </div>
+                                <script>window.onload = () => { window.print(); };</script>
+                              </body>
+                              </html>
+                            `;
+                            printWin.document.write(html);
+                            printWin.document.close();
+                          }}
+                          class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-lg shadow-sm"
+                        >
+                          🖨️ Cetak Daftar Nilai
+                        </button>
+                        <button
+                          onClick={() => {
+                            const printWin = window.open('', '_blank');
+                            if (!printWin) return;
+                            const html = `
+                              <!DOCTYPE html>
+                              <html>
+                              <head>
+                                <title>BAP Perkuliahan - ${d.mataKuliah.nama}</title>
+                                <style>
+                                  body { font-family: sans-serif; padding: 20px; color: #333; }
+                                  h2 { text-align: center; margin-bottom: 5px; }
+                                  p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
+                                  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                  th { background-color: #f4f4f4; text-align: center; }
+                                  .center { text-align: center; }
+                                </style>
+                              </head>
+                              <body>
+                                <h2>BERITA ACARA PERKULIAHAN (BAP)</h2>
+                                <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode})<br>Dosen: ${(d.dosenPengampu || []).join(', ') || '-'}</p>
+                                <table>
+                                  <thead>
+                                    <tr>
+                                      <th width="8%">Pertemuan</th>
+                                      <th width="15%">Tanggal</th>
+                                      <th>Materi / Pokok Bahasan</th>
+                                      <th width="15%">Durasi (Menit)</th>
+                                      <th width="20%">Dosen Pengajar</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    ${(d.bapList || [])
+                                      .map(
+                                        (b) => `
+                                      <tr>
+                                        <td class="center">${b.pertemuanKe}</td>
+                                        <td class="center">${new Date(b.tanggal).toLocaleDateString('id-ID')}</td>
+                                        <td>${b.materi}</td>
+                                        <td class="center">${b.durasiMenit}</td>
+                                        <td>${b.dosenNama}</td>
+                                      </tr>
+                                    `,
+                                      )
+                                      .join('')}
+                                  </tbody>
+                                </table>
+                                <script>window.onload = () => { window.print(); };</script>
+                              </body>
+                              </html>
+                            `;
+                            printWin.document.write(html);
+                            printWin.document.close();
+                          }}
+                          class="px-4 py-2 text-xs font-bold bg-secondary-700 text-white hover:bg-secondary-800 rounded-lg shadow-sm"
+                        >
+                          📄 Lihat & Cetak BAP Perkuliahan
+                        </button>
+                      </div>
+
+                      <div class="space-y-3">
+                        <h4 class="text-xs font-bold uppercase text-secondary-500 tracking-wider">
+                          Daftar Nilai Peserta Kelas
+                        </h4>
+                        <div class="max-h-60 overflow-y-auto border border-secondary-100 dark:border-secondary-800 rounded-lg">
+                          <table class="w-full text-left text-xs">
+                            <thead class="bg-secondary-50 dark:bg-secondary-800 text-secondary-500 font-semibold sticky top-0">
+                              <tr>
+                                <th class="py-2 px-3">NIM</th>
+                                <th class="py-2 px-3">Nama Mahasiswa</th>
+                                <th class="py-2 px-3 text-center">Nilai Angka</th>
+                                <th class="py-2 px-3 text-center">Nilai Huruf</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <For each={d.peserta || []}>
+                                {(p) => (
+                                  <tr class="border-b border-secondary-50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
+                                    <td class="py-2 px-3 font-mono">{p.nim}</td>
+                                    <td class="py-2 px-3 font-medium text-secondary-800 dark:text-white">{p.nama}</td>
+                                    <td class="py-2 px-3 text-center">{p.nilaiAngka || '-'}</td>
+                                    <td class="py-2 px-3 text-center font-bold">{p.nilaiHuruf || '-'}</td>
+                                  </tr>
+                                )}
+                              </For>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <div class="space-y-3">
+                        <h4 class="text-xs font-bold uppercase text-secondary-500 tracking-wider">
+                          BAP Jurnal Perkuliahan (${d.bapList?.length || 0} Pertemuan)
+                        </h4>
+                        <div class="max-h-48 overflow-y-auto border border-secondary-100 dark:border-secondary-800 rounded-lg">
+                          <table class="w-full text-left text-xs">
+                            <thead class="bg-secondary-50 dark:bg-secondary-800 text-secondary-500 font-semibold sticky top-0">
+                              <tr>
+                                <th class="py-2 px-3 text-center">P.Ke</th>
+                                <th class="py-2 px-3">Tanggal</th>
+                                <th class="py-2 px-3">Materi</th>
+                                <th class="py-2 px-3">Dosen</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <For each={d.bapList || []}>
+                                {(b) => (
+                                  <tr class="border-b border-secondary-50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
+                                    <td class="py-2 px-3 text-center font-bold">{b.pertemuanKe}</td>
+                                    <td class="py-2 px-3">{new Date(b.tanggal).toLocaleDateString('id-ID')}</td>
+                                    <td class="py-2 px-3">{b.materi}</td>
+                                    <td class="py-2 px-3">{b.dosenNama}</td>
+                                  </tr>
+                                )}
+                              </For>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </Show>
+            </div>
+          </div>
         </Show>
       </div>
     </MainLayout>

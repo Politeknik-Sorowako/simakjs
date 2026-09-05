@@ -188,6 +188,9 @@ export const getRekapPerProdiSchema = {
     summary: 'Rekap Nilai per Program Studi',
     description: 'Mengambil rekapitulasi nilai mahasiswa untuk seluruh mahasiswa dalam suatu program studi.',
   },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+  }),
 };
 
 export const getMatriksNilaiSchema = {
@@ -200,6 +203,8 @@ export const getMatriksNilaiSchema = {
     periodeId: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
     search: t.Optional(t.String()),
+    page: t.Optional(t.String()),
+    limit: t.Optional(t.String()),
   }),
 };
 
@@ -238,5 +243,19 @@ export const deletePredikatSchema = {
   },
   params: t.Object({
     id: t.Numeric(),
+  }),
+};
+
+export const getDetailNilaiMKSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Detail Nilai Mata Kuliah',
+    description: 'Mengambil detail nilai peserta dan BAP perkuliahan suatu mata kuliah.',
+  },
+  params: t.Object({
+    mataKuliahId: t.String(),
+  }),
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
   }),
 };

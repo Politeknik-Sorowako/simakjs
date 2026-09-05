@@ -9,6 +9,7 @@ import { ExportColumn } from '../../utils/export';
 export default function LaporanPeringatan() {
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
+  const [limit, setLimit] = createSignal(20);
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
 
   const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
@@ -33,12 +34,12 @@ export default function LaporanPeringatan() {
   );
 
   const [riwayatData] = createResource(
-    () => ({ page: page(), search: search(), periode: selectedPeriode() }),
+    () => ({ page: page(), limit: limit(), search: search(), periode: selectedPeriode() }),
     async (params) => {
       try {
         const res = await bimbinganController.getAllPelanggaran({
           page: params.page,
-          limit: 20,
+          limit: params.limit,
           search: params.search,
           periodeId: params.periode || undefined,
         });
@@ -223,16 +224,31 @@ export default function LaporanPeringatan() {
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Riwayat Pelanggaran Detail</h3>
-            <input
-              type="text"
-              placeholder="Cari NIM, Nama, atau Pelanggaran..."
-              class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white w-full sm:w-64"
-              value={search()}
-              onInput={(e) => {
-                setSearch(e.currentTarget.value);
-                setPage(1);
-              }}
-            />
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <select
+                class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+                value={limit()}
+                onChange={(e) => {
+                  setLimit(Number(e.currentTarget.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10 Data / Hal</option>
+                <option value={20}>20 Data / Hal</option>
+                <option value={50}>50 Data / Hal</option>
+                <option value={100}>100 Data / Hal</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Cari NIM, Nama, atau Pelanggaran..."
+                class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white w-full sm:w-64"
+                value={search()}
+                onInput={(e) => {
+                  setSearch(e.currentTarget.value);
+                  setPage(1);
+                }}
+              />
+            </div>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">

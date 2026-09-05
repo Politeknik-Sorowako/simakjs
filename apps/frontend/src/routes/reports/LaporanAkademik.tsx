@@ -32,7 +32,8 @@ export default function LaporanAkademik() {
     async ({ periodeId, prodiId, search }) => {
       try {
         const pId = prodiId ? parseInt(prodiId) : undefined;
-        return await khsController.getMatriksNilaiMK(periodeId || undefined, pId, search || undefined);
+        const res = await khsController.getMatriksNilaiMK(periodeId || undefined, pId, search || undefined);
+        return Array.isArray(res) ? res : res?.data || [];
       } catch {
         return [];
       }

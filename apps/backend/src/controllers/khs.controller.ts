@@ -256,11 +256,34 @@ export class KhsController {
     const periodeId = q.periodeId;
     const prodiId = q.prodiId ? parseInt(q.prodiId) : undefined;
     const search = q.search;
+    const page = q.page ? parseInt(q.page) : undefined;
+    const limit = q.limit ? parseInt(q.limit) : undefined;
     try {
-      return await KhsService.getMatriksNilaiMataKuliah({ periodeId, prodiId, search });
+      return await KhsService.getMatriksNilaiMataKuliah({ periodeId, prodiId, search, page, limit });
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal mengambil matriks nilai mata kuliah.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getDetailNilaiMK({ params, query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login.' };
+    }
+    const mataKuliahId = parseInt(params.mataKuliahId);
+    if (isNaN(mataKuliahId)) {
+      set.status = 400;
+      return { error: 'ID Mata Kuliah tidak valid.' };
+    }
+    const periodeId = (query as Record<string, string | undefined>)?.periodeId;
+    try {
+      return await KhsService.getDetailNilaiMataKuliah(mataKuliahId, periodeId);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengambil detail nilai mata kuliah.' };
     }
   }
 }
