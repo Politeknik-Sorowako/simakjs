@@ -123,21 +123,32 @@ export const loginSchema = {
     password: t.String({ description: 'Kata sandi' }),
   }),
   response: {
-    200: t.Object({
-      message: t.String({ default: 'Login berhasil' }),
-      token: t.String({ default: 'eyJhbGciOiJIUzI1NiIsInR...' }),
-      user: t.Object({
-        id: t.Integer({ default: 1 }),
-        email: t.String({ default: 'user@example.com' }),
-        nama: t.String({ default: 'Nama Pengguna' }),
-        role: t.String({ default: 'mahasiswa' }),
-        mustChangePassword: t.Optional(t.Boolean({ default: false })),
-        theme: t.Optional(t.String()),
-        avatar: t.Optional(t.String()),
+    200: t.Union([
+      t.Object({
+        message: t.String({ default: 'Login berhasil' }),
+        token: t.String({ default: 'eyJhbGciOiJIUzI1NiIsInR...' }),
+        user: t.Object({
+          id: t.Integer({ default: 1 }),
+          email: t.String({ default: 'user@example.com' }),
+          nama: t.String({ default: 'Nama Pengguna' }),
+          role: t.String({ default: 'mahasiswa' }),
+          mustChangePassword: t.Optional(t.Boolean({ default: false })),
+          theme: t.Optional(t.String()),
+          avatar: t.Optional(t.String()),
+          twoFactorEnabled: t.Optional(t.Boolean()),
+        }),
       }),
-    }),
+      t.Object({
+        requires2FA: t.Literal(true),
+        twoFactorToken: t.String(),
+        message: t.String({ default: 'Verifikasi 2FA diperlukan.' }),
+      }),
+    ]),
     401: t.Object({
       error: t.String({ default: 'Email atau password salah' }),
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akun Anda belum diaktifkan' }),
     }),
     429: t.Object({
       error: t.String({ default: 'Terlalu banyak percobaan login. Silakan coba lagi.' }),
@@ -172,4 +183,74 @@ export const clearRateLimitSchema = {
       error: t.String({ default: 'Tidak ada rate limit aktif untuk email tersebut.' }),
     }),
   },
+};
+
+export const googleCallbackSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Callback Google Workspace SSO',
+    description: 'Menukar authorization code Google untuk autentikasi user domain @politekniksorowako.ac.id.',
+  },
+  body: t.Object({
+    code: t.String({ description: 'Authorization code dari Google OAuth' }),
+  }),
+};
+
+export const activateAccountSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Aktivasi Akun Pengguna',
+    description: 'Memverifikasi token aktivasi dari email untuk mengaktifkan akun pengguna.',
+  },
+  body: t.Object({
+    token: t.String({ description: 'Token aktivasi dari link email' }),
+  }),
+};
+
+export const resendActivationSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Kirim Ulang Email Aktivasi',
+    description: 'Mengirim ulang tautan aktivasi akun ke alamat email pengguna.',
+  },
+  body: t.Object({
+    email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
+  }),
+};
+
+export const twoFactorEnableSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Aktifkan 2FA',
+    description: 'Memverifikasi kode 6-digit TOTP awal dan menyimpan rahasia 2FA user.',
+  },
+  body: t.Object({
+    secret: t.String({ description: 'Secret key base32' }),
+    code: t.String({ minLength: 6, maxLength: 6, description: 'Kode 6-digit dari aplikasi authenticator' }),
+  }),
+};
+
+export const twoFactorDisableSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Nonaktifkan 2FA',
+    description: 'Menonaktifkan 2FA dengan konfirmasi password dan kode 6-digit TOTP.',
+  },
+  body: t.Object({
+    password: t.String({ description: 'Kata sandi saat ini' }),
+    code: t.String({ minLength: 6, maxLength: 6, description: 'Kode 6-digit dari aplikasi authenticator' }),
+  }),
+};
+
+export const twoFactorVerifyLoginSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Verifikasi Kode 2FA Saat Login',
+    description: 'Memverifikasi kode TOTP 6-digit atau backup recovery code untuk menyelesaikan login 2FA.',
+  },
+  body: t.Object({
+    twoFactorToken: t.String({ description: 'Token sementara 2FA dari step 1 login' }),
+    code: t.String({ description: 'Kode 6-digit TOTP atau kode recovery backup' }),
+    isRecovery: t.Optional(t.Boolean({ default: false, description: 'True jika menggunakan kode recovery' })),
+  }),
 };

@@ -1,5 +1,11 @@
+import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
+import { users } from '../models/schema';
+import { AccountActivationService } from '../services/account-activation.service';
 import { AuthService } from '../services/auth.service';
+import { SsoService } from '../services/sso.service';
+import { TwoFactorService } from '../services/two-factor.service';
+import { db } from '../utils/db';
 import { isSuperAdminOrAdmin } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -23,7 +29,7 @@ export class AuthController {
       const user = await AuthService.register(body.email, body.password, body.nama, body.role);
       set.status = 201;
       return {
-        message: 'Registrasi berhasil',
+        message: 'Registrasi berhasil. Silakan cek email Anda untuk mengaktifkan akun.',
         user,
       };
     } catch (e) {
@@ -61,8 +67,22 @@ export class AuthController {
     }
     if (!user.isActive) {
       set.status = 403;
-      return { error: 'Akun Anda belum diaktifkan oleh Admin' };
+      return { error: 'Akun Anda belum diaktifkan' };
     }
+
+    if (user.twoFactorEnabled) {
+      const twoFactorToken = await jwt.sign({
+        id: user.id,
+        stage: '2fa_required',
+      });
+      set.status = 200;
+      return {
+        requires2FA: true,
+        twoFactorToken,
+        message: 'Verifikasi 2FA diperlukan.',
+      };
+    }
+
     const token = await jwt.sign({
       id: user.id,
       email: user.email,
@@ -100,6 +120,335 @@ export class AuthController {
       token,
       user: userResponse,
     };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async googleAuthUrl({ set }: AuthContext): Promise<any> {
+    try {
+      const url = SsoService.getGoogleAuthUrl();
+      set.status = 200;
+      return { url };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghasilkan URL autentikasi Google' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async googleCallback({ body, jwt, set, cookie }: AuthContext & { jwt: any }): Promise<any> {
+    try {
+      const code = (body as { code?: string })?.code;
+      if (!code) {
+        set.status = 400;
+        return { error: 'Kode otorisasi Google wajib diisi.' };
+      }
+
+      const googleUser = await SsoService.exchangeCodeForGoogleUser(code);
+      const user = await SsoService.findOrCreateGoogleUser(googleUser);
+
+      if (!user.isActive) {
+        set.status = 403;
+        return { error: 'Akun Anda belum aktif.' };
+      }
+
+      if (user.twoFactorEnabled) {
+        const twoFactorToken = await jwt.sign({
+          id: user.id,
+          stage: '2fa_required',
+        });
+        set.status = 200;
+        return {
+          requires2FA: true,
+          twoFactorToken,
+          message: 'Verifikasi 2FA diperlukan.',
+        };
+      }
+
+      const token = await jwt.sign({
+        id: user.id,
+        email: user.email,
+        nama: user.nama,
+        role: user.role,
+        roles: user.roles,
+        mustChangePassword: user.mustChangePassword,
+        isGlobalScope: user.isGlobalScope ?? false,
+      });
+
+      if (cookie?.access_token) {
+        cookie.access_token.set({
+          value: token,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60,
+        });
+      }
+
+      set.status = 200;
+      return {
+        message: 'Login Google berhasil',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          nama: user.nama,
+          role: user.role,
+          roles: user.roles,
+          mustChangePassword: user.mustChangePassword,
+          theme: user.theme,
+          avatar: user.avatar,
+        },
+      };
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memproses login Google Workspace.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async activateAccount({ body, set }: AuthContext): Promise<any> {
+    try {
+      const token = (body as { token?: string })?.token;
+      if (!token) {
+        set.status = 400;
+        return { error: 'Token aktivasi wajib diisi.' };
+      }
+
+      const result = await AccountActivationService.verifyActivationToken(token);
+      set.status = 200;
+      return { message: 'Akun Anda berhasil diaktifkan. Silakan login.', email: result.email };
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengaktifkan akun.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async resendActivation({ body, set }: AuthContext): Promise<any> {
+    try {
+      const email = (body as { email?: string })?.email;
+      if (!email) {
+        set.status = 400;
+        return { error: 'Email wajib diisi.' };
+      }
+
+      await AccountActivationService.resendActivationToken(email);
+      set.status = 200;
+      return { message: 'Tautan aktivasi baru telah dikirimkan ke email Anda.' };
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengirim ulang email aktivasi.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async twoFactorSetup({ set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu.' };
+      }
+
+      const { secret, otpauthUri } = TwoFactorService.generateSecret(currentUser.email);
+      const qrCodeUrl = await TwoFactorService.generateQrCode(otpauthUri);
+
+      set.status = 200;
+      return { secret, qrCodeUrl, otpauthUri };
+    } catch (err: unknown) {
+      set.status = 500;
+      return { error: 'Gagal menyiapkan 2FA.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async twoFactorEnable({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu.' };
+      }
+
+      const secret = (body as { secret?: string; code?: string })?.secret;
+      const code = (body as { secret?: string; code?: string })?.code;
+
+      if (!secret || !code) {
+        set.status = 400;
+        return { error: 'Secret dan kode 6-digit wajib diisi.' };
+      }
+
+      const isValid = TwoFactorService.verifyTotp(code, secret);
+      if (!isValid) {
+        set.status = 400;
+        return { error: 'Kode 6-digit TOTP tidak valid. Pastikan waktu di perangkat Anda sesuai.' };
+      }
+
+      const { plainCodes, hashedCodes } = await TwoFactorService.generateRecoveryCodes();
+
+      await db
+        .update(users)
+        .set({
+          twoFactorEnabled: true,
+          twoFactorSecret: secret,
+          twoFactorRecoveryCodes: hashedCodes,
+        })
+        .where(eq(users.id, currentUser.id));
+
+      set.status = 200;
+      return {
+        message: 'Autentikasi Dua Faktor (2FA) berhasil diaktifkan.',
+        recoveryCodes: plainCodes,
+      };
+    } catch (err: unknown) {
+      set.status = 500;
+      return { error: 'Gagal mengaktifkan 2FA.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async twoFactorDisable({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu.' };
+      }
+
+      const password = (body as { password?: string; code?: string })?.password;
+      const code = (body as { password?: string; code?: string })?.code;
+
+      if (!password || !code) {
+        set.status = 400;
+        return { error: 'Kata sandi dan kode 6-digit wajib diisi.' };
+      }
+
+      const [fullUser] = await db.select().from(users).where(eq(users.id, currentUser.id)).limit(1);
+      if (!fullUser) {
+        set.status = 404;
+        return { error: 'Pengguna tidak ditemukan.' };
+      }
+
+      const isMatch = await Bun.password.verify(password, fullUser.password);
+      if (!isMatch) {
+        set.status = 400;
+        return { error: 'Kata sandi Anda salah.' };
+      }
+
+      if (!fullUser.twoFactorSecret) {
+        set.status = 400;
+        return { error: '2FA belum diaktifkan.' };
+      }
+
+      const isValid = TwoFactorService.verifyTotp(code, fullUser.twoFactorSecret);
+      if (!isValid) {
+        set.status = 400;
+        return { error: 'Kode 6-digit TOTP tidak valid.' };
+      }
+
+      await db
+        .update(users)
+        .set({
+          twoFactorEnabled: false,
+          twoFactorSecret: null,
+          twoFactorRecoveryCodes: [],
+        })
+        .where(eq(users.id, currentUser.id));
+
+      set.status = 200;
+      return { message: 'Autentikasi Dua Faktor (2FA) telah dinonaktifkan.' };
+    } catch (err: unknown) {
+      set.status = 500;
+      return { error: 'Gagal menonaktifkan 2FA.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async twoFactorVerifyLogin({ body, jwt, set, cookie }: AuthContext & { jwt: any }): Promise<any> {
+    try {
+      const twoFactorToken = (body as { twoFactorToken?: string; code?: string; isRecovery?: boolean })?.twoFactorToken;
+      const code = (body as { twoFactorToken?: string; code?: string; isRecovery?: boolean })?.code;
+      const isRecovery = (body as { twoFactorToken?: string; code?: string; isRecovery?: boolean })?.isRecovery;
+
+      if (!twoFactorToken || !code) {
+        set.status = 400;
+        return { error: 'Token 2FA dan kode wajib diisi.' };
+      }
+
+      const payload = await jwt.verify(twoFactorToken);
+      if (!payload || payload.stage !== '2fa_required' || !payload.id) {
+        set.status = 401;
+        return { error: 'Sesi 2FA tidak valid atau telah kedaluwarsa. Silakan login kembali.' };
+      }
+
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, payload.id as number))
+        .limit(1);
+      if (!user || !user.isActive) {
+        set.status = 401;
+        return { error: 'Pengguna tidak ditemukan atau tidak aktif.' };
+      }
+
+      let isVerified = false;
+      if (isRecovery) {
+        isVerified = await TwoFactorService.verifyAndConsumeRecoveryCode(user.id, code);
+      } else if (user.twoFactorSecret) {
+        isVerified = TwoFactorService.verifyTotp(code, user.twoFactorSecret);
+      }
+
+      if (!isVerified) {
+        set.status = 400;
+        return {
+          error: isRecovery ? 'Kode pemulihan backup tidak valid atau sudah digunakan.' : 'Kode 6-digit TOTP salah.',
+        };
+      }
+
+      const roles = await AuthService.getRolesForUser(user.id);
+      const token = await jwt.sign({
+        id: user.id,
+        email: user.email,
+        nama: user.nama,
+        role: user.role,
+        roles,
+        mustChangePassword: user.mustChangePassword,
+        isGlobalScope: user.isGlobalScope ?? false,
+      });
+
+      if (cookie?.access_token) {
+        cookie.access_token.set({
+          value: token,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+          sameSite: 'strict',
+          maxAge: 7 * 24 * 60 * 60,
+        });
+      }
+
+      set.status = 200;
+      const userResponse: Record<string, unknown> = {
+        id: user.id,
+        email: user.email,
+        nama: user.nama,
+        role: user.role,
+        roles,
+        mustChangePassword: user.mustChangePassword,
+      };
+      if (user.theme) userResponse.theme = user.theme;
+      if (user.avatar) userResponse.avatar = user.avatar;
+
+      return {
+        message: 'Login 2FA berhasil',
+        token,
+        user: userResponse,
+      };
+    } catch (err: unknown) {
+      set.status = 500;
+      return { error: 'Gagal memverifikasi 2FA.' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
