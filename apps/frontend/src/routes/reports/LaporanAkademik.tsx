@@ -32,7 +32,8 @@ export default function LaporanAkademik() {
     async ({ periodeId, prodiId, search }) => {
       try {
         const pId = prodiId ? parseInt(prodiId) : undefined;
-        return await khsController.getMatriksNilaiMK(periodeId || undefined, pId, search || undefined);
+        const res = await khsController.getMatriksNilaiMK(periodeId || undefined, pId, search || undefined);
+        return Array.isArray(res) ? res : res?.data || [];
       } catch {
         return [];
       }
@@ -83,19 +84,9 @@ export default function LaporanAkademik() {
                 subtitle={`Periode: ${selectedPeriode()}`}
               />
             </Show>
-            <Show
-              when={
-                (Array.isArray(matriksNilai())
-                  ? (matriksNilai() as unknown[]).length
-                  : (matriksNilai() as { data: unknown[] })?.data?.length || 0) > 0
-              }
-            >
+            <Show when={(matriksNilai() || []).length > 0}>
               <ExportButtonGroup
-                data={() =>
-                  Array.isArray(matriksNilai())
-                    ? (matriksNilai() as unknown[])
-                    : (matriksNilai() as { data: unknown[] })?.data || []
-                }
+                data={() => matriksNilai() || []}
                 columns={matriksColumns}
                 filename={`Matriks_Nilai_MK_${selectedPeriode()}`}
                 title="Matriks Sebaran Nilai Mata Kuliah (A-E)"
@@ -224,12 +215,7 @@ export default function LaporanAkademik() {
             <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
               Matriks Mata Kuliah $\times$ Jumlah Mahasiswa Nilai (A - E)
             </h3>
-            <span class="text-xs text-secondary-500">
-              Total MK:{' '}
-              {Array.isArray(matriksNilai())
-                ? (matriksNilai() as unknown[]).length
-                : (matriksNilai() as { data: unknown[] })?.data?.length || 0}
-            </span>
+            <span class="text-xs text-secondary-500">Total MK: {(matriksNilai() || []).length}</span>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
@@ -251,11 +237,7 @@ export default function LaporanAkademik() {
               </thead>
               <tbody>
                 <For
-                  each={
-                    Array.isArray(matriksNilai())
-                      ? (matriksNilai() as Record<string, unknown>[])
-                      : (matriksNilai() as { data: Record<string, unknown>[] })?.data || []
-                  }
+                  each={matriksNilai() || []}
                   fallback={
                     <tr>
                       <td colspan="12" class="text-center py-8 text-secondary-400">

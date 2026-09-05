@@ -628,11 +628,21 @@ export class KhsService {
       .where(and(...kelasConditions));
 
     const kelasIds = kelasList.map((k) => k.id);
+    const mkData = {
+      id: mk.id,
+      kode: mk.kode,
+      nama: mk.nama,
+      sksTotal: mk.sksTotal,
+      prodiNama: mk.programStudi?.nama || '-',
+    };
+
     if (kelasIds.length === 0) {
       return {
-        mataKuliah: mk,
+        mataKuliah: mkData,
         dosenPengajar: [],
+        dosenPengampu: [],
         mahasiswa: [],
+        peserta: [],
         bapList: [],
       };
     }
@@ -682,10 +692,14 @@ export class KhsService {
       .where(inArray(bap.kelasKuliahId, kelasIds))
       .orderBy(bap.pertemuanKe);
 
+    const dosenPengampu = Array.from(new Set(dosenList.map((d) => d.nama).filter((n): n is string => Boolean(n))));
+
     return {
-      mataKuliah: mk,
+      mataKuliah: mkData,
       dosenPengajar: dosenList,
+      dosenPengampu,
       mahasiswa: mhsList,
+      peserta: mhsList,
       bapList: bapRows,
     };
   }

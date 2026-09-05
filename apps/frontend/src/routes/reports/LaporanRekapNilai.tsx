@@ -553,7 +553,7 @@ export default function LaporanRekapNilai() {
                                 </style>
                               </head>
                               <body>
-                                <h2>DAFTAR NILAIS KULIAH</h2>
+                                <h2>DAFTAR NILAI KULIAH</h2>
                                 <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode}) - ${d.mataKuliah.sksTotal} SKS<br>Program Studi: ${d.mataKuliah.prodiNama} | Periode: ${selectedPeriode()}</p>
                                 <table>
                                   <thead>
@@ -566,7 +566,7 @@ export default function LaporanRekapNilai() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    ${d.peserta
+                                    ${(d.peserta || [])
                                       .map(
                                         (p, idx) => `
                                       <tr>
@@ -582,7 +582,7 @@ export default function LaporanRekapNilai() {
                                   </tbody>
                                 </table>
                                 <div class="ttd">
-                                  <p>Dosen Pengampu,<br><br><br><br><strong>${d.dosenPengampu.join(', ') || '(...........................)游'}</strong></p>
+                                  <p>Dosen Pengampu,<br><br><br><br><strong>${(d.dosenPengampu || []).join(', ') || '(...........................)'}</strong></p>
                                 </div>
                                 <script>window.onload = () => { window.print(); };</script>
                               </body>
@@ -616,7 +616,7 @@ export default function LaporanRekapNilai() {
                               </head>
                               <body>
                                 <h2>BERITA ACARA PERKULIAHAN (BAP)</h2>
-                                <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode})<br>Dosen: ${d.dosenPengampu.join(', ') || '-'}</p>
+                                <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode})<br>Dosen: ${(d.dosenPengampu || []).join(', ') || '-'}</p>
                                 <table>
                                   <thead>
                                     <tr>
@@ -628,7 +628,7 @@ export default function LaporanRekapNilai() {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    ${d.bapList
+                                    ${(d.bapList || [])
                                       .map(
                                         (b) => `
                                       <tr>
@@ -671,7 +671,7 @@ export default function LaporanRekapNilai() {
                               </tr>
                             </thead>
                             <tbody>
-                              <For each={d.peserta}>
+                              <For each={d.peserta || []}>
                                 {(p) => (
                                   <tr class="border-b border-secondary-50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
                                     <td class="py-2 px-3 font-mono">{p.nim}</td>
@@ -688,7 +688,7 @@ export default function LaporanRekapNilai() {
 
                       <div class="space-y-3">
                         <h4 class="text-xs font-bold uppercase text-secondary-500 tracking-wider">
-                          BAP Jurnal Perkuliahan (${d.bapList.length} Pertemuan)
+                          BAP Jurnal Perkuliahan (${d.bapList?.length || 0} Pertemuan)
                         </h4>
                         <div class="max-h-48 overflow-y-auto border border-secondary-100 dark:border-secondary-800 rounded-lg">
                           <table class="w-full text-left text-xs">
@@ -701,7 +701,7 @@ export default function LaporanRekapNilai() {
                               </tr>
                             </thead>
                             <tbody>
-                              <For each={d.bapList}>
+                              <For each={d.bapList || []}>
                                 {(b) => (
                                   <tr class="border-b border-secondary-50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
                                     <td class="py-2 px-3 text-center font-bold">{b.pertemuanKe}</td>

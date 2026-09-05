@@ -647,7 +647,7 @@ export default function LaporanPresensiKelas() {
                                 </tr>
                               </thead>
                               <tbody>
-                                ${data.mahasiswa
+                                ${(data.mahasiswa || [])
                                   .map(
                                     (m, idx) => `
                                   <tr>

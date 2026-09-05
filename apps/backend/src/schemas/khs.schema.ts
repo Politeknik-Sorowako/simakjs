@@ -245,3 +245,17 @@ export const deletePredikatSchema = {
     id: t.Numeric(),
   }),
 };
+
+export const getDetailNilaiMKSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Detail Nilai Mata Kuliah',
+    description: 'Mengambil detail nilai peserta dan BAP perkuliahan suatu mata kuliah.',
+  },
+  params: t.Object({
+    mataKuliahId: t.String(),
+  }),
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+  }),
+};
