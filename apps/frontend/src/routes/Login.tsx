@@ -1,5 +1,5 @@
 import { A, useNavigate, useSearchParams } from '@solidjs/router';
-import { createEffect, createSignal, onCleanup, Show } from 'solid-js';
+import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
@@ -61,8 +61,10 @@ export default function Login() {
 
   const [retryAfter, setRetryAfter] = createSignal<number | null>(null);
   const [countdown, setCountdown] = createSignal(0);
+  const [ssoLoading, setSsoLoading] = createSignal(false);
 
   let countdownTimer: ReturnType<typeof setInterval> | null = null;
+  let ssoTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
   const stopCountdown = () => {
     if (countdownTimer) {
@@ -71,7 +73,42 @@ export default function Login() {
     }
   };
 
-  onCleanup(stopCountdown);
+  const resetSSOLoading = () => {
+    setSsoLoading(false);
+    setLoading(false);
+    if (ssoTimeoutTimer) {
+      clearTimeout(ssoTimeoutTimer);
+      ssoTimeoutTimer = null;
+    }
+  };
+
+  onCleanup(() => {
+    stopCountdown();
+    resetSSOLoading();
+  });
+
+  onMount(() => {
+    // Reset SSO loading state when page restored from BFCache (e.g. back button in standalone PWA)
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted || document.visibilityState === 'visible') {
+        resetSSOLoading();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        resetSSOLoading();
+      }
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    onCleanup(() => {
+      window.removeEventListener('pageshow', handlePageShow);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    });
+  });
 
   createEffect(() => {
     const seconds = retryAfter();
@@ -98,9 +135,9 @@ export default function Login() {
   // Check 2FA step from Google SSO redirect or URL
   createEffect(() => {
     if (searchParams.step === '2fa' || sessionStorage.getItem('2fa_token')) {
-      const tokenFromSession = sessionStorage.getItem('2fa_token');
-      if (tokenFromSession) {
-        setTwoFactorToken(tokenFromSession);
+      const storedToken = sessionStorage.getItem('2fa_token');
+      if (storedToken) {
+        setTwoFactorToken(storedToken);
         setIs2FAStep(true);
       }
     }
@@ -116,17 +153,24 @@ export default function Login() {
 
   const handleGoogleSSO = async () => {
     try {
+      setSsoLoading(true);
       setLoading(true);
+      if (ssoTimeoutTimer) clearTimeout(ssoTimeoutTimer);
+      // Auto-dismiss SSO loading overlay after 10s if redirect didn't happen or was blocked
+      ssoTimeoutTimer = setTimeout(() => {
+        resetSSOLoading();
+      }, 10000);
+
       const res = await authController.getGoogleAuthUrl();
       if (res?.url) {
         window.location.href = res.url;
       } else {
         toast.showToast('Gagal memuat URL login Google SSO', 'error');
+        resetSSOLoading();
       }
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal memulai login Google SSO', 'error');
-    } finally {
-      setLoading(false);
+      resetSSOLoading();
     }
   };
 
@@ -253,6 +297,25 @@ export default function Login() {
 
   return (
     <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-secondary-100 via-secondary-50 to-brand-50 dark:from-secondary-950 dark:via-primary-950 dark:to-secondary-950 overflow-hidden px-4 transition-colors duration-200">
+      <Show when={ssoLoading()}>
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-secondary-900/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div class="bg-white dark:bg-secondary-900 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-secondary-100 dark:border-secondary-800 flex flex-col items-center gap-4">
+            <div class="w-12 h-12 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+            <h3 class="text-base font-bold text-secondary-800 dark:text-white">Menghubungkan ke Google Workspace</h3>
+            <p class="text-xs text-secondary-500 dark:text-secondary-400">
+              Mengarahkan ke portal otentikasi Politeknik Sorowako...
+            </p>
+            <button
+              type="button"
+              onClick={resetSSOLoading}
+              class="mt-2 text-xs font-semibold text-secondary-500 hover:text-secondary-800 dark:text-secondary-400 dark:hover:text-white transition-colors underline focus:outline-none"
+            >
+              Batal / Kembali
+            </button>
+          </div>
+        </div>
+      </Show>
+
       {/* Floating Theme Toggle in Top Right */}
       <div class="absolute top-4 right-4 z-50">
         <button

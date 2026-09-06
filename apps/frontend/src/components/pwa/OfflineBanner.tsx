@@ -38,7 +38,10 @@ export default function OfflineBanner() {
               d="M18.364 5.636a9 9 0 010 12.728m-2.828-2.828a5 5 0 010-7.072m-4.243 4.243a1 1 0 11-1.414-1.414 1 1 0 011.414 1.414zM4.93 4.93l14.14 14.14"
             />
           </svg>
-          <span>Anda sedang dalam mode offline. Beberapa fitur yang memerlukan koneksi server mungkin terbatas.</span>
+          <span>
+            Anda dalam mode offline. Halaman utama (Dashboard, Presensi, RPS, Jurnal BAP, Apel, KRS/KHS, Profil) tetap
+            dapat diakses.
+          </span>
         </div>
       </div>
     </Show>

@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createEffect, createSignal, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -31,6 +31,14 @@ export default function Profil() {
   const [verifyCode, setVerifyCode] = createSignal('');
   const [recoveryCodes, setRecoveryCodes] = createSignal<string[]>([]);
   const [showRecoveryModal, setShowRecoveryModal] = createSignal(false);
+
+  // Synchronize 2FA state reactively when user signal updates
+  createEffect(() => {
+    const currentUser = user();
+    if (currentUser) {
+      setTwoFactorEnabled(!!currentUser.twoFactorEnabled);
+    }
+  });
 
   // Disable 2FA Signals
   const [showDisableModal, setShowDisableModal] = createSignal(false);
@@ -91,6 +99,7 @@ export default function Profil() {
         ...user()!,
         nama: res.user.nama as string,
         avatar: res.user.avatar as string | undefined,
+        twoFactorEnabled: (res.user.twoFactorEnabled as boolean) ?? user()?.twoFactorEnabled ?? false,
       });
 
       setPassword('');

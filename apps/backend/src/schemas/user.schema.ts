@@ -80,8 +80,9 @@ export const updateProfileSchema = {
         nama: t.String(),
         role: t.String(),
         mustChangePassword: t.Optional(t.Boolean({ default: false })),
-        theme: t.String(),
+        theme: t.Optional(t.String()),
         avatar: t.Union([t.String(), t.Null()]),
+        twoFactorEnabled: t.Optional(t.Boolean()),
       }),
     }),
     400: t.Object({

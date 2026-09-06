@@ -9,6 +9,10 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error('Root element not found. Easy to fix: add <div id="root"></div> to your index.html');
 }
 
+if (root) {
+  root.textContent = '';
+}
+
 render(
   () => (
     <Router>

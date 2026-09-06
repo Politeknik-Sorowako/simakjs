@@ -11,6 +11,7 @@ export default function GoogleCallback() {
   const toast = useToast();
 
   const [loading, setLoading] = createSignal(true);
+  const [stage, setStage] = createSignal('Memverifikasi tiket otentikasi Google...');
   const [errorMsg, setErrorMsg] = createSignal('');
 
   createEffect(() => {
@@ -29,9 +30,12 @@ export default function GoogleCallback() {
       return;
     }
 
+    setStage('Memverifikasi akun Google Workspace Politeknik Sorowako...');
+
     authController
       .googleCallback(code)
       .then((res) => {
+        setStage('Menyiapkan sesi otentikasi SIMAK Vokasi...');
         if (res.requires2FA && res.twoFactorToken) {
           sessionStorage.setItem('2fa_token', res.twoFactorToken);
           toast.showToast('Login Google berhasil. Silakan masukkan kode 2FA.', 'info');
@@ -65,8 +69,11 @@ export default function GoogleCallback() {
           <div class="flex flex-col items-center gap-4">
             <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">Memproses Login Google SSO...</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              Mohon tunggu sebentar, kami sedang memverifikasi akun Anda.
+            <p class="text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-3 py-1.5 rounded-lg">
+              {stage()}
+            </p>
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              Mohon tunggu sebentar, sistem sedang melakukan enkripsi & otentikasi aman.
             </p>
           </div>
         </Show>
