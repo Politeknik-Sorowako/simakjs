@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { dosen, mahasiswa, programStudi } from '../models/schema';
+import { dosen, kelompokApel, mahasiswa, programStudi, sesiApel } from '../models/schema';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -338,5 +339,76 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
     expect(bukaRes2.status).toBe(400);
     const body2 = await bukaRes2.json();
     expect(body2.error).toContain('sudah pernah dibuka');
+  });
+
+  it('monitor hari ini menandai kelompok belum dibuka sebagai status belum_buka', async () => {
+    const tanggal = '2026-09-01';
+    const kemarin = '2026-08-31';
+
+    // Kelompok A: sesi dibuka hari ini (berlangsung)
+    const [kelA] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok A', dosenId, shift: 'pagi' })
+      .returning();
+    await db.insert(sesiApel).values({
+      kelompokApelId: kelA.id,
+      tanggal,
+      shift: 'pagi',
+      dosenId,
+      jamMulai: '07:00',
+    });
+
+    // Kelompok B: sesi dibuka & ditutup hari ini (ditutup)
+    const [kelB] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok B', dosenId, shift: 'pagi' })
+      .returning();
+    const [sesiB] = await db
+      .insert(sesiApel)
+      .values({
+        kelompokApelId: kelB.id,
+        tanggal,
+        shift: 'pagi',
+        dosenId,
+        jamMulai: '07:00',
+      })
+      .returning();
+    await db.update(sesiApel).set({ isClosed: true, closedAt: new Date() }).where(eq(sesiApel.id, sesiB.id));
+
+    // Kelompok C: tanpa sesi hari ini, hanya punya sesi kemarin (belum_buka)
+    const [kelC] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok C', dosenId, shift: 'sore' })
+      .returning();
+    await db.insert(sesiApel).values({
+      kelompokApelId: kelC.id,
+      tanggal: kemarin,
+      shift: 'sore',
+      dosenId,
+      jamMulai: '16:00',
+    });
+
+    const res = await app.handle(
+      new Request(`http://localhost/apel/monitor?tanggal=${tanggal}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.summary.totalKelompok).toBe(3);
+    expect(body.summary.totalBelumBuka).toBe(1);
+
+    const kelCItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelC.id);
+    expect(kelCItem).toBeDefined();
+    expect(kelCItem.statusSesi).toBe('belum_buka');
+    expect(kelCItem.tanggal).toBe(tanggal);
+
+    const kelAItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelA.id);
+    expect(kelAItem.statusSesi).toBe('berlangsung');
+
+    const kelBItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelB.id);
+    expect(kelBItem.statusSesi).toBe('ditutup');
   });
 });
