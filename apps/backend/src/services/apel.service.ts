@@ -547,49 +547,107 @@ export class ApelService {
   static async getMonitorRealtime(dosenId?: number, tanggal?: string) {
     const targetTanggal = tanggal || getNowDateString(await SystemParameterService.getTimezone());
 
-    const conditions = [eq(kelompokApel.isActive, true)];
+    const kelompokConditions = [eq(kelompokApel.isActive, true)];
     if (dosenId) {
-      conditions.push(or(eq(kelompokApel.dosenId, dosenId), eq(sesiApel.dosenId, dosenId))!);
+      kelompokConditions.push(eq(kelompokApel.dosenId, dosenId));
     }
 
-    const rows = await db
+    const kelompokRows = await db
+      .select({
+        id: kelompokApel.id,
+        namaKelompok: kelompokApel.namaKelompok,
+        dosenId: kelompokApel.dosenId,
+        dosenNama: dosen.nama,
+        shift: kelompokApel.shift,
+        totalMahasiswa: sql<number>`(SELECT COUNT(*) FROM ${kelompokApelAnggota} WHERE ${kelompokApelAnggota.kelompokApelId} = ${kelompokApel.id})`,
+        pernahDibuka: sql<boolean>`EXISTS (SELECT 1 FROM ${sesiApel} WHERE ${sesiApel.kelompokApelId} = ${kelompokApel.id})`,
+      })
+      .from(kelompokApel)
+      .leftJoin(dosen, eq(dosen.id, kelompokApel.dosenId))
+      .where(and(...kelompokConditions))
+      .orderBy(kelompokApel.namaKelompok);
+
+    const sesiConditions = [
+      eq(sesiApel.tanggal, targetTanggal),
+      inArray(
+        sesiApel.kelompokApelId,
+        kelompokRows.map((k) => k.id),
+      ),
+    ];
+    if (dosenId) {
+      sesiConditions.push(eq(sesiApel.dosenId, dosenId));
+    }
+
+    const sesiRows = await db
       .select({
         id: sesiApel.id,
-        kelompokApelId: kelompokApel.id,
-        kelompokNama: kelompokApel.namaKelompok,
-        tanggal: sql<string>`COALESCE(${sesiApel.tanggal}, ${targetTanggal})`,
-        shift: sql<string>`COALESCE(${sesiApel.shift}, ${kelompokApel.shift})`,
-        dosenId: sql<number | null>`COALESCE(${sesiApel.dosenId}, ${kelompokApel.dosenId})`,
+        kelompokApelId: sesiApel.kelompokApelId,
+        shift: sesiApel.shift,
+        dosenId: sesiApel.dosenId,
         dosenNama: dosen.nama,
         jamMulai: sesiApel.jamMulai,
         isClosed: sesiApel.isClosed,
-        statusSesi: sql<string>`CASE 
-          WHEN ${sesiApel.id} IS NULL THEN 'belum_buka'
-          WHEN ${sesiApel.isClosed} = true THEN 'ditutup'
-          ELSE 'berlangsung'
-        END`,
-        totalMahasiswa: sql<number>`(SELECT COUNT(*) FROM ${kelompokApelAnggota} WHERE ${kelompokApelAnggota.kelompokApelId} = ${kelompokApel.id})`,
-        hadir: sql<number>`CASE WHEN ${sesiApel.id} IS NOT NULL THEN (SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'hadir') ELSE 0 END`,
-        terlambat: sql<number>`CASE WHEN ${sesiApel.id} IS NOT NULL THEN (SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'terlambat') ELSE 0 END`,
-        unknown: sql<number>`CASE WHEN ${sesiApel.id} IS NOT NULL THEN (SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'unknown') ELSE (SELECT COUNT(*) FROM ${kelompokApelAnggota} WHERE ${kelompokApelAnggota.kelompokApelId} = ${kelompokApel.id}) END`,
+        hadir: sql<number>`(SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'hadir')`,
+        terlambat: sql<number>`(SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'terlambat')`,
+        unknown: sql<number>`(SELECT COUNT(*) FROM ${presensiApel} WHERE ${presensiApel.sesiApelId} = ${sesiApel.id} AND ${presensiApel.status} = 'unknown')`,
       })
-      .from(kelompokApel)
-      .leftJoin(sesiApel, and(eq(sesiApel.kelompokApelId, kelompokApel.id), eq(sesiApel.tanggal, targetTanggal)))
-      .leftJoin(dosen, eq(dosen.id, sql`COALESCE(${sesiApel.dosenId}, ${kelompokApel.dosenId})`))
-      .where(and(...conditions))
-      .orderBy(kelompokApel.namaKelompok);
+      .from(sesiApel)
+      .leftJoin(dosen, eq(dosen.id, sesiApel.dosenId))
+      .where(and(...sesiConditions))
+      .orderBy(sesiApel.shift);
 
-    const totalKelompok = rows.length;
-    const totalSesiAktif = rows.filter((r) => r.statusSesi === 'berlangsung').length;
-    const totalBelumBuka = rows.filter((r) => r.statusSesi === 'belum_buka').length;
-    const totalDitutup = rows.filter((r) => r.statusSesi === 'ditutup').length;
-    const totalHadir = rows.reduce((s, r) => s + Number(r.hadir), 0);
-    const totalTerlambat = rows.reduce((s, r) => s + Number(r.terlambat), 0);
-    const totalUnknown = rows.reduce((s, r) => s + Number(r.unknown), 0);
+    const sesiByKelompok = new Map<number, typeof sesiRows>();
+    for (const sesi of sesiRows) {
+      const list = sesiByKelompok.get(sesi.kelompokApelId) || [];
+      list.push(sesi);
+      sesiByKelompok.set(sesi.kelompokApelId, list);
+    }
+
+    const detail = kelompokRows.map((kelompok) => {
+      const sesiList = sesiByKelompok.get(kelompok.id) || [];
+      const statusKelompok: 'dibuka' | 'belum_buka' = sesiList.length > 0 ? 'dibuka' : 'belum_buka';
+      const shiftsDibuka = sesiList.map((s) => s.shift);
+      return {
+        kelompokApelId: kelompok.id,
+        kelompokNama: kelompok.namaKelompok,
+        tanggal: targetTanggal,
+        shiftDefault: kelompok.shift,
+        shiftsDibuka,
+        statusKelompok,
+        dosenId: kelompok.dosenId,
+        dosenNama: kelompok.dosenNama || 'Belum Ada Dosen PJ',
+        totalMahasiswa: Number(kelompok.totalMahasiswa),
+        pernahDibuka: kelompok.pernahDibuka,
+        sesiHariIni: sesiList.map((s) => ({
+          id: s.id,
+          shift: s.shift,
+          jamMulai: s.jamMulai,
+          isClosed: s.isClosed,
+          statusSesi: s.isClosed ? 'ditutup' : 'berlangsung',
+          hadir: Number(s.hadir),
+          terlambat: Number(s.terlambat),
+          unknown: Number(s.unknown),
+        })),
+      };
+    });
+
+    const totalKelompok = detail.length;
+    const totalDibuka = detail.filter((d) => d.statusKelompok === 'dibuka').length;
+    const totalSesiAktif = detail.filter(
+      (d) => d.statusKelompok === 'dibuka' && d.sesiHariIni.some((s) => s.statusSesi === 'berlangsung'),
+    ).length;
+    const totalBelumBuka = totalKelompok - totalDibuka;
+    const totalDitutup = detail.filter(
+      (d) => d.sesiHariIni.length > 0 && d.sesiHariIni.every((s) => s.statusSesi === 'ditutup'),
+    ).length;
+    const totalHadir = detail.reduce((sum, d) => sum + d.sesiHariIni.reduce((s, x) => s + x.hadir, 0), 0);
+    const totalTerlambat = detail.reduce((sum, d) => sum + d.sesiHariIni.reduce((s, x) => s + x.terlambat, 0), 0);
+    const totalUnknown = detail.reduce((sum, d) => sum + d.sesiHariIni.reduce((s, x) => s + x.unknown, 0), 0);
 
     return {
       summary: {
         totalKelompok,
+        totalDibuka,
         totalSesiAktif,
         totalBelumBuka,
         totalDitutup,
@@ -597,11 +655,7 @@ export class ApelService {
         totalTerlambat,
         totalUnknown,
       },
-      detail: rows.map((r) => ({
-        ...r,
-        dosenNama: r.dosenNama || 'Belum Ada Dosen PJ',
-        jamMulai: r.jamMulai || '-',
-      })),
+      detail,
     };
   }
 
