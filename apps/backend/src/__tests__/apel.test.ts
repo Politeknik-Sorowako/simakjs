@@ -404,7 +404,10 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.summary.totalKelompok).toBe(4);
+    expect(body.summary.totalDibuka).toBe(2);
     expect(body.summary.totalBelumBuka).toBe(2);
+    expect(body.summary.totalSesiAktif).toBe(1);
+    expect(body.summary.totalDitutup).toBe(1);
 
     const kelCItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelC.id);
     expect(kelCItem).toBeDefined();
@@ -419,11 +422,13 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
 
     const kelAItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelA.id);
     expect(kelAItem.statusKelompok).toBe('dibuka');
+    expect(kelAItem.shiftsDibuka).toEqual(['pagi']);
     expect(kelAItem.sesiHariIni).toHaveLength(1);
     expect(kelAItem.sesiHariIni[0].statusSesi).toBe('berlangsung');
 
     const kelBItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelB.id);
     expect(kelBItem.statusKelompok).toBe('dibuka');
+    expect(kelBItem.shiftsDibuka).toEqual(['pagi']);
     expect(kelBItem.sesiHariIni[0].statusSesi).toBe('ditutup');
   });
 
@@ -462,11 +467,13 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
 
     // Harus satu baris per kelompok (bukan dobel karena 2 sesi)
     expect(body.summary.totalKelompok).toBe(1);
+    expect(body.summary.totalBelumBuka).toBe(0);
     expect(body.detail).toHaveLength(1);
 
     const item = body.detail[0];
     expect(item.kelompokNama).toBe('Kelompok 1A');
     expect(item.statusKelompok).toBe('dibuka');
+    expect(item.pernahDibuka).toBe(true);
     expect(item.shiftsDibuka).toEqual(['pagi', 'sore']);
     expect(item.sesiHariIni).toHaveLength(2);
     expect(item.sesiHariIni.map((s: { shift: string }) => s.shift)).toEqual(['pagi', 'sore']);

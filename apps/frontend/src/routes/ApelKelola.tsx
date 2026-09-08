@@ -493,7 +493,7 @@ export default function ApelKelola() {
                   onClick={() => setPanelSummaryCollapsed((c) => !c)}
                 >
                   <svg
-                    class={`w-4 h-4 transition-transform duration-200 ${panelSummaryCollapsed() ? 'rotate-180' : ''}`}
+                    class={`w-4 h-4 transition-transform duration-200 ${!panelSummaryCollapsed() ? 'rotate-180' : ''}`}
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
