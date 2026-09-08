@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, type JSX, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, type JSX, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -45,6 +45,19 @@ export default function KompensasiManual() {
   const [sortBy, setSortBy] = createSignal('');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
   const [page, setPage] = createSignal(1);
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let searchInputRef: HTMLInputElement | undefined;
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
+  const handleFilterSearchChange = (value: string) => {
+    setFilterSearch(value);
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 350);
+  };
 
   const toggleSort = (field: string) => {
     if (sortBy() === field) {
@@ -276,7 +289,7 @@ export default function KompensasiManual() {
 
   const [kompensasiList, { refetch }] = createResource(
     () => ({
-      search: filterSearch(),
+      search: debouncedSearch(),
       tanggal: filterTanggal(),
       jenisKompen: filterJenis(),
       sortBy: sortBy(),
@@ -483,12 +496,12 @@ export default function KompensasiManual() {
         <div class="bg-white dark:bg-secondary-900 p-4 rounded-2xl border border-secondary-200 dark:border-secondary-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-3">
           <div class="flex-1">
             <Input
+              id="pencarian-kompensasi"
+              ref={searchInputRef}
               type="text"
               placeholder="Cari NIM atau Nama Mahasiswa..."
-              value={filterSearch()}
               onInput={(e) => {
-                setFilterSearch(e.currentTarget.value);
-                setPage(1);
+                handleFilterSearchChange(e.currentTarget.value);
               }}
             />
           </div>
@@ -517,7 +530,10 @@ export default function KompensasiManual() {
           <Show when={filterSearch() || filterTanggal() || filterJenis()}>
             <Button
               onClick={() => {
+                clearTimeout(searchDebounceTimer);
+                if (searchInputRef) searchInputRef.value = '';
                 setFilterSearch('');
+                setDebouncedSearch('');
                 setFilterTanggal('');
                 setFilterJenis('');
                 setPage(1);

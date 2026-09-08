@@ -36,6 +36,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 - **Controllers**: Always use static methods destructuring `AuthContext`, check `getCurrentUser()` for auth/roles first, and wrap logic in try/catch returning `{ error }` with appropriate status code.
 - **Services & DB**: Always static methods. Use Drizzle ORM with explicit `where` clauses (never fetch unbounded tables). Throw standard `Error` instances for business logic failures.
 - **Data & File Operations**: Process bulk imports/CSV row-by-row with individual error handling (do not wrap entire imports in a single DB transaction). Use character-by-character CSV parsing to respect quoted newlines. Use native Node APIs (`node:fs/promises`) instead of shell commands.
+- **Native Bun & Elysia First**: Prefer `Bun.password` for password hashing over external libraries (e.g. `bcrypt`). Use Elysia `t.*` schema validators for all input validation instead of external validators (e.g. zod, joi). Minimize external npm dependencies when Bun/Elysia provide built-in equivalents.
 
 ---
 
@@ -44,6 +45,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 - **Component Structure**: Export standard function declarations as `default` wrapped inside `<MainLayout>`.
 - **Reactivity & State**: Use SolidJS primitives (`createSignal`, `createResource`) instead of React hooks.
 - **List Rendering & Types**: When using `<For>` components over dynamic API data, use named interfaces or `SafeAny` to prevent strict flow component type errors.
+- **Props Reactivity Integrity**: NEVER destructure props in SolidJS components. Always receive `props` as a single parameter and access values via `props.name`. Destructuring breaks the signal-tracking chain and causes reactivity to silently fail. Use `props.name` or `const { name } = props` only inside the component body when destructuring is necessary (destructured values are snapshot, not reactive).
 - **Eden Date Handling**:
   - **`date()` columns** (calendar-date only, e.g. `tanggal`, `tanggalLahir`, `tanggalBimbingan`): MUST use Drizzle `date('col', { mode: 'string' })` and Eden schema `t.String()` (or `t.Union([t.String(), t.Null()])`). Values are plain `'YYYY-MM-DD'` strings on the wire — no timezone conversion. Display them directly or format client-side; never round-trip through `new Date(...).toISOString()` (causes off-by-one day bugs in non-UTC timezones).
   - **`timestamp()` columns** (createdAt/updatedAt/...): MUST use `t.Date()`, not `t.String()` — otherwise Elysia rejects valid `Date` values at runtime (422). Eden/TS infers these as `Date`, but the JSON wire format is still an ISO string; sanitize on the frontend when needed.
