@@ -37,10 +37,14 @@ export default function ApelMonitor() {
     const q = searchTerm().trim().toLowerCase();
     const sf = statusFilter();
     return list.filter((item) => {
-      const matchStatus = sf === 'all' || item.statusSesi === sf;
+      const matchStatus = sf === 'all' || item.statusKelompok === sf;
       if (!matchStatus) return false;
       if (!q) return true;
-      return item.kelompokNama.toLowerCase().includes(q) || (item.dosenNama || '').toLowerCase().includes(q);
+      return (
+        item.kelompokNama.toLowerCase().includes(q) ||
+        (item.dosenNama || '').toLowerCase().includes(q) ||
+        item.shiftsDibuka.some((s) => s.toLowerCase().includes(q))
+      );
     });
   };
 
@@ -61,9 +65,13 @@ export default function ApelMonitor() {
     const monitorData = data();
     if (!monitorData) return;
 
-    let csv = 'Kelompok,Tanggal,Shift,Dosen,Status Sesi,Jam Mulai,Total Mahasiswa,Hadir,Terlambat,Unknown\n';
+    let csv = 'Kelompok,Tanggal,Shift,Dosen,Status Kelompok,Total Mahasiswa,Hadir,Terlambat,Unknown\n';
     for (const d of monitorData.detail) {
-      csv += `${d.kelompokNama},${d.tanggal},${d.shift},${d.dosenNama},${d.statusSesi || 'belum_buka'},${d.jamMulai},${d.totalMahasiswa},${d.hadir},${d.terlambat},${d.unknown}\n`;
+      const shifts = d.shiftsDibuka.length > 0 ? d.shiftsDibuka.join(' & ') : `- (${d.shiftDefault})`;
+      const hadir = d.sesiHariIni.reduce((s, x) => s + x.hadir, 0);
+      const terlambat = d.sesiHariIni.reduce((s, x) => s + x.terlambat, 0);
+      const unknown = d.sesiHariIni.reduce((s, x) => s + x.unknown, 0);
+      csv += `${d.kelompokNama},${d.tanggal},${shifts},${d.dosenNama},${d.statusKelompok},${d.totalMahasiswa},${hadir},${terlambat},${unknown}\n`;
     }
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -157,7 +165,7 @@ export default function ApelMonitor() {
                   onChange={(e) => setStatusFilter(e.currentTarget.value)}
                 >
                   <option value="all">Semua Status</option>
-                  <option value="berlangsung">Sedang Berlangsung</option>
+                  <option value="dibuka">Sedang Berlangsung</option>
                   <option value="belum_buka">Belum Dibuka</option>
                   <option value="ditutup">Selesai</option>
                 </select>
@@ -182,52 +190,75 @@ export default function ApelMonitor() {
                 </thead>
                 <tbody class="divide-y dark:divide-gray-700">
                   <For each={filteredDetail()}>
-                    {(item) => (
-                      <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
-                        <td class="px-4 py-3 text-sm font-medium">{item.kelompokNama}</td>
-                        <td class="px-4 py-3 text-sm">{item.tanggal}</td>
-                        <td class="px-4 py-3 text-center text-sm capitalize">{item.shift}</td>
-                        <td class="px-4 py-3 text-sm">{item.dosenNama}</td>
-                        <td class="px-4 py-3 text-center text-xs">
-                          <Show
-                            when={item.statusSesi === 'berlangsung'}
-                            fallback={
-                              <Show
-                                when={item.statusSesi === 'ditutup'}
-                                fallback={
-                                  <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-semibold">
-                                    Belum Dibuka
+                    {(item) => {
+                      const totalHadir = item.sesiHariIni.reduce((s, x) => s + x.hadir, 0);
+                      const totalTerlambat = item.sesiHariIni.reduce((s, x) => s + x.terlambat, 0);
+                      const totalUnknown = item.sesiHariIni.reduce((s, x) => s + x.unknown, 0);
+                      return (
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
+                          <td class="px-4 py-3 text-sm font-medium">{item.kelompokNama}</td>
+                          <td class="px-4 py-3 text-sm">{item.tanggal}</td>
+                          <td class="px-4 py-3 text-center">
+                            <div class="flex flex-wrap items-center justify-center gap-1">
+                              {item.sesiHariIni.length === 0 ? (
+                                <span class="text-xs text-gray-400 capitalize">- ({item.shiftDefault})</span>
+                              ) : (
+                                item.sesiHariIni.map((sesi) => (
+                                  <span
+                                    class={`px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${
+                                      sesi.statusSesi === 'ditutup'
+                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                    }`}
+                                  >
+                                    {sesi.shift}
                                   </span>
-                                }
-                              >
-                                <span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 font-semibold">
-                                  Selesai
+                                ))
+                              )}
+                            </div>
+                          </td>
+                          <td class="px-4 py-3 text-sm">{item.dosenNama}</td>
+                          <td class="px-4 py-3 text-center text-xs">
+                            <Show
+                              when={item.statusKelompok === 'dibuka'}
+                              fallback={
+                                <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-semibold">
+                                  Belum Dibuka
                                 </span>
-                              </Show>
-                            }
-                          >
-                            <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-semibold">
-                              Berlangsung
-                            </span>
-                          </Show>
-                        </td>
-                        <td class="px-4 py-3 text-center text-sm font-mono">{item.jamMulai}</td>
-                        <td class="px-4 py-3 text-center text-sm font-bold">{item.totalMahasiswa}</td>
-                        <td class="px-4 py-3 text-center text-sm text-green-600 font-semibold">{item.hadir}</td>
-                        <td class="px-4 py-3 text-center text-sm text-yellow-600 font-semibold">{item.terlambat}</td>
-                        <td class="px-4 py-3 text-center text-sm text-gray-500 font-semibold">{item.unknown}</td>
-                        <td class="px-4 py-3 text-center">
-                          <Show when={item.id} fallback={<span class="text-xs text-gray-400 italic">Belum Sesi</span>}>
-                            <button
-                              class="bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-100 px-3 py-1 rounded text-xs font-semibold"
-                              onClick={() => setSelectedDetailSesiId(item.id)}
+                              }
                             >
-                              Detail
-                            </button>
-                          </Show>
-                        </td>
-                      </tr>
-                    )}
+                              <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-semibold">
+                                Dibuka
+                              </span>
+                            </Show>
+                          </td>
+                          <td class="px-4 py-3 text-center text-sm font-mono">
+                            {item.sesiHariIni.length > 0 ? item.sesiHariIni.map((s) => s.jamMulai).join(', ') : '-'}
+                          </td>
+                          <td class="px-4 py-3 text-center text-sm font-bold">{item.totalMahasiswa}</td>
+                          <td class="px-4 py-3 text-center text-sm text-green-600 font-semibold">{totalHadir}</td>
+                          <td class="px-4 py-3 text-center text-sm text-yellow-600 font-semibold">{totalTerlambat}</td>
+                          <td class="px-4 py-3 text-center text-sm text-gray-500 font-semibold">{totalUnknown}</td>
+                          <td class="px-4 py-3 text-center">
+                            <Show
+                              when={item.sesiHariIni.length > 0}
+                              fallback={<span class="text-xs text-gray-400 italic">Belum Sesi</span>}
+                            >
+                              <div class="flex flex-wrap items-center justify-center gap-1">
+                                {item.sesiHariIni.map((sesi) => (
+                                  <button
+                                    class="bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-100 px-2 py-1 rounded text-xs font-semibold capitalize"
+                                    onClick={() => setSelectedDetailSesiId(sesi.id)}
+                                  >
+                                    Detail {sesi.shift}
+                                  </button>
+                                ))}
+                              </div>
+                            </Show>
+                          </td>
+                        </tr>
+                      );
+                    }}
                   </For>
                 </tbody>
               </table>

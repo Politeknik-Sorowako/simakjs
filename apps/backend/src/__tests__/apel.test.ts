@@ -341,7 +341,7 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
     expect(body2.error).toContain('sudah pernah dibuka');
   });
 
-  it('monitor hari ini menandai kelompok belum dibuka sebagai status belum_buka', async () => {
+  it('monitor hari ini menandai kelompok belum dibuka sebagai belum_buka', async () => {
     const tanggal = '2026-09-01';
     const kemarin = '2026-08-31';
 
@@ -388,6 +388,12 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
       jamMulai: '16:00',
     });
 
+    // Kelompok D: tanpa sesi sama sekali (belum_buka & belum pernah dibuka)
+    const [kelD] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok D', dosenId, shift: 'pagi' })
+      .returning();
+
     const res = await app.handle(
       new Request(`http://localhost/apel/monitor?tanggal=${tanggal}`, {
         method: 'GET',
@@ -397,18 +403,73 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
 
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.summary.totalKelompok).toBe(3);
-    expect(body.summary.totalBelumBuka).toBe(1);
+    expect(body.summary.totalKelompok).toBe(4);
+    expect(body.summary.totalBelumBuka).toBe(2);
 
     const kelCItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelC.id);
     expect(kelCItem).toBeDefined();
-    expect(kelCItem.statusSesi).toBe('belum_buka');
+    expect(kelCItem.statusKelompok).toBe('belum_buka');
+    expect(kelCItem.pernahDibuka).toBe(true);
     expect(kelCItem.tanggal).toBe(tanggal);
 
+    const kelDItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelD.id);
+    expect(kelDItem).toBeDefined();
+    expect(kelDItem.statusKelompok).toBe('belum_buka');
+    expect(kelDItem.pernahDibuka).toBe(false);
+
     const kelAItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelA.id);
-    expect(kelAItem.statusSesi).toBe('berlangsung');
+    expect(kelAItem.statusKelompok).toBe('dibuka');
+    expect(kelAItem.sesiHariIni).toHaveLength(1);
+    expect(kelAItem.sesiHariIni[0].statusSesi).toBe('berlangsung');
 
     const kelBItem = body.detail.find((d: { kelompokApelId: number }) => d.kelompokApelId === kelB.id);
-    expect(kelBItem.statusSesi).toBe('ditutup');
+    expect(kelBItem.statusKelompok).toBe('dibuka');
+    expect(kelBItem.sesiHariIni[0].statusSesi).toBe('ditutup');
+  });
+
+  it('monitor mengagregasi multi-shift menjadi satu baris per kelompok', async () => {
+    const tanggal = '2026-09-02';
+
+    // Kelompok dengan dua sesi di tanggal sama: pagi & sore
+    const [kel] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok 1A', dosenId, shift: 'pagi' })
+      .returning();
+    await db.insert(sesiApel).values({
+      kelompokApelId: kel.id,
+      tanggal,
+      shift: 'pagi',
+      dosenId,
+      jamMulai: '07:00',
+    });
+    await db.insert(sesiApel).values({
+      kelompokApelId: kel.id,
+      tanggal,
+      shift: 'sore',
+      dosenId,
+      jamMulai: '16:00',
+    });
+
+    const res = await app.handle(
+      new Request(`http://localhost/apel/monitor?tanggal=${tanggal}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+
+    // Harus satu baris per kelompok (bukan dobel karena 2 sesi)
+    expect(body.summary.totalKelompok).toBe(1);
+    expect(body.detail).toHaveLength(1);
+
+    const item = body.detail[0];
+    expect(item.kelompokNama).toBe('Kelompok 1A');
+    expect(item.statusKelompok).toBe('dibuka');
+    expect(item.shiftsDibuka).toEqual(['pagi', 'sore']);
+    expect(item.sesiHariIni).toHaveLength(2);
+    expect(item.sesiHariIni.map((s: { shift: string }) => s.shift)).toEqual(['pagi', 'sore']);
+    expect(item.sesiHariIni.every((s: { statusSesi: string }) => s.statusSesi === 'berlangsung')).toBe(true);
   });
 });

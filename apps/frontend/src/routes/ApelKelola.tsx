@@ -165,13 +165,12 @@ export default function ApelKelola() {
     async (tgl) => apelController.getMonitorRealtime({ tanggal: tgl }),
   );
 
-  const dibukaHariIni = () =>
-    (monitorHariIni()?.detail || []).filter((item) => item.statusSesi && item.statusSesi !== 'belum_buka');
-  const terlewatHariIni = () => (monitorHariIni()?.detail || []).filter((item) => item.statusSesi === 'belum_buka');
+  const dibukaHariIni = () => (monitorHariIni()?.detail || []).filter((item) => item.statusKelompok === 'dibuka');
+  const terlewatHariIni = () => (monitorHariIni()?.detail || []).filter((item) => item.statusKelompok === 'belum_buka');
 
-  const handlePilihKelompokPanel = (item: { kelompokApelId: number; id?: number | null }) => {
+  const handlePilihKelompokPanel = (item: { kelompokApelId: number; sesiId?: number | null }) => {
     setSelectedKelompok(item.kelompokApelId);
-    setSelectedSesi(item.id ?? null);
+    setSelectedSesi(item.sesiId ?? null);
     setPresensiData([]);
   };
 
@@ -516,29 +515,39 @@ export default function ApelKelola() {
                   <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                     <For each={dibukaHariIni()}>
                       {(item) => (
-                        <button
-                          type="button"
-                          class="w-full text-left flex items-center justify-between gap-2 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs"
-                          onClick={() => handlePilihKelompokPanel(item)}
-                        >
-                          <div class="flex items-center gap-2 min-w-0">
-                            <span class="font-semibold truncate">{item.kelompokNama}</span>
-                            <span class="text-gray-500 capitalize shrink-0">{item.shift}</span>
+                        <div class="flex items-center justify-between gap-2 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs">
+                          <div class="flex flex-col min-w-0 gap-1">
+                            <div class="flex items-center gap-2">
+                              <span class="font-semibold truncate">{item.kelompokNama}</span>
+                              <span class="text-gray-500 shrink-0">{item.dosenNama}</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-1.5">
+                              <For each={item.sesiHariIni}>
+                                {(sesi) => (
+                                  <button
+                                    type="button"
+                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-[10px] font-semibold capitalize"
+                                    onClick={() =>
+                                      handlePilihKelompokPanel({ kelompokApelId: item.kelompokApelId, sesiId: sesi.id })
+                                    }
+                                  >
+                                    {sesi.shift}
+                                    <span
+                                      class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                        sesi.statusSesi === 'ditutup'
+                                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                          : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                      }`}
+                                    >
+                                      {sesi.statusSesi === 'ditutup' ? 'Ditutup' : 'Berlangsung'}
+                                    </span>
+                                    <span class="text-gray-500 font-mono">{sesi.jamMulai}</span>
+                                  </button>
+                                )}
+                              </For>
+                            </div>
                           </div>
-                          <div class="flex items-center gap-2 shrink-0">
-                            <span class="text-gray-500 hidden sm:inline">{item.dosenNama}</span>
-                            <span class="text-gray-500 font-mono hidden md:inline">{item.jamMulai}</span>
-                            <span
-                              class={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                item.statusSesi === 'ditutup'
-                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                  : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                              }`}
-                            >
-                              {item.statusSesi === 'ditutup' ? 'Ditutup' : 'Berlangsung'}
-                            </span>
-                          </div>
-                        </button>
+                        </div>
                       )}
                     </For>
                   </div>
@@ -561,20 +570,26 @@ export default function ApelKelola() {
                           <button
                             type="button"
                             class="flex-1 min-w-0 text-left"
-                            onClick={() => handlePilihKelompokPanel(item)}
+                            onClick={() => handlePilihKelompokPanel({ kelompokApelId: item.kelompokApelId })}
                           >
                             <span class="font-semibold text-amber-900 dark:text-amber-200 truncate block">
                               {item.kelompokNama}
                             </span>
                             <span class="text-amber-700 dark:text-amber-300">
-                              Shift {item.shift} | {item.dosenNama || 'Belum ada PJ'} | {item.totalMahasiswa} mhs
+                              Shift {item.shiftDefault} | {item.dosenNama || 'Belum ada PJ'} | {item.totalMahasiswa} mhs
+                              {item.pernahDibuka ? '' : ' | Belum pernah ada sesi'}
                             </span>
                           </button>
                           <div class="flex items-center gap-1.5 shrink-0">
                             <button
                               type="button"
                               class="bg-amber-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-amber-700"
-                              onClick={() => handleBukaSesiDariPanel(item)}
+                              onClick={() =>
+                                handleBukaSesiDariPanel({
+                                  kelompokApelId: item.kelompokApelId,
+                                  shift: item.shiftDefault,
+                                })
+                              }
                             >
                               Buka Sesi
                             </button>

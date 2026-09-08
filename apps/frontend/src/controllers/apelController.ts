@@ -83,9 +83,35 @@ export interface UnknownPresensiItem {
   verifiedBy?: number | null;
 }
 
+export interface MonitorSesi {
+  id: number;
+  shift: string;
+  jamMulai: string;
+  isClosed: boolean;
+  statusSesi: 'berlangsung' | 'ditutup';
+  hadir: number;
+  terlambat: number;
+  unknown: number;
+}
+
+export interface MonitorKelompok {
+  kelompokApelId: number;
+  kelompokNama: string;
+  tanggal: string;
+  shiftDefault: string;
+  shiftsDibuka: string[];
+  statusKelompok: 'dibuka' | 'belum_buka';
+  dosenId?: number | null;
+  dosenNama: string;
+  totalMahasiswa: number;
+  pernahDibuka: boolean;
+  sesiHariIni: MonitorSesi[];
+}
+
 export interface MonitorResponse {
   summary: {
     totalKelompok?: number;
+    totalDibuka?: number;
     totalSesiAktif: number;
     totalBelumBuka?: number;
     totalDitutup?: number;
@@ -93,21 +119,7 @@ export interface MonitorResponse {
     totalTerlambat: number;
     totalUnknown: number;
   };
-  detail: Array<{
-    id: number | null;
-    kelompokApelId: number;
-    kelompokNama: string;
-    tanggal: string;
-    shift: string;
-    dosenId?: number | null;
-    dosenNama: string;
-    jamMulai: string;
-    statusSesi?: 'belum_buka' | 'berlangsung' | 'ditutup' | string;
-    totalMahasiswa: number;
-    hadir: number;
-    terlambat: number;
-    unknown: number;
-  }>;
+  detail: MonitorKelompok[];
 }
 
 export const apelController = {
