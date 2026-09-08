@@ -51,4 +51,48 @@ test.describe('Kompensasi Manual — Pencarian Fokus', () => {
     await page.waitForTimeout(700);
     expect(requestCount).toBeLessThanOrEqual(2);
   });
+
+  test('tabel menyegarkan parsial tanpa unmount halaman penuh saat mengetik', async ({ page }) => {
+    // Login sebagai admin
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@simak.id');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard/);
+
+    await page.goto('/kompensasi-manual');
+    const search = page.locator('input#pencarian-kompensasi');
+    await expect(search).toBeVisible();
+
+    // Saat data awal selesai dimuat, table harus tampil
+    await expect(page.locator('table')).toBeVisible();
+    await search.click();
+
+    // Fokus aktif di field pencarian sebelum mengetik
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.id ?? null))
+      .toBe('pencarian-kompensasi');
+
+    // Ketik bertahap sehingga memicu beberapa putaran debounce + refetch
+    await search.type('2020');
+    await page.waitForTimeout(450); // melewati jeda debounce 350ms (refetch pertama)
+    await search.type('0001');
+    await page.waitForTimeout(450); // melewati debounce kedua
+
+    // Assertion selama & sesudah refetch: fokus harus tetap di input
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.id ?? null))
+      .toBe('pencarian-kompensasi');
+
+    // Tidak boleh muncul full-screen RouteLoadingFallback / layar loading penuh
+    const fullScreenLoader = page.locator('.min-h-screen', { hasText: 'Memuat Halaman' });
+    await expect(fullScreenLoader).toHaveCount(0);
+
+    // Header bar & filter bar tidak boleh hilang (komponen induk tetap mounted)
+    await expect(page.locator('h1', { hasText: 'Kompensasi Manual' })).toBeVisible();
+    await expect(search).toBeVisible();
+
+    // Tabel tetap ada (refetch parsial, bukan unmount penuh)
+    await expect(page.locator('table')).toBeVisible();
+  });
 });
