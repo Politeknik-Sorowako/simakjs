@@ -160,6 +160,7 @@ export default function ApelKelola() {
 
   // Resource Pemantauan Kelompok Apel Hari Ini (acuan kelompok yang dibuka / mungkin terlewat)
   const [tanggalPanel, setTanggalPanel] = createSignal(getTodayString());
+  const [panelSummaryCollapsed, setPanelSummaryCollapsed] = createSignal(true);
   const [monitorHariIni, { refetch: refetchMonitor }] = createResource(
     () => tanggalPanel(),
     async (tgl) => apelController.getMonitorRealtime({ tanggal: tgl }),
@@ -479,6 +480,27 @@ export default function ApelKelola() {
                 </p>
               </div>
               <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  class="inline-flex items-center justify-center p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                  aria-expanded={!panelSummaryCollapsed()}
+                  aria-controls="panel-summary-hari-ini"
+                  aria-label={
+                    panelSummaryCollapsed()
+                      ? 'Tampilkan ringkasan sesi kelompok'
+                      : 'Sembunyikan ringkasan sesi kelompok'
+                  }
+                  onClick={() => setPanelSummaryCollapsed((c) => !c)}
+                >
+                  <svg
+                    class={`w-4 h-4 transition-transform duration-200 ${panelSummaryCollapsed() ? 'rotate-180' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
                 <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 px-2.5 py-1 rounded-full font-semibold">
                   Dibuka {dibukaHariIni().length}/{monitorHariIni()?.detail.length ?? 0}
                 </span>
@@ -502,105 +524,111 @@ export default function ApelKelola() {
               </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Dibuka hari ini */}
-              <div class="space-y-2">
-                <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Dibuka hari ini ({dibukaHariIni().length})
-                </h3>
-                <Show
-                  when={dibukaHariIni().length > 0}
-                  fallback={<div class="text-xs text-gray-500 italic">Belum ada kelompok yang dibuka hari ini.</div>}
-                >
-                  <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                    <For each={dibukaHariIni()}>
-                      {(item) => (
-                        <div class="flex items-center justify-between gap-2 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs">
-                          <div class="flex flex-col min-w-0 gap-1">
-                            <div class="flex items-center gap-2">
-                              <span class="font-semibold truncate">{item.kelompokNama}</span>
-                              <span class="text-gray-500 shrink-0">{item.dosenNama}</span>
-                            </div>
-                            <div class="flex flex-wrap items-center gap-1.5">
-                              <For each={item.sesiHariIni}>
-                                {(sesi) => (
-                                  <button
-                                    type="button"
-                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-[10px] font-semibold capitalize"
-                                    onClick={() =>
-                                      handlePilihKelompokPanel({ kelompokApelId: item.kelompokApelId, sesiId: sesi.id })
-                                    }
-                                  >
-                                    {sesi.shift}
-                                    <span
-                                      class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                                        sesi.statusSesi === 'ditutup'
-                                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                          : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                      }`}
+            <Show when={!panelSummaryCollapsed()}>
+              <div id="panel-summary-hari-ini" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Dibuka hari ini */}
+                <div class="space-y-2">
+                  <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Dibuka hari ini ({dibukaHariIni().length})
+                  </h3>
+                  <Show
+                    when={dibukaHariIni().length > 0}
+                    fallback={<div class="text-xs text-gray-500 italic">Belum ada kelompok yang dibuka hari ini.</div>}
+                  >
+                    <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      <For each={dibukaHariIni()}>
+                        {(item) => (
+                          <div class="flex items-center justify-between gap-2 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs">
+                            <div class="flex flex-col min-w-0 gap-1">
+                              <div class="flex items-center gap-2">
+                                <span class="font-semibold truncate">{item.kelompokNama}</span>
+                                <span class="text-gray-500 shrink-0">{item.dosenNama}</span>
+                              </div>
+                              <div class="flex flex-wrap items-center gap-1.5">
+                                <For each={item.sesiHariIni}>
+                                  {(sesi) => (
+                                    <button
+                                      type="button"
+                                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-[10px] font-semibold capitalize"
+                                      onClick={() =>
+                                        handlePilihKelompokPanel({
+                                          kelompokApelId: item.kelompokApelId,
+                                          sesiId: sesi.id,
+                                        })
+                                      }
                                     >
-                                      {sesi.statusSesi === 'ditutup' ? 'Ditutup' : 'Berlangsung'}
-                                    </span>
-                                    <span class="text-gray-500 font-mono">{sesi.jamMulai}</span>
-                                  </button>
-                                )}
-                              </For>
+                                      {sesi.shift}
+                                      <span
+                                        class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                          sesi.statusSesi === 'ditutup'
+                                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                            : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                        }`}
+                                      >
+                                        {sesi.statusSesi === 'ditutup' ? 'Ditutup' : 'Berlangsung'}
+                                      </span>
+                                      <span class="text-gray-500 font-mono">{sesi.jamMulai}</span>
+                                    </button>
+                                  )}
+                                </For>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </For>
-                  </div>
-                </Show>
-              </div>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
+                </div>
 
-              {/* Mungkin terlewat (belum dibuka) */}
-              <div class="space-y-2">
-                <h3 class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
-                  Mungkin terlewat ({terlewatHariIni().length})
-                </h3>
-                <Show
-                  when={terlewatHariIni().length > 0}
-                  fallback={<div class="text-xs text-gray-500 italic">Semua kelompok sudah dibuka hari ini.</div>}
-                >
-                  <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
-                    <For each={terlewatHariIni()}>
-                      {(item) => (
-                        <div class="flex items-center justify-between gap-2 p-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-xs">
-                          <button
-                            type="button"
-                            class="flex-1 min-w-0 text-left"
-                            onClick={() => handlePilihKelompokPanel({ kelompokApelId: item.kelompokApelId })}
-                          >
-                            <span class="font-semibold text-amber-900 dark:text-amber-200 truncate block">
-                              {item.kelompokNama}
-                            </span>
-                            <span class="text-amber-700 dark:text-amber-300">
-                              Shift {item.shiftDefault} | {item.dosenNama || 'Belum ada PJ'} | {item.totalMahasiswa} mhs
-                              {item.pernahDibuka ? '' : ' | Belum pernah ada sesi'}
-                            </span>
-                          </button>
-                          <div class="flex items-center gap-1.5 shrink-0">
+                {/* Mungkin terlewat (belum dibuka) */}
+                <div class="space-y-2">
+                  <h3 class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+                    Mungkin terlewat ({terlewatHariIni().length})
+                  </h3>
+                  <Show
+                    when={terlewatHariIni().length > 0}
+                    fallback={<div class="text-xs text-gray-500 italic">Semua kelompok sudah dibuka hari ini.</div>}
+                  >
+                    <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                      <For each={terlewatHariIni()}>
+                        {(item) => (
+                          <div class="flex items-center justify-between gap-2 p-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-xs">
                             <button
                               type="button"
-                              class="bg-amber-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-amber-700"
-                              onClick={() =>
-                                handleBukaSesiDariPanel({
-                                  kelompokApelId: item.kelompokApelId,
-                                  shift: item.shiftDefault,
-                                })
-                              }
+                              class="flex-1 min-w-0 text-left"
+                              onClick={() => handlePilihKelompokPanel({ kelompokApelId: item.kelompokApelId })}
                             >
-                              Buka Sesi
+                              <span class="font-semibold text-amber-900 dark:text-amber-200 truncate block">
+                                {item.kelompokNama}
+                              </span>
+                              <span class="text-amber-700 dark:text-amber-300">
+                                Shift {item.shiftDefault} | {item.dosenNama || 'Belum ada PJ'} | {item.totalMahasiswa}{' '}
+                                mhs
+                                {item.pernahDibuka ? '' : ' | Belum pernah ada sesi'}
+                              </span>
                             </button>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                class="bg-amber-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-amber-700"
+                                onClick={() =>
+                                  handleBukaSesiDariPanel({
+                                    kelompokApelId: item.kelompokApelId,
+                                    shift: item.shiftDefault,
+                                  })
+                                }
+                              >
+                                Buka Sesi
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </For>
-                  </div>
-                </Show>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
+                </div>
               </div>
-            </div>
+            </Show>
           </div>
         </Show>
 
