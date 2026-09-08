@@ -637,7 +637,9 @@ export class ApelService {
       (d) => d.statusKelompok === 'dibuka' && d.sesiHariIni.some((s) => s.statusSesi === 'berlangsung'),
     ).length;
     const totalBelumBuka = totalKelompok - totalDibuka;
-    const totalDitutup = detail.filter((d) => d.sesiHariIni.every((s) => s.statusSesi === 'ditutup')).length;
+    const totalDitutup = detail.filter(
+      (d) => d.sesiHariIni.length > 0 && d.sesiHariIni.every((s) => s.statusSesi === 'ditutup'),
+    ).length;
     const totalHadir = detail.reduce((sum, d) => sum + d.sesiHariIni.reduce((s, x) => s + x.hadir, 0), 0);
     const totalTerlambat = detail.reduce((sum, d) => sum + d.sesiHariIni.reduce((s, x) => s + x.terlambat, 0), 0);
     const totalUnknown = detail.reduce((sum, d) => sum + d.sesiHariIni.reduce((s, x) => s + x.unknown, 0), 0);

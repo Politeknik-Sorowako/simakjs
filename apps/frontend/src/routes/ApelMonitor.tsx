@@ -37,7 +37,10 @@ export default function ApelMonitor() {
     const q = searchTerm().trim().toLowerCase();
     const sf = statusFilter();
     return list.filter((item) => {
-      const matchStatus = sf === 'all' || item.statusKelompok === sf;
+      const matchStatus =
+        sf === 'all' ||
+        item.statusKelompok === sf ||
+        (sf === 'ditutup' && item.sesiHariIni.length > 0 && item.sesiHariIni.every((s) => s.statusSesi === 'ditutup'));
       if (!matchStatus) return false;
       if (!q) return true;
       return (

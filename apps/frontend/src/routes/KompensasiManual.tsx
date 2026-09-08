@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, type JSX, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, type JSX, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -47,6 +47,7 @@ export default function KompensasiManual() {
   const [page, setPage] = createSignal(1);
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
   let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const handleFilterSearchChange = (value: string) => {
     setFilterSearch(value);
@@ -528,6 +529,7 @@ export default function KompensasiManual() {
           <Show when={filterSearch() || filterTanggal() || filterJenis()}>
             <Button
               onClick={() => {
+                clearTimeout(searchDebounceTimer);
                 setFilterSearch('');
                 setDebouncedSearch('');
                 setFilterTanggal('');
