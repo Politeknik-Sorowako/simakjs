@@ -1,4 +1,4 @@
-import { createSignal, For, type JSX, Show, splitProps } from 'solid-js';
+import { createUniqueId, For, type JSX, Show, splitProps } from 'solid-js';
 
 interface SelectOption {
   value: string | number;
@@ -10,11 +10,12 @@ interface InputProps extends JSX.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   isSelect?: boolean;
   selectOptions?: SelectOption[];
+  ref?: HTMLInputElement | ((el: HTMLInputElement) => void);
 }
 
 export function Input(props: InputProps) {
-  const [local, others] = splitProps(props, ['label', 'error', 'isSelect', 'selectOptions', 'class', 'id']);
-  const inputId = () => local.id || `input-${Math.random().toString(36).slice(2, 9)}`;
+  const [local, others] = splitProps(props, ['label', 'error', 'isSelect', 'selectOptions', 'class', 'id', 'ref']);
+  const inputId = () => local.id || `input-${createUniqueId()}`;
 
   const baseClasses = `
     w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-sm text-secondary-800
@@ -46,6 +47,7 @@ export function Input(props: InputProps) {
         fallback={
           <input
             {...others}
+            ref={local.ref}
             id={inputId()}
             class={`${baseClasses} ${local.error ? errorClasses : ''} ${local.class || ''}`}
           />

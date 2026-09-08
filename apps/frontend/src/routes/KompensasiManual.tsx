@@ -47,6 +47,7 @@ export default function KompensasiManual() {
   const [page, setPage] = createSignal(1);
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
   let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let searchInputRef: HTMLInputElement | undefined;
   onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const handleFilterSearchChange = (value: string) => {
@@ -496,9 +497,9 @@ export default function KompensasiManual() {
           <div class="flex-1">
             <Input
               id="pencarian-kompensasi"
+              ref={searchInputRef}
               type="text"
               placeholder="Cari NIM atau Nama Mahasiswa..."
-              value={filterSearch()}
               onInput={(e) => {
                 handleFilterSearchChange(e.currentTarget.value);
               }}
@@ -530,6 +531,7 @@ export default function KompensasiManual() {
             <Button
               onClick={() => {
                 clearTimeout(searchDebounceTimer);
+                if (searchInputRef) searchInputRef.value = '';
                 setFilterSearch('');
                 setDebouncedSearch('');
                 setFilterTanggal('');
