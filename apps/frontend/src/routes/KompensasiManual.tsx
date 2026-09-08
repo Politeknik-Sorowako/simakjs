@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, type JSX, onCleanup, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, type JSX, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -27,6 +27,34 @@ const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([v
 }));
 
 const JENIS_FULL_DAY: JenisKompen[] = ['sakit', 'izin', 'alpa'];
+
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function KompensasiManual() {
   const auth = useAuth();
@@ -500,6 +528,7 @@ export default function KompensasiManual() {
               ref={searchInputRef}
               type="text"
               placeholder="Cari NIM atau Nama Mahasiswa..."
+              value={filterSearch()}
               onInput={(e) => {
                 handleFilterSearchChange(e.currentTarget.value);
               }}
@@ -570,132 +599,139 @@ export default function KompensasiManual() {
         </Show>
 
         {/* Data Table */}
-        <Table
-          headers={
-            [
-              ...(isManagerRole()
-                ? [
-                    <input
-                      type="checkbox"
-                      checked={isAllPageSelected()}
-                      onChange={() => toggleSelectAllPage()}
-                      title="Pilih semua baris di halaman ini"
-                      class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
-                    />,
-                  ]
-                : []),
-              'No',
-              <SortableHeader field="mahasiswaNim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                NIM
-              </SortableHeader>,
-              <SortableHeader field="mahasiswaNama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Nama Mahasiswa
-              </SortableHeader>,
-              <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Tanggal
-              </SortableHeader>,
-              <SortableHeader field="jenisKompen" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Jenis
-              </SortableHeader>,
-              <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Durasi
-              </SortableHeader>,
-              <SortableHeader field="createdAt" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Waktu Pencatatan
-              </SortableHeader>,
-              'Keterangan',
-              ...(isAdminRole() ? ['Aksi'] : []),
-            ] as (string | JSX.Element)[]
-          }
-        >
-          <For each={kompensasiList()?.data || []}>
-            {(rec, idx) => (
-              <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40 transition-colors">
-                <Show when={isManagerRole()}>
-                  <td class="py-3 px-4">
-                    <input
-                      type="checkbox"
-                      checked={isRowSelected(rec.id)}
-                      onChange={() => toggleRowSelect(rec.id)}
-                      class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
-                    />
+        <Suspense fallback={<TableLoadingFallback />}>
+          <Table
+            headers={
+              [
+                ...(isManagerRole()
+                  ? [
+                      <input
+                        type="checkbox"
+                        checked={isAllPageSelected()}
+                        onChange={() => toggleSelectAllPage()}
+                        title="Pilih semua baris di halaman ini"
+                        class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                      />,
+                    ]
+                  : []),
+                'No',
+                <SortableHeader field="mahasiswaNim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  NIM
+                </SortableHeader>,
+                <SortableHeader field="mahasiswaNama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Nama Mahasiswa
+                </SortableHeader>,
+                <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Tanggal
+                </SortableHeader>,
+                <SortableHeader field="jenisKompen" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Jenis
+                </SortableHeader>,
+                <SortableHeader field="durasiMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Durasi
+                </SortableHeader>,
+                <SortableHeader field="createdAt" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Waktu Pencatatan
+                </SortableHeader>,
+                'Keterangan',
+                ...(isAdminRole() ? ['Aksi'] : []),
+              ] as (string | JSX.Element)[]
+            }
+          >
+            <For each={kompensasiList()?.data || []}>
+              {(rec, idx) => (
+                <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40 transition-colors">
+                  <Show when={isManagerRole()}>
+                    <td class="py-3 px-4">
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected(rec.id)}
+                        onChange={() => toggleRowSelect(rec.id)}
+                        class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                      />
+                    </td>
+                  </Show>
+                  <td class="py-3 px-4 font-mono text-secondary-500">
+                    {((kompensasiList()?.meta?.page || 1) - 1) * 20 + idx() + 1}
                   </td>
-                </Show>
-                <td class="py-3 px-4 font-mono text-secondary-500">
-                  {((kompensasiList()?.meta?.page || 1) - 1) * 20 + idx() + 1}
-                </td>
-                <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-secondary-100">{rec.mahasiswaNim}</td>
-                <td class="py-3 px-4 font-bold text-secondary-900 dark:text-white">
-                  <div class="flex items-center gap-2">
-                    <StudentAvatar foto={rec.mahasiswaFoto} nama={rec.mahasiswaNama} nim={rec.mahasiswaNim} size="sm" />
-                    {rec.mahasiswaNama}
-                  </div>
-                </td>
-                <td class="py-3 px-4 text-secondary-700 dark:text-secondary-300">{rec.tanggal}</td>
-                <td class="py-3 px-4">
-                  <Badge variant={getJenisBadgeVariant(rec.jenisKompen)}>
-                    {JENIS_KOMPEN_LABEL[rec.jenisKompen] || rec.jenisKompen}
-                  </Badge>
-                </td>
-                <td class="py-3 px-4 font-semibold text-brand-600 dark:text-brand-400">{rec.durasiMenit} menit</td>
-                <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{fmtWaktu(rec.createdAt)}</td>
-                <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300 max-w-xs truncate">
-                  {rec.keterangan || '-'}
-                </td>
-                <Show when={isAdminRole()}>
-                  <td class="py-3 px-4 text-right">
-                    <div class="flex items-center justify-end gap-2">
-                      <Button onClick={() => openEditModal(rec)} variant="secondary" class="text-xs py-1 px-2.5">
-                        Edit
-                      </Button>
-                      <Button onClick={() => openDeleteModal(rec)} variant="danger" class="text-xs py-1 px-2.5">
-                        Hapus
-                      </Button>
+                  <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-secondary-100">{rec.mahasiswaNim}</td>
+                  <td class="py-3 px-4 font-bold text-secondary-900 dark:text-white">
+                    <div class="flex items-center gap-2">
+                      <StudentAvatar
+                        foto={rec.mahasiswaFoto}
+                        nama={rec.mahasiswaNama}
+                        nim={rec.mahasiswaNim}
+                        size="sm"
+                      />
+                      {rec.mahasiswaNama}
                     </div>
                   </td>
-                </Show>
+                  <td class="py-3 px-4 text-secondary-700 dark:text-secondary-300">{rec.tanggal}</td>
+                  <td class="py-3 px-4">
+                    <Badge variant={getJenisBadgeVariant(rec.jenisKompen)}>
+                      {JENIS_KOMPEN_LABEL[rec.jenisKompen] || rec.jenisKompen}
+                    </Badge>
+                  </td>
+                  <td class="py-3 px-4 font-semibold text-brand-600 dark:text-brand-400">{rec.durasiMenit} menit</td>
+                  <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{fmtWaktu(rec.createdAt)}</td>
+                  <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300 max-w-xs truncate">
+                    {rec.keterangan || '-'}
+                  </td>
+                  <Show when={isAdminRole()}>
+                    <td class="py-3 px-4 text-right">
+                      <div class="flex items-center justify-end gap-2">
+                        <Button onClick={() => openEditModal(rec)} variant="secondary" class="text-xs py-1 px-2.5">
+                          Edit
+                        </Button>
+                        <Button onClick={() => openDeleteModal(rec)} variant="danger" class="text-xs py-1 px-2.5">
+                          Hapus
+                        </Button>
+                      </div>
+                    </td>
+                  </Show>
+                </tr>
+              )}
+            </For>
+            <Show when={(kompensasiList()?.data || []).length === 0}>
+              <tr>
+                <td
+                  colSpan={tableColumnCount()}
+                  class="py-12 text-center text-xs text-secondary-500 dark:text-secondary-400"
+                >
+                  Tidak ada data kompensasi manual yang ditemukan.
+                </td>
               </tr>
-            )}
-          </For>
-          <Show when={(kompensasiList()?.data || []).length === 0}>
-            <tr>
-              <td
-                colSpan={tableColumnCount()}
-                class="py-12 text-center text-xs text-secondary-500 dark:text-secondary-400"
-              >
-                Tidak ada data kompensasi manual yang ditemukan.
-              </td>
-            </tr>
-          </Show>
-        </Table>
+            </Show>
+          </Table>
 
-        {/* Pagination Controls */}
-        <Show when={(kompensasiList()?.meta?.totalPages || 0) > 1}>
-          <div class="px-6 py-4 border-t border-secondary-100 dark:border-secondary-800 flex items-center justify-between text-xs">
-            <span class="text-secondary-500">
-              Menampilkan Halaman {kompensasiList()?.meta?.page} dari {kompensasiList()?.meta?.totalPages} (
-              {kompensasiList()?.meta?.total} Total Data)
-            </span>
-            <div class="flex items-center gap-2">
-              <Button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page() <= 1}
-                variant="secondary"
-                class="text-xs py-1 px-3"
-              >
-                Sebelumnya
-              </Button>
-              <Button
-                onClick={() => setPage((p) => Math.min(kompensasiList()?.meta?.totalPages || 1, p + 1))}
-                disabled={page() >= (kompensasiList()?.meta?.totalPages || 1)}
-                variant="secondary"
-                class="text-xs py-1 px-3"
-              >
-                Selanjutnya
-              </Button>
+          {/* Pagination Controls */}
+          <Show when={(kompensasiList()?.meta?.totalPages || 0) > 1}>
+            <div class="px-6 py-4 border-t border-secondary-100 dark:border-secondary-800 flex items-center justify-between text-xs">
+              <span class="text-secondary-500">
+                Menampilkan Halaman {kompensasiList()?.meta?.page} dari {kompensasiList()?.meta?.totalPages} (
+                {kompensasiList()?.meta?.total} Total Data)
+              </span>
+              <div class="flex items-center gap-2">
+                <Button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page() <= 1}
+                  variant="secondary"
+                  class="text-xs py-1 px-3"
+                >
+                  Sebelumnya
+                </Button>
+                <Button
+                  onClick={() => setPage((p) => Math.min(kompensasiList()?.meta?.totalPages || 1, p + 1))}
+                  disabled={page() >= (kompensasiList()?.meta?.totalPages || 1)}
+                  variant="secondary"
+                  class="text-xs py-1 px-3"
+                >
+                  Selanjutnya
+                </Button>
+              </div>
             </div>
-          </div>
-        </Show>
+          </Show>
+        </Suspense>
 
         {/* Modal Input / Edit Form */}
         <Modal
