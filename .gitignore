@@ -71,3 +71,4 @@ apps/backend/src/graphify-out/
 !.opencode/rules/
 !.opencode/agent.json
 !.gemini/config.json
+apps/backend/backups/*
