@@ -249,9 +249,17 @@ export default function PresensiUnknown() {
               <option value="belum">Belum ditindaklanjuti</option>
               <option value="sudah">Sudah dikonfirmasi</option>
             </select>
-            <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">
-              Total: <strong>{data()?.meta.total || 0}</strong> data
-            </span>
+            <Suspense
+              fallback={
+                <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">
+                  Total: <strong>…</strong> data
+                </span>
+              }
+            >
+              <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">
+                Total: <strong>{data()?.meta.total || 0}</strong> data
+              </span>
+            </Suspense>
           </div>
 
           <Suspense fallback={<TableLoadingFallback />}>

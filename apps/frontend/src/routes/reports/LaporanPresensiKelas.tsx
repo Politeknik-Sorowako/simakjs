@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
@@ -157,8 +157,10 @@ export default function LaporanPresensiKelas() {
     },
   );
 
-  // Sorted data memos
-  const sortedKelasList = createMemo(() => {
+  // Sorted data helpers (plain functions, NOT createMemo: a memo owned at page
+  // level would throw into the root <Suspense> on every refetch; plain functions
+  // evaluate at the read site, so table reads suspend only to the local <Suspense>).
+  const sortedKelasList = () => {
     const raw = rekapKelasData();
     const list = Array.isArray(raw) ? raw : raw?.data || [];
     const data = [...list];
@@ -176,9 +178,9 @@ export default function LaporanPresensiKelas() {
       const strB = String(valB || '').toLowerCase();
       return order === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
     });
-  });
+  };
 
-  const sortedMahasiswaList = createMemo(() => {
+  const sortedMahasiswaList = () => {
     const raw = rekapMahasiswaData();
     const list = Array.isArray(raw) ? raw : raw?.data || [];
     const data = [...list];
@@ -196,7 +198,7 @@ export default function LaporanPresensiKelas() {
       const strB = String(valB || '').toLowerCase();
       return order === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
     });
-  });
+  };
 
   const handleSort = (field: string) => {
     if (sortField() === field) {

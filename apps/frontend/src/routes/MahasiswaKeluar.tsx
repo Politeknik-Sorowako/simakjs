@@ -329,15 +329,15 @@ export default function MahasiswaKeluarPage() {
               )}
             </For>
           </Table>
+          <Pagination
+            currentPage={page()}
+            totalPages={records()?.meta?.totalPages ?? 1}
+            total={records()?.meta?.total ?? 0}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </Suspense>
-        <Pagination
-          currentPage={page()}
-          totalPages={records()?.meta?.totalPages ?? 1}
-          total={records()?.meta?.total ?? 0}
-          limit={limit()}
-          onPageChange={setPage}
-          onLimitChange={setLimit}
-        />
       </div>
 
       <Modal show={showModal()} onClose={() => setShowModal(false)} title="Pencatatan Mahasiswa Keluar/Non-Aktif">
