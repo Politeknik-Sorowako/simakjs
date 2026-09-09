@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
@@ -6,11 +6,48 @@ import { presensiController, RekapKelasListItem, RekapMahasiswaListItem } from '
 import { prodiController } from '../../controllers/prodiController';
 import { ExportColumn } from '../../utils/export';
 
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function LaporanPresensiKelas() {
   const [activeTab, setActiveTab] = createSignal<'kelas' | 'mahasiswa'>('kelas');
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedProdi, setSelectedProdi] = createSignal('');
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => setDebouncedSearch(value), 350);
+  };
 
   // Pagination signals
   const [kelasPage, setKelasPage] = createSignal(1);
@@ -43,7 +80,7 @@ export default function LaporanPresensiKelas() {
     () => ({
       periodeId: selectedPeriode(),
       prodiId: selectedProdi(),
-      search: search(),
+      search: debouncedSearch(),
       page: kelasPage(),
       limit: kelasLimit(),
     }),
@@ -71,7 +108,7 @@ export default function LaporanPresensiKelas() {
     () => ({
       periodeId: selectedPeriode(),
       prodiId: selectedProdi(),
-      search: search(),
+      search: debouncedSearch(),
       page: mhsPage(),
       limit: mhsLimit(),
     }),
@@ -313,7 +350,7 @@ export default function LaporanPresensiKelas() {
               placeholder={activeTab() === 'kelas' ? 'Kode MK, Nama MK, Kelas...' : 'NIM atau Nama...'}
               class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={search()}
-              onInput={(e) => setSearch(e.currentTarget.value)}
+              onInput={(e) => handleSearchChange(e.currentTarget.value)}
             />
           </div>
         </div>
@@ -342,124 +379,126 @@ export default function LaporanPresensiKelas() {
                 <span class="text-xs text-secondary-400">Default: % Kehadiran tertinggi</span>
               </div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800 select-none">
-                    <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('kodeMk')}>
-                      Kode MK {sortField() === 'kodeMk' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('namaMk')}>
-                      Mata Kuliah / Kelas {sortField() === 'namaMk' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th class="py-3 px-4">Program Studi</th>
-                    <th class="py-3 px-4">Dosen Pengajar</th>
-                    <th
-                      class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
-                      onClick={() => handleSort('totalMahasiswa')}
+            <Suspense fallback={<TableLoadingFallback />}>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800 select-none">
+                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('kodeMk')}>
+                        Kode MK {sortField() === 'kodeMk' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('namaMk')}>
+                        Mata Kuliah / Kelas {sortField() === 'namaMk' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th class="py-3 px-4">Program Studi</th>
+                      <th class="py-3 px-4">Dosen Pengajar</th>
+                      <th
+                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        onClick={() => handleSort('totalMahasiswa')}
+                      >
+                        Mhs {sortField() === 'totalMahasiswa' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th
+                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        onClick={() => handleSort('totalPertemuan')}
+                      >
+                        Sesi BAP {sortField() === 'totalPertemuan' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th
+                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        onClick={() => handleSort('rataPersentaseHadir')}
+                      >
+                        % Kehadiran Rata-rata{' '}
+                        {sortField() === 'rataPersentaseHadir' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th class="py-3 px-4 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For
+                      each={sortedKelasList()}
+                      fallback={
+                        <tr>
+                          <td colspan="8" class="text-center py-8 text-secondary-400">
+                            Belum ada data kelas pada periode ini
+                          </td>
+                        </tr>
+                      }
                     >
-                      Mhs {sortField() === 'totalMahasiswa' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th
-                      class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
-                      onClick={() => handleSort('totalPertemuan')}
-                    >
-                      Sesi BAP {sortField() === 'totalPertemuan' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th
-                      class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
-                      onClick={() => handleSort('rataPersentaseHadir')}
-                    >
-                      % Kehadiran Rata-rata{' '}
-                      {sortField() === 'rataPersentaseHadir' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th class="py-3 px-4 text-center">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <For
-                    each={sortedKelasList()}
-                    fallback={
-                      <tr>
-                        <td colspan="8" class="text-center py-8 text-secondary-400">
-                          Belum ada data kelas pada periode ini
-                        </td>
-                      </tr>
-                    }
-                  >
-                    {(row: RekapKelasListItem) => (
-                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30 transition-colors">
-                        <td class="py-3 px-4 font-mono font-bold text-secondary-700 dark:text-secondary-300">
-                          {row.kodeMk}
-                        </td>
-                        <td class="py-3 px-4">
-                          <div class="font-semibold text-secondary-800 dark:text-white">{row.namaMk}</div>
-                          <div class="text-[10px] text-brand-600 font-bold">Kelas: {row.namaKelas}</div>
-                        </td>
-                        <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.prodiNama}</td>
-                        <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.dosenPengajar}</td>
-                        <td class="py-3 px-4 text-center font-bold">{row.totalMahasiswa}</td>
-                        <td class="py-3 px-4 text-center">{row.totalPertemuan}</td>
-                        <td class="py-3 px-4 text-center">
-                          <span
-                            class={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              row.rataPersentaseHadir >= 80
-                                ? 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300'
-                                : row.rataPersentaseHadir >= 60
-                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
-                            }`}
-                          >
-                            {row.rataPersentaseHadir}%
-                          </span>
-                        </td>
-                        <td class="py-3 px-4 text-center">
-                          <button
-                            onClick={() => setDetailKelasId(row.kelasKuliahId)}
-                            class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 text-[11px] font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
-                          >
-                            Lihat Detail Mhs
-                          </button>
-                        </td>
-                      </tr>
-                    )}
-                  </For>
-                </tbody>
-              </table>
-            </div>
-            <Show
-              when={
-                !Array.isArray(rekapKelasData()) &&
-                (rekapKelasData() as { pagination?: { totalPages: number; page: number } })?.pagination &&
-                ((rekapKelasData() as { pagination?: { totalPages: number } }).pagination?.totalPages || 0) > 1
-              }
-            >
-              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
-                <span class="text-secondary-500">
-                  Halaman {(rekapKelasData() as { pagination: { page: number } }).pagination.page} dari{' '}
-                  {(rekapKelasData() as { pagination: { totalPages: number } }).pagination.totalPages}
-                </span>
-                <div class="flex gap-2">
-                  <button
-                    disabled={kelasPage() <= 1}
-                    onClick={() => setKelasPage((p) => Math.max(1, p - 1))}
-                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
-                  >
-                    Sebelumnya
-                  </button>
-                  <button
-                    disabled={
-                      kelasPage() >=
-                      ((rekapKelasData() as { pagination: { totalPages: number } }).pagination?.totalPages || 1)
-                    }
-                    onClick={() => setKelasPage((p) => p + 1)}
-                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
-                  >
-                    Selanjutnya
-                  </button>
-                </div>
+                      {(row: RekapKelasListItem) => (
+                        <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30 transition-colors">
+                          <td class="py-3 px-4 font-mono font-bold text-secondary-700 dark:text-secondary-300">
+                            {row.kodeMk}
+                          </td>
+                          <td class="py-3 px-4">
+                            <div class="font-semibold text-secondary-800 dark:text-white">{row.namaMk}</div>
+                            <div class="text-[10px] text-brand-600 font-bold">Kelas: {row.namaKelas}</div>
+                          </td>
+                          <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.prodiNama}</td>
+                          <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.dosenPengajar}</td>
+                          <td class="py-3 px-4 text-center font-bold">{row.totalMahasiswa}</td>
+                          <td class="py-3 px-4 text-center">{row.totalPertemuan}</td>
+                          <td class="py-3 px-4 text-center">
+                            <span
+                              class={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                row.rataPersentaseHadir >= 80
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300'
+                                  : row.rataPersentaseHadir >= 60
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                              }`}
+                            >
+                              {row.rataPersentaseHadir}%
+                            </span>
+                          </td>
+                          <td class="py-3 px-4 text-center">
+                            <button
+                              onClick={() => setDetailKelasId(row.kelasKuliahId)}
+                              class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 text-[11px] font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
+                            >
+                              Lihat Detail Mhs
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
               </div>
-            </Show>
+              <Show
+                when={
+                  !Array.isArray(rekapKelasData()) &&
+                  (rekapKelasData() as { pagination?: { totalPages: number; page: number } })?.pagination &&
+                  ((rekapKelasData() as { pagination?: { totalPages: number } }).pagination?.totalPages || 0) > 1
+                }
+              >
+                <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
+                  <span class="text-secondary-500">
+                    Halaman {(rekapKelasData() as { pagination: { page: number } }).pagination.page} dari{' '}
+                    {(rekapKelasData() as { pagination: { totalPages: number } }).pagination.totalPages}
+                  </span>
+                  <div class="flex gap-2">
+                    <button
+                      disabled={kelasPage() <= 1}
+                      onClick={() => setKelasPage((p) => Math.max(1, p - 1))}
+                      class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      disabled={
+                        kelasPage() >=
+                        ((rekapKelasData() as { pagination: { totalPages: number } }).pagination?.totalPages || 1)
+                      }
+                      onClick={() => setKelasPage((p) => p + 1)}
+                      class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                    >
+                      Selanjutnya
+                    </button>
+                  </div>
+                </div>
+              </Show>
+            </Suspense>
           </div>
         </Show>
 
@@ -487,112 +526,114 @@ export default function LaporanPresensiKelas() {
                 <span class="text-xs text-secondary-400">Default: % Kehadiran tertinggi</span>
               </div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800 select-none">
-                    <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('nim')}>
-                      NIM {sortField() === 'nim' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('nama')}>
-                      Mahasiswa {sortField() === 'nama' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th class="py-3 px-4">Program Studi</th>
-                    <th
-                      class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
-                      onClick={() => handleSort('totalKelas')}
+            <Suspense fallback={<TableLoadingFallback />}>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800 select-none">
+                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('nim')}>
+                        NIM {sortField() === 'nim' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('nama')}>
+                        Mahasiswa {sortField() === 'nama' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th class="py-3 px-4">Program Studi</th>
+                      <th
+                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        onClick={() => handleSort('totalKelas')}
+                      >
+                        Total Kelas {sortField() === 'totalKelas' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th
+                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        onClick={() => handleSort('rataPersentaseHadir')}
+                      >
+                        % Kehadiran Rata-rata{' '}
+                        {sortField() === 'rataPersentaseHadir' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th class="py-3 px-4 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For
+                      each={sortedMahasiswaList()}
+                      fallback={
+                        <tr>
+                          <td colspan="6" class="text-center py-8 text-secondary-400">
+                            Belum ada data mahasiswa pada periode ini
+                          </td>
+                        </tr>
+                      }
                     >
-                      Total Kelas {sortField() === 'totalKelas' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th
-                      class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
-                      onClick={() => handleSort('rataPersentaseHadir')}
-                    >
-                      % Kehadiran Rata-rata{' '}
-                      {sortField() === 'rataPersentaseHadir' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
-                    </th>
-                    <th class="py-3 px-4 text-center">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <For
-                    each={sortedMahasiswaList()}
-                    fallback={
-                      <tr>
-                        <td colspan="6" class="text-center py-8 text-secondary-400">
-                          Belum ada data mahasiswa pada periode ini
-                        </td>
-                      </tr>
-                    }
-                  >
-                    {(row: RekapMahasiswaListItem) => (
-                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30 transition-colors">
-                        <td class="py-3 px-4 font-mono font-bold text-secondary-700 dark:text-secondary-300">
-                          {row.nim}
-                        </td>
-                        <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-white">{row.nama}</td>
-                        <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.prodiNama}</td>
-                        <td class="py-3 px-4 text-center font-bold">{row.totalKelas}</td>
-                        <td class="py-3 px-4 text-center">
-                          <span
-                            class={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                              row.rataPersentaseHadir >= 80
-                                ? 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300'
-                                : row.rataPersentaseHadir >= 60
-                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
-                            }`}
-                          >
-                            {row.rataPersentaseHadir}%
-                          </span>
-                        </td>
-                        <td class="py-3 px-4 text-center">
-                          <button
-                            onClick={() => setDetailMahasiswaId(row.mahasiswaId)}
-                            class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 text-[11px] font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
-                          >
-                            Lihat Detail Kelas
-                          </button>
-                        </td>
-                      </tr>
-                    )}
-                  </For>
-                </tbody>
-              </table>
-            </div>
-            <Show
-              when={
-                !Array.isArray(rekapMahasiswaData()) &&
-                (rekapMahasiswaData() as { pagination?: { totalPages: number; page: number } })?.pagination &&
-                ((rekapMahasiswaData() as { pagination?: { totalPages: number } }).pagination?.totalPages || 0) > 1
-              }
-            >
-              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
-                <span class="text-secondary-500">
-                  Halaman {(rekapMahasiswaData() as { pagination: { page: number } }).pagination.page} dari{' '}
-                  {(rekapMahasiswaData() as { pagination: { totalPages: number } }).pagination.totalPages}
-                </span>
-                <div class="flex gap-2">
-                  <button
-                    disabled={mhsPage() <= 1}
-                    onClick={() => setMhsPage((p) => Math.max(1, p - 1))}
-                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
-                  >
-                    Sebelumnya
-                  </button>
-                  <button
-                    disabled={
-                      mhsPage() >=
-                      ((rekapMahasiswaData() as { pagination: { totalPages: number } }).pagination?.totalPages || 1)
-                    }
-                    onClick={() => setMhsPage((p) => p + 1)}
-                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
-                  >
-                    Selanjutnya
-                  </button>
-                </div>
+                      {(row: RekapMahasiswaListItem) => (
+                        <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30 transition-colors">
+                          <td class="py-3 px-4 font-mono font-bold text-secondary-700 dark:text-secondary-300">
+                            {row.nim}
+                          </td>
+                          <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-white">{row.nama}</td>
+                          <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.prodiNama}</td>
+                          <td class="py-3 px-4 text-center font-bold">{row.totalKelas}</td>
+                          <td class="py-3 px-4 text-center">
+                            <span
+                              class={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                                row.rataPersentaseHadir >= 80
+                                  ? 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-300'
+                                  : row.rataPersentaseHadir >= 60
+                                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                                    : 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
+                              }`}
+                            >
+                              {row.rataPersentaseHadir}%
+                            </span>
+                          </td>
+                          <td class="py-3 px-4 text-center">
+                            <button
+                              onClick={() => setDetailMahasiswaId(row.mahasiswaId)}
+                              class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 text-[11px] font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
+                            >
+                              Lihat Detail Kelas
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
               </div>
-            </Show>
+              <Show
+                when={
+                  !Array.isArray(rekapMahasiswaData()) &&
+                  (rekapMahasiswaData() as { pagination?: { totalPages: number; page: number } })?.pagination &&
+                  ((rekapMahasiswaData() as { pagination?: { totalPages: number } }).pagination?.totalPages || 0) > 1
+                }
+              >
+                <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
+                  <span class="text-secondary-500">
+                    Halaman {(rekapMahasiswaData() as { pagination: { page: number } }).pagination.page} dari{' '}
+                    {(rekapMahasiswaData() as { pagination: { totalPages: number } }).pagination.totalPages}
+                  </span>
+                  <div class="flex gap-2">
+                    <button
+                      disabled={mhsPage() <= 1}
+                      onClick={() => setMhsPage((p) => Math.max(1, p - 1))}
+                      class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                    >
+                      Sebelumnya
+                    </button>
+                    <button
+                      disabled={
+                        mhsPage() >=
+                        ((rekapMahasiswaData() as { pagination: { totalPages: number } }).pagination?.totalPages || 1)
+                      }
+                      onClick={() => setMhsPage((p) => p + 1)}
+                      class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                    >
+                      Selanjutnya
+                    </button>
+                  </div>
+                </div>
+              </Show>
+            </Suspense>
           </div>
         </Show>
 
