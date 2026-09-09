@@ -121,15 +121,17 @@ export default function LaporanAkademik() {
                 subtitle={`Periode: ${selectedPeriode()}`}
               />
             </Show>
-            <Show when={(matriksNilai() || []).length > 0}>
-              <ExportButtonGroup
-                data={() => matriksNilai() || []}
-                columns={matriksColumns}
-                filename={`Matriks_Nilai_MK_${selectedPeriode()}`}
-                title="Matriks Sebaran Nilai Mata Kuliah (A-E)"
-                subtitle={`Periode: ${selectedPeriode() || 'Semua'}`}
-              />
-            </Show>
+            <Suspense fallback={null}>
+              <Show when={(matriksNilai() || []).length > 0}>
+                <ExportButtonGroup
+                  data={() => matriksNilai() || []}
+                  columns={matriksColumns}
+                  filename={`Matriks_Nilai_MK_${selectedPeriode()}`}
+                  title="Matriks Sebaran Nilai Mata Kuliah (A-E)"
+                  subtitle={`Periode: ${selectedPeriode() || 'Semua'}`}
+                />
+              </Show>
+            </Suspense>
           </div>
         </div>
 
@@ -252,7 +254,9 @@ export default function LaporanAkademik() {
             <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
               Matriks Mata Kuliah $\times$ Jumlah Mahasiswa Nilai (A - E)
             </h3>
-            <span class="text-xs text-secondary-500">Total MK: {(matriksNilai() || []).length}</span>
+            <Suspense fallback={<span class="text-xs text-secondary-500">Total MK: …</span>}>
+              <span class="text-xs text-secondary-500">Total MK: {(matriksNilai() || []).length}</span>
+            </Suspense>
           </div>
           <Suspense fallback={<TableLoadingFallback />}>
             <div class="overflow-x-auto">

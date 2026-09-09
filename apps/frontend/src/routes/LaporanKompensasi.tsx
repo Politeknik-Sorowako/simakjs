@@ -374,28 +374,28 @@ export default function LaporanKompensasi() {
 
         {/* Laporan Table — server-side paginated */}
         <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
-          <Show when={filterProdiId() || debouncedSearch() || statusLunas() !== 'belum_lunas'}>
-            <div class="px-5 py-2 bg-brand-50 dark:bg-brand-950/40 border-b border-brand-100 dark:border-brand-900/50 flex justify-between items-center">
-              <span class="text-xs font-bold text-brand-700 dark:text-brand-400">
-                {debouncedSearch() ? `Pencarian: "${debouncedSearch()}"` : ''}
-                {filterProdiId() ? ' — Filter prodi' : ''} ({filteredCount()} mahasiswa)
-              </span>
-              <button
-                onClick={() => {
-                  setSearch('');
-                  setFilterProdiId(undefined);
-                  setStatusLunas('belum_lunas');
-                  setSortBy('sisa');
-                  setSortOrder('desc');
-                  setPage(1);
-                }}
-                class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
-              >
-                Reset Filter
-              </button>
-            </div>
-          </Show>
           <Suspense fallback={<TableLoadingFallback />}>
+            <Show when={filterProdiId() || debouncedSearch() || statusLunas() !== 'belum_lunas'}>
+              <div class="px-5 py-2 bg-brand-50 dark:bg-brand-950/40 border-b border-brand-100 dark:border-brand-900/50 flex justify-between items-center">
+                <span class="text-xs font-bold text-brand-700 dark:text-brand-400">
+                  {debouncedSearch() ? `Pencarian: "${debouncedSearch()}"` : ''}
+                  {filterProdiId() ? ' — Filter prodi' : ''} ({filteredCount()} mahasiswa)
+                </span>
+                <button
+                  onClick={() => {
+                    setSearch('');
+                    setFilterProdiId(undefined);
+                    setStatusLunas('belum_lunas');
+                    setSortBy('sisa');
+                    setSortOrder('desc');
+                    setPage(1);
+                  }}
+                  class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
+                >
+                  Reset Filter
+                </button>
+              </div>
+            </Show>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm border-collapse">
                 <thead>
@@ -533,148 +533,158 @@ export default function LaporanKompensasi() {
       </div>
       {/* Modal Detail Mahasiswa */}
       <Modal isOpen={selectedMhsId() !== null} onClose={handleCloseDetail} title="Detail Riwayat Jam Kompensasi">
-        <Show
-          when={!mhsDetail.loading && mhsDetail()}
+        <Suspense
           fallback={<div class="p-6 text-center text-secondary-400 dark:text-secondary-200">Memuat riwayat...</div>}
         >
-          {(detail) => (
-            <div class="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-2">
-              <div class="bg-secondary-50 rounded-2xl p-5 border border-secondary-100 flex items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-800">
-                <div class="flex items-center gap-3">
-                  <StudentAvatar
-                    foto={detail().mahasiswa.foto}
-                    nama={detail().mahasiswa.nama}
-                    nim={detail().mahasiswa.nim}
-                    size="lg"
-                  />
-                  <div>
-                    <h3 class="font-bold text-secondary-800 text-lg dark:text-white">{detail().mahasiswa.nama}</h3>
-                    <p class="text-sm text-secondary-500 dark:text-secondary-200">NIM: {detail().mahasiswa.nim}</p>
-                    <Button
-                      onClick={handleExportRiwayat}
-                      disabled={isExportingDetail()}
-                      variant="secondary"
-                      class="mt-3 !px-3 !py-1.5 text-[11px] font-bold"
-                    >
-                      {isExportingDetail() ? 'Mengunduh...' : '📥 Ekspor Riwayat Mahasiswa (.xlsx)'}
-                    </Button>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-xs text-secondary-400 uppercase font-semibold dark:text-secondary-200">
-                    Sisa Tanggungan
-                  </div>
-                  <div
-                    class={`px-3 py-1 rounded-full text-xl font-black inline-block mt-1 ${
-                      detail().summary.sisaKompensasi > 0
-                        ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
-                        : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'
-                    }`}
-                  >
-                    {detail().summary.sisaKompensasi} Menit
-                  </div>
-                  <Show when={detail().summary.sisaKompensasi < 0}>
-                    <div class="text-[10px] font-bold text-green-600 dark:text-green-400 mt-1">
-                      Kelebihan jam / deposit kompensasi mahasiswa
+          <Show
+            when={!mhsDetail.loading && mhsDetail()}
+            fallback={<div class="p-6 text-center text-secondary-400 dark:text-secondary-200">Memuat riwayat...</div>}
+          >
+            {(detail) => (
+              <div class="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-2">
+                <div class="bg-secondary-50 rounded-2xl p-5 border border-secondary-100 flex items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-800">
+                  <div class="flex items-center gap-3">
+                    <StudentAvatar
+                      foto={detail().mahasiswa.foto}
+                      nama={detail().mahasiswa.nama}
+                      nim={detail().mahasiswa.nim}
+                      size="lg"
+                    />
+                    <div>
+                      <h3 class="font-bold text-secondary-800 text-lg dark:text-white">{detail().mahasiswa.nama}</h3>
+                      <p class="text-sm text-secondary-500 dark:text-secondary-200">NIM: {detail().mahasiswa.nim}</p>
+                      <Button
+                        onClick={handleExportRiwayat}
+                        disabled={isExportingDetail()}
+                        variant="secondary"
+                        class="mt-3 !px-3 !py-1.5 text-[11px] font-bold"
+                      >
+                        {isExportingDetail() ? 'Mengunduh...' : '📥 Ekspor Riwayat Mahasiswa (.xlsx)'}
+                      </Button>
                     </div>
-                  </Show>
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="flex flex-col gap-3">
-                  <h4 class="font-bold text-secondary-700 border-b pb-2 text-sm dark:text-secondary-200">
-                    Log Akumulasi Absensi
-                  </h4>
-                  <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                    <For
-                      each={detail().historyKompensasi}
-                      fallback={
-                        <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
-                          Tidak ada log absensi bermasalah.
-                        </p>
-                      }
+                  </div>
+                  <div class="text-right">
+                    <div class="text-xs text-secondary-400 uppercase font-semibold dark:text-secondary-200">
+                      Sisa Tanggungan
+                    </div>
+                    <div
+                      class={`px-3 py-1 rounded-full text-xl font-black inline-block mt-1 ${
+                        detail().summary.sisaKompensasi > 0
+                          ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+                          : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'
+                      }`}
                     >
-                      {(log) => (
-                        <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-start gap-3 dark:bg-secondary-900 dark:border-secondary-800">
-                          <div class="flex flex-col gap-0.5 min-w-0">
-                            <span class="font-bold text-secondary-700 dark:text-secondary-200">
-                              {log.sumber === 'apel'
-                                ? 'Presensi Apel'
-                                : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
-                            </span>
-                            <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(log.bapTanggal)}</span>
-                            <span class="font-semibold text-accent-600 dark:text-accent-400">
-                              Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
-                            </span>
-                            <Show when={log.keterangan}>
-                              <span class="text-secondary-500 dark:text-secondary-300">
-                                Keterangan: {log.keterangan}
-                              </span>
-                            </Show>
-                            <Show when={log.keteranganAdmin}>
-                              <span class="text-secondary-500 dark:text-secondary-300">
-                                Catatan admin: {log.keteranganAdmin}
-                              </span>
-                            </Show>
-                          </div>
-                          <span class="font-bold text-red-600 font-mono dark:text-red-400 shrink-0">
-                            +{log.poinKompensasi}m
-                          </span>
-                        </div>
-                      )}
-                    </For>
+                      {detail().summary.sisaKompensasi} Menit
+                    </div>
+                    <Show when={detail().summary.sisaKompensasi < 0}>
+                      <div class="text-[10px] font-bold text-green-600 dark:text-green-400 mt-1">
+                        Kelebihan jam / deposit kompensasi mahasiswa
+                      </div>
+                    </Show>
                   </div>
                 </div>
-                <div class="flex flex-col gap-3">
-                  <div class="flex justify-between items-center border-b pb-2">
-                    <h4 class="font-bold text-secondary-700 text-sm dark:text-secondary-200">
-                      Log Penyelesaian Kompensasi
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="flex flex-col gap-3">
+                    <h4 class="font-bold text-secondary-700 border-b pb-2 text-sm dark:text-secondary-200">
+                      Log Akumulasi Absensi
                     </h4>
-                    <Button onClick={openAddPaymentModal} variant="success" class="!px-2.5 !py-1 text-[11px] font-bold">
-                      + Input Pelunasan
-                    </Button>
-                  </div>
-                  <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                    <For
-                      each={detail().payments}
-                      fallback={
-                        <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
-                          Belum ada penyelesaian kompensasi yang dilaporkan.
-                        </p>
-                      }
-                    >
-                      {(pay) => (
-                        <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
-                          <div class="flex flex-col gap-0.5">
-                            <span class="font-bold text-secondary-700 dark:text-secondary-200">{pay.keterangan}</span>
-                            <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(pay.tanggal)}</span>
-                          </div>
-                          <div class="flex items-center gap-2">
-                            <span class="font-bold text-accent-600 font-mono dark:text-accent-400">
-                              -{pay.jumlahMenit}m
+                    <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                      <For
+                        each={detail().historyKompensasi}
+                        fallback={
+                          <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
+                            Tidak ada log absensi bermasalah.
+                          </p>
+                        }
+                      >
+                        {(log) => (
+                          <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-start gap-3 dark:bg-secondary-900 dark:border-secondary-800">
+                            <div class="flex flex-col gap-0.5 min-w-0">
+                              <span class="font-bold text-secondary-700 dark:text-secondary-200">
+                                {log.sumber === 'apel'
+                                  ? 'Presensi Apel'
+                                  : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
+                              </span>
+                              <span class="text-secondary-400 dark:text-secondary-200">
+                                {fmtTanggal(log.bapTanggal)}
+                              </span>
+                              <span class="font-semibold text-accent-600 dark:text-accent-400">
+                                Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
+                              </span>
+                              <Show when={log.keterangan}>
+                                <span class="text-secondary-500 dark:text-secondary-300">
+                                  Keterangan: {log.keterangan}
+                                </span>
+                              </Show>
+                              <Show when={log.keteranganAdmin}>
+                                <span class="text-secondary-500 dark:text-secondary-300">
+                                  Catatan admin: {log.keteranganAdmin}
+                                </span>
+                              </Show>
+                            </div>
+                            <span class="font-bold text-red-600 font-mono dark:text-red-400 shrink-0">
+                              +{log.poinKompensasi}m
                             </span>
-                            <Button
-                              onClick={() => openEditPaymentModal(pay)}
-                              variant="secondary"
-                              class="!py-0.5 !px-1.5 text-[10px]"
-                            >
-                              Edit
-                            </Button>
                           </div>
-                        </div>
-                      )}
-                    </For>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-3">
+                    <div class="flex justify-between items-center border-b pb-2">
+                      <h4 class="font-bold text-secondary-700 text-sm dark:text-secondary-200">
+                        Log Penyelesaian Kompensasi
+                      </h4>
+                      <Button
+                        onClick={openAddPaymentModal}
+                        variant="success"
+                        class="!px-2.5 !py-1 text-[11px] font-bold"
+                      >
+                        + Input Pelunasan
+                      </Button>
+                    </div>
+                    <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                      <For
+                        each={detail().payments}
+                        fallback={
+                          <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
+                            Belum ada penyelesaian kompensasi yang dilaporkan.
+                          </p>
+                        }
+                      >
+                        {(pay) => (
+                          <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
+                            <div class="flex flex-col gap-0.5">
+                              <span class="font-bold text-secondary-700 dark:text-secondary-200">{pay.keterangan}</span>
+                              <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(pay.tanggal)}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                              <span class="font-bold text-accent-600 font-mono dark:text-accent-400">
+                                -{pay.jumlahMenit}m
+                              </span>
+                              <Button
+                                onClick={() => openEditPaymentModal(pay)}
+                                variant="secondary"
+                                class="!py-0.5 !px-1.5 text-[10px]"
+                              >
+                                Edit
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </For>
+                    </div>
                   </div>
                 </div>
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
+                  <Button onClick={handleCloseDetail} variant="secondary">
+                    Tutup
+                  </Button>
+                </div>
               </div>
-              <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
-                <Button onClick={handleCloseDetail} variant="secondary">
-                  Tutup
-                </Button>
-              </div>
-            </div>
-          )}
-        </Show>
+            )}
+          </Show>
+        </Suspense>
       </Modal>
       {/* Modal Input Payment */}
       <Modal

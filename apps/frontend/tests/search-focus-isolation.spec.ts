@@ -1,5 +1,22 @@
 import { expect, test, type Page } from '@playwright/test';
 
+const API_BASE = 'http://localhost:3000';
+let adminToken = '';
+
+async function gotoAsAdmin(page: Page, path: string) {
+  await page.context().addCookies([{ name: 'access_token', value: adminToken, domain: 'localhost', path: '/' }]);
+  await page.goto('/login');
+  await page.evaluate(({ token }) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem(
+      'user',
+      JSON.stringify({ id: 1, email: 'admin@simak.id', nama: 'Admin SIMAK', role: 'admin', roles: ['admin'] }),
+    );
+  }, { token: adminToken });
+  await page.goto(path);
+  await expect(page).toHaveURL(path);
+}
+
 const TARGET_PAGES: Array<{ name: string; path: string; selector: string }> = [
   { name: 'Apel Verifikasi', path: '/apel/verifikasi', selector: 'input[placeholder="Cari NIM/Nama..."]' },
   {
@@ -16,36 +33,52 @@ const TARGET_PAGES: Array<{ name: string; path: string; selector: string }> = [
     path: '/laporan/presensi-kelas',
     selector: 'input[placeholder="Kode MK, Nama MK, Kelas..."]',
   },
-  { name: 'Laporan Peringatan', path: '/laporan/peringatan', selector: 'input[placeholder="Cari NIM, Nama, atau Pelanggaran..."]' },
+  {
+    name: 'Laporan Peringatan',
+    path: '/laporan/peringatan',
+    selector: 'input[placeholder="Cari NIM, Nama, atau Pelanggaran..."]',
+  },
 ];
 
-async function loginAdmin(page: Page) {
-  await page.goto('/login');
-  await page.fill('input[type="email"]', 'admin@simak.id');
-  await page.fill('input[type="password"]', 'password123');
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/dashboard/);
-}
-
 test.describe('Search Focus & Table Refresh Isolation', () => {
+  test.beforeAll(async ({ playwright }) => {
+    // Satu login API untuk seluruh file (hindari rate-limit login),
+    // token dipakai untuk otentikasi /e2e/reset dan cookie halaman.
+    const ctx = await playwright.request.newContext();
+    const login = await ctx.post(`${API_BASE}/auth/login`, {
+      data: { email: 'admin@simak.id', password: 'password123' },
+    });
+    if (!login.ok()) {
+      console.log('LOGIN FAILED:', login.status(), await login.text());
+    }
+    expect(login.ok()).toBeTruthy();
+    const body = (await login.json()) as { token?: string };
+    expect(body.token).toBeTruthy();
+    adminToken = body.token as string;
+    await ctx.dispose();
+  });
+
   test.beforeEach(async ({ request }) => {
-    const res = await request.post('http://localhost:3000/e2e/reset');
+    const res = await request.post(`${API_BASE}/e2e/reset`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
     expect(res.ok()).toBeTruthy();
   });
 
   for (const target of TARGET_PAGES) {
     test(`mengetik di pencarian ${target.name} tidak menghilangkan fokus kursor`, async ({ page }) => {
-      await loginAdmin(page);
-      await page.goto(target.path);
+      await gotoAsAdmin(page, target.path);
 
       const search = page.locator(target.selector);
       await expect(search).toBeVisible();
+
+      const placeholder = await search.getAttribute('placeholder');
 
       // Fokus di input pencarian
       await search.click();
       await expect
         .poll(() => page.evaluate(() => document.activeElement?.getAttribute('placeholder') ?? null))
-        .toBe(search.getAttribute('placeholder').then((p) => p ?? null));
+        .toBe(placeholder);
 
       // Ketik bertahap sambil menunggu debounce + refetch tabel
       await search.type('a');
@@ -56,7 +89,7 @@ test.describe('Search Focus & Table Refresh Isolation', () => {
       // Fokus harus tetap di input pencarian selama request latar belakang
       await expect
         .poll(() => page.evaluate(() => document.activeElement?.getAttribute('placeholder') ?? null))
-        .toBe(search.getAttribute('placeholder').then((p) => p ?? null));
+        .toBe(placeholder);
 
       // Tidak boleh muncul full-screen loading (bubble ke root Suspense)
       const fullScreenLoader = page.locator('.min-h-screen', { hasText: 'Memuat Halaman' });
@@ -68,10 +101,8 @@ test.describe('Search Focus & Table Refresh Isolation', () => {
   }
 
   test('refresh tabel terisolasi (bukan unmount seluruh halaman) pada halaman laporan', async ({ page }) => {
-    await loginAdmin(page);
-
     for (const target of ['/laporan/akademik', '/laporan/rekap-nilai', '/laporan-kompensasi', '/laporan/peringatan']) {
-      await page.goto(target);
+      await gotoAsAdmin(page, target);
 
       const input = page.locator('input[placeholder]').first();
       await expect(input).toBeVisible();
