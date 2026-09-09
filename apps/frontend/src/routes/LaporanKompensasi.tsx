@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -12,6 +12,34 @@ import { type ExportColumn, exportToExcel, exportToExcelMultipleSheets } from '.
 import { fmtTanggal, getTodayString } from '../utils/format';
 
 const PER_PAGE = 20;
+
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function LaporanKompensasi() {
   const toast = useToast();
@@ -367,149 +395,140 @@ export default function LaporanKompensasi() {
               </button>
             </div>
           </Show>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold bg-secondary-50/50 dark:border-secondary-800 dark:bg-secondary-800">
-                  <th
-                    onClick={() => handleSort('nama')}
-                    title="Klik untuk mengurutkan berdasarkan nama"
-                    class="py-3 px-6 cursor-pointer select-none hover:text-brand-600 transition-colors"
-                  >
-                    Mahasiswa <span class="text-xs font-bold">{getSortIcon('nama')}</span>
-                  </th>
-                  <th class="py-3 px-6">Program Studi</th>
-                  <th
-                    onClick={() => handleSort('total')}
-                    title="Klik untuk mengurutkan berdasarkan total mangkir"
-                    class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
-                  >
-                    Akumulasi Mangkir <span class="text-xs font-bold">{getSortIcon('total')}</span>
-                  </th>
-                  <th class="py-3 px-6 text-center">Kompensasi Dilunasi</th>
-                  <th
-                    onClick={() => handleSort('sisa')}
-                    title="Klik untuk mengurutkan berdasarkan sisa tanggungan"
-                    class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
-                  >
-                    Sisa Tanggungan <span class="text-xs font-bold">{getSortIcon('sisa')}</span>
-                  </th>
-                  <th class="py-3 px-6 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                <Show when={laporan.error}>
-                  <tr>
-                    <td colspan="6" class="text-center py-12">
-                      <div class="flex flex-col items-center gap-3 px-6">
-                        <div class="text-red-600 dark:text-red-400 font-bold text-sm">
-                          Gagal memuat data laporan kompensasi.
-                        </div>
-                        <div class="text-xs text-secondary-400 dark:text-secondary-200 max-w-md break-words">
-                          {laporan.error instanceof Error ? laporan.error.message : String(laporan.error)}
-                        </div>
-                        <Button
-                          onClick={() => refetchLaporan()}
-                          variant="primary"
-                          class="!px-4 !py-1.5 text-xs font-bold"
-                        >
-                          🔄 Coba Lagi
-                        </Button>
-                      </div>
-                    </td>
+          <Suspense fallback={<TableLoadingFallback />}>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold bg-secondary-50/50 dark:border-secondary-800 dark:bg-secondary-800">
+                    <th
+                      onClick={() => handleSort('nama')}
+                      title="Klik untuk mengurutkan berdasarkan nama"
+                      class="py-3 px-6 cursor-pointer select-none hover:text-brand-600 transition-colors"
+                    >
+                      Mahasiswa <span class="text-xs font-bold">{getSortIcon('nama')}</span>
+                    </th>
+                    <th class="py-3 px-6">Program Studi</th>
+                    <th
+                      onClick={() => handleSort('total')}
+                      title="Klik untuk mengurutkan berdasarkan total mangkir"
+                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                    >
+                      Akumulasi Mangkir <span class="text-xs font-bold">{getSortIcon('total')}</span>
+                    </th>
+                    <th class="py-3 px-6 text-center">Kompensasi Dilunasi</th>
+                    <th
+                      onClick={() => handleSort('sisa')}
+                      title="Klik untuk mengurutkan berdasarkan sisa tanggungan"
+                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                    >
+                      Sisa Tanggungan <span class="text-xs font-bold">{getSortIcon('sisa')}</span>
+                    </th>
+                    <th class="py-3 px-6 text-center">Aksi</th>
                   </tr>
-                </Show>
-                <Show
-                  when={!laporan.loading && !laporan.error}
-                  fallback={
-                    !laporan.error ? (
-                      <tr>
-                        <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
-                          Memuat data laporan kompensasi...
-                        </td>
-                      </tr>
-                    ) : null
-                  }
-                >
-                  <For
-                    each={laporan()?.data || []}
-                    fallback={
-                      <tr>
-                        <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
-                          Tidak ada data mahasiswa terkompensasi.
-                        </td>
-                      </tr>
-                    }
-                  >
-                    {(item) => (
-                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
-                        <td class="py-4 px-6">
-                          <div class="flex items-center gap-2">
-                            <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
-                            <div>
-                              <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
-                              <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
-                            </div>
+                </thead>
+                <tbody>
+                  <Show when={laporan.error}>
+                    <tr>
+                      <td colspan="6" class="text-center py-12">
+                        <div class="flex flex-col items-center gap-3 px-6">
+                          <div class="text-red-600 dark:text-red-400 font-bold text-sm">
+                            Gagal memuat data laporan kompensasi.
                           </div>
-                        </td>
-                        <td class="py-4 px-6 text-secondary-600 font-semibold dark:text-secondary-200">
-                          {item.prodiNama || '-'}
-                        </td>
-                        <td class="py-4 px-6 text-center text-red-500 font-bold">{item.totalKompensasi} Menit</td>
-                        <td class="py-4 px-6 text-center text-accent-600 font-bold dark:text-accent-400">
-                          {item.totalDibayar} Menit
-                        </td>
-                        <td class="py-4 px-6 text-center">
-                          <span
-                            class={`px-3 py-1 rounded-full text-xs font-extrabold ${item.sisaKompensasi > 0 ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'}`}
-                          >
-                            {item.sisaKompensasi} Menit
-                          </span>
-                        </td>
-                        <td class="py-4 px-6 text-center">
+                          <div class="text-xs text-secondary-400 dark:text-secondary-200 max-w-md break-words">
+                            {laporan.error instanceof Error ? laporan.error.message : String(laporan.error)}
+                          </div>
                           <Button
-                            onClick={() => handleOpenDetail(item.id)}
+                            onClick={() => refetchLaporan()}
                             variant="primary"
                             class="!px-4 !py-1.5 text-xs font-bold"
                           >
-                            Kelola Detail
+                            🔄 Coba Lagi
                           </Button>
-                        </td>
-                      </tr>
-                    )}
-                  </For>
-                </Show>
-              </tbody>
-            </table>
-          </div>
-          {/* Server-side Pagination */}
-          <Show when={filteredCount() > PER_PAGE}>
-            <div class="flex justify-between items-center px-6 py-3 border-t border-secondary-100 dark:border-secondary-800 bg-secondary-50/50 dark:bg-secondary-800/50">
-              <span class="text-xs text-secondary-500">
-                Menampilkan {(page() - 1) * PER_PAGE + 1}-{Math.min(page() * PER_PAGE, filteredCount())} dari{' '}
-                {filteredCount()} mahasiswa
-              </span>
-              <div class="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  disabled={page() <= 1}
-                  class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
-                >
-                  ← Sebelumnya
-                </button>
-                <span class="text-xs font-semibold text-secondary-500 px-2">
-                  {page()} / {totalPages()}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(p + 1, totalPages()))}
-                  disabled={page() >= totalPages()}
-                  class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
-                >
-                  Berikutnya →
-                </button>
-              </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </Show>
+                  <Show when={!laporan.error}>
+                    <For
+                      each={laporan()?.data || []}
+                      fallback={
+                        <tr>
+                          <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
+                            Tidak ada data mahasiswa terkompensasi.
+                          </td>
+                        </tr>
+                      }
+                    >
+                      {(item) => (
+                        <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
+                          <td class="py-4 px-6">
+                            <div class="flex items-center gap-2">
+                              <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                              <div>
+                                <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
+                                <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="py-4 px-6 text-secondary-600 font-semibold dark:text-secondary-200">
+                            {item.prodiNama || '-'}
+                          </td>
+                          <td class="py-4 px-6 text-center text-red-500 font-bold">{item.totalKompensasi} Menit</td>
+                          <td class="py-4 px-6 text-center text-accent-600 font-bold dark:text-accent-400">
+                            {item.totalDibayar} Menit
+                          </td>
+                          <td class="py-4 px-6 text-center">
+                            <span
+                              class={`px-3 py-1 rounded-full text-xs font-extrabold ${item.sisaKompensasi > 0 ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'}`}
+                            >
+                              {item.sisaKompensasi} Menit
+                            </span>
+                          </td>
+                          <td class="py-4 px-6 text-center">
+                            <Button
+                              onClick={() => handleOpenDetail(item.id)}
+                              variant="primary"
+                              class="!px-4 !py-1.5 text-xs font-bold"
+                            >
+                              Kelola Detail
+                            </Button>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </Show>
+                </tbody>
+              </table>
             </div>
-          </Show>
+            {/* Server-side Pagination */}
+            <Show when={filteredCount() > PER_PAGE}>
+              <div class="flex justify-between items-center px-6 py-3 border-t border-secondary-100 dark:border-secondary-800 bg-secondary-50/50 dark:bg-secondary-800/50">
+                <span class="text-xs text-secondary-500">
+                  Menampilkan {(page() - 1) * PER_PAGE + 1}-{Math.min(page() * PER_PAGE, filteredCount())} dari{' '}
+                  {filteredCount()} mahasiswa
+                </span>
+                <div class="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                    disabled={page() <= 1}
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
+                  >
+                    ← Sebelumnya
+                  </button>
+                  <span class="text-xs font-semibold text-secondary-500 px-2">
+                    {page()} / {totalPages()}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(p + 1, totalPages()))}
+                    disabled={page() >= totalPages()}
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
+                  >
+                    Berikutnya →
+                  </button>
+                </div>
+              </div>
+            </Show>
+          </Suspense>
         </div>
       </div>
       {/* Modal Detail Mahasiswa */}

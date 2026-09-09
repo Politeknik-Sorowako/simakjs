@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { PieChart, StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
@@ -6,11 +6,49 @@ import { bimbinganController } from '../../controllers/bimbinganController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import { ExportColumn } from '../../utils/export';
 
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function LaporanPeringatan() {
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [limit, setLimit] = createSignal(20);
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => setDebouncedSearch(value), 350);
+  };
 
   const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
 
@@ -34,7 +72,7 @@ export default function LaporanPeringatan() {
   );
 
   const [riwayatData] = createResource(
-    () => ({ page: page(), limit: limit(), search: search(), periode: selectedPeriode() }),
+    () => ({ page: page(), limit: limit(), search: debouncedSearch(), periode: selectedPeriode() }),
     async (params) => {
       try {
         const res = await bimbinganController.getAllPelanggaran({
@@ -243,97 +281,98 @@ export default function LaporanPeringatan() {
                 placeholder="Cari NIM, Nama, atau Pelanggaran..."
                 class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white w-full sm:w-64"
                 value={search()}
-                onInput={(e) => {
-                  setSearch(e.currentTarget.value);
-                  setPage(1);
-                }}
+                onInput={(e) => handleSearchChange(e.currentTarget.value)}
               />
             </div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
-                  <th class="py-3 px-5">Tanggal</th>
-                  <th class="py-3 px-5">Mahasiswa</th>
-                  <th class="py-3 px-5">Jenis Pelanggaran & Pasal</th>
-                  <th class="py-3 px-5 text-center">Bobot Poin</th>
-                  <th class="py-3 px-5">Pelapor</th>
-                  <th class="py-3 px-5">Keterangan</th>
-                </tr>
-              </thead>
-              <tbody>
-                <For
-                  each={riwayatData()?.data || []}
-                  fallback={
-                    <tr>
-                      <td colspan="6" class="text-center py-8 text-secondary-400">
-                        Belum ada data pelanggaran
-                      </td>
-                    </tr>
-                  }
-                >
-                  {(item: {
-                    tanggal: string;
-                    nim?: string;
-                    namaMahasiswa?: string;
-                    jenisPelanggaran: string;
-                    nomorPasal?: string | null;
-                    bobotPoin?: number;
-                    jenisSanksi?: number;
-                    pelapor?: string | null;
-                    keterangan: string;
-                  }) => (
-                    <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                      <td class="py-3 px-5 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString('id-ID')}</td>
-                      <td class="py-3 px-5">
-                        <div class="font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa || '-'}</div>
-                        <div class="text-[10px] text-secondary-400">{item.nim}</div>
-                      </td>
-                      <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">
-                        <div>{item.jenisPelanggaran}</div>
-                        <Show when={item.nomorPasal}>
-                          <span class="inline-block text-[10px] text-brand-600 dark:text-brand-400 font-normal">
-                            Pasal {item.nomorPasal}
-                          </span>
-                        </Show>
-                      </td>
-                      <td class="py-3 px-5 text-center font-bold text-rose-600">
-                        {item.jenisSanksi ?? item.bobotPoin}
-                      </td>
-                      <td class="py-3 px-5 text-secondary-600 dark:text-secondary-300 font-medium">
-                        {item.pelapor || '-'}
-                      </td>
-                      <td class="py-3 px-5 text-secondary-500">{item.keterangan}</td>
-                    </tr>
-                  )}
-                </For>
-              </tbody>
-            </table>
-          </div>
-          <Show when={riwayatData()?.pagination && riwayatData()!.pagination.totalPages > 1}>
-            <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
-              <span class="text-secondary-500">
-                Halaman {riwayatData()?.pagination.page} dari {riwayatData()?.pagination.totalPages}
-              </span>
-              <div class="flex gap-2">
-                <button
-                  disabled={page() <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
-                >
-                  Sebelumnya
-                </button>
-                <button
-                  disabled={page() >= (riwayatData()?.pagination.totalPages || 1)}
-                  onClick={() => setPage((p) => p + 1)}
-                  class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
-                >
-                  Selanjutnya
-                </button>
-              </div>
+          <Suspense fallback={<TableLoadingFallback />}>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-5">Tanggal</th>
+                    <th class="py-3 px-5">Mahasiswa</th>
+                    <th class="py-3 px-5">Jenis Pelanggaran & Pasal</th>
+                    <th class="py-3 px-5 text-center">Bobot Poin</th>
+                    <th class="py-3 px-5">Pelapor</th>
+                    <th class="py-3 px-5">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={riwayatData()?.data || []}
+                    fallback={
+                      <tr>
+                        <td colspan="6" class="text-center py-8 text-secondary-400">
+                          Belum ada data pelanggaran
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(item: {
+                      tanggal: string;
+                      nim?: string;
+                      namaMahasiswa?: string;
+                      jenisPelanggaran: string;
+                      nomorPasal?: string | null;
+                      bobotPoin?: number;
+                      jenisSanksi?: number;
+                      pelapor?: string | null;
+                      keterangan: string;
+                    }) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-5 whitespace-nowrap">
+                          {new Date(item.tanggal).toLocaleDateString('id-ID')}
+                        </td>
+                        <td class="py-3 px-5">
+                          <div class="font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa || '-'}</div>
+                          <div class="text-[10px] text-secondary-400">{item.nim}</div>
+                        </td>
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">
+                          <div>{item.jenisPelanggaran}</div>
+                          <Show when={item.nomorPasal}>
+                            <span class="inline-block text-[10px] text-brand-600 dark:text-brand-400 font-normal">
+                              Pasal {item.nomorPasal}
+                            </span>
+                          </Show>
+                        </td>
+                        <td class="py-3 px-5 text-center font-bold text-rose-600">
+                          {item.jenisSanksi ?? item.bobotPoin}
+                        </td>
+                        <td class="py-3 px-5 text-secondary-600 dark:text-secondary-300 font-medium">
+                          {item.pelapor || '-'}
+                        </td>
+                        <td class="py-3 px-5 text-secondary-500">{item.keterangan}</td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
             </div>
-          </Show>
+            <Show when={riwayatData()?.pagination && riwayatData()!.pagination.totalPages > 1}>
+              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
+                <span class="text-secondary-500">
+                  Halaman {riwayatData()?.pagination.page} dari {riwayatData()?.pagination.totalPages}
+                </span>
+                <div class="flex gap-2">
+                  <button
+                    disabled={page() <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                  >
+                    Sebelumnya
+                  </button>
+                  <button
+                    disabled={page() >= (riwayatData()?.pagination.totalPages || 1)}
+                    onClick={() => setPage((p) => p + 1)}
+                    class="px-3 py-1 bg-secondary-100 dark:bg-secondary-800 rounded disabled:opacity-50"
+                  >
+                    Selanjutnya
+                  </button>
+                </div>
+              </div>
+            </Show>
+          </Suspense>
         </div>
       </div>
     </MainLayout>

@@ -125,7 +125,8 @@ export default defineConfig({
         ],
         runtimeCaching: [
           {
-            urlPattern: ({ request }) => request.destination === 'script' || request.destination === 'style',
+            urlPattern: ({ request, url }) =>
+              (request.destination === 'script' || request.destination === 'style') && !url.pathname.startsWith('/api/'),
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'dynamic-scripts-cache',

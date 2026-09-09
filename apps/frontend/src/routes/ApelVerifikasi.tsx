@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +7,34 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, UnknownPresensiItem } from '../controllers/apelController';
 import { PaginatedResponse, prodiController } from '../controllers/prodiController';
 import { fmtTanggal, fmtWaktu } from '../utils/format';
+
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function ApelVerifikasi() {
   const auth = useAuth();
@@ -170,157 +198,159 @@ export default function ApelVerifikasi() {
             </select>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full">
-              <thead class="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-medium uppercase">No</th>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
-                    onClick={() => handleSort('nim')}
-                  >
-                    NIM{sortIcon('nim')}
-                  </th>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
-                    onClick={() => handleSort('nama')}
-                  >
-                    Nama{sortIcon('nama')}
-                  </th>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
-                    onClick={() => handleSort('prodi')}
-                  >
-                    Prodi{sortIcon('prodi')}
-                  </th>
-                  <th class="px-4 py-3 text-left text-xs font-medium uppercase">Kelompok</th>
-                  <th
-                    class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
-                    onClick={() => handleSort('tanggal')}
-                  >
-                    Tanggal{sortIcon('tanggal')}
-                  </th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
-                    onClick={() => handleSort('shift')}
-                  >
-                    Shift{sortIcon('shift')}
-                  </th>
-                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Dosen</th>
-                  <th
-                    class="px-4 py-3 text-center text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
-                    onClick={() => handleSort('waktu')}
-                  >
-                    Waktu Pencatatan{sortIcon('waktu')}
-                  </th>
-                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Durasi</th>
-                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status</th>
-                  <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y dark:divide-gray-700">
-                <For each={data()?.data}>
-                  {(item: UnknownPresensiItem, idx) => (
-                    <tr
-                      class={`hover:bg-gray-50 dark:hover:bg-gray-750 ${
-                        item.verifiedStatus ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''
-                      }`}
+          <Suspense fallback={<TableLoadingFallback />}>
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium uppercase">No</th>
+                    <th
+                      class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                      onClick={() => handleSort('nim')}
                     >
-                      <td class="px-4 py-3 text-sm">{idx() + 1}</td>
-                      <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
-                      <td class="px-4 py-3 text-sm">
-                        <div class="flex items-center gap-2">
-                          <StudentAvatar
-                            foto={item.mahasiswaFoto}
-                            nama={item.mahasiswaNama}
-                            nim={item.mahasiswaNim}
-                            size="sm"
-                          />
-                          {item.mahasiswaNama}
-                        </div>
-                      </td>
-                      <td class="px-4 py-3 text-sm">{item.prodiNama}</td>
-                      <td class="px-4 py-3 text-sm">{item.kelompokNama}</td>
-                      <td class="px-4 py-3 text-sm">{item.tanggal}</td>
-                      <td class="px-4 py-3 text-center text-sm">{item.shift}</td>
-                      <td class="px-4 py-3 text-center text-sm">{item.dosenNama}</td>
-                      <td class="px-4 py-3 text-center text-sm">{fmtWaktu(item.createdAt)}</td>
-                      <td class="px-4 py-3 text-center text-sm">
-                        {item.menitTerlambat != null ? `${item.menitTerlambat} mnt` : '-'}
-                      </td>
-                      <td class="px-4 py-3 text-center">
-                        {item.verifiedStatus ? (
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                            ✓ {statusLabel(item.verifiedStatus)}
-                          </span>
-                        ) : (
-                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                            ⏳ Belum
-                          </span>
-                        )}
-                      </td>
-                      <td class="px-4 py-3 text-center">
-                        <button
-                          class={
-                            item.verifiedStatus
-                              ? 'bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600'
-                              : 'bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700'
-                          }
-                          onClick={() => {
-                            setVerifyModal({
-                              id: item.id,
-                              nama: item.mahasiswaNama,
-                              menit: item.menitTerlambat ?? null,
-                              tanggal: item.tanggal,
-                            });
-                            setVerifyStatus(item.verifiedStatus || 'alpa');
-                            setVerifyDuration(item.menitTerlambat || 0);
-                            setIsAnulir(false);
-                            setVerifyNote('');
-                          }}
-                        >
-                          {item.verifiedStatus ? 'Koreksi' : 'Verifikasi'}
-                        </button>
+                      NIM{sortIcon('nim')}
+                    </th>
+                    <th
+                      class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                      onClick={() => handleSort('nama')}
+                    >
+                      Nama{sortIcon('nama')}
+                    </th>
+                    <th
+                      class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                      onClick={() => handleSort('prodi')}
+                    >
+                      Prodi{sortIcon('prodi')}
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium uppercase">Kelompok</th>
+                    <th
+                      class="px-4 py-3 text-left text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                      onClick={() => handleSort('tanggal')}
+                    >
+                      Tanggal{sortIcon('tanggal')}
+                    </th>
+                    <th
+                      class="px-4 py-3 text-center text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                      onClick={() => handleSort('shift')}
+                    >
+                      Shift{sortIcon('shift')}
+                    </th>
+                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Dosen</th>
+                    <th
+                      class="px-4 py-3 text-center text-xs font-medium uppercase cursor-pointer select-none hover:text-blue-600"
+                      onClick={() => handleSort('waktu')}
+                    >
+                      Waktu Pencatatan{sortIcon('waktu')}
+                    </th>
+                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Durasi</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y dark:divide-gray-700">
+                  <For each={data()?.data}>
+                    {(item: UnknownPresensiItem, idx) => (
+                      <tr
+                        class={`hover:bg-gray-50 dark:hover:bg-gray-750 ${
+                          item.verifiedStatus ? 'bg-emerald-50/40 dark:bg-emerald-950/20' : ''
+                        }`}
+                      >
+                        <td class="px-4 py-3 text-sm">{idx() + 1}</td>
+                        <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
+                        <td class="px-4 py-3 text-sm">
+                          <div class="flex items-center gap-2">
+                            <StudentAvatar
+                              foto={item.mahasiswaFoto}
+                              nama={item.mahasiswaNama}
+                              nim={item.mahasiswaNim}
+                              size="sm"
+                            />
+                            {item.mahasiswaNama}
+                          </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm">{item.prodiNama}</td>
+                        <td class="px-4 py-3 text-sm">{item.kelompokNama}</td>
+                        <td class="px-4 py-3 text-sm">{item.tanggal}</td>
+                        <td class="px-4 py-3 text-center text-sm">{item.shift}</td>
+                        <td class="px-4 py-3 text-center text-sm">{item.dosenNama}</td>
+                        <td class="px-4 py-3 text-center text-sm">{fmtWaktu(item.createdAt)}</td>
+                        <td class="px-4 py-3 text-center text-sm">
+                          {item.menitTerlambat != null ? `${item.menitTerlambat} mnt` : '-'}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                          {item.verifiedStatus ? (
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                              ✓ {statusLabel(item.verifiedStatus)}
+                            </span>
+                          ) : (
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                              ⏳ Belum
+                            </span>
+                          )}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                          <button
+                            class={
+                              item.verifiedStatus
+                                ? 'bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600'
+                                : 'bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700'
+                            }
+                            onClick={() => {
+                              setVerifyModal({
+                                id: item.id,
+                                nama: item.mahasiswaNama,
+                                menit: item.menitTerlambat ?? null,
+                                tanggal: item.tanggal,
+                              });
+                              setVerifyStatus(item.verifiedStatus || 'alpa');
+                              setVerifyDuration(item.menitTerlambat || 0);
+                              setIsAnulir(false);
+                              setVerifyNote('');
+                            }}
+                          >
+                            {item.verifiedStatus ? 'Koreksi' : 'Verifikasi'}
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                  <Show when={!data()?.data.length}>
+                    <tr>
+                      <td colspan="12" class="px-4 py-8 text-center text-gray-500">
+                        Tidak ada data presensi unknown
                       </td>
                     </tr>
-                  )}
-                </For>
-                <Show when={!data()?.data.length}>
-                  <tr>
-                    <td colspan="12" class="px-4 py-8 text-center text-gray-500">
-                      Tidak ada data presensi unknown
-                    </td>
-                  </tr>
-                </Show>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <Show when={data()?.meta && data()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-sm text-gray-500">Total: {data()?.meta.total} data</span>
-              <div class="flex gap-2">
-                <button
-                  class="px-3 py-1 border rounded text-sm disabled:opacity-50"
-                  disabled={page() <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </button>
-                <span class="px-3 py-1 text-sm">
-                  {page()} / {data()?.meta.totalPages}
-                </span>
-                <button
-                  class="px-3 py-1 border rounded text-sm disabled:opacity-50"
-                  disabled={page() >= (data()?.meta.totalPages || 1)}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </button>
-              </div>
+                  </Show>
+                </tbody>
+              </table>
             </div>
-          </Show>
+
+            {/* Pagination */}
+            <Show when={data()?.meta && data()!.meta.totalPages > 1}>
+              <div class="flex justify-between items-center mt-4">
+                <span class="text-sm text-gray-500">Total: {data()?.meta.total} data</span>
+                <div class="flex gap-2">
+                  <button
+                    class="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                    disabled={page() <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <span class="px-3 py-1 text-sm">
+                    {page()} / {data()?.meta.totalPages}
+                  </span>
+                  <button
+                    class="px-3 py-1 border rounded text-sm disabled:opacity-50"
+                    disabled={page() >= (data()?.meta.totalPages || 1)}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </Show>
+          </Suspense>
         </div>
 
         {/* Verify Modal */}

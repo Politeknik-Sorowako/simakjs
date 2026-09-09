@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,6 +9,34 @@ import { periodeAkademikController } from '../../controllers/periodeAkademikCont
 import { prodiController } from '../../controllers/prodiController';
 import { ExportColumn } from '../../utils/export';
 
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function LaporanRekapNilai() {
   const auth = useAuth();
   const toast = useToast();
@@ -18,8 +46,28 @@ export default function LaporanRekapNilai() {
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedProdi, setSelectedProdi] = createSignal('');
   const [mkSearch, setMkSearch] = createSignal('');
+  const [debouncedMkSearch, setDebouncedMkSearch] = createSignal('');
   const [mhsSearch, setMhsSearch] = createSignal('');
+  const [debouncedMhsSearch, setDebouncedMhsSearch] = createSignal('');
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
+  let mkSearchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let mhsSearchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => {
+    clearTimeout(mkSearchDebounceTimer);
+    clearTimeout(mhsSearchDebounceTimer);
+  });
+
+  const handleMkSearchChange = (value: string) => {
+    setMkSearch(value);
+    clearTimeout(mkSearchDebounceTimer);
+    mkSearchDebounceTimer = setTimeout(() => setDebouncedMkSearch(value), 350);
+  };
+
+  const handleMhsSearchChange = (value: string) => {
+    setMhsSearch(value);
+    clearTimeout(mhsSearchDebounceTimer);
+    mhsSearchDebounceTimer = setTimeout(() => setDebouncedMhsSearch(value), 350);
+  };
 
   const [selectedMkDetail, setSelectedMkDetail] = createSignal<{
     mataKuliahId: number;
@@ -66,7 +114,7 @@ export default function LaporanRekapNilai() {
     () => ({
       periodeId: selectedPeriode(),
       prodiId: selectedProdi(),
-      search: mkSearch(),
+      search: debouncedMkSearch(),
       page: page(),
       limit: limit(),
     }),
@@ -103,7 +151,7 @@ export default function LaporanRekapNilai() {
   );
 
   const [mahasiswas] = createResource(
-    () => ({ search: mhsSearch(), prodi: selectedProdi() }),
+    () => ({ search: debouncedMhsSearch(), prodi: selectedProdi() }),
     async ({ search, prodi }) => {
       const prodiId = prodi ? parseInt(prodi) : undefined;
       return await mahasiswaController.getAll(search, 1, 50, prodiId);
@@ -195,7 +243,7 @@ export default function LaporanRekapNilai() {
               placeholder="Kode atau Nama MK..."
               class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={mkSearch()}
-              onInput={(e) => setMkSearch(e.currentTarget.value)}
+              onInput={(e) => handleMkSearchChange(e.currentTarget.value)}
             />
           </div>
         </div>
@@ -231,102 +279,104 @@ export default function LaporanRekapNilai() {
             </div>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
-                  <th class="py-3 px-4">Kode MK</th>
-                  <th class="py-3 px-4">Mata Kuliah</th>
-                  <th class="py-3 px-4 text-center">SKS</th>
-                  <th class="py-3 px-4">Program Studi</th>
-                  <th class="py-3 px-3 text-center bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 font-bold">
-                    A
-                  </th>
-                  <th class="py-3 px-3 text-center bg-blue-50/50 dark:bg-blue-950/20 text-blue-700 font-bold">B</th>
-                  <th class="py-3 px-3 text-center bg-yellow-50/50 dark:bg-yellow-950/20 text-yellow-700 font-bold">
-                    C
-                  </th>
-                  <th class="py-3 px-3 text-center bg-orange-50/50 dark:bg-orange-950/20 text-orange-700 font-bold">
-                    D
-                  </th>
-                  <th class="py-3 px-3 text-center bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 font-bold">E</th>
-                  <th class="py-3 px-3 text-center text-secondary-400">Belum Ada</th>
-                  <th class="py-3 px-4 text-center font-bold">Total Peserta</th>
-                  <th class="py-3 px-4 text-center font-bold">% Kelulusan</th>
-                  <th class="py-3 px-4 text-center font-bold">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                <For
-                  each={matriksNilai()?.data || []}
-                  fallback={
-                    <tr>
-                      <td colspan="13" class="text-center py-8 text-secondary-400">
-                        Tidak ada data matriks nilai untuk periode yang dipilih
-                      </td>
-                    </tr>
-                  }
-                >
-                  {(row) => (
-                    <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                      <td class="py-3 px-4 font-mono font-bold text-secondary-700 dark:text-secondary-300">
-                        {row.kodeMk}
-                      </td>
-                      <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-white">{row.namaMk}</td>
-                      <td class="py-3 px-4 text-center">{row.sks}</td>
-                      <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.prodiNama}</td>
-                      <td class="py-3 px-3 text-center font-bold text-emerald-600 bg-emerald-50/30 dark:bg-emerald-950/10">
-                        {row.gradeA}
-                      </td>
-                      <td class="py-3 px-3 text-center font-bold text-blue-600 bg-blue-50/30 dark:bg-blue-950/10">
-                        {row.gradeB}
-                      </td>
-                      <td class="py-3 px-3 text-center font-bold text-amber-600 bg-yellow-50/30 dark:bg-yellow-950/10">
-                        {row.gradeC}
-                      </td>
-                      <td class="py-3 px-3 text-center font-bold text-orange-600 bg-orange-50/30 dark:bg-orange-950/10">
-                        {row.gradeD}
-                      </td>
-                      <td class="py-3 px-3 text-center font-bold text-rose-600 bg-rose-50/30 dark:bg-rose-950/10">
-                        {row.gradeE}
-                      </td>
-                      <td class="py-3 px-3 text-center text-secondary-400">{row.gradeNull}</td>
-                      <td class="py-3 px-4 text-center font-bold text-secondary-800 dark:text-white">
-                        {row.totalPeserta}
-                      </td>
-                      <td class="py-3 px-4 text-center">
-                        <span
-                          class={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            row.persenLulus >= 85
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                              : row.persenLulus >= 70
-                                ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400'
-                                : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
-                          }`}
-                        >
-                          {row.persenLulus}%
-                        </span>
-                      </td>
-                      <td class="py-3 px-4 text-center">
-                        <button
-                          onClick={() =>
-                            setSelectedMkDetail({
-                              mataKuliahId: row.mataKuliahId,
-                              kodeMk: row.kodeMk,
-                              namaMk: row.namaMk,
-                            })
-                          }
-                          class="px-2.5 py-1 text-[11px] font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg dark:bg-brand-900/40 dark:text-brand-300"
-                        >
-                          Detail
-                        </button>
-                      </td>
-                    </tr>
-                  )}
-                </For>
-              </tbody>
-            </table>
-          </div>
+          <Suspense fallback={<TableLoadingFallback />}>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-4">Kode MK</th>
+                    <th class="py-3 px-4">Mata Kuliah</th>
+                    <th class="py-3 px-4 text-center">SKS</th>
+                    <th class="py-3 px-4">Program Studi</th>
+                    <th class="py-3 px-3 text-center bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 font-bold">
+                      A
+                    </th>
+                    <th class="py-3 px-3 text-center bg-blue-50/50 dark:bg-blue-950/20 text-blue-700 font-bold">B</th>
+                    <th class="py-3 px-3 text-center bg-yellow-50/50 dark:bg-yellow-950/20 text-yellow-700 font-bold">
+                      C
+                    </th>
+                    <th class="py-3 px-3 text-center bg-orange-50/50 dark:bg-orange-950/20 text-orange-700 font-bold">
+                      D
+                    </th>
+                    <th class="py-3 px-3 text-center bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 font-bold">E</th>
+                    <th class="py-3 px-3 text-center text-secondary-400">Belum Ada</th>
+                    <th class="py-3 px-4 text-center font-bold">Total Peserta</th>
+                    <th class="py-3 px-4 text-center font-bold">% Kelulusan</th>
+                    <th class="py-3 px-4 text-center font-bold">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={matriksNilai()?.data || []}
+                    fallback={
+                      <tr>
+                        <td colspan="13" class="text-center py-8 text-secondary-400">
+                          Tidak ada data matriks nilai untuk periode yang dipilih
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(row) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-4 font-mono font-bold text-secondary-700 dark:text-secondary-300">
+                          {row.kodeMk}
+                        </td>
+                        <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-white">{row.namaMk}</td>
+                        <td class="py-3 px-4 text-center">{row.sks}</td>
+                        <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.prodiNama}</td>
+                        <td class="py-3 px-3 text-center font-bold text-emerald-600 bg-emerald-50/30 dark:bg-emerald-950/10">
+                          {row.gradeA}
+                        </td>
+                        <td class="py-3 px-3 text-center font-bold text-blue-600 bg-blue-50/30 dark:bg-blue-950/10">
+                          {row.gradeB}
+                        </td>
+                        <td class="py-3 px-3 text-center font-bold text-amber-600 bg-yellow-50/30 dark:bg-yellow-950/10">
+                          {row.gradeC}
+                        </td>
+                        <td class="py-3 px-3 text-center font-bold text-orange-600 bg-orange-50/30 dark:bg-orange-950/10">
+                          {row.gradeD}
+                        </td>
+                        <td class="py-3 px-3 text-center font-bold text-rose-600 bg-rose-50/30 dark:bg-rose-950/10">
+                          {row.gradeE}
+                        </td>
+                        <td class="py-3 px-3 text-center text-secondary-400">{row.gradeNull}</td>
+                        <td class="py-3 px-4 text-center font-bold text-secondary-800 dark:text-white">
+                          {row.totalPeserta}
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                          <span
+                            class={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              row.persenLulus >= 85
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
+                                : row.persenLulus >= 70
+                                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400'
+                                  : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+                            }`}
+                          >
+                            {row.persenLulus}%
+                          </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                          <button
+                            onClick={() =>
+                              setSelectedMkDetail({
+                                mataKuliahId: row.mataKuliahId,
+                                kodeMk: row.kodeMk,
+                                namaMk: row.namaMk,
+                              })
+                            }
+                            class="px-2.5 py-1 text-[11px] font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg dark:bg-brand-900/40 dark:text-brand-300"
+                          >
+                            Detail
+                          </button>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </Suspense>
           <Show when={matriksNilai()?.pagination && (matriksNilai()?.pagination.totalPages || 0) > 1}>
             <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
               <span class="text-secondary-500">
@@ -395,7 +445,7 @@ export default function LaporanRekapNilai() {
             placeholder="Ketik NIM atau Nama Mahasiswa..."
             class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             value={mhsSearch()}
-            onInput={(e) => setMhsSearch(e.currentTarget.value)}
+            onInput={(e) => handleMhsSearchChange(e.currentTarget.value)}
           />
         </div>
 
@@ -405,41 +455,43 @@ export default function LaporanRekapNilai() {
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Hasil Pencarian Mahasiswa</h3>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
-                    <th class="py-3 px-5">NIM</th>
-                    <th class="py-3 px-5">Nama</th>
-                    <th class="py-3 px-5">Status</th>
-                    <th class="py-3 px-5 text-center">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <For each={mahasiswas()?.data || []}>
-                    {(m) => (
-                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                        <td class="py-3 px-5 font-mono text-secondary-600">{m.nim}</td>
-                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
-                        <td class="py-3 px-5">
-                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700">
-                            {m.status}
-                          </span>
-                        </td>
-                        <td class="py-3 px-5 text-center">
-                          <button
-                            onClick={() => setSelectedMhsId(selectedMhsId() === m.id ? null : m.id)}
-                            class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
-                          >
-                            {selectedMhsId() === m.id ? 'Tutup' : 'Lihat Nilai'}
-                          </button>
-                        </td>
-                      </tr>
-                    )}
-                  </For>
-                </tbody>
-              </table>
-            </div>
+            <Suspense fallback={<TableLoadingFallback />}>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                      <th class="py-3 px-5">NIM</th>
+                      <th class="py-3 px-5">Nama</th>
+                      <th class="py-3 px-5">Status</th>
+                      <th class="py-3 px-5 text-center">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={mahasiswas()?.data || []}>
+                      {(m) => (
+                        <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                          <td class="py-3 px-5 font-mono text-secondary-600">{m.nim}</td>
+                          <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
+                          <td class="py-3 px-5">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700">
+                              {m.status}
+                            </span>
+                          </td>
+                          <td class="py-3 px-5 text-center">
+                            <button
+                              onClick={() => setSelectedMhsId(selectedMhsId() === m.id ? null : m.id)}
+                              class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
+                            >
+                              {selectedMhsId() === m.id ? 'Tutup' : 'Lihat Nilai'}
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+            </Suspense>
           </div>
         </Show>
 
