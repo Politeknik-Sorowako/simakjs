@@ -72,3 +72,5 @@ apps/backend/src/graphify-out/
 !.opencode/agent.json
 !.gemini/config.json
 apps/backend/backups/*
+
+014_prompt-workflow.md
