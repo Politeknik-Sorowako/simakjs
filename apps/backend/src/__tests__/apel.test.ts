@@ -479,4 +479,55 @@ describe('Kelompok Apel API (Fleksibel Lintas Prodi)', () => {
     expect(item.sesiHariIni.map((s: { shift: string }) => s.shift)).toEqual(['pagi', 'sore']);
     expect(item.sesiHariIni.every((s: { statusSesi: string }) => s.statusSesi === 'berlangsung')).toBe(true);
   });
+
+  it('monitor menggabungkan beberapa Dosen PJ menjadi format koma', async () => {
+    const tanggal = '2026-09-03';
+
+    // Dosen kedua sebagai PJ shift sore
+    const [dosenB] = await db
+      .insert(dosen)
+      .values({
+        nip: '199101012020011002',
+        nama: 'Dosen B',
+        email: 'dosenB@test.com',
+        programStudiId: prodi1Id,
+      })
+      .returning();
+
+    // Kelompok dengan PJ = dosenId, sesi pagi (PJ sama) & sesi sore (PJ dosenB)
+    const [kel] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok Multi PJ', dosenId, shift: 'pagi' })
+      .returning();
+    await db.insert(sesiApel).values({
+      kelompokApelId: kel.id,
+      tanggal,
+      shift: 'pagi',
+      dosenId,
+      jamMulai: '07:00',
+    });
+    await db.insert(sesiApel).values({
+      kelompokApelId: kel.id,
+      tanggal,
+      shift: 'sore',
+      dosenId: dosenB.id,
+      jamMulai: '16:00',
+    });
+
+    const res = await app.handle(
+      new Request(`http://localhost/apel/monitor?tanggal=${tanggal}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.detail).toHaveLength(1);
+
+    const item = body.detail[0];
+    // Dedupe: dosenId muncul di kelompok & sesi pagi -> hanya sekali; ditambah dosenB.
+    expect(item.dosenNama).toBe('Dosen Pembina Apel, Dosen B');
+    expect(item.dosenIds).toEqual([dosenId, dosenB.id]);
+  });
 });

@@ -14,6 +14,19 @@ import { db } from '../utils/db';
 import { getNowDateString, getNowTimeString } from '../utils/timezone';
 import { SystemParameterService } from './system-parameter.service';
 
+function joinDosenNames(names: Array<string | null | undefined>): string {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of names) {
+    const trimmed = raw?.trim();
+    if (!trimmed || trimmed === 'Belum Ada Dosen PJ') continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    result.push(trimmed);
+  }
+  return result.length > 0 ? result.join(', ') : 'Belum Ada Dosen PJ';
+}
+
 export class ApelService {
   static async createKelompok(data: {
     namaKelompok: string;
@@ -283,7 +296,7 @@ export class ApelService {
         tanggal: sesiApel.tanggal,
         shift: sesiApel.shift,
         dosenId: sesiApel.dosenId,
-        dosenNama: dosen.nama,
+        dosenNama: dosen.nama ?? 'Belum Ada Dosen PJ',
         jamMulai: sesiApel.jamMulai,
         catatan: sesiApel.catatan,
         isClosed: sesiApel.isClosed,
@@ -333,7 +346,7 @@ export class ApelService {
         tanggal: sesiApel.tanggal,
         shift: sesiApel.shift,
         dosenId: sesiApel.dosenId,
-        dosenNama: dosen.nama,
+        dosenNama: dosen.nama ?? 'Belum Ada Dosen PJ',
         jamMulai: sesiApel.jamMulai,
         isClosed: sesiApel.isClosed,
         closedAt: sesiApel.closedAt,
@@ -607,6 +620,13 @@ export class ApelService {
       const sesiList = sesiByKelompok.get(kelompok.id) || [];
       const statusKelompok: 'dibuka' | 'belum_buka' = sesiList.length > 0 ? 'dibuka' : 'belum_buka';
       const shiftsDibuka = sesiList.map((s) => s.shift);
+      // Gabungkan PJ kelompok dengan seluruh PJ sesi hari itu menjadi satu daftar unik.
+      const dosenNames = [kelompok.dosenNama, ...sesiList.map((s) => s.dosenNama)];
+      const dosenIds = Array.from(
+        new Set(
+          [kelompok.dosenId, ...sesiList.map((s) => s.dosenId)].filter((id): id is number => typeof id === 'number'),
+        ),
+      );
       return {
         kelompokApelId: kelompok.id,
         kelompokNama: kelompok.namaKelompok,
@@ -614,8 +634,9 @@ export class ApelService {
         shiftDefault: kelompok.shift,
         shiftsDibuka,
         statusKelompok,
-        dosenId: kelompok.dosenId,
-        dosenNama: kelompok.dosenNama || 'Belum Ada Dosen PJ',
+        dosenId: dosenIds[0] ?? null,
+        dosenIds,
+        dosenNama: joinDosenNames(dosenNames),
         totalMahasiswa: Number(kelompok.totalMahasiswa),
         pernahDibuka: kelompok.pernahDibuka,
         sesiHariIni: sesiList.map((s) => ({

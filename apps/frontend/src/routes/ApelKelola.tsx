@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
@@ -45,6 +45,18 @@ export default function ApelKelola() {
   const APEL_FULL_STATUSES = ['hadir', 'terlambat', 'sakit', 'izin', 'alpa', 'unknown'];
   const APEL_STAFF_STATUSES = ['hadir', 'terlambat', 'unknown'];
   const statusOptions = () => (auth.hasRole(['admin', 'super_admin']) ? APEL_FULL_STATUSES : APEL_STAFF_STATUSES);
+  const rekapPresensi = createMemo(() => {
+    const list = presensiData();
+    let hadir = 0;
+    let terlambat = 0;
+    let unknown = 0;
+    for (const item of list) {
+      if (item.status === 'hadir') hadir += 1;
+      else if (item.status === 'terlambat') terlambat += 1;
+      else if (item.status === 'unknown') unknown += 1;
+    }
+    return { hadir, terlambat, unknown, total: list.length };
+  });
   const [showBukaSesiModal, setShowBukaSesiModal] = createSignal(false);
 
   // Modal Buat Kelompok State
@@ -542,7 +554,9 @@ export default function ApelKelola() {
                             <div class="flex flex-col min-w-0 gap-1">
                               <div class="flex items-center gap-2">
                                 <span class="font-semibold truncate">{item.kelompokNama}</span>
-                                <span class="text-gray-500 shrink-0">{item.dosenNama}</span>
+                                <span class="text-gray-500 shrink-0" title={item.dosenNama}>
+                                  {item.dosenNama}
+                                </span>
                               </div>
                               <div class="flex flex-wrap items-center gap-1.5">
                                 <For each={item.sesiHariIni}>
@@ -601,7 +615,7 @@ export default function ApelKelola() {
                               <span class="font-semibold text-amber-900 dark:text-amber-200 truncate block">
                                 {item.kelompokNama}
                               </span>
-                              <span class="text-amber-700 dark:text-amber-300">
+                              <span class="text-amber-700 dark:text-amber-300" title={item.dosenNama || 'Belum ada PJ'}>
                                 Shift {item.shiftDefault} | {item.dosenNama || 'Belum ada PJ'} | {item.totalMahasiswa}{' '}
                                 mhs
                                 {item.pernahDibuka ? '' : ' | Belum pernah ada sesi'}
@@ -748,7 +762,7 @@ export default function ApelKelola() {
                     <h2 class="text-lg font-semibold">
                       Presensi - {sesiPresensi()?.sesi.tanggal} ({sesiPresensi()?.sesi.shift})
                     </h2>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-500" title={sesiPresensi()?.sesi.dosenNama}>
                       {sesiPresensi()?.sesi.jamMulai} | {sesiPresensi()?.sesi.dosenNama}
                     </p>
                   </div>
@@ -813,6 +827,33 @@ export default function ApelKelola() {
                       </button>
                     </Show>
                   </div>
+                </div>
+
+                <div class="px-4 py-2 border-b dark:border-gray-700 flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                    title="Hadir"
+                  >
+                    H: {rekapPresensi().hadir}
+                  </span>
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+                    title="Terlambat"
+                  >
+                    T: {rekapPresensi().terlambat}
+                  </span>
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                    title="Unknown / Belum jelas"
+                  >
+                    ?: {rekapPresensi().unknown}
+                  </span>
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    title="Total mahasiswa"
+                  >
+                    Total: {rekapPresensi().total}
+                  </span>
                 </div>
 
                 <div class="overflow-x-auto">
