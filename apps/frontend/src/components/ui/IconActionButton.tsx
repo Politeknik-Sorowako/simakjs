@@ -35,7 +35,7 @@ export function IconActionButton(props: IconActionButtonProps) {
       <span class="shrink-0">{props.icon}</span>
       <span class="hidden sm:inline">{props.label}</span>
 
-      <span class="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 text-white text-[11px] font-medium px-2 py-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 group-focus-within:opacity-100 sm:hidden z-20 shadow-lg">
+      <span class="pointer-events-none absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-gray-900 dark:bg-gray-700 text-white text-[11px] font-medium px-2 py-1 opacity-0 transition-opacity duration-150 delay-150 group-hover:opacity-100 group-hover:delay-0 group-focus-visible:opacity-100 group-focus-visible:delay-0 group-focus-within:opacity-100 group-focus-within:delay-0 sm:hidden z-20 shadow-lg">
         {props.label}
       </span>
     </button>
