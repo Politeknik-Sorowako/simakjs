@@ -58,3 +58,20 @@ apps/backend/src/scripts/seed-local-*.ts
 apps/backend/src/scripts/seed-kelas-krs.ts
 implementation_plan.md
 improvement_plan.md
+
+
+# KECUALIKAN cache, log, dan kredensial AI Agent
+.opencode/cache/
+.opencode/logs/
+.opencode/history/
+.opencode/secrets.*
+
+.gemini/cache/
+.gemini/logs/
+.gemini/credentials.json
+
+# IZINKAN file konfigurasi utama (jika sebelumnya di-ignore global)
+!.opencode/rules/
+!.opencode/agent.json
+!.gemini/config.json
+apps/backend/src/graphify-out/cache/*
