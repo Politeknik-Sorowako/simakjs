@@ -69,12 +69,13 @@ export default function ApelMonitor() {
     if (!monitorData) return;
 
     let csv = 'Kelompok,Tanggal,Shift,Dosen,Status Kelompok,Total Mahasiswa,Hadir,Terlambat,Unknown\n';
+    const quote = (value: string) => `"${value.replace(/"/g, '""')}"`;
     for (const d of monitorData.detail) {
       const shifts = d.shiftsDibuka.length > 0 ? d.shiftsDibuka.join(' & ') : `- (${d.shiftDefault})`;
       const hadir = d.sesiHariIni.reduce((s, x) => s + x.hadir, 0);
       const terlambat = d.sesiHariIni.reduce((s, x) => s + x.terlambat, 0);
       const unknown = d.sesiHariIni.reduce((s, x) => s + x.unknown, 0);
-      csv += `${d.kelompokNama},${d.tanggal},${shifts},${d.dosenNama},${d.statusKelompok},${d.totalMahasiswa},${hadir},${terlambat},${unknown}\n`;
+      csv += `${quote(d.kelompokNama)},${d.tanggal},${quote(shifts)},${quote(d.dosenNama)},${d.statusKelompok},${d.totalMahasiswa},${hadir},${terlambat},${unknown}\n`;
     }
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -220,7 +221,11 @@ export default function ApelMonitor() {
                               )}
                             </div>
                           </td>
-                          <td class="px-4 py-3 text-sm">{item.dosenNama}</td>
+                          <td class="px-4 py-3 text-sm">
+                            <span title={item.dosenNama} class="inline-block max-w-[200px] truncate align-bottom">
+                              {item.dosenNama}
+                            </span>
+                          </td>
                           <td class="px-4 py-3 text-center text-xs">
                             <Show
                               when={item.statusKelompok === 'dibuka'}
@@ -278,7 +283,8 @@ export default function ApelMonitor() {
                   <h3 class="text-lg font-bold">Detail Presensi Sesi Apel</h3>
                   <p class="text-xs text-gray-500">
                     {sesiDetailData()?.sesi.kelompokNama} — Tanggal: {sesiDetailData()?.sesi.tanggal} (
-                    {sesiDetailData()?.sesi.shift}) | Dosen PJ: {sesiDetailData()?.sesi.dosenNama}
+                    {sesiDetailData()?.sesi.shift}) | Dosen PJ:{' '}
+                    <span title={sesiDetailData()?.sesi.dosenNama}>{sesiDetailData()?.sesi.dosenNama}</span>
                   </p>
                 </div>
                 <button

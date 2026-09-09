@@ -102,6 +102,7 @@ export interface MonitorKelompok {
   shiftsDibuka: string[];
   statusKelompok: 'dibuka' | 'belum_buka';
   dosenId?: number | null;
+  dosenIds?: number[];
   dosenNama: string;
   totalMahasiswa: number;
   pernahDibuka: boolean;
