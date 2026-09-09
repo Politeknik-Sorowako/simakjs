@@ -1,5 +1,6 @@
 import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { IconActionButton } from '../components/ui/IconActionButton';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { VerifiedBadge } from '../components/ui/VerifiedBadge';
@@ -491,7 +492,7 @@ export default function ApelKelola() {
                   Acuan kelompok yang sudah dibuka dan yang mungkin terlewat oleh petugas PJ.
                 </p>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2 shrink-0 justify-end">
                 <button
                   type="button"
                   class="inline-flex items-center justify-center p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
@@ -523,16 +524,25 @@ export default function ApelKelola() {
                 </Show>
                 <input
                   type="date"
-                  class="border rounded-lg px-2 py-1 text-xs dark:bg-gray-700 dark:border-gray-600"
+                  class="border rounded-lg px-2 py-1 text-xs dark:bg-gray-700 dark:border-gray-600 max-w-full"
                   value={tanggalPanel()}
                   onChange={(e) => setTanggalPanel(e.currentTarget.value)}
                 />
-                <button
-                  class="text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 px-2.5 py-1 rounded-lg font-medium"
+                <IconActionButton
+                  label="Muat ulang data"
+                  variant="gray"
                   onClick={() => refetchMonitor()}
-                >
-                  Refresh
-                </button>
+                  icon={
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  }
+                />
               </div>
             </div>
 
@@ -757,34 +767,52 @@ export default function ApelKelola() {
               }
             >
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-                <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-                  <div>
+                <div class="p-4 border-b dark:border-gray-700 flex flex-wrap justify-between items-center gap-3">
+                  <div class="min-w-0">
                     <h2 class="text-lg font-semibold">
                       Presensi - {sesiPresensi()?.sesi.tanggal} ({sesiPresensi()?.sesi.shift})
                     </h2>
-                    <p class="text-sm text-gray-500" title={sesiPresensi()?.sesi.dosenNama}>
+                    <p class="text-sm text-gray-500 truncate" title={sesiPresensi()?.sesi.dosenNama}>
                       {sesiPresensi()?.sesi.jamMulai} | {sesiPresensi()?.sesi.dosenNama}
                     </p>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <button
-                      class="bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50"
+                  <div class="flex flex-wrap items-center gap-2 shrink-0 justify-end">
+                    <IconActionButton
+                      label="Simpan"
+                      variant="green"
                       onClick={handleSubmit}
                       disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                    >
-                      Simpan
-                    </button>
+                      icon={
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                          />
+                        </svg>
+                      }
+                    />
 
                     <Show
                       when={sesiPresensi()?.sesi.isClosed}
                       fallback={
-                        <button
-                          class="bg-amber-600 text-white px-3 py-1.5 rounded-lg hover:bg-amber-700 text-sm font-medium disabled:opacity-50"
+                        <IconActionButton
+                          label="Tutup Sesi"
+                          variant="amber"
                           onClick={handleTutupSesi}
                           disabled={isSubmitting()}
-                        >
-                          Tutup Sesi
-                        </button>
+                          icon={
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                              />
+                            </svg>
+                          }
+                        />
                       }
                     >
                       <Show
@@ -795,36 +823,61 @@ export default function ApelKelola() {
                           </span>
                         }
                       >
-                        <button
-                          class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                        <IconActionButton
+                          label="Buka Sesi Kembali"
+                          variant="blue"
                           onClick={() => handleBukaKembaliSesi()}
                           disabled={isSubmitting()}
-                        >
-                          Buka Sesi Kembali
-                        </button>
+                          icon={
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+                              />
+                            </svg>
+                          }
+                        />
                       </Show>
                     </Show>
 
                     <Show when={auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur'])}>
-                      <button
-                        class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 text-sm font-medium disabled:opacity-50"
+                      <IconActionButton
+                        label="Edit Sesi"
+                        variant="indigo"
                         onClick={openEditSesiModal}
                         disabled={isSubmitting()}
-                        title="Edit Sesi Apel"
-                      >
-                        ✏ Edit Sesi
-                      </button>
+                        icon={
+                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                            />
+                          </svg>
+                        }
+                      />
                     </Show>
 
                     <Show when={auth.hasRole(['admin'])}>
-                      <button
-                        class="bg-red-600 text-white px-3 py-1.5 rounded-lg hover:bg-red-700 text-sm font-medium disabled:opacity-50"
+                      <IconActionButton
+                        label="Hapus Sesi"
+                        variant="red"
                         onClick={() => handleDeleteSesi()}
                         disabled={isSubmitting()}
-                        title="Hapus Sesi Apel"
-                      >
-                        Hapus Sesi
-                      </button>
+                        icon={
+                          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                          </svg>
+                        }
+                      />
                     </Show>
                   </div>
                 </div>
