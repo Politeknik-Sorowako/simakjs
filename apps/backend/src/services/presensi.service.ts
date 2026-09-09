@@ -1059,8 +1059,71 @@ export class PresensiService {
       const searchCond = or(ilike(mataKuliah.nama, s), ilike(mataKuliah.kode, s), ilike(kelasKuliah.namaKelas, s));
       if (searchCond) conditions.push(searchCond);
     }
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const kelasRows = await db
+    // Single aggregated SQL query replacing the N+1 loop over getRekapKehadiran():
+    // per-class aggregates (BAP count, KRS count, dosen list, per-student attendance)
+    // are computed in CTEs and joined once, with LIMIT/OFFSET applied at SQL level.
+    const kelasBapCount = db.$with('kelas_bap_count').as(
+      db
+        .select({
+          kelasKuliahId: bap.kelasKuliahId,
+          totalPertemuan: sql<number>`COUNT(*)`.as('total_pertemuan'),
+        })
+        .from(bap)
+        .innerJoin(kelasKuliah, eq(bap.kelasKuliahId, kelasKuliah.id))
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(whereClause)
+        .groupBy(bap.kelasKuliahId),
+    );
+
+    const kelasKrsCount = db.$with('kelas_krs_count').as(
+      db
+        .select({
+          kelasKuliahId: krs.kelasKuliahId,
+          totalMahasiswa: sql<number>`COUNT(DISTINCT ${krs.mahasiswaId})`.as('total_mahasiswa'),
+        })
+        .from(krs)
+        .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(whereClause)
+        .groupBy(krs.kelasKuliahId),
+    );
+
+    const kelasDosen = db.$with('kelas_dosen').as(
+      db
+        .select({
+          kelasKuliahId: dosenPengajarKelas.kelasKuliahId,
+          dosenNama: sql<string>`COALESCE(STRING_AGG(DISTINCT ${dosen.nama}, ', '), '')`.as('dosen_nama'),
+        })
+        .from(dosenPengajarKelas)
+        .innerJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
+        .innerJoin(kelasKuliah, eq(dosenPengajarKelas.kelasKuliahId, kelasKuliah.id))
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(whereClause)
+        .groupBy(dosenPengajarKelas.kelasKuliahId),
+    );
+
+    const kelasStudentAtt = db.$with('kelas_student_att').as(
+      db
+        .select({
+          kelasKuliahId: bap.kelasKuliahId,
+          mahasiswaId: presensi.mahasiswaId,
+          totalPertemuan: sql<number>`COUNT(DISTINCT ${bap.id})`.as('total_pertemuan'),
+          hadirOk: sql<number>`COUNT(CASE WHEN ${presensi.status} IN ('hadir', 'sakit', 'izin') THEN 1 END)`.as(
+            'hadir_ok',
+          ),
+        })
+        .from(presensi)
+        .innerJoin(bap, eq(presensi.bapId, bap.id))
+        .innerJoin(kelasKuliah, eq(bap.kelasKuliahId, kelasKuliah.id))
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(whereClause)
+        .groupBy(bap.kelasKuliahId, presensi.mahasiswaId),
+    );
+
+    const baseQuery = db
+      .with(kelasBapCount, kelasKrsCount, kelasDosen, kelasStudentAtt)
       .select({
         kelasKuliahId: kelasKuliah.id,
         namaKelas: kelasKuliah.namaKelas,
@@ -1070,59 +1133,67 @@ export class PresensiService {
         sks: mataKuliah.sksTotal,
         prodiNama: programStudi.nama,
         prodiId: mataKuliah.programStudiId,
+        dosenPengajar: sql<string>`COALESCE(kelas_dosen.dosen_nama, '-')`.as('dosen_pengajar'),
+        totalPertemuan: sql<number>`COALESCE(kelas_bap_count.total_pertemuan, 0)`.as('total_pertemuan'),
+        totalMahasiswa: sql<number>`COALESCE(kelas_krs_count.total_mahasiswa, 0)`.as('total_mahasiswa'),
+        rataPersentaseHadir: sql<number>`COALESCE(AVG(CASE
+            WHEN kelas_student_att.total_pertemuan > 0
+            THEN (kelas_student_att.hadir_ok::float / kelas_student_att.total_pertemuan) * 100
+            ELSE 0 END), 0)`.as('rata_persentase_hadir'),
       })
       .from(kelasKuliah)
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .leftJoin(programStudi, eq(mataKuliah.programStudiId, programStudi.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      .leftJoin(kelasBapCount, eq(sql`kelas_bap_count.kelas_kuliah_id`, kelasKuliah.id))
+      .leftJoin(kelasKrsCount, eq(sql`kelas_krs_count.kelas_kuliah_id`, kelasKuliah.id))
+      .leftJoin(kelasDosen, eq(sql`kelas_dosen.kelas_kuliah_id`, kelasKuliah.id))
+      .leftJoin(kelasStudentAtt, eq(sql`kelas_student_att.kelas_kuliah_id`, kelasKuliah.id))
+      .where(whereClause)
+      .groupBy(
+        kelasKuliah.id,
+        kelasKuliah.namaKelas,
+        kelasKuliah.periodeId,
+        mataKuliah.kode,
+        mataKuliah.nama,
+        mataKuliah.sksTotal,
+        programStudi.nama,
+        mataKuliah.programStudiId,
+      )
+      .orderBy(desc(sql`rata_persentase_hadir`), asc(kelasKuliah.namaKelas));
 
-    const result = [];
-    for (const k of kelasRows) {
-      const rekapData = await this.getRekapKehadiran(k.kelasKuliahId);
-      const mhsList = rekapData.mahasiswa || [];
-      const totalMahasiswa = mhsList.length;
-      const pt = rekapData.totalPertemuan || 0;
-      const rataHadir =
-        totalMahasiswa > 0 ? Math.round(mhsList.reduce((s, m) => s + (m.persentaseHadir || 0), 0) / totalMahasiswa) : 0;
-
-      const dosenNames =
-        (rekapData.dosenPengajar || [])
-          .map((d) => d.dosen?.nama)
-          .filter(Boolean)
-          .join(', ') || '-';
-
-      result.push({
-        kelasKuliahId: k.kelasKuliahId,
-        namaKelas: k.namaKelas,
-        periodeId: k.periodeId,
-        kodeMk: k.kodeMk,
-        namaMk: k.namaMk,
-        sks: k.sks,
-        prodiNama: k.prodiNama || '-',
-        dosenPengajar: dosenNames,
-        totalMahasiswa,
-        totalPertemuan: pt,
-        rataPersentaseHadir: rataHadir,
-      });
+    let rows: Awaited<typeof baseQuery>;
+    let total = 0;
+    if (page && limit) {
+      const [totalResult] = await db
+        .select({ total: count() })
+        .from(kelasKuliah)
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(whereClause);
+      total = totalResult?.total || 0;
+      rows = await baseQuery.limit(limit).offset((page - 1) * limit);
+    } else {
+      rows = await baseQuery;
     }
 
-    result.sort((a, b) => b.rataPersentaseHadir - a.rataPersentaseHadir);
+    const data = rows.map((r) => ({
+      kelasKuliahId: r.kelasKuliahId,
+      namaKelas: r.namaKelas,
+      periodeId: r.periodeId,
+      kodeMk: r.kodeMk,
+      namaMk: r.namaMk,
+      sks: r.sks,
+      prodiNama: r.prodiNama || '-',
+      dosenPengajar: r.dosenPengajar && r.dosenPengajar !== '' ? r.dosenPengajar : '-',
+      totalMahasiswa: Number(r.totalMahasiswa),
+      totalPertemuan: Number(r.totalPertemuan),
+      rataPersentaseHadir: Math.round(Number(r.rataPersentaseHadir)),
+    }));
 
     if (page && limit) {
-      const total = result.length;
-      const offset = (page - 1) * limit;
-      return {
-        data: result.slice(offset, offset + limit),
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      };
+      const totalPages = Math.ceil(total / limit);
+      return { data, pagination: { total, page, limit, totalPages } };
     }
-
-    return result;
+    return data;
   }
 
   static async getRekapMahasiswaList(
@@ -1132,91 +1203,117 @@ export class PresensiService {
     page?: number,
     limit?: number,
   ) {
-    const conditions: SQL<unknown>[] = [];
-    if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
+    const classConditions: SQL<unknown>[] = [];
+    if (periodeId && periodeId.trim()) classConditions.push(eq(kelasKuliah.periodeId, periodeId.trim()));
+    const classWhere = classConditions.length > 0 ? and(...classConditions) : undefined;
+
+    const studentConditions: SQL<unknown>[] = [];
+    if (prodiId) studentConditions.push(eq(mahasiswa.programStudiId, prodiId));
     if (search && search.trim()) {
       const s = `%${search.trim()}%`;
       const searchCond = or(ilike(mahasiswa.nama, s), ilike(mahasiswa.nim, s));
-      if (searchCond) conditions.push(searchCond);
+      if (searchCond) studentConditions.push(searchCond);
     }
+    const studentWhere = studentConditions.length > 0 ? and(...studentConditions) : undefined;
 
-    let mhsRows: Array<{
-      id: number;
-      nim: string;
-      nama: string;
-      foto: string | null;
-      prodiNama: string | null;
-      prodiId: number | null;
-    }>;
+    // When a periode is selected, only students who take KRS in that periode are
+    // included — simulated via LEFT JOIN + IS NOT NULL to keep a single query shape.
+    const finalWhere =
+      studentWhere && classWhere
+        ? and(studentWhere, isNotNull(sql`mhs_krs.kelas_kuliah_id`))
+        : classWhere
+          ? isNotNull(sql`mhs_krs.kelas_kuliah_id`)
+          : studentWhere;
 
-    if (periodeId && periodeId.trim()) {
-      mhsRows = await db
+    // Single aggregated SQL query replacing the N+1 loop over getRekapKehadiranMahasiswa():
+    // per-student class list (KRS) and per-student attendance are aggregated once in CTEs,
+    // combined per (student, class), with LIMIT/OFFSET applied at SQL level.
+    const mhsKrs = db.$with('mhs_krs').as(
+      db
         .select({
-          id: mahasiswa.id,
-          nim: mahasiswa.nim,
-          nama: mahasiswa.nama,
-          foto: mahasiswa.foto,
-          prodiNama: programStudi.nama,
-          prodiId: mahasiswa.programStudiId,
+          mahasiswaId: krs.mahasiswaId,
+          kelasKuliahId: krs.kelasKuliahId,
         })
-        .from(mahasiswa)
-        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
-        .innerJoin(krs, eq(krs.mahasiswaId, mahasiswa.id))
+        .from(krs)
         .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-        .where(and(eq(kelasKuliah.periodeId, periodeId.trim()), conditions.length > 0 ? and(...conditions) : undefined))
-        .groupBy(
-          mahasiswa.id,
-          mahasiswa.nim,
-          mahasiswa.nama,
-          mahasiswa.foto,
-          programStudi.nama,
-          mahasiswa.programStudiId,
-        );
-    } else {
-      mhsRows = await db
+        .where(classWhere)
+        .groupBy(krs.mahasiswaId, krs.kelasKuliahId),
+    );
+
+    const mhsAtt = db.$with('mhs_class_att').as(
+      db
         .select({
-          id: mahasiswa.id,
-          nim: mahasiswa.nim,
-          nama: mahasiswa.nama,
-          foto: mahasiswa.foto,
-          prodiNama: programStudi.nama,
-          prodiId: mahasiswa.programStudiId,
+          mahasiswaId: presensi.mahasiswaId,
+          kelasKuliahId: bap.kelasKuliahId,
+          totalPertemuan: sql<number>`COUNT(DISTINCT ${bap.id})`.as('total_pertemuan'),
+          hadirOk: sql<number>`COUNT(CASE WHEN ${presensi.status} IN ('hadir', 'sakit', 'izin') THEN 1 END)`.as(
+            'hadir_ok',
+          ),
         })
+        .from(presensi)
+        .innerJoin(bap, eq(presensi.bapId, bap.id))
+        .innerJoin(kelasKuliah, eq(bap.kelasKuliahId, kelasKuliah.id))
+        .where(classWhere)
+        .groupBy(presensi.mahasiswaId, bap.kelasKuliahId),
+    );
+
+    const baseQuery = db
+      .with(mhsKrs, mhsAtt)
+      .select({
+        mahasiswaId: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
+        prodiNama: programStudi.nama,
+        totalKelas: sql<number>`COUNT(mhs_krs.kelas_kuliah_id)`.as('total_kelas'),
+        rataPersentaseHadir: sql<number>`COALESCE(ROUND(AVG(CASE
+            WHEN mhs_class_att.total_pertemuan > 0
+            THEN (mhs_class_att.hadir_ok::float / mhs_class_att.total_pertemuan) * 100
+            ELSE 0 END)), 0)`.as('rata_persentase_hadir'),
+      })
+      .from(mahasiswa)
+      .leftJoin(mhsKrs, eq(sql`mhs_krs.mahasiswa_id`, mahasiswa.id))
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(
+        mhsAtt,
+        and(
+          eq(sql`mhs_class_att.mahasiswa_id`, mahasiswa.id),
+          eq(sql`mhs_class_att.kelas_kuliah_id`, sql`mhs_krs.kelas_kuliah_id`),
+        ),
+      )
+      .where(finalWhere)
+      .groupBy(mahasiswa.id, mahasiswa.nim, mahasiswa.nama, mahasiswa.foto, programStudi.nama)
+      .orderBy(desc(sql`rata_persentase_hadir`), asc(mahasiswa.nama));
+
+    let rows: Awaited<typeof baseQuery>;
+    let total = 0;
+    if (page && limit) {
+      const [totalResult] = await db
+        .with(mhsKrs, mhsAtt)
+        .select({ total: sql<number>`COUNT(DISTINCT ${mahasiswa.id})` })
         .from(mahasiswa)
-        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
-        .where(conditions.length > 0 ? and(...conditions) : undefined);
+        .leftJoin(mhsKrs, eq(sql`mhs_krs.mahasiswa_id`, mahasiswa.id))
+        .where(finalWhere);
+      total = Number(totalResult?.total || 0);
+      rows = await baseQuery.limit(limit).offset((page - 1) * limit);
+    } else {
+      rows = await baseQuery;
     }
 
-    const result = [];
-    for (const m of mhsRows) {
-      const mhsRekap = await this.getRekapKehadiranMahasiswa(m.id, periodeId);
-      result.push({
-        mahasiswaId: m.id,
-        nim: m.nim,
-        nama: m.nama,
-        foto: m.foto,
-        prodiNama: m.prodiNama || '-',
-        totalKelas: mhsRekap.summary.totalKelas,
-        rataPersentaseHadir: mhsRekap.summary.rataPersentaseHadir,
-      });
-    }
-
-    result.sort((a, b) => b.rataPersentaseHadir - a.rataPersentaseHadir);
+    const data = rows.map((r) => ({
+      mahasiswaId: r.mahasiswaId,
+      nim: r.nim,
+      nama: r.nama,
+      foto: r.foto,
+      prodiNama: r.prodiNama || '-',
+      totalKelas: Number(r.totalKelas),
+      rataPersentaseHadir: Math.round(Number(r.rataPersentaseHadir)),
+    }));
 
     if (page && limit) {
-      const total = result.length;
-      const offset = (page - 1) * limit;
-      return {
-        data: result.slice(offset, offset + limit),
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      };
+      const totalPages = Math.ceil(total / limit);
+      return { data, pagination: { total, page, limit, totalPages } };
     }
-
-    return result;
+    return data;
   }
 }

@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -12,6 +12,34 @@ import { type ExportColumn, exportToExcel, exportToExcelMultipleSheets } from '.
 import { fmtTanggal, getTodayString } from '../utils/format';
 
 const PER_PAGE = 20;
+
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function LaporanKompensasi() {
   const toast = useToast();
@@ -346,316 +374,317 @@ export default function LaporanKompensasi() {
 
         {/* Laporan Table — server-side paginated */}
         <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
-          <Show when={filterProdiId() || debouncedSearch() || statusLunas() !== 'belum_lunas'}>
-            <div class="px-5 py-2 bg-brand-50 dark:bg-brand-950/40 border-b border-brand-100 dark:border-brand-900/50 flex justify-between items-center">
-              <span class="text-xs font-bold text-brand-700 dark:text-brand-400">
-                {debouncedSearch() ? `Pencarian: "${debouncedSearch()}"` : ''}
-                {filterProdiId() ? ' — Filter prodi' : ''} ({filteredCount()} mahasiswa)
-              </span>
-              <button
-                onClick={() => {
-                  setSearch('');
-                  setFilterProdiId(undefined);
-                  setStatusLunas('belum_lunas');
-                  setSortBy('sisa');
-                  setSortOrder('desc');
-                  setPage(1);
-                }}
-                class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
-              >
-                Reset Filter
-              </button>
-            </div>
-          </Show>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm border-collapse">
-              <thead>
-                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold bg-secondary-50/50 dark:border-secondary-800 dark:bg-secondary-800">
-                  <th
-                    onClick={() => handleSort('nama')}
-                    title="Klik untuk mengurutkan berdasarkan nama"
-                    class="py-3 px-6 cursor-pointer select-none hover:text-brand-600 transition-colors"
-                  >
-                    Mahasiswa <span class="text-xs font-bold">{getSortIcon('nama')}</span>
-                  </th>
-                  <th class="py-3 px-6">Program Studi</th>
-                  <th
-                    onClick={() => handleSort('total')}
-                    title="Klik untuk mengurutkan berdasarkan total mangkir"
-                    class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
-                  >
-                    Akumulasi Mangkir <span class="text-xs font-bold">{getSortIcon('total')}</span>
-                  </th>
-                  <th class="py-3 px-6 text-center">Kompensasi Dilunasi</th>
-                  <th
-                    onClick={() => handleSort('sisa')}
-                    title="Klik untuk mengurutkan berdasarkan sisa tanggungan"
-                    class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
-                  >
-                    Sisa Tanggungan <span class="text-xs font-bold">{getSortIcon('sisa')}</span>
-                  </th>
-                  <th class="py-3 px-6 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                <Show when={laporan.error}>
-                  <tr>
-                    <td colspan="6" class="text-center py-12">
-                      <div class="flex flex-col items-center gap-3 px-6">
-                        <div class="text-red-600 dark:text-red-400 font-bold text-sm">
-                          Gagal memuat data laporan kompensasi.
-                        </div>
-                        <div class="text-xs text-secondary-400 dark:text-secondary-200 max-w-md break-words">
-                          {laporan.error instanceof Error ? laporan.error.message : String(laporan.error)}
-                        </div>
-                        <Button
-                          onClick={() => refetchLaporan()}
-                          variant="primary"
-                          class="!px-4 !py-1.5 text-xs font-bold"
-                        >
-                          🔄 Coba Lagi
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                </Show>
-                <Show
-                  when={!laporan.loading && !laporan.error}
-                  fallback={
-                    !laporan.error ? (
-                      <tr>
-                        <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
-                          Memuat data laporan kompensasi...
-                        </td>
-                      </tr>
-                    ) : null
-                  }
+          <Suspense fallback={<TableLoadingFallback />}>
+            <Show when={filterProdiId() || debouncedSearch() || statusLunas() !== 'belum_lunas'}>
+              <div class="px-5 py-2 bg-brand-50 dark:bg-brand-950/40 border-b border-brand-100 dark:border-brand-900/50 flex justify-between items-center">
+                <span class="text-xs font-bold text-brand-700 dark:text-brand-400">
+                  {debouncedSearch() ? `Pencarian: "${debouncedSearch()}"` : ''}
+                  {filterProdiId() ? ' — Filter prodi' : ''} ({filteredCount()} mahasiswa)
+                </span>
+                <button
+                  onClick={() => {
+                    setSearch('');
+                    setFilterProdiId(undefined);
+                    setStatusLunas('belum_lunas');
+                    setSortBy('sisa');
+                    setSortOrder('desc');
+                    setPage(1);
+                  }}
+                  class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
                 >
-                  <For
-                    each={laporan()?.data || []}
-                    fallback={
-                      <tr>
-                        <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
-                          Tidak ada data mahasiswa terkompensasi.
-                        </td>
-                      </tr>
-                    }
-                  >
-                    {(item) => (
-                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
-                        <td class="py-4 px-6">
-                          <div class="flex items-center gap-2">
-                            <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
-                            <div>
-                              <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
-                              <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
-                            </div>
+                  Reset Filter
+                </button>
+              </div>
+            </Show>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold bg-secondary-50/50 dark:border-secondary-800 dark:bg-secondary-800">
+                    <th
+                      onClick={() => handleSort('nama')}
+                      title="Klik untuk mengurutkan berdasarkan nama"
+                      class="py-3 px-6 cursor-pointer select-none hover:text-brand-600 transition-colors"
+                    >
+                      Mahasiswa <span class="text-xs font-bold">{getSortIcon('nama')}</span>
+                    </th>
+                    <th class="py-3 px-6">Program Studi</th>
+                    <th
+                      onClick={() => handleSort('total')}
+                      title="Klik untuk mengurutkan berdasarkan total mangkir"
+                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                    >
+                      Akumulasi Mangkir <span class="text-xs font-bold">{getSortIcon('total')}</span>
+                    </th>
+                    <th class="py-3 px-6 text-center">Kompensasi Dilunasi</th>
+                    <th
+                      onClick={() => handleSort('sisa')}
+                      title="Klik untuk mengurutkan berdasarkan sisa tanggungan"
+                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                    >
+                      Sisa Tanggungan <span class="text-xs font-bold">{getSortIcon('sisa')}</span>
+                    </th>
+                    <th class="py-3 px-6 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <Show when={laporan.error}>
+                    <tr>
+                      <td colspan="6" class="text-center py-12">
+                        <div class="flex flex-col items-center gap-3 px-6">
+                          <div class="text-red-600 dark:text-red-400 font-bold text-sm">
+                            Gagal memuat data laporan kompensasi.
                           </div>
-                        </td>
-                        <td class="py-4 px-6 text-secondary-600 font-semibold dark:text-secondary-200">
-                          {item.prodiNama || '-'}
-                        </td>
-                        <td class="py-4 px-6 text-center text-red-500 font-bold">{item.totalKompensasi} Menit</td>
-                        <td class="py-4 px-6 text-center text-accent-600 font-bold dark:text-accent-400">
-                          {item.totalDibayar} Menit
-                        </td>
-                        <td class="py-4 px-6 text-center">
-                          <span
-                            class={`px-3 py-1 rounded-full text-xs font-extrabold ${item.sisaKompensasi > 0 ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'}`}
-                          >
-                            {item.sisaKompensasi} Menit
-                          </span>
-                        </td>
-                        <td class="py-4 px-6 text-center">
+                          <div class="text-xs text-secondary-400 dark:text-secondary-200 max-w-md break-words">
+                            {laporan.error instanceof Error ? laporan.error.message : String(laporan.error)}
+                          </div>
                           <Button
-                            onClick={() => handleOpenDetail(item.id)}
+                            onClick={() => refetchLaporan()}
                             variant="primary"
                             class="!px-4 !py-1.5 text-xs font-bold"
                           >
-                            Kelola Detail
+                            🔄 Coba Lagi
                           </Button>
-                        </td>
-                      </tr>
-                    )}
-                  </For>
-                </Show>
-              </tbody>
-            </table>
-          </div>
-          {/* Server-side Pagination */}
-          <Show when={filteredCount() > PER_PAGE}>
-            <div class="flex justify-between items-center px-6 py-3 border-t border-secondary-100 dark:border-secondary-800 bg-secondary-50/50 dark:bg-secondary-800/50">
-              <span class="text-xs text-secondary-500">
-                Menampilkan {(page() - 1) * PER_PAGE + 1}-{Math.min(page() * PER_PAGE, filteredCount())} dari{' '}
-                {filteredCount()} mahasiswa
-              </span>
-              <div class="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(p - 1, 1))}
-                  disabled={page() <= 1}
-                  class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
-                >
-                  ← Sebelumnya
-                </button>
-                <span class="text-xs font-semibold text-secondary-500 px-2">
-                  {page()} / {totalPages()}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(p + 1, totalPages()))}
-                  disabled={page() >= totalPages()}
-                  class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
-                >
-                  Berikutnya →
-                </button>
-              </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </Show>
+                  <Show when={!laporan.error}>
+                    <For
+                      each={laporan()?.data || []}
+                      fallback={
+                        <tr>
+                          <td colspan="6" class="text-center py-12 text-secondary-400 dark:text-secondary-200">
+                            Tidak ada data mahasiswa terkompensasi.
+                          </td>
+                        </tr>
+                      }
+                    >
+                      {(item) => (
+                        <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
+                          <td class="py-4 px-6">
+                            <div class="flex items-center gap-2">
+                              <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                              <div>
+                                <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
+                                <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td class="py-4 px-6 text-secondary-600 font-semibold dark:text-secondary-200">
+                            {item.prodiNama || '-'}
+                          </td>
+                          <td class="py-4 px-6 text-center text-red-500 font-bold">{item.totalKompensasi} Menit</td>
+                          <td class="py-4 px-6 text-center text-accent-600 font-bold dark:text-accent-400">
+                            {item.totalDibayar} Menit
+                          </td>
+                          <td class="py-4 px-6 text-center">
+                            <span
+                              class={`px-3 py-1 rounded-full text-xs font-extrabold ${item.sisaKompensasi > 0 ? 'bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'}`}
+                            >
+                              {item.sisaKompensasi} Menit
+                            </span>
+                          </td>
+                          <td class="py-4 px-6 text-center">
+                            <Button
+                              onClick={() => handleOpenDetail(item.id)}
+                              variant="primary"
+                              class="!px-4 !py-1.5 text-xs font-bold"
+                            >
+                              Kelola Detail
+                            </Button>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </Show>
+                </tbody>
+              </table>
             </div>
-          </Show>
+            {/* Server-side Pagination */}
+            <Show when={filteredCount() > PER_PAGE}>
+              <div class="flex justify-between items-center px-6 py-3 border-t border-secondary-100 dark:border-secondary-800 bg-secondary-50/50 dark:bg-secondary-800/50">
+                <span class="text-xs text-secondary-500">
+                  Menampilkan {(page() - 1) * PER_PAGE + 1}-{Math.min(page() * PER_PAGE, filteredCount())} dari{' '}
+                  {filteredCount()} mahasiswa
+                </span>
+                <div class="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(p - 1, 1))}
+                    disabled={page() <= 1}
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
+                  >
+                    ← Sebelumnya
+                  </button>
+                  <span class="text-xs font-semibold text-secondary-500 px-2">
+                    {page()} / {totalPages()}
+                  </span>
+                  <button
+                    onClick={() => setPage((p) => Math.min(p + 1, totalPages()))}
+                    disabled={page() >= totalPages()}
+                    class="px-3 py-1.5 text-xs font-bold rounded-lg border border-secondary-200 dark:border-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-secondary-100 dark:hover:bg-secondary-700 transition-colors text-secondary-700 dark:text-white"
+                  >
+                    Berikutnya →
+                  </button>
+                </div>
+              </div>
+            </Show>
+          </Suspense>
         </div>
       </div>
       {/* Modal Detail Mahasiswa */}
       <Modal isOpen={selectedMhsId() !== null} onClose={handleCloseDetail} title="Detail Riwayat Jam Kompensasi">
-        <Show
-          when={!mhsDetail.loading && mhsDetail()}
+        <Suspense
           fallback={<div class="p-6 text-center text-secondary-400 dark:text-secondary-200">Memuat riwayat...</div>}
         >
-          {(detail) => (
-            <div class="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-2">
-              <div class="bg-secondary-50 rounded-2xl p-5 border border-secondary-100 flex items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-800">
-                <div class="flex items-center gap-3">
-                  <StudentAvatar
-                    foto={detail().mahasiswa.foto}
-                    nama={detail().mahasiswa.nama}
-                    nim={detail().mahasiswa.nim}
-                    size="lg"
-                  />
-                  <div>
-                    <h3 class="font-bold text-secondary-800 text-lg dark:text-white">{detail().mahasiswa.nama}</h3>
-                    <p class="text-sm text-secondary-500 dark:text-secondary-200">NIM: {detail().mahasiswa.nim}</p>
-                    <Button
-                      onClick={handleExportRiwayat}
-                      disabled={isExportingDetail()}
-                      variant="secondary"
-                      class="mt-3 !px-3 !py-1.5 text-[11px] font-bold"
-                    >
-                      {isExportingDetail() ? 'Mengunduh...' : '📥 Ekspor Riwayat Mahasiswa (.xlsx)'}
-                    </Button>
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div class="text-xs text-secondary-400 uppercase font-semibold dark:text-secondary-200">
-                    Sisa Tanggungan
-                  </div>
-                  <div
-                    class={`px-3 py-1 rounded-full text-xl font-black inline-block mt-1 ${
-                      detail().summary.sisaKompensasi > 0
-                        ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
-                        : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'
-                    }`}
-                  >
-                    {detail().summary.sisaKompensasi} Menit
-                  </div>
-                  <Show when={detail().summary.sisaKompensasi < 0}>
-                    <div class="text-[10px] font-bold text-green-600 dark:text-green-400 mt-1">
-                      Kelebihan jam / deposit kompensasi mahasiswa
+          <Show
+            when={!mhsDetail.loading && mhsDetail()}
+            fallback={<div class="p-6 text-center text-secondary-400 dark:text-secondary-200">Memuat riwayat...</div>}
+          >
+            {(detail) => (
+              <div class="flex flex-col gap-6 max-h-[80vh] overflow-y-auto pr-2">
+                <div class="bg-secondary-50 rounded-2xl p-5 border border-secondary-100 flex items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-800">
+                  <div class="flex items-center gap-3">
+                    <StudentAvatar
+                      foto={detail().mahasiswa.foto}
+                      nama={detail().mahasiswa.nama}
+                      nim={detail().mahasiswa.nim}
+                      size="lg"
+                    />
+                    <div>
+                      <h3 class="font-bold text-secondary-800 text-lg dark:text-white">{detail().mahasiswa.nama}</h3>
+                      <p class="text-sm text-secondary-500 dark:text-secondary-200">NIM: {detail().mahasiswa.nim}</p>
+                      <Button
+                        onClick={handleExportRiwayat}
+                        disabled={isExportingDetail()}
+                        variant="secondary"
+                        class="mt-3 !px-3 !py-1.5 text-[11px] font-bold"
+                      >
+                        {isExportingDetail() ? 'Mengunduh...' : '📥 Ekspor Riwayat Mahasiswa (.xlsx)'}
+                      </Button>
                     </div>
-                  </Show>
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="flex flex-col gap-3">
-                  <h4 class="font-bold text-secondary-700 border-b pb-2 text-sm dark:text-secondary-200">
-                    Log Akumulasi Absensi
-                  </h4>
-                  <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                    <For
-                      each={detail().historyKompensasi}
-                      fallback={
-                        <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
-                          Tidak ada log absensi bermasalah.
-                        </p>
-                      }
+                  </div>
+                  <div class="text-right">
+                    <div class="text-xs text-secondary-400 uppercase font-semibold dark:text-secondary-200">
+                      Sisa Tanggungan
+                    </div>
+                    <div
+                      class={`px-3 py-1 rounded-full text-xl font-black inline-block mt-1 ${
+                        detail().summary.sisaKompensasi > 0
+                          ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400'
+                          : 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400'
+                      }`}
                     >
-                      {(log) => (
-                        <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-start gap-3 dark:bg-secondary-900 dark:border-secondary-800">
-                          <div class="flex flex-col gap-0.5 min-w-0">
-                            <span class="font-bold text-secondary-700 dark:text-secondary-200">
-                              {log.sumber === 'apel'
-                                ? 'Presensi Apel'
-                                : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
-                            </span>
-                            <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(log.bapTanggal)}</span>
-                            <span class="font-semibold text-accent-600 dark:text-accent-400">
-                              Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
-                            </span>
-                            <Show when={log.keterangan}>
-                              <span class="text-secondary-500 dark:text-secondary-300">
-                                Keterangan: {log.keterangan}
-                              </span>
-                            </Show>
-                            <Show when={log.keteranganAdmin}>
-                              <span class="text-secondary-500 dark:text-secondary-300">
-                                Catatan admin: {log.keteranganAdmin}
-                              </span>
-                            </Show>
-                          </div>
-                          <span class="font-bold text-red-600 font-mono dark:text-red-400 shrink-0">
-                            +{log.poinKompensasi}m
-                          </span>
-                        </div>
-                      )}
-                    </For>
+                      {detail().summary.sisaKompensasi} Menit
+                    </div>
+                    <Show when={detail().summary.sisaKompensasi < 0}>
+                      <div class="text-[10px] font-bold text-green-600 dark:text-green-400 mt-1">
+                        Kelebihan jam / deposit kompensasi mahasiswa
+                      </div>
+                    </Show>
                   </div>
                 </div>
-                <div class="flex flex-col gap-3">
-                  <div class="flex justify-between items-center border-b pb-2">
-                    <h4 class="font-bold text-secondary-700 text-sm dark:text-secondary-200">
-                      Log Penyelesaian Kompensasi
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="flex flex-col gap-3">
+                    <h4 class="font-bold text-secondary-700 border-b pb-2 text-sm dark:text-secondary-200">
+                      Log Akumulasi Absensi
                     </h4>
-                    <Button onClick={openAddPaymentModal} variant="success" class="!px-2.5 !py-1 text-[11px] font-bold">
-                      + Input Pelunasan
-                    </Button>
-                  </div>
-                  <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
-                    <For
-                      each={detail().payments}
-                      fallback={
-                        <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
-                          Belum ada penyelesaian kompensasi yang dilaporkan.
-                        </p>
-                      }
-                    >
-                      {(pay) => (
-                        <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
-                          <div class="flex flex-col gap-0.5">
-                            <span class="font-bold text-secondary-700 dark:text-secondary-200">{pay.keterangan}</span>
-                            <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(pay.tanggal)}</span>
-                          </div>
-                          <div class="flex items-center gap-2">
-                            <span class="font-bold text-accent-600 font-mono dark:text-accent-400">
-                              -{pay.jumlahMenit}m
+                    <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                      <For
+                        each={detail().historyKompensasi}
+                        fallback={
+                          <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
+                            Tidak ada log absensi bermasalah.
+                          </p>
+                        }
+                      >
+                        {(log) => (
+                          <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-start gap-3 dark:bg-secondary-900 dark:border-secondary-800">
+                            <div class="flex flex-col gap-0.5 min-w-0">
+                              <span class="font-bold text-secondary-700 dark:text-secondary-200">
+                                {log.sumber === 'apel'
+                                  ? 'Presensi Apel'
+                                  : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
+                              </span>
+                              <span class="text-secondary-400 dark:text-secondary-200">
+                                {fmtTanggal(log.bapTanggal)}
+                              </span>
+                              <span class="font-semibold text-accent-600 dark:text-accent-400">
+                                Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
+                              </span>
+                              <Show when={log.keterangan}>
+                                <span class="text-secondary-500 dark:text-secondary-300">
+                                  Keterangan: {log.keterangan}
+                                </span>
+                              </Show>
+                              <Show when={log.keteranganAdmin}>
+                                <span class="text-secondary-500 dark:text-secondary-300">
+                                  Catatan admin: {log.keteranganAdmin}
+                                </span>
+                              </Show>
+                            </div>
+                            <span class="font-bold text-red-600 font-mono dark:text-red-400 shrink-0">
+                              +{log.poinKompensasi}m
                             </span>
-                            <Button
-                              onClick={() => openEditPaymentModal(pay)}
-                              variant="secondary"
-                              class="!py-0.5 !px-1.5 text-[10px]"
-                            >
-                              Edit
-                            </Button>
                           </div>
-                        </div>
-                      )}
-                    </For>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-3">
+                    <div class="flex justify-between items-center border-b pb-2">
+                      <h4 class="font-bold text-secondary-700 text-sm dark:text-secondary-200">
+                        Log Penyelesaian Kompensasi
+                      </h4>
+                      <Button
+                        onClick={openAddPaymentModal}
+                        variant="success"
+                        class="!px-2.5 !py-1 text-[11px] font-bold"
+                      >
+                        + Input Pelunasan
+                      </Button>
+                    </div>
+                    <div class="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                      <For
+                        each={detail().payments}
+                        fallback={
+                          <p class="text-xs text-secondary-400 italic dark:text-secondary-200">
+                            Belum ada penyelesaian kompensasi yang dilaporkan.
+                          </p>
+                        }
+                      >
+                        {(pay) => (
+                          <div class="bg-white border border-secondary-100 rounded-xl p-3 shadow-xs text-xs flex justify-between items-center dark:bg-secondary-900 dark:border-secondary-800">
+                            <div class="flex flex-col gap-0.5">
+                              <span class="font-bold text-secondary-700 dark:text-secondary-200">{pay.keterangan}</span>
+                              <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(pay.tanggal)}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                              <span class="font-bold text-accent-600 font-mono dark:text-accent-400">
+                                -{pay.jumlahMenit}m
+                              </span>
+                              <Button
+                                onClick={() => openEditPaymentModal(pay)}
+                                variant="secondary"
+                                class="!py-0.5 !px-1.5 text-[10px]"
+                              >
+                                Edit
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </For>
+                    </div>
                   </div>
                 </div>
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
+                  <Button onClick={handleCloseDetail} variant="secondary">
+                    Tutup
+                  </Button>
+                </div>
               </div>
-              <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
-                <Button onClick={handleCloseDetail} variant="secondary">
-                  Tutup
-                </Button>
-              </div>
-            </div>
-          )}
-        </Show>
+            )}
+          </Show>
+        </Suspense>
       </Modal>
       {/* Modal Input Payment */}
       <Modal

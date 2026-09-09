@@ -795,25 +795,33 @@ export const pasalPelanggaran = pgTable('pasal_pelanggaran', {
     .$onUpdate(() => new Date()),
 });
 
-export const pelanggaran = pgTable('pelanggaran', {
-  id: serial('id').primaryKey(),
-  mahasiswaId: integer('mahasiswa_id')
-    .notNull()
-    .references(() => mahasiswa.id, { onDelete: 'cascade' }),
-  tanggal: date('tanggal', { mode: 'string' }).notNull(),
-  jenisPelanggaran: varchar('jenis_pelanggaran', { length: 255 }).notNull(),
-  keterangan: text('keterangan').notNull(),
-  pasalId: integer('pasal_id').references(() => pasalPelanggaran.id, { onDelete: 'set null' }),
-  jenisSanksi: integer('jenis_sanksi').default(1).notNull(), // 1 = Lisan, 4 = Tertulis
-  pelapor: varchar('pelapor', { length: 255 }),
-  dibuatOleh: integer('dibuat_oleh').references(() => users.id, { onDelete: 'set null' }),
-  periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const pelanggaran = pgTable(
+  'pelanggaran',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    tanggal: date('tanggal', { mode: 'string' }).notNull(),
+    jenisPelanggaran: varchar('jenis_pelanggaran', { length: 255 }).notNull(),
+    keterangan: text('keterangan').notNull(),
+    pasalId: integer('pasal_id').references(() => pasalPelanggaran.id, { onDelete: 'set null' }),
+    jenisSanksi: integer('jenis_sanksi').default(1).notNull(), // 1 = Lisan, 4 = Tertulis
+    pelapor: varchar('pelapor', { length: 255 }),
+    dibuatOleh: integer('dibuat_oleh').references(() => users.id, { onDelete: 'set null' }),
+    periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    periodeMhsTanggalIdx: index('idx_pelanggaran_periode_mhs_tanggal').on(t.periodeId, t.mahasiswaId, t.tanggal),
+    pasalIdIdx: index('idx_pelanggaran_pasal_id').on(t.pasalId),
+    mahasiswaIdIdx: index('idx_pelanggaran_mahasiswa_id').on(t.mahasiswaId),
+  }),
+);
 
 export const kategoriBimbinganRelations = relations(kategoriBimbingan, ({ many }) => ({
   bimbinganList: many(bimbingan),

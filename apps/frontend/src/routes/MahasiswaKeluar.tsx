@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -14,18 +14,56 @@ import { periodeAkademikController } from '../controllers/periodeAkademikControl
 import { usePagination } from '../hooks/usePagination';
 import { getTodayString } from '../utils/format';
 
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function MahasiswaKeluarPage() {
   const toast = useToast();
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [searchFilter, setSearchFilter] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [periodeFilter, setPeriodeFilter] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
+  const handleSearchChange = (value: string) => {
+    setSearchFilter(value);
+    resetPage();
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => setDebouncedSearch(value), 350);
+  };
 
   // Fetch Deactivated Students
   const [records, { refetch: refetchRecords }] = createResource(
     () => ({
       page: page(),
       limit: limit(),
-      search: searchFilter(),
+      search: debouncedSearch(),
       periodeId: periodeFilter(),
     }),
     ({ page, limit, search, periodeId }) =>
@@ -211,10 +249,7 @@ export default function MahasiswaKeluarPage() {
             <Input
               placeholder="Cari NIM atau nama..."
               value={searchFilter()}
-              onInput={(e) => {
-                setSearchFilter(e.currentTarget.value);
-                resetPage();
-              }}
+              onInput={(e) => handleSearchChange(e.currentTarget.value)}
             />
           </div>
           <div class="w-48">
@@ -232,10 +267,7 @@ export default function MahasiswaKeluarPage() {
           </div>
         </div>
 
-        <Show
-          when={!records.loading}
-          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Table
             headers={[
               <SortableHeader field="nim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
@@ -297,15 +329,15 @@ export default function MahasiswaKeluarPage() {
               )}
             </For>
           </Table>
-        </Show>
-        <Pagination
-          currentPage={page()}
-          totalPages={records()?.meta?.totalPages ?? 1}
-          total={records()?.meta?.total ?? 0}
-          limit={limit()}
-          onPageChange={setPage}
-          onLimitChange={setLimit}
-        />
+          <Pagination
+            currentPage={page()}
+            totalPages={records()?.meta?.totalPages ?? 1}
+            total={records()?.meta?.total ?? 0}
+            limit={limit()}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
+        </Suspense>
       </div>
 
       <Modal show={showModal()} onClose={() => setShowModal(false)} title="Pencatatan Mahasiswa Keluar/Non-Aktif">

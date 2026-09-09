@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { BarChart, StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
@@ -7,10 +7,47 @@ import { periodeAkademikController } from '../../controllers/periodeAkademikCont
 import { prodiController } from '../../controllers/prodiController';
 import { ExportColumn } from '../../utils/export';
 
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function LaporanAkademik() {
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedProdi, setSelectedProdi] = createSignal('');
   const [mkSearch, setMkSearch] = createSignal('');
+  const [debouncedMkSearch, setDebouncedMkSearch] = createSignal('');
+  let mkSearchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(mkSearchDebounceTimer));
+
+  const handleMkSearchChange = (value: string) => {
+    setMkSearch(value);
+    clearTimeout(mkSearchDebounceTimer);
+    mkSearchDebounceTimer = setTimeout(() => setDebouncedMkSearch(value), 350);
+  };
 
   const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
   const [prodis] = createResource(() => prodiController.getAll('', 1, 100));
@@ -28,7 +65,7 @@ export default function LaporanAkademik() {
   );
 
   const [matriksNilai] = createResource(
-    () => ({ periodeId: selectedPeriode(), prodiId: selectedProdi(), search: mkSearch() }),
+    () => ({ periodeId: selectedPeriode(), prodiId: selectedProdi(), search: debouncedMkSearch() }),
     async ({ periodeId, prodiId, search }) => {
       try {
         const pId = prodiId ? parseInt(prodiId) : undefined;
@@ -84,15 +121,17 @@ export default function LaporanAkademik() {
                 subtitle={`Periode: ${selectedPeriode()}`}
               />
             </Show>
-            <Show when={(matriksNilai() || []).length > 0}>
-              <ExportButtonGroup
-                data={() => matriksNilai() || []}
-                columns={matriksColumns}
-                filename={`Matriks_Nilai_MK_${selectedPeriode()}`}
-                title="Matriks Sebaran Nilai Mata Kuliah (A-E)"
-                subtitle={`Periode: ${selectedPeriode() || 'Semua'}`}
-              />
-            </Show>
+            <Suspense fallback={null}>
+              <Show when={(matriksNilai() || []).length > 0}>
+                <ExportButtonGroup
+                  data={() => matriksNilai() || []}
+                  columns={matriksColumns}
+                  filename={`Matriks_Nilai_MK_${selectedPeriode()}`}
+                  title="Matriks Sebaran Nilai Mata Kuliah (A-E)"
+                  subtitle={`Periode: ${selectedPeriode() || 'Semua'}`}
+                />
+              </Show>
+            </Suspense>
           </div>
         </div>
 
@@ -135,7 +174,7 @@ export default function LaporanAkademik() {
               placeholder="Filter mata kuliah..."
               class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={mkSearch()}
-              onInput={(e) => setMkSearch(e.currentTarget.value)}
+              onInput={(e) => handleMkSearchChange(e.currentTarget.value)}
             />
           </div>
         </div>
@@ -215,69 +254,73 @@ export default function LaporanAkademik() {
             <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
               Matriks Mata Kuliah $\times$ Jumlah Mahasiswa Nilai (A - E)
             </h3>
-            <span class="text-xs text-secondary-500">Total MK: {(matriksNilai() || []).length}</span>
+            <Suspense fallback={<span class="text-xs text-secondary-500">Total MK: …</span>}>
+              <span class="text-xs text-secondary-500">Total MK: {(matriksNilai() || []).length}</span>
+            </Suspense>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
-                  <th class="py-3 px-4">Kode MK</th>
-                  <th class="py-3 px-4">Mata Kuliah</th>
-                  <th class="py-3 px-4 text-center">SKS</th>
-                  <th class="py-3 px-4">Program Studi</th>
-                  <th class="py-3 px-4 text-center bg-green-500/10 text-green-700 dark:text-green-400">A</th>
-                  <th class="py-3 px-4 text-center bg-blue-500/10 text-blue-700 dark:text-blue-400">B</th>
-                  <th class="py-3 px-4 text-center bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">C</th>
-                  <th class="py-3 px-4 text-center bg-orange-500/10 text-orange-700 dark:text-orange-400">D</th>
-                  <th class="py-3 px-4 text-center bg-rose-500/10 text-rose-700 dark:text-rose-400">E</th>
-                  <th class="py-3 px-4 text-center text-secondary-400">Belum Ada</th>
-                  <th class="py-3 px-4 text-center font-bold">Total</th>
-                  <th class="py-3 px-4 text-center">% Kelulusan</th>
-                </tr>
-              </thead>
-              <tbody>
-                <For
-                  each={matriksNilai() || []}
-                  fallback={
-                    <tr>
-                      <td colspan="12" class="text-center py-8 text-secondary-400">
-                        Tidak ada data sebaran nilai mata kuliah untuk filter yang dipilih
-                      </td>
-                    </tr>
-                  }
-                >
-                  {(item) => (
-                    <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                      <td class="py-3 px-4 font-mono text-secondary-600 dark:text-secondary-300">{item.kodeMk}</td>
-                      <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-white">{item.namaMk}</td>
-                      <td class="py-3 px-4 text-center">{item.sks}</td>
-                      <td class="py-3 px-4 text-secondary-500">{item.prodiNama}</td>
-                      <td class="py-3 px-4 text-center font-bold text-green-600 bg-green-500/5">{item.gradeA}</td>
-                      <td class="py-3 px-4 text-center font-bold text-blue-600 bg-blue-500/5">{item.gradeB}</td>
-                      <td class="py-3 px-4 text-center font-bold text-yellow-600 bg-yellow-500/5">{item.gradeC}</td>
-                      <td class="py-3 px-4 text-center font-bold text-orange-600 bg-orange-500/5">{item.gradeD}</td>
-                      <td class="py-3 px-4 text-center font-bold text-rose-600 bg-rose-500/5">{item.gradeE}</td>
-                      <td class="py-3 px-4 text-center text-secondary-400">{item.gradeNull}</td>
-                      <td class="py-3 px-4 text-center font-bold">{item.totalPeserta}</td>
-                      <td class="py-3 px-4 text-center font-bold">
-                        <span
-                          class={`px-2 py-0.5 rounded text-[10px] ${
-                            item.persenLulus >= 80
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                              : item.persenLulus >= 50
-                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                                : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
-                          }`}
-                        >
-                          {item.persenLulus}%
-                        </span>
-                      </td>
-                    </tr>
-                  )}
-                </For>
-              </tbody>
-            </table>
-          </div>
+          <Suspense fallback={<TableLoadingFallback />}>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-4">Kode MK</th>
+                    <th class="py-3 px-4">Mata Kuliah</th>
+                    <th class="py-3 px-4 text-center">SKS</th>
+                    <th class="py-3 px-4">Program Studi</th>
+                    <th class="py-3 px-4 text-center bg-green-500/10 text-green-700 dark:text-green-400">A</th>
+                    <th class="py-3 px-4 text-center bg-blue-500/10 text-blue-700 dark:text-blue-400">B</th>
+                    <th class="py-3 px-4 text-center bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">C</th>
+                    <th class="py-3 px-4 text-center bg-orange-500/10 text-orange-700 dark:text-orange-400">D</th>
+                    <th class="py-3 px-4 text-center bg-rose-500/10 text-rose-700 dark:text-rose-400">E</th>
+                    <th class="py-3 px-4 text-center text-secondary-400">Belum Ada</th>
+                    <th class="py-3 px-4 text-center font-bold">Total</th>
+                    <th class="py-3 px-4 text-center">% Kelulusan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={matriksNilai() || []}
+                    fallback={
+                      <tr>
+                        <td colspan="12" class="text-center py-8 text-secondary-400">
+                          Tidak ada data sebaran nilai mata kuliah untuk filter yang dipilih
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(item) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-4 font-mono text-secondary-600 dark:text-secondary-300">{item.kodeMk}</td>
+                        <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-white">{item.namaMk}</td>
+                        <td class="py-3 px-4 text-center">{item.sks}</td>
+                        <td class="py-3 px-4 text-secondary-500">{item.prodiNama}</td>
+                        <td class="py-3 px-4 text-center font-bold text-green-600 bg-green-500/5">{item.gradeA}</td>
+                        <td class="py-3 px-4 text-center font-bold text-blue-600 bg-blue-500/5">{item.gradeB}</td>
+                        <td class="py-3 px-4 text-center font-bold text-yellow-600 bg-yellow-500/5">{item.gradeC}</td>
+                        <td class="py-3 px-4 text-center font-bold text-orange-600 bg-orange-500/5">{item.gradeD}</td>
+                        <td class="py-3 px-4 text-center font-bold text-rose-600 bg-rose-500/5">{item.gradeE}</td>
+                        <td class="py-3 px-4 text-center text-secondary-400">{item.gradeNull}</td>
+                        <td class="py-3 px-4 text-center font-bold">{item.totalPeserta}</td>
+                        <td class="py-3 px-4 text-center font-bold">
+                          <span
+                            class={`px-2 py-0.5 rounded text-[10px] ${
+                              item.persenLulus >= 80
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                : item.persenLulus >= 50
+                                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+                                  : 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300'
+                            }`}
+                          >
+                            {item.persenLulus}%
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </Suspense>
         </div>
       </div>
     </MainLayout>

@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -8,6 +8,34 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { PresensiUnknownItem, presensiController } from '../controllers/presensiController';
 import { PresensiPraktikumUnknownItem, rombelPraktikumController } from '../controllers/rombelPraktikumController';
 import { fmtTanggal, fmtWaktu } from '../utils/format';
+
+function TableLoadingFallback() {
+  return (
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+          <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
+            <For each={Array.from({ length: 5 })}>
+              {() => (
+                <tr>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-3/4 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-1/2 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="h-4 w-2/3 rounded bg-secondary-100 dark:bg-secondary-800 animate-pulse" />
+                  </td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 
 export default function PresensiUnknown() {
   const toast = useToast();
@@ -221,138 +249,150 @@ export default function PresensiUnknown() {
               <option value="belum">Belum ditindaklanjuti</option>
               <option value="sudah">Sudah dikonfirmasi</option>
             </select>
-            <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">
-              Total: <strong>{data()?.meta.total || 0}</strong> data
-            </span>
+            <Suspense
+              fallback={
+                <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">
+                  Total: <strong>…</strong> data
+                </span>
+              }
+            >
+              <span class="text-xs text-secondary-500 dark:text-secondary-300 ml-auto">
+                Total: <strong>{data()?.meta.total || 0}</strong> data
+              </span>
+            </Suspense>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead>
-                <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold">
-                  <th class="py-3 px-4">No</th>
-                  <th class="py-3 px-4">Mahasiswa</th>
-                  <th class="py-3 px-4">Prodi</th>
-                  <th class="py-3 px-4">Mata Kuliah (Kelas)</th>
-                  <th class="py-3 px-4">Dosen Pengampu</th>
-                  <th class="py-3 px-4">Pertemuan & Tanggal</th>
-                  <th class="py-3 px-4">Waktu Pencatatan</th>
-                  <th class="py-3 px-4">Materi</th>
-                  <th class="py-3 px-4 text-center">Surat Bukti</th>
-                  <th class="py-3 px-4">Status Konfirmasi</th>
-                  <th class="py-3 px-4 text-center">Aksi</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
-                <For each={(data()?.data || []) as Array<PresensiUnknownItem & Partial<PresensiPraktikumUnknownItem>>}>
-                  {(item, idx) => (
-                    <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
-                      <td class="py-3 px-4">{idx() + 1}</td>
-                      <td class="py-3 px-4">
-                        <div class="flex items-center gap-2">
-                          <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
-                          <div>
-                            <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
-                            <div class="text-xs text-secondary-400 dark:text-secondary-200 font-mono">{item.nim}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="py-3 px-4 text-xs">{item.prodiNama || '-'}</td>
-                      <td class="py-3 px-4 text-xs">
-                        <div class="font-semibold text-secondary-700 dark:text-secondary-100">
-                          {item.mataKuliahNama || '-'}
-                        </div>
-                        <div class="text-xs text-secondary-400">
-                          {item.mataKuliahKode || ''} · Kelas {item.namaKelas}
-                        </div>
-                        <Show when={tab() === 'praktikum' && item.namaGroup}>
-                          <div class="text-[11px] text-secondary-400">Rombel: {item.namaGroup}</div>
-                        </Show>
-                      </td>
-                      <td class="py-3 px-4 text-xs">{item.dosenNama || '-'}</td>
-                      <td class="py-3 px-4 text-xs">
-                        <Show
-                          when={tab() === 'perkuliahan'}
-                          fallback={
+          <Suspense fallback={<TableLoadingFallback />}>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold">
+                    <th class="py-3 px-4">No</th>
+                    <th class="py-3 px-4">Mahasiswa</th>
+                    <th class="py-3 px-4">Prodi</th>
+                    <th class="py-3 px-4">Mata Kuliah (Kelas)</th>
+                    <th class="py-3 px-4">Dosen Pengampu</th>
+                    <th class="py-3 px-4">Pertemuan & Tanggal</th>
+                    <th class="py-3 px-4">Waktu Pencatatan</th>
+                    <th class="py-3 px-4">Materi</th>
+                    <th class="py-3 px-4 text-center">Surat Bukti</th>
+                    <th class="py-3 px-4">Status Konfirmasi</th>
+                    <th class="py-3 px-4 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                  <For
+                    each={(data()?.data || []) as Array<PresensiUnknownItem & Partial<PresensiPraktikumUnknownItem>>}
+                  >
+                    {(item, idx) => (
+                      <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+                        <td class="py-3 px-4">{idx() + 1}</td>
+                        <td class="py-3 px-4">
+                          <div class="flex items-center gap-2">
+                            <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
                             <div>
-                              <div>Sesi {item.bapPrakSesiKe ?? '-'}</div>
-                              <div class="text-secondary-400 dark:text-secondary-200">{item.bapPrakTanggal}</div>
+                              <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
+                              <div class="text-xs text-secondary-400 dark:text-secondary-200 font-mono">{item.nim}</div>
                             </div>
-                          }
-                        >
-                          <div>Pertemuan {item.bapPertemuan}</div>
-                          <div class="text-secondary-400 dark:text-secondary-200">{item.bapTanggal}</div>
-                        </Show>
-                      </td>
-                      <td class="py-3 px-4 text-xs">{fmtWaktu(item.createdAt)}</td>
-                      <td class="py-3 px-4 text-xs max-w-xs truncate" title={item.bapPrakMateri || item.bapMateri}>
-                        {tab() === 'praktikum' ? item.bapPrakMateri : item.bapMateri}
-                      </td>
-                      <td class="py-3 px-4 text-center">
-                        <Show
-                          when={tab() === 'perkuliahan' && item.lampiranEvidens}
-                          fallback={<span class="text-xs text-secondary-300">-</span>}
-                        >
-                          <Button variant="secondary" size="sm" onClick={() => openPreview(item)}>
-                            Lihat Surat
-                          </Button>
-                        </Show>
-                      </td>
-                      <td class="py-3 px-4">
-                        {konfirmasiBadge(item)}
-                        <Show when={isResolved(item)}>
-                          <div class="text-[11px] text-secondary-400 dark:text-secondary-200 mt-0.5">
-                            oleh {item.resolvedByName || `User #${item.resolvedBy || ''}`}
                           </div>
-                        </Show>
-                      </td>
-                      <td class="py-3 px-4 text-center">
-                        <Button
-                          variant={isResolved(item) ? 'secondary' : 'accent'}
-                          class="py-1 px-3 text-xs"
-                          onClick={() => openResolve(item)}
-                        >
-                          {isResolved(item) ? 'Koreksi' : 'Konfirmasi'}
-                        </Button>
+                        </td>
+                        <td class="py-3 px-4 text-xs">{item.prodiNama || '-'}</td>
+                        <td class="py-3 px-4 text-xs">
+                          <div class="font-semibold text-secondary-700 dark:text-secondary-100">
+                            {item.mataKuliahNama || '-'}
+                          </div>
+                          <div class="text-xs text-secondary-400">
+                            {item.mataKuliahKode || ''} · Kelas {item.namaKelas}
+                          </div>
+                          <Show when={tab() === 'praktikum' && item.namaGroup}>
+                            <div class="text-[11px] text-secondary-400">Rombel: {item.namaGroup}</div>
+                          </Show>
+                        </td>
+                        <td class="py-3 px-4 text-xs">{item.dosenNama || '-'}</td>
+                        <td class="py-3 px-4 text-xs">
+                          <Show
+                            when={tab() === 'perkuliahan'}
+                            fallback={
+                              <div>
+                                <div>Sesi {item.bapPrakSesiKe ?? '-'}</div>
+                                <div class="text-secondary-400 dark:text-secondary-200">{item.bapPrakTanggal}</div>
+                              </div>
+                            }
+                          >
+                            <div>Pertemuan {item.bapPertemuan}</div>
+                            <div class="text-secondary-400 dark:text-secondary-200">{item.bapTanggal}</div>
+                          </Show>
+                        </td>
+                        <td class="py-3 px-4 text-xs">{fmtWaktu(item.createdAt)}</td>
+                        <td class="py-3 px-4 text-xs max-w-xs truncate" title={item.bapPrakMateri || item.bapMateri}>
+                          {tab() === 'praktikum' ? item.bapPrakMateri : item.bapMateri}
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                          <Show
+                            when={tab() === 'perkuliahan' && item.lampiranEvidens}
+                            fallback={<span class="text-xs text-secondary-300">-</span>}
+                          >
+                            <Button variant="secondary" size="sm" onClick={() => openPreview(item)}>
+                              Lihat Surat
+                            </Button>
+                          </Show>
+                        </td>
+                        <td class="py-3 px-4">
+                          {konfirmasiBadge(item)}
+                          <Show when={isResolved(item)}>
+                            <div class="text-[11px] text-secondary-400 dark:text-secondary-200 mt-0.5">
+                              oleh {item.resolvedByName || `User #${item.resolvedBy || ''}`}
+                            </div>
+                          </Show>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                          <Button
+                            variant={isResolved(item) ? 'secondary' : 'accent'}
+                            class="py-1 px-3 text-xs"
+                            onClick={() => openResolve(item)}
+                          >
+                            {isResolved(item) ? 'Koreksi' : 'Konfirmasi'}
+                          </Button>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                  <Show when={(data()?.data || []).length === 0}>
+                    <tr>
+                      <td colspan="11" class="py-10 text-center text-secondary-400 text-sm">
+                        Tidak ada data presensi unknown.
                       </td>
                     </tr>
-                  )}
-                </For>
-                <Show when={(data()?.data || []).length === 0}>
-                  <tr>
-                    <td colspan="11" class="py-10 text-center text-secondary-400 text-sm">
-                      Tidak ada data presensi unknown.
-                    </td>
-                  </tr>
-                </Show>
-              </tbody>
-            </table>
-          </div>
-
-          <Show when={data()?.meta && data()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
-              <span class="text-sm text-secondary-500">Total: {data()?.meta.total} data</span>
-              <div class="flex gap-2 items-center">
-                <button
-                  class="px-3 py-1 border rounded-xl text-sm disabled:opacity-50 text-secondary-700 dark:text-secondary-200"
-                  disabled={page() <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </button>
-                <span class="px-3 py-1 text-sm text-secondary-600 dark:text-secondary-200">
-                  {page()} / {data()?.meta.totalPages}
-                </span>
-                <button
-                  class="px-3 py-1 border rounded-xl text-sm disabled:opacity-50 text-secondary-700 dark:text-secondary-200"
-                  disabled={page() >= (data()?.meta.totalPages || 1)}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </button>
-              </div>
+                  </Show>
+                </tbody>
+              </table>
             </div>
-          </Show>
+
+            <Show when={data()?.meta && data()!.meta.totalPages > 1}>
+              <div class="flex justify-between items-center mt-4">
+                <span class="text-sm text-secondary-500">Total: {data()?.meta.total} data</span>
+                <div class="flex gap-2 items-center">
+                  <button
+                    class="px-3 py-1 border rounded-xl text-sm disabled:opacity-50 text-secondary-700 dark:text-secondary-200"
+                    disabled={page() <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <span class="px-3 py-1 text-sm text-secondary-600 dark:text-secondary-200">
+                    {page()} / {data()?.meta.totalPages}
+                  </span>
+                  <button
+                    class="px-3 py-1 border rounded-xl text-sm disabled:opacity-50 text-secondary-700 dark:text-secondary-200"
+                    disabled={page() >= (data()?.meta.totalPages || 1)}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </Show>
+          </Suspense>
         </div>
       </div>
 
