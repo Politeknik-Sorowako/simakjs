@@ -42,6 +42,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 
 ## 4. Frontend Development (SolidJS)
 
+- **UI & Design System Reference (`DESIGN.md`)**: ALWAYS refer to `@DESIGN.md` as the design system authority before writing or styling any UI component. Adhere strictly to Apple-inspired aesthetics: SF Pro / Inter typography ladder (17px body text, negative letter-spacing on display headlines, weight 300/400/600/700 without 500), Action Blue (`#0066cc`) primary interactive color with `#0071e3` focus and `#2997ff` on dark, ink neutrals (`#1d1d1f`), parchment canvas (`#f5f5f7`), pearl surfaces (`#fafafc`), signature pill/capsule buttons (`rounded-full` / `rounded.pill`), frosted-glass headers/sub-navs (`backdrop-blur`), soft hairline dividers (`#e0e0e0`), and scale micro-interactions (`active:scale-95`).
 - **Component Structure**: Export standard function declarations as `default` wrapped inside `<MainLayout>`.
 - **Reactivity & State**: Use SolidJS primitives (`createSignal`, `createResource`) instead of React hooks.
 - **List Rendering & Types**: When using `<For>` components over dynamic API data, use named interfaces or `SafeAny` to prevent strict flow component type errors.
