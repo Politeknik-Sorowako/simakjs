@@ -407,6 +407,13 @@
       "when": 1786600000008,
       "tag": "0057_pelanggaran_performance_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1786600000009,
+      "tag": "0058_audit_logs_detail",
+      "breakpoints": true
     }
   ]
 }

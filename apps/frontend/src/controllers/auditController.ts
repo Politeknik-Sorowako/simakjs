@@ -4,14 +4,17 @@ export interface AuditLog {
   id: string;
   timestamp: string;
   userId?: number | null;
+  userName?: string | null;
   userRole?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
   actionType: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'LOGOUT';
   module: string;
+  tableName?: string | null;
   entityId?: string | null;
   entityName?: string | null;
   description: string;
+  detail?: string | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -30,6 +33,8 @@ export interface AuditLogFilters {
   limit?: number;
   module?: string;
   actionType?: string;
+  tableName?: string;
+  userName?: string;
   startDate?: string;
   endDate?: string;
   search?: string;
@@ -42,6 +47,8 @@ export const auditController = {
     if (params?.limit) searchParams.set('limit', String(params.limit));
     if (params?.module) searchParams.set('module', params.module);
     if (params?.actionType) searchParams.set('actionType', params.actionType);
+    if (params?.tableName) searchParams.set('tableName', params.tableName);
+    if (params?.userName) searchParams.set('userName', params.userName);
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
     if (params?.search) searchParams.set('search', params.search);
@@ -53,6 +60,8 @@ export const auditController = {
     const searchParams = new URLSearchParams();
     if (params?.module) searchParams.set('module', params.module);
     if (params?.actionType) searchParams.set('actionType', params.actionType);
+    if (params?.tableName) searchParams.set('tableName', params.tableName);
+    if (params?.userName) searchParams.set('userName', params.userName);
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
     if (params?.search) searchParams.set('search', params.search);

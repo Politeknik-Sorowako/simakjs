@@ -9,12 +9,23 @@ const MODULES = [
   'users',
   'dosen',
   'mahasiswa',
+  'mahasiswa-keluar',
   'mata-kuliah',
-  'kelas',
+  'kelas-kuliah',
   'krs',
-  'kompensasi',
+  'bap',
+  'kompensasi-bayar',
+  'kompensasi-manual',
   'pelanggaran',
   'pasal-pelanggaran',
+  'bimbingan',
+  'tagihan',
+  'kurikulum',
+  'rps',
+  'cpmk',
+  'cpl',
+  'program-studi',
+  'periode-akademik',
   'audit-logs',
   'system',
 ];
@@ -35,6 +46,34 @@ const actionBadge = (action: string) => {
       {action}
     </span>
   );
+};
+
+const metaValue = (entry: AuditLogEntry | null, key: string): string => {
+  const value = entry?.metadata?.[key];
+  if (value == null) return '-';
+  return String(value);
+};
+
+interface ResponseSummaryError {
+  line?: string | number | null;
+  message?: string;
+}
+
+interface ResponseSummaryData {
+  kind?: string;
+  success?: number;
+  failed?: number;
+  skipped?: number;
+  errorCount?: number;
+  count?: number;
+  message?: string;
+  errors?: ResponseSummaryError[];
+}
+
+const getResponseSummary = (entry: AuditLogEntry | null): ResponseSummaryData | null => {
+  const raw = entry?.metadata?.responseSummary;
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  return raw as ResponseSummaryData;
 };
 
 export default function AuditLog() {
@@ -277,16 +316,24 @@ export default function AuditLog() {
                         <td class="py-3 px-4 text-xs whitespace-nowrap">{fmtWaktu(item.timestamp)}</td>
                         <td class="py-3 px-4">
                           <div class="font-semibold text-secondary-800 dark:text-white">
-                            {item.userId ? `User #${item.userId}` : 'Sistem'}
+                            {item.userName || (item.userId ? `User #${item.userId}` : 'Sistem')}
                           </div>
                         </td>
                         <td class="py-3 px-4 text-xs capitalize">{item.userRole || '-'}</td>
                         <td class="py-3 px-4">{actionBadge(item.actionType)}</td>
-                        <td class="py-3 px-4 text-xs font-mono">{item.module}</td>
+                        <td class="py-3 px-4 text-xs font-mono">
+                          <div>{item.module}</div>
+                          <Show when={item.tableName}>
+                            <div class="text-[10px] text-secondary-400">{item.tableName}</div>
+                          </Show>
+                        </td>
                         <td class="py-3 px-4 max-w-[200px] truncate text-secondary-600 dark:text-secondary-300">
                           {item.entityName || item.entityId || '-'}
                         </td>
-                        <td class="py-3 px-4 max-w-xs truncate text-secondary-600 dark:text-secondary-300">
+                        <td
+                          class="py-3 px-4 max-w-xs truncate text-secondary-600 dark:text-secondary-300"
+                          title={item.description}
+                        >
                           {item.description}
                         </td>
                         <td class="py-3 px-4 text-xs font-mono">{item.ipAddress || '-'}</td>
@@ -359,10 +406,16 @@ export default function AuditLog() {
                   <div class="text-xs font-semibold text-secondary-400 uppercase">Deskripsi</div>
                   <div>{detail()?.description}</div>
                 </div>
+                <Show when={detail()?.detail}>
+                  <div>
+                    <div class="text-xs font-semibold text-secondary-400 uppercase">Detail</div>
+                    <div>{detail()?.detail}</div>
+                  </div>
+                </Show>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <div class="text-xs font-semibold text-secondary-400 uppercase">User ID</div>
-                    <div>{detail()?.userId || '-'}</div>
+                    <div class="text-xs font-semibold text-secondary-400 uppercase">User</div>
+                    <div>{detail()?.userName || (detail()?.userId ? `User #${detail()?.userId}` : 'Sistem')}</div>
                   </div>
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">Role</div>
@@ -371,6 +424,10 @@ export default function AuditLog() {
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">Module</div>
                     <div>{detail()?.module}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold text-secondary-400 uppercase">Tabel</div>
+                    <div>{detail()?.tableName || '-'}</div>
                   </div>
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">Aksi</div>
@@ -390,12 +447,56 @@ export default function AuditLog() {
                   </div>
                 </div>
                 <Show when={detail()?.metadata}>
-                  <div>
-                    <div class="text-xs font-semibold text-secondary-400 uppercase">Metadata</div>
-                    <pre class="mt-1 bg-secondary-50 dark:bg-gray-700 rounded-lg p-3 text-xs overflow-x-auto">
-                      {JSON.stringify(detail()?.metadata, null, 2)}
-                    </pre>
+                  <div class="grid grid-cols-3 gap-3">
+                    <div>
+                      <div class="text-xs font-semibold text-secondary-400 uppercase">Method</div>
+                      <div>{metaValue(detail(), 'method')}</div>
+                    </div>
+                    <div class="col-span-2">
+                      <div class="text-xs font-semibold text-secondary-400 uppercase">URL</div>
+                      <div class="break-all">{metaValue(detail(), 'path')}</div>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold text-secondary-400 uppercase">Status</div>
+                      <div>{metaValue(detail(), 'statusCode')}</div>
+                    </div>
                   </div>
+                </Show>
+                <Show when={getResponseSummary(detail())}>
+                  {(summary) => (
+                    <div class="rounded-xl bg-secondary-50 dark:bg-secondary-800 border border-secondary-100 dark:border-secondary-700 p-3">
+                      <div class="text-xs font-semibold text-secondary-400 uppercase mb-2">Ringkasan Hasil</div>
+                      <Show when={summary().kind === 'bulk'}>
+                        <div class="text-sm">
+                          Sukses: <strong>{summary().success ?? 0}</strong> · Gagal:{' '}
+                          <strong>{summary().failed ?? 0}</strong> · Dilewati: <strong>{summary().skipped ?? 0}</strong>
+                        </div>
+                        <div class="mt-2 space-y-1">
+                          <For each={summary().errors}>
+                            {(err: ResponseSummaryError) => (
+                              <div class="text-xs text-secondary-600 dark:text-secondary-300">
+                                {err.line != null ? `Baris ${err.line}: ` : ''}
+                                {err.message || '-'}
+                              </div>
+                            )}
+                          </For>
+                          <Show when={(summary().errorCount ?? 0) > (summary().errors?.length ?? 0)}>
+                            <div class="text-xs text-secondary-400">
+                              ... +{(summary().errorCount ?? 0) - (summary().errors?.length ?? 0)} error lainnya
+                            </div>
+                          </Show>
+                        </div>
+                      </Show>
+                      <Show when={summary().kind === 'count'}>
+                        <div class="text-sm">
+                          Dihitung: <strong>{summary().count ?? 0}</strong>
+                        </div>
+                      </Show>
+                      <Show when={summary().kind === 'error'}>
+                        <div class="text-sm text-rose-600">{summary().message || '-'}</div>
+                      </Show>
+                    </div>
+                  )}
                 </Show>
               </div>
               <div class="flex justify-end mt-6">
