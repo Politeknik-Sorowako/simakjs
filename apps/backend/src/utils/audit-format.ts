@@ -151,3 +151,131 @@ export function formatAuditDateTime(date: Date, tz: string): string {
   const get = (type: string) => parts.find((p) => p.type === type)?.value || '00';
   return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}:${get('second')}`;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Response summarization for bulk/import endpoints
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface SummaryErrorItem {
+  line: string | null;
+  message: string;
+}
+
+export interface BulkSummary {
+  kind: 'bulk';
+  success: number;
+  failed: number;
+  skipped: number;
+  total: number;
+  errorCount: number;
+  errors: SummaryErrorItem[];
+}
+
+export interface CountSummary {
+  kind: 'count';
+  count: number;
+}
+
+export interface ErrorSummary {
+  kind: 'error';
+  message: string;
+}
+
+export type ResponseSummary = BulkSummary | CountSummary | ErrorSummary;
+
+const MAX_ERROR_ITEMS = 5;
+const MAX_ERROR_MESSAGE = 300;
+
+function toFiniteNumber(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeErrorItem(raw: unknown): SummaryErrorItem | null {
+  if (raw == null) return null;
+  if (typeof raw === 'string') {
+    const msg = raw.trim();
+    return msg ? { line: null, message: msg.slice(0, MAX_ERROR_MESSAGE) } : null;
+  }
+  if (typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const lineVal = obj.line ?? obj.row ?? obj.baris;
+    const msgVal = obj.error ?? obj.message ?? obj.pesan;
+    if (typeof msgVal === 'string' && msgVal.trim().length > 0) {
+      const line = lineVal == null ? null : String(lineVal);
+      return { line, message: msgVal.trim().slice(0, MAX_ERROR_MESSAGE) };
+    }
+  }
+  return null;
+}
+
+/**
+ * Builds a small, safe summary of a mutation response payload.
+ *
+ * Only known safe fields are read (never the whole response), so sensitive keys
+ * such as tokens/passwords/files are inherently excluded. Error arrays are
+ * capped at MAX_ERROR_ITEMS — callers must NOT stringify the raw response.
+ */
+export function summarizeResponse(value: unknown): ResponseSummary | null {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const obj = value as Record<string, unknown>;
+
+  // Error form: `{ error: string }` (403/404/422 messages).
+  if (typeof obj.error === 'string' && obj.error.trim().length > 0) {
+    return { kind: 'error', message: obj.error.trim().slice(0, MAX_ERROR_MESSAGE) };
+  }
+
+  // Bulk form: `{ successCount|success|imported, skipped, failed, errors[] }`.
+  const successRaw = obj.successCount ?? obj.success ?? obj.imported;
+  const hasBulkSignal =
+    successRaw != null || obj.failed != null || obj.skipped != null || obj.skippedCount != null || obj.errors != null;
+  if (hasBulkSignal) {
+    const errorArray = Array.isArray(obj.errors) ? (obj.errors as unknown[]) : [];
+    const errorCount = errorArray.length;
+    const errors: SummaryErrorItem[] = [];
+    for (let i = 0; i < Math.min(errorArray.length, MAX_ERROR_ITEMS); i++) {
+      const item = normalizeErrorItem(errorArray[i]);
+      if (item) errors.push(item);
+    }
+    const success = toFiniteNumber(successRaw);
+    const failed = Math.max(toFiniteNumber(obj.failed), errorCount);
+    const skipped = toFiniteNumber(obj.skipped ?? obj.skippedCount);
+    return {
+      kind: 'bulk',
+      success,
+      failed,
+      skipped,
+      total: success + failed + skipped,
+      errorCount,
+      errors,
+    };
+  }
+
+  // Count form: `{ count: number }` (bulk calc endpoints).
+  if (typeof obj.count === 'number') {
+    return { kind: 'count', count: obj.count };
+  }
+
+  return null;
+}
+
+/** Sentence appended to the description for bulk results. */
+export function formatBulkSentence(summary: BulkSummary): string {
+  return `Hasil: ${summary.success} sukses, ${summary.failed} gagal, ${summary.skipped} dilewati.`;
+}
+
+/** Human-readable one-liner for the detail column / modal. */
+export function formatSummaryForDetail(summary: ResponseSummary): string | null {
+  if (summary.kind === 'bulk') {
+    let s = `${summary.success} sukses, ${summary.failed} gagal, ${summary.skipped} dilewati`;
+    if (summary.errors.length > 0) {
+      const first = summary.errors[0];
+      const line = first.line ? ` (baris ${first.line})` : '';
+      s += `. Contoh error: ${first.message}${line}`;
+    }
+    return s;
+  }
+  if (summary.kind === 'count') return `Dihitung: ${summary.count}`;
+  if (summary.kind === 'error') return `Error: ${summary.message}`;
+  return null;
+}

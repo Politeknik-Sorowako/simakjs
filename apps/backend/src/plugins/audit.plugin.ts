@@ -13,7 +13,15 @@ import {
 } from '../models/schema';
 import { AuditService } from '../services/audit.service';
 import { SystemParameterService } from '../services/system-parameter.service';
-import { formatAuditDateTime, formatDescription, formatDetail, resolveTableName } from '../utils/audit-format';
+import {
+  formatAuditDateTime,
+  formatBulkSentence,
+  formatDescription,
+  formatDetail,
+  formatSummaryForDetail,
+  resolveTableName,
+  summarizeResponse,
+} from '../utils/audit-format';
 import { db } from '../utils/db';
 
 type EntityInfo = {
@@ -308,7 +316,9 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
 
     const tz = await SystemParameterService.getTimezone().catch(() => DEFAULT_TZ);
     const waktu = formatAuditDateTime(new Date(), tz);
-    const description = formatDescription({
+
+    const summary = summarizeResponse(responseValue);
+    let description = formatDescription({
       waktu,
       userName,
       userRole,
@@ -316,10 +326,18 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
       tableName,
       recordId: entityId,
     });
+    if (summary?.kind === 'bulk') {
+      description = `${description} ${formatBulkSentence(summary)}`;
+    }
 
     const detailParts: string[] = [...entityParts];
     const actor = part('User', userName);
     if (actor) detailParts.push(actor);
+    const summaryDetail = summary ? formatSummaryForDetail(summary) : null;
+    if (summaryDetail) {
+      const pSummary = part('Ringkasan', summaryDetail);
+      if (pSummary) detailParts.push(pSummary);
+    }
 
     const detail = formatDetail({ module, url: path, parts: detailParts });
 
@@ -340,6 +358,7 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
         method,
         path,
         statusCode,
+        ...(summary ? { responseSummary: summary } : {}),
       },
     });
 

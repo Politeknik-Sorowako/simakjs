@@ -54,6 +54,28 @@ const metaValue = (entry: AuditLogEntry | null, key: string): string => {
   return String(value);
 };
 
+interface ResponseSummaryError {
+  line?: string | number | null;
+  message?: string;
+}
+
+interface ResponseSummaryData {
+  kind?: string;
+  success?: number;
+  failed?: number;
+  skipped?: number;
+  errorCount?: number;
+  count?: number;
+  message?: string;
+  errors?: ResponseSummaryError[];
+}
+
+const getResponseSummary = (entry: AuditLogEntry | null): ResponseSummaryData | null => {
+  const raw = entry?.metadata?.responseSummary;
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  return raw as ResponseSummaryData;
+};
+
 export default function AuditLog() {
   const [page, setPage] = createSignal(1);
   const [search, setSearch] = createSignal('');
@@ -439,6 +461,42 @@ export default function AuditLog() {
                       <div>{metaValue(detail(), 'statusCode')}</div>
                     </div>
                   </div>
+                </Show>
+                <Show when={getResponseSummary(detail())}>
+                  {(summary) => (
+                    <div class="rounded-xl bg-secondary-50 dark:bg-secondary-800 border border-secondary-100 dark:border-secondary-700 p-3">
+                      <div class="text-xs font-semibold text-secondary-400 uppercase mb-2">Ringkasan Hasil</div>
+                      <Show when={summary().kind === 'bulk'}>
+                        <div class="text-sm">
+                          Sukses: <strong>{summary().success ?? 0}</strong> · Gagal:{' '}
+                          <strong>{summary().failed ?? 0}</strong> · Dilewati: <strong>{summary().skipped ?? 0}</strong>
+                        </div>
+                        <div class="mt-2 space-y-1">
+                          <For each={summary().errors}>
+                            {(err: ResponseSummaryError) => (
+                              <div class="text-xs text-secondary-600 dark:text-secondary-300">
+                                {err.line != null ? `Baris ${err.line}: ` : ''}
+                                {err.message || '-'}
+                              </div>
+                            )}
+                          </For>
+                          <Show when={(summary().errorCount ?? 0) > (summary().errors?.length ?? 0)}>
+                            <div class="text-xs text-secondary-400">
+                              ... +{(summary().errorCount ?? 0) - (summary().errors?.length ?? 0)} error lainnya
+                            </div>
+                          </Show>
+                        </div>
+                      </Show>
+                      <Show when={summary().kind === 'count'}>
+                        <div class="text-sm">
+                          Dihitung: <strong>{summary().count ?? 0}</strong>
+                        </div>
+                      </Show>
+                      <Show when={summary().kind === 'error'}>
+                        <div class="text-sm text-rose-600">{summary().message || '-'}</div>
+                      </Show>
+                    </div>
+                  )}
                 </Show>
               </div>
               <div class="flex justify-end mt-6">

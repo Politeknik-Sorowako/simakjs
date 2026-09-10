@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { desc, eq } from 'drizzle-orm';
 import { app } from '../app';
+import { auditLogs } from '../models/schema';
 import { AuditService } from '../services/audit.service';
+import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
 describe('Audit Log & Backup System', () => {
@@ -175,6 +178,47 @@ describe('Audit Log & Backup System', () => {
       };
       expect(body.data.length).toBeGreaterThanOrEqual(1);
       expect(body.data.some((row) => row.userName === 'Admin Audit')).toBe(true);
+    });
+
+    it('should log a bulk import result with success/failure summary', async () => {
+      const token = await getAuthToken('admin_import_audit@test.com', 'admin');
+
+      const csvContent = 'nim,nama,email,programStudiKode\n1234567890,Nama Satu,import1@test.com,PRODI-TIDAK-ADA\n';
+      const formData = new FormData();
+      formData.append('file', new File([csvContent], 'import.csv', { type: 'text/csv' }));
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/import', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const result = (await response.json()) as { successCount: number; errors: unknown[] };
+      expect(result.successCount).toBe(0);
+      expect(result.errors.length).toBeGreaterThan(0);
+
+      // onAfterResponse berjalan asinkron dan tidak di-await oleh app.handle;
+      // tunggu/poll sampai baris log tertulis.
+      let row: typeof auditLogs.$inferSelect | undefined;
+      for (let i = 0; i < 20; i++) {
+        [row] = await db
+          .select()
+          .from(auditLogs)
+          .where(eq(auditLogs.module, 'mahasiswa'))
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(1);
+        if (row) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      expect(row).toBeDefined();
+      expect(row!.tableName).toBe('mahasiswa');
+      expect(row!.description).toContain('tabel mahasiswa');
+      expect(row!.description).toContain('0 sukses');
+      expect(row!.detail).toContain('Ringkasan');
     });
   });
 });
