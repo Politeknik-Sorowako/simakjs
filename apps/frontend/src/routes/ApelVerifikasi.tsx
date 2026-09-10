@@ -63,6 +63,7 @@ export default function ApelVerifikasi() {
     nama: string;
     menit: number | null;
     tanggal: string;
+    verificationNote?: string | null;
   } | null>(null);
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
   const [verifyNote, setVerifyNote] = createSignal('');
@@ -347,6 +348,7 @@ export default function ApelVerifikasi() {
                                 nama: item.mahasiswaNama,
                                 menit: item.menitTerlambat ?? null,
                                 tanggal: item.tanggal,
+                                verificationNote: item.verificationNote ?? null,
                               });
                               setVerifyStatus(item.verifiedStatus || 'alpa');
                               setVerifyDuration(item.menitTerlambat || 0);
@@ -431,6 +433,12 @@ export default function ApelVerifikasi() {
                     >
                       {sisaKuota()} menit
                     </span>
+                  </div>
+                </Show>
+                <Show when={verifyModal()?.verificationNote}>
+                  <div>
+                    <strong>Catatan verifikasi terakhir:</strong>{' '}
+                    <span class="italic text-gray-700 dark:text-gray-200">{verifyModal()?.verificationNote}</span>
                   </div>
                 </Show>
               </div>
