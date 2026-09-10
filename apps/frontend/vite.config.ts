@@ -125,6 +125,10 @@ export default defineConfig({
         ],
         runtimeCaching: [
           {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: ({ request, url }) =>
               (request.destination === 'script' || request.destination === 'style') && !url.pathname.startsWith('/api/'),
             handler: 'StaleWhileRevalidate',

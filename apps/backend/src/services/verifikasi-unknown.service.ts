@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import {
   bap,
   kelasKuliah,
@@ -15,9 +15,12 @@ import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
 
 export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
-export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
+export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR';
 
-const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'HADIR'];
+const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'HADIR'];
+
+/** Status yang dihitung sebagai beban kompensasi terverifikasi pada cap harian. */
+const STATUS_TERHITUNG_CAP = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT'];
 
 interface VerifyInput {
   sumber: KetidakhadiranSumber;
@@ -155,6 +158,9 @@ export class VerifikasiUnknownService {
 
       if (durasi > 0) {
         const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
+        // Cap hanya menghitung baris yang SUDAH terverifikasi dan berstatus kelas
+        // ketidakhadiran (SAKIT/IZIN/ALPA/TERLAMBAT). Baris UNKNOWN yang belum
+        // terverifikasi tidak boleh menghabiskan kuota harian.
         const [totalRow] = await tx
           .select({ total: sql<number>`COALESCE(SUM(${ketidakhadiranMahasiswa.durasiMenit}), 0)` })
           .from(ketidakhadiranMahasiswa)
@@ -162,13 +168,20 @@ export class VerifikasiUnknownService {
             and(
               eq(ketidakhadiranMahasiswa.mahasiswaId, absence.mahasiswaId),
               eq(ketidakhadiranMahasiswa.tanggal, absence.tanggal),
+              eq(ketidakhadiranMahasiswa.isVerified, true),
+              sql`${ketidakhadiranMahasiswa.status} IN ('SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT')`,
               sql`${ketidakhadiranMahasiswa.id} != ${absence.id}`,
             ),
           );
-        const totalHariIni = Number(totalRow?.total || 0);
-        if (totalHariIni + durasi > maksHarian) {
+        const totalTerverifikasi = Number(totalRow?.total || 0);
+        const sisaKuota = Math.max(maksHarian - totalTerverifikasi, 0);
+        // Koreksi turun (durasi baru <= durasi lama) tidak menambah beban harian,
+        // jadi tetap diizinkan meski kuota sudah penuh.
+        const isKoreksiTurun = durasi <= Number(absence.durasiMenit || 0);
+        if (!isKoreksiTurun && durasi > sisaKuota) {
           throw new Error(
-            `Total durasi ketidakhadiran pada tanggal ${absence.tanggal} akan melebihi batas ${maksHarian} menit/hari.`,
+            `Total durasi terverifikasi pada tanggal ${absence.tanggal} adalah ${totalTerverifikasi} menit. ` +
+              `Durasi diminta ${durasi} menit melebihi sisa kuota ${sisaKuota} menit (maks ${maksHarian} menit/hari).`,
           );
         }
       }
@@ -218,7 +231,7 @@ export class VerifikasiUnknownService {
         await tx
           .update(presensi)
           .set({
-            status: lowerStatus as 'sakit' | 'izin' | 'alpa',
+            status: lowerStatus as 'sakit' | 'izin' | 'alpa' | 'terlambat',
             durasiMangkir: durasi,
             keteranganAdmin,
             resolvedBy: adminUserId,
@@ -238,8 +251,8 @@ export class VerifikasiUnknownService {
         await tx
           .update(presensiApel)
           .set({
-            status: lowerStatus as 'sakit' | 'izin' | 'alpa',
-            verifiedStatus: lowerStatus as 'sakit' | 'izin' | 'alpa',
+            status: lowerStatus as 'sakit' | 'izin' | 'alpa' | 'terlambat',
+            verifiedStatus: lowerStatus as 'sakit' | 'izin' | 'alpa' | 'terlambat',
             menitTerlambat: durasi,
             verificationNote,
             verifiedBy: adminUserId,
@@ -259,7 +272,7 @@ export class VerifikasiUnknownService {
         await tx
           .update(presensiPraktikum)
           .set({
-            status: lowerStatus as 'sakit' | 'izin' | 'alpa',
+            status: lowerStatus as 'sakit' | 'izin' | 'alpa' | 'terlambat',
             durasiMangkir: durasi,
             keteranganAdmin,
             resolvedBy: adminUserId,
@@ -300,6 +313,43 @@ export class VerifikasiUnknownService {
       .offset(offset);
 
     return rows;
+  }
+
+  /**
+   * Rekap ketidakhadiran per mahasiswa per hari (single source of truth untuk
+   * kuota DURASI_HARIAN_MENIT). Dipakai modal verifikasi agar admin melihat
+   * total terverifikasi & sisa kuota sebelum menyimpan.
+   */
+  static async getRekapHarian(mahasiswaId: number, tanggal: string) {
+    const rows = await db
+      .select({
+        id: ketidakhadiranMahasiswa.id,
+        mahasiswaId: ketidakhadiranMahasiswa.mahasiswaId,
+        tanggal: ketidakhadiranMahasiswa.tanggal,
+        sumber: ketidakhadiranMahasiswa.sumber,
+        sumberId: ketidakhadiranMahasiswa.sumberId,
+        status: ketidakhadiranMahasiswa.status,
+        durasiMenit: ketidakhadiranMahasiswa.durasiMenit,
+        keterangan: ketidakhadiranMahasiswa.keterangan,
+        isVerified: ketidakhadiranMahasiswa.isVerified,
+      })
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.mahasiswaId, mahasiswaId), eq(ketidakhadiranMahasiswa.tanggal, tanggal)))
+      .orderBy(asc(ketidakhadiranMahasiswa.id));
+
+    const totalTerverifikasi = rows
+      .filter((r) => r.isVerified && STATUS_TERHITUNG_CAP.includes(r.status))
+      .reduce((sum, r) => sum + Number(r.durasiMenit || 0), 0);
+    const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
+
+    return {
+      mahasiswaId,
+      tanggal,
+      maksHarian,
+      totalTerverifikasi,
+      sisaKuota: Math.max(maksHarian - totalTerverifikasi, 0),
+      rows,
+    };
   }
 }
 

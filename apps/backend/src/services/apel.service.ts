@@ -454,11 +454,15 @@ export class ApelService {
     sortOrder?: 'asc' | 'desc',
   ) {
     const offset = (page - 1) * limit;
-    const conditions = [eq(presensiApel.status, 'unknown')];
+    // Baris yang sudah diverifikasi (verifiedStatus terisi) TETAP dimasukkan agar
+    // admin bisa mengoreksi. Baris yang diinput langsung (status alpa/sakit/... tanpa
+    // verifiedStatus) tetap dikecualikan karena belum melewati alur verifikasi.
+    const conditions = [or(eq(presensiApel.status, 'unknown'), isNotNull(presensiApel.verifiedStatus))];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
     if (kelompokId) conditions.push(eq(sesiApel.kelompokApelId, kelompokId));
     if (tanggal) conditions.push(eq(sesiApel.tanggal, tanggal));
-    if (statusFilter === 'belum') conditions.push(isNull(presensiApel.verifiedStatus));
+    if (statusFilter === 'belum')
+      conditions.push(and(eq(presensiApel.status, 'unknown'), isNull(presensiApel.verifiedStatus))!);
     if (statusFilter === 'sudah') conditions.push(isNotNull(presensiApel.verifiedStatus));
     if (search) {
       const escaped = search.replace(/[\\%_]/g, '\\$&');
@@ -504,10 +508,12 @@ export class ApelService {
         kelompokNama: kelompokApel.namaKelompok,
         dosenNama: dosen.nama,
         createdAt: presensiApel.createdAt,
+        status: presensiApel.status,
         menitTerlambat: presensiApel.menitTerlambat,
         verifiedStatus: presensiApel.verifiedStatus,
         verifiedAt: presensiApel.verifiedAt,
         verifiedBy: presensiApel.verifiedBy,
+        verificationNote: presensiApel.verificationNote,
       })
       .from(presensiApel)
       .innerJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))

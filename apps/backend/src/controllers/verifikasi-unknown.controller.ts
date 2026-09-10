@@ -48,4 +48,32 @@ export class VerifikasiUnknownController {
       return { error: e instanceof Error ? e.message : 'Gagal memuat daftar ketidakhadiran' };
     }
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getRekapHarian({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!allowed(user, ['admin', 'super_admin', 'prodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+      }
+
+      const q = (query || {}) as Record<string, unknown>;
+      const mahasiswaId = Number(q.mahasiswaId);
+      const tanggal = String(q.tanggal || '');
+      if (!Number.isFinite(mahasiswaId) || mahasiswaId <= 0) {
+        set.status = 400;
+        return { error: 'mahasiswaId tidak valid' };
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) {
+        set.status = 400;
+        return { error: 'tanggal tidak valid (format YYYY-MM-DD)' };
+      }
+
+      return await VerifikasiUnknownService.getRekapHarian(mahasiswaId, tanggal);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memuat rekap harian ketidakhadiran' };
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show, Suspense } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
@@ -59,14 +59,41 @@ export default function ApelVerifikasi() {
 
   const [verifyModal, setVerifyModal] = createSignal<{
     id: number;
+    mahasiswaId: number;
     nama: string;
     menit: number | null;
     tanggal: string;
+    verificationNote?: string | null;
   } | null>(null);
   const [verifyStatus, setVerifyStatus] = createSignal('alpa');
   const [verifyNote, setVerifyNote] = createSignal('');
   const [verifyDuration, setVerifyDuration] = createSignal(0);
   const [isAnulir, setIsAnulir] = createSignal(false);
+
+  const [dailyRekap] = createResource(
+    () => {
+      const m = verifyModal();
+      return m ? { mahasiswaId: m.mahasiswaId, tanggal: m.tanggal } : null;
+    },
+    (params) => apelController.getRekapHarian(params.mahasiswaId, params.tanggal),
+  );
+
+  const selectedAbsence = createMemo(() => {
+    const m = verifyModal();
+    const rekap = dailyRekap();
+    if (!m || !rekap) return null;
+    return rekap.rows.find((r) => r.sumber === 'APEL' && r.sumberId === m.id) ?? null;
+  });
+
+  const sisaKuota = createMemo(() => dailyRekap()?.sisaKuota ?? 0);
+  const totalTerverifikasi = createMemo(() => dailyRekap()?.totalTerverifikasi ?? 0);
+  const maksDurasi = createMemo(() => Math.max(sisaKuota(), selectedAbsence()?.durasiMenit ?? 0));
+
+  createEffect(() => {
+    const row = selectedAbsence();
+    if (!row) return;
+    setVerifyDuration(row.durasiMenit ?? 0);
+  });
 
   const [data, { refetch }] = createResource(
     () => ({
@@ -109,16 +136,33 @@ export default function ApelVerifikasi() {
       toast.showToast('Pilih status verifikasi terlebih dahulu', 'error');
       return;
     }
-    try {
-      if (isAnulir() && !verifyNote().trim()) {
-        toast.showToast('Alasan/keterangan wajib diisi saat menganulir', 'error');
+    if (isAnulir() && !verifyNote().trim()) {
+      toast.showToast('Alasan/keterangan wajib diisi saat menganulir', 'error');
+      return;
+    }
+    const status = verifyStatus();
+    if (!isAnulir() && status !== 'hadir') {
+      const dur = verifyDuration();
+      if (!(dur > 0)) {
+        toast.showToast('Durasi ketidakhadiran wajib lebih dari 0 menit', 'error');
         return;
       }
+      const row = selectedAbsence();
+      const isKoreksiTurun = dur <= (row?.durasiMenit ?? 0);
+      if (!isKoreksiTurun && dur > sisaKuota()) {
+        toast.showToast(
+          `Durasi ${dur} menit melebihi sisa kuota ${sisaKuota()} menit pada tanggal ${modal.tanggal}`,
+          'error',
+        );
+        return;
+      }
+    }
+    try {
       await apelController.verifikasiUnknown({
         sumber: 'APEL',
         sumberId: modal.id,
-        statusKonfirmasi: verifyStatus().toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR',
-        durasiMenit: isAnulir() ? 0 : verifyStatus() !== 'hadir' ? verifyDuration() : 0,
+        statusKonfirmasi: status.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR',
+        durasiMenit: isAnulir() ? 0 : status !== 'hadir' ? verifyDuration() : 0,
         keterangan: verifyNote() || undefined,
       });
       toast.showToast('Presensi berhasil diverifikasi', 'success');
@@ -151,6 +195,8 @@ export default function ApelVerifikasi() {
         return 'Alpa';
       case 'telat':
         return 'Telat';
+      case 'terlambat':
+        return 'Terlambat';
       default:
         return '';
     }
@@ -298,9 +344,11 @@ export default function ApelVerifikasi() {
                             onClick={() => {
                               setVerifyModal({
                                 id: item.id,
+                                mahasiswaId: item.mahasiswaId,
                                 nama: item.mahasiswaNama,
                                 menit: item.menitTerlambat ?? null,
                                 tanggal: item.tanggal,
+                                verificationNote: item.verificationNote ?? null,
                               });
                               setVerifyStatus(item.verifiedStatus || 'alpa');
                               setVerifyDuration(item.menitTerlambat || 0);
@@ -371,6 +419,28 @@ export default function ApelVerifikasi() {
                     {verifyModal()?.menit != null ? `${verifyModal()?.menit} menit` : '-'}
                   </span>
                 </div>
+                <Show when={dailyRekap()}>
+                  <div>
+                    <strong>Total terverifikasi hari ini:</strong>{' '}
+                    <span class="font-semibold text-gray-800 dark:text-gray-100">{totalTerverifikasi()} menit</span>
+                  </div>
+                  <div>
+                    <strong>Sisa kuota (maks {dailyRekap()?.maksHarian} menit/hari):</strong>{' '}
+                    <span
+                      class={`font-semibold ${
+                        sisaKuota() > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
+                      }`}
+                    >
+                      {sisaKuota()} menit
+                    </span>
+                  </div>
+                </Show>
+                <Show when={verifyModal()?.verificationNote}>
+                  <div>
+                    <strong>Catatan verifikasi terakhir:</strong>{' '}
+                    <span class="italic text-gray-700 dark:text-gray-200">{verifyModal()?.verificationNote}</span>
+                  </div>
+                </Show>
               </div>
               <div class="space-y-4">
                 <div>
@@ -383,6 +453,7 @@ export default function ApelVerifikasi() {
                     <option value="alpa">Alpa (Tanpa Keterangan)</option>
                     <option value="sakit">Sakit</option>
                     <option value="izin">Izin</option>
+                    <option value="terlambat">Terlambat (durasi menit)</option>
                     <option value="hadir">Hadir (ternyata datang)</option>
                   </select>
                 </div>
@@ -408,6 +479,7 @@ export default function ApelVerifikasi() {
                     <input
                       type="number"
                       min="0"
+                      max={maksDurasi()}
                       class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600"
                       value={verifyDuration()}
                       onInput={(e) => setVerifyDuration(Number(e.currentTarget.value) || 0)}
