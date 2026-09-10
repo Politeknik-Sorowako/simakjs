@@ -6,4 +6,5 @@ import { verifikasiUnknownSchema } from '../schemas/verifikasi-unknown.schema';
 export const verifikasiUnknownRoutes = new Elysia({ prefix: '/ketidakhadiran' })
   .use(authMiddleware)
   .get('/unknown', VerifikasiUnknownController.getList)
+  .get('/harian', VerifikasiUnknownController.getRekapHarian)
   .post('/verifikasi-unknown', VerifikasiUnknownController.verify, verifikasiUnknownSchema);

@@ -193,9 +193,12 @@ export const verifyPresensiSchema = {
     id: t.String({ error: 'ID presensi diperlukan' }),
   }),
   body: t.Object({
-    verifiedStatus: t.Union([t.Literal('sakit'), t.Literal('izin'), t.Literal('alpa'), t.Literal('hadir')], {
-      error: 'Status verifikasi harus sakit, izin, alpa, atau hadir',
-    }),
+    verifiedStatus: t.Union(
+      [t.Literal('sakit'), t.Literal('izin'), t.Literal('alpa'), t.Literal('terlambat'), t.Literal('hadir')],
+      {
+        error: 'Status verifikasi harus sakit, izin, alpa, terlambat, atau hadir',
+      },
+    ),
     verificationNote: t.Optional(t.String({ error: 'Catatan verifikasi tidak valid' })),
     menitTerlambat: t.Optional(t.Nullable(t.Number({ minimum: 0, error: 'Durasi menit tidak valid' }))),
   }),
