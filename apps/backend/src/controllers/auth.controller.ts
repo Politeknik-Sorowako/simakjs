@@ -6,6 +6,8 @@ import { AuthService } from '../services/auth.service';
 import { SsoService } from '../services/sso.service';
 import { TwoFactorService } from '../services/two-factor.service';
 import { db } from '../utils/db';
+import { getFrontendBaseUrl } from '../utils/frontend-url';
+import { escapeHtml } from '../utils/html-escape';
 import { isSuperAdminOrAdmin } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -497,10 +499,7 @@ export class AuthController {
 
         const resendApiKey = process.env.RESEND_API_KEY;
         if (resendApiKey) {
-          const domainName = process.env.DOMAIN_NAME || 'localhost';
-          const protocol = domainName === 'localhost' ? 'http' : 'https';
-          const port = domainName === 'localhost' ? ':8080' : '';
-          const resetLink = `${protocol}://${domainName}${port}/reset-password?token=${token}`;
+          const resetLink = `${getFrontendBaseUrl()}/reset-password?token=${token}`;
 
           try {
             const resend = new Resend(resendApiKey);
@@ -515,7 +514,7 @@ export class AuthController {
                   <p>Kami menerima permintaan untuk mereset kata sandi akun SIMAK Vokasi Anda.</p>
                   <p>Silakan klik tombol di bawah ini untuk mengatur ulang kata sandi Anda. Tautan ini akan kedaluwarsa dalam 1 jam.</p>
                   <div style="margin: 24px 0;">
-                    <a href="${resetLink}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Atur Ulang Kata Sandi</a>
+                    <a href="${escapeHtml(resetLink)}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Atur Ulang Kata Sandi</a>
                   </div>
                   <p style="color: #64748b; font-size: 12px;">Jika Anda tidak meminta ini, abaikan email ini.</p>
                 </div>

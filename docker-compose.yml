@@ -33,7 +33,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: ${CORS_ORIGIN:-https://simak.politekniksorowako.ac.id,http://simak.politekniksorowako.ac.id,http://localhost:8080,http://localhost:3000}
       NODE_ENV: development
-      DOMAIN_NAME: localhost
+      DOMAIN_NAME: ${DOMAIN_NAME:-localhost}
       PGHOST: db
       PGPORT: "5432"
       BACKUP_DIR: ./backups

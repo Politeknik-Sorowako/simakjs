@@ -30,6 +30,7 @@ const MODULES = [
   'system',
 ];
 const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'];
+const PAGE_SIZES = [20, 50, 100, 200, 500];
 
 const actionBadge = (action: string) => {
   const styles: Record<string, string> = {
@@ -78,6 +79,7 @@ const getResponseSummary = (entry: AuditLogEntry | null): ResponseSummaryData | 
 
 export default function AuditLog() {
   const [page, setPage] = createSignal(1);
+  const [limit, setLimit] = createSignal(20);
   const [search, setSearch] = createSignal('');
   const [module, setModule] = createSignal<string>('');
   const [actionType, setActionType] = createSignal<string>('');
@@ -92,6 +94,7 @@ export default function AuditLog() {
   const [data, { refetch }] = createResource(
     () => ({
       page: page(),
+      limit: limit(),
       search: search(),
       module: module(),
       actionType: actionType(),
@@ -99,7 +102,7 @@ export default function AuditLog() {
       endDate: endDate(),
     }),
     async (params) => {
-      const filters: AuditLogFilters = { page: params.page, limit: 20 };
+      const filters: AuditLogFilters = { page: params.page, limit: params.limit };
       if (params.search) filters.search = params.search;
       if (params.module) filters.module = params.module;
       if (params.actionType) filters.actionType = params.actionType;
@@ -267,6 +270,22 @@ export default function AuditLog() {
                 }}
               />
             </div>
+            <div>
+              <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-300 mb-1">
+                Baris / Halaman
+              </label>
+              <select
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                value={limit()}
+                onChange={(e) => {
+                  setLimit(Number(e.currentTarget.value));
+                  setPage(1);
+                  refetch();
+                }}
+              >
+                <For each={PAGE_SIZES}>{(size) => <option value={size}>{size} / halaman</option>}</For>
+              </select>
+            </div>
             <button
               class="rounded-xl border border-secondary-300 dark:border-secondary-700 px-4 py-2 text-sm font-semibold text-secondary-600 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-800"
               onClick={() => {
@@ -276,6 +295,7 @@ export default function AuditLog() {
                 setStartDate('');
                 setEndDate('');
                 setPage(1);
+                setLimit(20);
                 refetch();
               }}
             >
@@ -361,25 +381,30 @@ export default function AuditLog() {
           </div>
 
           {/* Pagination */}
-          <Show when={data()?.meta && data()!.meta.totalPages > 1}>
-            <div class="flex justify-between items-center mt-4">
+          <Show when={data() && (data()!.meta?.total ?? 0) > 0}>
+            <div class="flex flex-col sm:flex-row justify-between items-center mt-4 gap-3">
               <span class="text-xs text-secondary-500 dark:text-secondary-300">
-                Total: <strong>{data()?.meta.total}</strong> log
+                Menampilkan{' '}
+                <strong>
+                  {(data()!.meta.page - 1) * data()!.meta.limit + 1}–
+                  {Math.min(data()!.meta.page * data()!.meta.limit, data()!.meta.total)}
+                </strong>{' '}
+                dari <strong>{data()!.meta.total}</strong> log
               </span>
-              <div class="flex gap-2">
+              <div class="flex gap-2 items-center">
                 <button
-                  class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
                   disabled={page() <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   Prev
                 </button>
                 <span class="px-3 py-1 text-sm">
-                  {page()} / {data()?.meta.totalPages}
+                  {page()} / {data()!.meta.totalPages}
                 </span>
                 <button
-                  class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={page() >= (data()?.meta.totalPages || 1)}
+                  class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                  disabled={page() >= (data()!.meta.totalPages || 1)}
                   onClick={() => setPage((p) => p + 1)}
                 >
                   Next

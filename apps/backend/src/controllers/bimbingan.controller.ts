@@ -280,6 +280,22 @@ export class BimbinganController {
       return { error: 'ID Mahasiswa tidak valid.' };
     }
 
+    // RBAC check: mahasiswa hanya melihat data sendiri; dosen hanya untuk binaannya (Dosen PA).
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== mhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat mengakses data akademik Anda sendiri.' };
+      }
+    } else if (hasRole(user, ['dosen'])) {
+      const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
+      const [mhs] = await db.select({ dosenPaId: mahasiswa.dosenPaId }).from(mahasiswa).where(eq(mahasiswa.id, mhsId));
+      if (!myDosenId || !mhs || mhs.dosenPaId !== myDosenId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda bukan Dosen PA mahasiswa ini.' };
+      }
+    }
+
     try {
       let sisaKompensasi = 0;
       try {

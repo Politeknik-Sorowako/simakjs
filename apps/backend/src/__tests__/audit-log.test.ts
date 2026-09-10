@@ -180,6 +180,68 @@ describe('Audit Log & Backup System', () => {
       expect(body.data.some((row) => row.userName === 'Admin Audit')).toBe(true);
     });
 
+    it('should respect the requested page size (limit=50)', async () => {
+      const token = await getAuthToken('admin_pg@test.com', 'admin');
+      for (let i = 0; i < 3; i++) {
+        await AuditService.log({
+          actionType: 'CREATE',
+          module: 'users',
+          description: `Log pembatas ${i}`,
+        });
+      }
+
+      const response = await app.handle(
+        new Request('http://localhost/audit-logs?limit=50', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { meta: { limit: number; page: number } };
+      expect(body.meta.limit).toBe(50);
+    });
+
+    it('should fall back to limit=20 for unapproved page sizes', async () => {
+      const token = await getAuthToken('admin_pg2@test.com', 'admin');
+
+      const response = await app.handle(
+        new Request('http://localhost/audit-logs?limit=999', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { meta: { limit: number; page: number } };
+      expect(body.meta.limit).toBe(20);
+    });
+
+    it('should paginate correctly with page=2&limit=50', async () => {
+      const token = await getAuthToken('admin_pg3@test.com', 'admin');
+      for (let i = 0; i < 60; i++) {
+        await AuditService.log({
+          actionType: 'CREATE',
+          module: 'users',
+          description: `Log paginasi ${i}`,
+        });
+      }
+
+      const response = await app.handle(
+        new Request('http://localhost/audit-logs?page=2&limit=50', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as {
+        data: unknown[];
+        meta: { page: number; limit: number; total: number };
+      };
+      expect(body.meta.page).toBe(2);
+      expect(body.meta.limit).toBe(50);
+      expect(body.meta.total).toBeGreaterThanOrEqual(60);
+      expect(body.data.length).toBe(body.meta.total - 50);
+    });
+
     it('should log a bulk import result with success/failure summary', async () => {
       const token = await getAuthToken('admin_import_audit@test.com', 'admin');
 
