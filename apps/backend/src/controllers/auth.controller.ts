@@ -6,6 +6,7 @@ import { AuthService } from '../services/auth.service';
 import { SsoService } from '../services/sso.service';
 import { TwoFactorService } from '../services/two-factor.service';
 import { db } from '../utils/db';
+import { getFrontendBaseUrl } from '../utils/frontend-url';
 import { isSuperAdminOrAdmin } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -497,10 +498,7 @@ export class AuthController {
 
         const resendApiKey = process.env.RESEND_API_KEY;
         if (resendApiKey) {
-          const domainName = process.env.DOMAIN_NAME || 'localhost';
-          const protocol = domainName === 'localhost' ? 'http' : 'https';
-          const port = domainName === 'localhost' ? ':8080' : '';
-          const resetLink = `${protocol}://${domainName}${port}/reset-password?token=${token}`;
+          const resetLink = `${getFrontendBaseUrl()}/reset-password?token=${token}`;
 
           try {
             const resend = new Resend(resendApiKey);

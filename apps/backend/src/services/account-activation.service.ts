@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { accountActivations, users } from '../models/schema';
 import { db } from '../utils/db';
+import { getFrontendBaseUrl } from '../utils/frontend-url';
 
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -41,10 +42,7 @@ export class AccountActivationService {
       return;
     }
 
-    const domainName = process.env.DOMAIN_NAME || 'localhost';
-    const protocol = domainName === 'localhost' ? 'http' : 'https';
-    const port = domainName === 'localhost' ? ':8080' : '';
-    const activationLink = `${protocol}://${domainName}${port}/aktivasi-akun?token=${token}`;
+    const activationLink = `${getFrontendBaseUrl()}/aktivasi-akun?token=${token}`;
 
     try {
       const resend = new Resend(resendApiKey);

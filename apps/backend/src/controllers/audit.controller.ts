@@ -17,8 +17,10 @@ export class AuditController {
       }
 
       const q = (query || {}) as Record<string, unknown>;
-      const page = parseInt((q.page as string) || '1', 10);
-      const limit = parseInt((q.limit as string) || '20', 10);
+      const page = Math.max(1, parseInt((q.page as string) || '1', 10) || 1);
+      const allowedLimits = new Set([20, 50, 100, 200, 500]);
+      const requestedLimit = parseInt((q.limit as string) || '20', 10);
+      const limit = allowedLimits.has(requestedLimit) ? requestedLimit : 20;
       const module = (q.module as string) || undefined;
       const actionType = (q.actionType as string) || undefined;
       const userId = q.userId ? parseInt(q.userId as string, 10) : undefined;

@@ -1,7 +1,10 @@
 import { basename, join } from 'node:path';
+import { eq } from 'drizzle-orm';
+import { dosen, mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { getSuratUploadDir, PresensiService } from '../services/presensi.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
+import { db } from '../utils/db';
 import { getBapKelasId, guardKelasScope } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
@@ -105,6 +108,28 @@ export class PresensiController {
       return { error: 'Unauthorized' };
     }
     const targetMhsId = parseInt(params.mahasiswaId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    // Dosen hanya boleh melihat detail kompensasi mahasiswa binaannya (Dosen PA).
+    if (hasRole(user, ['dosen'])) {
+      const [mhs] = await db
+        .select({ dosenPaId: mahasiswa.dosenPaId })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, targetMhsId));
+      if (!mhs) {
+        set.status = 404;
+        return { error: 'Mahasiswa tidak ditemukan.' };
+      }
+      const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email));
+      if (!dsn || mhs.dosenPaId !== dsn.id) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda bukan Dosen PA mahasiswa ini.' };
+      }
+    }
+
     const detail = await PresensiService.getKompensasiDetail(targetMhsId);
     if (hasRole(user, ['mahasiswa']) && detail.mahasiswa.email !== user.email) {
       set.status = 403;

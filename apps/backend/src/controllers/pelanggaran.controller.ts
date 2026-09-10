@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { mahasiswa } from '../models/schema';
+import { dosen, mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { PelanggaranService } from '../services/pelanggaran.service';
 import { db } from '../utils/db';
@@ -65,6 +65,20 @@ export class PelanggaranController {
       if (!myMhsId || myMhsId !== targetMhsId) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda hanya dapat melihat riwayat kedisiplinan Anda sendiri.' };
+      }
+    } else if (hasRole(user, ['dosen'])) {
+      const [mhs] = await db
+        .select({ dosenPaId: mahasiswa.dosenPaId })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, targetMhsId));
+      if (!mhs) {
+        set.status = 404;
+        return { error: 'Mahasiswa tidak ditemukan.' };
+      }
+      const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email));
+      if (!dsn || mhs.dosenPaId !== dsn.id) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda bukan Dosen PA mahasiswa ini.' };
       }
     }
 
