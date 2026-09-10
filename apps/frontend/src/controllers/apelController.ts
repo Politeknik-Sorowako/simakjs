@@ -123,6 +123,27 @@ export interface MonitorResponse {
   detail: MonitorKelompok[];
 }
 
+export interface RekapHarianRow {
+  id: number;
+  mahasiswaId: number;
+  tanggal: string;
+  sumber: 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
+  sumberId: number | null;
+  status: string;
+  durasiMenit: number;
+  keterangan?: string | null;
+  isVerified: boolean;
+}
+
+export interface RekapHarianResponse {
+  mahasiswaId: number;
+  tanggal: string;
+  maksHarian: number;
+  totalTerverifikasi: number;
+  sisaKuota: number;
+  rows: RekapHarianRow[];
+}
+
 export const apelController = {
   createKelompok: (data: { namaKelompok: string; dosenId?: number | null; shift?: string; keterangan?: string }) =>
     fetchApi<KelompokApel>('/apel/kelompok', { method: 'POST', body: JSON.stringify(data) }),
@@ -223,7 +244,7 @@ export const apelController = {
   verifikasiUnknown: (data: {
     sumber: 'BAP' | 'APEL' | 'MANUAL';
     sumberId: number;
-    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR';
     durasiMenit?: number;
     keterangan?: string;
   }) =>
@@ -231,6 +252,13 @@ export const apelController = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  getRekapHarian: (mahasiswaId: number, tanggal: string) => {
+    const params = new URLSearchParams();
+    params.set('mahasiswaId', String(mahasiswaId));
+    params.set('tanggal', tanggal);
+    return fetchApi<RekapHarianResponse>(`/ketidakhadiran/harian?${params.toString()}`);
+  },
 
   getRekapApel: (kelompokId: number) => fetchApi(`/apel/rekap/${kelompokId}`),
 };

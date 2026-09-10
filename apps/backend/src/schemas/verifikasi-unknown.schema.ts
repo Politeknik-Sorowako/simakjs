@@ -6,9 +6,12 @@ export const verifikasiUnknownSchema = {
       error: 'Sumber harus BAP, APEL, MANUAL, atau PRAKTIKUM',
     }),
     sumberId: t.Numeric(),
-    statusKonfirmasi: t.Union([t.Literal('SAKIT'), t.Literal('IZIN'), t.Literal('ALPA'), t.Literal('HADIR')], {
-      error: 'Status konfirmasi harus SAKIT, IZIN, ALPA, atau HADIR',
-    }),
+    statusKonfirmasi: t.Union(
+      [t.Literal('SAKIT'), t.Literal('IZIN'), t.Literal('ALPA'), t.Literal('TERLAMBAT'), t.Literal('HADIR')],
+      {
+        error: 'Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, atau HADIR',
+      },
+    ),
     durasiMenit: t.Optional(t.Number({ minimum: 0 })),
     keterangan: t.Optional(t.String()),
   }),
