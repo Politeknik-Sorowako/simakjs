@@ -45,6 +45,7 @@ export const MODULE_TABLE_MAP: Record<string, string> = {
   cpl: 'cpl',
   'profil-lulusan': 'profil_lulusan',
   'bahan-kajian': 'bahan_kajian',
+  'visi-misi': 'visi_misi_prodi',
   'visi-misi-prodi': 'visi_misi_prodi',
   'program-studi': 'program_studi',
   'periode-akademik': 'periode_akademik',
@@ -57,8 +58,8 @@ export const MODULE_TABLE_MAP: Record<string, string> = {
   feedback: 'feedback',
   'evaluasi-kurikulum': 'evaluasi_kurikulum',
   'evaluasi-sistem': 'evaluasi_sistem',
-  'system-parameters': 'konfigurasi_sistem',
-  settings: 'konfigurasi_sistem',
+  'system-parameters': 'system_settings',
+  settings: 'system_settings',
   pddikti: 'pddikti',
   admisi: 'pendaftar',
 };
