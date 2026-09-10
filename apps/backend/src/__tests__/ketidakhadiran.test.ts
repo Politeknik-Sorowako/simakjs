@@ -151,6 +151,34 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     );
   }
 
+  // Helper ambil daftar verifikasi apel (sumber='APEL').
+  function getApelUnknownList(params: string) {
+    return app.handle(
+      new Request(`http://localhost/apel/verifikasi/unknown${params ? `?${params}` : ''}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+  }
+
+  // Helper seed presensi apel yang DIINPUT LANGSUNG (tanpa alur verifikasi/ketidakhadiran).
+  async function seedApelDirect(tanggal: string, status: string, durasi: number) {
+    const [kelompok] = await db
+      .insert(kelompokApel)
+      .values({ namaKelompok: 'Kelompok Langsung', dosenId, shift: 'pagi' })
+      .returning();
+    await db.insert(kelompokApelAnggota).values({ kelompokApelId: kelompok.id, mahasiswaId: mhsId });
+    const [sesi] = await db
+      .insert(sesiApel)
+      .values({ kelompokApelId: kelompok.id, tanggal, shift: 'pagi', dosenId, jamMulai: '06:30:00' })
+      .returning();
+    const [p] = await db
+      .insert(presensiApel)
+      .values({ sesiApelId: sesi.id, mahasiswaId: mhsId, status: status as never, menitTerlambat: durasi })
+      .returning();
+    return { presensiId: p.id };
+  }
+
   it('menolak akses verifikasi untuk non-admin', async () => {
     const token = await getAuthToken('mhs_ketid2@test.com', 'mahasiswa');
     const res = await app.handle(
@@ -681,5 +709,58 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     expect(body.totalTerverifikasi).toBe(300);
     expect(body.sisaKuota).toBe(MAKS_HARIAN - 300);
     expect(body.maksHarian).toBe(MAKS_HARIAN);
+  });
+
+  it('item APEL yang diverifikasi tetap tampil di daftar verifikasi dan bisa dikoreksi', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-20', 'unknown', 0);
+    expect((await verifyPresensi('APEL', presensiId, 'ALPA', 60)).status).toBe(200);
+
+    const res = await getApelUnknownList('');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: Array<{ id: number; status?: string | null; verifiedStatus?: string | null }>;
+    };
+    const found = body.data.find((r) => r.id === presensiId);
+    expect(found).toBeDefined();
+    expect(found?.verifiedStatus).toBe('alpa');
+    expect(found?.status).toBe('alpa');
+  });
+
+  it('filter status daftar apel memisahkan belum/sudah diverifikasi dengan benar', async () => {
+    const unverified = await seedApelPresensi('2026-09-21', 'unknown', 0);
+    const verifiedRow = await seedApelPresensi('2026-09-21', 'unknown', 0);
+    expect((await verifyPresensi('APEL', verifiedRow.presensiId, 'SAKIT', 45)).status).toBe(200);
+
+    const belumRes = await getApelUnknownList('statusFilter=belum');
+    const belumBody = (await belumRes.json()) as { data: Array<{ id: number }> };
+    const belumIds = belumBody.data.map((r) => r.id);
+    expect(belumIds).toContain(unverified.presensiId);
+    expect(belumIds).not.toContain(verifiedRow.presensiId);
+
+    const sudahRes = await getApelUnknownList('statusFilter=sudah');
+    const sudahBody = (await sudahRes.json()) as { data: Array<{ id: number }> };
+    const sudahIds = sudahBody.data.map((r) => r.id);
+    expect(sudahIds).toContain(verifiedRow.presensiId);
+    expect(sudahIds).not.toContain(unverified.presensiId);
+  });
+
+  it('presensi apel yang diinput langsung (verifiedStatus kosong) tidak muncul di daftar verifikasi', async () => {
+    const direct = await seedApelDirect('2026-09-22', 'alpa', 90);
+
+    const res = await getApelUnknownList('');
+    const body = (await res.json()) as { data: Array<{ id: number }> };
+    expect(body.data.some((r) => r.id === direct.presensiId)).toBe(false);
+  });
+
+  it('baris terverifikasi HADIR tetap tampil di daftar dan bisa dikoreksi menjadi ALPA', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-23', 'unknown', 0);
+    expect((await verifyPresensi('APEL', presensiId, 'HADIR', 0)).status).toBe(200);
+
+    const sudahRes = await getApelUnknownList('statusFilter=sudah');
+    const sudahBody = (await sudahRes.json()) as { data: Array<{ id: number }> };
+    expect(sudahBody.data.some((r) => r.id === presensiId)).toBe(true);
+
+    const koreksi = await verifyPresensi('APEL', presensiId, 'ALPA', 120);
+    expect(koreksi.status).toBe(200);
   });
 });

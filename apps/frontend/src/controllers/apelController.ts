@@ -77,10 +77,12 @@ export interface UnknownPresensiItem {
   kelompokNama: string;
   dosenNama: string;
   createdAt: string;
+  status?: string | null;
   menitTerlambat?: number | null;
   verifiedStatus?: string | null;
   verifiedAt?: string | null;
   verifiedBy?: number | null;
+  verificationNote?: string | null;
 }
 
 export interface MonitorSesi {
