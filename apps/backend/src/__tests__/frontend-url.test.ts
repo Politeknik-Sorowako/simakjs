@@ -56,6 +56,12 @@ describe('getFrontendBaseUrl', () => {
     expect(getFrontendBaseUrl()).toBe('http://localhost:3000');
   });
 
+  it('preserves an explicit 127.0.0.1 port', () => {
+    process.env.DOMAIN_NAME = '127.0.0.1:3000';
+    unsetBase();
+    expect(getFrontendBaseUrl()).toBe('http://127.0.0.1:3000');
+  });
+
   it('normalizes whitespace and trailing slashes', () => {
     unsetDomain();
     process.env.FRONTEND_BASE_URL = '  https://staging-simak.example.com/  ';

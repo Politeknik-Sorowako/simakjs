@@ -386,7 +386,7 @@ export default function AuditLog() {
               <span class="text-xs text-secondary-500 dark:text-secondary-300">
                 Menampilkan{' '}
                 <strong>
-                  {data()!.meta.total === 0 ? 0 : (data()!.meta.page - 1) * data()!.meta.limit + 1}–
+                  {(data()!.meta.page - 1) * data()!.meta.limit + 1}–
                   {Math.min(data()!.meta.page * data()!.meta.limit, data()!.meta.total)}
                 </strong>{' '}
                 dari <strong>{data()!.meta.total}</strong> log

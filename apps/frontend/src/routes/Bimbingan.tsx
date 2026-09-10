@@ -126,7 +126,7 @@ export default function Bimbingan() {
     return selectedMhsId();
   };
 
-  const [pelanggaranDetail, { refetch: refetchPelanggaranDetail }] = createResource(
+  const [pelanggaranDetail] = createResource(
     () => (showPelanggaranDetail() ? detailTargetMhsId() : null),
     async (id) => {
       if (!id) return null;
@@ -134,7 +134,7 @@ export default function Bimbingan() {
     },
   );
 
-  const [kompensasiDetail, { refetch: refetchKompensasiDetail }] = createResource(
+  const [kompensasiDetail] = createResource(
     () => (showKompensasiDetail() ? detailTargetMhsId() : null),
     async (id) => {
       if (!id) return null;
