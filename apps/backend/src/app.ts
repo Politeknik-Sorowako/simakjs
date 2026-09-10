@@ -4,7 +4,7 @@ import { cors } from '@elysiajs/cors';
 import { swagger } from '@elysiajs/swagger';
 import { Elysia } from 'elysia';
 import { authMiddleware } from './middlewares/auth.middleware';
-import { auditPlugin } from './plugins/audit.plugin';
+import { auditAfterResponse, auditBeforeHandle } from './plugins/audit.plugin';
 import { jwtPlugin } from './plugins/jwt.plugin';
 import { admisiRoutes } from './routes/admisi.routes';
 import { admisiAdminRoutes } from './routes/admisi-admin.routes';
@@ -297,7 +297,8 @@ export const app = new Elysia()
     },
   })
   .use(authMiddleware)
-  .use(auditPlugin)
+  .onBeforeHandle(auditBeforeHandle)
+  .onAfterResponse(auditAfterResponse)
   .use(authRoutes)
   .use(admisiRoutes)
   .use(apelRoutes)

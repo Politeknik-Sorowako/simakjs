@@ -2,9 +2,12 @@ import { describe, expect, it } from 'bun:test';
 import {
   formatAuditDateTime,
   formatAuditUser,
+  formatBulkSentence,
   formatDescription,
   formatDetail,
+  formatSummaryForDetail,
   resolveTableName,
+  summarizeResponse,
 } from '../utils/audit-format';
 
 describe('audit-format', () => {
@@ -142,6 +145,99 @@ describe('audit-format', () => {
     it('formats a date into YYYY-MM-DD HH:mm:ss in the given timezone', () => {
       const date = new Date('2026-09-10T06:00:00.000Z');
       expect(formatAuditDateTime(date, 'Asia/Makassar')).toBe('2026-09-10 14:00:00');
+    });
+  });
+
+  describe('summarizeResponse', () => {
+    it('summarizes the csv-import shape (successCount + errors array)', () => {
+      const summary = summarizeResponse({
+        successCount: 12,
+        skippedCount: 3,
+        errors: [
+          { line: 2, error: 'Kolom NIM wajib diisi' },
+          { line: 5, error: 'Prodi tidak ditemukan' },
+        ],
+      });
+      expect(summary?.kind).toBe('bulk');
+      if (summary?.kind !== 'bulk') return;
+      expect(summary.success).toBe(12);
+      expect(summary.skipped).toBe(3);
+      expect(summary.failed).toBe(2);
+      expect(summary.total).toBe(17);
+      expect(summary.errorCount).toBe(2);
+      expect(summary.errors[0]).toEqual({ line: '2', message: 'Kolom NIM wajib diisi' });
+    });
+
+    it('summarizes the success/failed shape used by other import services', () => {
+      const summary = summarizeResponse({ success: 5, failed: 1, errors: [{ row: 4, error: 'Kode duplikat' }] });
+      expect(summary?.kind).toBe('bulk');
+      if (summary?.kind !== 'bulk') return;
+      expect(summary.success).toBe(5);
+      expect(summary.failed).toBe(1);
+    });
+
+    it('summarizes the imported/skipped shape (kurikulum)', () => {
+      const summary = summarizeResponse({ imported: 8, skipped: 2, errors: [{ pesan: 'MK tidak ditemukan' }] });
+      expect(summary?.kind).toBe('bulk');
+      if (summary?.kind !== 'bulk') return;
+      expect(summary.success).toBe(8);
+      expect(summary.skipped).toBe(2);
+    });
+
+    it('caps error list at 5 and reports full errorCount', () => {
+      const errors = Array.from({ length: 10 }, (_, i) => ({ line: i + 1, error: `err${i + 1}` }));
+      const summary = summarizeResponse({ successCount: 0, errors });
+      expect(summary?.kind).toBe('bulk');
+      if (summary?.kind !== 'bulk') return;
+      expect(summary.errorCount).toBe(10);
+      expect(summary.errors.length).toBe(5);
+    });
+
+    it('handles count shape', () => {
+      const summary = summarizeResponse({ count: 42 });
+      expect(summary).toEqual({ kind: 'count', count: 42 });
+    });
+
+    it('handles error shape', () => {
+      const summary = summarizeResponse({ error: 'Akses ditolak' });
+      expect(summary).toEqual({ kind: 'error', message: 'Akses ditolak' });
+    });
+
+    it('returns null for non-object / array / unknown shapes', () => {
+      expect(summarizeResponse(null)).toBeNull();
+      expect(summarizeResponse('text')).toBeNull();
+      expect(summarizeResponse([1, 2])).toBeNull();
+      expect(summarizeResponse({ foo: 'bar' })).toBeNull();
+      expect(summarizeResponse({ token: 'secret', data: {} })).toBeNull();
+    });
+  });
+
+  describe('formatBulkSentence & formatSummaryForDetail', () => {
+    it('formats the result sentence', () => {
+      expect(
+        formatBulkSentence({
+          kind: 'bulk',
+          success: 0,
+          failed: 120,
+          skipped: 0,
+          total: 120,
+          errorCount: 120,
+          errors: [],
+        }),
+      ).toBe('Hasil: 0 sukses, 120 gagal, 0 dilewati.');
+    });
+
+    it('includes first error in detail summary', () => {
+      const detail = formatSummaryForDetail({
+        kind: 'bulk',
+        success: 0,
+        failed: 1,
+        skipped: 0,
+        total: 1,
+        errorCount: 1,
+        errors: [{ line: '3', message: 'Program Studi tidak ditemukan' }],
+      });
+      expect(detail).toBe('0 sukses, 1 gagal, 0 dilewati. Contoh error: Program Studi tidak ditemukan (baris 3)');
     });
   });
 });

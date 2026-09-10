@@ -40,14 +40,21 @@ export class SystemParameterService {
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
       return cached.value;
     }
-    const [row] = await db.select().from(systemSettings).where(eq(systemSettings.key, key)).limit(1);
-    if (!row) {
+    try {
+      const [row] = await db.select().from(systemSettings).where(eq(systemSettings.key, key)).limit(1);
+      if (!row) {
+        const def = DEFAULT_PARAMS[key];
+        if (def) return def.value;
+        return null;
+      }
+      cache.set(key, { value: row.value, at: Date.now() });
+      return row.value;
+    } catch {
+      // Tabel opsional belum tersedia atau query gagal: gunakan default agar path
+      // yang bergantung pada parameter (mis. audit log) tidak ikut gagal.
       const def = DEFAULT_PARAMS[key];
-      if (def) return def.value;
-      return null;
+      return def ? def.value : null;
     }
-    cache.set(key, { value: row.value, at: Date.now() });
-    return row.value;
   }
 
   static async getNumber(key: string): Promise<number> {

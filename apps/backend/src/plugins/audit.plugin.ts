@@ -1,6 +1,4 @@
 import { eq } from 'drizzle-orm';
-import { Elysia } from 'elysia';
-import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   bap,
   dosen,
@@ -15,7 +13,15 @@ import {
 } from '../models/schema';
 import { AuditService } from '../services/audit.service';
 import { SystemParameterService } from '../services/system-parameter.service';
-import { formatAuditDateTime, formatDescription, formatDetail, resolveTableName } from '../utils/audit-format';
+import {
+  formatAuditDateTime,
+  formatBulkSentence,
+  formatDescription,
+  formatDetail,
+  formatSummaryForDetail,
+  resolveTableName,
+  summarizeResponse,
+} from '../utils/audit-format';
 import { db } from '../utils/db';
 
 type EntityInfo = {
@@ -25,6 +31,18 @@ type EntityInfo = {
   /** Human-readable descriptors for the affected entity (NIM, Nama, Prodi, MK, ...). */
   parts: string[];
 };
+
+/**
+ * Minimal hook context used by the audit handlers.
+ * Registered inline on the root app (`.onBeforeHandle/.onAfterResponse`) because Elysia
+ * does not propagate hooks declared inside a `.use()`d plugin to parent routes.
+ */
+export interface AuditHookContext {
+  request: Request;
+  set?: { status?: number | string };
+  getCurrentUser?: () => Promise<{ id: number; nama: string; role: string; roles?: string[] } | null>;
+  responseValue?: unknown;
+}
 
 const DEFAULT_TZ = 'Asia/Makassar';
 
@@ -232,41 +250,52 @@ function extractRecordId(responseValue: unknown): string | null {
   return null;
 }
 
-export const auditPlugin = new Elysia({ name: 'audit-plugin' })
-  .use(authMiddleware)
-  .onBeforeHandle(async ({ request }) => {
-    const method = request.method.toUpperCase();
-    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      return;
-    }
-    const { path, module, rawEntityId } = getPathMeta(request);
-    if (path.includes('/audit-logs')) {
-      return;
-    }
-    // Resolve entity before the mutation (so DELETE still has the row).
-    const info = await resolveEntity(module, rawEntityId);
-    entityCache.set(request, info);
-  })
-  .onAfterResponse(async (ctx) => {
-    const { request, set, getCurrentUser, responseValue } = ctx;
-    const method = request.method.toUpperCase();
+/**
+ * Resolves and caches entity info BEFORE a mutation runs, so DELETE still sees the row.
+ * Registered inline on the root app via `.onBeforeHandle`.
+ */
+export async function auditBeforeHandle(ctx: AuditHookContext): Promise<void> {
+  const { request } = ctx;
+  const method = request.method.toUpperCase();
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return;
+  }
+  const { path, module, rawEntityId } = getPathMeta(request);
+  if (path.includes('/audit-logs')) {
+    return;
+  }
+  // Resolve entity before the mutation (so DELETE still has the row).
+  const info = await resolveEntity(module, rawEntityId);
+  entityCache.set(request, info);
+}
 
-    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
-      return;
-    }
+/**
+ * Writes an audit log entry after a mutation response is sent.
+ * Registered inline on the root app via `.onAfterResponse`.
+ */
+export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
+  const { request, set, getCurrentUser, responseValue } = ctx;
+  const method = request.method.toUpperCase();
 
-    const { path, module } = getPathMeta(request);
+  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    return;
+  }
 
-    if (path.includes('/audit-logs')) {
-      return;
-    }
+  const { path, module } = getPathMeta(request);
 
-    let actionType = 'UPDATE';
-    if (method === 'POST') actionType = path.includes('/auth/login') ? 'LOGIN' : 'CREATE';
-    if (method === 'DELETE') actionType = 'DELETE';
-    if (path.includes('/auth/logout')) actionType = 'LOGOUT';
+  if (path.includes('/audit-logs')) {
+    return;
+  }
 
-    const user = await getCurrentUser().catch(() => null);
+  let actionType = 'UPDATE';
+  if (method === 'POST') actionType = path.includes('/auth/login') ? 'LOGIN' : 'CREATE';
+  if (method === 'DELETE') actionType = 'DELETE';
+  if (path.includes('/auth/logout')) actionType = 'LOGOUT';
+
+  try {
+    const user = await (typeof getCurrentUser === 'function'
+      ? getCurrentUser().catch(() => null)
+      : Promise.resolve(null));
     const userId = user?.id ?? null;
     const userName = user?.nama ?? null;
     const userRole = user?.role ?? null;
@@ -277,7 +306,7 @@ export const auditPlugin = new Elysia({ name: 'audit-plugin' })
       '127.0.0.1';
     const userAgent = request.headers.get('user-agent') || 'Unknown';
 
-    const statusCode = typeof set.status === 'number' ? set.status : 200;
+    const statusCode = typeof set?.status === 'number' ? set.status : 200;
 
     const cached = entityCache.get(request);
     const tableName = cached?.tableName ?? resolveTableName(module);
@@ -285,52 +314,58 @@ export const auditPlugin = new Elysia({ name: 'audit-plugin' })
     const entityName = cached?.entityName ?? null;
     const entityParts = cached?.parts ?? [];
 
-    void (async () => {
-      try {
-        let tz = DEFAULT_TZ;
-        try {
-          tz = await SystemParameterService.getTimezone();
-        } catch {
-          // fall back to default timezone
-        }
+    const tz = await SystemParameterService.getTimezone().catch(() => DEFAULT_TZ);
+    const waktu = formatAuditDateTime(new Date(), tz);
 
-        const waktu = formatAuditDateTime(new Date(), tz);
-        const description = formatDescription({
-          waktu,
-          userName,
-          userRole,
-          actionType,
-          tableName,
-          recordId: entityId,
-        });
+    const summary = summarizeResponse(responseValue);
+    let description = formatDescription({
+      waktu,
+      userName,
+      userRole,
+      actionType,
+      tableName,
+      recordId: entityId,
+    });
+    if (summary?.kind === 'bulk') {
+      description = `${description} ${formatBulkSentence(summary)}`;
+    }
 
-        const detailParts: string[] = [...entityParts];
-        const actor = part('User', userName);
-        if (actor) detailParts.push(actor);
+    const detailParts: string[] = [...entityParts];
+    const actor = part('User', userName);
+    if (actor) detailParts.push(actor);
+    const summaryDetail = summary ? formatSummaryForDetail(summary) : null;
+    if (summaryDetail) {
+      const pSummary = part('Ringkasan', summaryDetail);
+      if (pSummary) detailParts.push(pSummary);
+    }
 
-        const detail = formatDetail({ module, url: path, parts: detailParts });
+    const detail = formatDetail({ module, url: path, parts: detailParts });
 
-        await AuditService.log({
-          userId,
-          userName,
-          userRole,
-          ipAddress,
-          userAgent,
-          actionType,
-          module,
-          tableName,
-          entityId,
-          entityName,
-          description,
-          detail,
-          metadata: {
-            method,
-            path,
-            statusCode,
-          },
-        });
-      } catch (error: unknown) {
-        console.error('[audit-plugin] Failed to build audit log:', error instanceof Error ? error.message : error);
-      }
-    })();
-  });
+    const inserted = await AuditService.log({
+      userId,
+      userName,
+      userRole,
+      ipAddress,
+      userAgent,
+      actionType,
+      module,
+      tableName,
+      entityId,
+      entityName,
+      description,
+      detail,
+      metadata: {
+        method,
+        path,
+        statusCode,
+        ...(summary ? { responseSummary: summary } : {}),
+      },
+    });
+
+    if (!inserted) {
+      console.error('[audit-plugin] Audit log write returned null (gagal):', method, path);
+    }
+  } catch (error: unknown) {
+    console.error('[audit-plugin] Gagal menulis audit log:', error instanceof Error ? error.message : error);
+  }
+}
