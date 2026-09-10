@@ -4,12 +4,14 @@ import { hasRole } from '../utils/role';
 import { getNowDateString } from '../utils/timezone';
 import type { AuthContext } from '../utils/types';
 
+const AUDIT_ROLES = ['super_admin', 'admin'] as const;
+
 export class AuditController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin'])) {
+      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -23,8 +25,21 @@ export class AuditController {
       const startDate = (q.startDate as string) || undefined;
       const endDate = (q.endDate as string) || undefined;
       const search = (q.search as string) || undefined;
+      const tableName = (q.tableName as string) || undefined;
+      const userName = (q.userName as string) || undefined;
 
-      const result = await AuditService.getAll(page, limit, module, actionType, userId, startDate, endDate, search);
+      const result = await AuditService.getAll(
+        page,
+        limit,
+        module,
+        actionType,
+        userId,
+        startDate,
+        endDate,
+        search,
+        tableName,
+        userName,
+      );
 
       return result;
     } catch (error: unknown) {
@@ -37,7 +52,7 @@ export class AuditController {
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin'])) {
+      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -60,7 +75,7 @@ export class AuditController {
   static async exportCsv({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin'])) {
+      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -72,10 +87,22 @@ export class AuditController {
       const startDate = (q.startDate as string) || undefined;
       const endDate = (q.endDate as string) || undefined;
       const search = (q.search as string) || undefined;
+      const tableName = (q.tableName as string) || undefined;
+      const userName = (q.userName as string) || undefined;
       const rawLimit = parseInt((q.limit as string) || '10000', 10);
       const limit = Number.isNaN(rawLimit) ? 10000 : Math.min(Math.max(rawLimit, 1), 20000);
 
-      const csv = await AuditService.exportCsv(module, actionType, userId, startDate, endDate, search, limit);
+      const csv = await AuditService.exportCsv(
+        module,
+        actionType,
+        userId,
+        startDate,
+        endDate,
+        search,
+        limit,
+        tableName,
+        userName,
+      );
       set.headers['Content-Type'] = 'text/csv; charset=utf-8';
       set.headers['Content-Disposition'] =
         `attachment; filename="audit-logs-${await getNowDateString(await SystemParameterService.getTimezone())}.csv"`;
@@ -90,7 +117,7 @@ export class AuditController {
   static async purge({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin'])) {
+      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }

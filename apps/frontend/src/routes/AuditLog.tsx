@@ -9,12 +9,23 @@ const MODULES = [
   'users',
   'dosen',
   'mahasiswa',
+  'mahasiswa-keluar',
   'mata-kuliah',
-  'kelas',
+  'kelas-kuliah',
   'krs',
-  'kompensasi',
+  'bap',
+  'kompensasi-bayar',
+  'kompensasi-manual',
   'pelanggaran',
   'pasal-pelanggaran',
+  'bimbingan',
+  'tagihan',
+  'kurikulum',
+  'rps',
+  'cpmk',
+  'cpl',
+  'program-studi',
+  'periode-akademik',
   'audit-logs',
   'system',
 ];
@@ -35,6 +46,12 @@ const actionBadge = (action: string) => {
       {action}
     </span>
   );
+};
+
+const metaValue = (entry: AuditLogEntry | null, key: string): string => {
+  const value = entry?.metadata?.[key];
+  if (value == null) return '-';
+  return String(value);
 };
 
 export default function AuditLog() {
@@ -277,16 +294,24 @@ export default function AuditLog() {
                         <td class="py-3 px-4 text-xs whitespace-nowrap">{fmtWaktu(item.timestamp)}</td>
                         <td class="py-3 px-4">
                           <div class="font-semibold text-secondary-800 dark:text-white">
-                            {item.userId ? `User #${item.userId}` : 'Sistem'}
+                            {item.userName || (item.userId ? `User #${item.userId}` : 'Sistem')}
                           </div>
                         </td>
                         <td class="py-3 px-4 text-xs capitalize">{item.userRole || '-'}</td>
                         <td class="py-3 px-4">{actionBadge(item.actionType)}</td>
-                        <td class="py-3 px-4 text-xs font-mono">{item.module}</td>
+                        <td class="py-3 px-4 text-xs font-mono">
+                          <div>{item.module}</div>
+                          <Show when={item.tableName}>
+                            <div class="text-[10px] text-secondary-400">{item.tableName}</div>
+                          </Show>
+                        </td>
                         <td class="py-3 px-4 max-w-[200px] truncate text-secondary-600 dark:text-secondary-300">
                           {item.entityName || item.entityId || '-'}
                         </td>
-                        <td class="py-3 px-4 max-w-xs truncate text-secondary-600 dark:text-secondary-300">
+                        <td
+                          class="py-3 px-4 max-w-xs truncate text-secondary-600 dark:text-secondary-300"
+                          title={item.description}
+                        >
                           {item.description}
                         </td>
                         <td class="py-3 px-4 text-xs font-mono">{item.ipAddress || '-'}</td>
@@ -359,10 +384,16 @@ export default function AuditLog() {
                   <div class="text-xs font-semibold text-secondary-400 uppercase">Deskripsi</div>
                   <div>{detail()?.description}</div>
                 </div>
+                <Show when={detail()?.detail}>
+                  <div>
+                    <div class="text-xs font-semibold text-secondary-400 uppercase">Detail</div>
+                    <div>{detail()?.detail}</div>
+                  </div>
+                </Show>
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <div class="text-xs font-semibold text-secondary-400 uppercase">User ID</div>
-                    <div>{detail()?.userId || '-'}</div>
+                    <div class="text-xs font-semibold text-secondary-400 uppercase">User</div>
+                    <div>{detail()?.userName || (detail()?.userId ? `User #${detail()?.userId}` : 'Sistem')}</div>
                   </div>
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">Role</div>
@@ -371,6 +402,10 @@ export default function AuditLog() {
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">Module</div>
                     <div>{detail()?.module}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs font-semibold text-secondary-400 uppercase">Tabel</div>
+                    <div>{detail()?.tableName || '-'}</div>
                   </div>
                   <div>
                     <div class="text-xs font-semibold text-secondary-400 uppercase">Aksi</div>
@@ -390,11 +425,19 @@ export default function AuditLog() {
                   </div>
                 </div>
                 <Show when={detail()?.metadata}>
-                  <div>
-                    <div class="text-xs font-semibold text-secondary-400 uppercase">Metadata</div>
-                    <pre class="mt-1 bg-secondary-50 dark:bg-gray-700 rounded-lg p-3 text-xs overflow-x-auto">
-                      {JSON.stringify(detail()?.metadata, null, 2)}
-                    </pre>
+                  <div class="grid grid-cols-3 gap-3">
+                    <div>
+                      <div class="text-xs font-semibold text-secondary-400 uppercase">Method</div>
+                      <div>{metaValue(detail(), 'method')}</div>
+                    </div>
+                    <div class="col-span-2">
+                      <div class="text-xs font-semibold text-secondary-400 uppercase">URL</div>
+                      <div class="break-all">{metaValue(detail(), 'path')}</div>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold text-secondary-400 uppercase">Status</div>
+                      <div>{metaValue(detail(), 'statusCode')}</div>
+                    </div>
                   </div>
                 </Show>
               </div>
