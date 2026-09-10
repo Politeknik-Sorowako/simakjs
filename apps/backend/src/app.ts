@@ -297,6 +297,7 @@ export const app = new Elysia()
     },
   })
   .use(authMiddleware)
+  .use(auditPlugin)
   .use(authRoutes)
   .use(admisiRoutes)
   .use(apelRoutes)
@@ -352,7 +353,6 @@ export const app = new Elysia()
   .use(rombelPraktikumPublicRoutes)
   .use(rombelPraktikumRoutes)
   .use(mahasiswaKeluarRoutes)
-  .use(auditPlugin)
   .use(auditRoutes);
 
 export type App = typeof app;
