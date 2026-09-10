@@ -2,12 +2,18 @@ import { createEffect, createResource, createSignal, For, onCleanup, Show } from
 import { MainLayout } from '../components/MainLayout';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
-import { BimbinganThread, bimbinganController, SesiBimbingan } from '../controllers/bimbinganController';
+import {
+  BimbinganThread,
+  bimbinganController,
+  PelanggaranRekap,
+  SesiBimbingan,
+} from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { kategoriBimbinganController } from '../controllers/kategoriBimbinganController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
+import { KompensasiDetailResponse, presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
-import { getTodayString } from '../utils/format';
+import { fmtTanggal, fmtWaktu, getTodayString } from '../utils/format';
 
 export default function Bimbingan() {
   const auth = useAuth();
@@ -50,6 +56,10 @@ export default function Bimbingan() {
   const [showKategoriModal, setShowKategoriModal] = createSignal(false);
   const [newKatNama, setNewKatNama] = createSignal('');
   const [newKatDeskripsi, setNewKatDeskripsi] = createSignal('');
+
+  // Detail Pelanggaran & Kompensasi Modal Signals
+  const [showPelanggaranDetail, setShowPelanggaranDetail] = createSignal(false);
+  const [showKompensasiDetail, setShowKompensasiDetail] = createSignal(false);
 
   // Right panel toggle state (persisted to localStorage)
   const [isRightPanelOpen, setIsRightPanelOpen] = createSignal<boolean>(
@@ -109,6 +119,28 @@ export default function Bimbingan() {
     const raw = akademikSummary()?.sisaKompensasi || 0;
     return auth.hasRole(['mahasiswa']) ? Math.max(0, raw) : raw;
   };
+
+  // Lazy-fetch detail pelanggaran & kompensasi hanya saat modal dibuka.
+  const detailTargetMhsId = () => {
+    if (auth.hasRole(['mahasiswa'])) return mhsProfile()?.id ?? null;
+    return selectedMhsId();
+  };
+
+  const [pelanggaranDetail] = createResource(
+    () => (showPelanggaranDetail() ? detailTargetMhsId() : null),
+    async (id) => {
+      if (!id) return null;
+      return await bimbinganController.getPelanggaranByMhsId(id);
+    },
+  );
+
+  const [kompensasiDetail] = createResource(
+    () => (showKompensasiDetail() ? detailTargetMhsId() : null),
+    async (id) => {
+      if (!id) return null;
+      return await presensiController.getKompensasiDetail(id);
+    },
+  );
 
   // Load profiles
   const [mhsProfile] = createResource(
@@ -935,10 +967,24 @@ export default function Bimbingan() {
                               ).toFixed(2)}{' '}
                               Mutu)
                             </span>
+                            <button
+                              type="button"
+                              onClick={() => setShowPelanggaranDetail(true)}
+                              class="mt-1 self-start px-2 py-1 rounded-lg text-[10px] font-bold text-rose-600 bg-rose-100 hover:bg-rose-200 active:scale-95 transition-all dark:text-rose-300 dark:bg-rose-900/50 dark:hover:bg-rose-900"
+                            >
+                              Lihat Detail →
+                            </button>
                           </div>
                           <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
                             <span class="text-[10px] text-orange-600 font-bold uppercase">Jam Kompensasi</span>
                             <span class="text-sm font-black text-orange-700">{sisaKompensasiMhs()} Menit</span>
+                            <button
+                              type="button"
+                              onClick={() => setShowKompensasiDetail(true)}
+                              class="mt-1 self-start px-2 py-1 rounded-lg text-[10px] font-bold text-orange-600 bg-orange-100 hover:bg-orange-200 active:scale-95 transition-all dark:text-orange-300 dark:bg-orange-800/60 dark:hover:bg-orange-800"
+                            >
+                              Lihat Detail →
+                            </button>
                           </div>
                           <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl flex flex-col gap-0.5 dark:border-accent-800">
                             <span class="text-[10px] text-accent-600 font-bold uppercase">IPK Kumulatif</span>
@@ -1199,6 +1245,237 @@ export default function Bimbingan() {
                     )}
                   </For>
                 </div>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* --- MODAL DETAIL PELANGGARAN --- */}
+        <Show when={showPelanggaranDetail()}>
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-5 dark:bg-secondary-900">
+              <div class="flex items-center justify-between border-b pb-3 dark:border-secondary-800">
+                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">🔴 Detail Pelanggaran</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowPelanggaranDetail(false)}
+                  class="text-secondary-400 hover:text-secondary-600 font-bold text-lg dark:text-secondary-200"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <Show
+                when={pelanggaranDetail()}
+                fallback={
+                  <div class="text-center text-secondary-400 text-sm py-10">
+                    {pelanggaranDetail.loading ? 'Memuat data pelanggaran...' : 'Tidak ada data pelanggaran.'}
+                  </div>
+                }
+              >
+                {(detail: () => PelanggaranRekap) => (
+                  <div class="flex flex-col gap-4">
+                    <div class="grid grid-cols-3 gap-3 text-xs">
+                      <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
+                        <span class="text-[10px] text-rose-600 font-bold uppercase">Total Poin</span>
+                        <span class="text-sm font-black text-rose-700 dark:text-rose-400">{detail().totalPoin}</span>
+                      </div>
+                      <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
+                        <span class="text-[10px] text-rose-600 font-bold uppercase">Predikat</span>
+                        <span class="text-sm font-black text-rose-700 dark:text-rose-400">{detail().predikat}</span>
+                      </div>
+                      <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
+                        <span class="text-[10px] text-rose-600 font-bold uppercase">Jumlah</span>
+                        <span class="text-sm font-black text-rose-700 dark:text-rose-400">
+                          {detail().pelanggaranList.length} Pelanggaran
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="max-h-80 overflow-y-auto rounded-xl border border-secondary-100 dark:border-secondary-800">
+                      <table class="w-full text-left text-xs">
+                        <thead>
+                          <tr class="border-b border-secondary-100 bg-secondary-50/60 text-secondary-500 dark:border-secondary-800 dark:bg-secondary-800 uppercase text-[10px] font-bold">
+                            <th class="py-2.5 px-3">Tanggal</th>
+                            <th class="py-2.5 px-3">Jenis / Pasal</th>
+                            <th class="py-2.5 px-3">Poin</th>
+                            <th class="py-2.5 px-3">Pelapor</th>
+                            <th class="py-2.5 px-3">Keterangan</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                          <For each={detail().pelanggaranList}>
+                            {(item) => (
+                              <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+                                <td class="py-2.5 px-3 whitespace-nowrap">{fmtTanggal(item.tanggal)}</td>
+                                <td class="py-2.5 px-3 text-secondary-700 dark:text-secondary-200">
+                                  {item.jenisPelanggaran || item.nomorPasal || '-'}
+                                </td>
+                                <td class="py-2.5 px-3 font-bold text-rose-600 dark:text-rose-400">
+                                  {item.bobotPoin ?? '-'}
+                                </td>
+                                <td class="py-2.5 px-3">{item.pelapor || '-'}</td>
+                                <td
+                                  class="py-2.5 px-3 max-w-[220px] truncate text-secondary-500"
+                                  title={item.keterangan}
+                                >
+                                  {item.keterangan || '-'}
+                                </td>
+                              </tr>
+                            )}
+                          </For>
+                          <Show when={detail().pelanggaranList.length === 0}>
+                            <tr>
+                              <td colspan="5" class="py-8 text-center text-secondary-400">
+                                Tidak ada riwayat pelanggaran.
+                              </td>
+                            </tr>
+                          </Show>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </Show>
+
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowPelanggaranDetail(false)}
+                  class="px-4 py-2 border border-secondary-200 text-secondary-600 font-bold rounded-xl text-xs active:scale-95 transition-all dark:border-secondary-700"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* --- MODAL DETAIL KOMPENSASI --- */}
+        <Show when={showKompensasiDetail()}>
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-5 dark:bg-secondary-900">
+              <div class="flex items-center justify-between border-b pb-3 dark:border-secondary-800">
+                <h3 class="font-extrabold text-secondary-800 text-base dark:text-white">🟠 Detail Kompensasi</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowKompensasiDetail(false)}
+                  class="text-secondary-400 hover:text-secondary-600 font-bold text-lg dark:text-secondary-200"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <Show
+                when={kompensasiDetail()}
+                fallback={
+                  <div class="text-center text-secondary-400 text-sm py-10">
+                    {kompensasiDetail.loading ? 'Memuat data kompensasi...' : 'Tidak ada data kompensasi.'}
+                  </div>
+                }
+              >
+                {(detail: () => KompensasiDetailResponse) => (
+                  <div class="flex flex-col gap-4">
+                    <div class="grid grid-cols-3 gap-3 text-xs">
+                      <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
+                        <span class="text-[10px] text-orange-600 font-bold uppercase">Total Kompensasi</span>
+                        <span class="text-sm font-black text-orange-700">{detail().summary.totalKompensasi} Menit</span>
+                      </div>
+                      <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
+                        <span class="text-[10px] text-orange-600 font-bold uppercase">Sudah Dibayar</span>
+                        <span class="text-sm font-black text-orange-700">{detail().summary.totalDibayar} Menit</span>
+                      </div>
+                      <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl flex flex-col gap-0.5 dark:border-orange-800">
+                        <span class="text-[10px] text-orange-600 font-bold uppercase">Sisa</span>
+                        <span class="text-sm font-black text-orange-700">{detail().summary.sisaKompensasi} Menit</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 class="font-bold text-xs text-secondary-700 mb-2 dark:text-white">Riwayat Kompensasi</h4>
+                      <div class="max-h-56 overflow-y-auto rounded-xl border border-secondary-100 dark:border-secondary-800">
+                        <table class="w-full text-left text-xs">
+                          <thead>
+                            <tr class="border-b border-secondary-100 bg-secondary-50/60 text-secondary-500 dark:border-secondary-800 dark:bg-secondary-800 uppercase text-[10px] font-bold">
+                              <th class="py-2.5 px-3">Tanggal</th>
+                              <th class="py-2.5 px-3">Sumber</th>
+                              <th class="py-2.5 px-3">Status</th>
+                              <th class="py-2.5 px-3">Durasi</th>
+                              <th class="py-2.5 px-3">Poin</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                            <For each={detail().historyKompensasi}>
+                              {(item) => (
+                                <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+                                  <td class="py-2.5 px-3 whitespace-nowrap">{fmtTanggal(item.bapTanggal)}</td>
+                                  <td class="py-2.5 px-3 capitalize">{item.sumber}</td>
+                                  <td class="py-2.5 px-3 capitalize">{item.verifiedStatus || item.status}</td>
+                                  <td class="py-2.5 px-3">{item.durasiMangkir} mnt</td>
+                                  <td class="py-2.5 px-3 font-bold text-orange-600 dark:text-orange-400">
+                                    {item.poinKompensasi}
+                                  </td>
+                                </tr>
+                              )}
+                            </For>
+                            <Show when={detail().historyKompensasi.length === 0}>
+                              <tr>
+                                <td colspan="5" class="py-8 text-center text-secondary-400">
+                                  Tidak ada riwayat kompensasi.
+                                </td>
+                              </tr>
+                            </Show>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 class="font-bold text-xs text-secondary-700 mb-2 dark:text-white">Riwayat Pembayaran</h4>
+                      <div class="max-h-40 overflow-y-auto rounded-xl border border-secondary-100 dark:border-secondary-800">
+                        <table class="w-full text-left text-xs">
+                          <thead>
+                            <tr class="border-b border-secondary-100 bg-secondary-50/60 text-secondary-500 dark:border-secondary-800 dark:bg-secondary-800 uppercase text-[10px] font-bold">
+                              <th class="py-2.5 px-3">Tanggal</th>
+                              <th class="py-2.5 px-3">Menit</th>
+                              <th class="py-2.5 px-3">Keterangan</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                            <For each={detail().payments}>
+                              {(item) => (
+                                <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+                                  <td class="py-2.5 px-3 whitespace-nowrap">{fmtTanggal(item.tanggal)}</td>
+                                  <td class="py-2.5 px-3 font-bold text-emerald-600 dark:text-emerald-400">
+                                    {item.jumlahMenit} mnt
+                                  </td>
+                                  <td class="py-2.5 px-3">{item.keterangan || '-'}</td>
+                                </tr>
+                              )}
+                            </For>
+                            <Show when={detail().payments.length === 0}>
+                              <tr>
+                                <td colspan="3" class="py-6 text-center text-secondary-400">
+                                  Belum ada pembayaran kompensasi.
+                                </td>
+                              </tr>
+                            </Show>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Show>
+
+              <div class="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowKompensasiDetail(false)}
+                  class="px-4 py-2 border border-secondary-200 text-secondary-600 font-bold rounded-xl text-xs active:scale-95 transition-all dark:border-secondary-700"
+                >
+                  Tutup
+                </button>
               </div>
             </div>
           </div>

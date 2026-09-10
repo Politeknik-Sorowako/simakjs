@@ -2,6 +2,8 @@ import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { accountActivations, users } from '../models/schema';
 import { db } from '../utils/db';
+import { getFrontendBaseUrl } from '../utils/frontend-url';
+import { escapeHtml } from '../utils/html-escape';
 
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -41,10 +43,7 @@ export class AccountActivationService {
       return;
     }
 
-    const domainName = process.env.DOMAIN_NAME || 'localhost';
-    const protocol = domainName === 'localhost' ? 'http' : 'https';
-    const port = domainName === 'localhost' ? ':8080' : '';
-    const activationLink = `${protocol}://${domainName}${port}/aktivasi-akun?token=${token}`;
+    const activationLink = `${getFrontendBaseUrl()}/aktivasi-akun?token=${token}`;
 
     try {
       const resend = new Resend(resendApiKey);
@@ -55,10 +54,10 @@ export class AccountActivationService {
         html: `
           <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
             <h2 style="color: #1e3a8a; margin-top: 0; margin-bottom: 16px;">Selamat Datang di SIMAK Vokasi</h2>
-            <p style="color: #334155; font-size: 15px;">Halo <strong>${nama}</strong>,</p>
+            <p style="color: #334155; font-size: 15px;">Halo <strong>${escapeHtml(nama)}</strong>,</p>
             <p style="color: #334155; font-size: 15px;">Terima kasih telah mendaftar di Sistem Informasi Akademik Vokasi (SIMAK). Silakan aktifkan akun Anda dengan mengklik tombol di bawah ini:</p>
             <div style="margin: 28px 0; text-align: center;">
-              <a href="${activationLink}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">Aktifkan Akun Saya</a>
+              <a href="${escapeHtml(activationLink)}" style="background-color: #2563eb; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 15px; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">Aktifkan Akun Saya</a>
             </div>
             <p style="color: #64748b; font-size: 13px;">Tautan ini berlaku selama 24 jam. Jika Anda tidak merasa mendaftar akun di SIMAK Vokasi, abaikan email ini.</p>
           </div>
