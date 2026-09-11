@@ -107,7 +107,7 @@ export default function LaporanPeringatan() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Status & Riwayat Peringatan</h1>
+            <h1 class="page-title">Laporan Status & Riwayat Peringatan</h1>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
               Rekapitulasi pelanggaran dan kedisiplinan mahasiswa berdasarkan pasal
             </p>
@@ -124,7 +124,7 @@ export default function LaporanPeringatan() {
         {/* Filter Periode */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
           <div class="w-full sm:w-72">
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Periode Semester
             </label>
             <select
@@ -145,7 +145,7 @@ export default function LaporanPeringatan() {
               </For>
             </select>
           </div>
-          <div class="text-xs text-secondary-500 dark:text-secondary-400">
+          <div class="text-caption text-secondary-500 dark:text-secondary-400">
             <Show when={selectedPeriode()} fallback={<span>Menampilkan akumulasi seluruh periode</span>}>
               <span>
                 Menampilkan data periode:{' '}
@@ -211,7 +211,7 @@ export default function LaporanPeringatan() {
         <Show when={(rekapPasal()?.perPasal?.length || 0) > 0}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">
+              <h3 class="text-section font-bold text-secondary-800 dark:text-white mb-3">
                 Agregasi Top 10 Pasal Pelanggaran (Terbanyak)
               </h3>
               <PieChart
@@ -227,14 +227,18 @@ export default function LaporanPeringatan() {
             </div>
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
               <div>
-                <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Detail Agregasi Pasal</h3>
+                <h3 class="text-section font-bold text-secondary-800 dark:text-white mb-3">Detail Agregasi Pasal</h3>
                 <div class="overflow-x-auto max-h-[260px] overflow-y-auto">
-                  <table class="w-full text-left text-xs">
+                  <table class="w-full text-left text-table">
                     <thead class="sticky top-0 bg-white dark:bg-secondary-900">
                       <tr class="border-b border-secondary-100 dark:border-secondary-800">
-                        <th class="py-2 font-semibold text-secondary-400">Pasal / Jenis</th>
-                        <th class="py-2 text-center font-semibold text-secondary-400">Jumlah</th>
-                        <th class="py-2 text-center font-semibold text-secondary-400">Total Poin</th>
+                        <th class="py-2 font-semibold text-secondary-400 dark:text-secondary-300">Pasal / Jenis</th>
+                        <th class="py-2 text-center font-semibold text-secondary-400 dark:text-secondary-300">
+                          Jumlah
+                        </th>
+                        <th class="py-2 text-center font-semibold text-secondary-400 dark:text-secondary-300">
+                          Total Poin
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -261,10 +265,10 @@ export default function LaporanPeringatan() {
         {/* Table Riwayat with Search & Pagination */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Riwayat Pelanggaran Detail</h3>
+            <h3 class="text-section font-bold text-secondary-800 dark:text-white">Riwayat Pelanggaran Detail</h3>
             <div class="flex items-center gap-2 w-full sm:w-auto">
               <select
-                class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+                class="px-3 py-1.5 text-caption border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
                 value={limit()}
                 onChange={(e) => {
                   setLimit(Number(e.currentTarget.value));
@@ -279,7 +283,7 @@ export default function LaporanPeringatan() {
               <input
                 type="text"
                 placeholder="Cari NIM, Nama, atau Pelanggaran..."
-                class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white w-full sm:w-64"
+                class="px-3 py-1.5 text-caption border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white w-full sm:w-64"
                 value={search()}
                 onInput={(e) => handleSearchChange(e.currentTarget.value)}
               />
@@ -287,9 +291,9 @@ export default function LaporanPeringatan() {
           </div>
           <Suspense fallback={<TableLoadingFallback />}>
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full text-left text-table border-collapse">
                 <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                     <th class="py-3 px-5">Tanggal</th>
                     <th class="py-3 px-5">Mahasiswa</th>
                     <th class="py-3 px-5">Jenis Pelanggaran & Pasal</th>
@@ -303,7 +307,7 @@ export default function LaporanPeringatan() {
                     each={riwayatData()?.data || []}
                     fallback={
                       <tr>
-                        <td colspan="6" class="text-center py-8 text-secondary-400">
+                        <td colspan="6" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
                           Belum ada data pelanggaran
                         </td>
                       </tr>
@@ -326,12 +330,12 @@ export default function LaporanPeringatan() {
                         </td>
                         <td class="py-3 px-5">
                           <div class="font-bold text-secondary-800 dark:text-white">{item.namaMahasiswa || '-'}</div>
-                          <div class="text-[10px] text-secondary-400">{item.nim}</div>
+                          <div class="text-caption text-secondary-500 dark:text-secondary-300">{item.nim}</div>
                         </td>
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">
                           <div>{item.jenisPelanggaran}</div>
                           <Show when={item.nomorPasal}>
-                            <span class="inline-block text-[10px] text-brand-600 dark:text-brand-400 font-normal">
+                            <span class="inline-block text-caption text-brand-600 dark:text-brand-400 font-normal">
                               Pasal {item.nomorPasal}
                             </span>
                           </Show>
@@ -342,7 +346,7 @@ export default function LaporanPeringatan() {
                         <td class="py-3 px-5 text-secondary-600 dark:text-secondary-300 font-medium">
                           {item.pelapor || '-'}
                         </td>
-                        <td class="py-3 px-5 text-secondary-500">{item.keterangan}</td>
+                        <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{item.keterangan}</td>
                       </tr>
                     )}
                   </For>
@@ -350,8 +354,8 @@ export default function LaporanPeringatan() {
               </table>
             </div>
             <Show when={riwayatData()?.pagination && riwayatData()!.pagination.totalPages > 1}>
-              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
-                <span class="text-secondary-500">
+              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-caption">
+                <span class="text-secondary-500 dark:text-secondary-300">
                   Halaman {riwayatData()?.pagination.page} dari {riwayatData()?.pagination.totalPages}
                 </span>
                 <div class="flex gap-2">

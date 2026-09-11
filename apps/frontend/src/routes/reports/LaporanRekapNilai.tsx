@@ -13,7 +13,7 @@ function TableLoadingFallback() {
   return (
     <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
             <For each={Array.from({ length: 5 })}>
               {() => (
@@ -184,8 +184,8 @@ export default function LaporanRekapNilai() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Rekap Nilai</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan Rekap Nilai</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Rekapitulasi sebaran nilai mata kuliah (A s.d. E) dan evaluasi akademik per semester
             </p>
           </div>
@@ -205,11 +205,11 @@ export default function LaporanRekapNilai() {
         {/* Filter */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Periode Akademik
             </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
               value={selectedPeriode()}
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
             >
@@ -224,11 +224,11 @@ export default function LaporanRekapNilai() {
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Program Studi
             </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
               value={selectedProdi()}
               onChange={(e) => setSelectedProdi(e.currentTarget.value)}
             >
@@ -237,13 +237,13 @@ export default function LaporanRekapNilai() {
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Cari Mata Kuliah
             </label>
             <input
               type="text"
               placeholder="Kode atau Nama MK..."
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={mkSearch()}
               onInput={(e) => handleMkSearchChange(e.currentTarget.value)}
             />
@@ -254,16 +254,16 @@ export default function LaporanRekapNilai() {
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                 Matriks Sebaran Nilai Mata Kuliah (A s.d. E)
               </h3>
-              <p class="text-[10px] text-secondary-400">
+              <p class="text-caption text-secondary-400 dark:text-secondary-300">
                 Jumlah mahasiswa yang memperoleh grade nilai A, B, C, D, E pada tiap mata kuliah
               </p>
             </div>
             <div class="flex items-center gap-2">
               <select
-                class="px-3 py-1.5 text-xs border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+                class="px-3 py-1.5 text-caption border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
                 value={limit()}
                 onChange={(e) => {
                   setLimit(Number(e.currentTarget.value));
@@ -277,12 +277,12 @@ export default function LaporanRekapNilai() {
               </select>
               <Suspense
                 fallback={
-                  <span class="text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
+                  <span class="text-caption font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
                     … Mata Kuliah
                   </span>
                 }
               >
-                <span class="text-xs font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
+                <span class="text-caption font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
                   {matriksNilai()?.pagination?.total || 0} Mata Kuliah
                 </span>
               </Suspense>
@@ -291,9 +291,9 @@ export default function LaporanRekapNilai() {
 
           <Suspense fallback={<TableLoadingFallback />}>
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full text-left text-table border-collapse">
                 <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                     <th class="py-3 px-4">Kode MK</th>
                     <th class="py-3 px-4">Mata Kuliah</th>
                     <th class="py-3 px-4 text-center">SKS</th>
@@ -309,7 +309,7 @@ export default function LaporanRekapNilai() {
                       D
                     </th>
                     <th class="py-3 px-3 text-center bg-rose-50/50 dark:bg-rose-950/20 text-rose-700 font-bold">E</th>
-                    <th class="py-3 px-3 text-center text-secondary-400">Belum Ada</th>
+                    <th class="py-3 px-3 text-center text-secondary-400 dark:text-secondary-300">Belum Ada</th>
                     <th class="py-3 px-4 text-center font-bold">Total Peserta</th>
                     <th class="py-3 px-4 text-center font-bold">% Kelulusan</th>
                     <th class="py-3 px-4 text-center font-bold">Aksi</th>
@@ -320,7 +320,7 @@ export default function LaporanRekapNilai() {
                     each={matriksNilai()?.data || []}
                     fallback={
                       <tr>
-                        <td colspan="13" class="text-center py-8 text-secondary-400">
+                        <td colspan="13" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
                           Tidak ada data matriks nilai untuk periode yang dipilih
                         </td>
                       </tr>
@@ -349,13 +349,15 @@ export default function LaporanRekapNilai() {
                         <td class="py-3 px-3 text-center font-bold text-rose-600 bg-rose-50/30 dark:bg-rose-950/10">
                           {row.gradeE}
                         </td>
-                        <td class="py-3 px-3 text-center text-secondary-400">{row.gradeNull}</td>
+                        <td class="py-3 px-3 text-center text-secondary-400 dark:text-secondary-300">
+                          {row.gradeNull}
+                        </td>
                         <td class="py-3 px-4 text-center font-bold text-secondary-800 dark:text-white">
                           {row.totalPeserta}
                         </td>
                         <td class="py-3 px-4 text-center">
                           <span
-                            class={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            class={`px-2 py-0.5 rounded-full text-caption font-bold ${
                               row.persenLulus >= 85
                                 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
                                 : row.persenLulus >= 70
@@ -375,7 +377,7 @@ export default function LaporanRekapNilai() {
                                 namaMk: row.namaMk,
                               })
                             }
-                            class="px-2.5 py-1 text-[11px] font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg dark:bg-brand-900/40 dark:text-brand-300"
+                            class="px-2.5 py-1 text-caption font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg dark:bg-brand-900/40 dark:text-brand-300"
                           >
                             Detail
                           </button>
@@ -387,8 +389,8 @@ export default function LaporanRekapNilai() {
               </table>
             </div>
             <Show when={matriksNilai()?.pagination && (matriksNilai()?.pagination.totalPages || 0) > 1}>
-              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-xs">
-                <span class="text-secondary-500">
+              <div class="px-5 py-3 border-t border-secondary-100 dark:border-secondary-800 flex justify-between items-center text-caption">
+                <span class="text-secondary-500 dark:text-secondary-300">
                   Halaman {matriksNilai()?.pagination.page} dari {matriksNilai()?.pagination.totalPages}
                 </span>
                 <div class="flex gap-2">
@@ -416,12 +418,12 @@ export default function LaporanRekapNilai() {
         <Show when={rekapProdi()}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Rata-rata IP per Program Studi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rata-rata IP per Program Studi</h3>
             </div>
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full text-left text-table border-collapse">
                 <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                     <th class="py-3 px-5">Program Studi</th>
                     <th class="py-3 px-5 text-center">Total Mahasiswa</th>
                     <th class="py-3 px-5 text-center">Rata-rata IP</th>
@@ -447,13 +449,13 @@ export default function LaporanRekapNilai() {
 
         {/* Pencarian Individual Mahasiswa */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-          <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+          <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
             Pencarian Detail Nilai Mahasiswa
           </label>
           <input
             type="text"
             placeholder="Ketik NIM atau Nama Mahasiswa..."
-            class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+            class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             value={mhsSearch()}
             onInput={(e) => handleMhsSearchChange(e.currentTarget.value)}
           />
@@ -463,13 +465,13 @@ export default function LaporanRekapNilai() {
         <Show when={mhsSearch()}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Hasil Pencarian Mahasiswa</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Hasil Pencarian Mahasiswa</h3>
             </div>
             <Suspense fallback={<TableLoadingFallback />}>
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse">
+                <table class="w-full text-left text-table border-collapse">
                   <thead>
-                    <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                       <th class="py-3 px-5">NIM</th>
                       <th class="py-3 px-5">Nama</th>
                       <th class="py-3 px-5">Status</th>
@@ -483,14 +485,14 @@ export default function LaporanRekapNilai() {
                           <td class="py-3 px-5 font-mono text-secondary-600">{m.nim}</td>
                           <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
                           <td class="py-3 px-5">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700">
+                            <span class="px-2 py-0.5 rounded-full text-caption font-bold bg-green-50 text-green-700">
                               {m.status}
                             </span>
                           </td>
                           <td class="py-3 px-5 text-center">
                             <button
                               onClick={() => setSelectedMhsId(selectedMhsId() === m.id ? null : m.id)}
-                              class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
+                              class="text-caption font-bold text-brand-600 hover:text-brand-700 underline"
                             >
                               {selectedMhsId() === m.id ? 'Tutup' : 'Lihat Nilai'}
                             </button>
@@ -514,28 +516,28 @@ export default function LaporanRekapNilai() {
                 <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
                   <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center">
                     <div>
-                      <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
+                      <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                         Detail Nilai: {data.mahasiswa.nama}
                       </h3>
-                      <p class="text-[10px] text-secondary-400">
+                      <p class="text-caption text-secondary-400 dark:text-secondary-300">
                         {data.mahasiswa.nim} - {data.mahasiswa.prodi}
                       </p>
                     </div>
                     <div class="flex items-center gap-4">
                       <div class="text-right">
-                        <p class="text-[10px] text-secondary-400">Total SKS</p>
-                        <p class="text-sm font-bold text-secondary-800 dark:text-white">{data.summary.totalSks}</p>
+                        <p class="text-caption text-secondary-400 dark:text-secondary-300">Total SKS</p>
+                        <p class="text-base font-bold text-secondary-800 dark:text-white">{data.summary.totalSks}</p>
                       </div>
                       <div class="text-right bg-brand-50 dark:bg-brand-900/30 px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800">
-                        <p class="text-[10px] text-brand-600 dark:text-brand-400 font-bold">IPK</p>
-                        <p class="text-sm font-bold text-brand-700 dark:text-brand-300">{data.summary.ip}</p>
+                        <p class="text-caption text-brand-600 dark:text-brand-400 font-bold">IPK</p>
+                        <p class="text-base font-bold text-brand-700 dark:text-brand-300">{data.summary.ip}</p>
                       </div>
                     </div>
                   </div>
 
                   <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs">
-                      <thead class="bg-secondary-50 dark:bg-secondary-800/50 text-secondary-500 font-medium border-b border-secondary-100 dark:border-secondary-800 uppercase tracking-wider text-[10px]">
+                    <table class="w-full text-left text-table">
+                      <thead class="bg-secondary-50 dark:bg-secondary-800/50 text-secondary-500 font-medium border-b border-secondary-100 dark:border-secondary-800 uppercase tracking-wider text-caption">
                         <tr>
                           <th class="py-3 px-5">Kode MK</th>
                           <th class="py-3 px-5">Mata Kuliah</th>
@@ -549,7 +551,9 @@ export default function LaporanRekapNilai() {
                         <For each={data.mataKuliah}>
                           {(mk) => (
                             <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                              <td class="py-3 px-5 font-mono text-secondary-500">{mk.kodeMk}</td>
+                              <td class="py-3 px-5 font-mono text-secondary-500 dark:text-secondary-300">
+                                {mk.kodeMk}
+                              </td>
                               <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{mk.namaMk}</td>
                               <td class="py-3 px-5 text-center">{mk.sks}</td>
                               <td class="py-3 px-5 text-center">{mk.nilaiAngka || '-'}</td>
@@ -575,7 +579,7 @@ export default function LaporanRekapNilai() {
                   <h2 class="text-lg font-bold text-secondary-800 dark:text-white">
                     Detail Nilai & BAP: {selectedMkDetail()?.namaMk}
                   </h2>
-                  <p class="text-xs text-secondary-500 font-mono">
+                  <p class="text-caption text-secondary-500 dark:text-secondary-300 font-mono">
                     Kode: {selectedMkDetail()?.kodeMk} | Periode: {selectedPeriode() || 'Aktif'}
                   </p>
                 </div>
@@ -588,11 +592,19 @@ export default function LaporanRekapNilai() {
               </div>
 
               <Suspense
-                fallback={<div class="py-8 text-center text-xs text-secondary-400">Memuat detail nilai...</div>}
+                fallback={
+                  <div class="py-8 text-center text-caption text-secondary-400 dark:text-secondary-300">
+                    Memuat detail nilai...
+                  </div>
+                }
               >
                 <Show
                   when={detailData()}
-                  fallback={<div class="py-8 text-center text-xs text-secondary-400">Memuat detail nilai...</div>}
+                  fallback={
+                    <div class="py-8 text-center text-caption text-secondary-400 dark:text-secondary-300">
+                      Memuat detail nilai...
+                    </div>
+                  }
                 >
                   {(() => {
                     const d = detailData()!;
@@ -658,7 +670,7 @@ export default function LaporanRekapNilai() {
                               printWin.document.write(html);
                               printWin.document.close();
                             }}
-                            class="px-4 py-2 text-xs font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-lg shadow-sm"
+                            class="px-4 py-2 text-caption font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-lg shadow-sm"
                           >
                             🖨️ Cetak Daftar Nilai
                           </button>
@@ -717,18 +729,18 @@ export default function LaporanRekapNilai() {
                               printWin.document.write(html);
                               printWin.document.close();
                             }}
-                            class="px-4 py-2 text-xs font-bold bg-secondary-700 text-white hover:bg-secondary-800 rounded-lg shadow-sm"
+                            class="px-4 py-2 text-caption font-bold bg-secondary-700 text-white hover:bg-secondary-800 rounded-lg shadow-sm"
                           >
                             📄 Lihat & Cetak BAP Perkuliahan
                           </button>
                         </div>
 
                         <div class="space-y-3">
-                          <h4 class="text-xs font-bold uppercase text-secondary-500 tracking-wider">
+                          <h4 class="text-caption font-bold uppercase text-secondary-500 dark:text-secondary-300 tracking-wider">
                             Daftar Nilai Peserta Kelas
                           </h4>
                           <div class="max-h-60 overflow-y-auto border border-secondary-100 dark:border-secondary-800 rounded-lg">
-                            <table class="w-full text-left text-xs">
+                            <table class="w-full text-left text-table">
                               <thead class="bg-secondary-50 dark:bg-secondary-800 text-secondary-500 font-semibold sticky top-0">
                                 <tr>
                                   <th class="py-2 px-3">NIM</th>
@@ -754,11 +766,11 @@ export default function LaporanRekapNilai() {
                         </div>
 
                         <div class="space-y-3">
-                          <h4 class="text-xs font-bold uppercase text-secondary-500 tracking-wider">
+                          <h4 class="text-caption font-bold uppercase text-secondary-500 dark:text-secondary-300 tracking-wider">
                             BAP Jurnal Perkuliahan (${d.bapList?.length || 0} Pertemuan)
                           </h4>
                           <div class="max-h-48 overflow-y-auto border border-secondary-100 dark:border-secondary-800 rounded-lg">
-                            <table class="w-full text-left text-xs">
+                            <table class="w-full text-left text-table">
                               <thead class="bg-secondary-50 dark:bg-secondary-800 text-secondary-500 font-semibold sticky top-0">
                                 <tr>
                                   <th class="py-2 px-3 text-center">P.Ke</th>
