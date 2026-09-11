@@ -10,7 +10,7 @@ function TableLoadingFallback() {
   return (
     <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
             <For each={Array.from({ length: 5 })}>
               {() => (
@@ -234,7 +234,7 @@ export default function LaporanPresensiKelas() {
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 class="page-title">Laporan Rekapitulasi Presensi</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Pemantauan persentase kehadiran perkuliahan per kelas dan per mahasiswa
             </p>
           </div>
@@ -260,7 +260,7 @@ export default function LaporanPresensiKelas() {
         </div>
 
         {/* Tab Navigation */}
-        <div class="flex border-b border-secondary-200 dark:border-secondary-800 text-sm font-semibold">
+        <div class="flex border-b border-secondary-200 dark:border-secondary-800 text-base font-semibold">
           <button
             onClick={() => {
               setActiveTab('kelas');
@@ -314,7 +314,7 @@ export default function LaporanPresensiKelas() {
               Periode Semester
             </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
               value={selectedPeriode()}
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
             >
@@ -334,7 +334,7 @@ export default function LaporanPresensiKelas() {
               Program Studi
             </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
               value={selectedProdi()}
               onChange={(e) => setSelectedProdi(e.currentTarget.value)}
             >
@@ -350,7 +350,7 @@ export default function LaporanPresensiKelas() {
             <input
               type="text"
               placeholder={activeTab() === 'kelas' ? 'Kode MK, Nama MK, Kelas...' : 'NIM atau Nama...'}
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={search()}
               onInput={(e) => handleSearchChange(e.currentTarget.value)}
             />
@@ -361,7 +361,7 @@ export default function LaporanPresensiKelas() {
         <Show when={activeTab() === 'kelas'}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                 Daftar Persentase Kehadiran per Kelas Kuliah
               </h3>
               <div class="flex items-center gap-2">
@@ -510,7 +510,7 @@ export default function LaporanPresensiKelas() {
         <Show when={activeTab() === 'mahasiswa'}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                 Daftar Persentase Kehadiran per Mahasiswa
               </h3>
               <div class="flex items-center gap-2">
@@ -670,7 +670,7 @@ export default function LaporanPresensiKelas() {
                               body { font-family: sans-serif; padding: 20px; color: #333; }
                               h2 { text-align: center; margin-bottom: 5px; }
                               p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
-                              table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; }
+                              table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
                               th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
                               th { background-color: #f4f4f4; text-align: center; }
                               .center { text-align: center; }

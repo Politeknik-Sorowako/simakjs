@@ -10,7 +10,7 @@ function TableLoadingFallback() {
   return (
     <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
             <For each={Array.from({ length: 5 })}>
               {() => (
@@ -108,7 +108,7 @@ export default function LaporanPeringatan() {
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 class="page-title">Laporan Status & Riwayat Peringatan</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Rekapitulasi pelanggaran dan kedisiplinan mahasiswa berdasarkan pasal
             </p>
           </div>
@@ -128,7 +128,7 @@ export default function LaporanPeringatan() {
               Periode Semester
             </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white font-medium"
               value={selectedPeriode()}
               onChange={(e) => {
                 setSelectedPeriode(e.currentTarget.value);
