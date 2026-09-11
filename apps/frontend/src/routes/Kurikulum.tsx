@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -7,6 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import {
   Kurikulum as IKurikulum,
@@ -22,11 +23,16 @@ import { API_URL, fetchApi } from '../utils/api';
 export default function Kurikulum() {
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const workspace = useWorkspace();
   const prodiFilter = () => workspace.activeProdiId() ?? undefined;
 
   const [kurikulums, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit(), prodiId: prodiFilter() }),
+    () => ({ search: debouncedSearch(), page: page(), limit: limit(), prodiId: prodiFilter() }),
     ({ search, page, limit, prodiId }) => kurikulumController.getAll(search, page, limit, prodiId),
   );
 
@@ -396,93 +402,99 @@ export default function Kurikulum() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                resetPage();
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(e.currentTarget.value);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>
         </div>
 
         {/* Kurikulum Table */}
-        <Table
-          headers={[
-            <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-              Kode
-            </SortableHeader>,
-            <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-              Nama Kurikulum
-            </SortableHeader>,
-            <SortableHeader field="programStudiId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-              Program Studi
-            </SortableHeader>,
-            'Mulai Berlaku',
-            'SKS (L/W/P)',
-            'Status',
-            'Aksi',
-          ]}
-        >
-          <Show when={kurikulums.loading}>
-            <tr>
-              <td colspan="7" class="p-8 text-center text-secondary-500">
-                Memuat data...
-              </td>
-            </tr>
-          </Show>
-          <Show when={!kurikulums.loading && (kurikulums()?.data?.length ?? 0) === 0}>
-            <tr>
-              <td colspan="7" class="p-8 text-center text-secondary-500">
-                Belum ada data kurikulum.
-              </td>
-            </tr>
-          </Show>
-          <For each={sortedData()}>
-            {(item) => (
-              <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
-                <td class="px-6 py-4 text-sm font-medium text-secondary-900 dark:text-white">{item.kode}</td>
-                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.nama}</td>
-                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
-                  {item.programStudi?.nama || '-'}
-                </td>
-                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.semesterMulai}</td>
-                <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
-                  {item.jumlahSksLulus} / {item.jumlahSksWajib} / {item.jumlahSksPilihan}
-                </td>
-                <td class="px-6 py-4 text-sm">
-                  <span
-                    class={`px-2 py-1 rounded-full text-xs font-semibold ${item.isAktif ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-secondary-100 text-secondary-800 dark:bg-secondary-800 dark:text-secondary-200'}`}
-                  >
-                    {item.isAktif ? 'Aktif' : 'Tidak Aktif'}
-                  </span>
-                </td>
-                <td class="px-6 py-4 text-sm space-x-2">
-                  <Button variant="primary" onClick={() => openManageModal(item.id)}>
-                    MK
-                  </Button>
-                  <Button variant="secondary" onClick={() => openEditModal(item)}>
-                    Edit
-                  </Button>
-                  <Button variant="secondary" onClick={() => openDuplicateModal(item)}>
-                    Duplikasi
-                  </Button>
-                  <Button variant="danger" onClick={() => handleDelete(item.id)}>
-                    Hapus
-                  </Button>
+        <Suspense fallback={<TableLoadingFallback />}>
+          <Table
+            headers={[
+              <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kode
+              </SortableHeader>,
+              <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Nama Kurikulum
+              </SortableHeader>,
+              <SortableHeader field="programStudiId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Program Studi
+              </SortableHeader>,
+              'Mulai Berlaku',
+              'SKS (L/W/P)',
+              'Status',
+              'Aksi',
+            ]}
+          >
+            <Show when={kurikulums.loading}>
+              <tr>
+                <td colspan="7" class="p-8 text-center text-secondary-500">
+                  Memuat data...
                 </td>
               </tr>
-            )}
-          </For>
-        </Table>
+            </Show>
+            <Show when={!kurikulums.loading && (kurikulums()?.data?.length ?? 0) === 0}>
+              <tr>
+                <td colspan="7" class="p-8 text-center text-secondary-500">
+                  Belum ada data kurikulum.
+                </td>
+              </tr>
+            </Show>
+            <For each={sortedData()}>
+              {(item) => (
+                <tr class="hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
+                  <td class="px-6 py-4 text-sm font-medium text-secondary-900 dark:text-white">{item.kode}</td>
+                  <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.nama}</td>
+                  <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
+                    {item.programStudi?.nama || '-'}
+                  </td>
+                  <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">{item.semesterMulai}</td>
+                  <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
+                    {item.jumlahSksLulus} / {item.jumlahSksWajib} / {item.jumlahSksPilihan}
+                  </td>
+                  <td class="px-6 py-4 text-sm">
+                    <span
+                      class={`px-2 py-1 rounded-full text-xs font-semibold ${item.isAktif ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-secondary-100 text-secondary-800 dark:bg-secondary-800 dark:text-secondary-200'}`}
+                    >
+                      {item.isAktif ? 'Aktif' : 'Tidak Aktif'}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm space-x-2">
+                    <Button variant="primary" onClick={() => openManageModal(item.id)}>
+                      MK
+                    </Button>
+                    <Button variant="secondary" onClick={() => openEditModal(item)}>
+                      Edit
+                    </Button>
+                    <Button variant="secondary" onClick={() => openDuplicateModal(item)}>
+                      Duplikasi
+                    </Button>
+                    <Button variant="danger" onClick={() => handleDelete(item.id)}>
+                      Hapus
+                    </Button>
+                  </td>
+                </tr>
+              )}
+            </For>
+          </Table>
 
-        {/* Pagination */}
-        <Show when={kurikulums() && kurikulums()!.meta.totalPages > 0}>
-          <Pagination
-            currentPage={page()}
-            totalPages={kurikulums()!.meta.totalPages}
-            total={kurikulums()!.meta.total}
-            limit={limit()}
-            onPageChange={setPage}
-            onLimitChange={setLimit}
-          />
-        </Show>
+          {/* Pagination */}
+          <Show when={kurikulums() && kurikulums()!.meta.totalPages > 0}>
+            <Pagination
+              currentPage={page()}
+              totalPages={kurikulums()!.meta.totalPages}
+              total={kurikulums()!.meta.total}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={setLimit}
+            />
+          </Show>
+        </Suspense>
 
         {/* Modal CRUD Kurikulum */}
         <Modal

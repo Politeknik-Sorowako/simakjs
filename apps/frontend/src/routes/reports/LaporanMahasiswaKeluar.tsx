@@ -24,8 +24,8 @@ export default function LaporanMahasiswaKeluar() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Mahasiswa Keluar / Dropout</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan Mahasiswa Keluar / Dropout</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Rekapitulasi mahasiswa keluar, dropout, pindah, dan wafat
             </p>
           </div>
@@ -91,7 +91,7 @@ export default function LaporanMahasiswaKeluar() {
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-                    <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Jenis Mahasiswa Keluar</h3>
+                    <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Jenis Mahasiswa Keluar</h3>
                     <PieChart
                       labels={(s.perStatus || []).map((p) => p.status)}
                       data={(s.perStatus || []).map((p) => p.jumlah)}
@@ -100,7 +100,7 @@ export default function LaporanMahasiswaKeluar() {
                     />
                   </div>
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-                    <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">
+                    <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">
                       Mahasiswa Keluar per Prodi
                     </h3>
                     <BarChart

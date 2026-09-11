@@ -38,8 +38,8 @@ export default function LaporanKeuangan() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Keuangan per Periode</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan Keuangan per Periode</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Rekapitulasi tagihan dan pembayaran per periode akademik
             </p>
           </div>
@@ -55,11 +55,11 @@ export default function LaporanKeuangan() {
         </div>
 
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-          <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+          <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
             Periode Akademik
           </label>
           <select
-            class="w-full sm:w-64 px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+            class="w-full sm:w-64 px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             value={selectedPeriode()}
             onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
           >
@@ -137,7 +137,7 @@ export default function LaporanKeuangan() {
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-                    <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Status Pembayaran</h3>
+                    <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Pembayaran</h3>
                     <PieChart
                       labels={['Lunas', 'Cicilan', 'Belum Bayar']}
                       data={[
@@ -150,7 +150,7 @@ export default function LaporanKeuangan() {
                     />
                   </div>
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-                    <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Tunggakan per Prodi</h3>
+                    <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Tunggakan per Prodi</h3>
                     <BarChart
                       labels={(s.rekapPerProdi || []).map(
                         (p: { prodiNama: string; total: number; terbayar: number; tunggakan: number }) => p.prodiNama,
@@ -172,12 +172,12 @@ export default function LaporanKeuangan() {
                 </div>
                 <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
                   <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-                    <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Rekap per Program Studi</h3>
+                    <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rekap per Program Studi</h3>
                   </div>
                   <div class="overflow-x-auto">
-                    <table class="w-full text-left text-xs border-collapse">
+                    <table class="w-full text-left text-table border-collapse">
                       <thead>
-                        <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                        <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                           <th class="py-3 px-5">Prodi</th>
                           <th class="py-3 px-5 text-center">Total</th>
                           <th class="py-3 px-5 text-center">Terbayar</th>

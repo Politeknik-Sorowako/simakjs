@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { KrsMassalModal } from '../components/krs/KrsMassalModal';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -8,6 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -25,6 +26,10 @@ export default function Krs() {
   const userEmail = () => auth.user()?.email;
 
   const mainPagination = usePagination();
+  const [debouncedMainSearch, setDebouncedMainSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const [sortBy, setSortBy] = createSignal('mahasiswa');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
@@ -101,7 +106,7 @@ export default function Krs() {
     },
   );
 
-  const sortedPendingStudents = createMemo(() => {
+  const sortedPendingStudents = () => {
     const list = pendingStudents() || [];
     const field = pickerSortBy();
     const order = pickerSortOrder();
@@ -111,14 +116,14 @@ export default function Krs() {
       const cmp = String(aVal).localeCompare(String(bVal), 'id');
       return order === 'asc' ? cmp : -cmp;
     });
-  });
+  };
 
-  const paginatedPendingStudents = createMemo(() => {
+  const paginatedPendingStudents = () => {
     const list = sortedPendingStudents();
     const p = pickerPagination.page();
     const l = pickerPagination.limit();
     return list.slice((p - 1) * l, p * l);
-  });
+  };
 
   // Load Mahasiswa profile if current user is Mahasiswa
   const [mahasiswaProfile] = createResource(
@@ -136,7 +141,7 @@ export default function Krs() {
   // Fetch KRS data (filtered dynamically)
   const [krsData, { refetch }] = createResource(
     () => ({
-      search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : mainPagination.search(),
+      search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : debouncedMainSearch(),
       page: mainPagination.page(),
       limit: mainPagination.limit(),
       mhsLoaded: role() === 'mahasiswa' ? !!mahasiswaProfile() : true,
@@ -152,7 +157,7 @@ export default function Krs() {
     },
   );
 
-  const sortedKrsData = createMemo(() => {
+  const sortedKrsData = () => {
     const items = krsData()?.data || [];
     const field = sortBy();
     const order = sortOrder();
@@ -179,7 +184,7 @@ export default function Krs() {
       const cmp = String(aVal).localeCompare(String(bVal), 'id');
       return order === 'asc' ? cmp : -cmp;
     });
-  });
+  };
 
   // Rencana Studi & Validasi
   const [rencanaStudi, { refetch: refetchRencana }] = createResource(
@@ -513,16 +518,17 @@ export default function Krs() {
                 value={mainPagination.search()}
                 onInput={(e) => {
                   mainPagination.setSearch(e.currentTarget.value);
-                  mainPagination.resetPage();
+                  clearTimeout(searchDebounceTimer);
+                  searchDebounceTimer = setTimeout(() => {
+                    setDebouncedMainSearch(e.currentTarget.value);
+                    mainPagination.resetPage();
+                  }, 400);
                 }}
               />
             </div>
           </Show>
 
-          <Show
-            when={!krsData.loading}
-            fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-          >
+          <Suspense fallback={<TableLoadingFallback />}>
             <Table
               headers={[
                 <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
@@ -600,7 +606,7 @@ export default function Krs() {
                 onLimitChange={mainPagination.setLimit}
               />
             </Show>
-          </Show>
+          </Suspense>
         </Show>
 
         <Show when={activeTab() === 'massal' && role() !== 'mahasiswa'}>
@@ -621,10 +627,7 @@ export default function Krs() {
             </Button>
           </div>
 
-          <Show
-            when={!pendingStudents.loading}
-            fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-          >
+          <Suspense fallback={<TableLoadingFallback />}>
             <Table
               headers={[
                 'Pilih',
@@ -712,7 +715,7 @@ export default function Krs() {
                 onLimitChange={pickerPagination.setLimit}
               />
             </Show>
-          </Show>
+          </Suspense>
         </Show>
 
         {/* Modal Add KRS */}

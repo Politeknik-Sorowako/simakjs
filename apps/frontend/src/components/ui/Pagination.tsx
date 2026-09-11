@@ -27,14 +27,14 @@ export function Pagination(props: PaginationProps) {
 
   return (
     <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4">
-      <div class="flex items-center gap-3 text-xs text-secondary-500 dark:text-secondary-400">
+      <div class="flex items-center gap-3 text-caption text-secondary-500 dark:text-secondary-400">
         <span>
           Menampilkan {props.total > 0 ? start() : 0}–{end()} dari {props.total} data
         </span>
         <div class="flex items-center gap-1.5">
           <span>Baris:</span>
           <select
-            class="rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-xs px-2 py-1 text-secondary-700 dark:text-secondary-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            class="rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-caption px-2 py-1 text-secondary-700 dark:text-secondary-300 focus:outline-none focus:ring-1 focus:ring-primary-500"
             value={props.limit}
             onChange={(e) => props.onLimitChange(Number(e.currentTarget.value))}
           >
@@ -50,13 +50,13 @@ export function Pagination(props: PaginationProps) {
           type="button"
           disabled={props.currentPage <= 1}
           onClick={() => props.onPageChange(props.currentPage - 1)}
-          class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          class="px-3 py-1.5 text-caption font-semibold rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           &lsaquo; Prev
         </button>
 
         <Show when={props.totalPages > 0}>
-          <div class="flex items-center gap-1.5 text-xs text-secondary-600 dark:text-secondary-300">
+          <div class="flex items-center gap-1.5 text-caption text-secondary-600 dark:text-secondary-300">
             <input
               type="number"
               min={1}
@@ -68,7 +68,7 @@ export function Pagination(props: PaginationProps) {
                 if (e.key === 'Enter') handleJump();
               }}
               onBlur={handleJump}
-              class="w-14 text-center rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              class="w-14 text-center rounded border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-1.5 py-1 text-caption focus:outline-none focus:ring-1 focus:ring-primary-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <span>/ {props.totalPages}</span>
           </div>
@@ -78,7 +78,7 @@ export function Pagination(props: PaginationProps) {
           type="button"
           disabled={props.currentPage >= props.totalPages}
           onClick={() => props.onPageChange(props.currentPage + 1)}
-          class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          class="px-3 py-1.5 text-caption font-semibold rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           Next &rsaquo;
         </button>

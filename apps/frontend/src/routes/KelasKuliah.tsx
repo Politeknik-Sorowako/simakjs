@@ -1,5 +1,5 @@
 import { useNavigate } from '@solidjs/router';
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -10,6 +10,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -62,14 +63,18 @@ export default function KelasKuliah() {
   const workspace = useWorkspace();
 
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
   const [selectedMatkulFilter, setSelectedMatkulFilter] = createSignal<number | undefined>(undefined);
   const [selectedDosenFilter, setSelectedDosenFilter] = createSignal<number | undefined>(undefined);
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   // Fetch Kelas Data
   const [kelas, { refetch }] = createResource(
     () => ({
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
       prodiId: workspace.activeProdiId(),
@@ -398,7 +403,11 @@ export default function KelasKuliah() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              resetPage();
+              clearTimeout(searchDebounceTimer);
+              searchDebounceTimer = setTimeout(() => {
+                setDebouncedSearch(e.currentTarget.value);
+                resetPage();
+              }, 400);
             }}
           />
           <SearchableSelect
@@ -445,10 +454,7 @@ export default function KelasKuliah() {
           </Show>
         </div>
 
-        <Show
-          when={!kelas.loading}
-          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Table
             headers={[
               <SortableHeader field="namaKelas" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
@@ -545,7 +551,7 @@ export default function KelasKuliah() {
               onLimitChange={setLimit}
             />
           </Show>
-        </Show>
+        </Suspense>
 
         {/* Modal Add/Edit Kelas */}
         <Modal

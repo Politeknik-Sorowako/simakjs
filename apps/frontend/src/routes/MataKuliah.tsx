@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -8,6 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { bahanKajianController } from '../controllers/bahanKajianController';
@@ -27,6 +28,10 @@ export default function MataKuliah() {
   const isAdmin = () => auth.hasRole(['admin']);
   const [showImportModal, setShowImportModal] = createSignal(false);
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   // Filters
   const filterProdi = () => ws.activeProdiId() ?? undefined;
@@ -66,7 +71,7 @@ export default function MataKuliah() {
   // Fetch Mata Kuliah Data (always with kurikulum filter)
   const [matkuls, { refetch }] = createResource(
     () => ({
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
       kurikulumId: filterKurikulum(),
@@ -302,7 +307,11 @@ export default function MataKuliah() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                resetPage();
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(e.currentTarget.value);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>
@@ -344,10 +353,7 @@ export default function MataKuliah() {
           </div>
         </div>
 
-        <Show
-          when={!matkuls.loading}
-          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Show when={matkuls.error}>
             <div class="p-4 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
               Gagal memuat data: {String(matkuls.error)}
@@ -428,7 +434,7 @@ export default function MataKuliah() {
             onPageChange={setPage}
             onLimitChange={setLimit}
           />
-        </Show>
+        </Suspense>
 
         <Modal
           show={showModal()}

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { settingsController } from '../controllers/settingsController';
 import { eden } from '../utils/eden';
 
-export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
+export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed?: boolean; onExpand?: () => void }) {
   const auth = useAuth();
   const role = () => auth.user()?.role;
   const location = useLocation();
@@ -144,15 +144,20 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
   return (
     <aside
-      class={`fixed inset-y-0 left-0 z-40 w-64 bg-brand-800 border-r border-brand-900/60 text-secondary-100 min-h-screen flex flex-col shadow-2xl transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
-        props.isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
+      class={`fixed inset-y-0 left-0 z-40 w-64 bg-brand-800 border-r border-brand-900/60 text-secondary-100 min-h-screen flex flex-col shadow-2xl transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
+        props.collapsed ? 'sidebar-collapsed' : ''
+      } ${props.isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      onClick={() => {
+        if (props.collapsed) props.onExpand?.();
+      }}
     >
       {/* Brand Header */}
-      <div class="h-16 flex items-center justify-between border-b border-brand-900/60 bg-brand-900 px-6">
+      <div class="h-16 flex items-center justify-between border-b border-brand-900/60 bg-brand-900 px-6 sidebar-brand-header">
         <div class="flex items-center gap-3">
           <img src={logoImg} alt="Logo" class="h-8 w-8 object-contain rounded-md" />
-          <span class="text-sm font-bold text-white tracking-wider uppercase">Politeknik Sorowako</span>
+          <span class="text-caption font-bold text-white tracking-wider uppercase sidebar-brand-text">
+            Politeknik Sorowako
+          </span>
         </div>
 
         {/* Mobile Close Button */}
@@ -168,7 +173,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
       {/* Nav Menu */}
       <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-        <div class="px-3 mb-2 text-[10px] font-semibold text-secondary-300/70 uppercase tracking-widest">
+        <div class="px-3 mb-2 text-fine font-semibold text-secondary-300 uppercase tracking-widest sidebar-section-title">
           Menu Utama
         </div>
 
@@ -178,7 +183,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           onClick={() => props.onClose()}
           activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
           inactiveClass="hover:bg-brand-800/60 hover:text-white"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-all duration-150"
         >
           <svg
             class="w-5 h-5 text-accent-200/70 group-hover:text-white transition-colors"
@@ -199,7 +204,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         {/* PMB - Calon Mahasiswa Only */}
         <Show when={isCalonMhs()}>
           <div class="pt-2">
-            <div class="px-3 mb-2 text-[10px] font-semibold text-secondary-300/70 uppercase tracking-widest">
+            <div class="px-3 mb-2 text-fine font-semibold text-secondary-300 uppercase tracking-widest sidebar-section-title">
               Admisi
             </div>
             <A
@@ -207,7 +212,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               onClick={() => props.onClose()}
               activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
               inactiveClass="hover:bg-brand-800/60 hover:text-white"
-              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-150"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-all duration-150"
             >
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -222,7 +227,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
             <button
               onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Pendaftaran</span>
               <svg
@@ -236,13 +241,13 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isAdmisiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <A
                   href="/admisi/sesi"
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -259,7 +264,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -281,7 +286,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsMasterOpen(!isMasterOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Data Master</span>
               <svg
@@ -295,13 +300,13 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isMasterOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <A
                   href="/program-studi"
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -318,7 +323,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -335,7 +340,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -352,7 +357,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -369,7 +374,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -391,7 +396,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsPerencanaanOpen(!isPerencanaanOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Persiapan Semester</span>
               <svg
@@ -405,8 +410,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isPerencanaanOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
-                <div class="px-3 pt-2 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
+                <div class="px-3 pt-2 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">
                   1. Kurikulum OBE
                 </div>
                 <Show when={isAdmin() || isProdi()}>
@@ -415,7 +420,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -440,7 +445,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -459,7 +464,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -478,7 +483,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -497,7 +502,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -516,7 +521,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -530,7 +535,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   </A>
                 </Show>
 
-                <div class="px-3 pt-3 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
+                <div class="px-3 pt-3 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">
                   2. Mata Kuliah & Kurikulum
                 </div>
                 <Show when={isAdmin()}>
@@ -539,7 +544,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -558,7 +563,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -577,7 +582,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -591,16 +596,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   </A>
                 </Show>
 
-                <div class="px-3 pt-3 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
-                  3. RPS
-                </div>
+                <div class="px-3 pt-3 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">3. RPS</div>
                 <Show when={isAdmin() || isDosen() || isInstruktur()}>
                   <A
                     href="/rps"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -614,16 +617,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   </A>
                 </Show>
 
-                <div class="px-3 pt-3 pb-1 text-[9px] font-bold text-accent-400/70 uppercase tracking-wider">
-                  4. Kelas
-                </div>
+                <div class="px-3 pt-3 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">4. Kelas</div>
                 <Show when={isAdmin()}>
                   <A
                     href="/kelas-kuliah"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -646,7 +647,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsRegistrasiOpen(!isRegistrasiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Registrasi Akademik</span>
               <svg
@@ -660,14 +661,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isRegistrasiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isMahasiswa()}>
                   <A
                     href="/krs"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -686,7 +687,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -709,7 +710,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsPelaksanaanOpen(!isPelaksanaanOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Pelaksanaan Akademik</span>
               <svg
@@ -723,14 +724,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isPelaksanaanOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isProdi() || isInstruktur()}>
                   <A
                     href="/jurnal-presensi"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -749,7 +750,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -769,7 +770,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -788,7 +789,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -807,7 +808,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -830,7 +831,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsEvaluasiOpen(!isEvaluasiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Evaluasi & Kelulusan</span>
               <svg
@@ -844,14 +845,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isEvaluasiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isMahasiswa()}>
                   <A
                     href="/khs"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -870,7 +871,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -892,7 +893,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsLaporanOpen(!isLaporanOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Laporan</span>
               <svg
@@ -906,14 +907,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isLaporanOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/rekap-nilai"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -932,7 +933,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -951,7 +952,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -970,7 +971,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -989,7 +990,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1008,7 +1009,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1027,7 +1028,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1046,7 +1047,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1065,7 +1066,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1084,7 +1085,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1103,7 +1104,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1122,7 +1123,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1141,7 +1142,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1160,7 +1161,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1179,7 +1180,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1198,7 +1199,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1217,7 +1218,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1236,7 +1237,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1255,7 +1256,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1277,7 +1278,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsLayananOpen(!isLayananOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Layanan Mahasiswa</span>
               <svg
@@ -1291,14 +1292,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isLayananOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isMahasiswa() || isInstruktur()}>
                   <A
                     href="/pelanggaran"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1317,7 +1318,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1336,7 +1337,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1355,7 +1356,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1374,7 +1375,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1397,7 +1398,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Admisi</span>
               <svg
@@ -1411,14 +1412,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isAdmisiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin()}>
                   <A
                     href="/admisi/manajemen"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1455,7 +1456,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1474,7 +1475,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1493,7 +1494,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1512,7 +1513,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1531,7 +1532,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1550,7 +1551,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1569,7 +1570,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1588,7 +1589,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1607,7 +1608,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1626,7 +1627,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1649,7 +1650,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
           <div class="pt-2">
             <button
               onClick={() => setIsKonfigurasiOpen(!isKonfigurasiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-secondary-300/70 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
             >
               <span>Konfigurasi</span>
               <svg
@@ -1663,14 +1664,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isKonfigurasiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdminMgmt()}>
                   <A
                     href="/pengguna"
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1689,7 +1690,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1708,7 +1709,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1727,7 +1728,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1746,7 +1747,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1765,7 +1766,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1784,7 +1785,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                     onClick={() => props.onClose()}
                     activeClass="text-accent-400 font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path
@@ -1802,7 +1803,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
                   onClick={() => props.onClose()}
                   activeClass="text-accent-400 font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
-                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150"
+                  class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -1837,33 +1838,51 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               class="h-9 w-9 rounded-full object-cover border border-brand-800 shadow-md"
             />
           </Show>
-          <div class="flex-1 overflow-hidden">
-            <div class="text-sm font-semibold text-white truncate">{auth.user()?.nama || auth.user()?.email}</div>
+          <div class="flex-1 overflow-hidden sidebar-footer-text">
+            <div class="text-table font-semibold text-white truncate">{auth.user()?.nama || auth.user()?.email}</div>
             <div class="text-xs text-accent-200/50 capitalize">{auth.user()?.role}</div>
           </div>
         </div>
 
-        <div class="text-center text-[10px] text-brand-400/40 pt-1">
+        <div class="text-center text-fine text-brand-300 pt-1 sidebar-footer-text">
           SIMAK v{versionInfo()?.version || '1.0.0'}
           <Show when={import.meta.env.VITE_APP_MODE === 'development' || versionInfo()?.environment === 'development'}>
             <span class="ml-1 text-amber-400/70 font-semibold">• DEV</span>
           </Show>
         </div>
 
-        <div class="flex gap-2 text-xs border-t border-brand-950/60 pt-2.5">
+        <div class="flex gap-2 text-xs border-t border-brand-950/60 pt-2.5 sidebar-footer-actions">
           <A
             href="/profil"
             onClick={() => props.onClose()}
             activeClass="bg-brand-800 text-white font-medium"
-            class="flex-1 text-center py-1.5 bg-brand-900 hover:bg-brand-800/80 text-accent-100 rounded border border-brand-950/60 transition-colors"
+            class="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-brand-900 hover:bg-brand-800/80 text-accent-100 rounded border border-brand-950/60 transition-colors"
+            title={props.collapsed ? 'Profil' : undefined}
           >
-            Profil
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            <span class="sidebar-footer-text">Profil</span>
           </A>
           <button
             onClick={auth.logout}
-            class="flex-1 text-center py-1.5 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 rounded border border-rose-950/40 transition-colors"
+            class="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 rounded border border-rose-950/40 transition-colors"
+            title={props.collapsed ? 'Logout' : undefined}
           >
-            Logout
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            <span class="sidebar-footer-text">Logout</span>
           </button>
         </div>
       </div>

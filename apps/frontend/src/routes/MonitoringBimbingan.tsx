@@ -1,10 +1,11 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { bimbinganController, MonitoringBimbinganLengkapItem } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
@@ -15,6 +16,10 @@ export default function MonitoringBimbingan() {
   const [selectedDosenPa, setSelectedDosenPa] = createSignal<number | null>(null);
   const [printData, setPrintData] = createSignal<MonitoringBimbinganLengkapItem[]>([]);
   const { page, limit, setPage, setLimit, search, setSearch, resetPage } = usePagination(10);
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   // Load Periode Akademik
   const [periodes] = createResource(() => periodeAkademikController.getAll());
@@ -27,7 +32,7 @@ export default function MonitoringBimbingan() {
     () => ({
       periodeId: selectedPeriode(),
       dosenPaId: selectedDosenPa(),
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
     }),
@@ -167,7 +172,11 @@ export default function MonitoringBimbingan() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                resetPage();
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(e.currentTarget.value);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>
@@ -175,10 +184,7 @@ export default function MonitoringBimbingan() {
 
         {/* Table */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm print:hidden">
-          <Show
-            when={!monitoringData.loading}
-            fallback={<p class="text-center text-xs text-secondary-400 py-8">Memuat data monitoring bimbingan...</p>}
-          >
+          <Suspense fallback={<TableLoadingFallback />}>
             <Show
               when={data().length > 0}
               fallback={<p class="text-center text-xs text-secondary-400 py-8">Tidak ada data bimbingan ditemukan.</p>}
@@ -230,7 +236,7 @@ export default function MonitoringBimbingan() {
                 onLimitChange={setLimit}
               />
             </Show>
-          </Show>
+          </Suspense>
         </div>
 
         {/* Print-Only Table (renders all filtered rows) */}

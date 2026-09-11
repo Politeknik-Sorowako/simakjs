@@ -24,8 +24,8 @@ export default function LaporanYudisium() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Yudisium / Kelulusan</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan Yudisium / Kelulusan</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Rekapitulasi pengajuan yudisium dan status kelulusan
             </p>
           </div>
@@ -91,7 +91,7 @@ export default function LaporanYudisium() {
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-                    <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Status Pengajuan</h3>
+                    <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Pengajuan</h3>
                     <PieChart
                       labels={Object.keys(s.statusBreakdown || {})}
                       data={Object.values(s.statusBreakdown || {})}
@@ -100,12 +100,14 @@ export default function LaporanYudisium() {
                     />
                   </div>
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-                    <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Pengajuan per Prodi</h3>
+                    <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Pengajuan per Prodi</h3>
                     <For each={s.perProdi || []}>
                       {(p) => (
                         <div class="flex justify-between items-center py-2 border-b border-secondary-50 last:border-0">
-                          <span class="text-xs font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</span>
-                          <span class="text-xs font-bold">{p.total} pengajuan</span>
+                          <span class="text-caption font-semibold text-secondary-800 dark:text-white">
+                            {p.prodiNama}
+                          </span>
+                          <span class="text-caption font-bold">{p.total} pengajuan</span>
                         </div>
                       )}
                     </For>

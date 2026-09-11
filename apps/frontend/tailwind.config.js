@@ -141,6 +141,16 @@ module.exports = {
         heading: ['Poppins', 'sans-serif'],
         body: ['Work Sans', 'sans-serif'],
       },
+      fontSize: {
+        display: ['2rem', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
+        title: ['1.5rem', { lineHeight: '1.25', letterSpacing: '-0.01em' }],
+        section: ['1.125rem', { lineHeight: '1.4', letterSpacing: '-0.01em' }],
+        body: ['1.0625rem', { lineHeight: '1.47', letterSpacing: '-0.01em' }],
+        table: ['0.9375rem', { lineHeight: '1.55' }],
+        caption: ['0.875rem', { lineHeight: '1.45' }],
+        fine: ['0.75rem', { lineHeight: '1.4' }],
+        micro: ['0.6875rem', { lineHeight: '1.3' }],
+      },
       boxShadow: {
         'card': '0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03)',
         'card-hover': '0 12px 30px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04)',

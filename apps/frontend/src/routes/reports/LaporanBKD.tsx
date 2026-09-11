@@ -50,8 +50,8 @@ export default function LaporanBKD() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan BKD / Beban Dosen</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan BKD / Beban Dosen</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Rekapitulasi beban kerja dosen (BKD) per semester
             </p>
           </div>
@@ -60,9 +60,11 @@ export default function LaporanBKD() {
 
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4">
           <div class="flex-1">
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">Periode</label>
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
+              Periode
+            </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={selectedPeriode()}
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
             >
@@ -71,9 +73,11 @@ export default function LaporanBKD() {
             </select>
           </div>
           <div class="flex-1">
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">Dosen</label>
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
+              Dosen
+            </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={selectedDosen()}
               onChange={(e) => setSelectedDosen(e.currentTarget.value)}
             >
@@ -139,12 +143,12 @@ export default function LaporanBKD() {
 
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-            <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Detail Bimbingan</h3>
+            <h3 class="text-base font-bold text-secondary-800 dark:text-white">Detail Bimbingan</h3>
           </div>
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs border-collapse">
+            <table class="w-full text-left text-table border-collapse">
               <thead>
-                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                   <th class="py-3 px-5">Mahasiswa</th>
                   <th class="py-3 px-5">Ringkasan</th>
                   <th class="py-3 px-5 text-center">Status</th>
@@ -156,7 +160,7 @@ export default function LaporanBKD() {
                   each={rekap()?.data || []}
                   fallback={
                     <tr>
-                      <td colspan="4" class="text-center py-8 text-secondary-400">
+                      <td colspan="4" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
                         Tidak ada data
                       </td>
                     </tr>
@@ -171,13 +175,15 @@ export default function LaporanBKD() {
                     <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                       <td class="py-3 px-5">
                         <div class="font-semibold text-secondary-800 dark:text-white">{r.mahasiswa?.nama || '-'}</div>
-                        <div class="text-[10px] text-secondary-400">{r.mahasiswa?.nim || ''}</div>
+                        <div class="text-caption text-secondary-400 dark:text-secondary-300">
+                          {r.mahasiswa?.nim || ''}
+                        </div>
                       </td>
-                      <td class="py-3 px-5 text-secondary-500">{r.ringkasan || '-'}</td>
+                      <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{r.ringkasan || '-'}</td>
                       <td class="py-3 px-5 text-center">
                         <span
                           class={
-                            'px-2 py-0.5 rounded-full text-[10px] font-bold ' +
+                            'px-2 py-0.5 rounded-full text-caption font-bold ' +
                             (r.isApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700')
                           }
                         >
@@ -187,10 +193,10 @@ export default function LaporanBKD() {
                       <td class="py-3 px-5 text-center">
                         <span
                           class={
-                            'px-2 py-0.5 rounded-full text-[10px] font-bold ' +
+                            'px-2 py-0.5 rounded-full text-caption font-bold ' +
                             (r.sesi?.some((s) => s.statusBkd)
                               ? 'bg-blue-50 text-blue-700'
-                              : 'bg-secondary-50 text-secondary-500')
+                              : 'bg-secondary-50 text-secondary-500 dark:text-secondary-300')
                           }
                         >
                           {r.sesi?.some((s) => s.statusBkd) ? 'Ya' : 'Tidak'}

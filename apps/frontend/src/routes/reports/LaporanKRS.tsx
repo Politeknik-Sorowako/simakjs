@@ -33,8 +33,8 @@ export default function LaporanKRS() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan KRS</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan KRS</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Status pengisian dan approval KRS per periode
             </p>
           </div>
@@ -50,11 +50,11 @@ export default function LaporanKRS() {
         </div>
 
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-          <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+          <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
             Periode Akademik
           </label>
           <select
-            class="w-full sm:w-64 px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+            class="w-full sm:w-64 px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             value={selectedPeriode()}
             onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
           >
@@ -113,7 +113,7 @@ export default function LaporanKRS() {
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Status Approval KRS</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Approval KRS</h3>
               <PieChart
                 labels={['Disetujui', 'Pending']}
                 data={[stats()?.approved || 0, stats()?.pending || 0]}
@@ -122,12 +122,12 @@ export default function LaporanKRS() {
               />
             </div>
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">KRS per Program Studi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">KRS per Program Studi</h3>
               <For each={stats()?.perProdi || []}>
                 {(p: { prodiNama: string; total: number; approved: number }) => (
                   <div class="flex justify-between items-center py-2 border-b border-secondary-50 last:border-0">
-                    <span class="text-xs font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</span>
-                    <span class="text-xs">
+                    <span class="text-caption font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</span>
+                    <span class="text-caption">
                       {p.total} KRS <span class="text-green-600 font-bold">({p.approved} approved)</span>
                     </span>
                   </div>
