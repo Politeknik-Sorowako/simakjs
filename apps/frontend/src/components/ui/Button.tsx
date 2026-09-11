@@ -24,8 +24,8 @@ const variantClasses = {
 };
 
 const sizeClasses = {
-  sm: 'px-3 py-1.5 text-xs rounded-lg',
-  md: 'px-4 py-2 text-sm rounded-lg',
+  sm: 'px-3 py-1.5 text-caption rounded-lg',
+  md: 'px-4 py-2.5 text-table rounded-lg',
   lg: 'px-6 py-3 text-base rounded-xl',
 };
 

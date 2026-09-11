@@ -46,18 +46,20 @@ export function StatCard(props: StatCardProps) {
       class={`bg-white dark:bg-secondary-900 border ${c.border} p-5 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-200 hover:shadow-md ${props.href ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
     >
       <div class="flex flex-col gap-0.5">
-        <span class="text-xs font-semibold text-secondary-400 dark:text-secondary-200 uppercase tracking-wider">
+        <span class="text-caption font-semibold text-secondary-500 dark:text-secondary-400 uppercase tracking-wider">
           {props.title}
         </span>
         <div class="flex items-baseline gap-2">
-          <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">
+          <span class="text-display font-bold text-secondary-800 dark:text-white">
             {props.loading ? (
               <span class="inline-block w-16 h-8 bg-secondary-200 dark:bg-secondary-700 rounded animate-pulse" />
             ) : (
               props.value
             )}
           </span>
-          {props.subtitle && <span class="text-xs text-secondary-400">{props.subtitle}</span>}
+          {props.subtitle && (
+            <span class="text-caption text-secondary-600 dark:text-secondary-300">{props.subtitle}</span>
+          )}
         </div>
       </div>
       {props.icon && <div class={`p-3 ${c.bg} ${c.text} rounded-xl flex-shrink-0`}>{props.icon}</div>}
