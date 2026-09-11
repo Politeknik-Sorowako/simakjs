@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -8,6 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { Prodi, prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
@@ -165,10 +166,7 @@ export default function ProgramStudi() {
         </div>
 
         {/* Data Table */}
-        <Show
-          when={!prodis.loading}
-          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Table
             headers={[
               <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
@@ -223,7 +221,7 @@ export default function ProgramStudi() {
             onPageChange={setPage}
             onLimitChange={setLimit}
           />
-        </Show>
+        </Suspense>
 
         {/* Modal Form */}
         <Modal

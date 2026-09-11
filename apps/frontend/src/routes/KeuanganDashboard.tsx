@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { PieChart, StatCard } from '../components/charts';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
@@ -284,7 +285,7 @@ export default function KeuanganDashboard() {
   };
 
   // Summary stats computed from all tagihan data
-  const summaryStats = createMemo(() => {
+  const summaryStats = () => {
     const items = tagihanData()?.data || [];
     const totalNominal = items.reduce((s, t) => s + t.nominal, 0);
     const totalTerbayar = items.reduce((s, t) => s + (t.nominalTerbayar || 0), 0);
@@ -300,7 +301,7 @@ export default function KeuanganDashboard() {
       belumBayar,
       total: items.length,
     };
-  });
+  };
 
   return (
     <MainLayout>
@@ -353,71 +354,73 @@ export default function KeuanganDashboard() {
         </div>
 
         {/* Summary Stats */}
-        <Show when={role() !== 'mahasiswa' && (tagihanData()?.data?.length || 0) > 0}>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              title="Total Tagihan"
-              value={formatRupiah(summaryStats().totalNominal)}
-              color="brand"
-              icon={
-                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              }
-            />
-            <StatCard
-              title="Telah Terbayar"
-              value={formatRupiah(summaryStats().totalTerbayar)}
-              color="green"
-              icon={
-                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
-            />
-            <StatCard
-              title="Sisa Tunggakan"
-              value={formatRupiah(summaryStats().totalTunggakan)}
-              color="rose"
-              icon={
-                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              }
-            />
-            <StatCard
-              title="Status Pembayaran"
-              value={`${summaryStats().lunas}/${summaryStats().total}`}
-              subtitle={`${summaryStats().cicilan} cicilan, ${summaryStats().belumBayar} belum`}
-              color="yellow"
-              icon={
-                <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              }
-            />
-          </div>
-        </Show>
+        <Suspense fallback={null}>
+          <Show when={role() !== 'mahasiswa' && (tagihanData()?.data?.length || 0) > 0}>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard
+                title="Total Tagihan"
+                value={formatRupiah(summaryStats().totalNominal)}
+                color="brand"
+                icon={
+                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Telah Terbayar"
+                value={formatRupiah(summaryStats().totalTerbayar)}
+                color="green"
+                icon={
+                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Sisa Tunggakan"
+                value={formatRupiah(summaryStats().totalTunggakan)}
+                color="rose"
+                icon={
+                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                }
+              />
+              <StatCard
+                title="Status Pembayaran"
+                value={`${summaryStats().lunas}/${summaryStats().total}`}
+                subtitle={`${summaryStats().cicilan} cicilan, ${summaryStats().belumBayar} belum`}
+                color="yellow"
+                icon={
+                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                }
+              />
+            </div>
+          </Show>
+        </Suspense>
 
         {/* Search & Filter */}
         <div class="bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between dark:bg-secondary-900 dark:border-secondary-800">
@@ -457,12 +460,7 @@ export default function KeuanganDashboard() {
         </div>
 
         {/* Table */}
-        <Show
-          when={!tagihanData.loading}
-          fallback={
-            <div class="text-center py-10 text-secondary-400 dark:text-secondary-300">Loading data keuangan...</div>
-          }
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Table
             headers={[
               <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
@@ -579,7 +577,7 @@ export default function KeuanganDashboard() {
               onLimitChange={setLimit}
             />
           </Show>
-        </Show>
+        </Suspense>
 
         {/* --- CUSTOM GENERATE TAGIHAN MODAL --- */}
         <Show when={showGenerateModal()}>

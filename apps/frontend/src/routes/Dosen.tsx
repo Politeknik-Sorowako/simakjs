@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -8,6 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -268,10 +269,7 @@ export default function Dosen() {
           />
         </div>
 
-        <Show
-          when={!dosens.loading}
-          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Table
             headers={[
               <input
@@ -345,7 +343,7 @@ export default function Dosen() {
               onLimitChange={setLimit}
             />
           </Show>
-        </Show>
+        </Suspense>
 
         <Modal
           show={showModal()}

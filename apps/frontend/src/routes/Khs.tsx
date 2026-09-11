@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -274,22 +274,24 @@ export default function Khs() {
                 <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
                   Pilih dari Hasil Pencarian
                 </label>
-                <select
-                  onChange={(e) => {
-                    const id = parseInt(e.currentTarget.value);
-                    setSelectedMhsId(id || null);
-                  }}
-                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-                >
-                  <option value="">-- Pilih Mahasiswa --</option>
-                  <For each={searchedStudents()}>
-                    {(item) => (
-                      <option value={item.id} selected={selectedMhsId() === item.id}>
-                        {item.nim} - {item.nama}
-                      </option>
-                    )}
-                  </For>
-                </select>
+                <Suspense fallback={<span class="text-caption text-secondary-400">Memuat hasil pencarian...</span>}>
+                  <select
+                    onChange={(e) => {
+                      const id = parseInt(e.currentTarget.value);
+                      setSelectedMhsId(id || null);
+                    }}
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  >
+                    <option value="">-- Pilih Mahasiswa --</option>
+                    <For each={searchedStudents()}>
+                      {(item) => (
+                        <option value={item.id} selected={selectedMhsId() === item.id}>
+                          {item.nim} - {item.nama}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </Suspense>
               </div>
 
               <Show when={activeTab() === 'khs'}>

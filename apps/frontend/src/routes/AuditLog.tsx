@@ -1,5 +1,6 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { AuditLog as AuditLogEntry, AuditLogFilters, auditController } from '../controllers/auditController';
 import { fmtWaktu } from '../utils/format';
 
@@ -325,114 +326,116 @@ export default function AuditLog() {
           </div>
 
           {/* Table */}
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm">
-              <thead>
-                <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold">
-                  <th class="py-3 px-4">Waktu</th>
-                  <th class="py-3 px-4">User</th>
-                  <th class="py-3 px-4">Role</th>
-                  <th class="py-3 px-4">Aksi</th>
-                  <th class="py-3 px-4">Module</th>
-                  <th class="py-3 px-4">Entitas</th>
-                  <th class="py-3 px-4">Deskripsi</th>
-                  <th class="py-3 px-4">IP</th>
-                  <th class="py-3 px-4 text-center">Detail</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
-                <Show
-                  when={!data.loading}
-                  fallback={
-                    <tr>
-                      <td colspan="9" class="py-8 text-center text-secondary-400">
-                        Memuat data...
-                      </td>
-                    </tr>
-                  }
-                >
-                  <For each={data()?.data}>
-                    {(item) => (
-                      <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
-                        <td class="py-3 px-4 text-xs whitespace-nowrap">{fmtWaktu(item.timestamp)}</td>
-                        <td class="py-3 px-4">
-                          <div class="font-semibold text-secondary-800 dark:text-white">
-                            {item.userName || (item.userId ? `User #${item.userId}` : 'Sistem')}
-                          </div>
-                        </td>
-                        <td class="py-3 px-4 text-xs capitalize">{item.userRole || '-'}</td>
-                        <td class="py-3 px-4">{actionBadge(item.actionType)}</td>
-                        <td class="py-3 px-4 text-xs font-mono">
-                          <div>{item.module}</div>
-                          <Show when={item.tableName}>
-                            <div class="text-[10px] text-secondary-400">{item.tableName}</div>
-                          </Show>
-                        </td>
-                        <td class="py-3 px-4 max-w-[200px] truncate text-secondary-600 dark:text-secondary-300">
-                          {item.entityName || item.entityId || '-'}
-                        </td>
-                        <td
-                          class="py-3 px-4 max-w-xs truncate text-secondary-600 dark:text-secondary-300"
-                          title={item.description}
-                        >
-                          {item.description}
-                        </td>
-                        <td class="py-3 px-4 text-xs font-mono">{item.ipAddress || '-'}</td>
-                        <td class="py-3 px-4 text-center">
-                          <button
-                            class="text-brand-600 hover:text-brand-700 font-semibold text-xs"
-                            onClick={() => setDetail(item)}
-                          >
-                            Lihat →
-                          </button>
+          <Suspense fallback={<TableLoadingFallback />}>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold">
+                    <th class="py-3 px-4">Waktu</th>
+                    <th class="py-3 px-4">User</th>
+                    <th class="py-3 px-4">Role</th>
+                    <th class="py-3 px-4">Aksi</th>
+                    <th class="py-3 px-4">Module</th>
+                    <th class="py-3 px-4">Entitas</th>
+                    <th class="py-3 px-4">Deskripsi</th>
+                    <th class="py-3 px-4">IP</th>
+                    <th class="py-3 px-4 text-center">Detail</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                  <Show
+                    when={!data.loading}
+                    fallback={
+                      <tr>
+                        <td colspan="9" class="py-8 text-center text-secondary-400">
+                          Memuat data...
                         </td>
                       </tr>
-                    )}
-                  </For>
-                  <Show when={!data()?.data?.length}>
-                    <tr>
-                      <td colspan="9" class="py-8 text-center text-secondary-400">
-                        Tidak ada data audit log
-                      </td>
-                    </tr>
+                    }
+                  >
+                    <For each={data()?.data}>
+                      {(item) => (
+                        <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+                          <td class="py-3 px-4 text-xs whitespace-nowrap">{fmtWaktu(item.timestamp)}</td>
+                          <td class="py-3 px-4">
+                            <div class="font-semibold text-secondary-800 dark:text-white">
+                              {item.userName || (item.userId ? `User #${item.userId}` : 'Sistem')}
+                            </div>
+                          </td>
+                          <td class="py-3 px-4 text-xs capitalize">{item.userRole || '-'}</td>
+                          <td class="py-3 px-4">{actionBadge(item.actionType)}</td>
+                          <td class="py-3 px-4 text-xs font-mono">
+                            <div>{item.module}</div>
+                            <Show when={item.tableName}>
+                              <div class="text-[10px] text-secondary-400">{item.tableName}</div>
+                            </Show>
+                          </td>
+                          <td class="py-3 px-4 max-w-[200px] truncate text-secondary-600 dark:text-secondary-300">
+                            {item.entityName || item.entityId || '-'}
+                          </td>
+                          <td
+                            class="py-3 px-4 max-w-xs truncate text-secondary-600 dark:text-secondary-300"
+                            title={item.description}
+                          >
+                            {item.description}
+                          </td>
+                          <td class="py-3 px-4 text-xs font-mono">{item.ipAddress || '-'}</td>
+                          <td class="py-3 px-4 text-center">
+                            <button
+                              class="text-brand-600 hover:text-brand-700 font-semibold text-xs"
+                              onClick={() => setDetail(item)}
+                            >
+                              Lihat →
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={!data()?.data?.length}>
+                      <tr>
+                        <td colspan="9" class="py-8 text-center text-secondary-400">
+                          Tidak ada data audit log
+                        </td>
+                      </tr>
+                    </Show>
                   </Show>
-                </Show>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          <Show when={data() && (data()!.meta?.total ?? 0) > 0}>
-            <div class="flex flex-col sm:flex-row justify-between items-center mt-4 gap-3">
-              <span class="text-xs text-secondary-500 dark:text-secondary-300">
-                Menampilkan{' '}
-                <strong>
-                  {(data()!.meta.page - 1) * data()!.meta.limit + 1}–
-                  {Math.min(data()!.meta.page * data()!.meta.limit, data()!.meta.total)}
-                </strong>{' '}
-                dari <strong>{data()!.meta.total}</strong> log
-              </span>
-              <div class="flex gap-2 items-center">
-                <button
-                  class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
-                  disabled={page() <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Prev
-                </button>
-                <span class="px-3 py-1 text-sm">
-                  {page()} / {data()!.meta.totalPages}
-                </span>
-                <button
-                  class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
-                  disabled={page() >= (data()!.meta.totalPages || 1)}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </button>
-              </div>
+                </tbody>
+              </table>
             </div>
-          </Show>
+
+            {/* Pagination */}
+            <Show when={data() && (data()!.meta?.total ?? 0) > 0}>
+              <div class="flex flex-col sm:flex-row justify-between items-center mt-4 gap-3">
+                <span class="text-xs text-secondary-500 dark:text-secondary-300">
+                  Menampilkan{' '}
+                  <strong>
+                    {(data()!.meta.page - 1) * data()!.meta.limit + 1}–
+                    {Math.min(data()!.meta.page * data()!.meta.limit, data()!.meta.total)}
+                  </strong>{' '}
+                  dari <strong>{data()!.meta.total}</strong> log
+                </span>
+                <div class="flex gap-2 items-center">
+                  <button
+                    class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                    disabled={page() <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Prev
+                  </button>
+                  <span class="px-3 py-1 text-sm">
+                    {page()} / {data()!.meta.totalPages}
+                  </span>
+                  <button
+                    class="px-3 py-1 border rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 transition-transform"
+                    disabled={page() >= (data()!.meta.totalPages || 1)}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </Show>
+          </Suspense>
         </div>
 
         {/* Detail Modal */}

@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -7,6 +7,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { Cpl, cplController } from '../controllers/cplController';
 import { cpmkController, Cpmk as ICpmk } from '../controllers/cpmkController';
@@ -415,74 +416,76 @@ export default function Cpmk() {
           </Button>
         </div>
 
-        <div class="bg-[#1e293b] rounded-2xl overflow-hidden">
-          <Table
-            headers={[
-              <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Kode
-              </SortableHeader>,
-              <SortableHeader field="deskripsi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Deskripsi
-              </SortableHeader>,
-              <SortableHeader field="mataKuliahId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                Mata Kuliah
-              </SortableHeader>,
-              'Sub-CPMK',
-              'CPL Mapping',
-              'Aksi',
-            ]}
-          >
-            <Show
-              when={!cpmkList.loading}
-              fallback={
-                <tr>
-                  <td colspan={6} class="text-center py-8 text-secondary-300">
-                    Memuat...
-                  </td>
-                </tr>
-              }
+        <Suspense fallback={<TableLoadingFallback />}>
+          <div class="bg-[#1e293b] rounded-2xl overflow-hidden">
+            <Table
+              headers={[
+                <SortableHeader field="kode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Kode
+                </SortableHeader>,
+                <SortableHeader field="deskripsi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Deskripsi
+                </SortableHeader>,
+                <SortableHeader field="mataKuliahId" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                  Mata Kuliah
+                </SortableHeader>,
+                'Sub-CPMK',
+                'CPL Mapping',
+                'Aksi',
+              ]}
             >
-              <For
-                each={sortedData()}
+              <Show
+                when={!cpmkList.loading}
                 fallback={
                   <tr>
                     <td colspan={6} class="text-center py-8 text-secondary-300">
-                      Belum ada data
+                      Memuat...
                     </td>
                   </tr>
                 }
               >
-                {(item) => (
-                  <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
-                    <td class="px-4 py-3 font-medium text-black dark:text-white">{item.kode}</td>
-                    <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.deskripsi}</td>
-                    <td class="px-4 py-3 text-black dark:text-white">{item.mataKuliah?.nama || '-'}</td>
-                    <td class="px-4 py-3">
-                      <Button variant="ghost" size="sm" onClick={() => openSubCpmkModal(item.id)}>
-                        {item.subCpmk?.length || 0} Sub
-                      </Button>
-                    </td>
-                    <td class="px-4 py-3">
-                      <Button variant="ghost" size="sm" onClick={() => openMappingModal(item.id)}>
-                        {item.cplMappings?.length || 0} CPL
-                      </Button>
-                    </td>
-                    <td class="px-4 py-3">
-                      <div class="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}>
-                          Edit
+                <For
+                  each={sortedData()}
+                  fallback={
+                    <tr>
+                      <td colspan={6} class="text-center py-8 text-secondary-300">
+                        Belum ada data
+                      </td>
+                    </tr>
+                  }
+                >
+                  {(item) => (
+                    <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
+                      <td class="px-4 py-3 font-medium text-black dark:text-white">{item.kode}</td>
+                      <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.deskripsi}</td>
+                      <td class="px-4 py-3 text-black dark:text-white">{item.mataKuliah?.nama || '-'}</td>
+                      <td class="px-4 py-3">
+                        <Button variant="ghost" size="sm" onClick={() => openSubCpmkModal(item.id)}>
+                          {item.subCpmk?.length || 0} Sub
                         </Button>
-                        <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>
-                          Hapus
+                      </td>
+                      <td class="px-4 py-3">
+                        <Button variant="ghost" size="sm" onClick={() => openMappingModal(item.id)}>
+                          {item.cplMappings?.length || 0} CPL
                         </Button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </For>
-            </Show>
-          </Table>
-        </div>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="flex gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}>
+                            Edit
+                          </Button>
+                          <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>
+                            Hapus
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </For>
+              </Show>
+            </Table>
+          </div>
+        </Suspense>
 
         <Pagination
           currentPage={page()}

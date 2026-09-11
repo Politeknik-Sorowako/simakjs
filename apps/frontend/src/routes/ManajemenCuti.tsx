@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,6 +7,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { CutiRequest, cutiController, MahasiswaCuti } from '../controllers/cutiController';
@@ -469,10 +470,7 @@ export default function ManajemenCuti() {
             <Button onClick={openFormModal}>+ Catat Cuti</Button>
           </div>
 
-          <Show
-            when={!inputRecords.loading}
-            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
-          >
+          <Suspense fallback={<TableLoadingFallback />}>
             <Table headers={['NIM', 'Nama Mahasiswa', 'Status', 'Periode Cuti', 'Rentang Cuti', 'No SK', 'Aksi']}>
               <For
                 each={pendingSortedData()}
@@ -549,7 +547,7 @@ export default function ManajemenCuti() {
               onPageChange={pendingPagination.setPage}
               onLimitChange={pendingPagination.setLimit}
             />
-          </Show>
+          </Suspense>
         </Show>
         {/* ===================== TAB: PERSETUJUAN CUTI ===================== */}
         <Show when={activeTab() === 'approval'}>
@@ -586,10 +584,7 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show
-            when={!approvals.loading}
-            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
-          >
+          <Suspense fallback={<TableLoadingFallback />}>
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode', 'Alasan Cuti', 'Status', 'SK Cuti', 'Aksi']}>
               <For
                 each={approvedSortedData()}
@@ -644,7 +639,7 @@ export default function ManajemenCuti() {
               onPageChange={approvedPagination.setPage}
               onLimitChange={approvedPagination.setLimit}
             />
-          </Show>
+          </Suspense>
         </Show>
 
         {/* ===================== TAB: AKTIFKAN KEMBALI ===================== */}
@@ -681,10 +676,7 @@ export default function ManajemenCuti() {
             </div>
           </div>
 
-          <Show
-            when={!aktifList.loading}
-            fallback={<div class="text-center py-10 text-secondary-400">Loading data...</div>}
-          >
+          <Suspense fallback={<TableLoadingFallback />}>
             <Table headers={['NIM', 'Nama Mahasiswa', 'Prodi', 'Periode Cuti', 'Rentang Cuti', 'Aksi']}>
               <For
                 each={rejectedSortedData()}
@@ -737,7 +729,7 @@ export default function ManajemenCuti() {
               onPageChange={rejectedPagination.setPage}
               onLimitChange={rejectedPagination.setLimit}
             />
-          </Show>
+          </Suspense>
         </Show>
       </div>
 
