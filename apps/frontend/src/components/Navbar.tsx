@@ -92,13 +92,15 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
           </svg>
         </button>
 
-        <h2 class="text-md font-bold text-secondary-900 dark:text-white hidden sm:block">Sistem Informasi Akademik</h2>
+        <h2 class="text-section font-bold text-secondary-900 dark:text-white hidden sm:block">
+          Sistem Informasi Akademik
+        </h2>
       </div>
 
       {/* Global Filter for Admin */}
       <Show when={role() === 'admin'}>
         <div class="hidden md:flex items-center gap-3 bg-secondary-100/60 dark:bg-secondary-800/40 px-3 py-1.5 rounded-xl border border-secondary-200/80 dark:border-secondary-700/80">
-          <div class="flex items-center gap-1.5 text-xs">
+          <div class="flex items-center gap-1.5 text-caption">
             <span class="text-secondary-500 font-semibold dark:text-secondary-400">Prodi:</span>
             <select
               onChange={(e) => {
@@ -120,7 +122,7 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
             </select>
           </div>
           <div class="h-4 w-px bg-secondary-300 dark:bg-secondary-700"></div>
-          <div class="flex items-center gap-1.5 text-xs">
+          <div class="flex items-center gap-1.5 text-caption">
             <span class="text-secondary-500 font-semibold dark:text-secondary-400">Periode:</span>
             <select
               onChange={(e) => {
@@ -172,18 +174,24 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
           <Show when={showNotifPopover()}>
             <div class="absolute right-0 mt-2 w-80 bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-2xl shadow-xl z-50 p-4 flex flex-col gap-3">
               <div class="flex items-center justify-between border-b pb-2">
-                <h4 class="text-sm font-bold text-secondary-900 dark:text-white">Notifikasi</h4>
-                <span class="text-xs text-secondary-400">{unreadCount()} belum dibaca</span>
+                <h4 class="text-base font-bold text-secondary-900 dark:text-white">Notifikasi</h4>
+                <span class="text-caption text-secondary-500 dark:text-secondary-400">
+                  {unreadCount()} belum dibaca
+                </span>
               </div>
               <div class="flex flex-col gap-2 max-h-72 overflow-y-auto">
                 <For
                   each={notifications()}
-                  fallback={<p class="text-xs text-secondary-400 text-center py-4">Belum ada notifikasi.</p>}
+                  fallback={
+                    <p class="text-caption text-secondary-500 dark:text-secondary-400 text-center py-4">
+                      Belum ada notifikasi.
+                    </p>
+                  }
                 >
                   {(item) => (
                     <div
                       onClick={() => handleMarkRead(item.id)}
-                      class={`p-2.5 rounded-xl border text-xs cursor-pointer transition-colors ${
+                      class={`p-2.5 rounded-xl border text-caption cursor-pointer transition-colors ${
                         item.isRead
                           ? 'bg-secondary-50/50 dark:bg-secondary-800/30 border-secondary-100 dark:border-secondary-800 text-secondary-600 dark:text-secondary-400'
                           : 'bg-brand-50/50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 font-semibold text-secondary-900 dark:text-white'
@@ -191,11 +199,11 @@ export function Navbar(props: { onToggleSidebar: () => void }) {
                     >
                       <div class="flex justify-between items-start gap-1">
                         <span class="font-bold">{item.title}</span>
-                        <span class="text-[10px] text-secondary-400">
+                        <span class="text-micro text-secondary-500 dark:text-secondary-400">
                           {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <p class="mt-1 text-[11px] font-normal leading-relaxed">{item.message}</p>
+                      <p class="mt-1 text-caption font-normal leading-relaxed">{item.message}</p>
                     </div>
                   )}
                 </For>

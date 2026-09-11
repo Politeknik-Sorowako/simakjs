@@ -1145,8 +1145,8 @@ export default function BapPresensi() {
       <div class="flex flex-col gap-6">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Jurnal & Presensi Kuliah</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Jurnal & Presensi Kuliah</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Isi Berita Acara Perkuliahan (BAP) dan Presensi kehadiran mahasiswa
             </p>
           </div>
@@ -1162,7 +1162,7 @@ export default function BapPresensi() {
           <button
             type="button"
             onClick={() => setMainTab('teori')}
-            class={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+            class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
               mainTab() === 'teori'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
@@ -1173,7 +1173,7 @@ export default function BapPresensi() {
           <button
             type="button"
             onClick={() => setMainTab('praktikum')}
-            class={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+            class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
               mainTab() === 'praktikum'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
@@ -1184,7 +1184,7 @@ export default function BapPresensi() {
           <button
             type="button"
             onClick={() => setMainTab('monitoring')}
-            class={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+            class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
               mainTab() === 'monitoring'
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
@@ -1243,24 +1243,24 @@ export default function BapPresensi() {
                 <div class="flex justify-between items-center border-b pb-2">
                   <h3 class="font-bold text-secondary-800 dark:text-white">Detail Berita Acara (BAP)</h3>
                   <div class="flex items-center gap-2">
-                    <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-xs">
+                    <Button onClick={openEditBap} variant="secondary" class="py-1 px-2.5 text-caption">
                       Edit
                     </Button>
                     <Button
                       onClick={() => handleDuplicateBap(selectedBapId()!)}
                       variant="secondary"
-                      class="py-1 px-2.5 text-xs"
+                      class="py-1 px-2.5 text-caption"
                     >
                       Duplikasi
                     </Button>
-                    <Button onClick={() => setShowPrintModal(true)} variant="accent" class="py-1 px-2.5 text-xs">
+                    <Button onClick={() => setShowPrintModal(true)} variant="accent" class="py-1 px-2.5 text-caption">
                       Cetak BAP
                     </Button>
                     <Show when={selectedBapId()}>
                       <Button
                         onClick={() => handleDeleteBap(selectedBapId()!)}
                         variant="danger"
-                        class="py-1 px-2.5 text-xs"
+                        class="py-1 px-2.5 text-caption"
                       >
                         Hapus
                       </Button>
@@ -1269,10 +1269,10 @@ export default function BapPresensi() {
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">
+                  <span class="text-caption font-semibold text-secondary-400 uppercase dark:text-secondary-200">
                     Materi Pokok (CPMK)
                   </span>
-                  <span class="text-sm font-semibold text-brand-600">
+                  <span class="text-base font-semibold text-brand-600">
                     {(() => {
                       const activeBapObj = bapData()?.find((b) => b.id === selectedBapId());
                       const cpmkObj = cpmkData()?.find((c) => c.id === activeBapObj?.cpmkId);
@@ -1282,37 +1282,37 @@ export default function BapPresensi() {
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">
+                  <span class="text-caption font-semibold text-secondary-400 uppercase dark:text-secondary-200">
                     Materi Utama (RPS)
                   </span>
-                  <span class="text-sm text-secondary-700 dark:text-secondary-200">
+                  <span class="text-base text-secondary-700 dark:text-secondary-200">
                     {bapData()?.find((b) => b.id === selectedBapId())?.materi || '-'}
                   </span>
                 </div>
 
                 <div class="flex flex-col gap-1">
-                  <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">
+                  <span class="text-caption font-semibold text-secondary-400 uppercase dark:text-secondary-200">
                     Catatan Pertemuan
                   </span>
-                  <span class="text-sm text-secondary-700 dark:text-secondary-200">
+                  <span class="text-base text-secondary-700 dark:text-secondary-200">
                     {bapData()?.find((b) => b.id === selectedBapId())?.catatan || '-'}
                   </span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
                   <div class="flex flex-col gap-1">
-                    <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">
+                    <span class="text-caption font-semibold text-secondary-400 uppercase dark:text-secondary-200">
                       Pertemuan Ke
                     </span>
-                    <span class="text-sm font-bold text-secondary-800 dark:text-white">
+                    <span class="text-base font-bold text-secondary-800 dark:text-white">
                       {bapData()?.find((b) => b.id === selectedBapId())?.pertemuanKe || '-'}
                     </span>
                   </div>
                   <div class="flex flex-col gap-1">
-                    <span class="text-xs font-semibold text-secondary-400 uppercase dark:text-secondary-200">
+                    <span class="text-caption font-semibold text-secondary-400 uppercase dark:text-secondary-200">
                       Durasi Kelas
                     </span>
-                    <span class="text-sm font-bold text-secondary-800 dark:text-white">
+                    <span class="text-base font-bold text-secondary-800 dark:text-white">
                       {bapData()?.find((b) => b.id === selectedBapId())?.durasiMenit || 0} Menit
                     </span>
                   </div>
@@ -1329,9 +1329,9 @@ export default function BapPresensi() {
                 </div>
 
                 <div class="overflow-x-auto">
-                  <table class="w-full text-left text-sm border-collapse">
+                  <table class="w-full text-left text-base border-collapse">
                     <thead>
-                      <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold dark:border-secondary-800">
+                      <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-caption font-semibold dark:border-secondary-800">
                         <th class="py-3 px-4">NIM / Nama</th>
                         <th class="py-3 px-4">Status Kehadiran</th>
                         <th class="py-3 px-4">Durasi Keterlambatan</th>
@@ -1355,7 +1355,7 @@ export default function BapPresensi() {
                                   />
                                   <div>
                                     <div class="font-bold text-secondary-800 dark:text-white">{k.mahasiswa?.nama}</div>
-                                    <div class="text-xs text-secondary-400 dark:text-secondary-200">
+                                    <div class="text-caption text-secondary-400 dark:text-secondary-200">
                                       {k.mahasiswa?.nim}
                                     </div>
                                   </div>
@@ -1374,7 +1374,7 @@ export default function BapPresensi() {
                                             type="button"
                                             onClick={() => handleStatusChange(k.mahasiswaId, st)}
                                             disabled={locked}
-                                            class={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                            class={`px-3 py-1.5 rounded-lg text-caption font-bold transition-all border ${
                                               locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
                                             } ${
                                               state().status === st
@@ -1385,7 +1385,7 @@ export default function BapPresensi() {
                                                     : st === 'unknown'
                                                       ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300'
                                                       : 'bg-accent-50 text-accent-700 border-accent-200'
-                                                : 'bg-transparent text-secondary-400 border-secondary-200 hover:bg-secondary-100'
+                                                : 'bg-transparent text-secondary-400 dark:text-secondary-300 border-secondary-200 hover:bg-secondary-100'
                                             }`}
                                             title={statusFullLabel(st)}
                                           >
@@ -1407,7 +1407,7 @@ export default function BapPresensi() {
                                 <Show
                                   when={state().status === 'telat'}
                                   fallback={
-                                    <span class="text-xs text-secondary-400 italic dark:text-secondary-200">
+                                    <span class="text-caption text-secondary-400 italic dark:text-secondary-200">
                                       {state().status === 'hadir'
                                         ? '0'
                                         : state().status === 'unknown'
@@ -1424,9 +1424,9 @@ export default function BapPresensi() {
                                       onInput={(e) =>
                                         handleMangkirChange(k.mahasiswaId, parseInt(e.currentTarget.value) || 0)
                                       }
-                                      class="w-16 bg-secondary-50 border border-secondary-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none dark:bg-secondary-800 dark:border-secondary-700"
+                                      class="w-16 bg-secondary-50 border border-secondary-200 rounded-lg px-2 py-1 text-caption text-center focus:outline-none dark:bg-secondary-800 dark:border-secondary-700"
                                     />
-                                    <span class="text-xs text-secondary-500 dark:text-secondary-200">Menit</span>
+                                    <span class="text-caption text-secondary-500 dark:text-secondary-200">Menit</span>
                                   </div>
                                 </Show>
                               </td>
@@ -1437,7 +1437,7 @@ export default function BapPresensi() {
                                     setKeteranganModalMhsId(k.mahasiswaId);
                                     setKeteranganDraft(state().keterangan || '');
                                   }}
-                                  class={`w-full max-w-[180px] truncate text-left text-xs rounded-lg px-3 py-1.5 border transition-colors ${
+                                  class={`w-full max-w-[180px] truncate text-left text-caption rounded-lg px-3 py-1.5 border transition-colors ${
                                     state().keterangan
                                       ? 'bg-secondary-100 border-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-secondary-200 hover:bg-secondary-200'
                                       : 'bg-secondary-50 border-secondary-200 text-secondary-400 dark:bg-secondary-800 dark:border-secondary-700 hover:bg-secondary-100 border-dashed'
@@ -1512,7 +1512,7 @@ export default function BapPresensi() {
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
                     <h3 class="font-bold text-secondary-800 dark:text-white">BAP & Sinkronisasi Rombel Praktikum</h3>
-                    <p class="text-xs text-secondary-500 dark:text-secondary-300">
+                    <p class="text-caption text-secondary-500 dark:text-secondary-300">
                       Sinkronisasi presensi & nilai praktikum ke kelas induk (teori). Presensi ditulis ulang pada BAP
                       teori tanggal yang sama; nilai dirata-ratakan per komponen.
                     </p>
@@ -1558,9 +1558,9 @@ export default function BapPresensi() {
                 </div>
 
                 <div class="overflow-x-auto">
-                  <table class="w-full text-left text-sm border-collapse">
+                  <table class="w-full text-left text-base border-collapse">
                     <thead>
-                      <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 dark:text-secondary-200 uppercase text-xs font-semibold">
+                      <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 dark:text-secondary-200 uppercase text-caption font-semibold">
                         <th class="py-3 px-4">Sesi</th>
                         <th class="py-3 px-4">Tanggal</th>
                         <th class="py-3 px-4">Materi</th>
@@ -1581,7 +1581,9 @@ export default function BapPresensi() {
                                 {(t) => (
                                   <div>
                                     <span class="font-semibold text-brand-600">{t()}</span>
-                                    <div class="text-xs text-secondary-500 dark:text-secondary-300">{bap.materi}</div>
+                                    <div class="text-caption text-secondary-500 dark:text-secondary-300">
+                                      {bap.materi}
+                                    </div>
                                   </div>
                                 )}
                               </Show>
@@ -1589,7 +1591,11 @@ export default function BapPresensi() {
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">
                               <Show
                                 when={bap.instruktur?.nama}
-                                fallback={<span class="italic text-secondary-400">Instruktur rombel</span>}
+                                fallback={
+                                  <span class="italic text-secondary-400 dark:text-secondary-300">
+                                    Instruktur rombel
+                                  </span>
+                                }
                               >
                                 {bap.instruktur?.nama}
                               </Show>
@@ -1608,14 +1614,14 @@ export default function BapPresensi() {
                                 <Button
                                   onClick={() => openEditBapPrakModal(bap)}
                                   variant="secondary"
-                                  class="text-xs py-1.5 px-3"
+                                  class="text-caption py-1.5 px-3"
                                 >
                                   Edit
                                 </Button>
                                 <Button
                                   onClick={() => openPresensiPrakModal(bap)}
                                   variant="secondary"
-                                  class="text-xs py-1.5 px-3"
+                                  class="text-caption py-1.5 px-3"
                                 >
                                   Isi Presensi
                                 </Button>
@@ -1623,14 +1629,14 @@ export default function BapPresensi() {
                                   onClick={() => handleSyncPresensi(selectedRombelId()!, bap.id)}
                                   loading={syncLoadingPresensiId() === bap.id}
                                   variant="primary"
-                                  class="text-xs py-1.5 px-3"
+                                  class="text-caption py-1.5 px-3"
                                 >
                                   Sync Presensi
                                 </Button>
                                 <Button
                                   onClick={() => handleDeleteBapPrak(bap.id)}
                                   variant="danger"
-                                  class="text-xs py-1.5 px-3"
+                                  class="text-caption py-1.5 px-3"
                                 >
                                   Hapus
                                 </Button>
@@ -1642,7 +1648,9 @@ export default function BapPresensi() {
                     </tbody>
                   </table>
                   <Show when={(bapPraktikumData() || []).length === 0 && bapPraktikumData() !== undefined}>
-                    <p class="text-center text-sm text-secondary-500 py-6">Belum ada BAP praktikum untuk rombel ini.</p>
+                    <p class="text-center text-base text-secondary-500 dark:text-secondary-300 py-6">
+                      Belum ada BAP praktikum untuk rombel ini.
+                    </p>
                   </Show>
                 </div>
               </div>
@@ -1655,7 +1663,7 @@ export default function BapPresensi() {
             {/* Stats Cards */}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
-                <span class="text-xs font-semibold uppercase text-secondary-400 dark:text-secondary-200">
+                <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Total Kelas Perkuliahan
                 </span>
                 <span class="text-2xl font-bold text-secondary-800 dark:text-white">
@@ -1663,7 +1671,7 @@ export default function BapPresensi() {
                 </span>
               </div>
               <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
-                <span class="text-xs font-semibold uppercase text-secondary-400 dark:text-secondary-200">
+                <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Rata-Rata Progres RPS
                 </span>
                 <span class="text-2xl font-bold text-brand-600">
@@ -1676,7 +1684,7 @@ export default function BapPresensi() {
                 </span>
               </div>
               <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
-                <span class="text-xs font-semibold uppercase text-secondary-400 dark:text-secondary-200">
+                <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Kelas Sesuai Target (&gt;=80%)
                 </span>
                 <span class="text-2xl font-bold text-emerald-600">
@@ -1684,7 +1692,7 @@ export default function BapPresensi() {
                 </span>
               </div>
               <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
-                <span class="text-xs font-semibold uppercase text-secondary-400 dark:text-secondary-200">
+                <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Kelas Belum Sesuai (&lt;80%)
                 </span>
                 <span class="text-2xl font-bold text-amber-600">
@@ -1727,15 +1735,15 @@ export default function BapPresensi() {
                     placeholder="Cari Mata Kuliah / Dosen..."
                     value={searchMonitoring()}
                     onInput={(e) => setSearchMonitoring(e.currentTarget.value)}
-                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-secondary-800 dark:text-white"
+                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 text-secondary-800 dark:text-white"
                   />
                 </div>
               </div>
 
               <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm border-collapse">
+                <table class="w-full text-left text-base border-collapse">
                   <thead>
-                    <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 uppercase text-xs font-semibold">
+                    <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 uppercase text-caption font-semibold">
                       <th class="py-3 px-4">Mata Kuliah / Kelas</th>
                       <th class="py-3 px-4">Program Studi</th>
                       <th class="py-3 px-4">Dosen Pengajar</th>
@@ -1763,7 +1771,9 @@ export default function BapPresensi() {
                             <div class="font-bold text-secondary-800 dark:text-white">
                               [{item.mataKuliahKode}] {item.mataKuliahNama}
                             </div>
-                            <div class="text-xs text-secondary-400 dark:text-secondary-300">Kelas {item.namaKelas}</div>
+                            <div class="text-caption text-secondary-400 dark:text-secondary-300">
+                              Kelas {item.namaKelas}
+                            </div>
                           </td>
                           <td class="py-3 px-4 font-medium text-secondary-600 dark:text-secondary-300">
                             {item.prodiNama}
@@ -1780,14 +1790,14 @@ export default function BapPresensi() {
                                   style={{ width: `${item.persentaseCapaian}%` }}
                                 />
                               </div>
-                              <span class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
+                              <span class="text-caption font-bold text-secondary-700 dark:text-secondary-200">
                                 {item.persentaseCapaian}%
                               </span>
                             </div>
                           </td>
                           <td class="py-3 px-4">
                             <span
-                              class={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                              class={`px-2.5 py-1 rounded-full text-caption font-bold ${
                                 item.status === 'SESUAI_TARGET'
                                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200'
                                   : item.status === 'BERJALAN'
@@ -1802,7 +1812,7 @@ export default function BapPresensi() {
                             <Button
                               onClick={() => setSelectedDetailKelasId(item.kelasKuliahId)}
                               variant="secondary"
-                              class="text-xs py-1 px-3"
+                              class="text-caption py-1 px-3"
                             >
                               Detail Matrix RPS
                             </Button>
@@ -1826,7 +1836,7 @@ export default function BapPresensi() {
           title={`Matrix Kesesuaian RPS - ${detailMatrixData()?.mataKuliahNama || ''} (${detailMatrixData()?.namaKelas || ''})`}
         >
           <div class="flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-1">
-            <div class="bg-brand-50/50 p-4 rounded-xl border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-brand-50/50 p-4 rounded-xl border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 grid grid-cols-2 gap-2 text-caption">
               <div>
                 <span class="font-bold">Mata Kuliah:</span> [{detailMatrixData()?.mataKuliahKode}]{' '}
                 {detailMatrixData()?.mataKuliahNama}
@@ -1843,7 +1853,7 @@ export default function BapPresensi() {
             </div>
 
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full text-left text-caption border-collapse">
                 <thead>
                   <tr class="border-b border-secondary-200 dark:border-secondary-700 font-semibold text-secondary-500 dark:text-secondary-300 uppercase">
                     <th class="py-2 px-3">P-Ke</th>
@@ -1862,7 +1872,7 @@ export default function BapPresensi() {
                         </td>
                         <td class="py-2.5 px-3">
                           <span
-                            class={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                            class={`px-2 py-0.5 rounded-md font-bold text-fine ${
                               row.diajarkan
                                 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200'
                                 : 'bg-secondary-100 text-secondary-500 dark:bg-secondary-800 dark:text-secondary-400'
@@ -1877,7 +1887,7 @@ export default function BapPresensi() {
                               Pertemuan {row.bapInfo.pertemuanKe} ({row.bapInfo.tanggal}) - {row.bapInfo.dosenNama}
                             </span>
                           ) : (
-                            <span class="italic text-secondary-400">-</span>
+                            <span class="italic text-secondary-400 dark:text-secondary-300">-</span>
                           )}
                         </td>
                       </tr>
@@ -1932,7 +1942,7 @@ export default function BapPresensi() {
                 />
                 <Show when={selectedKelas()}>
                   {(kelas) => (
-                    <div class="flex items-center justify-between gap-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs dark:bg-amber-900/20 dark:border-amber-800/40">
+                    <div class="flex items-center justify-between gap-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-caption dark:bg-amber-900/20 dark:border-amber-800/40">
                       <span class="text-amber-800 dark:text-amber-200">
                         Mata kuliah ini belum memiliki Rencana Perkuliahan (RPS). Buat RPS terlebih dahulu agar dapat
                         memilih topik pertemuan dan menautkan CPMK.
@@ -1953,7 +1963,7 @@ export default function BapPresensi() {
           >
             <div class="flex flex-col gap-1.5">
               <div class="flex items-center justify-between gap-2">
-                <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+                <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
                   Pilih Topik RPS (Dapat Memilih Lebih Dari Satu Topik)
                 </label>
                 <Show when={selectedKelas()}>
@@ -1962,7 +1972,7 @@ export default function BapPresensi() {
                       href={`/rps?mataKuliahId=${kelas().mataKuliahId}&periodeId=${kelas().periodeId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors shrink-0"
+                      class="inline-flex items-center gap-1 text-caption font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors shrink-0"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
@@ -1982,7 +1992,7 @@ export default function BapPresensi() {
                   {(topic) => {
                     const isChecked = () => selectedTopikIds().includes(topic.id);
                     return (
-                      <label class="flex items-center gap-2 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-2 rounded-lg transition-colors">
+                      <label class="flex items-center gap-2 text-caption cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-2 rounded-lg transition-colors">
                         <input
                           type="checkbox"
                           checked={isChecked()}
@@ -2019,7 +2029,7 @@ export default function BapPresensi() {
           </Show>
 
           <Show when={materi()}>
-            <div class="rounded-xl bg-brand-50/50 p-3 border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 text-xs">
+            <div class="rounded-xl bg-brand-50/50 p-3 border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 text-caption">
               <span class="font-bold text-brand-700 dark:text-brand-300">Target CPMK (Otomatis dari RPS): </span>
               <span class="text-secondary-700 dark:text-secondary-200">
                 {(() => {
@@ -2032,11 +2042,11 @@ export default function BapPresensi() {
           </Show>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+            <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
               Catatan Pertemuan (Opsional)
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               rows="3"
               placeholder="Tambahkan catatan khusus mengenai pertemuan perkuliahan ini..."
               value={catatan()}
@@ -2081,9 +2091,9 @@ export default function BapPresensi() {
           />
 
           <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Deskripsi CPMK</label>
+            <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">Deskripsi CPMK</label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Jelaskan capaian mata kuliah ini..."
               value={newCpmkDeskripsi()}
@@ -2116,11 +2126,11 @@ export default function BapPresensi() {
           />
 
           <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+            <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
               Keterangan (opsional)
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Catatan opsional mengenai kelompok praktikum ini..."
               value={keteranganRombel()}
@@ -2146,12 +2156,12 @@ export default function BapPresensi() {
         title="Konfirmasi Hapus Rombel Praktikum"
       >
         <div class="flex flex-col gap-4">
-          <p class="text-sm text-secondary-600 dark:text-secondary-300">
+          <p class="text-base text-secondary-600 dark:text-secondary-300">
             Apakah Anda yakin ingin menghapus rombel{' '}
             <strong class="text-secondary-900 dark:text-white">{currentRombel()?.namaGroup || ''}</strong>?
           </p>
           <Show when={(bapPraktikumData()?.length || 0) > 0}>
-            <div class="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300 text-xs leading-relaxed">
+            <div class="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-red-800 dark:text-red-300 text-caption leading-relaxed">
               Rombel ini memiliki{' '}
               <strong class="font-bold">{bapPraktikumData()?.length || 0} sesi BAP Praktikum</strong>. Jika Anda
               melanjutkan, seluruh BAP Praktikum, presensi praktikum, nilai praktikum, dan data anggota di dalamnya akan
@@ -2159,7 +2169,7 @@ export default function BapPresensi() {
             </div>
           </Show>
           <Show when={(bapPraktikumData()?.length || 0) === 0}>
-            <p class="text-xs text-secondary-500 dark:text-secondary-400">
+            <p class="text-caption text-secondary-500 dark:text-secondary-400">
               Semua data terkait (anggota rombel, presensi, dan nilai praktikum) akan ikut terhapus secara permanen.
             </p>
           </Show>
@@ -2194,7 +2204,7 @@ export default function BapPresensi() {
         title={`Kelola Anggota Rombel — ${currentRombel()?.namaGroup || ''}`}
       >
         <form onSubmit={handleSaveRombelMembers} class="flex flex-col gap-4 max-h-[80vh]">
-          <p class="text-xs text-secondary-500 dark:text-secondary-400">
+          <p class="text-caption text-secondary-500 dark:text-secondary-400">
             Pilih mahasiswa peserta praktikum. Mahasiswa dapat berasal dari kelas induk matakuliah ini maupun diambil
             dari mahasiswa kelas lain (lintas kelas).
           </p>
@@ -2205,7 +2215,7 @@ export default function BapPresensi() {
               <button
                 type="button"
                 onClick={() => setAssignTab('krs')}
-                class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                class={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors ${
                   assignTab() === 'krs'
                     ? 'bg-brand-600 text-white shadow-sm'
                     : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
@@ -2216,7 +2226,7 @@ export default function BapPresensi() {
               <button
                 type="button"
                 onClick={() => setAssignTab('all')}
-                class={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                class={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors ${
                   assignTab() === 'all'
                     ? 'bg-brand-600 text-white shadow-sm'
                     : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
@@ -2225,7 +2235,7 @@ export default function BapPresensi() {
                 Lintas Kelas (Semua Mhs)
               </button>
             </div>
-            <div class="text-xs font-bold text-brand-600 dark:text-brand-400 px-2">
+            <div class="text-caption font-bold text-brand-600 dark:text-brand-400 px-2">
               {assignedMhsSet().size} Mahasiswa Terpilih
             </div>
           </div>
@@ -2269,7 +2279,7 @@ export default function BapPresensi() {
 
               if (candidates.length === 0) {
                 return (
-                  <div class="p-6 text-center text-xs text-secondary-500">
+                  <div class="p-6 text-center text-caption text-secondary-500 dark:text-secondary-300">
                     Tidak ada mahasiswa yang sesuai kriteria pencarian.
                   </div>
                 );
@@ -2279,7 +2289,7 @@ export default function BapPresensi() {
                 const checked = assignedMhsSet().has(m.id);
                 return (
                   <label
-                    class={`flex items-center justify-between p-3 cursor-pointer text-xs transition-colors hover:bg-secondary-50 dark:hover:bg-secondary-800/60 ${
+                    class={`flex items-center justify-between p-3 cursor-pointer text-caption transition-colors hover:bg-secondary-50 dark:hover:bg-secondary-800/60 ${
                       checked ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''
                     }`}
                   >
@@ -2292,7 +2302,7 @@ export default function BapPresensi() {
                       />
                       <div>
                         <div class="font-semibold text-secondary-800 dark:text-secondary-100">{m.nama}</div>
-                        <div class="text-[11px] text-secondary-500 dark:text-secondary-400">
+                        <div class="text-fine text-secondary-500 dark:text-secondary-400">
                           NIM: {m.nim} {m.prodiNama ? `• ${m.prodiNama}` : ''}
                         </div>
                       </div>
@@ -2330,7 +2340,7 @@ export default function BapPresensi() {
         <form onSubmit={handleCreateBapPrak} class="flex flex-col gap-4">
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+              <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
                 {editBapPrakId() ? 'Pilih Sesi Ke' : 'Sesi Ke (Bisa Lebih Dari Satu)'}
               </label>
               <Show
@@ -2339,7 +2349,7 @@ export default function BapPresensi() {
                   <select
                     value={selectedSesiIdsPrak()[0] || 1}
                     onChange={(e) => setSelectedSesiIdsPrak([Number(e.currentTarget.value)])}
-                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-3 py-2 text-sm text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-3 py-2 text-base text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]}>
                       {(p) => <option value={p}>Sesi {p}</option>}
@@ -2352,7 +2362,7 @@ export default function BapPresensi() {
                     {(p) => {
                       const isChecked = () => selectedSesiIdsPrak().includes(p);
                       return (
-                        <label class="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-1.5 rounded-lg transition-colors">
+                        <label class="flex items-center gap-1.5 text-caption cursor-pointer hover:bg-white dark:hover:bg-secondary-700 p-1.5 rounded-lg transition-colors">
                           <input
                             type="checkbox"
                             checked={isChecked()}
@@ -2385,7 +2395,7 @@ export default function BapPresensi() {
           </div>
           <Show when={(rpsTopics() || []).length > 0}>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+              <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
                 Pilih Topik Rencana Pembelajaran SAP / RPS (Opsional)
               </label>
               <div class="max-h-48 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl p-2 bg-secondary-50 dark:bg-secondary-800 space-y-1">
@@ -2406,7 +2416,7 @@ export default function BapPresensi() {
                       }
                     };
                     return (
-                      <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white dark:hover:bg-secondary-700/60 cursor-pointer transition-colors text-xs">
+                      <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-white dark:hover:bg-secondary-700/60 cursor-pointer transition-colors text-caption">
                         <input
                           type="checkbox"
                           checked={isChecked()}
@@ -2417,7 +2427,7 @@ export default function BapPresensi() {
                           <span class="font-bold text-brand-600 dark:text-brand-400 mr-1.5">P{topic.pertemuanKe}</span>
                           <span class="font-medium text-secondary-800 dark:text-secondary-100">{topic.topik}</span>
                           {topic.subTopik && (
-                            <span class="text-secondary-500 dark:text-secondary-400 block text-[11px]">
+                            <span class="text-secondary-500 dark:text-secondary-400 block text-fine">
                               {topic.subTopik}
                             </span>
                           )}
@@ -2427,7 +2437,7 @@ export default function BapPresensi() {
                   }}
                 </For>
               </div>
-              <p class="text-[11px] text-secondary-500 dark:text-secondary-400">
+              <p class="text-fine text-secondary-500 dark:text-secondary-400">
                 Memilih topik SAP/RPS otomatis mengisi ringkasan materi praktikum di bawah.
               </p>
             </div>
@@ -2459,7 +2469,7 @@ export default function BapPresensi() {
               }))}
               onChange={(val) => setInstrukturIdPrak(val ? Number(val) : null)}
             />
-            <p class="text-xs text-secondary-500 dark:text-secondary-300 mt-1">
+            <p class="text-caption text-secondary-500 dark:text-secondary-300 mt-1">
               Jika kosong, instruktur rombel yang dipakai saat sinkronisasi.
             </p>
           </div>
@@ -2473,11 +2483,11 @@ export default function BapPresensi() {
             required
           />
           <div class="flex flex-col gap-1">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">
+            <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
               Catatan Sesi (opsional)
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Catatan hasil pelaksanaan praktikum..."
               value={catatanPrak()}
@@ -2506,7 +2516,7 @@ export default function BapPresensi() {
         title={`Isi Presensi Praktikum — Sesi ${selectedBapPrak()?.sesiKe || ''}`}
       >
         <form onSubmit={handleSavePresensiPrak} class="flex flex-col gap-4 max-h-[80vh]">
-          <p class="text-xs text-secondary-500 dark:text-secondary-400">
+          <p class="text-caption text-secondary-500 dark:text-secondary-400">
             Isi kehadiran peserta praktikum pada tanggal {selectedBapPrak()?.tanggal}.
           </p>
 
@@ -2522,15 +2532,17 @@ export default function BapPresensi() {
                     verifiedByName: null,
                   };
                 return (
-                  <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-caption">
                     <div>
                       <div class="font-bold text-secondary-800 dark:text-white">{mhsItem.mahasiswa?.nama}</div>
-                      <div class="text-[11px] text-secondary-500">NIM: {mhsItem.mahasiswa?.nim}</div>
+                      <div class="text-fine text-secondary-500 dark:text-secondary-300">
+                        NIM: {mhsItem.mahasiswa?.nim}
+                      </div>
                     </div>
                     <div class="flex flex-col items-end gap-1.5">
                       <div class="flex items-center gap-2">
                         <select
-                          class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                           value={sheet().status}
                           disabled={Boolean(sheet().verifiedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi'])}
                           onChange={(e) => {
@@ -2561,7 +2573,7 @@ export default function BapPresensi() {
                         <input
                           type="number"
                           min={0}
-                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
                           placeholder="Menit"
                           value={sheet().durasiMangkir}
                           onInput={(e) => {
@@ -2579,7 +2591,7 @@ export default function BapPresensi() {
               }}
             </For>
             <Show when={(currentRombel()?.mahasiswaList || []).length === 0}>
-              <div class="p-6 text-center text-xs text-secondary-500">
+              <div class="p-6 text-center text-caption text-secondary-500 dark:text-secondary-300">
                 Belum ada anggota mahasiswa pada Rombel Praktikum ini. Gunakan tombol 'Kelola Anggota' untuk menambah
                 mahasiswa.
               </div>
@@ -2604,7 +2616,7 @@ export default function BapPresensi() {
         title={`Input Nilai Praktikum — ${currentRombel()?.namaGroup || ''}`}
       >
         <form onSubmit={handleSaveNilaiPrak} class="flex flex-col gap-4 max-h-[80vh]">
-          <p class="text-xs text-secondary-500 dark:text-secondary-400">
+          <p class="text-caption text-secondary-500 dark:text-secondary-400">
             Input nilai angka praktikum (skala 0 - 100) untuk seluruh peserta rombel.
           </p>
 
@@ -2613,19 +2625,21 @@ export default function BapPresensi() {
               {(mhsItem) => {
                 const sheet = () => nilaiPrakSheet()[mhsItem.mahasiswaId] || { nilaiAngka: 0, keterangan: '' };
                 return (
-                  <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div class="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-caption">
                     <div>
                       <div class="font-bold text-secondary-800 dark:text-white">{mhsItem.mahasiswa?.nama}</div>
-                      <div class="text-[11px] text-secondary-500">NIM: {mhsItem.mahasiswa?.nim}</div>
+                      <div class="text-fine text-secondary-500 dark:text-secondary-300">
+                        NIM: {mhsItem.mahasiswa?.nim}
+                      </div>
                     </div>
                     <div class="flex items-center gap-2">
-                      <label class="text-[11px] text-secondary-500">Nilai (0-100):</label>
+                      <label class="text-fine text-secondary-500 dark:text-secondary-300">Nilai (0-100):</label>
                       <input
                         type="number"
                         min={0}
                         max={100}
                         step="0.01"
-                        class="w-24 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 text-right font-bold text-brand-600"
+                        class="w-24 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-brand-500 text-right font-bold text-brand-600"
                         value={sheet().nilaiAngka}
                         onInput={(e) => {
                           const val = parseFloat(e.currentTarget.value) || 0;
@@ -2641,7 +2655,7 @@ export default function BapPresensi() {
               }}
             </For>
             <Show when={(currentRombel()?.mahasiswaList || []).length === 0}>
-              <div class="p-6 text-center text-xs text-secondary-500">
+              <div class="p-6 text-center text-caption text-secondary-500 dark:text-secondary-300">
                 Belum ada anggota mahasiswa pada Rombel Praktikum ini. Gunakan tombol 'Kelola Anggota' untuk menambah
                 mahasiswa.
               </div>
@@ -2680,13 +2694,13 @@ export default function BapPresensi() {
                   <div class="print:mt-4">
                     <div class="text-center mb-4">
                       <h2 class="text-lg font-bold">BERITA ACARA PERKULIAHAN (BAP)</h2>
-                      <p class="text-sm">
+                      <p class="text-base">
                         {kelas?.mataKuliah?.kode ? `[${kelas.mataKuliah.kode}] ` : ''}
                         {kelas?.mataKuliah?.nama || ''} · Kelas {kelas?.namaKelas || ''}
                       </p>
-                      <p class="text-sm">Dosen Pengampu: {currentDosenPrint() || '-'}</p>
+                      <p class="text-base">Dosen Pengampu: {currentDosenPrint() || '-'}</p>
                     </div>
-                    <table class="w-full text-sm border-collapse print:border-black">
+                    <table class="w-full text-base border-collapse print:border-black">
                       <thead>
                         <tr>
                           <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
@@ -2734,13 +2748,13 @@ export default function BapPresensi() {
                     </table>
                     <div class="flex justify-end mt-6">
                       <div class="text-center mr-8">
-                        <p class="text-xs mb-10">(_______________)</p>
-                        <p class="text-xs">{currentDosenPrint()}</p>
+                        <p class="text-caption mb-10">(_______________)</p>
+                        <p class="text-caption">{currentDosenPrint()}</p>
                       </div>
                     </div>
                   </div>
                   <div class="print:hidden">
-                    <p class="text-xs text-secondary-500">
+                    <p class="text-caption text-secondary-500 dark:text-secondary-300">
                       Menampilkan {rows.length} baris BAP (satu baris per pertemuan) untuk kelas ini. Klik Cetak untuk
                       mencetak.
                     </p>
@@ -2764,10 +2778,10 @@ export default function BapPresensi() {
                   <div class="print:mt-4">
                     <div class="text-center mb-4">
                       <h2 class="text-lg font-bold">BERITA ACARA PRAKTIKUM (BAP)</h2>
-                      <p class="text-sm">Kelas Praktikum (Rombel): {rombel?.namaGroup || ''}</p>
-                      <p class="text-sm">Instruktur: {rombel?.instruktur?.nama || '-'}</p>
+                      <p class="text-base">Kelas Praktikum (Rombel): {rombel?.namaGroup || ''}</p>
+                      <p class="text-base">Instruktur: {rombel?.instruktur?.nama || '-'}</p>
                     </div>
-                    <table class="w-full text-sm border-collapse print:border-black">
+                    <table class="w-full text-base border-collapse print:border-black">
                       <thead>
                         <tr>
                           <th class="border border-secondary-300 px-2 py-1.5 bg-secondary-100 print:bg-gray-100 print:border-black">
@@ -2821,13 +2835,13 @@ export default function BapPresensi() {
                     </table>
                     <div class="flex justify-end mt-6">
                       <div class="text-center mr-8">
-                        <p class="text-xs mb-10">(_______________)</p>
-                        <p class="text-xs">{rombel?.instruktur?.nama || 'Instruktur'}</p>
+                        <p class="text-caption mb-10">(_______________)</p>
+                        <p class="text-caption">{rombel?.instruktur?.nama || 'Instruktur'}</p>
                       </div>
                     </div>
                   </div>
                   <div class="print:hidden">
-                    <p class="text-xs text-secondary-500">
+                    <p class="text-caption text-secondary-500 dark:text-secondary-300">
                       Menampilkan {rows.length} baris BAP praktikum (satu baris per sesi) untuk rombel ini. Klik Cetak
                       untuk mencetak.
                     </p>
@@ -2842,28 +2856,30 @@ export default function BapPresensi() {
       {/* Duplikasi BAP Modal */}
       <Modal isOpen={showDuplicateModal()} onClose={() => setShowDuplicateModal(false)} title="Duplikasi BAP">
         <div class="flex flex-col gap-4">
-          <p class="text-sm text-secondary-600 dark:text-secondary-200">
+          <p class="text-base text-secondary-600 dark:text-secondary-200">
             Duplikasi BAP jenis teoretis untuk Pertemuan{' '}
             <span class="font-bold">{bapData()?.find((b) => b.id === duplicateSourceBapId())?.pertemuanKe}</span> kepada
             pertemuan baru. Presensi, topik, dan catatan akan disalin otomatis.
           </p>
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Nomor Pertemuan Baru</label>
+            <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
+              Nomor Pertemuan Baru
+            </label>
             <input
               type="number"
               min={1}
               value={duplicateTargetPertemuan()}
               onInput={(e) => setDuplicateTargetPertemuan(Number(e.currentTarget.value))}
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Tanggal Pertemuan</label>
+            <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">Tanggal Pertemuan</label>
             <input
               type="date"
               value={duplicateTargetTanggal()}
               onInput={(e) => setDuplicateTargetTanggal(e.currentTarget.value)}
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             />
           </div>
           <div class="flex justify-end gap-2">
@@ -2895,9 +2911,11 @@ export default function BapPresensi() {
           class="flex flex-col gap-4"
         >
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Keterangan / Alasan</label>
+            <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">
+              Keterangan / Alasan
+            </label>
             <textarea
-              class="w-full min-h-[120px] bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white resize-y"
+              class="w-full min-h-[120px] bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white resize-y"
               placeholder="Tulis keterangan detail (misal alasan keterlambatan, kondisi khusus, dll)..."
               value={keteranganDraft()}
               onInput={(e) => setKeteranganDraft(e.currentTarget.value)}

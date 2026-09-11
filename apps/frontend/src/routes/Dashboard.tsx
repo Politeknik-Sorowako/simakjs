@@ -140,10 +140,14 @@ function AdminWidgets() {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Tagihan Status */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-          <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Status Pembayaran Mahasiswa</h3>
+          <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Pembayaran Mahasiswa</h3>
           <Show
             when={tagihanStats().total > 0}
-            fallback={<p class="text-xs text-secondary-400 text-center py-8">Belum ada data tagihan</p>}
+            fallback={
+              <p class="text-caption text-secondary-400 dark:text-secondary-300 text-center py-8">
+                Belum ada data tagihan
+              </p>
+            }
           >
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <PieChart
@@ -153,24 +157,24 @@ function AdminWidgets() {
                 donut
               />
               <div class="flex flex-col justify-center gap-3">
-                <div class="flex justify-between text-xs">
-                  <span class="text-secondary-500">Total Tagihan</span>
+                <div class="flex justify-between text-caption">
+                  <span class="text-secondary-500 dark:text-secondary-300">Total Tagihan</span>
                   <span class="font-bold text-secondary-800 dark:text-white">
                     {formatRupiah(tagihanStats().totalNominal)}
                   </span>
                 </div>
-                <div class="flex justify-between text-xs">
-                  <span class="text-secondary-500">Telah Terbayar</span>
+                <div class="flex justify-between text-caption">
+                  <span class="text-secondary-500 dark:text-secondary-300">Telah Terbayar</span>
                   <span class="font-bold text-green-600">{formatRupiah(tagihanStats().totalTerbayar)}</span>
                 </div>
-                <div class="flex justify-between text-xs">
-                  <span class="text-secondary-500">Sisa Tunggakan</span>
+                <div class="flex justify-between text-caption">
+                  <span class="text-secondary-500 dark:text-secondary-300">Sisa Tunggakan</span>
                   <span class="font-bold text-rose-600">
                     {formatRupiah(tagihanStats().totalNominal - tagihanStats().totalTerbayar)}
                   </span>
                 </div>
                 <div class="mt-2 text-center">
-                  <a href="/keuangan" class="text-xs font-bold text-brand-600 hover:text-brand-700 underline">
+                  <a href="/keuangan" class="text-caption font-bold text-brand-600 hover:text-brand-700 underline">
                     Kelola Keuangan →
                   </a>
                 </div>
@@ -181,22 +185,22 @@ function AdminWidgets() {
 
         {/* PDDIKTI Sync Status */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-          <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Sinkronisasi PDDIKTI</h3>
+          <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Sinkronisasi PDDIKTI</h3>
           <Show
             when={!pddiktiStats.loading && pddiktiStats()}
-            fallback={<p class="text-xs text-secondary-400 text-center py-8">Memuat...</p>}
+            fallback={<p class="text-caption text-secondary-400 dark:text-secondary-300 text-center py-8">Memuat...</p>}
           >
             <div class="space-y-3">
               <For each={Object.entries(pddiktiStats() || {})}>
                 {([key, val]: [string, { total: number; unsynced: number }]) => (
                   <div class="flex items-center justify-between border-b border-secondary-100 dark:border-secondary-800 pb-2 last:border-0">
-                    <span class="text-xs font-semibold text-secondary-600 dark:text-secondary-300 capitalize">
+                    <span class="text-caption font-semibold text-secondary-600 dark:text-secondary-300 capitalize">
                       {key}
                     </span>
                     <div class="flex items-center gap-2">
-                      <span class="text-xs text-secondary-400">{val.total} total</span>
+                      <span class="text-caption text-secondary-400 dark:text-secondary-300">{val.total} total</span>
                       <span
-                        class={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        class={`inline-flex items-center px-2 py-0.5 rounded-full text-fine font-bold ${
                           val.unsynced > 0
                             ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                             : 'bg-green-50 text-green-700 border border-green-200'
@@ -209,7 +213,7 @@ function AdminWidgets() {
                 )}
               </For>
               <div class="pt-2 text-center">
-                <a href="/pddikti" class="text-xs font-bold text-brand-600 hover:text-brand-700 underline">
+                <a href="/pddikti" class="text-caption font-bold text-brand-600 hover:text-brand-700 underline">
                   Sinkronisasi Data →
                 </a>
               </div>
@@ -222,12 +226,12 @@ function AdminWidgets() {
       <div class="bg-gradient-to-r from-brand-600 to-accent-700 text-white rounded-2xl p-5 shadow-sm">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
-            <h3 class="text-sm font-bold opacity-90">Periode Akademik Aktif</h3>
-            <p class="text-2xl font-extrabold">{periodeAktif()?.nama || '-'}</p>
+            <h3 class="text-base font-bold opacity-90">Periode Akademik Aktif</h3>
+            <p class="text-2xl font-bold">{periodeAktif()?.nama || '-'}</p>
           </div>
           <a
             href="/periode-akademik"
-            class="px-4 py-2 text-xs font-bold bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+            class="px-4 py-2 text-caption font-bold bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
           >
             Kelola Periode
           </a>
@@ -347,16 +351,16 @@ function DosenWidgets() {
       <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5 shadow-sm">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <div class="flex items-center gap-2 flex-wrap">
-            <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Kelas Aktif Semester Ini</h3>
+            <h3 class="text-base font-bold text-secondary-800 dark:text-white">Kelas Aktif Semester Ini</h3>
             <Show when={periodeAktif()}>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-brand-50 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-fine font-semibold bg-brand-50 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
                 {periodeAktif()?.nama}
               </span>
             </Show>
           </div>
           <a
             href="/jurnal-presensi"
-            class="text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 underline"
+            class="text-caption font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 underline"
           >
             Isi BAP & Presensi →
           </a>
@@ -364,7 +368,7 @@ function DosenWidgets() {
         <Show
           when={!kelasDiampu.loading}
           fallback={
-            <div class="flex flex-col items-center justify-center py-10 text-secondary-400">
+            <div class="flex flex-col items-center justify-center py-10 text-secondary-400 dark:text-secondary-300">
               <svg
                 class="animate-spin h-6 w-6 text-brand-500 mb-2"
                 xmlns="http://www.w3.org/2000/svg"
@@ -378,7 +382,7 @@ function DosenWidgets() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              <p class="text-xs font-medium">Memuat data kelas aktif...</p>
+              <p class="text-caption font-medium">Memuat data kelas aktif...</p>
             </div>
           }
         >
@@ -396,8 +400,8 @@ function DosenWidgets() {
                     />
                   </svg>
                 </div>
-                <h4 class="text-sm font-bold text-secondary-800 dark:text-white">Belum Ada Kelas yang Diampu</h4>
-                <p class="text-xs text-secondary-500 dark:text-secondary-400 max-w-sm mt-1">
+                <h4 class="text-base font-bold text-secondary-800 dark:text-white">Belum Ada Kelas yang Diampu</h4>
+                <p class="text-caption text-secondary-500 dark:text-secondary-400 max-w-sm mt-1">
                   Belum ada kelas atau mata kuliah yang Anda ampu pada semester aktif ini (
                   {periodeAktif()?.nama || 'Semester Berjalan'}).
                 </p>
@@ -412,20 +416,20 @@ function DosenWidgets() {
                     class="group relative border border-secondary-100 dark:border-secondary-800 rounded-xl p-4 hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700 transition-all bg-secondary-50/40 dark:bg-secondary-800/40 hover:bg-white dark:hover:bg-secondary-800"
                   >
                     <div class="flex items-center justify-between">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-brand-100/70 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 uppercase tracking-wider">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-fine font-bold bg-brand-100/70 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 uppercase tracking-wider">
                         {item.kelasKuliah?.namaKelas}
                       </span>
-                      <span class="text-[10px] font-medium text-secondary-400 dark:text-secondary-500">
+                      <span class="text-fine font-medium text-secondary-400 dark:text-secondary-500">
                         {item.sksBebanMengajar || item.kelasKuliah?.mataKuliah?.sksTotal || 0} SKS
                       </span>
                     </div>
-                    <div class="text-sm font-bold text-secondary-800 dark:text-white mt-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
+                    <div class="text-base font-bold text-secondary-800 dark:text-white mt-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
                       {item.kelasKuliah?.mataKuliah?.nama || 'Mata Kuliah'}
                     </div>
-                    <div class="text-[11px] text-secondary-500 dark:text-secondary-400 mt-1 flex items-center gap-2">
+                    <div class="text-fine text-secondary-500 dark:text-secondary-400 mt-1 flex items-center gap-2">
                       <span class="font-mono">{item.kelasKuliah?.mataKuliah?.kode}</span>
                     </div>
-                    <span class="mt-2.5 inline-flex items-center gap-1 text-[10px] font-bold text-brand-600 dark:text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="mt-2.5 inline-flex items-center gap-1 text-fine font-bold text-brand-600 dark:text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
                       Buka BAP →
                     </span>
                   </a>
@@ -439,24 +443,30 @@ function DosenWidgets() {
       {/* Mahasiswa Bimbingan */}
       <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5 shadow-sm">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
+          <h3 class="text-base font-bold text-secondary-800 dark:text-white">
             Mahasiswa Bimbingan Akademik
-            <span class="ml-2 text-[10px] font-normal text-secondary-400">({dosenBimbingan().length} mahasiswa)</span>
+            <span class="ml-2 text-fine font-normal text-secondary-400 dark:text-secondary-300">
+              ({dosenBimbingan().length} mahasiswa)
+            </span>
           </h3>
         </div>
         <Show
           when={dosenBimbingan().length > 0}
-          fallback={<p class="text-xs text-secondary-400 text-center py-6">Belum ada mahasiswa bimbingan</p>}
+          fallback={
+            <p class="text-caption text-secondary-400 dark:text-secondary-300 text-center py-6">
+              Belum ada mahasiswa bimbingan
+            </p>
+          }
         >
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full text-left text-caption">
               <thead>
                 <tr class="border-b border-secondary-100 dark:border-secondary-800">
-                  <th class="pb-2 font-semibold text-secondary-400">NIM</th>
-                  <th class="pb-2 font-semibold text-secondary-400">Nama</th>
-                  <th class="pb-2 font-semibold text-secondary-400">Status</th>
-                  <th class="pb-2 font-semibold text-secondary-400">Bimbingan</th>
-                  <th class="pb-2 font-semibold text-secondary-400">Aksi</th>
+                  <th class="pb-2 font-semibold text-secondary-400 dark:text-secondary-300">NIM</th>
+                  <th class="pb-2 font-semibold text-secondary-400 dark:text-secondary-300">Nama</th>
+                  <th class="pb-2 font-semibold text-secondary-400 dark:text-secondary-300">Status</th>
+                  <th class="pb-2 font-semibold text-secondary-400 dark:text-secondary-300">Bimbingan</th>
+                  <th class="pb-2 font-semibold text-secondary-400 dark:text-secondary-300">Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -466,17 +476,17 @@ function DosenWidgets() {
                       <td class="py-3 font-mono text-secondary-600">{m.nim}</td>
                       <td class="py-3 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
                       <td class="py-3">
-                        <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-50 text-green-700 border border-green-200">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-fine font-bold bg-green-50 text-green-700 border border-green-200">
                           Aktif
                         </span>
                       </td>
-                      <td class="py-3 text-secondary-500">
+                      <td class="py-3 text-secondary-500 dark:text-secondary-300">
                         {m.bimbinganId ? `${m.totalSesi || 0} sesi` : 'Belum ada'}
                       </td>
                       <td class="py-3">
                         <a
                           href={`/bimbingan?mhs=${m.id}`}
-                          class="text-brand-600 hover:text-brand-700 font-bold text-[10px]"
+                          class="text-brand-600 hover:text-brand-700 font-bold text-fine"
                         >
                           Detail →
                         </a>
@@ -629,10 +639,14 @@ function MahasiswaWidgets() {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* IP Trend Chart */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-          <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Tren IP per Semester</h3>
+          <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Tren IP per Semester</h3>
           <Show
             when={ipsData().labels.length > 0}
-            fallback={<p class="text-xs text-secondary-400 text-center py-8">Belum ada data nilai</p>}
+            fallback={
+              <p class="text-caption text-secondary-400 dark:text-secondary-300 text-center py-8">
+                Belum ada data nilai
+              </p>
+            }
           >
             <LineChart
               labels={ipsData().labels}
@@ -652,15 +666,15 @@ function MahasiswaWidgets() {
 
         {/* Tagihan Info */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-          <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Status Tagihan</h3>
+          <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Tagihan</h3>
           <Show
             when={currentTagihan()}
             fallback={
               <div class="text-center py-8">
-                <p class="text-xs text-secondary-400">Tidak ada tagihan aktif</p>
+                <p class="text-caption text-secondary-400 dark:text-secondary-300">Tidak ada tagihan aktif</p>
                 <a
                   href="/keuangan"
-                  class="text-xs font-bold text-brand-600 hover:text-brand-700 underline mt-2 inline-block"
+                  class="text-caption font-bold text-brand-600 hover:text-brand-700 underline mt-2 inline-block"
                 >
                   Lihat Riwayat →
                 </a>
@@ -668,18 +682,18 @@ function MahasiswaWidgets() {
             }
           >
             <div class="space-y-4">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-secondary-500">Nominal Tagihan</span>
+              <div class="flex items-center justify-between text-caption">
+                <span class="text-secondary-500 dark:text-secondary-300">Nominal Tagihan</span>
                 <span class="font-bold text-secondary-800 dark:text-white">
                   {formatRupiah(currentTagihan()?.nominal || 0)}
                 </span>
               </div>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-secondary-500">Terbayar</span>
+              <div class="flex items-center justify-between text-caption">
+                <span class="text-secondary-500 dark:text-secondary-300">Terbayar</span>
                 <span class="font-bold text-green-600">{formatRupiah(currentTagihan()?.nominalTerbayar || 0)}</span>
               </div>
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-secondary-500">Sisa</span>
+              <div class="flex items-center justify-between text-caption">
+                <span class="text-secondary-500 dark:text-secondary-300">Sisa</span>
                 <span class="font-bold text-rose-600">
                   {formatRupiah((currentTagihan()?.nominal || 0) - (currentTagihan()?.nominalTerbayar || 0))}
                 </span>
@@ -699,7 +713,7 @@ function MahasiswaWidgets() {
               </div>
               <div class="text-center">
                 <span
-                  class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-caption font-semibold ${
                     currentTagihan()?.status === 'lunas'
                       ? 'bg-green-50 text-green-700 border border-green-200'
                       : currentTagihan()?.status === 'cicilan'
@@ -723,12 +737,12 @@ function MahasiswaWidgets() {
       <div class="bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl p-5 shadow-sm">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-sm font-bold opacity-90">Poin Pelanggaran</h3>
-            <p class="text-2xl font-extrabold">{akademikSummary()?.poinPelanggaran || 0}</p>
+            <h3 class="text-base font-bold opacity-90">Poin Pelanggaran</h3>
+            <p class="text-2xl font-bold">{akademikSummary()?.poinPelanggaran || 0}</p>
           </div>
           <a
             href="/pelanggaran"
-            class="px-4 py-2 text-xs font-bold bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+            class="px-4 py-2 text-caption font-bold bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
           >
             Lihat Detail
           </a>
@@ -753,12 +767,14 @@ function MahasiswaWidgets() {
               </svg>
             </div>
             <div>
-              <h3 class="text-sm font-bold opacity-90">Presensi Butuh Bukti / Surat</h3>
-              <p class="text-2xl font-extrabold">{unknownCount()} pertemuan</p>
-              <p class="text-xs opacity-80">Unggah surat sakit/izin agar diverifikasi Admin</p>
+              <h3 class="text-base font-bold opacity-90">Presensi Butuh Bukti / Surat</h3>
+              <p class="text-2xl font-bold">{unknownCount()} pertemuan</p>
+              <p class="text-caption opacity-80">Unggah surat sakit/izin agar diverifikasi Admin</p>
             </div>
           </div>
-          <span class="px-4 py-2 text-xs font-bold bg-white/20 hover:bg-white/30 rounded-xl shrink-0">Kelola →</span>
+          <span class="px-4 py-2 text-caption font-bold bg-white/20 hover:bg-white/30 rounded-xl shrink-0">
+            Kelola →
+          </span>
         </a>
       </Show>
     </div>
@@ -778,7 +794,7 @@ export default function Dashboard() {
         <div class="bg-gradient-to-r from-brand-600 to-accent-700 text-white rounded-2xl p-8 shadow-lg relative overflow-hidden">
           <div class="absolute -right-16 -top-16 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
           <div class="relative z-10 flex flex-col gap-2">
-            <h1 class="text-3xl font-extrabold tracking-tight">Selamat Datang, {user()?.nama || user()?.email}!</h1>
+            <h1 class="page-title">Selamat Datang, {user()?.nama || user()?.email}!</h1>
             <p class="text-brand-100 max-w-xl">
               Anda masuk sebagai <strong class="uppercase text-white">{role()}</strong> di SIMAK Vokasi Politeknik
               Sorowako.
@@ -800,7 +816,7 @@ export default function Dashboard() {
         {/* Other roles */}
         <Show when={role() === 'prodi' || role() === 'keuangan'}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
-            <p class="text-sm text-secondary-500">
+            <p class="text-base text-secondary-500 dark:text-secondary-300">
               Dashboard khusus untuk role <strong>{role()}</strong> sedang dalam pengembangan. Silakan gunakan menu
               navigasi di sebelah kiri.
             </p>

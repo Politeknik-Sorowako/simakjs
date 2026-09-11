@@ -18,7 +18,7 @@ export function Input(props: InputProps) {
   const inputId = () => local.id || `input-${createUniqueId()}`;
 
   const baseClasses = `
-    w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-sm text-secondary-800
+    w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800
     placeholder:text-secondary-400
     focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600
     transition-all duration-200
@@ -36,7 +36,7 @@ export function Input(props: InputProps) {
       <Show when={local.label}>
         <label
           for={inputId()}
-          class="text-xs font-semibold uppercase tracking-wider text-secondary-600 dark:text-secondary-400"
+          class="text-caption font-semibold uppercase tracking-wider text-secondary-600 dark:text-secondary-400"
         >
           {local.label}
         </label>
@@ -74,7 +74,7 @@ export function Input(props: InputProps) {
       </Show>
 
       <Show when={local.error}>
-        <p class="text-xs text-danger-600 dark:text-danger-400">{local.error}</p>
+        <p class="text-caption text-danger-600 dark:text-danger-400">{local.error}</p>
       </Show>
     </div>
   );

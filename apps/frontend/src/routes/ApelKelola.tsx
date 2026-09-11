@@ -470,14 +470,14 @@ export default function ApelKelola() {
     <MainLayout>
       <div class="space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h1 class="text-2xl font-bold">Presensi Apel Pagi & Sore</h1>
+          <h1 class="page-title">Presensi Apel Pagi & Sore</h1>
         </div>
 
         {/* Panel Acuan Kelompok Hari Ini */}
         <Show
           when={monitorHariIni()}
           fallback={
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-sm text-gray-500">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-base text-gray-500">
               Memuat daftar kelompok hari ini...
             </div>
           }
@@ -488,7 +488,7 @@ export default function ApelKelola() {
                 <h2 class="text-base font-bold text-gray-900 dark:text-white">
                   Kelompok Apel Hari Ini — {tanggalPanel()}
                 </h2>
-                <p class="text-xs text-gray-500">
+                <p class="text-caption text-gray-500 dark:text-gray-400">
                   Acuan kelompok yang sudah dibuka dan yang mungkin terlewat oleh petugas PJ.
                 </p>
               </div>
@@ -514,17 +514,17 @@ export default function ApelKelola() {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 px-2.5 py-1 rounded-full font-semibold">
+                <span class="text-caption bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 px-2.5 py-1 rounded-full font-semibold">
                   Dibuka {dibukaHariIni().length}/{monitorHariIni()?.detail.length ?? 0}
                 </span>
                 <Show when={terlewatHariIni().length > 0}>
-                  <span class="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2.5 py-1 rounded-full font-semibold">
+                  <span class="text-caption bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 px-2.5 py-1 rounded-full font-semibold">
                     Terlewat {terlewatHariIni().length}
                   </span>
                 </Show>
                 <input
                   type="date"
-                  class="border rounded-lg px-2 py-1 text-xs dark:bg-gray-700 dark:border-gray-600 max-w-full"
+                  class="border rounded-lg px-2 py-1 text-caption dark:bg-gray-700 dark:border-gray-600 max-w-full"
                   value={tanggalPanel()}
                   onChange={(e) => setTanggalPanel(e.currentTarget.value)}
                 />
@@ -550,21 +550,25 @@ export default function ApelKelola() {
               <div id="panel-summary-hari-ini" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Dibuka hari ini */}
                 <div class="space-y-2">
-                  <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <h3 class="text-caption font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     Dibuka hari ini ({dibukaHariIni().length})
                   </h3>
                   <Show
                     when={dibukaHariIni().length > 0}
-                    fallback={<div class="text-xs text-gray-500 italic">Belum ada kelompok yang dibuka hari ini.</div>}
+                    fallback={
+                      <div class="text-caption text-gray-500 dark:text-gray-400 italic">
+                        Belum ada kelompok yang dibuka hari ini.
+                      </div>
+                    }
                   >
                     <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                       <For each={dibukaHariIni()}>
                         {(item) => (
-                          <div class="flex items-center justify-between gap-2 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs">
+                          <div class="flex items-center justify-between gap-2 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-caption">
                             <div class="flex flex-col min-w-0 gap-1">
                               <div class="flex items-center gap-2">
                                 <span class="font-semibold truncate">{item.kelompokNama}</span>
-                                <span class="text-gray-500 shrink-0" title={item.dosenNama}>
+                                <span class="text-gray-500 dark:text-gray-400 shrink-0" title={item.dosenNama}>
                                   {item.dosenNama}
                                 </span>
                               </div>
@@ -573,7 +577,7 @@ export default function ApelKelola() {
                                   {(sesi) => (
                                     <button
                                       type="button"
-                                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-[10px] font-semibold capitalize"
+                                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-fine font-semibold capitalize"
                                       onClick={() =>
                                         handlePilihKelompokPanel({
                                           kelompokApelId: item.kelompokApelId,
@@ -583,7 +587,7 @@ export default function ApelKelola() {
                                     >
                                       {sesi.shift}
                                       <span
-                                        class={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                        class={`px-1.5 py-0.5 rounded text-fine font-bold ${
                                           sesi.statusSesi === 'ditutup'
                                             ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
                                             : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
@@ -591,7 +595,7 @@ export default function ApelKelola() {
                                       >
                                         {sesi.statusSesi === 'ditutup' ? 'Ditutup' : 'Berlangsung'}
                                       </span>
-                                      <span class="text-gray-500 font-mono">{sesi.jamMulai}</span>
+                                      <span class="text-gray-500 dark:text-gray-400 font-mono">{sesi.jamMulai}</span>
                                     </button>
                                   )}
                                 </For>
@@ -606,17 +610,21 @@ export default function ApelKelola() {
 
                 {/* Mungkin terlewat (belum dibuka) */}
                 <div class="space-y-2">
-                  <h3 class="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+                  <h3 class="text-caption font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
                     Mungkin terlewat ({terlewatHariIni().length})
                   </h3>
                   <Show
                     when={terlewatHariIni().length > 0}
-                    fallback={<div class="text-xs text-gray-500 italic">Semua kelompok sudah dibuka hari ini.</div>}
+                    fallback={
+                      <div class="text-caption text-gray-500 dark:text-gray-400 italic">
+                        Semua kelompok sudah dibuka hari ini.
+                      </div>
+                    }
                   >
                     <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                       <For each={terlewatHariIni()}>
                         {(item) => (
-                          <div class="flex items-center justify-between gap-2 p-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-xs">
+                          <div class="flex items-center justify-between gap-2 p-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-caption">
                             <button
                               type="button"
                               class="flex-1 min-w-0 text-left"
@@ -634,7 +642,7 @@ export default function ApelKelola() {
                             <div class="flex items-center gap-1.5 shrink-0">
                               <button
                                 type="button"
-                                class="bg-amber-600 text-white px-2.5 py-1 rounded text-[10px] font-semibold hover:bg-amber-700"
+                                class="bg-amber-600 text-white px-2.5 py-1 rounded text-fine font-semibold hover:bg-amber-700"
                                 onClick={() =>
                                   handleBukaSesiDariPanel({
                                     kelompokApelId: item.kelompokApelId,
@@ -664,7 +672,7 @@ export default function ApelKelola() {
                 <h2 class="text-lg font-semibold">Pilih Kelompok</h2>
                 <Show when={auth.hasRole(['super_admin', 'admin'])}>
                   <button
-                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                    class="text-caption text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                     onClick={() => setShowCreateModal(true)}
                   >
                     + Buat Kelompok
@@ -687,14 +695,14 @@ export default function ApelKelola() {
               />
 
               <Show when={kelompokList() && kelompokList()!.length === 0}>
-                <div class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-2 rounded border border-amber-200 dark:border-amber-800">
+                <div class="text-caption text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-2 rounded border border-amber-200 dark:border-amber-800">
                   Belum ada kelompok apel pada prodi ini. Klik tombol <b>+ Buat Kelompok Baru</b> di atas untuk membuat.
                 </div>
               </Show>
 
               <Show when={selectedKelompok()}>
                 <button
-                  class="w-full text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-lg flex items-center justify-center gap-1 font-medium"
+                  class="w-full text-caption bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-800 dark:text-gray-200 py-2 px-3 rounded-lg flex items-center justify-center gap-1 font-medium"
                   onClick={() => setShowAnggotaModal(true)}
                   title="Kelola Anggota Mahasiswa"
                 >
@@ -706,17 +714,17 @@ export default function ApelKelola() {
             <Show when={selectedKelompok()}>
               <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
                 <div class="flex justify-between items-center">
-                  <h2 class="text-sm font-bold text-gray-800 dark:text-white">Pilih Riwayat Sesi</h2>
+                  <h2 class="text-base font-bold text-gray-800 dark:text-white">Pilih Riwayat Sesi</h2>
                   <div class="flex items-center gap-2">
                     <button
-                      class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                      class="text-caption text-blue-600 dark:text-blue-400 hover:underline font-semibold"
                       onClick={openBukaSesiModalWithCheck}
                     >
                       + Tambah Sesi
                     </button>
                     <Show when={selectedSesi() && auth.hasRole(['admin'])}>
                       <button
-                        class="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold"
+                        class="text-caption text-red-600 dark:text-red-400 hover:underline font-semibold"
                         onClick={() => handleDeleteSesi(selectedSesi()!)}
                       >
                         🗑 Hapus Sesi
@@ -728,7 +736,7 @@ export default function ApelKelola() {
                 <Show
                   when={sesiList() && sesiList()!.length > 0}
                   fallback={
-                    <div class="text-xs text-gray-500 italic py-1">
+                    <div class="text-caption text-gray-500 dark:text-gray-400 italic py-1">
                       Belum ada sesi. Klik{' '}
                       <button onClick={openBukaSesiModalWithCheck} class="text-blue-600 underline font-semibold">
                         + Tambah Sesi
@@ -772,7 +780,10 @@ export default function ApelKelola() {
                     <h2 class="text-lg font-semibold">
                       Presensi - {sesiPresensi()?.sesi.tanggal} ({sesiPresensi()?.sesi.shift})
                     </h2>
-                    <p class="text-sm text-gray-500 truncate" title={sesiPresensi()?.sesi.dosenNama}>
+                    <p
+                      class="text-base text-gray-500 dark:text-gray-400 truncate"
+                      title={sesiPresensi()?.sesi.dosenNama}
+                    >
                       {sesiPresensi()?.sesi.jamMulai} | {sesiPresensi()?.sesi.dosenNama}
                     </p>
                   </div>
@@ -818,7 +829,7 @@ export default function ApelKelola() {
                       <Show
                         when={auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur'])}
                         fallback={
-                          <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded font-semibold">
+                          <span class="text-caption bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 rounded font-semibold">
                             Sesi Tertutup
                           </span>
                         }
@@ -884,25 +895,25 @@ export default function ApelKelola() {
 
                 <div class="px-4 py-2 border-b dark:border-gray-700 flex flex-wrap items-center gap-2">
                   <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-fine font-semibold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
                     title="Hadir"
                   >
                     H: {rekapPresensi().hadir}
                   </span>
                   <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-fine font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
                     title="Terlambat"
                   >
                     T: {rekapPresensi().terlambat}
                   </span>
                   <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-fine font-semibold bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
                     title="Unknown / Belum jelas"
                   >
                     ?: {rekapPresensi().unknown}
                   </span>
                   <span
-                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-fine font-semibold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
                     title="Total mahasiswa"
                   >
                     Total: {rekapPresensi().total}
@@ -913,21 +924,21 @@ export default function ApelKelola() {
                   <table class="w-full">
                     <thead class="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase">No</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase">NIM</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase">Nama</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium uppercase">Durasi (Menit)</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium uppercase">Catatan / Alasan</th>
+                        <th class="px-4 py-3 text-left text-caption font-medium uppercase">No</th>
+                        <th class="px-4 py-3 text-left text-caption font-medium uppercase">NIM</th>
+                        <th class="px-4 py-3 text-left text-caption font-medium uppercase">Nama</th>
+                        <th class="px-4 py-3 text-center text-caption font-medium uppercase">Status</th>
+                        <th class="px-4 py-3 text-center text-caption font-medium uppercase">Durasi (Menit)</th>
+                        <th class="px-4 py-3 text-left text-caption font-medium uppercase">Catatan / Alasan</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y dark:divide-gray-700">
                       <For each={presensiData()}>
                         {(item: PresensiApelItem, idx) => (
                           <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
-                            <td class="px-4 py-3 text-sm">{idx() + 1}</td>
-                            <td class="px-4 py-3 text-sm font-mono">{item.mahasiswaNim}</td>
-                            <td class="px-4 py-3 text-sm">
+                            <td class="px-4 py-3 text-base">{idx() + 1}</td>
+                            <td class="px-4 py-3 text-base font-mono">{item.mahasiswaNim}</td>
+                            <td class="px-4 py-3 text-base">
                               <div class="flex items-center gap-2">
                                 <StudentAvatar
                                   foto={item.mahasiswaFoto}
@@ -941,7 +952,7 @@ export default function ApelKelola() {
                             <td class="px-4 py-3 text-center">
                               <div class="flex items-center justify-center gap-2">
                                 <select
-                                  class={`px-2 py-1 rounded text-xs font-bold border focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 ${
+                                  class={`px-2 py-1 rounded text-caption font-bold border focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50 ${
                                     item.status === 'hadir'
                                       ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border-green-300'
                                       : item.status === 'terlambat'
@@ -988,7 +999,7 @@ export default function ApelKelola() {
                                   <input
                                     type="number"
                                     min={0}
-                                    class="w-16 border rounded px-2 py-1 text-sm text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
+                                    class="w-16 border rounded px-2 py-1 text-base text-center dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                                     value={item.menitTerlambat ?? 0}
                                     disabled={
                                       isSubmitting() ||
@@ -1004,7 +1015,7 @@ export default function ApelKelola() {
                                       handleMenitChange(item.mahasiswaId, val);
                                     }}
                                   />
-                                  <span class="text-xs text-gray-500">mnt</span>
+                                  <span class="text-caption text-gray-500 dark:text-gray-400">mnt</span>
                                 </div>
                               </Show>
                             </td>
@@ -1013,7 +1024,7 @@ export default function ApelKelola() {
                                 type="button"
                                 onClick={() => openCatatanModal(item)}
                                 disabled={isSubmitting() || sesiPresensi()?.sesi.isClosed}
-                                class={`px-2.5 py-1 rounded text-xs transition-colors max-w-[130px] truncate text-left ${
+                                class={`px-2.5 py-1 rounded text-caption transition-colors max-w-[130px] truncate text-left ${
                                   item.keterangan
                                     ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 font-medium'
                                     : 'border border-dashed border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400 hover:border-blue-500 hover:text-blue-600'
@@ -1027,7 +1038,7 @@ export default function ApelKelola() {
                       </For>
                       <Show when={presensiData().length === 0}>
                         <tr>
-                          <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                          <td colspan="6" class="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                             Belum ada data presensi
                           </td>
                         </tr>
@@ -1056,7 +1067,7 @@ export default function ApelKelola() {
 
               <form onSubmit={handleCreateKelompok} class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium mb-1">Nama Kelompok *</label>
+                  <label class="block text-base font-medium mb-1">Nama Kelompok *</label>
                   <input
                     type="text"
                     required
@@ -1068,7 +1079,7 @@ export default function ApelKelola() {
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium mb-1">Keterangan (Opsional)</label>
+                  <label class="block text-base font-medium mb-1">Keterangan (Opsional)</label>
                   <textarea
                     rows={2}
                     placeholder="misal: Lokasi Lapangan Olahraga"
@@ -1081,7 +1092,7 @@ export default function ApelKelola() {
                 <div class="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    class="px-4 py-2 text-base rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setShowCreateModal(false)}
                   >
                     Batal
@@ -1089,7 +1100,7 @@ export default function ApelKelola() {
                   <button
                     type="submit"
                     disabled={isSubmitting()}
-                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                    class="px-4 py-2 text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                   >
                     {isSubmitting() ? 'Menyimpan...' : 'Simpan Kelompok'}
                   </button>
@@ -1106,7 +1117,7 @@ export default function ApelKelola() {
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3 flex-shrink-0">
                 <div>
                   <h3 class="text-lg font-bold">Kelola Anggota Kelompok Apel</h3>
-                  <p class="text-xs text-gray-500">{kelompokDetail()?.namaKelompok}</p>
+                  <p class="text-caption text-gray-500 dark:text-gray-400">{kelompokDetail()?.namaKelompok}</p>
                 </div>
                 <button
                   class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -1119,21 +1130,21 @@ export default function ApelKelola() {
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-hidden">
                 {/* Kiri: Anggota Terdaftar */}
                 <div class="flex flex-col border rounded-lg p-3 dark:border-gray-700 overflow-hidden">
-                  <h4 class="font-semibold text-sm mb-2 flex justify-between items-center">
+                  <h4 class="font-semibold text-base mb-2 flex justify-between items-center">
                     <span>Anggota Terdaftar</span>
-                    <span class="text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                    <span class="text-caption bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 px-2 py-0.5 rounded-full">
                       {kelompokDetail()?.anggota?.length || 0} Mahasiswa
                     </span>
                   </h4>
                   <div class="flex-1 overflow-y-auto space-y-1.5 pr-1">
                     <For each={kelompokDetail()?.anggota}>
                       {(mhs) => (
-                        <div class="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-700/50 text-xs">
+                        <div class="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-700/50 text-caption">
                           <div class="flex items-center gap-2">
                             <StudentAvatar foto={mhs.foto} nama={mhs.nama} nim={mhs.nim} size="sm" />
                             <div>
                               <div class="font-semibold">{mhs.nama}</div>
-                              <div class="text-gray-500 font-mono">{mhs.nim}</div>
+                              <div class="text-gray-500 dark:text-gray-400 font-mono">{mhs.nim}</div>
                             </div>
                           </div>
                           <button
@@ -1147,18 +1158,20 @@ export default function ApelKelola() {
                       )}
                     </For>
                     <Show when={!kelompokDetail()?.anggota || kelompokDetail()?.anggota.length === 0}>
-                      <div class="text-center text-xs text-gray-500 py-6">Belum ada anggota di kelompok ini</div>
+                      <div class="text-center text-caption text-gray-500 dark:text-gray-400 py-6">
+                        Belum ada anggota di kelompok ini
+                      </div>
                     </Show>
                   </div>
                 </div>
 
                 {/* Kanan: Cari & Tambah Mahasiswa */}
                 <div class="flex flex-col border rounded-lg p-3 dark:border-gray-700 overflow-hidden space-y-2">
-                  <h4 class="font-semibold text-sm">Tambah Mahasiswa</h4>
+                  <h4 class="font-semibold text-base">Tambah Mahasiswa</h4>
                   <input
                     type="text"
                     placeholder="Cari berdasarkan NIM atau Nama Mahasiswa..."
-                    class="w-full border rounded-lg px-2.5 py-1.5 text-xs dark:bg-gray-700 dark:border-gray-600"
+                    class="w-full border rounded-lg px-2.5 py-1.5 text-caption dark:bg-gray-700 dark:border-gray-600"
                     value={mhsSearch()}
                     onInput={(e) => setMhsSearch(e.currentTarget.value)}
                   />
@@ -1169,7 +1182,7 @@ export default function ApelKelola() {
                         const isSelected = () => selectedMhsToAdd().includes(mhs.id);
                         return (
                           <div
-                            class={`flex items-center justify-between p-2 rounded text-xs border ${
+                            class={`flex items-center justify-between p-2 rounded text-caption border ${
                               isAlreadyMember()
                                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-transparent cursor-not-allowed'
                                 : isSelected()
@@ -1180,11 +1193,11 @@ export default function ApelKelola() {
                           >
                             <div>
                               <div class="font-medium">{mhs.nama}</div>
-                              <div class="text-gray-500 font-mono text-[10px]">{mhs.nim}</div>
+                              <div class="text-gray-500 dark:text-gray-400 font-mono text-fine">{mhs.nim}</div>
                             </div>
                             <Show
                               when={!isAlreadyMember()}
-                              fallback={<span class="text-[10px] text-gray-400 italic">Sudah Ada</span>}
+                              fallback={<span class="text-fine text-gray-400 italic">Sudah Ada</span>}
                             >
                               <input
                                 type="checkbox"
@@ -1198,12 +1211,14 @@ export default function ApelKelola() {
                       }}
                     </For>
                     <Show when={mhsList() && mhsList()!.length === 0}>
-                      <div class="text-center text-xs text-gray-500 py-6">Mahasiswa tidak ditemukan</div>
+                      <div class="text-center text-caption text-gray-500 dark:text-gray-400 py-6">
+                        Mahasiswa tidak ditemukan
+                      </div>
                     </Show>
                   </div>
 
                   <button
-                    class="w-full bg-blue-600 text-white text-xs py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex-shrink-0"
+                    class="w-full bg-blue-600 text-white text-caption py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium flex-shrink-0"
                     onClick={handleAddAnggota}
                     disabled={isSubmitting() || selectedMhsToAdd().length === 0}
                   >
@@ -1214,7 +1229,7 @@ export default function ApelKelola() {
 
               <div class="flex justify-end pt-2 border-t dark:border-gray-700 flex-shrink-0">
                 <button
-                  class="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+                  class="px-4 py-2 text-base bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
                   onClick={() => setShowAnggotaModal(false)}
                 >
                   Selesai
@@ -1240,20 +1255,20 @@ export default function ApelKelola() {
 
               <form onSubmit={handleUpdateSesi} class="space-y-4">
                 <div>
-                  <label class="block text-sm font-medium mb-1">Tanggal *</label>
+                  <label class="block text-base font-medium mb-1">Tanggal *</label>
                   <input
                     type="date"
                     required
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-base"
                     value={editTanggal()}
                     onChange={(e) => setEditTanggal(e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium mb-1">Shift</label>
+                  <label class="block text-base font-medium mb-1">Shift</label>
                   <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-base"
                     value={editShift()}
                     onChange={(e) => setEditShift(e.target.value)}
                   >
@@ -1265,9 +1280,9 @@ export default function ApelKelola() {
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium mb-1">Dosen PJ Sesi (Opsional)</label>
+                  <label class="block text-base font-medium mb-1">Dosen PJ Sesi (Opsional)</label>
                   <select
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-base"
                     value={editDosenId() ?? ''}
                     onChange={(e) => setEditDosenId(Number(e.target.value) || null)}
                   >
@@ -1283,11 +1298,11 @@ export default function ApelKelola() {
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium mb-1">Jam Mulai *</label>
+                  <label class="block text-base font-medium mb-1">Jam Mulai *</label>
                   <input
                     type="time"
                     required
-                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-sm"
+                    class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 text-base"
                     value={editJamMulai()}
                     onChange={(e) => setEditJamMulai(e.target.value)}
                   />
@@ -1296,7 +1311,7 @@ export default function ApelKelola() {
                 <div class="flex justify-end gap-2 pt-2">
                   <button
                     type="button"
-                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    class="px-4 py-2 text-base rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setShowEditSesiModal(false)}
                   >
                     Batal
@@ -1304,7 +1319,7 @@ export default function ApelKelola() {
                   <button
                     type="submit"
                     disabled={isSubmitting()}
-                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                    class="px-4 py-2 text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                   >
                     {isSubmitting() ? 'Menyimpan...' : 'Simpan Perubahan'}
                   </button>
@@ -1330,14 +1345,14 @@ export default function ApelKelola() {
 
               <form onSubmit={handleSaveCatatanModal} class="space-y-4">
                 <div>
-                  <label class="block text-xs font-semibold mb-1 text-gray-600 dark:text-gray-300">
+                  <label class="block text-caption font-semibold mb-1 text-gray-600 dark:text-gray-300">
                     Keterangan / Alasan Ketidakhadiran
                   </label>
                   <textarea
                     rows={3}
                     maxlength="1000"
                     placeholder="Tuliskan catatan atau alasan..."
-                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 text-xs dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 text-caption dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={editingCatatanMhs()?.text || ''}
                     onInput={(e) =>
                       setEditingCatatanMhs((prev) => (prev ? { ...prev, text: e.currentTarget.value } : null))
@@ -1348,14 +1363,14 @@ export default function ApelKelola() {
                 <div class="flex justify-end gap-2 pt-2 border-t dark:border-gray-700">
                   <button
                     type="button"
-                    class="px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    class="px-3 py-1.5 text-caption rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setEditingCatatanMhs(null)}
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    class="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    class="px-3 py-1.5 text-caption bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                   >
                     Simpan Catatan
                   </button>
@@ -1388,7 +1403,7 @@ export default function ApelKelola() {
                 class="space-y-4"
               >
                 <div>
-                  <label class="block text-sm font-medium mb-1">Tanggal *</label>
+                  <label class="block text-base font-medium mb-1">Tanggal *</label>
                   <input
                     type="date"
                     required
@@ -1398,7 +1413,7 @@ export default function ApelKelola() {
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Shift *</label>
+                  <label class="block text-base font-medium mb-1">Shift *</label>
                   <select
                     class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     value={shift()}
@@ -1423,22 +1438,24 @@ export default function ApelKelola() {
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Jam Mulai (Opsional)</label>
+                  <label class="block text-base font-medium mb-1">Jam Mulai (Opsional)</label>
                   <input
                     type="time"
                     class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     value={jamMulai()}
                     onChange={(e) => setJamMulai(e.target.value)}
                   />
-                  <p class="text-xs text-gray-500 mt-1">Default mengikuti waktu perangkat saat ini bila dikosongkan.</p>
+                  <p class="text-caption text-gray-500 dark:text-gray-400 mt-1">
+                    Default mengikuti waktu perangkat saat ini bila dikosongkan.
+                  </p>
                 </div>
                 <div>
-                  <label class="block text-sm font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
+                  <label class="block text-base font-medium mb-1">Catatan Sesi Apel (Opsional)</label>
                   <textarea
                     rows="2"
                     maxlength="1000"
                     placeholder="Keterangan / Catatan Sesi Apel..."
-                    class="w-full border rounded-lg px-3 py-2 text-xs dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    class="w-full border rounded-lg px-3 py-2 text-caption dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     value={catatanSesi()}
                     onInput={(e) => setCatatanSesi(e.currentTarget.value)}
                   />
@@ -1447,7 +1464,7 @@ export default function ApelKelola() {
                 <div class="flex justify-end gap-2 pt-2 border-t dark:border-gray-700">
                   <button
                     type="button"
-                    class="px-4 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    class="px-4 py-2 text-base rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                     onClick={() => setShowBukaSesiModal(false)}
                   >
                     Batal
@@ -1455,7 +1472,7 @@ export default function ApelKelola() {
                   <button
                     type="submit"
                     disabled={isSubmitting()}
-                    class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+                    class="px-4 py-2 text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
                   >
                     {isSubmitting() ? 'Memproses...' : 'Buka Sesi'}
                   </button>

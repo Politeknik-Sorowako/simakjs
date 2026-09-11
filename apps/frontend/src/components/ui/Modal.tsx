@@ -53,7 +53,7 @@ export function Modal(props: ModalProps) {
           {/* Header */}
           <Show when={props.title}>
             <div class="flex items-center justify-between px-6 py-4 border-b border-secondary-200/80 dark:border-secondary-800 print:hidden">
-              <h3 class="text-lg font-heading font-semibold text-secondary-900 dark:text-white">{props.title}</h3>
+              <h3 class="text-section font-heading font-semibold text-secondary-900 dark:text-white">{props.title}</h3>
               <button
                 onClick={() => props.onClose?.()}
                 aria-label="Tutup dialog"
