@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { BulkUploadFotoModal } from '../components/mahasiswa/BulkUploadFotoModal';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
@@ -10,6 +10,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -502,10 +503,7 @@ export default function Mahasiswa() {
           </div>
         </div>
 
-        <Show
-          when={!mahasiswas.loading}
-          fallback={<div class="text-center py-10 text-secondary-400 dark:text-secondary-200">Loading data...</div>}
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Table
             headers={[
               <input
@@ -662,7 +660,7 @@ export default function Mahasiswa() {
               onLimitChange={setLimit}
             />
           </Show>
-        </Show>
+        </Suspense>
 
         <Modal
           show={showModal()}

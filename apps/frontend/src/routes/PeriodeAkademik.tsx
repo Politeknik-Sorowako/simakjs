@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { z } from 'zod';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
@@ -8,6 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useToast } from '../contexts/ToastContext';
 import { PeriodeAkademik as IPeriode, periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
@@ -180,20 +181,7 @@ export default function PeriodeAkademik() {
           />
         </div>
 
-        <Show
-          when={!periodes.loading}
-          fallback={
-            <div class="flex flex-col items-center justify-center py-20 bg-white dark:bg-secondary-900 rounded-xl border border-secondary-100 dark:border-secondary-800 shadow-sm gap-4">
-              <div
-                class="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"
-                aria-hidden="true"
-              />
-              <p class="text-sm font-medium text-secondary-500 dark:text-secondary-200 animate-pulse">
-                Memuat data periode akademik...
-              </p>
-            </div>
-          }
-        >
+        <Suspense fallback={<TableLoadingFallback />}>
           <Table
             headers={[
               <SortableHeader field="id" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
@@ -264,7 +252,7 @@ export default function PeriodeAkademik() {
             onPageChange={setPage}
             onLimitChange={setLimit}
           />
-        </Show>
+        </Suspense>
 
         <Modal
           show={showModal()}
