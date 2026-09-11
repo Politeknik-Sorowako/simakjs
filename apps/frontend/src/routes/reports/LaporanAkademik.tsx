@@ -11,7 +11,7 @@ function TableLoadingFallback() {
   return (
     <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
+        <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
             <For each={Array.from({ length: 5 })}>
               {() => (
@@ -106,8 +106,8 @@ export default function LaporanAkademik() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Akademik & Matriks Nilai MK</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan Akademik & Matriks Nilai MK</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Rata-rata IP per prodi dan matriks sebaran nilai mata kuliah (A - E)
             </p>
           </div>
@@ -138,11 +138,11 @@ export default function LaporanAkademik() {
         {/* Filter Controls */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Periode Akademik
             </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={selectedPeriode()}
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
             >
@@ -152,11 +152,11 @@ export default function LaporanAkademik() {
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Program Studi
             </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={selectedProdi()}
               onChange={(e) => setSelectedProdi(e.currentTarget.value)}
             >
@@ -166,13 +166,13 @@ export default function LaporanAkademik() {
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Cari Kode / Nama MK
             </label>
             <input
               type="text"
               placeholder="Filter mata kuliah..."
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={mkSearch()}
               onInput={(e) => handleMkSearchChange(e.currentTarget.value)}
             />
@@ -183,7 +183,7 @@ export default function LaporanAkademik() {
         <Show when={rekap()}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Rata-rata IP per Prodi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Rata-rata IP per Prodi</h3>
               <BarChart
                 labels={(rekap()?.prodi || []).map((p) => p.prodiNama)}
                 datasets={[
@@ -198,7 +198,7 @@ export default function LaporanAkademik() {
               />
             </div>
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Jumlah Mahasiswa per Prodi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Jumlah Mahasiswa per Prodi</h3>
               <BarChart
                 labels={(rekap()?.prodi || []).map((p) => p.prodiNama)}
                 datasets={[
@@ -219,12 +219,12 @@ export default function LaporanAkademik() {
         <Show when={rekap()}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Detail Rekap IP per Program Studi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Detail Rekap IP per Program Studi</h3>
             </div>
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full text-left text-table border-collapse">
                 <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                     <th class="py-3 px-5">Program Studi</th>
                     <th class="py-3 px-5 text-center">Total Mahasiswa</th>
                     <th class="py-3 px-5 text-center">Rata-rata IP</th>
@@ -251,18 +251,22 @@ export default function LaporanAkademik() {
         {/* Matriks Nilai Mata Kuliah (A s.d. E) */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center">
-            <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
+            <h3 class="text-base font-bold text-secondary-800 dark:text-white">
               Matriks Mata Kuliah $\times$ Jumlah Mahasiswa Nilai (A - E)
             </h3>
-            <Suspense fallback={<span class="text-xs text-secondary-500">Total MK: …</span>}>
-              <span class="text-xs text-secondary-500">Total MK: {(matriksNilai() || []).length}</span>
+            <Suspense
+              fallback={<span class="text-caption text-secondary-500 dark:text-secondary-300">Total MK: …</span>}
+            >
+              <span class="text-caption text-secondary-500 dark:text-secondary-300">
+                Total MK: {(matriksNilai() || []).length}
+              </span>
             </Suspense>
           </div>
           <Suspense fallback={<TableLoadingFallback />}>
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full text-left text-table border-collapse">
                 <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                     <th class="py-3 px-4">Kode MK</th>
                     <th class="py-3 px-4">Mata Kuliah</th>
                     <th class="py-3 px-4 text-center">SKS</th>
@@ -272,7 +276,7 @@ export default function LaporanAkademik() {
                     <th class="py-3 px-4 text-center bg-yellow-500/10 text-yellow-700 dark:text-yellow-400">C</th>
                     <th class="py-3 px-4 text-center bg-orange-500/10 text-orange-700 dark:text-orange-400">D</th>
                     <th class="py-3 px-4 text-center bg-rose-500/10 text-rose-700 dark:text-rose-400">E</th>
-                    <th class="py-3 px-4 text-center text-secondary-400">Belum Ada</th>
+                    <th class="py-3 px-4 text-center text-secondary-400 dark:text-secondary-300">Belum Ada</th>
                     <th class="py-3 px-4 text-center font-bold">Total</th>
                     <th class="py-3 px-4 text-center">% Kelulusan</th>
                   </tr>
@@ -282,7 +286,7 @@ export default function LaporanAkademik() {
                     each={matriksNilai() || []}
                     fallback={
                       <tr>
-                        <td colspan="12" class="text-center py-8 text-secondary-400">
+                        <td colspan="12" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
                           Tidak ada data sebaran nilai mata kuliah untuk filter yang dipilih
                         </td>
                       </tr>
@@ -293,17 +297,19 @@ export default function LaporanAkademik() {
                         <td class="py-3 px-4 font-mono text-secondary-600 dark:text-secondary-300">{item.kodeMk}</td>
                         <td class="py-3 px-4 font-semibold text-secondary-800 dark:text-white">{item.namaMk}</td>
                         <td class="py-3 px-4 text-center">{item.sks}</td>
-                        <td class="py-3 px-4 text-secondary-500">{item.prodiNama}</td>
+                        <td class="py-3 px-4 text-secondary-500 dark:text-secondary-300">{item.prodiNama}</td>
                         <td class="py-3 px-4 text-center font-bold text-green-600 bg-green-500/5">{item.gradeA}</td>
                         <td class="py-3 px-4 text-center font-bold text-blue-600 bg-blue-500/5">{item.gradeB}</td>
                         <td class="py-3 px-4 text-center font-bold text-yellow-600 bg-yellow-500/5">{item.gradeC}</td>
                         <td class="py-3 px-4 text-center font-bold text-orange-600 bg-orange-500/5">{item.gradeD}</td>
                         <td class="py-3 px-4 text-center font-bold text-rose-600 bg-rose-500/5">{item.gradeE}</td>
-                        <td class="py-3 px-4 text-center text-secondary-400">{item.gradeNull}</td>
+                        <td class="py-3 px-4 text-center text-secondary-400 dark:text-secondary-300">
+                          {item.gradeNull}
+                        </td>
                         <td class="py-3 px-4 text-center font-bold">{item.totalPeserta}</td>
                         <td class="py-3 px-4 text-center font-bold">
                           <span
-                            class={`px-2 py-0.5 rounded text-[10px] ${
+                            class={`px-2 py-0.5 rounded text-caption ${
                               item.persenLulus >= 80
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
                                 : item.persenLulus >= 50

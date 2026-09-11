@@ -31,8 +31,8 @@ export default function LaporanMahasiswaBaru() {
       <div class="flex flex-col gap-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Laporan Penerimaan Mahasiswa Baru</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+            <h1 class="page-title">Laporan Penerimaan Mahasiswa Baru</h1>
+            <p class="text-base text-secondary-500 dark:text-secondary-200">
               Statistik penerimaan mahasiswa baru per program studi
             </p>
           </div>
@@ -48,9 +48,11 @@ export default function LaporanMahasiswaBaru() {
         {/* Filter */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
           <div class="w-full sm:w-48">
-            <label class="block text-xs font-semibold text-secondary-500 uppercase tracking-wider mb-1">Angkatan</label>
+            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
+              Angkatan
+            </label>
             <select
-              class="w-full px-3 py-2 text-sm bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={angkatan()}
               onChange={(e) => setAngkatan(e.currentTarget.value)}
             >
@@ -126,13 +128,13 @@ export default function LaporanMahasiswaBaru() {
 
         {/* Loading / Error / Empty states */}
         <Show when={stats.error}>
-          <div class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 p-4 rounded-xl text-sm text-rose-700 dark:text-rose-400">
+          <div class="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 p-4 rounded-xl text-base text-rose-700 dark:text-rose-400">
             Gagal memuat data. Silakan muat ulang halaman.
           </div>
         </Show>
 
         <Show when={!stats.loading && !stats.error && (stats()?.total || 0) === 0}>
-          <div class="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/50 p-4 rounded-xl text-sm text-yellow-700 dark:text-yellow-400">
+          <div class="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/50 p-4 rounded-xl text-base text-yellow-700 dark:text-yellow-400">
             Belum ada data mahasiswa baru untuk angkatan {angkatan()}.
           </div>
         </Show>
@@ -141,7 +143,7 @@ export default function LaporanMahasiswaBaru() {
         <Show when={!stats.loading && !stats.error && (stats()?.total || 0) > 0}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Mahasiswa Baru per Prodi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Mahasiswa Baru per Prodi</h3>
               <BarChart
                 labels={(stats()?.perProdi || []).map(
                   (p: { prodiNama: string; total: number; laki?: number; perempuan?: number }) => p.prodiNama,
@@ -160,7 +162,7 @@ export default function LaporanMahasiswaBaru() {
               />
             </div>
             <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">Tren Penerimaan per Angkatan</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Tren Penerimaan per Angkatan</h3>
               <BarChart
                 labels={(stats()?.trend || []).map((t: { angkatan: string; total: number }) => t.angkatan)}
                 datasets={[
@@ -178,12 +180,12 @@ export default function LaporanMahasiswaBaru() {
           {/* Table */}
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-sm font-bold text-secondary-800 dark:text-white">Detail per Program Studi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Detail per Program Studi</h3>
             </div>
             <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs border-collapse">
+              <table class="w-full text-left text-table border-collapse">
                 <thead>
-                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-[10px] font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
                     <th class="py-3 px-5">Program Studi</th>
                     <th class="py-3 px-5 text-center">Total</th>
                     <th class="py-3 px-5 text-center">Laki-laki</th>
