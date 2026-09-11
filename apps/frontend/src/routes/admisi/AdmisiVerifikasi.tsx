@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../../components/MainLayout';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../contexts/ToastContext';
@@ -46,6 +46,10 @@ export default function AdmisiVerifikasi() {
   const [newP1, setNewP1] = createSignal<number | null>(null);
   const [newP2, setNewP2] = createSignal<number | null>(null);
   const [searchTerm, setSearchTerm] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
   const [editBiodata, setEditBiodata] = createSignal<number | null>(null);
   const [bioForm, setBioForm] = createSignal<Record<string, string>>({});
 
@@ -57,7 +61,7 @@ export default function AdmisiVerifikasi() {
     () => ({
       sessionId: sessionFilter() ? Number(sessionFilter()) : undefined,
       status: statusFilter() || undefined,
-      search: searchTerm() || undefined,
+      search: debouncedSearch() || undefined,
     }),
     (f) => admisiAdminController.getApplications(f),
   );
@@ -155,8 +159,11 @@ export default function AdmisiVerifikasi() {
             placeholder="Cari nama atau no pendaftar..."
             value={searchTerm()}
             onInput={(e) => {
-              setSearchTerm(e.currentTarget.value);
+              const val = e.currentTarget.value;
+              setSearchTerm(val);
               setSelectedApp(null);
+              clearTimeout(searchDebounceTimer);
+              searchDebounceTimer = setTimeout(() => setDebouncedSearch(val), 400);
             }}
             class="px-3 py-2 border border-secondary-300 dark:border-secondary-600 rounded-lg text-sm bg-white dark:bg-secondary-800 min-w-[200px] flex-1"
           />

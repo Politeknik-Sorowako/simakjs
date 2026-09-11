@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -21,6 +21,11 @@ import { getTodayString } from '../utils/format';
 export default function Dosen() {
   const toast = useToast();
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
@@ -39,7 +44,7 @@ export default function Dosen() {
   // Fetch Dosen Data
   const [dosens, { refetch }] = createResource(
     () => ({
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
       prodiId: workspace.activeProdiId(),
@@ -254,7 +259,11 @@ export default function Dosen() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              resetPage();
+              clearTimeout(searchDebounceTimer);
+              searchDebounceTimer = setTimeout(() => {
+                setDebouncedSearch(e.currentTarget.value);
+                resetPage();
+              }, 400);
             }}
           />
         </div>

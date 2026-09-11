@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -27,6 +27,10 @@ export default function MataKuliah() {
   const isAdmin = () => auth.hasRole(['admin']);
   const [showImportModal, setShowImportModal] = createSignal(false);
   const { page, limit, setPage, setLimit, resetPage, search, setSearch } = usePagination();
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   // Filters
   const filterProdi = () => ws.activeProdiId() ?? undefined;
@@ -66,7 +70,7 @@ export default function MataKuliah() {
   // Fetch Mata Kuliah Data (always with kurikulum filter)
   const [matkuls, { refetch }] = createResource(
     () => ({
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
       kurikulumId: filterKurikulum(),
@@ -302,7 +306,11 @@ export default function MataKuliah() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                resetPage();
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(e.currentTarget.value);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>

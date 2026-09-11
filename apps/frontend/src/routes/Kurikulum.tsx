@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -22,11 +22,16 @@ import { API_URL, fetchApi } from '../utils/api';
 export default function Kurikulum() {
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const workspace = useWorkspace();
   const prodiFilter = () => workspace.activeProdiId() ?? undefined;
 
   const [kurikulums, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit(), prodiId: prodiFilter() }),
+    () => ({ search: debouncedSearch(), page: page(), limit: limit(), prodiId: prodiFilter() }),
     ({ search, page, limit, prodiId }) => kurikulumController.getAll(search, page, limit, prodiId),
   );
 
@@ -396,7 +401,11 @@ export default function Kurikulum() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                resetPage();
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(e.currentTarget.value);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>

@@ -107,6 +107,50 @@
   }
 }
 
+/* Sidebar collapsed (mini icon rail) — desktop only */
+@media (min-width: 768px) {
+  aside.sidebar-collapsed {
+    width: 5rem;
+  }
+
+  aside.sidebar-collapsed .sidebar-brand-header {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  aside.sidebar-collapsed nav {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  aside.sidebar-collapsed nav a,
+  aside.sidebar-collapsed nav button {
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  aside.sidebar-collapsed nav a svg,
+  aside.sidebar-collapsed nav button svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  aside.sidebar-collapsed .sidebar-section-title,
+  aside.sidebar-collapsed .sidebar-submenu,
+  aside.sidebar-collapsed .sidebar-brand-text,
+  aside.sidebar-collapsed .sidebar-footer-text {
+    display: none;
+  }
+
+  aside.sidebar-collapsed .sidebar-footer-actions {
+    justify-content: center;
+  }
+}
+
 @media print {
   html, body, #root, #root > div, main, .min-h-screen, .flex, .flex-col {
     display: block !important;

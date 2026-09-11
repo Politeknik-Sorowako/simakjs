@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -15,6 +15,10 @@ export default function MonitoringBimbingan() {
   const [selectedDosenPa, setSelectedDosenPa] = createSignal<number | null>(null);
   const [printData, setPrintData] = createSignal<MonitoringBimbinganLengkapItem[]>([]);
   const { page, limit, setPage, setLimit, search, setSearch, resetPage } = usePagination(10);
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   // Load Periode Akademik
   const [periodes] = createResource(() => periodeAkademikController.getAll());
@@ -27,7 +31,7 @@ export default function MonitoringBimbingan() {
     () => ({
       periodeId: selectedPeriode(),
       dosenPaId: selectedDosenPa(),
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
     }),
@@ -167,7 +171,11 @@ export default function MonitoringBimbingan() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                resetPage();
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(e.currentTarget.value);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>

@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -15,6 +15,11 @@ import { getTodayString } from '../utils/format';
 
 export default function ProgramStudi() {
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [showImportModal, setShowImportModal] = createSignal(false);
 
@@ -26,7 +31,7 @@ export default function ProgramStudi() {
 
   // Fetch data
   const [prodis, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit() }),
+    () => ({ search: debouncedSearch(), page: page(), limit: limit() }),
     ({ search, page, limit }) => prodiController.getAll(search, page, limit),
   );
 
@@ -150,7 +155,11 @@ export default function ProgramStudi() {
             value={search()}
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              resetPage();
+              clearTimeout(searchDebounceTimer);
+              searchDebounceTimer = setTimeout(() => {
+                setDebouncedSearch(e.currentTarget.value);
+                resetPage();
+              }, 400);
             }}
           />
         </div>

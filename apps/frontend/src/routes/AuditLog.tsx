@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { AuditLog as AuditLogEntry, AuditLogFilters, auditController } from '../controllers/auditController';
 import { fmtWaktu } from '../utils/format';
@@ -81,6 +81,7 @@ export default function AuditLog() {
   const [page, setPage] = createSignal(1);
   const [limit, setLimit] = createSignal(20);
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [module, setModule] = createSignal<string>('');
   const [actionType, setActionType] = createSignal<string>('');
   const [startDate, setStartDate] = createSignal('');
@@ -90,12 +91,15 @@ export default function AuditLog() {
   const [noticeType, setNoticeType] = createSignal<'success' | 'error'>('success');
   const [isExporting, setIsExporting] = createSignal(false);
   const [isPurging, setIsPurging] = createSignal(false);
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const [data, { refetch }] = createResource(
     () => ({
       page: page(),
       limit: limit(),
-      search: search(),
+      search: debouncedSearch(),
       module: module(),
       actionType: actionType(),
       startDate: startDate(),
@@ -125,6 +129,21 @@ export default function AuditLog() {
   const applyFilter = () => {
     setPage(1);
     refetch();
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 400);
+  };
+
+  const commitSearch = () => {
+    clearTimeout(searchDebounceTimer);
+    setDebouncedSearch(search());
+    setPage(1);
   };
 
   const handleExport = async () => {
@@ -214,8 +233,8 @@ export default function AuditLog() {
                 placeholder="Deskripsi / module / aksi..."
                 class="w-full rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={search()}
-                onInput={(e) => setSearch(e.currentTarget.value)}
-                onKeyDown={(e) => e.key === 'Enter' && applyFilter()}
+                onInput={(e) => handleSearchChange(e.currentTarget.value)}
+                onKeyDown={(e) => e.key === 'Enter' && commitSearch()}
               />
             </div>
             <div>
@@ -290,12 +309,14 @@ export default function AuditLog() {
               class="rounded-xl border border-secondary-300 dark:border-secondary-700 px-4 py-2 text-sm font-semibold text-secondary-600 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-800"
               onClick={() => {
                 setSearch('');
+                setDebouncedSearch('');
                 setModule('');
                 setActionType('');
                 setStartDate('');
                 setEndDate('');
                 setPage(1);
                 setLimit(20);
+                clearTimeout(searchDebounceTimer);
                 refetch();
               }}
             >

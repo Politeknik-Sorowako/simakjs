@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { z } from 'zod';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
@@ -26,6 +26,11 @@ const periodeSchema = z.object({
 export default function PeriodeAkademik() {
   const toast = useToast();
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
 
   const exportColumns: ExportColumn[] = [
@@ -36,7 +41,7 @@ export default function PeriodeAkademik() {
 
   // Fetch Periode Data
   const [periodes, { refetch }] = createResource(
-    () => ({ search: search(), page: page(), limit: limit() }),
+    () => ({ search: debouncedSearch(), page: page(), limit: limit() }),
     async ({ search, page, limit }) => {
       try {
         return await periodeAkademikController.getAll(search, page, limit);
@@ -166,7 +171,11 @@ export default function PeriodeAkademik() {
             aria-label="Cari periode akademik"
             onInput={(e) => {
               setSearch(e.currentTarget.value);
-              resetPage();
+              clearTimeout(searchDebounceTimer);
+              searchDebounceTimer = setTimeout(() => {
+                setDebouncedSearch(e.currentTarget.value);
+                resetPage();
+              }, 400);
             }}
           />
         </div>

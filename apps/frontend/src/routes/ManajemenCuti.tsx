@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -52,6 +52,14 @@ export default function ManajemenCuti() {
 
   // =========================== TAB 1: INPUT CUTI ===========================
   const pendingPagination = usePagination();
+  const [debouncedPendingSearch, setDebouncedPendingSearch] = createSignal('');
+  let pendingSearchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let rejectedSearchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => {
+    clearTimeout(pendingSearchDebounceTimer);
+    clearTimeout(rejectedSearchDebounceTimer);
+  });
   const [inputPeriode, setInputPeriode] = createSignal('');
   const [pendingSortBy, setPendingSortBy] = createSignal('nim');
   const [pendingSortOrder, setPendingSortOrder] = createSignal<'asc' | 'desc'>('asc');
@@ -60,7 +68,7 @@ export default function ManajemenCuti() {
     () => ({
       page: pendingPagination.page(),
       limit: pendingPagination.limit(),
-      search: pendingPagination.search(),
+      search: debouncedPendingSearch(),
       periodeId: inputPeriode(),
     }),
     ({ page, limit, search, periodeId }) =>
@@ -323,6 +331,7 @@ export default function ManajemenCuti() {
 
   // =========================== TAB 3: AKTIFKAN KEMBALI ===========================
   const rejectedPagination = usePagination();
+  const [debouncedRejectedSearch, setDebouncedRejectedSearch] = createSignal('');
   const [aktifPeriode, setAktifPeriode] = createSignal('');
   const [rejectedSortBy, setRejectedSortBy] = createSignal('nim');
   const [rejectedSortOrder, setRejectedSortOrder] = createSignal<'asc' | 'desc'>('asc');
@@ -331,7 +340,7 @@ export default function ManajemenCuti() {
     () => ({
       page: rejectedPagination.page(),
       limit: rejectedPagination.limit(),
-      search: rejectedPagination.search(),
+      search: debouncedRejectedSearch(),
       periodeId: aktifPeriode(),
     }),
     ({ page, limit, search, periodeId }) =>
@@ -435,7 +444,11 @@ export default function ManajemenCuti() {
                   value={pendingPagination.search()}
                   onInput={(e) => {
                     pendingPagination.setSearch(e.currentTarget.value);
-                    pendingPagination.resetPage();
+                    clearTimeout(pendingSearchDebounceTimer);
+                    pendingSearchDebounceTimer = setTimeout(() => {
+                      setDebouncedPendingSearch(e.currentTarget.value);
+                      pendingPagination.resetPage();
+                    }, 400);
                   }}
                 />
               </div>
@@ -644,7 +657,11 @@ export default function ManajemenCuti() {
                 value={rejectedPagination.search()}
                 onInput={(e) => {
                   rejectedPagination.setSearch(e.currentTarget.value);
-                  rejectedPagination.resetPage();
+                  clearTimeout(rejectedSearchDebounceTimer);
+                  rejectedSearchDebounceTimer = setTimeout(() => {
+                    setDebouncedRejectedSearch(e.currentTarget.value);
+                    rejectedPagination.resetPage();
+                  }, 400);
                 }}
                 class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               />

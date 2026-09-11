@@ -5,6 +5,26 @@ import { Sidebar } from './Sidebar';
 export function MainLayout(props: { children: JSX.Element }) {
   const [isOpen, setIsOpen] = createSignal(false);
 
+  const getInitialCollapsed = (): boolean => {
+    try {
+      return localStorage.getItem('simak_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  };
+
+  const [collapsed, setCollapsed] = createSignal<boolean>(getInitialCollapsed());
+
+  const toggleCollapsed = () => {
+    const next = !collapsed();
+    setCollapsed(next);
+    try {
+      localStorage.setItem('simak_sidebar_collapsed', String(next));
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div class="min-h-screen flex bg-secondary-50/70 dark:bg-secondary-950 text-secondary-900 dark:text-secondary-100 relative overflow-hidden transition-colors duration-200">
       {/* Mobile Sidebar Backdrop Overlay */}
@@ -16,12 +36,21 @@ export function MainLayout(props: { children: JSX.Element }) {
       </Show>
 
       {/* Sidebar Navigation */}
-      <Sidebar isOpen={isOpen()} onClose={() => setIsOpen(false)} />
+      <Sidebar
+        isOpen={isOpen()}
+        onClose={() => setIsOpen(false)}
+        collapsed={collapsed()}
+        onExpand={() => setCollapsed(false)}
+      />
 
       {/* Main Body */}
       <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Navbar */}
-        <Navbar onToggleSidebar={() => setIsOpen(!isOpen())} />
+        <Navbar
+          onToggleSidebar={() => setIsOpen(!isOpen())}
+          collapsed={collapsed()}
+          onToggleCollapse={toggleCollapsed}
+        />
 
         {/* Content Viewport */}
         <main class="flex-1 p-4 md:p-8 overflow-y-auto w-full mx-auto">{props.children}</main>
