@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { PieChart, StatCard } from '../components/charts';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -19,6 +19,11 @@ export default function KeuanganDashboard() {
   const role = () => auth.user()?.role;
 
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const [statusFilter, setStatusFilter] = createSignal('');
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
@@ -79,7 +84,7 @@ export default function KeuanganDashboard() {
   // Fetch Tagihan
   const [tagihanData, { refetch }] = createResource(
     () => ({
-      search: search(),
+      search: debouncedSearch(),
       status: statusFilter(),
       page: page(),
       limit: limit(),
@@ -424,7 +429,11 @@ export default function KeuanganDashboard() {
                 value={search()}
                 onInput={(e) => {
                   setSearch(e.currentTarget.value);
-                  resetPage();
+                  clearTimeout(searchDebounceTimer);
+                  searchDebounceTimer = setTimeout(() => {
+                    setDebouncedSearch(e.currentTarget.value);
+                    resetPage();
+                  }, 400);
                 }}
                 class="w-full"
               />

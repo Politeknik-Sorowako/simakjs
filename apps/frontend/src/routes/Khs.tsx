@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
@@ -80,6 +80,10 @@ export default function Khs() {
   // For Admin / Dosen view
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
   const [searchNim, setSearchNim] = createSignal('');
+  const [debouncedSearchNim, setDebouncedSearchNim] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   // Printing States
   const [showPrintUjian, setShowPrintUjian] = createSignal(false);
@@ -119,7 +123,7 @@ export default function Khs() {
   );
 
   // Search Mahasiswa (Admin/Dosen only)
-  const [searchedStudents] = createResource(searchNim, async (nim) => {
+  const [searchedStudents] = createResource(debouncedSearchNim, async (nim) => {
     if (!nim) return [];
     const res = await mahasiswaController.getAll(nim, 1, 10);
     return res.data;
@@ -256,7 +260,12 @@ export default function Khs() {
                   type="text"
                   placeholder="Masukkan NIM atau Nama..."
                   value={searchNim()}
-                  onInput={(e) => setSearchNim(e.currentTarget.value)}
+                  onInput={(e) => {
+                    const val = e.currentTarget.value;
+                    setSearchNim(val);
+                    clearTimeout(searchDebounceTimer);
+                    searchDebounceTimer = setTimeout(() => setDebouncedSearchNim(val), 400);
+                  }}
                   class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-brand-500 dark:border-secondary-700"
                 />
               </div>

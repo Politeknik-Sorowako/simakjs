@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { BulkUploadFotoModal } from '../components/mahasiswa/BulkUploadFotoModal';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
@@ -26,6 +26,11 @@ export default function Mahasiswa() {
   const toast = useToast();
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const [showImportModal, setShowImportModal] = createSignal(false);
   const [showImportPaModal, setShowImportPaModal] = createSignal(false);
   const [showBulkPaModal, setShowBulkPaModal] = createSignal(false);
@@ -77,7 +82,7 @@ export default function Mahasiswa() {
   // Fetch Mahasiswa Data
   const [mahasiswas, { refetch }] = createResource(
     () => ({
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
       prodiId: workspace.activeProdiId(),
@@ -471,7 +476,11 @@ export default function Mahasiswa() {
               value={search()}
               onInput={(e) => {
                 setSearch(e.currentTarget.value);
-                resetPage();
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(e.currentTarget.value);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>

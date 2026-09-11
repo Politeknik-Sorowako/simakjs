@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { KrsMassalModal } from '../components/krs/KrsMassalModal';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -25,6 +25,10 @@ export default function Krs() {
   const userEmail = () => auth.user()?.email;
 
   const mainPagination = usePagination();
+  const [debouncedMainSearch, setDebouncedMainSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const [sortBy, setSortBy] = createSignal('mahasiswa');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
@@ -136,7 +140,7 @@ export default function Krs() {
   // Fetch KRS data (filtered dynamically)
   const [krsData, { refetch }] = createResource(
     () => ({
-      search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : mainPagination.search(),
+      search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : debouncedMainSearch(),
       page: mainPagination.page(),
       limit: mainPagination.limit(),
       mhsLoaded: role() === 'mahasiswa' ? !!mahasiswaProfile() : true,
@@ -513,7 +517,11 @@ export default function Krs() {
                 value={mainPagination.search()}
                 onInput={(e) => {
                   mainPagination.setSearch(e.currentTarget.value);
-                  mainPagination.resetPage();
+                  clearTimeout(searchDebounceTimer);
+                  searchDebounceTimer = setTimeout(() => {
+                    setDebouncedMainSearch(e.currentTarget.value);
+                    mainPagination.resetPage();
+                  }, 400);
                 }}
               />
             </div>

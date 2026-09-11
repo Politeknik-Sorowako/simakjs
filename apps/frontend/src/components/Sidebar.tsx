@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { settingsController } from '../controllers/settingsController';
 import { eden } from '../utils/eden';
 
-export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
+export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed?: boolean; onExpand?: () => void }) {
   const auth = useAuth();
   const role = () => auth.user()?.role;
   const location = useLocation();
@@ -144,15 +144,20 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
   return (
     <aside
-      class={`fixed inset-y-0 left-0 z-40 w-64 bg-brand-800 border-r border-brand-900/60 text-secondary-100 min-h-screen flex flex-col shadow-2xl transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${
-        props.isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
+      class={`fixed inset-y-0 left-0 z-40 w-64 bg-brand-800 border-r border-brand-900/60 text-secondary-100 min-h-screen flex flex-col shadow-2xl transition-all duration-300 ease-in-out md:relative md:translate-x-0 ${
+        props.collapsed ? 'sidebar-collapsed' : ''
+      } ${props.isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      onClick={() => {
+        if (props.collapsed) props.onExpand?.();
+      }}
     >
       {/* Brand Header */}
-      <div class="h-16 flex items-center justify-between border-b border-brand-900/60 bg-brand-900 px-6">
+      <div class="h-16 flex items-center justify-between border-b border-brand-900/60 bg-brand-900 px-6 sidebar-brand-header">
         <div class="flex items-center gap-3">
           <img src={logoImg} alt="Logo" class="h-8 w-8 object-contain rounded-md" />
-          <span class="text-caption font-bold text-white tracking-wider uppercase">Politeknik Sorowako</span>
+          <span class="text-caption font-bold text-white tracking-wider uppercase sidebar-brand-text">
+            Politeknik Sorowako
+          </span>
         </div>
 
         {/* Mobile Close Button */}
@@ -168,7 +173,9 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
 
       {/* Nav Menu */}
       <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
-        <div class="px-3 mb-2 text-fine font-semibold text-secondary-300 uppercase tracking-widest">Menu Utama</div>
+        <div class="px-3 mb-2 text-fine font-semibold text-secondary-300 uppercase tracking-widest sidebar-section-title">
+          Menu Utama
+        </div>
 
         {/* Dashboard Link */}
         <A
@@ -197,7 +204,9 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
         {/* PMB - Calon Mahasiswa Only */}
         <Show when={isCalonMhs()}>
           <div class="pt-2">
-            <div class="px-3 mb-2 text-fine font-semibold text-secondary-300 uppercase tracking-widest">Admisi</div>
+            <div class="px-3 mb-2 text-fine font-semibold text-secondary-300 uppercase tracking-widest sidebar-section-title">
+              Admisi
+            </div>
             <A
               href="/admisi/dashboard"
               onClick={() => props.onClose()}
@@ -232,7 +241,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isAdmisiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <A
                   href="/admisi/sesi"
                   onClick={() => props.onClose()}
@@ -291,7 +300,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isMasterOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <A
                   href="/program-studi"
                   onClick={() => props.onClose()}
@@ -401,7 +410,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isPerencanaanOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <div class="px-3 pt-2 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">
                   1. Kurikulum OBE
                 </div>
@@ -652,7 +661,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isRegistrasiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isMahasiswa()}>
                   <A
                     href="/krs"
@@ -715,7 +724,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isPelaksanaanOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isProdi() || isInstruktur()}>
                   <A
                     href="/jurnal-presensi"
@@ -836,7 +845,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isEvaluasiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isMahasiswa()}>
                   <A
                     href="/khs"
@@ -898,7 +907,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isLaporanOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/rekap-nilai"
@@ -1283,7 +1292,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isLayananOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin() || isDosen() || isMahasiswa() || isInstruktur()}>
                   <A
                     href="/pelanggaran"
@@ -1403,7 +1412,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isAdmisiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdmin()}>
                   <A
                     href="/admisi/manajemen"
@@ -1655,7 +1664,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
             </button>
 
             <Show when={isKonfigurasiOpen()}>
-              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3">
+              <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
                 <Show when={isAdminMgmt()}>
                   <A
                     href="/pengguna"
@@ -1829,33 +1838,51 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void }) {
               class="h-9 w-9 rounded-full object-cover border border-brand-800 shadow-md"
             />
           </Show>
-          <div class="flex-1 overflow-hidden">
+          <div class="flex-1 overflow-hidden sidebar-footer-text">
             <div class="text-table font-semibold text-white truncate">{auth.user()?.nama || auth.user()?.email}</div>
             <div class="text-xs text-accent-200/50 capitalize">{auth.user()?.role}</div>
           </div>
         </div>
 
-        <div class="text-center text-fine text-brand-300 pt-1">
+        <div class="text-center text-fine text-brand-300 pt-1 sidebar-footer-text">
           SIMAK v{versionInfo()?.version || '1.0.0'}
           <Show when={import.meta.env.VITE_APP_MODE === 'development' || versionInfo()?.environment === 'development'}>
             <span class="ml-1 text-amber-400/70 font-semibold">• DEV</span>
           </Show>
         </div>
 
-        <div class="flex gap-2 text-xs border-t border-brand-950/60 pt-2.5">
+        <div class="flex gap-2 text-xs border-t border-brand-950/60 pt-2.5 sidebar-footer-actions">
           <A
             href="/profil"
             onClick={() => props.onClose()}
             activeClass="bg-brand-800 text-white font-medium"
-            class="flex-1 text-center py-1.5 bg-brand-900 hover:bg-brand-800/80 text-accent-100 rounded border border-brand-950/60 transition-colors"
+            class="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-brand-900 hover:bg-brand-800/80 text-accent-100 rounded border border-brand-950/60 transition-colors"
+            title={props.collapsed ? 'Profil' : undefined}
           >
-            Profil
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            <span class="sidebar-footer-text">Profil</span>
           </A>
           <button
             onClick={auth.logout}
-            class="flex-1 text-center py-1.5 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 rounded border border-rose-950/40 transition-colors"
+            class="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-rose-950/20 hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 rounded border border-rose-950/40 transition-colors"
+            title={props.collapsed ? 'Logout' : undefined}
           >
-            Logout
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+              />
+            </svg>
+            <span class="sidebar-footer-text">Logout</span>
           </button>
         </div>
       </div>

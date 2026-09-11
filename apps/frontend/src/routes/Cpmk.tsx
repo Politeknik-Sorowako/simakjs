@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -24,7 +24,11 @@ export default function Cpmk() {
   const [kurikulumFilter, setKurikulumFilter] = createSignal<number | undefined>(undefined);
   const [mataKuliahFilter, setMataKuliahFilter] = createSignal<number | undefined>(undefined);
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
@@ -43,7 +47,7 @@ export default function Cpmk() {
 
   const [cpmkList, { refetch }] = createResource(
     () => ({
-      search: search(),
+      search: debouncedSearch(),
       page: page(),
       limit: limit(),
       kurikulumId: kurikulumFilter(),
@@ -396,8 +400,13 @@ export default function Cpmk() {
               placeholder="Cari kode atau deskripsi..."
               value={search()}
               onInput={(e: Event) => {
-                setSearch((e.target as HTMLInputElement).value);
-                resetPage();
+                const val = (e.target as HTMLInputElement).value;
+                setSearch(val);
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(val);
+                  resetPage();
+                }, 400);
               }}
             />
           </div>
