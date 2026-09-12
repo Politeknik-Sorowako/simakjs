@@ -1,7 +1,8 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
 import { useToast } from '../contexts/ToastContext';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { PresensiMahasiswaRiwayatItem, presensiController } from '../controllers/presensiController';
@@ -50,6 +51,17 @@ export default function PresensiMahasiswa() {
   const [list, { refetch }] = createResource(periodeFilter, (periodeId) =>
     presensiController.getMahasiswaPresensi(periodeId || undefined),
   );
+
+  const [page, setPage] = createSignal(1);
+  const [limit, setLimit] = createSignal(20);
+
+  const totalRows = () => list()?.length || 0;
+  const totalPages = () => Math.max(1, Math.ceil(totalRows() / limit()));
+  const paginatedList = createMemo(() => {
+    const rows = list() || [];
+    const start = (page() - 1) * limit();
+    return rows.slice(start, start + limit());
+  });
 
   const summary = () => {
     const rows = list() || [];
@@ -186,7 +198,10 @@ export default function PresensiMahasiswa() {
               <select
                 class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 value={periodeFilter()}
-                onChange={(e) => setPeriodeFilter(e.currentTarget.value)}
+                onChange={(e) => {
+                  setPeriodeFilter(e.currentTarget.value);
+                  setPage(1);
+                }}
               >
                 <option value="">Semua Periode</option>
                 <For each={periodes()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
@@ -211,10 +226,10 @@ export default function PresensiMahasiswa() {
                 </tr>
               </thead>
               <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
-                <For each={list()}>
+                <For each={paginatedList()}>
                   {(item, idx) => (
                     <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
-                      <td class="py-3 px-4">{idx() + 1}</td>
+                      <td class="py-3 px-4">{(page() - 1) * limit() + idx() + 1}</td>
                       <td class="py-3 px-4">
                         <div class="font-semibold text-secondary-800 dark:text-white">{item.mataKuliahNama || '-'}</div>
                         <div class="text-xs text-secondary-400">
@@ -279,6 +294,20 @@ export default function PresensiMahasiswa() {
               </tbody>
             </table>
           </div>
+
+          <Show when={!list.loading && totalRows() > 0}>
+            <Pagination
+              currentPage={page()}
+              totalPages={totalPages()}
+              total={totalRows()}
+              limit={limit()}
+              onPageChange={setPage}
+              onLimitChange={(l) => {
+                setLimit(l);
+                setPage(1);
+              }}
+            />
+          </Show>
         </div>
       </div>
 

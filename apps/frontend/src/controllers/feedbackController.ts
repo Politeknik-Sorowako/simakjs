@@ -59,12 +59,14 @@ export const feedbackController = {
     limit?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    myOnly?: boolean;
   }): Promise<FeedbackListResponse> {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', String(params.page));
     if (params?.limit) query.append('limit', String(params.limit));
     if (params?.sortBy) query.append('sortBy', params.sortBy);
     if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
+    if (params?.myOnly) query.append('myOnly', 'true');
     const qs = query.toString() ? `?${query.toString()}` : '';
     return fetchApi<FeedbackListResponse>(`/feedback${qs}`);
   },

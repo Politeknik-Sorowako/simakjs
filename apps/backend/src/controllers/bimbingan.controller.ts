@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, ilike } from 'drizzle-orm';
 import { dosen, mahasiswa, periodeAkademik } from '../models/schema';
 import { BimbinganService } from '../services/bimbingan.service';
 import { KhsService } from '../services/khs.service';
@@ -11,7 +11,7 @@ import { AuthContext } from '../utils/types';
 export class BimbinganController {
   // Helper to map email to student profile ID
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(ilike(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
