@@ -85,7 +85,27 @@ test.describe('Bimbingan — Modal Detail Sesi & Thread Percakapan', () => {
     await expect(page).toHaveURL(/\/dashboard/);
 
     await page.goto('/bimbingan');
-    await page.getByRole('button', { name: /Mahasiswa Bimbingan/ }).first().click();
+
+    // Kartu monitoring diringkas: avatar, nama & NIM, Dosen PA, dan jumlah bimbingan.
+    const listItem = page.getByRole('button', { name: /Mahasiswa Bimbingan/ }).first();
+    await expect(listItem).toContainText('NIM:');
+    await expect(listItem).toContainText('PA:');
+    await expect(listItem).toContainText('x Bimbingan (Semester Ini)');
+    await expect(listItem.locator('button[title]')).toHaveCount(1);
+
+    // Badge kelayakan & status baca mahasiswa sudah dihilangkan dari daftar.
+    await expect(listItem.getByText('Belum', { exact: true })).toHaveCount(0);
+    await expect(listItem.getByText('Layak', { exact: true })).toHaveCount(0);
+    await expect(page.locator('text=• Belum Dibaca Mahasiswa')).toHaveCount(0);
+
+    // Klik avatar membuka modal preview foto tanpa memicu pemilihan baris.
+    await listItem.locator('button[title]').click();
+    const photoDialog = page.locator('[role="dialog"]');
+    await expect(photoDialog).toBeVisible();
+    await photoDialog.getByRole('button', { name: 'Tutup dialog' }).click();
+    await expect(photoDialog).toHaveCount(0);
+
+    await listItem.click();
     await page.getByRole('button', { name: /Detail Sesi & Percakapan/ }).first().click();
     await expect(page.locator('[role="dialog"]').locator('text=Baik, akan saya perbaiki.')).toBeVisible();
   });

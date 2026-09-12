@@ -875,56 +875,44 @@ export default function Bimbingan() {
                   <div class="divide-y divide-secondary-50">
                     <For each={filteredMonitoring()}>
                       {(item) => (
-                        <button
+                        <div
+                          role="button"
+                          tabIndex={0}
                           onClick={() => {
                             setSelectedMhsId(item.id);
                             setSelectedMhsNama(item.nama);
                           }}
-                          class={`w-full p-4 text-left flex flex-col gap-1 transition-all hover:bg-brand-50/30 ${selectedMhsId() === item.id ? 'bg-brand-50/60 border-l-4 border-brand-600' : ''}`}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedMhsId(item.id);
+                              setSelectedMhsNama(item.nama);
+                            }
+                          }}
+                          class={`w-full p-4 text-left flex flex-col gap-2 cursor-pointer transition-all hover:bg-brand-50/30 focus:outline-none focus:ring-2 focus:ring-brand-500/30 ${selectedMhsId() === item.id ? 'bg-brand-50/60 border-l-4 border-brand-600' : ''}`}
                         >
-                          <div class="flex items-center justify-between">
+                          <div class="flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2 min-w-0">
-                              <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
-                              <span class="font-bold text-secondary-800 text-base dark:text-white truncate">
-                                {item.nama}
+                              <span onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                                <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
                               </span>
-                            </div>
-                            <div class="flex items-center gap-1.5">
-                              <span class="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-fine font-bold dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
-                                {item.totalSesi || 0}x Bimbingan (Semester Ini)
-                              </span>
-                              <Show
-                                when={item.isApproved}
-                                fallback={
-                                  <span class="px-2 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-fine font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                                    Belum
-                                  </span>
-                                }
-                              >
-                                <span class="px-2 py-0.5 bg-accent-50 text-accent-600 border border-accent-100 rounded text-fine font-bold dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800">
-                                  Layak
+                              <div class="flex flex-col min-w-0">
+                                <span class="font-bold text-secondary-800 text-base dark:text-white truncate">
+                                  {item.nama}
                                 </span>
-                              </Show>
+                                <span class="text-fine text-secondary-400 dark:text-secondary-300 font-mono truncate">
+                                  NIM: {item.nim}
+                                </span>
+                              </div>
                             </div>
-                          </div>
-                          <div class="flex items-center justify-between text-caption text-secondary-400 dark:text-secondary-300">
-                            <span>NIM: {item.nim}</span>
-                            <Show when={item.isReadByMahasiswa !== undefined}>
-                              <span
-                                class={`text-fine font-semibold ${item.isReadByMahasiswa ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}
-                              >
-                                {item.isReadByMahasiswa
-                                  ? `✓ Dibaca ${item.readAtMahasiswa ? new Date(item.readAtMahasiswa).toLocaleDateString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : ''}`
-                                  : '• Belum Dibaca Mahasiswa'}
-                              </span>
-                            </Show>
-                          </div>
-                          <Show when={auth.hasRole(['admin'])}>
-                            <span class="text-fine text-secondary-400 dark:text-secondary-300 italic">
-                              PA: {item.dosenPaNama || 'Belum diplot'}
+                            <span class="shrink-0 px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-fine font-bold dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+                              {item.totalSesi || 0}x Bimbingan (Semester Ini)
                             </span>
-                          </Show>
-                        </button>
+                          </div>
+                          <span class="text-fine text-secondary-400 dark:text-secondary-300 italic">
+                            PA: {item.dosenPaNama || 'Belum diplot'}
+                          </span>
+                        </div>
                       )}
                     </For>
                   </div>
