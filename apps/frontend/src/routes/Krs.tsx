@@ -52,6 +52,9 @@ export default function Krs() {
   const [activeTab, setActiveTab] = createSignal<'kelola' | 'massal'>('kelola');
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedMhsIds, setSelectedMhsIds] = createSignal<number[]>([]);
+  // Selection for batch approval in the "kelola" tab (row IDs), kept separate from massal tab.
+  const [selectedKrsIds, setSelectedKrsIds] = createSignal<number[]>([]);
+  let selectAllRef: HTMLInputElement | undefined;
 
   // Mahasiswa picker pagination & sorting
   const pickerPagination = usePagination(20);
@@ -372,6 +375,70 @@ export default function Krs() {
     }
   };
 
+  // --- Kelola tab: batch approval selection ---
+  const kelolaPagePending = () => sortedKrsData().filter((k) => !k.isApproved);
+  const allPagePendingSelected = () => {
+    const pending = kelolaPagePending();
+    return pending.length > 0 && pending.every((k) => selectedKrsIds().includes(k.id));
+  };
+  const somePagePendingSelected = () => kelolaPagePending().some((k) => selectedKrsIds().includes(k.id));
+
+  const toggleKrsRow = (id: number) => {
+    setSelectedKrsIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAllPending = () => {
+    const pendingIds = kelolaPagePending().map((k) => k.id);
+    if (allPagePendingSelected()) {
+      setSelectedKrsIds((prev) => prev.filter((id) => !pendingIds.includes(id)));
+    } else {
+      setSelectedKrsIds((prev) => [...new Set([...prev, ...pendingIds])]);
+    }
+  };
+
+  const selectedMahasiswaIds = () => {
+    const ids = selectedKrsIds();
+    const unique = new Set<number>();
+    for (const row of sortedKrsData()) {
+      if (ids.includes(row.id) && row.mahasiswa) unique.add(row.mahasiswaId);
+    }
+    return [...unique];
+  };
+
+  const handleApproveSelected = async () => {
+    const ids = selectedMahasiswaIds();
+    if (ids.length === 0) {
+      toast.showToast('Pilih setidaknya satu KRS pending.', 'error');
+      return;
+    }
+    try {
+      await krsController.approveBatch(ids, selectedPeriode() || '20252');
+      toast.showToast('KRS terpilih berhasil disetujui', 'success');
+      setSelectedKrsIds([]);
+      refetch();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyetujui KRS terpilih', 'error');
+    }
+  };
+
+  // Reset selection whenever the visible dataset changes.
+  createEffect(() => {
+    selectedPeriode();
+    debouncedMainSearch();
+    sortBy();
+    sortOrder();
+    mainPagination.page();
+    mainPagination.limit();
+    activeTab();
+    setSelectedKrsIds([]);
+  });
+
+  createEffect(() => {
+    if (selectAllRef) {
+      selectAllRef.indeterminate = somePagePendingSelected() && !allPagePendingSelected();
+    }
+  });
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -393,14 +460,7 @@ export default function Krs() {
                 ⚡ Buat KRS Massal
               </Button>
             </Show>
-            <Show
-              when={!(role() === 'mahasiswa' && !canMahasiswaFillKrs())}
-              fallback={
-                <Button variant="primary" disabled title="Pengisian KRS mandiri sedang dinonaktifkan">
-                  + Kontrak KRS
-                </Button>
-              }
-            >
+            <Show when={!(role() === 'mahasiswa' && !canMahasiswaFillKrs())}>
               <Button variant="primary" onClick={openAddModal}>
                 + Kontrak KRS
               </Button>
@@ -610,9 +670,35 @@ export default function Krs() {
             </div>
           </Show>
 
+          <Show when={role() !== 'mahasiswa'}>
+            <div class="flex justify-end">
+              <Button
+                variant="primary"
+                onClick={handleApproveSelected}
+                disabled={selectedKrsIds().length === 0}
+                class="!py-1.5 !px-4 text-xs"
+              >
+                🔓 Setujui Terpilih ({selectedKrsIds().length})
+              </Button>
+            </div>
+          </Show>
+
           <Suspense fallback={<TableLoadingFallback />}>
             <Table
               headers={[
+                ...(role() !== 'mahasiswa'
+                  ? [
+                      <input
+                        ref={selectAllRef}
+                        type="checkbox"
+                        checked={allPagePendingSelected()}
+                        onChange={toggleSelectAllPending}
+                        disabled={kelolaPagePending().length === 0}
+                        title="Pilih semua KRS pending di halaman ini"
+                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                      />,
+                    ]
+                  : []),
                 <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                   Mahasiswa
                 </SortableHeader>,
@@ -631,6 +717,21 @@ export default function Krs() {
               <For each={sortedKrsData()}>
                 {(item) => (
                   <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                    <Show when={role() !== 'mahasiswa'}>
+                      <td class="px-6 py-4">
+                        <Show
+                          when={!item.isApproved}
+                          fallback={<span class="text-xs text-secondary-300 dark:text-secondary-600">—</span>}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedKrsIds().includes(item.id)}
+                            onChange={() => toggleKrsRow(item.id)}
+                            class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                          />
+                        </Show>
+                      </td>
+                    </Show>
                     <td class="px-6 py-4">
                       <div class="font-medium text-secondary-800 dark:text-white">{item.mahasiswa?.nama}</div>
                       <div class="text-xs text-secondary-400 font-mono dark:text-secondary-200">
@@ -691,7 +792,10 @@ export default function Krs() {
               </For>
               <Show when={sortedKrsData().length === 0}>
                 <tr>
-                  <td colspan="5" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                  <td
+                    colspan={role() !== 'mahasiswa' ? 6 : 5}
+                    class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200"
+                  >
                     Tidak ada kontrak KRS ditemukan.
                   </td>
                 </tr>

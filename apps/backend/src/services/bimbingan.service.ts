@@ -9,6 +9,7 @@ import {
   periodeAkademik,
   programStudi,
   sesiBimbingan,
+  sesiBimbinganBalasan,
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
@@ -96,6 +97,22 @@ export class BimbinganService {
         .where(eq(sesiBimbingan.bimbinganId, existing.id))
         .orderBy(asc(sesiBimbingan.pertemuanKe));
 
+      const sesiIds = sesiList.map((s) => s.id);
+      const balasanList =
+        sesiIds.length > 0
+          ? await db
+              .select()
+              .from(sesiBimbinganBalasan)
+              .where(inArray(sesiBimbinganBalasan.sesiId, sesiIds))
+              .orderBy(asc(sesiBimbinganBalasan.createdAt))
+          : [];
+      const balasanMap = new Map<number, (typeof sesiBimbinganBalasan.$inferSelect)[]>();
+      for (const b of balasanList) {
+        const arr = balasanMap.get(b.sesiId) || [];
+        arr.push(b);
+        balasanMap.set(b.sesiId, arr);
+      }
+
       const attachments = await db
         .select()
         .from(bimbinganAttachments)
@@ -112,6 +129,7 @@ export class BimbinganService {
           ...s,
           topikBimbingan: s.topikBimbingan || s.permasalahan,
           permasalahan: s.topikBimbingan || s.permasalahan,
+          balasan: balasanMap.get(s.id) || [],
         })),
         attachments,
         availablePeriodes,
@@ -411,11 +429,102 @@ export class BimbinganService {
         id: sesiBimbingan.id,
         bimbinganId: sesiBimbingan.bimbinganId,
         mahasiswaId: bimbingan.mahasiswaId,
+        dosenId: bimbingan.dosenId,
       })
       .from(sesiBimbingan)
       .innerJoin(bimbingan, eq(sesiBimbingan.bimbinganId, bimbingan.id))
       .where(eq(sesiBimbingan.id, sesiId));
     return row;
+  }
+
+  static async addSesiBalasan(sesiId: number, senderRole: 'mahasiswa' | 'dosen' | 'admin' | 'prodi', pesan: string) {
+    const isMahasiswa = senderRole === 'mahasiswa';
+    const now = new Date();
+    const [balasan] = await db
+      .insert(sesiBimbinganBalasan)
+      .values({
+        sesiId,
+        senderRole,
+        pesan,
+        isReadByMahasiswa: isMahasiswa,
+        readAtMahasiswa: isMahasiswa ? now : null,
+        isReadByDosen: !isMahasiswa,
+        readAtDosen: !isMahasiswa ? now : null,
+      })
+      .returning();
+
+    // Perbarui flag baca agregat sesi: pengirim menandai sisinya sudah dibaca,
+    // pihak lawan menjadi "belum dibaca".
+    await db
+      .update(sesiBimbingan)
+      .set(
+        isMahasiswa
+          ? {
+              isReadByMahasiswa: true,
+              readAtMahasiswa: now,
+              isReadByDosen: false,
+              readAtDosen: null,
+              updatedAt: now,
+            }
+          : {
+              isReadByDosen: true,
+              readAtDosen: now,
+              isReadByMahasiswa: false,
+              readAtMahasiswa: null,
+              updatedAt: now,
+            },
+      )
+      .where(eq(sesiBimbingan.id, sesiId));
+
+    if (isMahasiswa) {
+      const [row] = await db
+        .select({ bimbinganId: sesiBimbingan.bimbinganId })
+        .from(sesiBimbingan)
+        .where(eq(sesiBimbingan.id, sesiId));
+      if (row) {
+        const bimb = await this.getBimbinganById(row.bimbinganId);
+        if (bimb) {
+          await this.notifyDosenPa(
+            bimb.mahasiswaId,
+            'Balasan Sesi Bimbingan',
+            `Mahasiswa membalas sesi bimbingan: "${pesan.slice(0, 120)}"`,
+            row.bimbinganId,
+          );
+        }
+      }
+    }
+
+    return balasan;
+  }
+
+  static async getSesiBalasan(sesiId: number) {
+    return await db
+      .select()
+      .from(sesiBimbinganBalasan)
+      .where(eq(sesiBimbinganBalasan.sesiId, sesiId))
+      .orderBy(asc(sesiBimbinganBalasan.createdAt))
+      .limit(200);
+  }
+
+  static async markSesiBalasanRead(sesiId: number, viewerRole: 'mahasiswa' | 'staff') {
+    const now = new Date();
+    if (viewerRole === 'mahasiswa') {
+      await db
+        .update(sesiBimbinganBalasan)
+        .set({ isReadByMahasiswa: true, readAtMahasiswa: now })
+        .where(and(eq(sesiBimbinganBalasan.sesiId, sesiId), eq(sesiBimbinganBalasan.isReadByMahasiswa, false)));
+      await db
+        .update(sesiBimbingan)
+        .set({ isReadByMahasiswa: true, readAtMahasiswa: now })
+        .where(eq(sesiBimbingan.id, sesiId));
+    } else {
+      await db
+        .update(sesiBimbinganBalasan)
+        .set({ isReadByDosen: true, readAtDosen: now })
+        .where(and(eq(sesiBimbinganBalasan.sesiId, sesiId), eq(sesiBimbinganBalasan.isReadByDosen, false)));
+      await db.update(sesiBimbingan).set({ isReadByDosen: true, readAtDosen: now }).where(eq(sesiBimbingan.id, sesiId));
+    }
+    return { success: true, readAt: now };
   }
 
   static async deleteSesiBimbingan(sesiId: number) {

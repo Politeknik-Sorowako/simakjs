@@ -54,6 +54,27 @@ export default function KonfigurasiParameter() {
   const hasChanges = (p: SystemParameter) =>
     p.paramType !== 'boolean' && edits()[p.key] !== undefined && edits()[p.key] !== p.value;
 
+  // Dedicated, admin-friendly control for the KRS self-service toggle.
+  const krsParam = () => params()?.find((p) => p.key === 'KRS_MANDIRI_ENABLED') ?? null;
+  const krsMandiriEnabled = () => (edits().KRS_MANDIRI_ENABLED ?? krsParam()?.value ?? 'true') === 'true';
+  const saveKrsMandiri = async () => {
+    setSavingKey('KRS_MANDIRI_ENABLED');
+    try {
+      await systemController.updateParameter('KRS_MANDIRI_ENABLED', krsMandiriEnabled() ? 'true' : 'false');
+      setEdits((prev) => {
+        const next = { ...prev };
+        delete next.KRS_MANDIRI_ENABLED;
+        return next;
+      });
+      setNotice('Pengaturan KRS mandiri berhasil diperbarui.');
+      refetch();
+    } catch (e: unknown) {
+      setNotice(e instanceof Error ? e.message : 'Gagal memperbarui pengaturan KRS mandiri.');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
   return (
     <MainLayout>
       <div class="max-w-3xl mx-auto">
@@ -70,8 +91,45 @@ export default function KonfigurasiParameter() {
           </div>
         </Show>
 
+        {/* Kontrol KRS Mandiri */}
+        <div class="mb-6">
+          <Card>
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                    Kontrol KRS Mandiri
+                  </span>
+                  <Badge variant={krsMandiriEnabled() ? 'success' : 'warning'}>
+                    {krsMandiriEnabled() ? 'Aktif' : 'Nonaktif'}
+                  </Badge>
+                </div>
+                <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                  Jika nonaktif, mahasiswa tidak dapat melakukan pengisian KRS mandiri (tombol Kontrak KRS
+                  disembunyikan). Staff (admin/dosen/prodi) tidak terpengaruh.
+                </p>
+                <p class="mt-0.5 text-xs text-secondary-400 font-mono">KRS_MANDIRI_ENABLED</p>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <select
+                  value={krsMandiriEnabled() ? 'true' : 'false'}
+                  onChange={(e) => setField('KRS_MANDIRI_ENABLED', e.currentTarget.value)}
+                  class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+                >
+                  <option value="true">Ya — Izinkan</option>
+                  <option value="false">Tidak — Nonaktifkan</option>
+                </select>
+                <Button size="sm" loading={savingKey() === 'KRS_MANDIRI_ENABLED'} onClick={saveKrsMandiri}>
+                  Simpan
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         <div class="space-y-3">
-          <For each={params() || []}>
+          <For each={(params() || []).filter((p) => p.key !== 'KRS_MANDIRI_ENABLED')}>
             {(p) => (
               <Card>
                 <div class="flex items-start justify-between gap-4">
