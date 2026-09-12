@@ -52,9 +52,7 @@ export default function Krs() {
   const [activeTab, setActiveTab] = createSignal<'kelola' | 'massal'>('kelola');
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedMhsIds, setSelectedMhsIds] = createSignal<number[]>([]);
-  // Selection for batch approval in the "kelola" tab (row IDs), kept separate from massal tab.
-  const [selectedKrsIds, setSelectedKrsIds] = createSignal<number[]>([]);
-  let selectAllRef: HTMLInputElement | undefined;
+  let selectAllMassalRef: HTMLInputElement | undefined;
 
   // Mahasiswa picker pagination & sorting
   const pickerPagination = usePagination(20);
@@ -363,6 +361,7 @@ export default function Krs() {
       toast.showToast('Silakan pilih setidaknya satu mahasiswa.', 'error');
       return;
     }
+    if (!confirm(`Setujui KRS untuk ${ids.length} mahasiswa terpilih?`)) return;
     const periodeId = selectedPeriode() || '20252';
     try {
       await krsController.approveBatch(ids, periodeId);
@@ -375,67 +374,37 @@ export default function Krs() {
     }
   };
 
-  // --- Kelola tab: batch approval selection ---
-  const kelolaPagePending = () => sortedKrsData().filter((k) => !k.isApproved);
-  const allPagePendingSelected = () => {
-    const pending = kelolaPagePending();
-    return pending.length > 0 && pending.every((k) => selectedKrsIds().includes(k.id));
+  // --- Massal tab: tri-state "Pilih Semua" for pending students ---
+  const massalPageIds = () => paginatedPendingStudents().map((s) => Number((s as { id: number }).id));
+  const allPageMassalSelected = () => {
+    const ids = massalPageIds();
+    return ids.length > 0 && ids.every((id) => selectedMhsIds().includes(id));
   };
-  const somePagePendingSelected = () => kelolaPagePending().some((k) => selectedKrsIds().includes(k.id));
+  const somePageMassalSelected = () => massalPageIds().some((id) => selectedMhsIds().includes(id));
 
-  const toggleKrsRow = (id: number) => {
-    setSelectedKrsIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  };
-
-  const toggleSelectAllPending = () => {
-    const pendingIds = kelolaPagePending().map((k) => k.id);
-    if (allPagePendingSelected()) {
-      setSelectedKrsIds((prev) => prev.filter((id) => !pendingIds.includes(id)));
+  const toggleSelectAllMassal = () => {
+    const ids = massalPageIds();
+    if (allPageMassalSelected()) {
+      setSelectedMhsIds((prev) => prev.filter((id) => !ids.includes(id)));
     } else {
-      setSelectedKrsIds((prev) => [...new Set([...prev, ...pendingIds])]);
-    }
-  };
-
-  const selectedMahasiswaIds = () => {
-    const ids = selectedKrsIds();
-    const unique = new Set<number>();
-    for (const row of sortedKrsData()) {
-      if (ids.includes(row.id) && row.mahasiswa) unique.add(row.mahasiswaId);
-    }
-    return [...unique];
-  };
-
-  const handleApproveSelected = async () => {
-    const ids = selectedMahasiswaIds();
-    if (ids.length === 0) {
-      toast.showToast('Pilih setidaknya satu KRS pending.', 'error');
-      return;
-    }
-    try {
-      await krsController.approveBatch(ids, selectedPeriode() || '20252');
-      toast.showToast('KRS terpilih berhasil disetujui', 'success');
-      setSelectedKrsIds([]);
-      refetch();
-    } catch (e: unknown) {
-      toast.showToast((e as Error).message || 'Gagal menyetujui KRS terpilih', 'error');
+      setSelectedMhsIds((prev) => [...new Set([...prev, ...ids])]);
     }
   };
 
   // Reset selection whenever the visible dataset changes.
   createEffect(() => {
     selectedPeriode();
-    debouncedMainSearch();
-    sortBy();
-    sortOrder();
-    mainPagination.page();
-    mainPagination.limit();
+    pickerPagination.page();
+    pickerPagination.limit();
+    pickerSortBy();
+    pickerSortOrder();
     activeTab();
-    setSelectedKrsIds([]);
+    setSelectedMhsIds([]);
   });
 
   createEffect(() => {
-    if (selectAllRef) {
-      selectAllRef.indeterminate = somePagePendingSelected() && !allPagePendingSelected();
+    if (selectAllMassalRef) {
+      selectAllMassalRef.indeterminate = somePageMassalSelected() && !allPageMassalSelected();
     }
   });
 
@@ -670,35 +639,9 @@ export default function Krs() {
             </div>
           </Show>
 
-          <Show when={role() !== 'mahasiswa'}>
-            <div class="flex justify-end">
-              <Button
-                variant="primary"
-                onClick={handleApproveSelected}
-                disabled={selectedKrsIds().length === 0}
-                class="!py-1.5 !px-4 text-xs"
-              >
-                🔓 Setujui Terpilih ({selectedKrsIds().length})
-              </Button>
-            </div>
-          </Show>
-
           <Suspense fallback={<TableLoadingFallback />}>
             <Table
               headers={[
-                ...(role() !== 'mahasiswa'
-                  ? [
-                      <input
-                        ref={selectAllRef}
-                        type="checkbox"
-                        checked={allPagePendingSelected()}
-                        onChange={toggleSelectAllPending}
-                        disabled={kelolaPagePending().length === 0}
-                        title="Pilih semua KRS pending di halaman ini"
-                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
-                      />,
-                    ]
-                  : []),
                 <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                   Mahasiswa
                 </SortableHeader>,
@@ -717,21 +660,6 @@ export default function Krs() {
               <For each={sortedKrsData()}>
                 {(item) => (
                   <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
-                    <Show when={role() !== 'mahasiswa'}>
-                      <td class="px-6 py-4">
-                        <Show
-                          when={!item.isApproved}
-                          fallback={<span class="text-xs text-secondary-300 dark:text-secondary-600">—</span>}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedKrsIds().includes(item.id)}
-                            onChange={() => toggleKrsRow(item.id)}
-                            class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
-                          />
-                        </Show>
-                      </td>
-                    </Show>
                     <td class="px-6 py-4">
                       <div class="font-medium text-secondary-800 dark:text-white">{item.mahasiswa?.nama}</div>
                       <div class="text-xs text-secondary-400 font-mono dark:text-secondary-200">
@@ -792,10 +720,7 @@ export default function Krs() {
               </For>
               <Show when={sortedKrsData().length === 0}>
                 <tr>
-                  <td
-                    colspan={role() !== 'mahasiswa' ? 6 : 5}
-                    class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200"
-                  >
+                  <td colspan="5" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                     Tidak ada kontrak KRS ditemukan.
                   </td>
                 </tr>
@@ -823,20 +748,38 @@ export default function Krs() {
                 Pilih satu atau beberapa mahasiswa untuk disetujui KRS-nya sekaligus.
               </p>
             </div>
-            <Button
-              variant="primary"
-              onClick={handleApproveBatch}
-              disabled={selectedMhsIds().length === 0}
-              class="shadow-sm shadow-accent-200"
-            >
-              🔓 Setujui KRS Terpilih ({selectedMhsIds().length})
-            </Button>
+            <div class="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={toggleSelectAllMassal}
+                disabled={massalPageIds().length === 0}
+                class="!py-1.5 !px-4 text-xs"
+              >
+                {allPageMassalSelected() ? 'Batal Centang' : 'Centang Semua'}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleApproveBatch}
+                disabled={selectedMhsIds().length === 0}
+                class="shadow-sm shadow-accent-200"
+              >
+                🔓 Setujui KRS Terpilih ({selectedMhsIds().length})
+              </Button>
+            </div>
           </div>
 
           <Suspense fallback={<TableLoadingFallback />}>
             <Table
               headers={[
-                'Pilih',
+                <input
+                  ref={selectAllMassalRef}
+                  type="checkbox"
+                  checked={allPageMassalSelected()}
+                  onChange={toggleSelectAllMassal}
+                  disabled={massalPageIds().length === 0}
+                  title="Pilih semua mahasiswa pending di halaman ini"
+                  class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                />,
                 <SortableHeader
                   field="nim"
                   sortBy={pickerSortBy()}

@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { Modal } from '../components/ui/Modal';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { bimbinganController, PelanggaranRekap, SesiBimbingan } from '../controllers/bimbinganController';
@@ -10,8 +11,9 @@ import { KompensasiDetailResponse, presensiController } from '../controllers/pre
 import { prodiController } from '../controllers/prodiController';
 import { fmtTanggal, fmtWaktu, getTodayString } from '../utils/format';
 
-interface SesiThreadProps {
-  sesi: SesiBimbingan;
+interface SesiDetailModalProps {
+  open: boolean;
+  sesi: SesiBimbingan | null;
   viewer: 'mahasiswa' | 'staff';
   draft: string;
   sending: boolean;
@@ -19,86 +21,147 @@ interface SesiThreadProps {
   onDraft: (value: string) => void;
   onSend: () => void;
   onMarkRead: () => void;
+  onClose: () => void;
 }
 
-function SesiThreadPanel(props: SesiThreadProps) {
-  const unread = () =>
-    props.viewer === 'mahasiswa' ? props.sesi.isReadByMahasiswa === false : props.sesi.isReadByDosen === false;
+function SesiDetailModal(props: SesiDetailModalProps) {
+  const unread = (sesi: SesiBimbingan) =>
+    props.viewer === 'mahasiswa' ? sesi.isReadByMahasiswa === false : sesi.isReadByDosen === false;
   const isOwn = (senderRole: string) =>
     props.viewer === 'mahasiswa' ? senderRole === 'mahasiswa' : senderRole !== 'mahasiswa';
 
   return (
-    <div class="mt-2 border-t border-secondary-100 pt-2 flex flex-col gap-2 dark:border-secondary-700">
-      <div class="flex items-center justify-between">
-        <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
-          Percakapan
-        </span>
-        <Show when={unread()}>
-          <div class="flex items-center gap-2">
-            <span class="text-fine font-semibold text-amber-600 dark:text-amber-400">• Belum dibaca</span>
-            <button
-              type="button"
-              disabled={props.marking}
-              onClick={props.onMarkRead}
-              class="px-2 py-0.5 border border-secondary-200 rounded-lg text-fine font-bold text-secondary-600 hover:bg-secondary-50 disabled:opacity-50 dark:border-secondary-700 dark:text-secondary-300 dark:hover:bg-secondary-700"
-            >
-              Tandai dibaca
-            </button>
-          </div>
-        </Show>
-        <Show when={!unread() && (props.sesi.balasan?.length ?? 0) > 0}>
-          <span class="text-fine font-semibold text-emerald-600 dark:text-emerald-400">✓ Dibaca</span>
-        </Show>
-      </div>
-
-      <Show
-        when={(props.sesi.balasan?.length ?? 0) > 0}
-        fallback={
-          <p class="text-fine text-secondary-400 dark:text-secondary-300 italic">Belum ada balasan pada sesi ini.</p>
-        }
-      >
-        <div class="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
-          <For each={props.sesi.balasan}>
-            {(b) => (
-              <div
-                class={`flex flex-col max-w-[85%] ${isOwn(b.senderRole) ? 'self-end items-end' : 'self-start items-start'}`}
+    <Modal
+      isOpen={props.open}
+      onClose={props.onClose}
+      maxWidth="lg"
+      title={props.sesi ? `Detail Sesi Pertemuan Ke-${props.sesi.pertemuanKe}` : 'Detail Sesi Bimbingan'}
+    >
+      <Show when={props.sesi}>
+        {(sesi) => (
+          <div class="flex flex-col gap-4">
+            {/* Metadata */}
+            <div class="flex items-center justify-between text-fine text-secondary-500 dark:text-secondary-300">
+              <span>📅 {fmtTanggal(sesi().tanggalBimbingan)}</span>
+              <span
+                class={`font-bold px-2 py-0.5 rounded text-fine ${
+                  sesi().statusBkd
+                    ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300'
+                    : 'bg-secondary-100 text-secondary-500'
+                }`}
               >
-                <div
-                  class={`px-3 py-2 rounded-2xl text-caption whitespace-pre-wrap ${
-                    isOwn(b.senderRole)
-                      ? 'bg-brand-600 text-white rounded-tr-none'
-                      : 'bg-white text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm dark:bg-secondary-900 dark:text-secondary-100 dark:border-secondary-700'
-                  }`}
-                >
-                  {b.pesan}
-                </div>
-                <span class="text-fine text-secondary-400 dark:text-secondary-300 mt-0.5 uppercase tracking-wider">
-                  {b.senderRole} • {fmtWaktu(b.createdAt)}
-                </span>
-              </div>
-            )}
-          </For>
-        </div>
-      </Show>
+                BKD: {sesi().statusBkd ? 'YA' : 'TIDAK'}
+              </span>
+            </div>
 
-      <div class="flex gap-2">
-        <input
-          type="text"
-          value={props.draft}
-          onInput={(e) => props.onDraft(e.currentTarget.value)}
-          placeholder="Tulis balasan..."
-          class="flex-1 border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-        />
-        <button
-          type="button"
-          disabled={props.sending || props.draft.trim().length === 0}
-          onClick={props.onSend}
-          class="px-3 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 dark:bg-brand-700 dark:hover:bg-brand-600"
-        >
-          {props.sending ? 'Mengirim...' : 'Kirim'}
-        </button>
-      </div>
-    </div>
+            {/* Permasalahan / Topik */}
+            <div class="p-3 bg-rose-50/50 border border-rose-100/60 rounded-xl dark:bg-rose-950/20 dark:border-rose-900/40">
+              <span class="text-fine font-bold text-rose-600 uppercase tracking-wider block mb-0.5">
+                Permasalahan / Topik
+              </span>
+              <p class="text-caption text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
+                {sesi().permasalahan || '-'}
+              </p>
+            </div>
+
+            {/* Solusi & Masukan Dosen PA */}
+            <div class="p-3 bg-accent-50/50 border border-accent-100/60 rounded-xl dark:bg-accent-950/20 dark:border-accent-900/40">
+              <span class="text-fine font-bold text-accent-600 uppercase tracking-wider block mb-0.5">
+                Solusi & Masukan Dosen PA
+              </span>
+              <p class="text-caption text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">{sesi().solusi}</p>
+            </div>
+
+            {/* Respons Awal Mahasiswa */}
+            <Show when={sesi().responsMahasiswa}>
+              <div class="p-3 bg-brand-50/50 border border-brand-100/60 rounded-xl dark:bg-brand-950/20 dark:border-brand-900/40">
+                <span class="text-fine font-bold text-brand-600 uppercase tracking-wider block mb-0.5">
+                  Respons Awal Mahasiswa
+                </span>
+                <p class="text-caption text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
+                  {sesi().responsMahasiswa}
+                </p>
+              </div>
+            </Show>
+
+            {/* Thread Percakapan */}
+            <div class="border-t border-secondary-100 pt-3 flex flex-col gap-2 dark:border-secondary-700">
+              <div class="flex items-center justify-between">
+                <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
+                  Percakapan
+                </span>
+                <Show when={unread(sesi())}>
+                  <div class="flex items-center gap-2">
+                    <span class="text-fine font-semibold text-amber-600 dark:text-amber-400">• Belum dibaca</span>
+                    <button
+                      type="button"
+                      disabled={props.marking}
+                      onClick={props.onMarkRead}
+                      class="px-2 py-0.5 border border-secondary-200 rounded-lg text-fine font-bold text-secondary-600 hover:bg-secondary-50 disabled:opacity-50 dark:border-secondary-700 dark:text-secondary-300 dark:hover:bg-secondary-700"
+                    >
+                      Tandai dibaca
+                    </button>
+                  </div>
+                </Show>
+                <Show when={!unread(sesi()) && (sesi().balasan?.length ?? 0) > 0}>
+                  <span class="text-fine font-semibold text-emerald-600 dark:text-emerald-400">✓ Dibaca</span>
+                </Show>
+              </div>
+
+              <Show
+                when={(sesi().balasan?.length ?? 0) > 0}
+                fallback={
+                  <p class="text-fine text-secondary-400 dark:text-secondary-300 italic">
+                    Belum ada balasan pada sesi ini.
+                  </p>
+                }
+              >
+                <div class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+                  <For each={sesi().balasan}>
+                    {(b) => (
+                      <div
+                        class={`flex flex-col max-w-[85%] ${isOwn(b.senderRole) ? 'self-end items-end' : 'self-start items-start'}`}
+                      >
+                        <div
+                          class={`px-3 py-2 rounded-2xl text-caption whitespace-pre-wrap ${
+                            isOwn(b.senderRole)
+                              ? 'bg-brand-600 text-white rounded-tr-none'
+                              : 'bg-secondary-50 text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm dark:bg-secondary-800 dark:text-secondary-100 dark:border-secondary-700'
+                          }`}
+                        >
+                          {b.pesan}
+                        </div>
+                        <span class="text-fine text-secondary-400 dark:text-secondary-300 mt-0.5 uppercase tracking-wider">
+                          {b.senderRole} • {fmtWaktu(b.createdAt)}
+                        </span>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
+
+              <div class="flex gap-2">
+                <input
+                  type="text"
+                  value={props.draft}
+                  onInput={(e) => props.onDraft(e.currentTarget.value)}
+                  placeholder="Tulis balasan..."
+                  class="flex-1 border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                />
+                <button
+                  type="button"
+                  disabled={props.sending || props.draft.trim().length === 0}
+                  onClick={props.onSend}
+                  class="px-3 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 dark:bg-brand-700 dark:hover:bg-brand-600"
+                >
+                  {props.sending ? 'Mengirim...' : 'Kirim'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Show>
+    </Modal>
   );
 }
 
@@ -118,15 +181,14 @@ export default function Bimbingan() {
   // Selected Academic Period (for History)
   const [selectedPeriode, setSelectedPeriode] = createSignal<string>('');
 
-  // Respons mahasiswa per sesi bimbingan
-  const [responsDrafts, setResponsDrafts] = createSignal<Record<number, string>>({});
-  const [savingResponsId, setSavingResponsId] = createSignal<number | null>(null);
+  // Global bimbingan read state
   const [markingRead, setMarkingRead] = createSignal(false);
 
   // Thread balasan per sesi bimbingan
   const [balasanDrafts, setBalasanDrafts] = createSignal<Record<number, string>>({});
   const [sendingBalasanId, setSendingBalasanId] = createSignal<number | null>(null);
   const [markingSesiId, setMarkingSesiId] = createSignal<number | null>(null);
+  const [activeSesiId, setActiveSesiId] = createSignal<number | null>(null);
 
   // Dosen inputs for ringkasan and approval
   const [ringkasanText, setRingkasanText] = createSignal('');
@@ -323,31 +385,35 @@ export default function Bimbingan() {
     }
   });
 
-  createEffect(() => {
-    const bimb = studentBimbingan();
-    if (!bimb?.sesi) return;
-    setResponsDrafts((prev) => {
-      const next = { ...prev };
-      for (const sesi of bimb.sesi) {
-        if (next[sesi.id] === undefined) next[sesi.id] = sesi.responsMahasiswa ?? '';
-      }
-      return next;
-    });
-  });
-
-  const handleSaveRespons = async (sesi: SesiBimbingan) => {
-    const value = responsDrafts()[sesi.id] ?? '';
-    setSavingResponsId(sesi.id);
-    try {
-      await bimbinganController.respondSesi(sesi.id, value);
-      await refetchStudentBimb();
-      alert('Respons bimbingan berhasil disimpan.');
-    } catch (err: unknown) {
-      alert((err as Error).message || 'Gagal menyimpan respons bimbingan.');
-    } finally {
-      setSavingResponsId(null);
-    }
+  // Active session for the detail modal (derived by ID so it stays fresh after refetch).
+  const activeSesi = () => {
+    const id = activeSesiId();
+    if (!id) return null;
+    const list = auth.hasRole(['mahasiswa']) ? studentBimbingan()?.sesi : selectedBimbingan()?.sesi;
+    return list?.find((s) => s.id === id) ?? null;
   };
+
+  const activeSesiDraft = () => {
+    const id = activeSesiId();
+    return id !== null ? (balasanDrafts()[id] ?? '') : '';
+  };
+  const activeSesiSending = () => activeSesiId() !== null && sendingBalasanId() === activeSesiId();
+  const activeSesiMarking = () => activeSesiId() !== null && markingSesiId() === activeSesiId();
+
+  // Auto tandai dibaca untuk viewer saat modal detail sesi dibuka.
+  createEffect(() => {
+    const sesi = activeSesi();
+    if (!sesi) return;
+    const isUnread = auth.hasRole(['mahasiswa']) ? sesi.isReadByMahasiswa === false : sesi.isReadByDosen === false;
+    if (!isUnread) return;
+    bimbinganController
+      .markSesiRead(sesi.id)
+      .then(() => {
+        if (auth.hasRole(['mahasiswa'])) refetchStudentBimb();
+        else refetchSelectedBimb();
+      })
+      .catch(() => {});
+  });
 
   const handleMarkAsRead = async () => {
     const targetId = mhsProfile()?.id;
@@ -672,62 +738,54 @@ export default function Bimbingan() {
                   }
                 >
                   <For each={studentBimbingan()?.sesi}>
-                    {(sesi) => (
-                      <div class="p-4 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-2 dark:bg-secondary-800 dark:border-secondary-700">
-                        <div class="flex items-center justify-between border-b pb-1">
-                          <span class="font-bold text-caption text-secondary-700 dark:text-white">
-                            Pertemuan Ke-{sesi.pertemuanKe}
-                          </span>
-                          <span class="text-fine text-secondary-400 dark:text-secondary-300 font-mono">
-                            {fmtTanggal(sesi.tanggalBimbingan)}
-                          </span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-fine font-bold text-rose-500 uppercase">Permasalahan:</span>
-                          <p class="text-caption text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
-                            {sesi.permasalahan}
+                    {(sesi) => {
+                      const unreadSesi = () => sesi.isReadByMahasiswa === false;
+                      const replyCount = () => sesi.balasan?.length ?? 0;
+                      return (
+                        <div class="p-4 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-2 dark:bg-secondary-800 dark:border-secondary-700">
+                          <div class="flex items-center justify-between border-b pb-1">
+                            <span class="font-bold text-caption text-secondary-700 dark:text-white">
+                              Pertemuan Ke-{sesi.pertemuanKe}
+                            </span>
+                            <span class="text-fine text-secondary-400 dark:text-secondary-300 font-mono">
+                              {fmtTanggal(sesi.tanggalBimbingan)}
+                            </span>
+                          </div>
+                          <p class="text-caption text-secondary-600 line-clamp-1 dark:text-secondary-300">
+                            {sesi.permasalahan || 'Tanpa topik'}
                           </p>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-fine font-bold text-accent-600 uppercase">Solusi / Masukan:</span>
-                          <p class="text-caption text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
+                          <p class="text-caption text-secondary-500 line-clamp-1 dark:text-secondary-400">
                             {sesi.solusi}
                           </p>
-                        </div>
-                        <div class="flex flex-col gap-1 mt-1">
-                          <span class="text-fine font-bold text-brand-600 uppercase dark:text-brand-400">
-                            Respons Saya:
-                          </span>
-                          <textarea
-                            rows={2}
-                            value={responsDrafts()[sesi.id] ?? ''}
-                            onInput={(e) => setResponsDrafts((prev) => ({ ...prev, [sesi.id]: e.currentTarget.value }))}
-                            placeholder="Tulis tanggapan/respons Anda terhadap catatan dosen..."
-                            class="w-full border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-                          />
-                          <div class="flex justify-end">
+                          <div class="flex items-center justify-between mt-1">
+                            <div class="flex items-center gap-2">
+                              <Show
+                                when={unreadSesi()}
+                                fallback={
+                                  <span class="text-fine font-semibold text-emerald-600 dark:text-emerald-400">
+                                    ✓ Dibaca
+                                  </span>
+                                }
+                              >
+                                <span class="text-fine font-semibold text-amber-600 dark:text-amber-400">
+                                  • Belum dibaca
+                                </span>
+                              </Show>
+                              <span class="text-fine text-secondary-400 dark:text-secondary-300">
+                                💬 {replyCount()} balasan
+                              </span>
+                            </div>
                             <button
                               type="button"
-                              disabled={savingResponsId() === sesi.id}
-                              onClick={() => handleSaveRespons(sesi)}
-                              class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 dark:bg-brand-700 dark:hover:bg-brand-600"
+                              onClick={() => setActiveSesiId(sesi.id)}
+                              class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
                             >
-                              {savingResponsId() === sesi.id ? 'Menyimpan...' : 'Simpan Respons'}
+                              💬 Detail Sesi &amp; Percakapan
                             </button>
                           </div>
                         </div>
-                        <SesiThreadPanel
-                          sesi={sesi}
-                          viewer="mahasiswa"
-                          draft={balasanDrafts()[sesi.id] ?? ''}
-                          sending={sendingBalasanId() === sesi.id}
-                          marking={markingSesiId() === sesi.id}
-                          onDraft={(v) => setBalasanDrafts((prev) => ({ ...prev, [sesi.id]: v }))}
-                          onSend={() => handleSendBalasan(sesi.id, refetchStudentBimb)}
-                          onMarkRead={() => handleMarkSesiRead(sesi.id, refetchStudentBimb)}
-                        />
-                      </div>
-                    )}
+                      );
+                    }}
                   </For>
                 </Show>
               </div>
@@ -983,44 +1041,39 @@ export default function Bimbingan() {
                                   </span>
                                 </div>
 
-                                <div class="flex flex-col gap-1.5 mt-1 text-caption">
-                                  <div class="p-2.5 bg-rose-50/50 border border-rose-100/60 rounded-xl dark:bg-rose-950/20 dark:border-rose-900/40">
-                                    <span class="text-fine font-bold text-rose-600 uppercase tracking-wider block mb-0.5">
-                                      Permasalahan / Topik:
-                                    </span>
-                                    <p class="text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
-                                      {sesi.permasalahan}
-                                    </p>
-                                  </div>
-                                  <div class="p-2.5 bg-accent-50/50 border border-accent-100/60 rounded-xl dark:bg-accent-950/20 dark:border-accent-900/40">
-                                    <span class="text-fine font-bold text-accent-600 uppercase tracking-wider block mb-0.5">
-                                      Solusi & Catatan Dosen PA:
-                                    </span>
-                                    <p class="text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
-                                      {sesi.solusi}
-                                    </p>
-                                  </div>
-                                  <Show when={sesi.responsMahasiswa}>
-                                    <div class="p-2.5 bg-brand-50/50 border border-brand-100/60 rounded-xl dark:bg-brand-950/20 dark:border-brand-900/40">
-                                      <span class="text-fine font-bold text-brand-600 uppercase tracking-wider block mb-0.5">
-                                        Respons Mahasiswa:
+                                <p class="text-caption text-secondary-600 line-clamp-1 dark:text-secondary-300">
+                                  {sesi.permasalahan || 'Tanpa topik'}
+                                </p>
+                                <p class="text-caption text-secondary-500 line-clamp-1 dark:text-secondary-400">
+                                  {sesi.solusi}
+                                </p>
+
+                                <div class="flex items-center justify-between mt-1">
+                                  <div class="flex items-center gap-2">
+                                    <Show
+                                      when={sesi.isReadByDosen === false}
+                                      fallback={
+                                        <span class="text-fine font-semibold text-emerald-600 dark:text-emerald-400">
+                                          ✓ Dibaca
+                                        </span>
+                                      }
+                                    >
+                                      <span class="text-fine font-semibold text-amber-600 dark:text-amber-400">
+                                        • Belum dibaca
                                       </span>
-                                      <p class="text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
-                                        {sesi.responsMahasiswa}
-                                      </p>
-                                    </div>
-                                  </Show>
+                                    </Show>
+                                    <span class="text-fine text-secondary-400 dark:text-secondary-300">
+                                      💬 {sesi.balasan?.length ?? 0} balasan
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveSesiId(sesi.id)}
+                                    class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                                  >
+                                    💬 Detail Sesi &amp; Percakapan
+                                  </button>
                                 </div>
-                                <SesiThreadPanel
-                                  sesi={sesi}
-                                  viewer="staff"
-                                  draft={balasanDrafts()[sesi.id] ?? ''}
-                                  sending={sendingBalasanId() === sesi.id}
-                                  marking={markingSesiId() === sesi.id}
-                                  onDraft={(v) => setBalasanDrafts((prev) => ({ ...prev, [sesi.id]: v }))}
-                                  onSend={() => handleSendBalasan(sesi.id, refetchSelectedBimb)}
-                                  onMarkRead={() => handleMarkSesiRead(sesi.id, refetchSelectedBimb)}
-                                />
                               </div>
                             );
                           }}
@@ -1596,6 +1649,30 @@ export default function Bimbingan() {
           </div>
         </Show>
       </div>
+
+      <SesiDetailModal
+        open={activeSesiId() !== null}
+        sesi={activeSesi()}
+        viewer={auth.hasRole(['mahasiswa']) ? 'mahasiswa' : 'staff'}
+        draft={activeSesiDraft()}
+        sending={activeSesiSending()}
+        marking={activeSesiMarking()}
+        onDraft={(v) => {
+          const id = activeSesiId();
+          if (id !== null) setBalasanDrafts((prev) => ({ ...prev, [id]: v }));
+        }}
+        onSend={() => {
+          const id = activeSesiId();
+          if (id === null) return;
+          handleSendBalasan(id, auth.hasRole(['mahasiswa']) ? refetchStudentBimb : refetchSelectedBimb);
+        }}
+        onMarkRead={() => {
+          const id = activeSesiId();
+          if (id === null) return;
+          handleMarkSesiRead(id, auth.hasRole(['mahasiswa']) ? refetchStudentBimb : refetchSelectedBimb);
+        }}
+        onClose={() => setActiveSesiId(null)}
+      />
     </MainLayout>
   );
 }
