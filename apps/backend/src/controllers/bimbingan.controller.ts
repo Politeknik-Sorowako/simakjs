@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, ilike } from 'drizzle-orm';
 import { dosen, mahasiswa, periodeAkademik } from '../models/schema';
 import { BimbinganService } from '../services/bimbingan.service';
 import { KhsService } from '../services/khs.service';
@@ -6,12 +6,13 @@ import { PelanggaranService } from '../services/pelanggaran.service';
 import { PresensiService } from '../services/presensi.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
+import type { UserPayload } from '../utils/types';
 import { AuthContext } from '../utils/types';
 
 export class BimbinganController {
   // Helper to map email to student profile ID
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
-    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.email, email));
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(ilike(mahasiswa.email, email));
     return mhs ? mhs.id : null;
   }
 
@@ -19,6 +20,44 @@ export class BimbinganController {
   private static async getDosenIdByEmail(email: string): Promise<number | null> {
     const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, email));
     return dsn ? dsn.id : null;
+  }
+
+  // Otorisasi akses thread sesi: mahasiswa hanya sesi miliknya, dosen hanya binaannya.
+  private static async authorizeSesiAccess(
+    user: UserPayload,
+    sesiId: number,
+  ): Promise<{ viewerRole: 'mahasiswa' | 'staff' } | { error: string; status: number }> {
+    const owner = await BimbinganService.getSesiWithOwner(sesiId);
+    if (!owner) return { error: 'Sesi bimbingan tidak ditemukan.', status: 404 };
+
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || owner.mahasiswaId !== myMhsId) {
+        return { error: 'Akses ditolak. Anda hanya dapat mengakses sesi bimbingan Anda sendiri.', status: 403 };
+      }
+      return { viewerRole: 'mahasiswa' };
+    }
+
+    if (hasRole(user, ['dosen'])) {
+      const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
+      const isPa = myDosenId !== null && owner.dosenId === myDosenId;
+      if (!isPa) {
+        const [mhs] = await db
+          .select({ dosenPaId: mahasiswa.dosenPaId })
+          .from(mahasiswa)
+          .where(eq(mahasiswa.id, owner.mahasiswaId));
+        if (!myDosenId || !mhs || mhs.dosenPaId !== myDosenId) {
+          return { error: 'Akses ditolak. Dosen PA tidak cocok.', status: 403 };
+        }
+      }
+      return { viewerRole: 'staff' };
+    }
+
+    if (hasRole(user, ['admin', 'prodi', 'super_admin'])) {
+      return { viewerRole: 'staff' };
+    }
+
+    return { error: 'Akses ditolak.', status: 403 };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -402,6 +441,36 @@ export class BimbinganController {
     }
 
     try {
+      // Mahasiswa hanya boleh mengisi/mengubah respons mahasiswa pada sesi miliknya.
+      if (hasRole(user, ['mahasiswa'])) {
+        const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
+        const owner = await BimbinganService.getSesiWithOwner(sesiId);
+        if (!myMhsId || !owner || owner.mahasiswaId !== myMhsId) {
+          set.status = 403;
+          return { error: 'Akses ditolak. Anda hanya dapat merespons sesi bimbingan Anda sendiri.' };
+        }
+
+        const hasNonResponsField =
+          body.pertemuanKe !== undefined ||
+          body.tanggalBimbingan !== undefined ||
+          body.topikBimbingan !== undefined ||
+          body.permasalahan !== undefined ||
+          body.solusi !== undefined ||
+          body.statusBkd !== undefined ||
+          body.kategoriId !== undefined;
+        if (hasNonResponsField) {
+          set.status = 403;
+          return { error: 'Akses ditolak. Mahasiswa hanya dapat mengisi respons bimbingan.' };
+        }
+
+        const respons =
+          body.responsMahasiswa === undefined || body.responsMahasiswa === null ? null : String(body.responsMahasiswa);
+        const updatedRespons = await BimbinganService.updateSesiBimbingan(sesiId, {
+          responsMahasiswa: respons,
+        });
+        return updatedRespons;
+      }
+
       const data: Record<string, unknown> = {};
       if (body.pertemuanKe !== undefined) data.pertemuanKe = body.pertemuanKe;
       if (body.tanggalBimbingan !== undefined) data.tanggalBimbingan = body.tanggalBimbingan;
@@ -418,6 +487,106 @@ export class BimbinganController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal meng-update sesi bimbingan.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getSesiBalasan(ctx: AuthContext<any, any>): Promise<any> {
+    const { params, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (!user || hasRole(user, ['guest'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const sesiId = parseInt(params.sesiId);
+    if (isNaN(sesiId)) {
+      set.status = 400;
+      return { error: 'ID Sesi tidak valid.' };
+    }
+
+    try {
+      const auth = await BimbinganController.authorizeSesiAccess(user, sesiId);
+      if ('error' in auth) {
+        set.status = auth.status;
+        return { error: auth.error };
+      }
+      await BimbinganService.markSesiBalasanRead(sesiId, auth.viewerRole);
+      const data = await BimbinganService.getSesiBalasan(sesiId);
+      return { data };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil balasan sesi bimbingan.' };
+    }
+  }
+
+  static async createSesiBalasan(ctx: AuthContext) {
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
+    const { params, body, set, getCurrentUser } = ctx as any;
+    const user = await getCurrentUser();
+    if (!user || hasRole(user, ['guest'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const sesiId = parseInt(params.sesiId);
+    if (isNaN(sesiId)) {
+      set.status = 400;
+      return { error: 'ID Sesi tidak valid.' };
+    }
+
+    try {
+      const auth = await BimbinganController.authorizeSesiAccess(user, sesiId);
+      if ('error' in auth) {
+        set.status = auth.status;
+        return { error: auth.error };
+      }
+
+      const pesan = String(body?.pesan ?? '').trim();
+      if (!pesan) {
+        set.status = 400;
+        return { error: 'Pesan balasan wajib diisi.' };
+      }
+
+      let senderRole: 'mahasiswa' | 'dosen' | 'admin' | 'prodi' = 'admin';
+      if (hasRole(user, ['mahasiswa'])) senderRole = 'mahasiswa';
+      else if (hasRole(user, ['dosen'])) senderRole = 'dosen';
+      else if (hasRole(user, ['prodi'])) senderRole = 'prodi';
+
+      const created = await BimbinganService.addSesiBalasan(sesiId, senderRole, pesan);
+      set.status = 201;
+      return created;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengirim balasan sesi bimbingan.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async markSesiRead(ctx: AuthContext<any, any>): Promise<any> {
+    const { params, set, getCurrentUser } = ctx;
+    const user = await getCurrentUser();
+    if (!user || hasRole(user, ['guest'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const sesiId = parseInt(params.sesiId);
+    if (isNaN(sesiId)) {
+      set.status = 400;
+      return { error: 'ID Sesi tidak valid.' };
+    }
+
+    try {
+      const auth = await BimbinganController.authorizeSesiAccess(user, sesiId);
+      if ('error' in auth) {
+        set.status = auth.status;
+        return { error: auth.error };
+      }
+      return await BimbinganService.markSesiBalasanRead(sesiId, auth.viewerRole);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menandai sesi sebagai dibaca.' };
     }
   }
 

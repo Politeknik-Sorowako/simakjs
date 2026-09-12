@@ -196,7 +196,7 @@
   .print\:hidden,
   div.print\:hidden,
   .flex-col.gap-6 > div:not(.fixed),
-  table:not(#print-area-invoice table):not(#print-area-receipt table):not(#print-area-khs table):not(#print-area-transkrip table):not(#print-area-ujian table):not(#print-area-bkd table),
+  table:not(#print-area-invoice table):not(#print-area-receipt table):not(#print-area-khs table):not(#print-area-transkrip table):not(#print-area-ujian table):not(#print-area-bkd table):not(#print-area-krs table),
   .flex.justify-between.items-center.mt-4,
   div.fixed.inset-0.z-50 button,
   div.fixed.inset-0.z-50 .border-t.pt-4,

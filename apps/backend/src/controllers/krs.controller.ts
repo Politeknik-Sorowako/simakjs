@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { KrsService } from '../services/krs.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
@@ -91,6 +92,11 @@ export class KrsController {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
+      const krsMandiriEnabled = await SystemParameterService.isKrsMandiriEnabled();
+      if (!krsMandiriEnabled) {
+        set.status = 403;
+        return { error: 'Pengisian KRS mandiri sedang dinonaktifkan oleh Admin. Silakan hubungi Prodi/Admin.' };
+      }
     }
     try {
       const newKrs = await KrsService.create(body);
@@ -166,9 +172,9 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Silakan login.' };
+      return { error: 'Akses ditolak. Hanya Admin dan Prodi yang dapat membatalkan KRS.' };
     }
     const deleted = await KrsService.delete(parseInt(params.id));
     if (!deleted) {

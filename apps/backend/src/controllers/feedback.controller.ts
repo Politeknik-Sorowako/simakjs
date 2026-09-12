@@ -1,9 +1,17 @@
 import { FeedbackService } from '../services/feedback.service';
 import { SettingsService } from '../services/settings.service';
 import { hasRole } from '../utils/role';
-import type { AuthContext } from '../utils/types';
+import type { AuthContext, UserRole } from '../utils/types';
+
+const FEEDBACK_RESTRICTED_MESSAGE = 'Fitur evaluasi sistem saat ini dibatasi untuk role tertentu.';
 
 export class FeedbackController {
+  private static async hasFeedbackAccess(user: { role: UserRole; roles?: UserRole[] }): Promise<boolean> {
+    const { mode, allowedRoles } = await SettingsService.getFeedbackAccessConfig();
+    if (mode !== 'restricted') return true;
+    return hasRole(user, [...allowedRoles, 'admin', 'super_admin'] as UserRole[]);
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
@@ -17,6 +25,10 @@ export class FeedbackController {
       if (!user) {
         set.status = 401;
         return { error: 'Unauthorized' };
+      }
+      if (!(await FeedbackController.hasFeedbackAccess(user))) {
+        set.status = 403;
+        return { error: FEEDBACK_RESTRICTED_MESSAGE };
       }
       return await FeedbackService.create({
         userId: user.id,
@@ -40,13 +52,19 @@ export class FeedbackController {
         set.status = 401;
         return { error: 'Unauthorized' };
       }
+      if (!(await FeedbackController.hasFeedbackAccess(user))) {
+        set.status = 403;
+        return { error: FEEDBACK_RESTRICTED_MESSAGE };
+      }
       // Semua user yang terautentikasi dapat melihat seluruh saran pengembangan
       // (papan saran kolaboratif), dengan sorting & pagination.
+      const myOnly = query?.myOnly === true || query?.myOnly === 'true';
       return await FeedbackService.getAll({
         page: query?.page ? Number(query.page) : undefined,
         limit: query?.limit ? Number(query.limit) : undefined,
         sortBy: query?.sortBy,
         sortOrder: query?.sortOrder === 'asc' ? 'asc' : query?.sortOrder === 'desc' ? 'desc' : undefined,
+        userId: myOnly ? user.id : undefined,
       });
     } catch (e: unknown) {
       set.status = 400;
@@ -61,6 +79,10 @@ export class FeedbackController {
       if (!user) {
         set.status = 401;
         return { error: 'Unauthorized' };
+      }
+      if (!(await FeedbackController.hasFeedbackAccess(user))) {
+        set.status = 403;
+        return { error: FEEDBACK_RESTRICTED_MESSAGE };
       }
       const id = parseInt(params.id);
       const feedback = await FeedbackService.getById(id, user.id);

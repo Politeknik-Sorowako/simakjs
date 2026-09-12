@@ -62,12 +62,14 @@ const InputNilai = lazy(() => import('./routes/InputNilai'));
 const KelasKuliah = lazy(() => import('./routes/KelasKuliah'));
 const KeuanganDashboard = lazy(() => import('./routes/KeuanganDashboard'));
 const Khs = lazy(() => import('./routes/Khs'));
+const KompensasiMahasiswa = lazy(() => import('./routes/KompensasiMahasiswa'));
 const KompensasiManual = lazy(() => import('./routes/KompensasiManual'));
 const KonfigurasiAbout = lazy(() => import('./routes/KonfigurasiAbout'));
 const KonfigurasiAksesRole = lazy(() => import('./routes/KonfigurasiAksesRole'));
 const KonfigurasiParameter = lazy(() => import('./routes/KonfigurasiParameter'));
 const KonfigurasiScopeProdi = lazy(() => import('./routes/KonfigurasiScopeProdi'));
 const Krs = lazy(() => import('./routes/Krs'));
+const KrsCetak = lazy(() => import('./routes/KrsCetak'));
 const Kurikulum = lazy(() => import('./routes/Kurikulum'));
 const LaporanKompensasi = lazy(() => import('./routes/LaporanKompensasi'));
 const LaporanObe = lazy(() => import('./routes/LaporanObe'));
@@ -230,6 +232,14 @@ function AppContent() {
             }
           />
           <Route
+            path="/krs/cetak"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+                <KrsCetak />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/keuangan"
             element={
               <ProtectedRoute allowedRoles={['admin', 'mahasiswa']}>
@@ -307,6 +317,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['mahasiswa']}>
                 <PresensiMahasiswa />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/kompensasi-saya"
+            element={
+              <ProtectedRoute allowedRoles={['mahasiswa', 'admin', 'dosen', 'prodi']}>
+                <KompensasiMahasiswa />
               </ProtectedRoute>
             }
           />

@@ -50,6 +50,26 @@ export const getBimbinganSchema = {
             permasalahan: t.Optional(t.String()),
             solusi: t.Optional(t.String()),
             statusBkd: t.Optional(t.Boolean()),
+            responsMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
+            isReadByMahasiswa: t.Optional(t.Boolean()),
+            readAtMahasiswa: t.Optional(t.Union([t.Date(), t.Null()])),
+            isReadByDosen: t.Optional(t.Boolean()),
+            readAtDosen: t.Optional(t.Union([t.Date(), t.Null()])),
+            balasan: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.Optional(t.Integer()),
+                  sesiId: t.Optional(t.Integer()),
+                  senderRole: t.Optional(t.String()),
+                  pesan: t.Optional(t.String()),
+                  isReadByMahasiswa: t.Optional(t.Boolean()),
+                  readAtMahasiswa: t.Optional(t.Union([t.Date(), t.Null()])),
+                  isReadByDosen: t.Optional(t.Boolean()),
+                  readAtDosen: t.Optional(t.Union([t.Date(), t.Null()])),
+                  createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
+                }),
+              ),
+            ),
             createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
             updatedAt: t.Optional(t.Union([t.Date(), t.Null()])),
           }),
@@ -157,6 +177,7 @@ export const addSesiBody = t.Object({
   solusi: t.Optional(t.String()),
   statusBkd: t.Optional(t.Boolean({ default: false })),
   kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  responsMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const addSesiSchema = {
@@ -180,7 +201,15 @@ export const updateSesiSchema = {
   params: t.Object({
     sesiId: t.Numeric(),
   }),
-  body: t.Partial(addSesiBody),
+  body: t.Object({
+    pertemuanKe: t.Optional(t.Integer()),
+    tanggalBimbingan: t.Optional(t.String()),
+    permasalahan: t.Optional(t.String()),
+    solusi: t.Optional(t.String()),
+    statusBkd: t.Optional(t.Boolean()),
+    kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
+    responsMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
+  }),
 };
 
 export const deleteSesiSchema = {
@@ -188,6 +217,44 @@ export const deleteSesiSchema = {
     tags: ['Bimbingan'],
     summary: 'Hapus Sesi Bimbingan',
     description: 'Menghapus sesi bimbingan berdasarkan ID sesi.',
+  },
+  params: t.Object({
+    sesiId: t.Numeric(),
+  }),
+};
+
+export const sesiBalasanBody = t.Object({
+  pesan: t.String({ minLength: 1, maxLength: 2000 }),
+});
+
+export const getSesiBalasanSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Ambil Thread Balasan Sesi',
+    description: 'Mengambil seluruh balasan percakapan pada satu sesi bimbingan dan menandainya dibaca untuk viewer.',
+  },
+  params: t.Object({
+    sesiId: t.Numeric(),
+  }),
+};
+
+export const createSesiBalasanSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Kirim Balasan Sesi Bimbingan',
+    description: 'Mengirim balasan percakapan pada sesi bimbingan (mahasiswa <-> dosen PA).',
+  },
+  params: t.Object({
+    sesiId: t.Numeric(),
+  }),
+  body: sesiBalasanBody,
+};
+
+export const readSesiSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Tandai Sesi Sudah Dibaca',
+    description: 'Menandai balasan sesi bimbingan sebagai sudah dibaca untuk viewer terkait.',
   },
   params: t.Object({
     sesiId: t.Numeric(),

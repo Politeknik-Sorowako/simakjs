@@ -5,11 +5,14 @@ import {
   addSesiSchema,
   clearChatSchema,
   createBimbinganThreadSchema,
+  createSesiBalasanSchema,
   deleteSesiSchema,
   getAkademikSummarySchema,
   getBimbinganMonitoringSchema,
   getBimbinganSchema,
   getRekapBkdSchema,
+  getSesiBalasanSchema,
+  readSesiSchema,
   updateBimbinganSchema,
   updateSesiSchema,
 } from '../schemas/bimbingan.schema';
@@ -26,5 +29,8 @@ export const bimbinganRoutes = new Elysia({ prefix: '/bimbingan' })
   .delete('/mahasiswa/:mhsId/thread', BimbinganController.clearChat, clearChatSchema)
   .post('/mahasiswa/:mhsId/sesi', BimbinganController.addSesi, addSesiSchema)
   .put('/sesi/:sesiId', BimbinganController.updateSesi, updateSesiSchema)
+  .get('/sesi/:sesiId/balasan', BimbinganController.getSesiBalasan, getSesiBalasanSchema)
+  .post('/sesi/:sesiId/balasan', BimbinganController.createSesiBalasan, createSesiBalasanSchema)
+  .post('/sesi/:sesiId/read', BimbinganController.markSesiRead, readSesiSchema)
   .delete('/sesi/:sesiId', BimbinganController.deleteSesi, deleteSesiSchema)
   .put('/mahasiswa/:mhsId', BimbinganController.updateBimbingan, updateBimbinganSchema);

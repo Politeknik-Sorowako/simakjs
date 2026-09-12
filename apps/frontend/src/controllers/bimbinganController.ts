@@ -24,6 +24,18 @@ export interface BimbinganThread {
   createdAt: string;
 }
 
+export interface SesiBalasan {
+  id: number;
+  sesiId: number;
+  senderRole: 'mahasiswa' | 'dosen' | 'admin' | 'prodi';
+  pesan: string;
+  isReadByMahasiswa: boolean;
+  readAtMahasiswa?: string | null;
+  isReadByDosen: boolean;
+  readAtDosen?: string | null;
+  createdAt: string;
+}
+
 export interface SesiBimbingan {
   id: number;
   bimbinganId: number;
@@ -32,8 +44,14 @@ export interface SesiBimbingan {
   topikBimbingan?: string;
   permasalahan?: string;
   solusi: string;
+  responsMahasiswa?: string | null;
   statusBkd: boolean;
   kategoriId?: number | null;
+  isReadByMahasiswa?: boolean;
+  readAtMahasiswa?: string | null;
+  isReadByDosen?: boolean;
+  readAtDosen?: string | null;
+  balasan?: SesiBalasan[];
   createdAt: string;
   updatedAt: string;
 }
@@ -256,11 +274,36 @@ export const bimbinganController = {
       solusi?: string;
       statusBkd?: boolean;
       kategoriId?: number | null;
+      responsMahasiswa?: string | null;
     },
   ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/sesi/${sesiId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  },
+
+  async respondSesi(sesiId: number, responsMahasiswa: string): Promise<SesiBimbingan> {
+    return fetchApi<SesiBimbingan>(`/bimbingan/sesi/${sesiId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ responsMahasiswa }),
+    });
+  },
+
+  async getSesiBalasan(sesiId: number): Promise<{ data: SesiBalasan[] }> {
+    return fetchApi<{ data: SesiBalasan[] }>(`/bimbingan/sesi/${sesiId}/balasan`);
+  },
+
+  async sendSesiBalasan(sesiId: number, pesan: string): Promise<SesiBalasan> {
+    return fetchApi<SesiBalasan>(`/bimbingan/sesi/${sesiId}/balasan`, {
+      method: 'POST',
+      body: JSON.stringify({ pesan }),
+    });
+  },
+
+  async markSesiRead(sesiId: number): Promise<{ success: boolean; readAt: string }> {
+    return fetchApi<{ success: boolean; readAt: string }>(`/bimbingan/sesi/${sesiId}/read`, {
+      method: 'POST',
     });
   },
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { dosen, mahasiswa, periodeAkademik, programStudi } from '../models/schema';
+import { MahasiswaService } from '../services/mahasiswa.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -106,6 +107,16 @@ describe('Bimbingan & Pelanggaran API', () => {
     });
   });
 
+  describe('MahasiswaService.getMahasiswaIdByEmail', () => {
+    it('harus mencocokkan email tanpa membedakan huruf besar/kecil', async () => {
+      const idUpper = await MahasiswaService.getMahasiswaIdByEmail('MHS@TEST.COM');
+      const idMixed = await MahasiswaService.getMahasiswaIdByEmail('Mhs@Test.Com');
+
+      expect(idUpper).toBe(mhsId);
+      expect(idMixed).toBe(mhsId);
+    });
+  });
+
   describe('Bimbingan API', () => {
     it('mahasiswa harus sukses mengambil/membuat bimbingan miliknya sendiri', async () => {
       const response = await app.handle(
@@ -133,6 +144,38 @@ describe('Bimbingan & Pelanggaran API', () => {
         }),
       );
       expect(response.status).toBe(403);
+    });
+
+    it('mahasiswa tetap dapat mengakses bimbingannya meski email berbeda kapitalisasi (case-insensitive)', async () => {
+      const [mhsCase] = await db
+        .insert(mahasiswa)
+        .values({
+          nim: '20200003',
+          nama: 'Mahasiswa Case Insensitive',
+          email: 'MhsCase@Test.com',
+          programStudiId: prodiId,
+          dosenPaId: dosenId,
+          status: 'aktif',
+          namaIbuKandung: 'Ibu Test',
+          nik: '1234567890123458',
+          jenisKelamin: 'L',
+          tanggalLahir: '2000-03-03',
+        })
+        .returning();
+
+      const caseToken = await getAuthToken('mhscase@test.com', 'mahasiswa');
+      const response = await app.handle(
+        new Request(`http://localhost/bimbingan/mahasiswa/${mhsCase.id}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${caseToken}`,
+          },
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.mahasiswaId).toBe(mhsCase.id);
     });
 
     it('mahasiswa harus sukses mengirim pesan bimbingan', async () => {

@@ -24,6 +24,11 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'boolean',
     description: 'Kunci kartu ujian jika ada tanggungan kompensasi',
   },
+  KRS_MANDIRI_ENABLED: {
+    value: 'true',
+    type: 'boolean',
+    description: 'Izinkan mahasiswa melakukan pengisian KRS secara mandiri',
+  },
 };
 
 export class SystemParameterService {
@@ -70,6 +75,12 @@ export class SystemParameterService {
 
   static async getTimezone(): Promise<string> {
     return (await SystemParameterService.getRaw('TIMEZONE')) || 'Asia/Makassar';
+  }
+
+  static async isKrsMandiriEnabled(): Promise<boolean> {
+    const raw = await SystemParameterService.getRaw('KRS_MANDIRI_ENABLED');
+    if (raw === null || raw === '') return true;
+    return raw === 'true' || raw === '1';
   }
 
   static async getAll() {

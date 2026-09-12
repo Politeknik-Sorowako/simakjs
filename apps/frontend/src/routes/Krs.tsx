@@ -16,6 +16,7 @@ import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { Krs as IKrs, krsController } from '../controllers/krsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { settingsController } from '../controllers/settingsController';
 import { usePagination } from '../hooks/usePagination';
 
 export default function Krs() {
@@ -44,9 +45,14 @@ export default function Krs() {
 
   const [showImportModal, setShowImportModal] = createSignal(false);
 
+  // Global setting: whether mahasiswa may fill KRS independently.
+  const [publicSettings] = createResource(() => settingsController.getPublicSettings());
+  const canMahasiswaFillKrs = () => publicSettings()?.krsMandiriEnabled ?? true;
+
   const [activeTab, setActiveTab] = createSignal<'kelola' | 'massal'>('kelola');
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedMhsIds, setSelectedMhsIds] = createSignal<number[]>([]);
+  let selectAllMassalRef: HTMLInputElement | undefined;
 
   // Mahasiswa picker pagination & sorting
   const pickerPagination = usePagination(20);
@@ -137,6 +143,41 @@ export default function Krs() {
       return res.data[0] || null;
     },
   );
+
+  // Detail modal state
+  const [showDetailModal, setShowDetailModal] = createSignal(false);
+  const [detailTarget, setDetailTarget] = createSignal<IKrs | null>(null);
+  const [detailKelas] = createResource(
+    () => detailTarget()?.kelasKuliahId,
+    async (kelasId) => {
+      if (!kelasId) return null;
+      try {
+        return await kelasKuliahController.getById(kelasId);
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  const openDetail = (item: IKrs) => {
+    setDetailTarget(item);
+    setShowDetailModal(true);
+  };
+
+  // Print KRS: open a dedicated print window so the app layout never affects the document
+  const printKrs = (mhs: { id: number; nama: string; nim: string }) => {
+    const params = new URLSearchParams({ mahasiswaId: String(mhs.id) });
+    if (selectedPeriode()) params.set('periodeId', selectedPeriode());
+    window.open(`/krs/cetak?${params.toString()}`, '_blank');
+  };
+
+  const dosenPengajarLabel = (
+    kelas: { dosenPengajarKelas?: { dosen?: { nama: string } | null }[] | null } | null | undefined,
+  ) =>
+    kelas?.dosenPengajarKelas
+      ?.map((d) => d.dosen?.nama)
+      .filter(Boolean)
+      .join(', ') || '-';
 
   // Fetch KRS data (filtered dynamically)
   const [krsData, { refetch }] = createResource(
@@ -241,6 +282,10 @@ export default function Krs() {
   const openAddModal = () => {
     setErrorMsg('');
     if (role() === 'mahasiswa') {
+      if (!canMahasiswaFillKrs()) {
+        alert('Pengisian KRS mandiri sedang dinonaktifkan. Silakan hubungi Prodi/Admin.');
+        return;
+      }
       if (!mahasiswaProfile()) {
         alert('Data profile mahasiswa belum dimuat.');
         return;
@@ -316,6 +361,7 @@ export default function Krs() {
       toast.showToast('Silakan pilih setidaknya satu mahasiswa.', 'error');
       return;
     }
+    if (!confirm(`Setujui KRS untuk ${ids.length} mahasiswa terpilih?`)) return;
     const periodeId = selectedPeriode() || '20252';
     try {
       await krsController.approveBatch(ids, periodeId);
@@ -327,6 +373,40 @@ export default function Krs() {
       toast.showToast((e as Error).message || 'Gagal menyetujui KRS batch', 'error');
     }
   };
+
+  // --- Massal tab: tri-state "Pilih Semua" for pending students ---
+  const massalPageIds = () => paginatedPendingStudents().map((s) => Number((s as { id: number }).id));
+  const allPageMassalSelected = () => {
+    const ids = massalPageIds();
+    return ids.length > 0 && ids.every((id) => selectedMhsIds().includes(id));
+  };
+  const somePageMassalSelected = () => massalPageIds().some((id) => selectedMhsIds().includes(id));
+
+  const toggleSelectAllMassal = () => {
+    const ids = massalPageIds();
+    if (allPageMassalSelected()) {
+      setSelectedMhsIds((prev) => prev.filter((id) => !ids.includes(id)));
+    } else {
+      setSelectedMhsIds((prev) => [...new Set([...prev, ...ids])]);
+    }
+  };
+
+  // Reset selection whenever the visible dataset changes.
+  createEffect(() => {
+    selectedPeriode();
+    pickerPagination.page();
+    pickerPagination.limit();
+    pickerSortBy();
+    pickerSortOrder();
+    activeTab();
+    setSelectedMhsIds([]);
+  });
+
+  createEffect(() => {
+    if (selectAllMassalRef) {
+      selectAllMassalRef.indeterminate = somePageMassalSelected() && !allPageMassalSelected();
+    }
+  });
 
   return (
     <MainLayout>
@@ -349,11 +429,26 @@ export default function Krs() {
                 ⚡ Buat KRS Massal
               </Button>
             </Show>
-            <Button variant="primary" onClick={openAddModal}>
-              + Kontrak KRS
-            </Button>
+            <Show when={!(role() === 'mahasiswa' && !canMahasiswaFillKrs())}>
+              <Button variant="primary" onClick={openAddModal}>
+                + Kontrak KRS
+              </Button>
+            </Show>
           </div>
         </div>
+
+        {/* Info Banner if Mahasiswa Self-Service KRS is disabled */}
+        <Show when={role() === 'mahasiswa' && !canMahasiswaFillKrs()}>
+          <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-semibold shadow-sm flex items-start gap-3 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+            <span class="text-base">🔒</span>
+            <div>
+              <p class="font-bold">Pengisian KRS Mandiri Dinonaktifkan</p>
+              <p class="text-xs text-amber-600 font-medium mt-1 dark:text-amber-400">
+                Admin menonaktifkan pengisian KRS mandiri. Silakan hubungi Prodi/Admin untuk pengisian KRS Anda.
+              </p>
+            </div>
+          </div>
+        </Show>
 
         {/* Warning Banner if Mahasiswa is not active */}
         <Show when={role() === 'mahasiswa' && mahasiswaProfile() && mahasiswaProfile()?.status !== 'aktif'}>
@@ -510,6 +605,22 @@ export default function Krs() {
         </Show>
 
         <Show when={activeTab() === 'kelola' || role() === 'mahasiswa'}>
+          <Show when={role() === 'mahasiswa' && mahasiswaProfile()}>
+            <div class="flex justify-end">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  printKrs({
+                    id: mahasiswaProfile()!.id,
+                    nama: mahasiswaProfile()!.nama,
+                    nim: mahasiswaProfile()!.nim,
+                  })
+                }
+              >
+                🖨️ Cetak KRS
+              </Button>
+            </div>
+          </Show>
           {/* Search Filter for Admins / Dosen */}
           <Show when={role() !== 'mahasiswa'}>
             <div class="max-w-xs">
@@ -570,7 +681,25 @@ export default function Krs() {
                         {item.isApproved ? 'Disetujui' : 'Pending'}
                       </span>
                     </td>
-                    <td class="px-6 py-4 flex gap-2">
+                    <td class="px-6 py-4 flex gap-2 flex-wrap">
+                      <Button variant="secondary" onClick={() => openDetail(item)} class="!py-1 !px-2.5 text-xs">
+                        Detail
+                      </Button>
+                      <Show when={role() !== 'mahasiswa' && item.mahasiswa}>
+                        <Button
+                          variant="secondary"
+                          onClick={() =>
+                            printKrs({
+                              id: item.mahasiswa!.id,
+                              nama: item.mahasiswa!.nama,
+                              nim: item.mahasiswa!.nim,
+                            })
+                          }
+                          class="!py-1 !px-2.5 text-xs"
+                        >
+                          🖨️ Cetak
+                        </Button>
+                      </Show>
                       <Show when={!item.isApproved && role() !== 'mahasiswa'}>
                         <Button
                           variant="success"
@@ -580,9 +709,11 @@ export default function Krs() {
                           Setujui
                         </Button>
                       </Show>
-                      <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
-                        Batal
-                      </Button>
+                      <Show when={role() === 'admin' || role() === 'prodi' || role() === 'super_admin'}>
+                        <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
+                          Batal
+                        </Button>
+                      </Show>
                     </td>
                   </tr>
                 )}
@@ -617,20 +748,38 @@ export default function Krs() {
                 Pilih satu atau beberapa mahasiswa untuk disetujui KRS-nya sekaligus.
               </p>
             </div>
-            <Button
-              variant="primary"
-              onClick={handleApproveBatch}
-              disabled={selectedMhsIds().length === 0}
-              class="shadow-sm shadow-accent-200"
-            >
-              🔓 Setujui KRS Terpilih ({selectedMhsIds().length})
-            </Button>
+            <div class="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                onClick={toggleSelectAllMassal}
+                disabled={massalPageIds().length === 0}
+                class="!py-1.5 !px-4 text-xs"
+              >
+                {allPageMassalSelected() ? 'Batal Centang' : 'Centang Semua'}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleApproveBatch}
+                disabled={selectedMhsIds().length === 0}
+                class="shadow-sm shadow-accent-200"
+              >
+                🔓 Setujui KRS Terpilih ({selectedMhsIds().length})
+              </Button>
+            </div>
           </div>
 
           <Suspense fallback={<TableLoadingFallback />}>
             <Table
               headers={[
-                'Pilih',
+                <input
+                  ref={selectAllMassalRef}
+                  type="checkbox"
+                  checked={allPageMassalSelected()}
+                  onChange={toggleSelectAllMassal}
+                  disabled={massalPageIds().length === 0}
+                  title="Pilih semua mahasiswa pending di halaman ini"
+                  class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                />,
                 <SortableHeader
                   field="nim"
                   sortBy={pickerSortBy()}
@@ -793,6 +942,108 @@ export default function Krs() {
             refetchPending();
           }}
         />
+
+        {/* Modal Detail Mata Kuliah Terkontrak */}
+        <Modal
+          show={showDetailModal()}
+          title="Detail Mata Kuliah Terkontrak"
+          onClose={() => setShowDetailModal(false)}
+          maxWidth="lg"
+        >
+          <Show when={detailTarget()}>
+            {(item) => (
+              <div class="flex flex-col gap-4 text-sm">
+                <div class="flex items-center justify-between border-b border-secondary-100 pb-3 dark:border-secondary-800">
+                  <div>
+                    <h3 class="text-base font-bold text-secondary-900 dark:text-white">
+                      {detailKelas()?.mataKuliah?.nama || '-'}
+                    </h3>
+                    <p class="text-xs text-secondary-500 dark:text-secondary-300">
+                      {detailKelas()?.mataKuliah?.kode || '-'} · {detailKelas()?.mataKuliah?.sksTotal ?? '-'} SKS
+                    </p>
+                  </div>
+                  <span
+                    class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                      item().isApproved
+                        ? 'bg-green-50 text-green-700 border border-green-200'
+                        : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                    }`}
+                  >
+                    {item().isApproved ? 'Disetujui' : 'Pending'}
+                  </span>
+                </div>
+
+                <Show when={detailKelas.loading}>
+                  <p class="text-center text-xs text-secondary-400 py-2">Memuat rincian kelas...</p>
+                </Show>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                  <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                      Mahasiswa
+                    </span>
+                    <span class="text-secondary-800 dark:text-secondary-200">
+                      {item().mahasiswa?.nama} ({item().mahasiswa?.nim})
+                    </span>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                      Kelas Kuliah
+                    </span>
+                    <span class="text-secondary-800 dark:text-secondary-200">
+                      {item().kelasKuliah?.namaKelas || '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-secondary-400">Periode</span>
+                    <span class="text-secondary-800 dark:text-secondary-200">
+                      {item().kelasKuliah?.periodeId || '-'}
+                    </span>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                      Dosen Pengajar
+                    </span>
+                    <span class="text-secondary-800 dark:text-secondary-200">{dosenPengajarLabel(detailKelas())}</span>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                      Nilai Angka
+                    </span>
+                    <span class="text-secondary-800 dark:text-secondary-200">{item().nilaiAngka || '-'}</span>
+                  </div>
+                  <div>
+                    <span class="block text-xs font-semibold uppercase tracking-wider text-secondary-400">
+                      Nilai Huruf
+                    </span>
+                    <span class="text-secondary-800 dark:text-secondary-200">{item().nilaiHuruf || '-'}</span>
+                  </div>
+                </div>
+
+                <div class="flex justify-end gap-2 border-t border-secondary-100 pt-4 dark:border-secondary-800">
+                  <Button variant="secondary" onClick={() => setShowDetailModal(false)}>
+                    Tutup
+                  </Button>
+                  <Show when={item().mahasiswa}>
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        setShowDetailModal(false);
+                        printKrs({
+                          id: item().mahasiswa!.id,
+                          nama: item().mahasiswa!.nama,
+                          nim: item().mahasiswa!.nim,
+                        });
+                      }}
+                    >
+                      🖨️ Cetak KRS
+                    </Button>
+                  </Show>
+                </div>
+              </div>
+            )}
+          </Show>
+        </Modal>
       </div>
     </MainLayout>
   );

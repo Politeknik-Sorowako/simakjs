@@ -24,7 +24,13 @@ export class FeedbackService {
     return newFeedback;
   }
 
-  static async getAll(options?: { page?: number; limit?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }) {
+  static async getAll(options?: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    userId?: number;
+  }) {
     try {
       const page = Math.max(1, options?.page || 1);
       const limit = Math.min(100, Math.max(1, options?.limit || 20));
@@ -34,6 +40,9 @@ export class FeedbackService {
       const commentCountExpr = sql<number>`(SELECT COUNT(*) FROM ${feedbackComments} WHERE ${feedbackComments.feedbackId} = ${systemFeedback.id})`;
 
       const conditions: SQL<unknown>[] = [];
+      if (options?.userId !== undefined) {
+        conditions.push(eq(systemFeedback.userId, options.userId));
+      }
       const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
       const [totalRow] = await db

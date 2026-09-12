@@ -2,6 +2,7 @@ import { eden, unwrap } from '../utils/eden';
 
 export interface SystemPublicSettings {
   featureFeedbackEnabled: boolean;
+  krsMandiriEnabled: boolean;
 }
 
 export interface SystemSettingItem {
@@ -12,7 +13,7 @@ export interface SystemSettingItem {
 }
 
 interface SettingsData {
-  data: { featureFeedbackEnabled: boolean };
+  data: { featureFeedbackEnabled: boolean; krsMandiriEnabled: boolean };
 }
 
 interface SettingsResponse {
@@ -38,9 +39,12 @@ export const settingsController = {
   async getPublicSettings(): Promise<SystemPublicSettings> {
     try {
       const res = await unwrap<SettingsData>(eden.settings.public.get());
-      return { featureFeedbackEnabled: res.data.featureFeedbackEnabled };
+      return {
+        featureFeedbackEnabled: res.data.featureFeedbackEnabled,
+        krsMandiriEnabled: res.data.krsMandiriEnabled,
+      };
     } catch {
-      return { featureFeedbackEnabled: true };
+      return { featureFeedbackEnabled: true, krsMandiriEnabled: true };
     }
   },
 

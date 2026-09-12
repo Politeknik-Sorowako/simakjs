@@ -1350,6 +1350,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     Presensi & Pengajuan Izin/Sakit
                   </A>
                 </Show>
+                <Show when={isMahasiswa()}>
+                  <A
+                    href="/kompensasi-saya"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Detail Kompensasi
+                  </A>
+                </Show>
                 <Show when={role() !== 'mahasiswa' && role() !== 'guest'}>
                   <A
                     href="/manajemen-cuti"

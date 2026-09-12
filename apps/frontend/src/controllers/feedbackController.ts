@@ -41,6 +41,11 @@ export interface FeedbackListResponse {
   };
 }
 
+export interface FeedbackAccessConfig {
+  mode: 'full' | 'restricted';
+  allowedRoles: string[];
+}
+
 type FeedbackSingleEden = Promise<{ data?: SystemFeedback | null; error?: unknown }>;
 type FeedbackListEden = Promise<{ data?: FeedbackListResponse | null; error?: unknown }>;
 
@@ -59,12 +64,14 @@ export const feedbackController = {
     limit?: number;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    myOnly?: boolean;
   }): Promise<FeedbackListResponse> {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', String(params.page));
     if (params?.limit) query.append('limit', String(params.limit));
     if (params?.sortBy) query.append('sortBy', params.sortBy);
     if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
+    if (params?.myOnly) query.append('myOnly', 'true');
     const qs = query.toString() ? `?${query.toString()}` : '';
     return fetchApi<FeedbackListResponse>(`/feedback${qs}`);
   },
@@ -107,5 +114,18 @@ export const feedbackController = {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
+  },
+
+  async getAccessConfig(): Promise<FeedbackAccessConfig> {
+    const res = await fetchApi<{ data: FeedbackAccessConfig }>('/settings/feedback-config');
+    return res.data;
+  },
+
+  async updateAccessConfig(mode: 'full' | 'restricted', allowedRoles: string[]): Promise<FeedbackAccessConfig> {
+    const res = await fetchApi<{ message: string; data: FeedbackAccessConfig }>('/settings/feedback-config', {
+      method: 'PUT',
+      body: JSON.stringify({ mode, allowedRoles }),
+    });
+    return res.data;
   },
 };

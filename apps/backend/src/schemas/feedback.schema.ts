@@ -37,4 +37,5 @@ export const getAllFeedbackQuery = t.Object({
     ]),
   ),
   sortOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')])),
+  myOnly: t.Optional(t.Union([t.Boolean(), t.String()])),
 });
