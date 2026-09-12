@@ -957,6 +957,55 @@ export const nilaiKomponenMahasiswa = pgTable('nilai_komponen_mahasiswa', {
     .$onUpdate(() => new Date()),
 });
 
+export const subKomponenNilai = pgTable(
+  'sub_komponen_nilai',
+  {
+    id: serial('id').primaryKey(),
+    komponenNilaiId: integer('komponen_nilai_id')
+      .notNull()
+      .references(() => komponenNilai.id, { onDelete: 'cascade' }),
+    nama: varchar('nama', { length: 100 }).notNull(),
+    bobot: integer('bobot').notNull(), // bobot relatif terhadap induk, 0 - 100
+    urutan: integer('urutan').default(0).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      komponenNilaiIdIdx: index('sub_komponen_nilai_komponen_id_idx').on(table.komponenNilaiId),
+    };
+  },
+);
+
+export const nilaiSubKomponenMahasiswa = pgTable(
+  'nilai_sub_komponen_mahasiswa',
+  {
+    id: serial('id').primaryKey(),
+    krsId: integer('krs_id')
+      .notNull()
+      .references(() => krs.id, { onDelete: 'cascade' }),
+    subKomponenNilaiId: integer('sub_komponen_nilai_id')
+      .notNull()
+      .references(() => subKomponenNilai.id, { onDelete: 'cascade' }),
+    nilai: numeric('nilai', { precision: 5, scale: 2 }).notNull(), // 0.00 - 100.00
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      krsIdIdx: index('nilai_sub_komponen_mahasiswa_krs_id_idx').on(table.krsId),
+      subKomponenNilaiIdIdx: index('nilai_sub_komponen_mahasiswa_sub_id_idx').on(table.subKomponenNilaiId),
+      krsSubUnique: unique('nilai_sub_komponen_mahasiswa_krs_sub_unique').on(table.krsId, table.subKomponenNilaiId),
+    };
+  },
+);
+
 export const pengajuanYudisium = pgTable('pengajuan_yudisium', {
   id: serial('id').primaryKey(),
   mahasiswaId: integer('mahasiswa_id')
@@ -983,6 +1032,7 @@ export const komponenNilaiRelations = relations(komponenNilai, ({ one, many }) =
     references: [kelasKuliah.id],
   }),
   nilaiKomponenMahasiswa: many(nilaiKomponenMahasiswa),
+  subKomponenNilai: many(subKomponenNilai),
 }));
 
 export const nilaiKomponenMahasiswaRelations = relations(nilaiKomponenMahasiswa, ({ one }) => ({
@@ -993,6 +1043,25 @@ export const nilaiKomponenMahasiswaRelations = relations(nilaiKomponenMahasiswa,
   komponenNilai: one(komponenNilai, {
     fields: [nilaiKomponenMahasiswa.komponenNilaiId],
     references: [komponenNilai.id],
+  }),
+}));
+
+export const subKomponenNilaiRelations = relations(subKomponenNilai, ({ one, many }) => ({
+  komponenNilai: one(komponenNilai, {
+    fields: [subKomponenNilai.komponenNilaiId],
+    references: [komponenNilai.id],
+  }),
+  nilaiSubKomponenMahasiswa: many(nilaiSubKomponenMahasiswa),
+}));
+
+export const nilaiSubKomponenMahasiswaRelations = relations(nilaiSubKomponenMahasiswa, ({ one }) => ({
+  krs: one(krs, {
+    fields: [nilaiSubKomponenMahasiswa.krsId],
+    references: [krs.id],
+  }),
+  subKomponenNilai: one(subKomponenNilai, {
+    fields: [nilaiSubKomponenMahasiswa.subKomponenNilaiId],
+    references: [subKomponenNilai.id],
   }),
 }));
 

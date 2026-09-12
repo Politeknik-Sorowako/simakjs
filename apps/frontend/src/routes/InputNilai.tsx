@@ -1,12 +1,13 @@
-import { createEffect, createResource, createSignal, For, Index, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Index, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import SubKomponenEditor from '../components/SubKomponenEditor';
 import { Button } from '../components/ui/Button';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
-import { khsController } from '../controllers/khsController';
+import { khsController, type SubKomponenNilai } from '../controllers/khsController';
 import { rpsController } from '../controllers/rpsController';
 
 export default function InputNilai() {
@@ -19,6 +20,8 @@ export default function InputNilai() {
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
   const [editableComponents, setEditableComponents] = createSignal<Array<{ name: string; bobot: number }>>([]);
   const [inputGrades, setInputGrades] = createSignal<Record<string, string>>({});
+  const [inputSubGrades, setInputSubGrades] = createSignal<Record<string, string>>({});
+  const [expandedKomponenId, setExpandedKomponenId] = createSignal<number | null>(null);
 
   // 1. Load all Kelas Kuliah for Lecturer/Admin
   const [classes, { refetch: refetchClasses }] = createResource(
@@ -55,6 +58,26 @@ export default function InputNilai() {
     } catch (e) {
       return [];
     }
+  });
+
+  // 3b. Load sub-komponen definitions for selected class
+  const [subComponents, { refetch: refetchSubComponents }] = createResource(selectedKelasId, async (kelasId) => {
+    if (!kelasId) return [];
+    try {
+      return await khsController.getSubKomponen(kelasId);
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const subsByKomponen = createMemo(() => {
+    const map = new Map<number, SubKomponenNilai[]>();
+    for (const sub of subComponents() || []) {
+      const arr = map.get(sub.komponenNilaiId) ?? [];
+      arr.push(sub);
+      map.set(sub.komponenNilaiId, arr);
+    }
+    return map;
   });
 
   const selectedClassDetails = () => classes()?.find((c) => c.id === selectedKelasId()) || null;
@@ -116,6 +139,21 @@ export default function InputNilai() {
         }
       }
       setInputGrades(initial);
+    }
+  });
+
+  // Sync student sub-grades to input states
+  createEffect(() => {
+    const sg = studentsGrades();
+    if (sg) {
+      const initial: Record<string, string> = {};
+      for (const stud of sg) {
+        for (const val of stud.nilaiSub || []) {
+          initial[`${stud.krsId}_${val.subKomponenNilaiId}`] =
+            val.nilai !== undefined && val.nilai !== null ? val.nilai.toString() : '';
+        }
+      }
+      setInputSubGrades(initial);
     }
   });
 
@@ -209,6 +247,46 @@ export default function InputNilai() {
     }));
   };
 
+  // Handle student sub-grade change
+  const handleSubGradeChange = (krsId: number, subKomponenNilaiId: number, value: string) => {
+    const sanitized = value.replace(/[^0-9.,]/g, '');
+    setInputSubGrades((prev) => ({
+      ...prev,
+      [`${krsId}_${subKomponenNilaiId}`]: sanitized,
+    }));
+  };
+
+  const parseGradeInput = (raw: string | undefined): number | null => {
+    const cleaned = raw ? raw.replace(',', '.') : '';
+    if (cleaned === '' || isNaN(Number(cleaned))) return null;
+    return Number(cleaned);
+  };
+
+  // Nilai level-1 suatu komponen: agregasi sub (weighted avg) atau nilai langsung
+  const getDynamicKomponenScore = (krsId: number, komponenId: number, bobot: number) => {
+    const subs = subsByKomponen().get(komponenId) || [];
+    if (subs.length === 0) {
+      const grade = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
+      return { score: grade, complete: grade !== null };
+    }
+
+    let total = 0;
+    let weight = 0;
+    let missing = 0;
+    for (const sub of subs) {
+      const grade = parseGradeInput(inputSubGrades()[`${krsId}_${sub.id}`]);
+      if (grade === null) {
+        missing += 1;
+        continue;
+      }
+      total += grade * (Number(sub.bobot) / 100);
+      weight += Number(sub.bobot);
+    }
+
+    const complete = missing === 0 && weight === 100;
+    return { score: complete ? parseFloat(total.toFixed(2)) : null, complete };
+  };
+
   const getDynamicFinalGrade = (stud: { krsId: number }) => {
     const list = components();
     if (!list || list.length === 0) return null;
@@ -216,10 +294,9 @@ export default function InputNilai() {
     let totalScore = 0;
     let totalBobot = 0;
     for (const c of list) {
-      const val = inputGrades()[`${stud.krsId}_${c.id}`];
-      const cleanedVal = val ? val.replace(',', '.') : '';
-      const grade = cleanedVal !== '' && !isNaN(Number(cleanedVal)) ? Number(cleanedVal) : 0;
-      totalScore += grade * (c.bobot / 100);
+      const result = getDynamicKomponenScore(stud.krsId, c.id!, c.bobot);
+      if (!result.complete || result.score === null) return null;
+      totalScore += result.score * (c.bobot / 100);
       totalBobot += c.bobot;
     }
 
@@ -253,7 +330,7 @@ export default function InputNilai() {
     };
   };
 
-  // Save all student grades
+  // Save all student grades (level-1 langsung + nilai sub-komponen)
   const handleSaveGrades = async () => {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
@@ -262,27 +339,62 @@ export default function InputNilai() {
     const comps = components();
     if (!list || !comps) return;
 
-    const payload = list.map((stud) => {
-      const nilaiKomponenList = comps.map((c) => {
-        const val = inputGrades()[`${stud.krsId}_${c.id}`];
-        const cleanedVal = val ? val.replace(',', '.') : '';
-        return {
-          komponenNilaiId: c.id!,
-          nilai: cleanedVal !== '' && !isNaN(Number(cleanedVal)) ? Number(cleanedVal) : 0,
-        };
-      });
-      return {
-        krsId: stud.krsId,
-        nilaiKomponenList,
-      };
-    });
+    const payload: Array<{
+      krsId: number;
+      nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }>;
+    }> = [];
+    const payloadSub: Array<{
+      krsId: number;
+      subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }>;
+    }> = [];
+
+    for (const stud of list) {
+      const nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }> = [];
+      const subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }> = [];
+
+      for (const c of comps) {
+        const subs = subsByKomponen().get(c.id!) || [];
+        if (subs.length > 0) {
+          for (const sub of subs) {
+            const grade = parseGradeInput(inputSubGrades()[`${stud.krsId}_${sub.id}`]);
+            subNilaiList.push({ subKomponenNilaiId: sub.id!, nilai: grade ?? 0 });
+          }
+        } else {
+          const grade = parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]);
+          nilaiKomponenList.push({ komponenNilaiId: c.id!, nilai: grade ?? 0 });
+        }
+      }
+
+      payload.push({ krsId: stud.krsId, nilaiKomponenList });
+      if (subNilaiList.length > 0) {
+        payloadSub.push({ krsId: stud.krsId, subNilaiList });
+      }
+    }
 
     try {
+      if (payloadSub.length > 0) {
+        await khsController.saveNilaiSub(kelasId, payloadSub);
+      }
       await khsController.saveNilaiMahasiswa(kelasId, payload);
       toast.showToast('Nilai mahasiswa berhasil disimpan.', 'success');
       refetchStudentsGrades();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menyimpan nilai.', 'error');
+    }
+  };
+
+  // Save sub-komponen definitions for one component
+  const handleSaveSub = async (komponenId: number, list: Array<{ nama: string; bobot: number }>) => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) return;
+
+    try {
+      await khsController.saveSubKomponen(kelasId, komponenId, list);
+      toast.showToast('Sub-komponen berhasil disimpan.', 'success');
+      refetchSubComponents();
+      refetchStudentsGrades();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan sub-komponen.', 'error');
     }
   };
 
@@ -392,35 +504,59 @@ export default function InputNilai() {
               <div class="flex flex-col gap-3">
                 {/* We use Index instead of For to preserve focus when elements update */}
                 <Index each={editableComponents()}>
-                  {(comp, idx) => (
-                    <div class="flex items-center gap-2 border-b pb-2">
-                      <input
-                        type="text"
-                        placeholder="Nama Komponen"
-                        value={comp().name}
-                        disabled={isClassLocked()}
-                        onInput={(e) => updateComponentField(idx, 'name', e.currentTarget.value)}
-                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Bobot"
-                        value={comp().bobot}
-                        disabled={isClassLocked()}
-                        onInput={(e) => updateComponentField(idx, 'bobot', e.currentTarget.value)}
-                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 text-center dark:border-secondary-700 dark:text-white"
-                      />
-                      <span class="text-xs text-secondary-400 font-bold">%</span>
-                      <Show when={!isClassLocked()}>
-                        <button
-                          onClick={() => removeComponent(idx)}
-                          class="text-rose-500 hover:text-rose-700 text-xs p-1"
-                        >
-                          ❌
-                        </button>
-                      </Show>
-                    </div>
-                  )}
+                  {(comp, idx) => {
+                    const komponenId = () => components()?.[idx]?.id;
+                    const isExpanded = () => komponenId() !== undefined && expandedKomponenId() === komponenId();
+                    return (
+                      <div class="flex flex-col gap-1 border-b pb-2">
+                        <div class="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder="Nama Komponen"
+                            value={comp().name}
+                            disabled={isClassLocked()}
+                            onInput={(e) => updateComponentField(idx, 'name', e.currentTarget.value)}
+                            class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs flex-1 focus:outline-none disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Bobot"
+                            value={comp().bobot}
+                            disabled={isClassLocked()}
+                            onInput={(e) => updateComponentField(idx, 'bobot', e.currentTarget.value)}
+                            class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-xs w-16 focus:outline-none disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 text-center dark:border-secondary-700 dark:text-white"
+                          />
+                          <span class="text-xs text-secondary-400 font-bold">%</span>
+                          <Show when={komponenId() !== undefined}>
+                            <button
+                              type="button"
+                              title="Breakdown sub-komponen"
+                              onClick={() => setExpandedKomponenId(isExpanded() ? null : (komponenId() as number))}
+                              class={`text-xs p-1 rounded ${isExpanded() ? 'text-brand-700' : 'text-secondary-400 hover:text-brand-600'}`}
+                            >
+                              🧩
+                            </button>
+                          </Show>
+                          <Show when={!isClassLocked()}>
+                            <button
+                              onClick={() => removeComponent(idx)}
+                              class="text-rose-500 hover:text-rose-700 text-xs p-1"
+                            >
+                              ❌
+                            </button>
+                          </Show>
+                        </div>
+                        <Show when={isExpanded()}>
+                          <SubKomponenEditor
+                            komponenId={komponenId() as number}
+                            disabled={isClassLocked()}
+                            subs={subsByKomponen().get(komponenId() as number) || []}
+                            onSave={handleSaveSub}
+                          />
+                        </Show>
+                      </div>
+                    );
+                  }}
                 </Index>
 
                 <div class="flex justify-between items-center mt-2">
@@ -521,6 +657,11 @@ export default function InputNilai() {
                         {(c) => (
                           <th class="p-3 text-center">
                             {c.nama} ({c.bobot}%)
+                            <Show when={(subsByKomponen().get(c.id!) || []).length > 0}>
+                              <span class="ml-1" title="Memiliki sub-komponen">
+                                🧩
+                              </span>
+                            </Show>
                           </th>
                         )}
                       </For>
@@ -554,19 +695,49 @@ export default function InputNilai() {
                           </td>
                           <For each={components()}>
                             {(c) => (
-                              <td class="p-3 text-center">
-                                <input
-                                  type="text"
-                                  placeholder="0.00"
-                                  disabled={isClassLocked()}
-                                  value={
-                                    inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
-                                      ? inputGrades()[`${stud.krsId}_${c.id}`]
-                                      : ''
+                              <td class="p-3 text-center align-top">
+                                <Show
+                                  when={(subsByKomponen().get(c.id!) || []).length > 0}
+                                  fallback={
+                                    <input
+                                      type="text"
+                                      placeholder="0.00"
+                                      disabled={isClassLocked()}
+                                      value={
+                                        inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
+                                          ? inputGrades()[`${stud.krsId}_${c.id}`]
+                                          : ''
+                                      }
+                                      onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
+                                      class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                                    />
                                   }
-                                  onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
-                                  class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
-                                />
+                                >
+                                  <div class="flex flex-col gap-1 items-center">
+                                    <For each={subsByKomponen().get(c.id!)}>
+                                      {(sub) => (
+                                        <div class="flex items-center gap-1">
+                                          <span
+                                            class="text-[9px] text-secondary-400 max-w-[70px] truncate"
+                                            title={sub.nama}
+                                          >
+                                            {sub.nama}
+                                          </span>
+                                          <input
+                                            type="text"
+                                            placeholder="0.00"
+                                            disabled={isClassLocked()}
+                                            value={inputSubGrades()[`${stud.krsId}_${sub.id}`] ?? ''}
+                                            onInput={(e) =>
+                                              handleSubGradeChange(stud.krsId, sub.id!, e.currentTarget.value)
+                                            }
+                                            class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] w-14 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                                          />
+                                        </div>
+                                      )}
+                                    </For>
+                                  </div>
+                                </Show>
                               </td>
                             )}
                           </For>
