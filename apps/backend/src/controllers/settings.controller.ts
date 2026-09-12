@@ -6,17 +6,19 @@ import type { AuthContext } from '../utils/types';
 export class SettingsController {
   // Public setting status (no auth needed)
   static async getPublicSettings({ set }: { set: { status?: number | string } }): Promise<{
-    data: { featureFeedbackEnabled: boolean; krsMandiriEnabled: boolean };
+    data: { featureFeedbackEnabled: boolean; krsMandiriEnabled: boolean; maxBimbinganAttachmentMb: number };
   }> {
     try {
-      const [feedbackEnabled, krsMandiriEnabled] = await Promise.all([
+      const [feedbackEnabled, krsMandiriEnabled, maxBimbinganAttachmentMb] = await Promise.all([
         SettingsService.isFeedbackEnabled(),
         SystemParameterService.isKrsMandiriEnabled(),
+        SystemParameterService.getNumber('MAX_BIMBINGAN_ATTACHMENT_MB'),
       ]);
       return {
         data: {
           featureFeedbackEnabled: feedbackEnabled,
           krsMandiriEnabled,
+          maxBimbinganAttachmentMb: maxBimbinganAttachmentMb || 2,
         },
       };
     } catch {
@@ -24,6 +26,7 @@ export class SettingsController {
         data: {
           featureFeedbackEnabled: true,
           krsMandiriEnabled: true,
+          maxBimbinganAttachmentMb: 2,
         },
       };
     }

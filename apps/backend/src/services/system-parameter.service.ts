@@ -29,6 +29,11 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'boolean',
     description: 'Izinkan mahasiswa melakukan pengisian KRS secara mandiri',
   },
+  MAX_BIMBINGAN_ATTACHMENT_MB: {
+    value: '2',
+    type: 'number',
+    description: 'Batas maksimal ukuran lampiran bimbingan dalam MB (default 2 MB)',
+  },
 };
 
 export class SystemParameterService {

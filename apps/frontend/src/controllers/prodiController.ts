@@ -7,6 +7,15 @@ export interface Prodi {
   nama: string;
   jenjang: string;
   idPddikti?: string | null;
+  kodeProdiPddikti?: string | null;
+  nomorSkIzinOperasional?: string | null;
+  tanggalSkIzinOperasional?: string | null;
+  tanggalSkIzinOperasionalBerlakuMulai?: string | null;
+  fileSkIzinOperasional?: string | null;
+  nilaiAkreditasi?: string | null;
+  tanggalSkAkreditasi?: string | null;
+  tanggalSkAkreditasiBerlakuMulai?: string | null;
+  fileSkAkreditasi?: string | null;
   isSynced?: boolean;
 }
 
@@ -59,6 +68,19 @@ export const prodiController = {
   async delete(id: number): Promise<{ message: string }> {
     return fetchApi<{ message: string }>(`/prodi/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  async uploadSk(
+    file: File,
+    jenis: 'izin' | 'akreditasi',
+  ): Promise<{ url: string; fileName: string; fileSize: number; fileType: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('jenis', jenis);
+    return fetchApi<{ url: string; fileName: string; fileSize: number; fileType: string }>('/prodi/upload-sk', {
+      method: 'POST',
+      body: formData,
     });
   },
 };

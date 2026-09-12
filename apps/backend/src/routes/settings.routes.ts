@@ -9,6 +9,7 @@ export const settingsRoutes = new Elysia({ prefix: '/settings' })
         data: t.Object({
           featureFeedbackEnabled: t.Boolean(),
           krsMandiriEnabled: t.Boolean(),
+          maxBimbinganAttachmentMb: t.Number(),
         }),
       }),
     },

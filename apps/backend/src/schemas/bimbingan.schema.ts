@@ -261,6 +261,17 @@ export const readSesiSchema = {
   }),
 };
 
+export const uploadAttachmentSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Unggah Lampiran Bimbingan',
+    description: 'Mengunggah lampiran PDF/gambar pada bimbingan dengan batas ukuran dinamis dari parameter sistem.',
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+  }),
+};
+
 export const getBimbinganMonitoringSchema = {
   detail: {
     tags: ['Bimbingan'],

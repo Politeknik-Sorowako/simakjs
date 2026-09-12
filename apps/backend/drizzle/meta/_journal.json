@@ -435,6 +435,13 @@
       "when": 1786600000012,
       "tag": "0061_add_sesi_bimbingan_balasan",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1786600000013,
+      "tag": "0062_add_prodi_sk_akreditasi",
+      "breakpoints": true
     }
   ]
 }
