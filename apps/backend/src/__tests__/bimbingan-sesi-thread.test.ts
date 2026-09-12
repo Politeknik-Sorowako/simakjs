@@ -9,6 +9,7 @@ describe('Thread Balasan per Sesi Bimbingan', () => {
   let dosenToken: string;
   let dosen2Token: string;
   let mhsToken: string;
+  let mhsId: number;
   let sesiMhsId: number;
   let sesiMhs2Id: number;
 
@@ -59,6 +60,7 @@ describe('Thread Balasan per Sesi Bimbingan', () => {
         tanggalLahir: '2002-05-05',
       })
       .returning();
+    mhsId = mhs.id;
 
     const [mhs2] = await db
       .insert(mahasiswa)
@@ -94,6 +96,8 @@ describe('Thread Balasan per Sesi Bimbingan', () => {
         bimbinganId: bimb.id,
         pertemuanKe: 1,
         tanggalBimbingan: '2025-09-01',
+        topikBimbingan: 'Topik uji',
+        permasalahan: 'Topik uji',
         solusi: 'Catatan dosen.',
         statusBkd: true,
       })
@@ -213,5 +217,28 @@ describe('Thread Balasan per Sesi Bimbingan', () => {
       }),
     );
     expect(res.status).toBe(403);
+  });
+
+  it('GET /bimbingan/mahasiswa/:mhsId menyertakan sesi[].balasan (tidak di-strip schema)', async () => {
+    await app.handle(
+      new Request(`http://localhost/bimbingan/sesi/${sesiMhsId}/balasan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+        body: JSON.stringify({ pesan: 'Pesan uji strip schema.' }),
+      }),
+    );
+
+    const res = await app.handle(
+      new Request(`http://localhost/bimbingan/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { sesi?: { id: number; balasan?: { pesan: string }[] }[] };
+    const sesi = json.sesi?.find((s) => s.id === sesiMhsId);
+    expect(sesi).toBeTruthy();
+    expect(Array.isArray(sesi?.balasan)).toBe(true);
+    expect(sesi?.balasan?.[0]?.pesan).toBe('Pesan uji strip schema.');
   });
 });
