@@ -3,7 +3,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { useAuth } from '../contexts/AuthContext';
+import { type UserRole, useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { type FeedbackDetail, feedbackController, type SystemFeedback } from '../controllers/feedbackController';
 
@@ -22,6 +22,16 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const PER_PAGE = 10;
+
+const ACCESS_ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'mahasiswa', label: 'Mahasiswa' },
+  { value: 'dosen', label: 'Dosen' },
+  { value: 'prodi', label: 'Admin Prodi' },
+  { value: 'kaprodi', label: 'Kaprodi' },
+  { value: 'keuangan', label: 'Keuangan' },
+  { value: 'instruktur', label: 'Instruktur' },
+  { value: 'plp', label: 'PLP / Teknisi Lab' },
+];
 
 export default function EvaluasiSistem() {
   const auth = useAuth();
@@ -42,6 +52,21 @@ export default function EvaluasiSistem() {
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
   const [myOnly, setMyOnly] = createSignal(false);
 
+  // Feedback access configuration
+  const [accessConfig, { refetch: refetchAccessConfig }] = createResource(async () =>
+    feedbackController.getAccessConfig(),
+  );
+  const [showAccessModal, setShowAccessModal] = createSignal(false);
+  const [accessMode, setAccessMode] = createSignal<'full' | 'restricted'>('full');
+  const [accessRoles, setAccessRoles] = createSignal<string[]>([]);
+  const [savingAccess, setSavingAccess] = createSignal(false);
+
+  const canAccess = () => {
+    const cfg = accessConfig();
+    if (!cfg || cfg.mode !== 'restricted') return true;
+    return isAdmin() || auth.hasRole(cfg.allowedRoles as UserRole[]);
+  };
+
   // Detail modal state
   const [selectedId, setSelectedId] = createSignal<number | null>(null);
   const [detailComment, setDetailComment] = createSignal('');
@@ -58,8 +83,11 @@ export default function EvaluasiSistem() {
   const [isDeleting, setIsDeleting] = createSignal(false);
 
   const [feedbacks, { refetch }] = createResource(
-    () => ({ page: page(), sortBy: sortBy(), sortOrder: sortOrder(), myOnly: myOnly() }),
-    async ({ page, sortBy, sortOrder, myOnly }) => {
+    () => ({ page: page(), sortBy: sortBy(), sortOrder: sortOrder(), myOnly: myOnly(), allowed: canAccess() }),
+    async ({ page, sortBy, sortOrder, myOnly, allowed }) => {
+      if (!allowed) {
+        return { data: [], meta: { page: 1, limit: PER_PAGE, total: 0, totalPages: 1 } };
+      }
       return feedbackController.getAll({
         page,
         limit: PER_PAGE,
@@ -231,6 +259,33 @@ export default function EvaluasiSistem() {
 
   const canModify = (item: SystemFeedback) => isAdmin() || item.userId === user()?.id;
 
+  const openAccessSettings = () => {
+    const cfg = accessConfig();
+    setAccessMode(cfg?.mode ?? 'full');
+    setAccessRoles(cfg?.allowedRoles ?? ['admin', 'super_admin', 'prodi', 'dosen', 'mahasiswa']);
+    setShowAccessModal(true);
+  };
+
+  const toggleAccessRole = (role: string) => {
+    setAccessRoles((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]));
+  };
+
+  const saveAccessSettings = async (e: Event) => {
+    e.preventDefault();
+    setSavingAccess(true);
+    try {
+      await feedbackController.updateAccessConfig(accessMode(), accessRoles());
+      toast.showToast('Pengaturan akses masukan berhasil disimpan', 'success');
+      setShowAccessModal(false);
+      refetchAccessConfig();
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal menyimpan pengaturan akses', 'error');
+    } finally {
+      setSavingAccess(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -241,198 +296,224 @@ export default function EvaluasiSistem() {
               Sampaikan masukan, laporan kendala, atau ide fitur baru untuk pengembangan SIMAK Vokasi
             </p>
           </div>
-          <Button onClick={() => setShowModal(true)} variant="primary">
-            + Berikan Masukan / Usulan
-          </Button>
+          <div class="flex items-center gap-2">
+            <Show when={isAdmin()}>
+              <Button onClick={openAccessSettings} variant="secondary">
+                ⚙️ Pengaturan Akses Masukan
+              </Button>
+            </Show>
+            <Show when={canAccess()}>
+              <Button onClick={() => setShowModal(true)} variant="primary">
+                + Berikan Masukan / Usulan
+              </Button>
+            </Show>
+          </div>
         </div>
 
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
-          <div class="flex items-center gap-2 mb-4">
-            <div class="inline-flex rounded-full bg-secondary-100 dark:bg-secondary-800 p-0.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setMyOnly(false);
-                  setPage(1);
-                }}
-                class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  !myOnly()
-                    ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
-                    : 'text-secondary-500 dark:text-secondary-300'
-                }`}
-              >
-                Semua Masukan
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMyOnly(true);
-                  setPage(1);
-                }}
-                class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  myOnly()
-                    ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
-                    : 'text-secondary-500 dark:text-secondary-300'
-                }`}
-              >
-                Masukan Saya Saja
-              </button>
+        <Show when={accessConfig() && !canAccess()}>
+          <div class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+            <span class="text-base">🔒</span>
+            <div>
+              <p class="text-sm font-semibold">Akses masukan saat ini dibatasi</p>
+              <p class="text-xs mt-0.5">
+                Administrator telah membatasi modul evaluasi & feedback hanya untuk role tertentu. Anda belum termasuk
+                role yang diizinkan untuk melihat atau mengirim masukan.
+              </p>
             </div>
           </div>
-          <Show
-            when={!feedbacks.loading}
-            fallback={<p class="text-center text-xs text-secondary-400 py-8">Memuat data masukan...</p>}
-          >
-            <Show
-              when={(feedbacks()?.data || []).length > 0}
-              fallback={
-                <div class="text-center py-12 text-secondary-400">
-                  Belum ada evaluasi atau usulan yang dikirim. Klik tombol di atas untuk mengirimkan masukan pertama
-                  Anda.
-                </div>
-              }
-            >
-              <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                  <thead>
-                    <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 font-semibold">
-                      <th
-                        class="pb-3 cursor-pointer select-none hover:text-brand-600"
-                        onClick={() => handleSort('createdAt')}
-                      >
-                        Tanggal {getSortIcon('createdAt')}
-                      </th>
-                      <th class="pb-3">Pengirim</th>
-                      <th
-                        class="pb-3 cursor-pointer select-none hover:text-brand-600"
-                        onClick={() => handleSort('kategori')}
-                      >
-                        Kategori {getSortIcon('kategori')}
-                      </th>
-                      <th
-                        class="pb-3 cursor-pointer select-none hover:text-brand-600"
-                        onClick={() => handleSort('judul')}
-                      >
-                        Judul & Pesan {getSortIcon('judul')}
-                      </th>
-                      <th
-                        class="pb-3 cursor-pointer select-none hover:text-brand-600"
-                        onClick={() => handleSort('rating')}
-                      >
-                        Rating {getSortIcon('rating')}
-                      </th>
-                      <th
-                        class="pb-3 cursor-pointer select-none hover:text-brand-600"
-                        onClick={() => handleSort('likeCount')}
-                      >
-                        Suka {getSortIcon('likeCount')}
-                      </th>
-                      <th class="pb-3">Komentar</th>
-                      <th class="pb-3">Status</th>
-                      <Show when={isAdmin()}>
-                        <th class="pb-3">Aksi Admin</th>
-                      </Show>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <For each={feedbacks()?.data || []}>
-                      {(item: SystemFeedback) => (
-                        <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
-                          <td class="py-3 text-secondary-500 font-mono">
-                            {new Date(item.createdAt).toLocaleDateString('id-ID')}
-                          </td>
-                          <td class="py-3 font-semibold text-secondary-800 dark:text-white">
-                            {item.user?.nama || user()?.nama || 'User'}
-                            <span class="block text-[10px] text-secondary-400 uppercase">{item.user?.role}</span>
-                          </td>
-                          <td class="py-3">
-                            <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
-                              {KATEGORI_LABEL[item.kategori] || item.kategori}
-                            </span>
-                          </td>
-                          <td class="py-3 max-w-xs">
-                            <button type="button" onClick={() => openDetail(item.id)} class="text-left group">
-                              <div class="font-bold text-secondary-800 dark:text-white group-hover:text-brand-600 group-hover:underline">
-                                {item.judul}
-                              </div>
-                              <div class="text-secondary-500 line-clamp-2 mt-0.5">{item.pesan}</div>
-                            </button>
-                          </td>
-                          <td class="py-3">
-                            <span class="text-amber-500 font-bold">★ {item.rating || 5}/5</span>
-                          </td>
-                          <td class="py-3">
-                            <span class="text-secondary-600 dark:text-secondary-300">♥ {item.likeCount ?? 0}</span>
-                          </td>
-                          <td class="py-3">
-                            <span class="text-secondary-600 dark:text-secondary-300">💬 {item.commentCount ?? 0}</span>
-                          </td>
-                          <td class="py-3">
-                            <span
-                              class={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                item.status === 'implemented'
-                                  ? 'bg-green-100 text-green-700'
-                                  : item.status === 'in_review'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : item.status === 'closed'
-                                      ? 'bg-secondary-100 text-secondary-600'
-                                      : 'bg-amber-100 text-amber-700'
-                              }`}
-                            >
-                              {STATUS_LABEL[item.status] || item.status}
-                            </span>
-                          </td>
-                          <Show when={isAdmin()}>
-                            <td class="py-3">
-                              <select
-                                class="text-[10px] bg-secondary-50 border border-secondary-200 rounded px-2 py-1 dark:bg-secondary-800 dark:text-white"
-                                value={item.status}
-                                onChange={(e) => handleUpdateStatus(item.id, e.currentTarget.value)}
-                              >
-                                <option value="pending">Pending</option>
-                                <option value="in_review">Ditinjau</option>
-                                <option value="implemented">Diterapkan</option>
-                                <option value="closed">Ditutup</option>
-                              </select>
-                            </td>
-                          </Show>
-                        </tr>
-                      )}
-                    </For>
-                  </tbody>
-                </table>
-              </div>
+        </Show>
 
-              {/* Pagination */}
-              <Show when={(feedbacks()?.meta?.totalPages || 0) > 1}>
-                <div class="flex items-center justify-between mt-4 pt-4 border-t border-secondary-100 dark:border-secondary-800">
-                  <span class="text-secondary-500">
-                    Menampilkan halaman {feedbacks()?.meta?.page} dari {feedbacks()?.meta?.totalPages} (
-                    {feedbacks()?.meta?.total} total)
-                  </span>
-                  <div class="flex items-center gap-2">
-                    <Button
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page() <= 1}
-                      variant="secondary"
-                      class="text-xs py-1 px-3"
-                    >
-                      Sebelumnya
-                    </Button>
-                    <Button
-                      onClick={() => setPage((p) => Math.min(feedbacks()?.meta?.totalPages || 1, p + 1))}
-                      disabled={page() >= (feedbacks()?.meta?.totalPages || 1)}
-                      variant="secondary"
-                      class="text-xs py-1 px-3"
-                    >
-                      Selanjutnya
-                    </Button>
+        <Show when={canAccess()}>
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
+            <div class="flex items-center gap-2 mb-4">
+              <div class="inline-flex rounded-full bg-secondary-100 dark:bg-secondary-800 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMyOnly(false);
+                    setPage(1);
+                  }}
+                  class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    !myOnly()
+                      ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
+                      : 'text-secondary-500 dark:text-secondary-300'
+                  }`}
+                >
+                  Semua Masukan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMyOnly(true);
+                    setPage(1);
+                  }}
+                  class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                    myOnly()
+                      ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
+                      : 'text-secondary-500 dark:text-secondary-300'
+                  }`}
+                >
+                  Masukan Saya Saja
+                </button>
+              </div>
+            </div>
+            <Show
+              when={!feedbacks.loading}
+              fallback={<p class="text-center text-xs text-secondary-400 py-8">Memuat data masukan...</p>}
+            >
+              <Show
+                when={(feedbacks()?.data || []).length > 0}
+                fallback={
+                  <div class="text-center py-12 text-secondary-400">
+                    Belum ada evaluasi atau usulan yang dikirim. Klik tombol di atas untuk mengirimkan masukan pertama
+                    Anda.
                   </div>
+                }
+              >
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs">
+                    <thead>
+                      <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 font-semibold">
+                        <th
+                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          onClick={() => handleSort('createdAt')}
+                        >
+                          Tanggal {getSortIcon('createdAt')}
+                        </th>
+                        <th class="pb-3">Pengirim</th>
+                        <th
+                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          onClick={() => handleSort('kategori')}
+                        >
+                          Kategori {getSortIcon('kategori')}
+                        </th>
+                        <th
+                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          onClick={() => handleSort('judul')}
+                        >
+                          Judul & Pesan {getSortIcon('judul')}
+                        </th>
+                        <th
+                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          onClick={() => handleSort('rating')}
+                        >
+                          Rating {getSortIcon('rating')}
+                        </th>
+                        <th
+                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          onClick={() => handleSort('likeCount')}
+                        >
+                          Suka {getSortIcon('likeCount')}
+                        </th>
+                        <th class="pb-3">Komentar</th>
+                        <th class="pb-3">Status</th>
+                        <Show when={isAdmin()}>
+                          <th class="pb-3">Aksi Admin</th>
+                        </Show>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <For each={feedbacks()?.data || []}>
+                        {(item: SystemFeedback) => (
+                          <tr class="border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30">
+                            <td class="py-3 text-secondary-500 font-mono">
+                              {new Date(item.createdAt).toLocaleDateString('id-ID')}
+                            </td>
+                            <td class="py-3 font-semibold text-secondary-800 dark:text-white">
+                              {item.user?.nama || user()?.nama || 'User'}
+                              <span class="block text-[10px] text-secondary-400 uppercase">{item.user?.role}</span>
+                            </td>
+                            <td class="py-3">
+                              <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                                {KATEGORI_LABEL[item.kategori] || item.kategori}
+                              </span>
+                            </td>
+                            <td class="py-3 max-w-xs">
+                              <button type="button" onClick={() => openDetail(item.id)} class="text-left group">
+                                <div class="font-bold text-secondary-800 dark:text-white group-hover:text-brand-600 group-hover:underline">
+                                  {item.judul}
+                                </div>
+                                <div class="text-secondary-500 line-clamp-2 mt-0.5">{item.pesan}</div>
+                              </button>
+                            </td>
+                            <td class="py-3">
+                              <span class="text-amber-500 font-bold">★ {item.rating || 5}/5</span>
+                            </td>
+                            <td class="py-3">
+                              <span class="text-secondary-600 dark:text-secondary-300">♥ {item.likeCount ?? 0}</span>
+                            </td>
+                            <td class="py-3">
+                              <span class="text-secondary-600 dark:text-secondary-300">
+                                💬 {item.commentCount ?? 0}
+                              </span>
+                            </td>
+                            <td class="py-3">
+                              <span
+                                class={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  item.status === 'implemented'
+                                    ? 'bg-green-100 text-green-700'
+                                    : item.status === 'in_review'
+                                      ? 'bg-blue-100 text-blue-700'
+                                      : item.status === 'closed'
+                                        ? 'bg-secondary-100 text-secondary-600'
+                                        : 'bg-amber-100 text-amber-700'
+                                }`}
+                              >
+                                {STATUS_LABEL[item.status] || item.status}
+                              </span>
+                            </td>
+                            <Show when={isAdmin()}>
+                              <td class="py-3">
+                                <select
+                                  class="text-[10px] bg-secondary-50 border border-secondary-200 rounded px-2 py-1 dark:bg-secondary-800 dark:text-white"
+                                  value={item.status}
+                                  onChange={(e) => handleUpdateStatus(item.id, e.currentTarget.value)}
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="in_review">Ditinjau</option>
+                                  <option value="implemented">Diterapkan</option>
+                                  <option value="closed">Ditutup</option>
+                                </select>
+                              </td>
+                            </Show>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
                 </div>
+
+                {/* Pagination */}
+                <Show when={(feedbacks()?.meta?.totalPages || 0) > 1}>
+                  <div class="flex items-center justify-between mt-4 pt-4 border-t border-secondary-100 dark:border-secondary-800">
+                    <span class="text-secondary-500">
+                      Menampilkan halaman {feedbacks()?.meta?.page} dari {feedbacks()?.meta?.totalPages} (
+                      {feedbacks()?.meta?.total} total)
+                    </span>
+                    <div class="flex items-center gap-2">
+                      <Button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page() <= 1}
+                        variant="secondary"
+                        class="text-xs py-1 px-3"
+                      >
+                        Sebelumnya
+                      </Button>
+                      <Button
+                        onClick={() => setPage((p) => Math.min(feedbacks()?.meta?.totalPages || 1, p + 1))}
+                        disabled={page() >= (feedbacks()?.meta?.totalPages || 1)}
+                        variant="secondary"
+                        class="text-xs py-1 px-3"
+                      >
+                        Selanjutnya
+                      </Button>
+                    </div>
+                  </div>
+                </Show>
               </Show>
             </Show>
-          </Show>
-        </div>
+          </div>
+        </Show>
       </div>
 
       {/* Modal Form Masukan */}
@@ -726,6 +807,87 @@ export default function EvaluasiSistem() {
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal Pengaturan Akses Masukan */}
+      <Modal
+        isOpen={showAccessModal()}
+        onClose={() => setShowAccessModal(false)}
+        title="⚙️ Pengaturan Akses Masukan"
+        maxWidth="lg"
+      >
+        <form onSubmit={saveAccessSettings} class="flex flex-col gap-5">
+          <div class="flex flex-col gap-3">
+            <span class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Mode Akses</span>
+            <label class="flex items-start gap-3 cursor-pointer rounded-xl border border-secondary-100 dark:border-secondary-800 p-3 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+              <input
+                type="radio"
+                name="accessMode"
+                checked={accessMode() === 'full'}
+                onChange={() => setAccessMode('full')}
+                class="mt-1 accent-brand-600"
+              />
+              <span>
+                <span class="block text-sm font-semibold text-secondary-800 dark:text-white">
+                  Opsi Penuh (Semua Pengguna)
+                </span>
+                <span class="block text-xs text-secondary-500 dark:text-secondary-300 mt-0.5">
+                  Semua pengguna terautentikasi dapat melihat dan memberikan masukan.
+                </span>
+              </span>
+            </label>
+            <label class="flex items-start gap-3 cursor-pointer rounded-xl border border-secondary-100 dark:border-secondary-800 p-3 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
+              <input
+                type="radio"
+                name="accessMode"
+                checked={accessMode() === 'restricted'}
+                onChange={() => setAccessMode('restricted')}
+                class="mt-1 accent-brand-600"
+              />
+              <span>
+                <span class="block text-sm font-semibold text-secondary-800 dark:text-white">
+                  Opsi Terbatas (Role Terpilih)
+                </span>
+                <span class="block text-xs text-secondary-500 dark:text-secondary-300 mt-0.5">
+                  Hanya admin dan role yang dipilih yang dapat melihat dan memberikan masukan.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <Show when={accessMode() === 'restricted'}>
+            <div class="flex flex-col gap-2 border-t border-secondary-100 dark:border-secondary-800 pt-4">
+              <span class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Role yang Diizinkan</span>
+              <div class="grid grid-cols-2 gap-2">
+                <For each={ACCESS_ROLE_OPTIONS}>
+                  {(opt) => (
+                    <label class="flex items-center gap-2 text-xs text-secondary-700 dark:text-secondary-200 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={accessRoles().includes(opt.value)}
+                        onChange={() => toggleAccessRole(opt.value)}
+                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  )}
+                </For>
+              </div>
+              <p class="text-fine text-secondary-400 dark:text-secondary-300">
+                Admin &amp; Super Admin selalu memiliki akses penuh.
+              </p>
+            </div>
+          </Show>
+
+          <div class="flex justify-end gap-2 border-t border-secondary-100 dark:border-secondary-800 pt-4">
+            <Button type="button" variant="secondary" onClick={() => setShowAccessModal(false)}>
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={savingAccess()}>
+              {savingAccess() ? 'Menyimpan...' : 'Simpan Pengaturan'}
+            </Button>
+          </div>
+        </form>
       </Modal>
     </MainLayout>
   );

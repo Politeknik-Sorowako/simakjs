@@ -105,6 +105,7 @@ export default function KompensasiMahasiswa() {
                             <th class="py-3 px-3">Status</th>
                             <th class="py-3 px-3">Durasi</th>
                             <th class="py-3 px-3">Poin</th>
+                            <th class="py-3 px-3">Deskripsi / Keterangan</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
@@ -118,12 +119,15 @@ export default function KompensasiMahasiswa() {
                                 <td class="py-3 px-3 font-bold text-orange-600 dark:text-orange-400">
                                   {item.poinKompensasi}
                                 </td>
+                                <td class="py-3 px-3 max-w-xs text-secondary-600 dark:text-secondary-300">
+                                  {item.keteranganAdmin || item.keterangan || item.bapMateri || '-'}
+                                </td>
                               </tr>
                             )}
                           </For>
                           <Show when={data().historyKompensasi.length === 0}>
                             <tr>
-                              <td colspan="5" class="py-8 text-center text-secondary-400 dark:text-secondary-300">
+                              <td colspan="6" class="py-8 text-center text-secondary-400 dark:text-secondary-300">
                                 Tidak ada riwayat kompensasi.
                               </td>
                             </tr>
