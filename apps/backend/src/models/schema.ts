@@ -761,11 +761,29 @@ export const sesiBimbingan = pgTable('sesi_bimbingan', {
   solusi: text('solusi').notNull(),
   responsMahasiswa: text('respons_mahasiswa'),
   statusBkd: boolean('status_bkd').default(true).notNull(),
+  isReadByMahasiswa: boolean('is_read_by_mahasiswa').default(true).notNull(),
+  readAtMahasiswa: timestamp('read_at_mahasiswa'),
+  isReadByDosen: boolean('is_read_by_dosen').default(true).notNull(),
+  readAtDosen: timestamp('read_at_dosen'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')
     .defaultNow()
     .notNull()
     .$onUpdate(() => new Date()),
+});
+
+export const sesiBimbinganBalasan = pgTable('sesi_bimbingan_balasan', {
+  id: serial('id').primaryKey(),
+  sesiId: integer('sesi_id')
+    .notNull()
+    .references(() => sesiBimbingan.id, { onDelete: 'cascade' }),
+  senderRole: roleEnum('sender_role').notNull(),
+  pesan: text('pesan').notNull(),
+  isReadByMahasiswa: boolean('is_read_by_mahasiswa').default(false).notNull(),
+  readAtMahasiswa: timestamp('read_at_mahasiswa'),
+  isReadByDosen: boolean('is_read_by_dosen').default(false).notNull(),
+  readAtDosen: timestamp('read_at_dosen'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
 export const bimbinganAttachments = pgTable('bimbingan_attachments', {
@@ -856,10 +874,18 @@ export const bimbinganThreadRelations = relations(bimbinganThread, ({ one }) => 
   }),
 }));
 
-export const sesiBimbinganRelations = relations(sesiBimbingan, ({ one }) => ({
+export const sesiBimbinganRelations = relations(sesiBimbingan, ({ one, many }) => ({
   bimbingan: one(bimbingan, {
     fields: [sesiBimbingan.bimbinganId],
     references: [bimbingan.id],
+  }),
+  balasan: many(sesiBimbinganBalasan),
+}));
+
+export const sesiBimbinganBalasanRelations = relations(sesiBimbinganBalasan, ({ one }) => ({
+  sesi: one(sesiBimbingan, {
+    fields: [sesiBimbinganBalasan.sesiId],
+    references: [sesiBimbingan.id],
   }),
 }));
 

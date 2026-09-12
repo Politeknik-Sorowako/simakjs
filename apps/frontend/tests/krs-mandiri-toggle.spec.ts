@@ -6,7 +6,7 @@ test.describe('KRS Mandiri — Toggle Pengaturan Sistem', () => {
     expect(res.ok()).toBeTruthy();
   });
 
-  test('saat dinonaktifkan, mahasiswa melihat banner dan tombol kontrak dinonaktifkan', async ({ page, request }) => {
+  test('saat dinonaktifkan, tombol kontrak KRS disembunyikan dan banner tampil', async ({ page, request }) => {
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@simak.id');
     await page.fill('input[type="password"]', 'password123');
@@ -32,7 +32,7 @@ test.describe('KRS Mandiri — Toggle Pengaturan Sistem', () => {
 
       await page.goto('/krs');
       await expect(page.locator('text=Pengisian KRS Mandiri Dinonaktifkan')).toBeVisible();
-      await expect(page.getByRole('button', { name: /Kontrak KRS/ }).first()).toBeDisabled();
+      await expect(page.getByRole('button', { name: /Kontrak KRS/ })).toHaveCount(0);
     } finally {
       // Restore flag so it does not leak to other tests (system_settings is not reset by /e2e/reset)
       await request.put('http://localhost:3000/system/parameters/KRS_MANDIRI_ENABLED', {
