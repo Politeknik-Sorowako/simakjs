@@ -759,6 +759,7 @@ export const sesiBimbingan = pgTable('sesi_bimbingan', {
   permasalahan: text('permasalahan'),
   topikBimbingan: text('topik_bimbingan'),
   solusi: text('solusi').notNull(),
+  responsMahasiswa: text('respons_mahasiswa'),
   statusBkd: boolean('status_bkd').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at')

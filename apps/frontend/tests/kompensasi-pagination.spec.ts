@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-test.describe('Kompensasi Saya — Paging Riwayat', () => {
+test.describe('Kompensasi Saya — Paging Riwayat (Tabs)', () => {
   test.beforeEach(async ({ request }) => {
     const res = await request.post('http://localhost:3000/e2e/reset');
     expect(res.ok()).toBeTruthy();
   });
 
-  test('pager pelunasan memiliki opsi 20/50/100 dan tidak memengaruhi riwayat ketidakhadiran', async ({
+  test('tab pelunasan memiliki opsi 10/20/50/100 dan pager independen dari ketidakhadiran', async ({
     page,
     request,
   }) => {
@@ -52,9 +52,17 @@ test.describe('Kompensasi Saya — Paging Riwayat', () => {
     await page.goto('/kompensasi-saya');
     await expect(page.locator('h1', { hasText: 'Detail Kompensasi Saya' })).toBeVisible();
 
-    const pager = page.locator('select').filter({ has: page.locator('option[value="20"]') }).first();
+    // Default tab is Ketidakhadiran (no pager when empty)
+    await expect(page.locator('h2', { hasText: 'Riwayat Ketidakhadiran' })).toBeVisible();
+    await expect(page.locator('text=Tidak ada riwayat kompensasi.')).toBeVisible();
+
+    // Switch to Pelunasan tab
+    await page.getByRole('button', { name: /^Riwayat Pelunasan/ }).click();
+    await expect(page.locator('h2', { hasText: 'Riwayat Pelunasan Kompensasi' })).toBeVisible();
+
+    const pager = page.locator('select').filter({ has: page.locator('option[value="10"]') }).first();
     await expect(pager).toBeVisible();
-    expect(await pager.locator('option').allTextContents()).toEqual(['20', '50', '100']);
+    expect(await pager.locator('option').allTextContents()).toEqual(['10', '20', '50', '100']);
 
     const paymentRows = page.locator('table').last().locator('tbody tr');
     await expect(paymentRows).toHaveCount(20);
@@ -62,7 +70,8 @@ test.describe('Kompensasi Saya — Paging Riwayat', () => {
     await pager.selectOption('50');
     await expect(paymentRows).toHaveCount(25);
 
-    // The independent history table keeps its own (empty) state
+    // Switch back: history tab keeps its own (empty) state
+    await page.getByRole('button', { name: /^Riwayat Ketidakhadiran/ }).click();
     await expect(page.locator('text=Tidak ada riwayat kompensasi.')).toBeVisible();
   });
 });

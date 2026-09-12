@@ -385,6 +385,7 @@ export class BimbinganService {
       solusi?: string;
       statusBkd?: boolean;
       kategoriId?: number | null;
+      responsMahasiswa?: string | null;
     },
   ) {
     const topikVal = data.topikBimbingan !== undefined ? data.topikBimbingan : data.permasalahan;
@@ -402,6 +403,19 @@ export class BimbinganService {
       .where(eq(sesiBimbingan.id, sesiId))
       .returning();
     return updatedSesi;
+  }
+
+  static async getSesiWithOwner(sesiId: number) {
+    const [row] = await db
+      .select({
+        id: sesiBimbingan.id,
+        bimbinganId: sesiBimbingan.bimbinganId,
+        mahasiswaId: bimbingan.mahasiswaId,
+      })
+      .from(sesiBimbingan)
+      .innerJoin(bimbingan, eq(sesiBimbingan.bimbinganId, bimbingan.id))
+      .where(eq(sesiBimbingan.id, sesiId));
+    return row;
   }
 
   static async deleteSesiBimbingan(sesiId: number) {

@@ -50,6 +50,7 @@ export const getBimbinganSchema = {
             permasalahan: t.Optional(t.String()),
             solusi: t.Optional(t.String()),
             statusBkd: t.Optional(t.Boolean()),
+            responsMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
             createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
             updatedAt: t.Optional(t.Union([t.Date(), t.Null()])),
           }),
@@ -157,6 +158,7 @@ export const addSesiBody = t.Object({
   solusi: t.Optional(t.String()),
   statusBkd: t.Optional(t.Boolean({ default: false })),
   kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  responsMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const addSesiSchema = {
@@ -180,7 +182,15 @@ export const updateSesiSchema = {
   params: t.Object({
     sesiId: t.Numeric(),
   }),
-  body: t.Partial(addSesiBody),
+  body: t.Object({
+    pertemuanKe: t.Optional(t.Integer()),
+    tanggalBimbingan: t.Optional(t.String()),
+    permasalahan: t.Optional(t.String()),
+    solusi: t.Optional(t.String()),
+    statusBkd: t.Optional(t.Boolean()),
+    kategoriId: t.Optional(t.Union([t.Integer(), t.Null()])),
+    responsMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
+  }),
 };
 
 export const deleteSesiSchema = {

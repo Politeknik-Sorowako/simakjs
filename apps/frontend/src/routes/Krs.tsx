@@ -16,6 +16,7 @@ import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { Krs as IKrs, krsController } from '../controllers/krsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { settingsController } from '../controllers/settingsController';
 import { usePagination } from '../hooks/usePagination';
 
 export default function Krs() {
@@ -43,6 +44,10 @@ export default function Krs() {
   };
 
   const [showImportModal, setShowImportModal] = createSignal(false);
+
+  // Global setting: whether mahasiswa may fill KRS independently.
+  const [publicSettings] = createResource(() => settingsController.getPublicSettings());
+  const canMahasiswaFillKrs = () => publicSettings()?.krsMandiriEnabled ?? true;
 
   const [activeTab, setActiveTab] = createSignal<'kelola' | 'massal'>('kelola');
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
@@ -276,6 +281,10 @@ export default function Krs() {
   const openAddModal = () => {
     setErrorMsg('');
     if (role() === 'mahasiswa') {
+      if (!canMahasiswaFillKrs()) {
+        alert('Pengisian KRS mandiri sedang dinonaktifkan. Silakan hubungi Prodi/Admin.');
+        return;
+      }
       if (!mahasiswaProfile()) {
         alert('Data profile mahasiswa belum dimuat.');
         return;
@@ -384,11 +393,33 @@ export default function Krs() {
                 ⚡ Buat KRS Massal
               </Button>
             </Show>
-            <Button variant="primary" onClick={openAddModal}>
-              + Kontrak KRS
-            </Button>
+            <Show
+              when={!(role() === 'mahasiswa' && !canMahasiswaFillKrs())}
+              fallback={
+                <Button variant="primary" disabled title="Pengisian KRS mandiri sedang dinonaktifkan">
+                  + Kontrak KRS
+                </Button>
+              }
+            >
+              <Button variant="primary" onClick={openAddModal}>
+                + Kontrak KRS
+              </Button>
+            </Show>
           </div>
         </div>
+
+        {/* Info Banner if Mahasiswa Self-Service KRS is disabled */}
+        <Show when={role() === 'mahasiswa' && !canMahasiswaFillKrs()}>
+          <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-semibold shadow-sm flex items-start gap-3 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+            <span class="text-base">🔒</span>
+            <div>
+              <p class="font-bold">Pengisian KRS Mandiri Dinonaktifkan</p>
+              <p class="text-xs text-amber-600 font-medium mt-1 dark:text-amber-400">
+                Admin menonaktifkan pengisian KRS mandiri. Silakan hubungi Prodi/Admin untuk pengisian KRS Anda.
+              </p>
+            </div>
+          </div>
+        </Show>
 
         {/* Warning Banner if Mahasiswa is not active */}
         <Show when={role() === 'mahasiswa' && mahasiswaProfile() && mahasiswaProfile()?.status !== 'aktif'}>

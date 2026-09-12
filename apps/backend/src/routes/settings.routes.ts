@@ -8,6 +8,7 @@ export const settingsRoutes = new Elysia({ prefix: '/settings' })
       200: t.Object({
         data: t.Object({
           featureFeedbackEnabled: t.Boolean(),
+          krsMandiriEnabled: t.Boolean(),
         }),
       }),
     },

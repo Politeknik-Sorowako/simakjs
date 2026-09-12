@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { KrsService } from '../services/krs.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
@@ -90,6 +91,11 @@ export class KrsController {
       if (!myMhsId || myMhsId !== body.mahasiswaId) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
+      }
+      const krsMandiriEnabled = await SystemParameterService.isKrsMandiriEnabled();
+      if (!krsMandiriEnabled) {
+        set.status = 403;
+        return { error: 'Pengisian KRS mandiri sedang dinonaktifkan oleh Admin. Silakan hubungi Prodi/Admin.' };
       }
     }
     try {

@@ -414,6 +414,20 @@
       "when": 1786600000009,
       "tag": "0058_audit_logs_detail",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1786600000010,
+      "tag": "0059_add_sesi_bimbingan_respons_mahasiswa",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1786600000011,
+      "tag": "0060_add_krs_mandiri_param",
+      "breakpoints": true
     }
   ]
 }
