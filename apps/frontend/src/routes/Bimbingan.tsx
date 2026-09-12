@@ -1,13 +1,8 @@
-import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  BimbinganThread,
-  bimbinganController,
-  PelanggaranRekap,
-  SesiBimbingan,
-} from '../controllers/bimbinganController';
+import { bimbinganController, PelanggaranRekap, SesiBimbingan } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { kategoriBimbinganController } from '../controllers/kategoriBimbinganController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
@@ -31,12 +26,10 @@ export default function Bimbingan() {
   // Selected Academic Period (for History)
   const [selectedPeriode, setSelectedPeriode] = createSignal<string>('');
 
-  // Messages input & category
-  const [messageText, setMessageText] = createSignal('');
-  const [chatType, setChatType] = createSignal<'uts' | 'uas'>('uts');
-
-  // Local state for live chat messages
-  const [messages, setMessages] = createSignal<BimbinganThread[]>([]);
+  // Respons mahasiswa per sesi bimbingan
+  const [responsDrafts, setResponsDrafts] = createSignal<Record<number, string>>({});
+  const [savingResponsId, setSavingResponsId] = createSignal<number | null>(null);
+  const [markingRead, setMarkingRead] = createSignal(false);
 
   // Dosen inputs for ringkasan and approval
   const [ringkasanText, setRingkasanText] = createSignal('');
@@ -175,11 +168,7 @@ export default function Bimbingan() {
     () => ({ id: mhsProfile()?.id, period: selectedPeriode(), kat: kategoriFilter() }),
     async ({ id, period, kat }) => {
       if (!id) return null;
-      const res = await bimbinganController.getByMhsId(id, period || undefined, kat !== 'ALL' ? kat : undefined);
-      if (res && res.isReadByMahasiswa === false) {
-        bimbinganController.markAsRead(id).catch(() => {});
-      }
-      return res;
+      return await bimbinganController.getByMhsId(id, period || undefined, kat !== 'ALL' ? kat : undefined);
     },
   );
 
@@ -225,84 +214,60 @@ export default function Bimbingan() {
     },
   );
 
-  // Sync messages from resource to local signal
+  // Sync ringkasan/approval from active resource, and seed respons drafts.
   createEffect(() => {
     const activeBimb = auth.hasRole(['mahasiswa']) ? studentBimbingan() : selectedBimbingan();
     if (activeBimb) {
-      if (activeBimb.thread) {
-        setMessages(activeBimb.thread);
-      } else {
-        setMessages([]);
-      }
       setRingkasanText(activeBimb.ringkasan || '');
       setIsApprovedStatus(activeBimb.isApproved);
     } else {
-      setMessages([]);
       setRingkasanText('');
       setIsApprovedStatus(false);
     }
   });
 
-  // Real-time WebSocket connection
-  let ws: WebSocket | null = null;
   createEffect(() => {
-    const activeBimb = auth.hasRole(['mahasiswa']) ? studentBimbingan() : selectedBimbingan();
-    if (ws) {
-      ws.close();
-      ws = null;
-    }
-    if (activeBimb && activeBimb.id) {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const jwtToken = auth.token() || '';
-      // Connect to Elysia WebSocket with token auth
-      ws = new WebSocket(
-        `${protocol}//${host}/api/bimbingan/ws/${activeBimb.id}?token=${encodeURIComponent(jwtToken)}`,
-      );
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'new_message' && data.message) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === data.message.id)) return prev;
-              return [data.message, ...prev];
-            });
-          }
-        } catch (e) {
-          console.error('WS parse error:', e);
-        }
-      };
-    }
+    const bimb = studentBimbingan();
+    if (!bimb?.sesi) return;
+    setResponsDrafts((prev) => {
+      const next = { ...prev };
+      for (const sesi of bimb.sesi) {
+        if (next[sesi.id] === undefined) next[sesi.id] = sesi.responsMahasiswa ?? '';
+      }
+      return next;
+    });
   });
 
-  onCleanup(() => {
-    if (ws) ws.close();
-  });
+  const handleSaveRespons = async (sesi: SesiBimbingan) => {
+    const value = responsDrafts()[sesi.id] ?? '';
+    setSavingResponsId(sesi.id);
+    try {
+      await bimbinganController.respondSesi(sesi.id, value);
+      await refetchStudentBimb();
+      alert('Respons bimbingan berhasil disimpan.');
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menyimpan respons bimbingan.');
+    } finally {
+      setSavingResponsId(null);
+    }
+  };
 
-  // Calculate UTS / UAS counts
-  const utsCount = () => messages().filter((m) => m.tipe === 'uts').length;
-  const uasCount = () => messages().filter((m) => m.tipe === 'uas').length;
+  const handleMarkAsRead = async () => {
+    const targetId = mhsProfile()?.id;
+    if (!targetId) return;
+    setMarkingRead(true);
+    try {
+      await bimbinganController.markAsRead(targetId);
+      await refetchStudentBimb();
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal menandai bimbingan sebagai dibaca.');
+    } finally {
+      setMarkingRead(false);
+    }
+  };
 
   const currentBimbinganData = () => {
     return auth.hasRole(['mahasiswa']) ? studentBimbingan() : selectedBimbingan();
-  };
-
-  const handleSendMessage = async (e: Event) => {
-    e.preventDefault();
-    const text = messageText().trim();
-    if (!text) return;
-
-    const targetId = auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId();
-    if (!targetId) return;
-
-    try {
-      const newMsg = await bimbinganController.sendThread(targetId, text, chatType());
-      setMessageText('');
-      // Optimistic/immediate local update
-      setMessages((prev) => [newMsg, ...prev]);
-    } catch (err: unknown) {
-      alert((err as Error).message || 'Gagal mengirim pesan.');
-    }
   };
 
   const handleUpdateBimbingan = async (e: Event) => {
@@ -320,20 +285,6 @@ export default function Bimbingan() {
       refetchMonitoring();
     } catch (err: unknown) {
       alert((err as Error).message || 'Gagal memperbarui bimbingan.');
-    }
-  };
-
-  const handleClearChat = async () => {
-    const targetId = auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId();
-    if (!targetId) return;
-    if (!confirm('Apakah Anda yakin ingin mengosongkan seluruh pesan obrolan di thread ini?')) return;
-
-    try {
-      await bimbinganController.clearChatThread(targetId);
-      setMessages([]);
-      alert('Pesan obrolan berhasil dikosongkan.');
-    } catch (err: unknown) {
-      alert((err as Error).message || 'Gagal mengosongkan obrolan.');
     }
   };
 
@@ -550,155 +501,101 @@ export default function Bimbingan() {
             </div>
           </Show>
 
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
-            {/* Chat Thread Panel */}
-            <div class="lg:col-span-2 bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-[600px] overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
-              <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800">
-                <h3 class="font-bold text-secondary-800 dark:text-white">Konsultasi Dosen PA</h3>
-                <div class="flex items-center gap-2">
-                  <span class="px-2 py-0.5 bg-brand-50 text-brand-700 text-fine font-bold rounded dark:bg-brand-900/30 dark:text-white">
-                    UTS: {utsCount()}/1
-                  </span>
-                  <span class="px-2 py-0.5 bg-accent-50 text-accent-700 text-fine font-bold rounded dark:bg-accent-900/30 dark:text-accent-400">
-                    UAS: {uasCount()}/3
-                  </span>
-                </div>
+          <div class="grid grid-cols-1 gap-6 print:hidden">
+            {/* Catatan Dosen PA & Riwayat Sesi (chat dihilangkan sementara) */}
+            <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
+                <h3 class="font-bold text-secondary-800 dark:text-white">Catatan Dosen PA</h3>
+                <Show when={studentBimbingan()?.isReadByMahasiswa === false}>
+                  <div class="flex items-center gap-2">
+                    <span class="text-fine font-semibold text-amber-600 dark:text-amber-400">• Belum Dibaca</span>
+                    <button
+                      type="button"
+                      onClick={handleMarkAsRead}
+                      disabled={markingRead()}
+                      class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 dark:bg-brand-700 dark:hover:bg-brand-600"
+                    >
+                      Tandai Sudah Dibaca
+                    </button>
+                  </div>
+                </Show>
+                <Show when={studentBimbingan()?.isReadByMahasiswa === true}>
+                  <span class="text-fine font-semibold text-emerald-600 dark:text-emerald-400">✓ Sudah Dibaca</span>
+                </Show>
               </div>
 
-              {/* Message List */}
-              <div class="flex-1 p-6 overflow-y-auto flex flex-col-reverse gap-4 bg-secondary-50/30 dark:bg-secondary-800">
+              <Show when={studentBimbingan()?.ringkasan}>
+                <div class="flex flex-col gap-1">
+                  <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
+                    Catatan Kelayakan / Ringkasan
+                  </span>
+                  <div class="p-3 bg-brand-50/50 border border-brand-100/50 rounded-xl text-caption text-brand-900 leading-relaxed">
+                    {studentBimbingan()?.ringkasan}
+                  </div>
+                </div>
+              </Show>
+
+              <div class="flex flex-col gap-3">
+                <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider block">
+                  Riwayat Sesi Pertemuan
+                </span>
                 <Show
-                  when={messages().length > 0}
+                  when={studentBimbingan()?.sesi && studentBimbingan()!.sesi.length > 0}
                   fallback={
-                    <div class="flex-1 flex flex-col items-center justify-center text-center p-8">
-                      <span class="text-4xl mb-2">💬</span>
-                      <p class="text-secondary-400 dark:text-secondary-300 text-base">
-                        Belum ada percakapan. Mulai bimbingan dengan mengirim pesan di bawah.
-                      </p>
-                    </div>
+                    <p class="text-caption text-secondary-400 dark:text-secondary-300 italic">
+                      Belum ada sesi bimbingan yang tercatat.
+                    </p>
                   }
                 >
-                  <For each={messages()}>
-                    {(msg) => (
-                      <div
-                        class={`flex flex-col max-w-[80%] ${msg.senderRole === 'mahasiswa' ? 'self-end items-end' : 'self-start items-start'}`}
-                      >
-                        <div
-                          class={`p-3 rounded-2xl text-base ${msg.senderRole === 'mahasiswa' ? 'bg-brand-600 text-white rounded-tr-none' : 'bg-white text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm'}`}
-                        >
-                          {msg.pesan}
+                  <For each={studentBimbingan()?.sesi}>
+                    {(sesi) => (
+                      <div class="p-4 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-2 dark:bg-secondary-800 dark:border-secondary-700">
+                        <div class="flex items-center justify-between border-b pb-1">
+                          <span class="font-bold text-caption text-secondary-700 dark:text-white">
+                            Pertemuan Ke-{sesi.pertemuanKe}
+                          </span>
+                          <span class="text-fine text-secondary-400 dark:text-secondary-300 font-mono">
+                            {fmtTanggal(sesi.tanggalBimbingan)}
+                          </span>
                         </div>
-                        <span class="text-fine text-secondary-400 dark:text-secondary-300 mt-1 uppercase tracking-wider font-medium">
-                          {msg.senderRole} • {msg.tipe.toUpperCase()} •{' '}
-                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                        <div class="flex flex-col gap-1">
+                          <span class="text-fine font-bold text-rose-500 uppercase">Permasalahan:</span>
+                          <p class="text-caption text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
+                            {sesi.permasalahan}
+                          </p>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                          <span class="text-fine font-bold text-accent-600 uppercase">Solusi / Masukan:</span>
+                          <p class="text-caption text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
+                            {sesi.solusi}
+                          </p>
+                        </div>
+                        <div class="flex flex-col gap-1 mt-1">
+                          <span class="text-fine font-bold text-brand-600 uppercase dark:text-brand-400">
+                            Respons Saya:
+                          </span>
+                          <textarea
+                            rows={2}
+                            value={responsDrafts()[sesi.id] ?? ''}
+                            onInput={(e) => setResponsDrafts((prev) => ({ ...prev, [sesi.id]: e.currentTarget.value }))}
+                            placeholder="Tulis tanggapan/respons Anda terhadap catatan dosen..."
+                            class="w-full border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                          />
+                          <div class="flex justify-end">
+                            <button
+                              type="button"
+                              disabled={savingResponsId() === sesi.id}
+                              onClick={() => handleSaveRespons(sesi)}
+                              class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 dark:bg-brand-700 dark:hover:bg-brand-600"
+                            >
+                              {savingResponsId() === sesi.id ? 'Menyimpan...' : 'Simpan Respons'}
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </For>
                 </Show>
-              </div>
-
-              {/* Chat Input */}
-              <form
-                onSubmit={handleSendMessage}
-                class="p-4 border-t border-secondary-100 bg-white flex flex-col gap-3 dark:border-secondary-800 dark:bg-secondary-900"
-              >
-                <div class="flex items-center gap-4 text-caption font-semibold text-secondary-500 dark:text-secondary-300">
-                  <span>Tipe Bimbingan:</span>
-                  <label class="flex items-center gap-1.5 cursor-pointer text-secondary-900 dark:text-white">
-                    <input
-                      type="radio"
-                      name="chatType"
-                      checked={chatType() === 'uts'}
-                      onChange={() => setChatType('uts')}
-                    />
-                    Persiapan UTS
-                  </label>
-                  <label class="flex items-center gap-1.5 cursor-pointer text-secondary-900 dark:text-white">
-                    <input
-                      type="radio"
-                      name="chatType"
-                      checked={chatType() === 'uas'}
-                      onChange={() => setChatType('uas')}
-                    />
-                    Persiapan UAS
-                  </label>
-                </div>
-
-                <div class="flex gap-3">
-                  <input
-                    type="text"
-                    placeholder="Tulis pesan bimbingan..."
-                    value={messageText()}
-                    onInput={(e) => setMessageText(e.currentTarget.value)}
-                    class="flex-1 border border-secondary-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-secondary-900 dark:border-secondary-700 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    class="px-5 py-3 bg-brand-600 text-white font-bold rounded-xl text-base hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
-                  >
-                    Kirim
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            {/* Sidebar Ringkasan */}
-            <div class="flex flex-col gap-6">
-              <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
-                <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Catatan Dosen PA</h3>
-
-                <Show when={studentBimbingan()?.ringkasan}>
-                  <div class="flex flex-col gap-1">
-                    <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
-                      Catatan Kelayakan / Ringkasan
-                    </span>
-                    <div class="p-3 bg-brand-50/50 border border-brand-100/50 rounded-xl text-caption text-brand-900 leading-relaxed">
-                      {studentBimbingan()?.ringkasan}
-                    </div>
-                  </div>
-                </Show>
-
-                <div class="flex flex-col gap-3">
-                  <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider block">
-                    Riwayat Sesi Pertemuan
-                  </span>
-                  <Show
-                    when={studentBimbingan()?.sesi && studentBimbingan()!.sesi.length > 0}
-                    fallback={
-                      <p class="text-caption text-secondary-400 dark:text-secondary-300 italic">
-                        Belum ada sesi bimbingan yang tercatat.
-                      </p>
-                    }
-                  >
-                    <For each={studentBimbingan()?.sesi}>
-                      {(sesi) => (
-                        <div class="p-3 bg-secondary-50 border border-secondary-100 rounded-xl flex flex-col gap-2 dark:bg-secondary-800">
-                          <div class="flex items-center justify-between border-b pb-1">
-                            <span class="font-bold text-caption text-secondary-700">
-                              Pertemuan Ke-{sesi.pertemuanKe}
-                            </span>
-                            <span class="text-fine text-secondary-400 dark:text-secondary-300 font-mono">
-                              {fmtTanggal(sesi.tanggalBimbingan)}
-                            </span>
-                          </div>
-                          <div class="flex flex-col gap-1">
-                            <span class="text-fine font-bold text-rose-500 uppercase">Permasalahan:</span>
-                            <p class="text-caption text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
-                              {sesi.permasalahan}
-                            </p>
-                          </div>
-                          <div class="flex flex-col gap-1">
-                            <span class="text-fine font-bold text-accent-600 uppercase">Solusi / Masukan:</span>
-                            <p class="text-caption text-secondary-800 whitespace-pre-wrap leading-relaxed dark:text-white">
-                              {sesi.solusi}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </For>
-                  </Show>
-                </div>
               </div>
             </div>
           </div>
@@ -969,6 +866,16 @@ export default function Bimbingan() {
                                       {sesi.solusi}
                                     </p>
                                   </div>
+                                  <Show when={sesi.responsMahasiswa}>
+                                    <div class="p-2.5 bg-brand-50/50 border border-brand-100/60 rounded-xl dark:bg-brand-950/20 dark:border-brand-900/40">
+                                      <span class="text-fine font-bold text-brand-600 uppercase tracking-wider block mb-0.5">
+                                        Respons Mahasiswa:
+                                      </span>
+                                      <p class="text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
+                                        {sesi.responsMahasiswa}
+                                      </p>
+                                    </div>
+                                  </Show>
                                 </div>
                               </div>
                             );

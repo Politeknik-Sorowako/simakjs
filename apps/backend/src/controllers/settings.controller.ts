@@ -1,23 +1,29 @@
 import { SettingsService } from '../services/settings.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
 export class SettingsController {
   // Public setting status (no auth needed)
   static async getPublicSettings({ set }: { set: { status?: number | string } }): Promise<{
-    data: { featureFeedbackEnabled: boolean };
+    data: { featureFeedbackEnabled: boolean; krsMandiriEnabled: boolean };
   }> {
     try {
-      const feedbackEnabled = await SettingsService.isFeedbackEnabled();
+      const [feedbackEnabled, krsMandiriEnabled] = await Promise.all([
+        SettingsService.isFeedbackEnabled(),
+        SystemParameterService.isKrsMandiriEnabled(),
+      ]);
       return {
         data: {
           featureFeedbackEnabled: feedbackEnabled,
+          krsMandiriEnabled,
         },
       };
     } catch {
       return {
         data: {
           featureFeedbackEnabled: true,
+          krsMandiriEnabled: true,
         },
       };
     }

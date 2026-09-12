@@ -24,7 +24,8 @@ test.describe('Bimbingan Akademik — Mahasiswa', () => {
     await expect(page.locator('text=Cannot access')).toHaveCount(0);
     expect(pageErrors.filter((m) => m.includes('before initialization'))).toHaveLength(0);
 
-    // Student view must render its chat panel
-    await expect(page.locator('text=Konsultasi Dosen PA')).toBeVisible();
+    // Student view must render its notes panel (chat removed)
+    await expect(page.locator('text=Catatan Dosen PA')).toBeVisible();
+    await expect(page.locator('text=Konsultasi Dosen PA')).toHaveCount(0);
   });
 });

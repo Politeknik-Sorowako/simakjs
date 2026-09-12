@@ -402,6 +402,36 @@ export class BimbinganController {
     }
 
     try {
+      // Mahasiswa hanya boleh mengisi/mengubah respons mahasiswa pada sesi miliknya.
+      if (hasRole(user, ['mahasiswa'])) {
+        const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
+        const owner = await BimbinganService.getSesiWithOwner(sesiId);
+        if (!myMhsId || !owner || owner.mahasiswaId !== myMhsId) {
+          set.status = 403;
+          return { error: 'Akses ditolak. Anda hanya dapat merespons sesi bimbingan Anda sendiri.' };
+        }
+
+        const hasNonResponsField =
+          body.pertemuanKe !== undefined ||
+          body.tanggalBimbingan !== undefined ||
+          body.topikBimbingan !== undefined ||
+          body.permasalahan !== undefined ||
+          body.solusi !== undefined ||
+          body.statusBkd !== undefined ||
+          body.kategoriId !== undefined;
+        if (hasNonResponsField) {
+          set.status = 403;
+          return { error: 'Akses ditolak. Mahasiswa hanya dapat mengisi respons bimbingan.' };
+        }
+
+        const respons =
+          body.responsMahasiswa === undefined || body.responsMahasiswa === null ? null : String(body.responsMahasiswa);
+        const updatedRespons = await BimbinganService.updateSesiBimbingan(sesiId, {
+          responsMahasiswa: respons,
+        });
+        return updatedRespons;
+      }
+
       const data: Record<string, unknown> = {};
       if (body.pertemuanKe !== undefined) data.pertemuanKe = body.pertemuanKe;
       if (body.tanggalBimbingan !== undefined) data.tanggalBimbingan = body.tanggalBimbingan;

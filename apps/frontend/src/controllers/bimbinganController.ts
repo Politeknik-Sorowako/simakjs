@@ -32,6 +32,7 @@ export interface SesiBimbingan {
   topikBimbingan?: string;
   permasalahan?: string;
   solusi: string;
+  responsMahasiswa?: string | null;
   statusBkd: boolean;
   kategoriId?: number | null;
   createdAt: string;
@@ -256,11 +257,19 @@ export const bimbinganController = {
       solusi?: string;
       statusBkd?: boolean;
       kategoriId?: number | null;
+      responsMahasiswa?: string | null;
     },
   ): Promise<SesiBimbingan> {
     return fetchApi<SesiBimbingan>(`/bimbingan/sesi/${sesiId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    });
+  },
+
+  async respondSesi(sesiId: number, responsMahasiswa: string): Promise<SesiBimbingan> {
+    return fetchApi<SesiBimbingan>(`/bimbingan/sesi/${sesiId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ responsMahasiswa }),
     });
   },
 
