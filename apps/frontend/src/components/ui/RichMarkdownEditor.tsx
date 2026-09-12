@@ -1,5 +1,5 @@
 import { createSignal, Show } from 'solid-js';
-import { API_URL } from '../../utils/api';
+import { getAbsoluteStorageUrl } from '../../utils/api';
 import { MarkdownViewer } from './MarkdownViewer';
 
 interface RichMarkdownEditorProps {
@@ -70,9 +70,13 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
     try {
       if (props.onUploadAttachment) {
         const res = await props.onUploadAttachment(file);
-        if (res) insertText(`\n[📄 File ${res.fileName}](${API_URL}${res.fileUrl})\n`);
+        if (res) {
+          const fullUrl = getAbsoluteStorageUrl(res.fileUrl);
+          insertText(`\n[📄 File ${res.fileName}](${fullUrl})\n`);
+        }
       } else {
-        insertText('\n[📄 File Namafile](/api/storage/...)\n');
+        const fallbackUrl = getAbsoluteStorageUrl('/storage/...');
+        insertText(`\n[📄 File Namafile](${fallbackUrl})\n`);
       }
     } finally {
       e.currentTarget.value = '';

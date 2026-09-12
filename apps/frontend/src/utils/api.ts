@@ -12,6 +12,38 @@ export const API_URL = (() => {
 })();
 
 /**
+ * Menghasilkan URL absolut lengkap (termasuk protokol dan host domain)
+ * untuk akses berkas storage agar tautan valid dan dapat diakses langsung oleh pengguna.
+ *
+ * - URL absolut (http/https) dikembalikan apa adanya.
+ * - API_URL absolut (mis. http://localhost:3000) digabung langsung.
+ * - API_URL relatif (mis. /api di production/staging) digabung dengan
+ *   window.location.origin sehingga menghasilkan URL berdomain lengkap.
+ */
+export function getAbsoluteStorageUrl(path: string): string {
+  if (!path) return '';
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  // Jika API_URL sudah berupa URL absolut (mis. http://localhost:3000)
+  if (/^https?:\/\//i.test(API_URL)) {
+    const trimmedApi = API_URL.replace(/\/+$/, '');
+    return `${trimmedApi}${normalizedPath}`;
+  }
+
+  // Jika di browser dan API_URL bernilai relatif (mis. '/api' di production/staging)
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin.replace(/\/+$/, '');
+    const apiPrefix =
+      API_URL && API_URL !== '/' ? (API_URL.startsWith('/') ? API_URL : `/${API_URL}`).replace(/\/+$/, '') : '';
+    return `${origin}${apiPrefix}${normalizedPath}`;
+  }
+
+  return `${API_URL}${normalizedPath}`;
+}
+
+/**
  * SafeAny — use for dynamic API data in SolidJS <For> loops
  * and contexts where strict typing causes compilation failures
  * due to optional/null fields from the backend.

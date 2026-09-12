@@ -51,13 +51,15 @@ test.describe('Bimbingan — Rich Text & Lampiran', () => {
       buffer: Buffer.from('%PDF-1.4 test lampiran bimbingan'),
     });
 
-    // Link berkas tersisip otomatis ke draft percakapan.
+    // Link berkas tersisip otomatis ke draft percakapan dengan URL berdomain lengkap.
     const draftValue = await dialog.locator('textarea').first().inputValue();
     expect(draftValue).toContain('[📄 File dokumen-bimbingan.pdf]');
-    expect(draftValue).toContain('/storage/bimbingan-attachments/');
+    expect(draftValue).toMatch(/\(https?:\/\/[^)]+\/storage\/bimbingan-attachments\//);
 
     // Kirim balasan, lalu link unduhan tampil di bubble percakapan.
     await dialog.getByRole('button', { name: 'Kirim' }).click();
-    await expect(dialog.getByRole('link', { name: /dokumen-bimbingan.pdf/ })).toBeVisible();
+    const downloadLink = dialog.getByRole('link', { name: /dokumen-bimbingan.pdf/ });
+    await expect(downloadLink).toBeVisible();
+    await expect(downloadLink).toHaveAttribute('href', /^https?:\/\/.+\/storage\/bimbingan-attachments\//);
   });
 });
