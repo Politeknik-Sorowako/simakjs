@@ -43,14 +43,22 @@ test.describe('Bimbingan — Rich Text & Lampiran', () => {
     // Solusi markdown ter-render.
     await expect(dialog.locator('.markdown-viewer strong', { hasText: 'Catatan penting' })).toBeVisible();
 
-    // Unggah lampiran.
+    // Unggah lampiran (PDF ±64KB).
     const fileInput = dialog.locator('input[type="file"]');
     await fileInput.setInputFiles({
       name: 'dokumen-bimbingan.pdf',
       mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.4 test lampiran bimbingan'),
+      buffer: Buffer.alloc(64 * 1024, 1),
     });
 
-    await expect(dialog.locator('text=dokumen-bimbingan.pdf')).toBeVisible();
+    // Chip lampiran siap dikirim tampil dan link tersisip ke draft percakapan.
+    await expect(dialog.locator('text=dokumen-bimbingan.pdf — siap dikirim')).toBeVisible();
+    const draftValue = await dialog.locator('textarea').first().inputValue();
+    expect(draftValue).toContain('dokumen-bimbingan.pdf');
+    expect(draftValue).toContain('/storage/bimbingan-attachments/');
+
+    // Kirim balasan, lalu link unduhan tampil di bubble percakapan.
+    await dialog.getByRole('button', { name: 'Kirim' }).click();
+    await expect(dialog.getByRole('link', { name: /dokumen-bimbingan.pdf/ })).toBeVisible();
   });
 });

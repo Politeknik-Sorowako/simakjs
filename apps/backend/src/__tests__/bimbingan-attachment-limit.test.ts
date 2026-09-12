@@ -98,4 +98,29 @@ describe('Bimbingan — Batas Ukuran Lampiran Dinamis', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  it('GET /bimbingan/mahasiswa/:mhsId mengembalikan attachments yang diunggah (tidak ter-strip)', async () => {
+    const form = buildForm(128 * 1024);
+    const uploadRes = await app.handle(
+      new Request(`http://localhost/bimbingan/mahasiswa/${mhsId}/attachment`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhsToken}` },
+        body: form,
+      }),
+    );
+    expect(uploadRes.status).toBe(201);
+    const uploaded = (await uploadRes.json()) as { fileName: string; fileUrl: string };
+
+    const res = await app.handle(
+      new Request(`http://localhost/bimbingan/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { attachments?: { fileName: string; fileUrl: string }[] };
+    expect(Array.isArray(json.attachments)).toBe(true);
+    expect(json.attachments?.some((a) => a.fileName === uploaded.fileName)).toBe(true);
+    expect(json.attachments?.some((a) => a.fileUrl === uploaded.fileUrl)).toBe(true);
+  });
 });

@@ -30,6 +30,7 @@ interface SesiDetailModalProps {
   attachments: BimbinganAttachment[];
   uploadingAttachment: boolean;
   maxAttachmentMb: number;
+  pendingAttachment: { fileName: string; fileUrl: string } | null;
   onDraft: (value: string) => void;
   onSend: () => void;
   onMarkRead: () => void;
@@ -169,6 +170,16 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                 placeholder="Tulis balasan... Mendukung **bold**, *italic*, - list, dan [tautan](https://...)."
               />
 
+              <Show when={props.pendingAttachment}>
+                {(att) => (
+                  <div class="flex items-center gap-2 text-fine">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                      📎 {att().fileName} — siap dikirim
+                    </span>
+                  </div>
+                )}
+              </Show>
+
               <div class="flex items-center justify-between gap-2">
                 <label class="inline-flex items-center gap-1.5 text-fine font-semibold text-secondary-500 dark:text-secondary-300 cursor-pointer hover:text-brand-600 dark:hover:text-brand-400">
                   <input
@@ -261,6 +272,7 @@ export default function Bimbingan() {
   const [markingSesiId, setMarkingSesiId] = createSignal<number | null>(null);
   const [activeSesiId, setActiveSesiId] = createSignal<number | null>(null);
   const [uploadingAttachment, setUploadingAttachment] = createSignal(false);
+  const [pendingAttachment, setPendingAttachment] = createSignal<{ fileName: string; fileUrl: string } | null>(null);
 
   const [publicSettings] = createResource(() => settingsController.getPublicSettings());
   const maxAttachmentMb = () => publicSettings()?.maxBimbinganAttachmentMb ?? 2;
@@ -511,6 +523,7 @@ export default function Bimbingan() {
     try {
       await bimbinganController.sendSesiBalasan(sesiId, pesan);
       setBalasanDrafts((prev) => ({ ...prev, [sesiId]: '' }));
+      setPendingAttachment(null);
       refetch();
     } catch (err: unknown) {
       alert((err as Error).message || 'Gagal mengirim balasan sesi bimbingan.');
@@ -545,7 +558,16 @@ export default function Bimbingan() {
     }
     setUploadingAttachment(true);
     try {
-      await bimbinganController.uploadAttachment(mhsId, file);
+      const res = await bimbinganController.uploadAttachment(mhsId, file);
+      const id = activeSesiId();
+      if (id !== null) {
+        const link = `[📄 ${res.fileName}](${API_URL}${res.fileUrl})`;
+        setBalasanDrafts((prev) => {
+          const current = prev[id] ?? '';
+          return { ...prev, [id]: current ? `${current}\n\n${link}` : link };
+        });
+        setPendingAttachment({ fileName: res.fileName, fileUrl: res.fileUrl });
+      }
       if (auth.hasRole(['mahasiswa'])) await refetchStudentBimb();
       else await refetchSelectedBimb();
     } catch (err: unknown) {
@@ -1739,6 +1761,7 @@ export default function Bimbingan() {
         attachments={activeBimbinganAttachments()}
         uploadingAttachment={uploadingAttachment()}
         maxAttachmentMb={maxAttachmentMb()}
+        pendingAttachment={pendingAttachment()}
         onUploadAttachment={handleUploadAttachment}
         onDraft={(v) => {
           const id = activeSesiId();
@@ -1754,7 +1777,10 @@ export default function Bimbingan() {
           if (id === null) return;
           handleMarkSesiRead(id, auth.hasRole(['mahasiswa']) ? refetchStudentBimb : refetchSelectedBimb);
         }}
-        onClose={() => setActiveSesiId(null)}
+        onClose={() => {
+          setActiveSesiId(null);
+          setPendingAttachment(null);
+        }}
       />
     </MainLayout>
   );
