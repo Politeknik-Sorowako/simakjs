@@ -506,13 +506,33 @@ export default function Bimbingan() {
             </div>
           </Show>
 
+          <Show when={!mhsProfile.loading && !mhsProfile()}>
+            <div class="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+              <span class="text-base">⚠️</span>
+              <p class="text-sm font-medium">
+                Profil mahasiswa tidak ditemukan. Pastikan akun Anda tertaut dengan data mahasiswa, atau hubungi Admin
+                Prodi.
+              </p>
+            </div>
+          </Show>
+
+          <Show when={!!mhsProfile() && (!!mhsProfile.error || !!studentBimbingan.error)}>
+            <div class="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+              <span class="text-base">⚠️</span>
+              <p class="text-sm font-medium">
+                Gagal memuat data bimbingan. Silakan muat ulang halaman atau hubungi Admin Prodi.
+              </p>
+            </div>
+          </Show>
+
           <Show
             when={
               !mhsProfile.loading &&
               !studentBimbingan.loading &&
               !!mhsProfile() &&
               !!studentBimbingan() &&
-              !studentBimbingan()?.dosenId
+              !studentBimbingan()?.dosenId &&
+              !mhsProfile()?.dosenPaId
             }
           >
             <div class="mb-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">

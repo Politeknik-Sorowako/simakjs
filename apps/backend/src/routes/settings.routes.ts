@@ -13,6 +13,35 @@ export const settingsRoutes = new Elysia({ prefix: '/settings' })
     },
   })
   .use(authMiddleware)
+  .get('/feedback-config', SettingsController.getFeedbackConfig, {
+    response: {
+      200: t.Object({
+        data: t.Object({
+          mode: t.String(),
+          allowedRoles: t.Array(t.String()),
+        }),
+      }),
+      400: t.Object({ error: t.String() }),
+      403: t.Object({ error: t.String() }),
+    },
+  })
+  .put('/feedback-config', SettingsController.updateFeedbackConfig, {
+    body: t.Object({
+      mode: t.String(),
+      allowedRoles: t.Array(t.String()),
+    }),
+    response: {
+      200: t.Object({
+        message: t.String(),
+        data: t.Object({
+          mode: t.String(),
+          allowedRoles: t.Array(t.String()),
+        }),
+      }),
+      400: t.Object({ error: t.String() }),
+      403: t.Object({ error: t.String() }),
+    },
+  })
   .get('/', SettingsController.getAll, {
     response: {
       200: t.Object({

@@ -41,6 +41,11 @@ export interface FeedbackListResponse {
   };
 }
 
+export interface FeedbackAccessConfig {
+  mode: 'full' | 'restricted';
+  allowedRoles: string[];
+}
+
 type FeedbackSingleEden = Promise<{ data?: SystemFeedback | null; error?: unknown }>;
 type FeedbackListEden = Promise<{ data?: FeedbackListResponse | null; error?: unknown }>;
 
@@ -109,5 +114,18 @@ export const feedbackController = {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
+  },
+
+  async getAccessConfig(): Promise<FeedbackAccessConfig> {
+    const res = await fetchApi<{ data: FeedbackAccessConfig }>('/settings/feedback-config');
+    return res.data;
+  },
+
+  async updateAccessConfig(mode: 'full' | 'restricted', allowedRoles: string[]): Promise<FeedbackAccessConfig> {
+    const res = await fetchApi<{ message: string; data: FeedbackAccessConfig }>('/settings/feedback-config', {
+      method: 'PUT',
+      body: JSON.stringify({ mode, allowedRoles }),
+    });
+    return res.data;
   },
 };

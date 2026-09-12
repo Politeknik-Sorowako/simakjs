@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
 import { dosen, mahasiswa, periodeAkademik, programStudi } from '../models/schema';
+import { MahasiswaService } from '../services/mahasiswa.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -103,6 +104,16 @@ describe('Bimbingan & Pelanggaran API', () => {
       id: periodeId,
       nama: 'Ganjil 2023/2024',
       aktif: true,
+    });
+  });
+
+  describe('MahasiswaService.getMahasiswaIdByEmail', () => {
+    it('harus mencocokkan email tanpa membedakan huruf besar/kecil', async () => {
+      const idUpper = await MahasiswaService.getMahasiswaIdByEmail('MHS@TEST.COM');
+      const idMixed = await MahasiswaService.getMahasiswaIdByEmail('Mhs@Test.Com');
+
+      expect(idUpper).toBe(mhsId);
+      expect(idMixed).toBe(mhsId);
     });
   });
 
