@@ -40,6 +40,7 @@ export default function EvaluasiSistem() {
   const [page, setPage] = createSignal(1);
   const [sortBy, setSortBy] = createSignal('');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
+  const [myOnly, setMyOnly] = createSignal(false);
 
   // Detail modal state
   const [selectedId, setSelectedId] = createSignal<number | null>(null);
@@ -57,13 +58,14 @@ export default function EvaluasiSistem() {
   const [isDeleting, setIsDeleting] = createSignal(false);
 
   const [feedbacks, { refetch }] = createResource(
-    () => ({ page: page(), sortBy: sortBy(), sortOrder: sortOrder() }),
-    async ({ page, sortBy, sortOrder }) => {
+    () => ({ page: page(), sortBy: sortBy(), sortOrder: sortOrder(), myOnly: myOnly() }),
+    async ({ page, sortBy, sortOrder, myOnly }) => {
       return feedbackController.getAll({
         page,
         limit: PER_PAGE,
         sortBy: sortBy || undefined,
         sortOrder: sortBy ? sortOrder : undefined,
+        myOnly,
       });
     },
   );
@@ -245,6 +247,38 @@ export default function EvaluasiSistem() {
         </div>
 
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="inline-flex rounded-full bg-secondary-100 dark:bg-secondary-800 p-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setMyOnly(false);
+                  setPage(1);
+                }}
+                class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  !myOnly()
+                    ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
+                    : 'text-secondary-500 dark:text-secondary-300'
+                }`}
+              >
+                Semua Masukan
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMyOnly(true);
+                  setPage(1);
+                }}
+                class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                  myOnly()
+                    ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
+                    : 'text-secondary-500 dark:text-secondary-300'
+                }`}
+              >
+                Masukan Saya Saja
+              </button>
+            </div>
+          </div>
           <Show
             when={!feedbacks.loading}
             fallback={<p class="text-center text-xs text-secondary-400 py-8">Memuat data masukan...</p>}

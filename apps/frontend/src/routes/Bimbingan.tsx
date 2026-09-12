@@ -499,6 +499,37 @@ export default function Bimbingan() {
 
         {/* --- MAHASISWA VIEW --- */}
         <Show when={auth.hasRole(['mahasiswa'])}>
+          <Show when={mhsProfile.loading || studentBimbingan.loading}>
+            <div class="flex items-center justify-center py-8 text-secondary-400 dark:text-secondary-300">
+              <div class="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <span class="text-sm">Memuat data bimbingan...</span>
+            </div>
+          </Show>
+
+          <Show
+            when={
+              !mhsProfile.loading &&
+              !studentBimbingan.loading &&
+              !!mhsProfile() &&
+              !!studentBimbingan() &&
+              !studentBimbingan()?.dosenId
+            }
+          >
+            <div class="mb-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+              <svg class="w-5 h-5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <p class="text-sm font-medium">
+                Dosen Pembimbing Akademik belum diplot oleh Program Studi. Silakan hubungi Admin Prodi.
+              </p>
+            </div>
+          </Show>
+
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* Chat Thread Panel */}
             <div class="lg:col-span-2 bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-[600px] overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
@@ -628,7 +659,7 @@ export default function Bimbingan() {
                               Pertemuan Ke-{sesi.pertemuanKe}
                             </span>
                             <span class="text-fine text-secondary-400 dark:text-secondary-300 font-mono">
-                              {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                              {fmtTanggal(sesi.tanggalBimbingan)}
                             </span>
                           </div>
                           <div class="flex flex-col gap-1">
@@ -893,10 +924,7 @@ export default function Bimbingan() {
                                 </div>
 
                                 <div class="flex items-center justify-between text-fine text-secondary-400 dark:text-secondary-300">
-                                  <span>
-                                    📅{' '}
-                                    {new Date(sesi.tanggalBimbingan).toLocaleDateString('id-ID', { dateStyle: 'full' })}
-                                  </span>
+                                  <span>📅 {fmtTanggal(sesi.tanggalBimbingan)}</span>
                                   <span
                                     class={`font-bold px-2 py-0.5 rounded text-fine ${sesi.statusBkd ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300' : 'bg-secondary-100 text-secondary-500'}`}
                                   >

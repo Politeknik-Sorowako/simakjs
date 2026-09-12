@@ -622,6 +622,7 @@ function MahasiswaWidgets() {
           title="Kompensasi"
           value={akademikSummary.loading ? '...' : `${sisaKompensasiMhs()} Menit`}
           color={sisaKompensasiMhs() > 0 ? 'rose' : 'green'}
+          href="/kompensasi-saya"
           icon={
             <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path

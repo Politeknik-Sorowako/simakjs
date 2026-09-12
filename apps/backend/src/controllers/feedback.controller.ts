@@ -42,11 +42,13 @@ export class FeedbackController {
       }
       // Semua user yang terautentikasi dapat melihat seluruh saran pengembangan
       // (papan saran kolaboratif), dengan sorting & pagination.
+      const myOnly = query?.myOnly === true || query?.myOnly === 'true';
       return await FeedbackService.getAll({
         page: query?.page ? Number(query.page) : undefined,
         limit: query?.limit ? Number(query.limit) : undefined,
         sortBy: query?.sortBy,
         sortOrder: query?.sortOrder === 'asc' ? 'asc' : query?.sortOrder === 'desc' ? 'desc' : undefined,
+        userId: myOnly ? user.id : undefined,
       });
     } catch (e: unknown) {
       set.status = 400;

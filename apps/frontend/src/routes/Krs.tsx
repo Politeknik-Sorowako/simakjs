@@ -580,9 +580,11 @@ export default function Krs() {
                           Setujui
                         </Button>
                       </Show>
-                      <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
-                        Batal
-                      </Button>
+                      <Show when={role() === 'admin' || role() === 'prodi' || role() === 'super_admin'}>
+                        <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
+                          Batal
+                        </Button>
+                      </Show>
                     </td>
                   </tr>
                 )}

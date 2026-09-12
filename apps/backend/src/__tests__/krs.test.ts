@@ -353,6 +353,21 @@ describe('8. KRS (/krs)', () => {
       expect(response.status).toBe(200);
     });
 
+    it('harus menolak (403) penghapusan KRS jika diakses oleh mahasiswa', async () => {
+      const mhsToken = await getAuthToken('mhs-krs@test.com', 'mahasiswa');
+
+      const response = await app.handle(
+        new Request(`http://localhost/krs/${krsId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${mhsToken}`,
+          },
+        }),
+      );
+
+      expect(response.status).toBe(403);
+    });
+
     it('harus gagal menghapus jika ID tidak ditemukan', async () => {
       const adminToken = await getAuthToken('admin-krs@test.com', 'admin');
 

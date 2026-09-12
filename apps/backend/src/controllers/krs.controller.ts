@@ -166,9 +166,9 @@ export class KrsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user) {
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Silakan login.' };
+      return { error: 'Akses ditolak. Hanya Admin dan Prodi yang dapat membatalkan KRS.' };
     }
     const deleted = await KrsService.delete(parseInt(params.id));
     if (!deleted) {
