@@ -16,7 +16,7 @@ function escapeHtml(input: string): string {
 
 function sanitizeUrl(url: string): string | null {
   const trimmed = url.trim();
-  if (/^https?:\/\//i.test(trimmed) || /^mailto:/i.test(trimmed)) return trimmed;
+  if (/^https?:\/\//i.test(trimmed) || /^mailto:/i.test(trimmed) || /^\//i.test(trimmed)) return trimmed;
   return null;
 }
 

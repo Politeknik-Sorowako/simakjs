@@ -86,6 +86,21 @@ export const getBimbinganSchema = {
           }),
         ),
       ),
+      attachments: t.Optional(
+        t.Array(
+          t.Object({
+            id: t.Integer(),
+            bimbinganId: t.Integer(),
+            bimbinganThreadId: t.Optional(t.Union([t.Integer(), t.Null()])),
+            fileUrl: t.String(),
+            fileName: t.String(),
+            fileSize: t.Integer(),
+            fileType: t.String(),
+            uploadedBy: t.Optional(t.Union([t.Integer(), t.Null()])),
+            createdAt: t.Optional(t.Union([t.Date(), t.String(), t.Null()])),
+          }),
+        ),
+      ),
     }),
   },
 };
@@ -270,6 +285,20 @@ export const uploadAttachmentSchema = {
   params: t.Object({
     mhsId: t.Numeric(),
   }),
+  response: {
+    201: t.Object({
+      id: t.Integer(),
+      bimbinganId: t.Integer(),
+      bimbinganThreadId: t.Optional(t.Union([t.Integer(), t.Null()])),
+      fileUrl: t.String(),
+      fileName: t.String(),
+      fileSize: t.Integer(),
+      fileType: t.String(),
+      uploadedBy: t.Optional(t.Union([t.Integer(), t.Null()])),
+      createdAt: t.Optional(t.Union([t.Date(), t.String(), t.Null()])),
+    }),
+    400: t.Object({ error: t.String() }),
+  },
 };
 
 export const getBimbinganMonitoringSchema = {
