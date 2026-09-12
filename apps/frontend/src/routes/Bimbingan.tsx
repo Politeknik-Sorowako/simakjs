@@ -33,7 +33,7 @@ interface SesiDetailModalProps {
   onDraft: (value: string) => void;
   onSend: () => void;
   onMarkRead: () => void;
-  onUploadAttachment: (file: File) => void;
+  onUploadAttachment: (file: File) => Promise<{ fileName: string; fileUrl: string } | null>;
   onClose: () => void;
 }
 
@@ -167,25 +167,12 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                 onInput={props.onDraft}
                 rows={3}
                 placeholder="Tulis balasan... Mendukung **bold**, *italic*, - list, dan [tautan](https://...)."
+                onUploadAttachment={props.onUploadAttachment}
+                uploadingAttachment={props.uploadingAttachment}
+                maxAttachmentMb={props.maxAttachmentMb}
               />
 
-              <div class="flex items-center justify-between gap-2">
-                <label class="inline-flex items-center gap-1.5 text-fine font-semibold text-secondary-500 dark:text-secondary-300 cursor-pointer hover:text-brand-600 dark:hover:text-brand-400">
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.webp"
-                    class="hidden"
-                    disabled={props.uploadingAttachment}
-                    onChange={(e) => {
-                      const f = e.currentTarget.files?.[0];
-                      if (f) props.onUploadAttachment(f);
-                      e.currentTarget.value = '';
-                    }}
-                  />
-                  {props.uploadingAttachment
-                    ? 'Mengunggah...'
-                    : `📎 Lampiran (PDF/Gambar, maks ${props.maxAttachmentMb} MB)`}
-                </label>
+              <div class="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   disabled={props.sending || props.draft.trim().length === 0}
@@ -536,20 +523,22 @@ export default function Bimbingan() {
     return bimb?.attachments ?? [];
   };
 
-  const handleUploadAttachment = async (file: File) => {
+  const handleUploadAttachment = async (file: File): Promise<{ fileName: string; fileUrl: string } | null> => {
     const mhsId = auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId();
-    if (!mhsId) return;
+    if (!mhsId) return null;
     if (file.size > maxAttachmentMb() * 1024 * 1024) {
       alert(`Ukuran lampiran maksimal ${maxAttachmentMb()} MB.`);
-      return;
+      return null;
     }
     setUploadingAttachment(true);
     try {
-      await bimbinganController.uploadAttachment(mhsId, file);
+      const res = await bimbinganController.uploadAttachment(mhsId, file);
       if (auth.hasRole(['mahasiswa'])) await refetchStudentBimb();
       else await refetchSelectedBimb();
+      return { fileName: res.fileName, fileUrl: res.fileUrl };
     } catch (err: unknown) {
       alert((err as Error).message || 'Gagal mengunggah lampiran.');
+      return null;
     } finally {
       setUploadingAttachment(false);
     }
@@ -1366,6 +1355,9 @@ export default function Bimbingan() {
                           placeholder="Tulis topik bimbingan akademis/non-akademis..."
                           value={permasalahanInput()}
                           onInput={setPermasalahanInput}
+                          onUploadAttachment={handleUploadAttachment}
+                          uploadingAttachment={uploadingAttachment()}
+                          maxAttachmentMb={maxAttachmentMb()}
                         />
 
                         <RichMarkdownEditor
@@ -1374,6 +1366,9 @@ export default function Bimbingan() {
                           placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
                           value={solusiInput()}
                           onInput={setSolusiInput}
+                          onUploadAttachment={handleUploadAttachment}
+                          uploadingAttachment={uploadingAttachment()}
+                          maxAttachmentMb={maxAttachmentMb()}
                         />
 
                         <div class="flex items-center justify-between p-3 bg-brand-50/50 rounded-xl border border-brand-100/50">

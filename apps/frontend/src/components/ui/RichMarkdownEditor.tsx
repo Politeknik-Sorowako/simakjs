@@ -1,4 +1,5 @@
 import { createSignal, Show } from 'solid-js';
+import { API_URL } from '../../utils/api';
 import { MarkdownViewer } from './MarkdownViewer';
 
 interface RichMarkdownEditorProps {
@@ -9,6 +10,9 @@ interface RichMarkdownEditorProps {
   label?: string;
   disabled?: boolean;
   class?: string;
+  onUploadAttachment?: (file: File) => Promise<{ fileName: string; fileUrl: string } | null>;
+  uploadingAttachment?: boolean;
+  maxAttachmentMb?: number;
 }
 
 const TOOLBAR_BTN =
@@ -45,6 +49,34 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
     const line = value.slice(lineStart, lineEnd);
     const nextLine = line.startsWith(prefix) ? line.slice(prefix.length) : prefix + line;
     props.onInput(value.slice(0, lineStart) + nextLine + value.slice(lineEnd));
+  };
+
+  const insertText = (text: string) => {
+    const el = ref;
+    if (!el) return;
+    const start = el.selectionStart ?? props.value.length;
+    const end = el.selectionEnd ?? start;
+    props.onInput(props.value.slice(0, start) + text + props.value.slice(end));
+    queueMicrotask(() => {
+      el.focus();
+      const pos = start + text.length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
+  const handleFileSelected = async (e: Event & { currentTarget: HTMLInputElement }) => {
+    const file = e.currentTarget.files?.[0];
+    if (!file) return;
+    try {
+      if (props.onUploadAttachment) {
+        const res = await props.onUploadAttachment(file);
+        if (res) insertText(`\n[📄 File ${res.fileName}](${API_URL}${res.fileUrl})\n`);
+      } else {
+        insertText('\n[📄 File Namafile](/api/storage/...)\n');
+      }
+    } finally {
+      e.currentTarget.value = '';
+    }
   };
 
   const wrapClass = () =>
@@ -143,6 +175,23 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
             >
               🔗
             </button>
+            <label
+              class={`${TOOLBAR_BTN} cursor-pointer inline-flex items-center gap-1`}
+              title={
+                props.maxAttachmentMb
+                  ? `Sisipkan Lampiran Berkas (maks ${props.maxAttachmentMb} MB)`
+                  : 'Sisipkan Lampiran Berkas'
+              }
+            >
+              <input
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.webp"
+                class="hidden"
+                disabled={props.disabled || props.uploadingAttachment}
+                onChange={handleFileSelected}
+              />
+              {props.uploadingAttachment ? '⏳' : '📎 File'}
+            </label>
           </div>
 
           <div class="flex items-center gap-0.5">
