@@ -1,13 +1,18 @@
-import { createResource, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { Pagination } from '../components/ui/Pagination';
 import { useAuth } from '../contexts/AuthContext';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { presensiController } from '../controllers/presensiController';
+import { usePagination } from '../hooks/usePagination';
 import { fmtTanggal } from '../utils/format';
 
 export default function KompensasiMahasiswa() {
   const auth = useAuth();
   const email = () => auth.user()?.email;
+
+  const historyPagination = usePagination(20);
+  const paymentPagination = usePagination(20);
 
   const [mhsProfile] = createResource(email, async (mail) => {
     if (!mail) return null;
@@ -22,6 +27,26 @@ export default function KompensasiMahasiswa() {
       return presensiController.getKompensasiDetail(id);
     },
   );
+
+  const pagedHistory = createMemo(() => {
+    const list = detail()?.historyKompensasi ?? [];
+    const p = historyPagination.page();
+    const l = historyPagination.limit();
+    return list.slice((p - 1) * l, p * l);
+  });
+
+  const pagedPayments = createMemo(() => {
+    const list = detail()?.payments ?? [];
+    const p = paymentPagination.page();
+    const l = paymentPagination.limit();
+    return list.slice((p - 1) * l, p * l);
+  });
+
+  createEffect(() => {
+    detail();
+    historyPagination.resetPage();
+    paymentPagination.resetPage();
+  });
 
   return (
     <MainLayout>
@@ -109,7 +134,7 @@ export default function KompensasiMahasiswa() {
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
-                          <For each={data().historyKompensasi}>
+                          <For each={pagedHistory()}>
                             {(item) => (
                               <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
                                 <td class="py-3 px-3 whitespace-nowrap">{fmtTanggal(item.bapTanggal)}</td>
@@ -135,6 +160,17 @@ export default function KompensasiMahasiswa() {
                         </tbody>
                       </table>
                     </div>
+                    <Show when={data().historyKompensasi.length > 0}>
+                      <Pagination
+                        currentPage={historyPagination.page()}
+                        totalPages={Math.ceil(data().historyKompensasi.length / historyPagination.limit())}
+                        total={data().historyKompensasi.length}
+                        limit={historyPagination.limit()}
+                        pageOptions={[20, 50, 100]}
+                        onPageChange={historyPagination.setPage}
+                        onLimitChange={historyPagination.setLimit}
+                      />
+                    </Show>
                   </div>
 
                   <div class="rounded-2xl border border-secondary-100 bg-white p-6 shadow-sm dark:border-secondary-800 dark:bg-secondary-900">
@@ -151,7 +187,7 @@ export default function KompensasiMahasiswa() {
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
-                          <For each={data().payments}>
+                          <For each={pagedPayments()}>
                             {(item) => (
                               <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
                                 <td class="py-3 px-3 whitespace-nowrap">{fmtTanggal(item.tanggal)}</td>
@@ -172,6 +208,17 @@ export default function KompensasiMahasiswa() {
                         </tbody>
                       </table>
                     </div>
+                    <Show when={data().payments.length > 0}>
+                      <Pagination
+                        currentPage={paymentPagination.page()}
+                        totalPages={Math.ceil(data().payments.length / paymentPagination.limit())}
+                        total={data().payments.length}
+                        limit={paymentPagination.limit()}
+                        pageOptions={[20, 50, 100]}
+                        onPageChange={paymentPagination.setPage}
+                        onLimitChange={paymentPagination.setLimit}
+                      />
+                    </Show>
                   </div>
                 </div>
               )}

@@ -158,30 +158,11 @@ export default function Krs() {
     setShowDetailModal(true);
   };
 
-  // Print KRS state
-  const [printTarget, setPrintTarget] = createSignal<{ id: number; nama: string; nim: string } | null>(null);
-  const [printData] = createResource(printTarget, async (mhs) => {
-    if (!mhs) return null;
-    try {
-      const [profileRes, krsRes] = await Promise.all([
-        mahasiswaController.getAll(mhs.nim, 1, 1),
-        krsController.getAll(mhs.nim, 1, 200),
-      ]);
-      const profile = profileRes.data.find((p) => p.id === mhs.id) || profileRes.data[0] || null;
-      const rows = krsRes.data.filter((k) => k.mahasiswaId === mhs.id);
-      const kelasList = await Promise.all(
-        rows.map((r) => kelasKuliahController.getById(r.kelasKuliahId).catch(() => null)),
-      );
-      const items = rows.map((r, i) => ({ krs: r, kelas: kelasList[i] }));
-      const totalSks = items.reduce((sum, it) => sum + (it.kelas?.mataKuliah?.sksTotal || 0), 0);
-      return { profile, items, totalSks, periodeId: rows[0]?.kelasKuliah?.periodeId || '' };
-    } catch {
-      return null;
-    }
-  });
-
-  const openPrint = (mhs: { id: number; nama: string; nim: string }) => {
-    setPrintTarget(mhs);
+  // Print KRS: open a dedicated print window so the app layout never affects the document
+  const printKrs = (mhs: { id: number; nama: string; nim: string }) => {
+    const params = new URLSearchParams({ mahasiswaId: String(mhs.id) });
+    if (selectedPeriode()) params.set('periodeId', selectedPeriode());
+    window.open(`/krs/cetak?${params.toString()}`, '_blank');
   };
 
   const dosenPengajarLabel = (
@@ -569,7 +550,7 @@ export default function Krs() {
               <Button
                 variant="secondary"
                 onClick={() =>
-                  openPrint({
+                  printKrs({
                     id: mahasiswaProfile()!.id,
                     nama: mahasiswaProfile()!.nama,
                     nim: mahasiswaProfile()!.nim,
@@ -648,7 +629,7 @@ export default function Krs() {
                         <Button
                           variant="secondary"
                           onClick={() =>
-                            openPrint({
+                            printKrs({
                               id: item.mahasiswa!.id,
                               nama: item.mahasiswa!.nama,
                               nim: item.mahasiswa!.nim,
@@ -970,7 +951,7 @@ export default function Krs() {
                       variant="primary"
                       onClick={() => {
                         setShowDetailModal(false);
-                        openPrint({
+                        printKrs({
                           id: item().mahasiswa!.id,
                           nama: item().mahasiswa!.nama,
                           nim: item().mahasiswa!.nim,
@@ -984,136 +965,6 @@ export default function Krs() {
               </div>
             )}
           </Show>
-        </Modal>
-
-        {/* Modal Cetak KRS */}
-        <Modal
-          show={printTarget() !== null}
-          title="Pratinjau Cetak KRS"
-          onClose={() => setPrintTarget(null)}
-          maxWidth="xl"
-        >
-          <Show
-            when={!printData.loading}
-            fallback={<p class="text-center text-xs text-secondary-400 py-8">Menyiapkan data cetak...</p>}
-          >
-            <Show
-              when={printData()}
-              fallback={<p class="text-center text-xs text-secondary-400 py-8">Data KRS tidak ditemukan.</p>}
-            >
-              {(data) => (
-                <div id="print-area-krs" class="flex flex-col gap-4 text-secondary-800 dark:text-secondary-100">
-                  <div class="text-center border-b border-secondary-200 pb-3 flex flex-col gap-1">
-                    <h2 class="text-xl font-bold tracking-wider text-brand-700 dark:text-white">POLITEKNIK SOROWAKO</h2>
-                    <h3 class="text-base font-bold uppercase tracking-widest text-secondary-600 dark:text-secondary-200">
-                      Kartu Rencana Studi (KRS)
-                    </h3>
-                    <p class="text-xs text-secondary-500 dark:text-secondary-300">
-                      Periode Akademik: {data().periodeId || '-'}
-                    </p>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-4 text-xs text-secondary-700 dark:text-secondary-200">
-                    <div class="flex flex-col gap-1">
-                      <p>
-                        Nama:{' '}
-                        <span class="font-bold text-secondary-900 dark:text-white">
-                          {data().profile?.nama || printTarget()?.nama || '-'}
-                        </span>
-                      </p>
-                      <p>
-                        NIM: <span class="font-bold">{data().profile?.nim || printTarget()?.nim || '-'}</span>
-                      </p>
-                    </div>
-                    <div class="flex flex-col gap-1 text-right">
-                      <p>
-                        Program Studi: <span class="font-bold">{data().profile?.programStudi?.nama || '-'}</span>
-                      </p>
-                      <p>
-                        Dosen PA: <span class="font-bold">{data().profile?.dosenPa?.nama || '-'}</span>
-                      </p>
-                    </div>
-                  </div>
-
-                  <table class="w-full text-left text-xs border border-secondary-200 border-collapse dark:border-secondary-700">
-                    <thead>
-                      <tr class="bg-secondary-50 text-secondary-500 font-bold uppercase border-b border-secondary-200 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700">
-                        <th class="p-2 border-r border-secondary-200 dark:border-secondary-700">No</th>
-                        <th class="p-2 border-r border-secondary-200 dark:border-secondary-700">Kode MK</th>
-                        <th class="p-2 border-r border-secondary-200 dark:border-secondary-700">Nama Mata Kuliah</th>
-                        <th class="p-2 border-r border-secondary-200 dark:border-secondary-700">Kelas</th>
-                        <th class="p-2 border-r border-secondary-200 dark:border-secondary-700 text-center">SKS</th>
-                        <th class="p-2 border-r border-secondary-200 dark:border-secondary-700">Dosen Pengajar</th>
-                        <th class="p-2 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-secondary-200 dark:divide-secondary-700">
-                      <For each={data().items}>
-                        {(row, idx) => (
-                          <tr>
-                            <td class="p-2 border-r border-secondary-200 dark:border-secondary-700">{idx() + 1}</td>
-                            <td class="p-2 border-r border-secondary-200 dark:border-secondary-700">
-                              {row.kelas?.mataKuliah?.kode || '-'}
-                            </td>
-                            <td class="p-2 border-r border-secondary-200 dark:border-secondary-700 font-bold text-secondary-800 dark:text-white">
-                              {row.kelas?.mataKuliah?.nama || '-'}
-                            </td>
-                            <td class="p-2 border-r border-secondary-200 dark:border-secondary-700">
-                              {row.kelas?.namaKelas || '-'}
-                            </td>
-                            <td class="p-2 border-r border-secondary-200 dark:border-secondary-700 text-center">
-                              {row.kelas?.mataKuliah?.sksTotal ?? '-'}
-                            </td>
-                            <td class="p-2 border-r border-secondary-200 dark:border-secondary-700">
-                              {dosenPengajarLabel(row.kelas)}
-                            </td>
-                            <td class="p-2 text-center">{row.krs.isApproved ? 'Disetujui' : 'Pending'}</td>
-                          </tr>
-                        )}
-                      </For>
-                    </tbody>
-                    <tfoot>
-                      <tr class="font-bold text-secondary-800 dark:text-white">
-                        <td colspan="4" class="p-2 text-right border-r border-secondary-200 dark:border-secondary-700">
-                          Total SKS
-                        </td>
-                        <td class="p-2 text-center border-r border-secondary-200 dark:border-secondary-700">
-                          {data().totalSks}
-                        </td>
-                        <td colspan="2" class="p-2" />
-                      </tr>
-                    </tfoot>
-                  </table>
-
-                  <div class="grid grid-cols-2 gap-4 mt-8 text-xs text-secondary-700 dark:text-secondary-200">
-                    <div class="text-center">
-                      <p>Mahasiswa</p>
-                      <div class="h-16" />
-                      <p class="font-bold underline">
-                        {(data().profile?.nama || printTarget()?.nama || '').trim() || '...........................'}
-                      </p>
-                    </div>
-                    <div class="text-center">
-                      <p>Dosen Pembimbing Akademik</p>
-                      <div class="h-16" />
-                      <p class="font-bold underline">
-                        {data().profile?.dosenPa?.nama || '...........................'}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </Show>
-          </Show>
-
-          <div class="flex justify-end gap-3 mt-4 border-t border-secondary-100 pt-4 print:hidden dark:border-secondary-800">
-            <Button variant="secondary" onClick={() => setPrintTarget(null)}>
-              Tutup
-            </Button>
-            <Button variant="primary" onClick={() => window.print()}>
-              🖨️ Cetak Sekarang
-            </Button>
-          </div>
         </Modal>
       </div>
     </MainLayout>

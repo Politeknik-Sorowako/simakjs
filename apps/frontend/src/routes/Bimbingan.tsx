@@ -106,6 +106,31 @@ export default function Bimbingan() {
   const [prodisList] = createResource(() => prodiController.getAll(undefined, 1, 100));
   const [kategoriList, { refetch: refetchKategori }] = createResource(() => kategoriBimbinganController.getAll());
 
+  // Load profiles (must be declared before akademikSummary which eagerly reads mhsProfile)
+  const [mhsProfile] = createResource(
+    () => {
+      if (auth.hasRole(['mahasiswa'])) return user()?.email;
+      return null;
+    },
+    async (email) => {
+      if (!email) return null;
+      const res = await mahasiswaController.getAll(email, 1, 1);
+      return res.data[0] || null;
+    },
+  );
+
+  const [dosenProfile] = createResource(
+    () => {
+      if (auth.hasRole(['dosen'])) return user()?.email;
+      return null;
+    },
+    async (email) => {
+      if (!email) return null;
+      const res = await dosenController.getAll(email, 1, 1);
+      return res.data[0] || null;
+    },
+  );
+
   // Load Akademik Summary Resource
   const [akademikSummary, { refetch: refetchAkademik }] = createResource(
     () => (auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId()),
@@ -139,31 +164,6 @@ export default function Bimbingan() {
     async (id) => {
       if (!id) return null;
       return await presensiController.getKompensasiDetail(id);
-    },
-  );
-
-  // Load profiles
-  const [mhsProfile] = createResource(
-    () => {
-      if (auth.hasRole(['mahasiswa'])) return user()?.email;
-      return null;
-    },
-    async (email) => {
-      if (!email) return null;
-      const res = await mahasiswaController.getAll(email, 1, 1);
-      return res.data[0] || null;
-    },
-  );
-
-  const [dosenProfile] = createResource(
-    () => {
-      if (auth.hasRole(['dosen'])) return user()?.email;
-      return null;
-    },
-    async (email) => {
-      if (!email) return null;
-      const res = await dosenController.getAll(email, 1, 1);
-      return res.data[0] || null;
     },
   );
 

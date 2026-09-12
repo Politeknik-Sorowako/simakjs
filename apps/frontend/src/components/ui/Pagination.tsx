@@ -5,14 +5,17 @@ interface PaginationProps {
   totalPages: number;
   total: number;
   limit: number;
+  pageOptions?: number[];
   onPageChange: (page: number) => void;
   onLimitChange: (limit: number) => void;
 }
 
-const PAGE_OPTIONS = [10, 20, 50, 100];
+const DEFAULT_PAGE_OPTIONS = [10, 20, 50, 100];
 
 export function Pagination(props: PaginationProps) {
   const [jumpValue, setJumpValue] = createSignal('');
+
+  const pageOptions = () => props.pageOptions ?? DEFAULT_PAGE_OPTIONS;
 
   const start = () => Math.min((props.currentPage - 1) * props.limit + 1, props.total);
   const end = () => Math.min(props.currentPage * props.limit, props.total);
@@ -38,7 +41,7 @@ export function Pagination(props: PaginationProps) {
             value={props.limit}
             onChange={(e) => props.onLimitChange(Number(e.currentTarget.value))}
           >
-            {PAGE_OPTIONS.map((opt) => (
+            {pageOptions().map((opt) => (
               <option value={opt}>{opt}</option>
             ))}
           </select>
