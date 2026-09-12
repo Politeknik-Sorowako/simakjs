@@ -11,6 +11,7 @@ import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { Prodi, prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
+import { API_URL } from '../utils/api';
 import { ExportColumn } from '../utils/export';
 import { getTodayString } from '../utils/format';
 
@@ -65,13 +66,34 @@ export default function ProgramStudi() {
   const [kode, setKode] = createSignal('');
   const [nama, setNama] = createSignal('');
   const [jenjang, setJenjang] = createSignal('D4');
+  const [kodeProdiPddikti, setKodeProdiPddikti] = createSignal('');
+  const [nomorSkIzin, setNomorSkIzin] = createSignal('');
+  const [tanggalSkIzin, setTanggalSkIzin] = createSignal('');
+  const [tanggalSkIzinMulai, setTanggalSkIzinMulai] = createSignal('');
+  const [fileSkIzin, setFileSkIzin] = createSignal('');
+  const [nilaiAkreditasi, setNilaiAkreditasi] = createSignal('');
+  const [tanggalSkAkreditasi, setTanggalSkAkreditasi] = createSignal('');
+  const [tanggalSkAkreditasiMulai, setTanggalSkAkreditasiMulai] = createSignal('');
+  const [fileSkAkreditasi, setFileSkAkreditasi] = createSignal('');
+  const [uploadingSk, setUploadingSk] = createSignal<'izin' | 'akreditasi' | null>(null);
   const [errorMsg, setErrorMsg] = createSignal('');
+
+  const orNull = (value: string) => (value.trim() ? value.trim() : null);
 
   const openAddModal = () => {
     setEditId(null);
     setKode('');
     setNama('');
     setJenjang('D4');
+    setKodeProdiPddikti('');
+    setNomorSkIzin('');
+    setTanggalSkIzin('');
+    setTanggalSkIzinMulai('');
+    setFileSkIzin('');
+    setNilaiAkreditasi('');
+    setTanggalSkAkreditasi('');
+    setTanggalSkAkreditasiMulai('');
+    setFileSkAkreditasi('');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -81,18 +103,60 @@ export default function ProgramStudi() {
     setKode(item.kode);
     setNama(item.nama);
     setJenjang(item.jenjang);
+    setKodeProdiPddikti(item.kodeProdiPddikti || '');
+    setNomorSkIzin(item.nomorSkIzinOperasional || '');
+    setTanggalSkIzin(item.tanggalSkIzinOperasional || '');
+    setTanggalSkIzinMulai(item.tanggalSkIzinOperasionalBerlakuMulai || '');
+    setFileSkIzin(item.fileSkIzinOperasional || '');
+    setNilaiAkreditasi(item.nilaiAkreditasi || '');
+    setTanggalSkAkreditasi(item.tanggalSkAkreditasi || '');
+    setTanggalSkAkreditasiMulai(item.tanggalSkAkreditasiBerlakuMulai || '');
+    setFileSkAkreditasi(item.fileSkAkreditasi || '');
     setErrorMsg('');
     setShowModal(true);
   };
+
+  const handleSkUpload = async (e: Event, jenis: 'izin' | 'akreditasi') => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    setUploadingSk(jenis);
+    setErrorMsg('');
+    try {
+      const res = await prodiController.uploadSk(file, jenis);
+      if (jenis === 'izin') setFileSkIzin(res.url);
+      else setFileSkAkreditasi(res.url);
+    } catch (err: unknown) {
+      setErrorMsg((err as Error).message || 'Gagal mengunggah SK');
+    } finally {
+      setUploadingSk(null);
+      input.value = '';
+    }
+  };
+
+  const buildPayload = () => ({
+    kode: kode(),
+    nama: nama(),
+    jenjang: jenjang(),
+    kodeProdiPddikti: orNull(kodeProdiPddikti()),
+    nomorSkIzinOperasional: orNull(nomorSkIzin()),
+    tanggalSkIzinOperasional: orNull(tanggalSkIzin()),
+    tanggalSkIzinOperasionalBerlakuMulai: orNull(tanggalSkIzinMulai()),
+    fileSkIzinOperasional: orNull(fileSkIzin()),
+    nilaiAkreditasi: orNull(nilaiAkreditasi()),
+    tanggalSkAkreditasi: orNull(tanggalSkAkreditasi()),
+    tanggalSkAkreditasiBerlakuMulai: orNull(tanggalSkAkreditasiMulai()),
+    fileSkAkreditasi: orNull(fileSkAkreditasi()),
+  });
 
   const handleSave = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
     try {
       if (editId()) {
-        await prodiController.update(editId()!, { kode: kode(), nama: nama(), jenjang: jenjang() });
+        await prodiController.update(editId()!, buildPayload());
       } else {
-        await prodiController.create({ kode: kode(), nama: nama(), jenjang: jenjang() });
+        await prodiController.create(buildPayload());
       }
       setShowModal(false);
       refetch();
@@ -178,6 +242,10 @@ export default function ProgramStudi() {
               <SortableHeader field="jenjang" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                 Jenjang
               </SortableHeader>,
+              <SortableHeader field="kodeProdiPddikti" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Kode PDDIKTI
+              </SortableHeader>,
+              'SK & Akreditasi',
               'Aksi',
             ]}
           >
@@ -193,6 +261,36 @@ export default function ProgramStudi() {
                       {item.jenjang}
                     </span>
                   </td>
+                  <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200">
+                    {item.kodeProdiPddikti || '-'}
+                  </td>
+                  <td class="px-6 py-4">
+                    <div class="flex flex-col gap-1 text-xs">
+                      <span class="text-secondary-700 dark:text-secondary-200">
+                        Akreditasi: <strong>{item.nilaiAkreditasi || '-'}</strong>
+                      </span>
+                      <Show when={item.fileSkIzinOperasional}>
+                        <a
+                          href={`${API_URL}${item.fileSkIzinOperasional}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          📄 SK Izin Operasional
+                        </a>
+                      </Show>
+                      <Show when={item.fileSkAkreditasi}>
+                        <a
+                          href={`${API_URL}${item.fileSkAkreditasi}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          📄 SK Akreditasi
+                        </a>
+                      </Show>
+                    </div>
+                  </td>
                   <td class="px-6 py-4 flex gap-2">
                     <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
                       Edit
@@ -206,7 +304,7 @@ export default function ProgramStudi() {
             </For>
             <Show when={prodis()?.data.length === 0}>
               <tr>
-                <td colspan="4" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                <td colspan="6" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data program studi ditemukan.
                 </td>
               </tr>
@@ -260,6 +358,105 @@ export default function ProgramStudi() {
                 { label: 'S1', value: 'S1' },
               ]}
             />
+
+            <div class="border-t pt-4 dark:border-secondary-800">
+              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">SK Izin Operasional</h3>
+              <div class="flex flex-col gap-4">
+                <Input
+                  label="Kode Prodi PDDIKTI"
+                  value={kodeProdiPddikti()}
+                  onInput={(e) => setKodeProdiPddikti(e.currentTarget.value)}
+                  placeholder="Contoh: 22401"
+                />
+                <Input
+                  label="Nomor SK Izin Operasional"
+                  value={nomorSkIzin()}
+                  onInput={(e) => setNomorSkIzin(e.currentTarget.value)}
+                  placeholder="Contoh: 123/SK/2024"
+                />
+                <Input
+                  type="date"
+                  label="Tanggal SK Izin Operasional"
+                  value={tanggalSkIzin()}
+                  onInput={(e) => setTanggalSkIzin(e.currentTarget.value)}
+                />
+                <Input
+                  type="date"
+                  label="Berlaku Mulai"
+                  value={tanggalSkIzinMulai()}
+                  onInput={(e) => setTanggalSkIzinMulai(e.currentTarget.value)}
+                />
+                <div class="flex flex-col gap-1.5">
+                  <label class="block text-caption font-semibold text-secondary-600 dark:text-secondary-300">
+                    File SK Izin Operasional (PDF/Gambar)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(e) => handleSkUpload(e, 'izin')}
+                    disabled={uploadingSk() === 'izin'}
+                    class="text-caption text-secondary-700 dark:text-secondary-300 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-caption file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700"
+                  />
+                  <Show when={fileSkIzin()}>
+                    <a
+                      href={`${API_URL}${fileSkIzin()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-caption text-brand-600 hover:underline dark:text-brand-400"
+                    >
+                      Lihat file SK Izin yang diunggah
+                    </a>
+                  </Show>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t pt-4 dark:border-secondary-800">
+              <h3 class="text-sm font-bold text-secondary-800 dark:text-white mb-3">SK Akreditasi</h3>
+              <div class="flex flex-col gap-4">
+                <Input
+                  label="Nilai Akreditasi"
+                  value={nilaiAkreditasi()}
+                  onInput={(e) => setNilaiAkreditasi(e.currentTarget.value)}
+                  placeholder="Contoh: Baik Sekali / Unggul / A"
+                />
+                <Input
+                  type="date"
+                  label="Tanggal SK Akreditasi"
+                  value={tanggalSkAkreditasi()}
+                  onInput={(e) => setTanggalSkAkreditasi(e.currentTarget.value)}
+                />
+                <Input
+                  type="date"
+                  label="Berlaku Mulai"
+                  value={tanggalSkAkreditasiMulai()}
+                  onInput={(e) => setTanggalSkAkreditasiMulai(e.currentTarget.value)}
+                />
+                <div class="flex flex-col gap-1.5">
+                  <label class="block text-caption font-semibold text-secondary-600 dark:text-secondary-300">
+                    File SK Akreditasi (PDF/Gambar)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={(e) => handleSkUpload(e, 'akreditasi')}
+                    disabled={uploadingSk() === 'akreditasi'}
+                    class="text-caption text-secondary-700 dark:text-secondary-300 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-caption file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700"
+                  />
+                  <Show when={fileSkAkreditasi()}>
+                    <a
+                      href={`${API_URL}${fileSkAkreditasi()}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-caption text-brand-600 hover:underline dark:text-brand-400"
+                    >
+                      Lihat file SK Akreditasi yang diunggah
+                    </a>
+                  </Show>
+                </div>
+              </div>
+            </div>
+
             <div class="flex justify-end gap-2 border-t pt-4">
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Batal

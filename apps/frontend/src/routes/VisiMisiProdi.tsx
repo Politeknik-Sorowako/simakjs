@@ -3,8 +3,10 @@ import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { MarkdownViewer } from '../components/ui/MarkdownViewer';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { RichMarkdownEditor } from '../components/ui/RichMarkdownEditor';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { prodiController } from '../controllers/prodiController';
@@ -339,8 +341,12 @@ export default function VisiMisiProdi() {
                 {(item) => (
                   <tr class="border-t border-slate-700/50 hover:bg-slate-700/30">
                     <td class="px-4 py-3 text-black dark:text-white">{item.tahunBerlaku || '-'}</td>
-                    <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.visi}</td>
-                    <td class="px-4 py-3 text-black dark:text-white max-w-md truncate">{item.misi}</td>
+                    <td class="px-4 py-3 text-black dark:text-white max-w-md">
+                      <MarkdownViewer content={item.visi} class="line-clamp-3" />
+                    </td>
+                    <td class="px-4 py-3 text-black dark:text-white max-w-md">
+                      <MarkdownViewer content={item.misi} class="line-clamp-3" />
+                    </td>
                     <td class="px-4 py-3 text-black dark:text-white">{item.programStudi?.nama || '-'}</td>
                     <td class="px-4 py-3">
                       <Show when={item.isAktif} fallback={<Badge variant="default">Tidak Aktif</Badge>}>
@@ -414,46 +420,22 @@ export default function VisiMisiProdi() {
             value={tahunBerlaku()}
             onInput={(e) => setTahunBerlaku(e.currentTarget.value)}
           />
-          <div>
-            <label class="block text-sm font-medium text-secondary-200 mb-1">Visi</label>
-            <textarea
-              class="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50"
-              rows={3}
-              placeholder="Visi program studi"
-              value={visi()}
-              onInput={(e) => setVisi(e.currentTarget.value)}
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-secondary-200 mb-1">Misi</label>
-            <textarea
-              class="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50"
-              rows={4}
-              placeholder="Misi program studi"
-              value={misi()}
-              onInput={(e) => setMisi(e.currentTarget.value)}
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-secondary-200 mb-1">Tujuan (Opsional)</label>
-            <textarea
-              class="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50"
-              rows={3}
-              placeholder="Tujuan program studi"
-              value={tujuan()}
-              onInput={(e) => setTujuan(e.currentTarget.value)}
-            />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-secondary-200 mb-1">Sasaran (Opsional)</label>
-            <textarea
-              class="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-accent-500/50"
-              rows={3}
-              placeholder="Sasaran program studi"
-              value={sasaran()}
-              onInput={(e) => setSasaran(e.currentTarget.value)}
-            />
-          </div>
+          <RichMarkdownEditor label="Visi" rows={3} placeholder="Visi program studi" value={visi()} onInput={setVisi} />
+          <RichMarkdownEditor label="Misi" rows={4} placeholder="Misi program studi" value={misi()} onInput={setMisi} />
+          <RichMarkdownEditor
+            label="Tujuan (Opsional)"
+            rows={3}
+            placeholder="Tujuan program studi"
+            value={tujuan()}
+            onInput={setTujuan}
+          />
+          <RichMarkdownEditor
+            label="Sasaran (Opsional)"
+            rows={3}
+            placeholder="Sasaran program studi"
+            value={sasaran()}
+            onInput={setSasaran}
+          />
           <div class="flex justify-end gap-3 pt-2">
             <Button variant="secondary" onClick={() => setShowModal(false)}>
               Batal

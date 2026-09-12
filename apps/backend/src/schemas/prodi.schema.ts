@@ -4,7 +4,16 @@ export const prodiBody = t.Object({
   kode: t.String({ default: 'TI' }),
   nama: t.String({ default: 'Teknik Informatika' }),
   jenjang: t.String({ default: 'D4' }),
-  idPddikti: t.Optional(t.String()),
+  idPddikti: t.Optional(t.Union([t.String(), t.Null()])),
+  kodeProdiPddikti: t.Optional(t.Union([t.String(), t.Null()])),
+  nomorSkIzinOperasional: t.Optional(t.Union([t.String(), t.Null()])),
+  tanggalSkIzinOperasional: t.Optional(t.Union([t.String(), t.Null()])),
+  tanggalSkIzinOperasionalBerlakuMulai: t.Optional(t.Union([t.String(), t.Null()])),
+  fileSkIzinOperasional: t.Optional(t.Union([t.String(), t.Null()])),
+  nilaiAkreditasi: t.Optional(t.Union([t.String(), t.Null()])),
+  tanggalSkAkreditasi: t.Optional(t.Union([t.String(), t.Null()])),
+  tanggalSkAkreditasiBerlakuMulai: t.Optional(t.Union([t.String(), t.Null()])),
+  fileSkAkreditasi: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const updateProdiBody = t.Partial(
@@ -12,9 +21,30 @@ export const updateProdiBody = t.Partial(
     kode: t.String(),
     nama: t.String(),
     jenjang: t.String(),
-    idPddikti: t.String(),
+    idPddikti: t.Union([t.String(), t.Null()]),
+    kodeProdiPddikti: t.Union([t.String(), t.Null()]),
+    nomorSkIzinOperasional: t.Union([t.String(), t.Null()]),
+    tanggalSkIzinOperasional: t.Union([t.String(), t.Null()]),
+    tanggalSkIzinOperasionalBerlakuMulai: t.Union([t.String(), t.Null()]),
+    fileSkIzinOperasional: t.Union([t.String(), t.Null()]),
+    nilaiAkreditasi: t.Union([t.String(), t.Null()]),
+    tanggalSkAkreditasi: t.Union([t.String(), t.Null()]),
+    tanggalSkAkreditasiBerlakuMulai: t.Union([t.String(), t.Null()]),
+    fileSkAkreditasi: t.Union([t.String(), t.Null()]),
   }),
 );
+
+export const prodiExtraResponseFields = {
+  kodeProdiPddikti: t.Union([t.String(), t.Null()], { default: null }),
+  nomorSkIzinOperasional: t.Union([t.String(), t.Null()], { default: null }),
+  tanggalSkIzinOperasional: t.Union([t.String(), t.Null()], { default: null }),
+  tanggalSkIzinOperasionalBerlakuMulai: t.Union([t.String(), t.Null()], { default: null }),
+  fileSkIzinOperasional: t.Union([t.String(), t.Null()], { default: null }),
+  nilaiAkreditasi: t.Union([t.String(), t.Null()], { default: null }),
+  tanggalSkAkreditasi: t.Union([t.String(), t.Null()], { default: null }),
+  tanggalSkAkreditasiBerlakuMulai: t.Union([t.String(), t.Null()], { default: null }),
+  fileSkAkreditasi: t.Union([t.String(), t.Null()], { default: null }),
+};
 
 export const getProdiSchema = {
   detail: {
@@ -36,6 +66,7 @@ export const getProdiSchema = {
           nama: t.String({ default: 'Teknik Informatika' }),
           jenjang: t.String({ default: 'D4' }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+          ...prodiExtraResponseFields,
           isSynced: t.Union([t.Boolean(), t.Null()], { default: false }),
           lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
           createdAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -66,6 +97,7 @@ export const createProdiSchema = {
       nama: t.String({ default: 'Teknik Informatika' }),
       jenjang: t.String({ default: 'D4' }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      ...prodiExtraResponseFields,
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
       createdAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -93,6 +125,7 @@ export const getProdiByIdSchema = {
       nama: t.String({ default: 'Teknik Informatika' }),
       jenjang: t.String({ default: 'D4' }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      ...prodiExtraResponseFields,
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
       createdAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -121,6 +154,7 @@ export const updateProdiSchema = {
       nama: t.String({ default: 'Teknik Informatika' }),
       jenjang: t.String({ default: 'D4' }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
+      ...prodiExtraResponseFields,
       isSynced: t.Boolean({ default: false }),
       lastSyncAt: t.Union([t.Date(), t.Null()], { default: null }),
       createdAt: t.Union([t.Date(), t.Null()], { default: null }),
@@ -132,6 +166,14 @@ export const updateProdiSchema = {
     404: t.Object({
       error: t.String({ default: 'Data tidak ditemukan' }),
     }),
+  },
+};
+
+export const uploadSkSchema = {
+  detail: {
+    tags: ['Program Studi'],
+    summary: 'Unggah Dokumen SK Prodi',
+    description: 'Mengunggah berkas SK Izin Operasional atau SK Akreditasi program studi (PDF/Gambar).',
   },
 };
 

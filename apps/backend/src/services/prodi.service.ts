@@ -2,6 +2,22 @@ import { count, eq, ilike, or } from 'drizzle-orm';
 import { programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
+type ProdiWriteData = Partial<{
+  kode: string;
+  nama: string;
+  jenjang: string;
+  idPddikti: string | null;
+  kodeProdiPddikti: string | null;
+  nomorSkIzinOperasional: string | null;
+  tanggalSkIzinOperasional: string | null;
+  tanggalSkIzinOperasionalBerlakuMulai: string | null;
+  fileSkIzinOperasional: string | null;
+  nilaiAkreditasi: string | null;
+  tanggalSkAkreditasi: string | null;
+  tanggalSkAkreditasiBerlakuMulai: string | null;
+  fileSkAkreditasi: string | null;
+}>;
+
 export class ProdiService {
   static async getAll(page = 1, limit = 10, search = '') {
     const offset = (page - 1) * limit;
@@ -34,12 +50,12 @@ export class ProdiService {
     return prodi || null;
   }
 
-  static async create(data: { kode: string; nama: string; jenjang: string; idPddikti?: string }) {
+  static async create(data: ProdiWriteData & { kode: string; nama: string; jenjang: string }) {
     const [newProdi] = await db.insert(programStudi).values(data).returning();
     return newProdi;
   }
 
-  static async update(id: number, data: Partial<{ kode: string; nama: string; jenjang: string; idPddikti: string }>) {
+  static async update(id: number, data: ProdiWriteData) {
     const [updatedProdi] = await db.update(programStudi).set(data).where(eq(programStudi.id, id)).returning();
     return updatedProdi || null;
   }

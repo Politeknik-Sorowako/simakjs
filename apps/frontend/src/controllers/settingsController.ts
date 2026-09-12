@@ -3,6 +3,7 @@ import { eden, unwrap } from '../utils/eden';
 export interface SystemPublicSettings {
   featureFeedbackEnabled: boolean;
   krsMandiriEnabled: boolean;
+  maxBimbinganAttachmentMb: number;
 }
 
 export interface SystemSettingItem {
@@ -13,7 +14,7 @@ export interface SystemSettingItem {
 }
 
 interface SettingsData {
-  data: { featureFeedbackEnabled: boolean; krsMandiriEnabled: boolean };
+  data: { featureFeedbackEnabled: boolean; krsMandiriEnabled: boolean; maxBimbinganAttachmentMb: number };
 }
 
 interface SettingsResponse {
@@ -42,9 +43,10 @@ export const settingsController = {
       return {
         featureFeedbackEnabled: res.data.featureFeedbackEnabled,
         krsMandiriEnabled: res.data.krsMandiriEnabled,
+        maxBimbinganAttachmentMb: res.data.maxBimbinganAttachmentMb ?? 2,
       };
     } catch {
-      return { featureFeedbackEnabled: true, krsMandiriEnabled: true };
+      return { featureFeedbackEnabled: true, krsMandiriEnabled: true, maxBimbinganAttachmentMb: 2 };
     }
   },
 
