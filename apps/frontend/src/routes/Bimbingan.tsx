@@ -1,14 +1,23 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { MarkdownViewer } from '../components/ui/MarkdownViewer';
 import { Modal } from '../components/ui/Modal';
+import { RichMarkdownEditor } from '../components/ui/RichMarkdownEditor';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
-import { bimbinganController, PelanggaranRekap, SesiBimbingan } from '../controllers/bimbinganController';
+import {
+  BimbinganAttachment,
+  bimbinganController,
+  PelanggaranRekap,
+  SesiBimbingan,
+} from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { kategoriBimbinganController } from '../controllers/kategoriBimbinganController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { KompensasiDetailResponse, presensiController } from '../controllers/presensiController';
 import { prodiController } from '../controllers/prodiController';
+import { settingsController } from '../controllers/settingsController';
+import { API_URL } from '../utils/api';
 import { fmtTanggal, fmtWaktu, getTodayString } from '../utils/format';
 
 interface SesiDetailModalProps {
@@ -18,9 +27,13 @@ interface SesiDetailModalProps {
   draft: string;
   sending: boolean;
   marking: boolean;
+  attachments: BimbinganAttachment[];
+  uploadingAttachment: boolean;
+  maxAttachmentMb: number;
   onDraft: (value: string) => void;
   onSend: () => void;
   onMarkRead: () => void;
+  onUploadAttachment: (file: File) => Promise<{ fileName: string; fileUrl: string } | null>;
   onClose: () => void;
 }
 
@@ -72,9 +85,7 @@ function SesiDetailModal(props: SesiDetailModalProps) {
               <span class="text-fine font-bold text-rose-600 uppercase tracking-wider block mb-0.5">
                 Permasalahan / Topik
               </span>
-              <p class="text-caption text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
-                {sesi().permasalahan || '-'}
-              </p>
+              <MarkdownViewer content={sesi().permasalahan || '-'} />
             </div>
 
             {/* Solusi & Masukan Dosen PA */}
@@ -82,7 +93,7 @@ function SesiDetailModal(props: SesiDetailModalProps) {
               <span class="text-fine font-bold text-accent-600 uppercase tracking-wider block mb-0.5">
                 Solusi & Masukan Dosen PA
               </span>
-              <p class="text-caption text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">{sesi().solusi}</p>
+              <MarkdownViewer content={sesi().solusi} />
             </div>
 
             {/* Respons Awal Mahasiswa */}
@@ -91,9 +102,7 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                 <span class="text-fine font-bold text-brand-600 uppercase tracking-wider block mb-0.5">
                   Respons Awal Mahasiswa
                 </span>
-                <p class="text-caption text-secondary-800 whitespace-pre-wrap dark:text-secondary-200">
-                  {sesi().responsMahasiswa}
-                </p>
+                <MarkdownViewer content={sesi().responsMahasiswa} />
               </div>
             </Show>
 
@@ -136,13 +145,13 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                         class={`flex flex-col max-w-[85%] ${isOwn(b.senderRole) ? 'self-end items-end' : 'self-start items-start'}`}
                       >
                         <div
-                          class={`px-3 py-2 rounded-2xl text-caption whitespace-pre-wrap ${
+                          class={`px-3 py-2 rounded-2xl text-caption ${
                             isOwn(b.senderRole)
                               ? 'bg-brand-600 text-white rounded-tr-none'
                               : 'bg-secondary-50 text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm dark:bg-secondary-800 dark:text-secondary-100 dark:border-secondary-700'
                           }`}
                         >
-                          {b.pesan}
+                          <MarkdownViewer content={b.pesan} />
                         </div>
                         <span class="text-fine text-secondary-400 dark:text-secondary-300 mt-0.5 uppercase tracking-wider">
                           {b.senderRole} • {fmtWaktu(b.createdAt)}
@@ -153,14 +162,17 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                 </div>
               </Show>
 
-              <div class="flex gap-2">
-                <input
-                  type="text"
-                  value={props.draft}
-                  onInput={(e) => props.onDraft(e.currentTarget.value)}
-                  placeholder="Tulis balasan..."
-                  class="flex-1 border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all text-secondary-900 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-                />
+              <RichMarkdownEditor
+                value={props.draft}
+                onInput={props.onDraft}
+                rows={3}
+                placeholder="Tulis balasan... Mendukung **bold**, *italic*, - list, dan [tautan](https://...)."
+                onUploadAttachment={props.onUploadAttachment}
+                uploadingAttachment={props.uploadingAttachment}
+                maxAttachmentMb={props.maxAttachmentMb}
+              />
+
+              <div class="flex items-center justify-end gap-2">
                 <button
                   type="button"
                   disabled={props.sending || props.draft.trim().length === 0}
@@ -170,6 +182,39 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                   {props.sending ? 'Mengirim...' : 'Kirim'}
                 </button>
               </div>
+
+              <Show when={props.attachments.length > 0}>
+                <div class="flex flex-col gap-1.5 border-t border-secondary-100 pt-2 dark:border-secondary-700">
+                  <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
+                    Lampiran Bimbingan
+                  </span>
+                  <For each={props.attachments}>
+                    {(att) => (
+                      <div class="flex items-center justify-between gap-2 text-caption">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <Show when={att.fileType?.startsWith('image/')}>
+                            <img
+                              src={`${API_URL}${att.fileUrl}`}
+                              alt={att.fileName}
+                              class="w-8 h-8 rounded-md object-cover border border-secondary-200 dark:border-secondary-700"
+                              loading="lazy"
+                            />
+                          </Show>
+                          <span class="truncate text-secondary-700 dark:text-secondary-200">{att.fileName}</span>
+                        </div>
+                        <a
+                          href={`${API_URL}${att.fileUrl}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="shrink-0 text-brand-600 hover:underline dark:text-brand-400 font-semibold"
+                        >
+                          Unduh
+                        </a>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
             </div>
           </div>
         )}
@@ -202,6 +247,10 @@ export default function Bimbingan() {
   const [sendingBalasanId, setSendingBalasanId] = createSignal<number | null>(null);
   const [markingSesiId, setMarkingSesiId] = createSignal<number | null>(null);
   const [activeSesiId, setActiveSesiId] = createSignal<number | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = createSignal(false);
+
+  const [publicSettings] = createResource(() => settingsController.getPublicSettings());
+  const maxAttachmentMb = () => publicSettings()?.maxBimbinganAttachmentMb ?? 2;
 
   // Dosen inputs for ringkasan and approval
   const [ringkasanText, setRingkasanText] = createSignal('');
@@ -466,6 +515,32 @@ export default function Bimbingan() {
       alert((err as Error).message || 'Gagal menandai sesi sebagai dibaca.');
     } finally {
       setMarkingSesiId(null);
+    }
+  };
+
+  const activeBimbinganAttachments = (): BimbinganAttachment[] => {
+    const bimb = auth.hasRole(['mahasiswa']) ? studentBimbingan() : selectedBimbingan();
+    return bimb?.attachments ?? [];
+  };
+
+  const handleUploadAttachment = async (file: File): Promise<{ fileName: string; fileUrl: string } | null> => {
+    const mhsId = auth.hasRole(['mahasiswa']) ? mhsProfile()?.id : selectedMhsId();
+    if (!mhsId) return null;
+    if (file.size > maxAttachmentMb() * 1024 * 1024) {
+      alert(`Ukuran lampiran maksimal ${maxAttachmentMb()} MB.`);
+      return null;
+    }
+    setUploadingAttachment(true);
+    try {
+      const res = await bimbinganController.uploadAttachment(mhsId, file);
+      if (auth.hasRole(['mahasiswa'])) await refetchStudentBimb();
+      else await refetchSelectedBimb();
+      return { fileName: res.fileName, fileUrl: res.fileUrl };
+    } catch (err: unknown) {
+      alert((err as Error).message || 'Gagal mengunggah lampiran.');
+      return null;
+    } finally {
+      setUploadingAttachment(false);
     }
   };
 
@@ -1274,29 +1349,27 @@ export default function Bimbingan() {
                             </For>
                           </select>
                         </div>
-                        <div class="flex flex-col gap-1">
-                          <label class="text-caption font-bold text-secondary-600">Topik Bimbingan</label>
-                          <textarea
-                            rows="3"
-                            placeholder="Tulis topik bimbingan akademis/non-akademis..."
-                            value={permasalahanInput()}
-                            onInput={(e) => setPermasalahanInput(e.currentTarget.value)}
-                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                            required
-                          />
-                        </div>
+                        <RichMarkdownEditor
+                          label="Topik Bimbingan"
+                          rows={3}
+                          placeholder="Tulis topik bimbingan akademis/non-akademis..."
+                          value={permasalahanInput()}
+                          onInput={setPermasalahanInput}
+                          onUploadAttachment={handleUploadAttachment}
+                          uploadingAttachment={uploadingAttachment()}
+                          maxAttachmentMb={maxAttachmentMb()}
+                        />
 
-                        <div class="flex flex-col gap-1">
-                          <label class="text-caption font-bold text-secondary-600">Solusi / Rekomendasi</label>
-                          <textarea
-                            rows="3"
-                            placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
-                            value={solusiInput()}
-                            onInput={(e) => setSolusiInput(e.currentTarget.value)}
-                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                            required
-                          />
-                        </div>
+                        <RichMarkdownEditor
+                          label="Solusi / Rekomendasi"
+                          rows={3}
+                          placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
+                          value={solusiInput()}
+                          onInput={setSolusiInput}
+                          onUploadAttachment={handleUploadAttachment}
+                          uploadingAttachment={uploadingAttachment()}
+                          maxAttachmentMb={maxAttachmentMb()}
+                        />
 
                         <div class="flex items-center justify-between p-3 bg-brand-50/50 rounded-xl border border-brand-100/50">
                           <div class="flex flex-col">
@@ -1658,6 +1731,10 @@ export default function Bimbingan() {
         draft={activeSesiDraft()}
         sending={activeSesiSending()}
         marking={activeSesiMarking()}
+        attachments={activeBimbinganAttachments()}
+        uploadingAttachment={uploadingAttachment()}
+        maxAttachmentMb={maxAttachmentMb()}
+        onUploadAttachment={handleUploadAttachment}
         onDraft={(v) => {
           const id = activeSesiId();
           if (id !== null) setBalasanDrafts((prev) => ({ ...prev, [id]: v }));

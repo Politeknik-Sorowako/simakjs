@@ -66,6 +66,9 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // Direktori penyimpanan berkas surat izin/sakit (dibuat aman di awal startup).
 mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursive: true });
+// Direktori lampiran bimbingan & dokumen SK prodi.
+mkdirSync(join(process.cwd(), 'storage', 'bimbingan-attachments'), { recursive: true });
+mkdirSync(join(process.cwd(), 'storage', 'sk-prodi'), { recursive: true });
 
 export const app = new Elysia()
   .use(
@@ -232,6 +235,58 @@ export const app = new Elysia()
     }
     set.headers['Content-Type'] = file.type || 'image/jpeg';
     set.headers['Cache-Control'] = 'public, max-age=86400';
+    return file;
+  })
+  .get('/storage/bimbingan-attachments/:filename', async ({ params, set, headers, cookie, jwt }) => {
+    const authHeader = headers['authorization'];
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
+    const token = headerToken || cookieToken;
+
+    if (!token || !(await jwt.verify(token))) {
+      set.status = 401;
+      return { error: 'Unauthorized: Silakan login terlebih dahulu' };
+    }
+
+    const raw = String(params.filename || '');
+    const filename = basename(raw);
+    if (filename !== raw || !/\.(pdf|jpg|jpeg|png|webp)$/i.test(filename)) {
+      set.status = 404;
+      return { error: 'Lampiran tidak ditemukan' };
+    }
+    const file = Bun.file(join(process.cwd(), 'storage', 'bimbingan-attachments', filename));
+    if (!(await file.exists())) {
+      set.status = 404;
+      return { error: 'Lampiran tidak ditemukan' };
+    }
+    set.headers['Content-Type'] = file.type || 'application/octet-stream';
+    set.headers['Cache-Control'] = 'private, max-age=3600';
+    return file;
+  })
+  .get('/storage/sk-prodi/:filename', async ({ params, set, headers, cookie, jwt }) => {
+    const authHeader = headers['authorization'];
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
+    const token = headerToken || cookieToken;
+
+    if (!token || !(await jwt.verify(token))) {
+      set.status = 401;
+      return { error: 'Unauthorized: Silakan login terlebih dahulu' };
+    }
+
+    const raw = String(params.filename || '');
+    const filename = basename(raw);
+    if (filename !== raw || !/\.(pdf|jpg|jpeg|png|webp)$/i.test(filename)) {
+      set.status = 404;
+      return { error: 'Dokumen tidak ditemukan' };
+    }
+    const file = Bun.file(join(process.cwd(), 'storage', 'sk-prodi', filename));
+    if (!(await file.exists())) {
+      set.status = 404;
+      return { error: 'Dokumen tidak ditemukan' };
+    }
+    set.headers['Content-Type'] = file.type || 'application/octet-stream';
+    set.headers['Cache-Control'] = 'private, max-age=3600';
     return file;
   })
   .ws('/bimbingan/ws/:bimbinganId', {

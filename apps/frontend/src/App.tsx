@@ -107,7 +107,7 @@ import { queryClient } from './utils/queryClient';
 
 function RouteLoadingFallback() {
   return (
-    <div class="min-h-screen flex flex-col items-center justify-center bg-secondary-50 dark:bg-secondary-950 text-secondary-700 dark:text-secondary-200">
+    <div class="min-h-screen flex flex-col items-center justify-center bg-parchment dark:bg-secondary-950 text-secondary-700 dark:text-secondary-200">
       <div class="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
       <p class="mt-4 text-sm font-medium">Memuat Halaman...</p>
     </div>
@@ -117,7 +117,7 @@ function RouteLoadingFallback() {
 function RouteErrorFallback(props: { error: unknown; reset: () => void }) {
   const errMessage = props.error instanceof Error ? props.error.message : 'Gagal memuat komponen halaman';
   return (
-    <div class="min-h-screen flex flex-col items-center justify-center bg-secondary-50 dark:bg-secondary-950 text-secondary-800 dark:text-secondary-100 p-6 text-center">
+    <div class="min-h-screen flex flex-col items-center justify-center bg-parchment dark:bg-secondary-950 text-secondary-800 dark:text-secondary-100 p-6 text-center">
       <div class="w-14 h-14 mb-4 rounded-2xl bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-inner">
         <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path

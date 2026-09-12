@@ -307,6 +307,15 @@ export const bimbinganController = {
     });
   },
 
+  async uploadAttachment(mhsId: number, file: File): Promise<BimbinganAttachment> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi<BimbinganAttachment>(`/bimbingan/mahasiswa/${mhsId}/attachment`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
   async deleteSesi(sesiId: number): Promise<{ message: string }> {
     return fetchApi<{ message: string }>(`/bimbingan/sesi/${sesiId}`, {
       method: 'DELETE',

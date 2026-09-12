@@ -9,6 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
+import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,7 +20,6 @@ import { Mahasiswa as IMahasiswa, mahasiswaController } from '../controllers/mah
 import { prodiController } from '../controllers/prodiController';
 import { userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
-import { API_URL } from '../utils/api';
 import { ExportColumn } from '../utils/export';
 import { getTodayString } from '../utils/format';
 
@@ -595,21 +595,7 @@ export default function Mahasiswa() {
                     />
                   </td>
                   <td class="px-6 py-4">
-                    {item.foto ? (
-                      <img
-                        src={`${API_URL}${item.foto}`}
-                        alt={item.nama}
-                        class="w-10 h-10 rounded-full object-cover border border-secondary-200 dark:border-secondary-700"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div class="w-10 h-10 rounded-full bg-secondary-100 dark:bg-secondary-800 flex items-center justify-center text-secondary-400 text-xs font-semibold border border-secondary-200 dark:border-secondary-700">
-                        {item.nama.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="md" />
                   </td>
                   <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">
                     {item.nim}

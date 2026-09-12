@@ -1,9 +1,12 @@
+import { mkdir, writeFile } from 'node:fs/promises';
+import { extname, join } from 'node:path';
 import { eq, ilike } from 'drizzle-orm';
 import { dosen, mahasiswa, periodeAkademik } from '../models/schema';
 import { BimbinganService } from '../services/bimbingan.service';
 import { KhsService } from '../services/khs.service';
 import { PelanggaranService } from '../services/pelanggaran.service';
 import { PresensiService } from '../services/presensi.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import type { UserPayload } from '../utils/types';
@@ -167,6 +170,90 @@ export class BimbinganController {
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal mengirim pesan.' };
+    }
+  }
+
+  static async uploadAttachment(ctx: AuthContext) {
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
+    const { params, request, set, getCurrentUser } = ctx as any;
+    const user = await getCurrentUser();
+    if (!user || hasRole(user, ['guest'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const targetMhsId = parseInt(params.mhsId);
+    if (isNaN(targetMhsId)) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    // Otorisasi: mahasiswa hanya bimbingannya sendiri, dosen hanya binaannya.
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await BimbinganController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== targetMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat melampirkan pada bimbingan Anda sendiri.' };
+      }
+    } else if (hasRole(user, ['dosen'])) {
+      const myDosenId = await BimbinganController.getDosenIdByEmail(user.email);
+      const [mhs] = await db
+        .select({ dosenPaId: mahasiswa.dosenPaId })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, targetMhsId));
+      if (!myDosenId || !mhs || mhs.dosenPaId !== myDosenId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Dosen PA tidak cocok.' };
+      }
+    }
+
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file');
+      if (!(file instanceof File) || file.size === 0) {
+        set.status = 400;
+        return { error: 'File lampiran tidak ditemukan.' };
+      }
+
+      const allowedMime = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+      const allowedExt = ['.pdf', '.jpg', '.jpeg', '.png', '.webp'];
+      const ext = extname(file.name).toLowerCase();
+      if (!allowedExt.includes(ext) || (file.type && !allowedMime.includes(file.type))) {
+        set.status = 400;
+        return { error: 'Format lampiran harus PDF atau gambar (jpg, jpeg, png, webp).' };
+      }
+
+      const maxMb = (await SystemParameterService.getNumber('MAX_BIMBINGAN_ATTACHMENT_MB')) || 2;
+      if (file.size > maxMb * 1024 * 1024) {
+        set.status = 400;
+        return { error: `Ukuran lampiran maksimal ${maxMb} MB.` };
+      }
+
+      const storageDir = join(process.cwd(), 'storage', 'bimbingan-attachments');
+      await mkdir(storageDir, { recursive: true });
+
+      const base = file.name
+        .replace(/\.[^.]+$/, '')
+        .replace(/[^a-zA-Z0-9._-]/g, '-')
+        .slice(0, 60);
+      const safeFilename = `${targetMhsId}-${Date.now()}-${base}${ext}`;
+      await writeFile(join(storageDir, safeFilename), new Uint8Array(await file.arrayBuffer()));
+
+      const bimbData = await BimbinganService.getOrCreateBimbingan(targetMhsId);
+      const attachment = await BimbinganService.addAttachment({
+        bimbinganId: bimbData.id,
+        fileUrl: `/storage/bimbingan-attachments/${safeFilename}`,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type || 'application/octet-stream',
+        uploadedBy: user.id,
+      });
+
+      set.status = 201;
+      return attachment;
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengunggah lampiran bimbingan.' };
     }
   }
 

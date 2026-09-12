@@ -15,6 +15,7 @@ import {
   readSesiSchema,
   updateBimbinganSchema,
   updateSesiSchema,
+  uploadAttachmentSchema,
 } from '../schemas/bimbingan.schema';
 
 export const bimbinganRoutes = new Elysia({ prefix: '/bimbingan' })
@@ -28,6 +29,7 @@ export const bimbinganRoutes = new Elysia({ prefix: '/bimbingan' })
   .post('/mahasiswa/:mhsId/thread', BimbinganController.createThreadMessage, createBimbinganThreadSchema)
   .delete('/mahasiswa/:mhsId/thread', BimbinganController.clearChat, clearChatSchema)
   .post('/mahasiswa/:mhsId/sesi', BimbinganController.addSesi, addSesiSchema)
+  .post('/mahasiswa/:mhsId/attachment', BimbinganController.uploadAttachment, uploadAttachmentSchema)
   .put('/sesi/:sesiId', BimbinganController.updateSesi, updateSesiSchema)
   .get('/sesi/:sesiId/balasan', BimbinganController.getSesiBalasan, getSesiBalasanSchema)
   .post('/sesi/:sesiId/balasan', BimbinganController.createSesiBalasan, createSesiBalasanSchema)
