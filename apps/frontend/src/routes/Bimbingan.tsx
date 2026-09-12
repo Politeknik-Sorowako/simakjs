@@ -30,6 +30,19 @@ function SesiDetailModal(props: SesiDetailModalProps) {
   const isOwn = (senderRole: string) =>
     props.viewer === 'mahasiswa' ? senderRole === 'mahasiswa' : senderRole !== 'mahasiswa';
 
+  let threadRef: HTMLDivElement | undefined;
+
+  // Auto-scroll ke pesan terbaru saat modal dibuka atau balasan bertambah.
+  createEffect(() => {
+    const el = threadRef;
+    const balasan = props.sesi?.balasan;
+    const isOpen = props.open;
+    if (!el || !isOpen || !balasan || balasan.length === 0) return;
+    queueMicrotask(() => {
+      if (threadRef) threadRef.scrollTop = threadRef.scrollHeight;
+    });
+  });
+
   return (
     <Modal
       isOpen={props.open}
@@ -116,8 +129,8 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                   </p>
                 }
               >
-                <div class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
-                  <For each={sesi().balasan}>
+                <div ref={threadRef} class="flex flex-col gap-2 max-h-72 overflow-y-auto pr-1">
+                  <For each={sesi().balasan ?? []}>
                     {(b) => (
                       <div
                         class={`flex flex-col max-w-[85%] ${isOwn(b.senderRole) ? 'self-end items-end' : 'self-start items-start'}`}
@@ -363,10 +376,10 @@ export default function Bimbingan() {
 
   // Selected student bimbingan details
   const [selectedBimbingan, { refetch: refetchSelectedBimb }] = createResource(
-    () => ({ id: selectedMhsId(), period: selectedPeriode() }),
-    async ({ id, period }) => {
+    () => ({ id: selectedMhsId(), period: selectedPeriode(), kat: kategoriFilter() }),
+    async ({ id, period, kat }) => {
       if (!id) return null;
-      const bimb = await bimbinganController.getByMhsId(id, period || undefined);
+      const bimb = await bimbinganController.getByMhsId(id, period || undefined, kat !== 'ALL' ? kat : undefined);
       setRingkasanText(bimb.ringkasan || '');
       setIsApprovedStatus(bimb.isApproved);
       return bimb;

@@ -55,6 +55,21 @@ export const getBimbinganSchema = {
             readAtMahasiswa: t.Optional(t.Union([t.Date(), t.Null()])),
             isReadByDosen: t.Optional(t.Boolean()),
             readAtDosen: t.Optional(t.Union([t.Date(), t.Null()])),
+            balasan: t.Optional(
+              t.Array(
+                t.Object({
+                  id: t.Optional(t.Integer()),
+                  sesiId: t.Optional(t.Integer()),
+                  senderRole: t.Optional(t.String()),
+                  pesan: t.Optional(t.String()),
+                  isReadByMahasiswa: t.Optional(t.Boolean()),
+                  readAtMahasiswa: t.Optional(t.Union([t.Date(), t.Null()])),
+                  isReadByDosen: t.Optional(t.Boolean()),
+                  readAtDosen: t.Optional(t.Union([t.Date(), t.Null()])),
+                  createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
+                }),
+              ),
+            ),
             createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
             updatedAt: t.Optional(t.Union([t.Date(), t.Null()])),
           }),
