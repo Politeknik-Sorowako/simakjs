@@ -26,7 +26,7 @@ export function MainLayout(props: { children: JSX.Element }) {
   };
 
   return (
-    <div class="min-h-screen flex bg-secondary-50/70 dark:bg-secondary-950 text-secondary-900 dark:text-secondary-100 relative overflow-hidden transition-colors duration-200">
+    <div class="min-h-screen flex bg-parchment dark:bg-secondary-950 text-secondary-900 dark:text-secondary-100 relative overflow-hidden transition-colors duration-200">
       {/* Mobile Sidebar Backdrop Overlay */}
       <Show when={isOpen()}>
         <div

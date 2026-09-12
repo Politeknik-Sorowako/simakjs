@@ -8,6 +8,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Parchment & Pearl - Kanvas mode terang (sesuai DESIGN.md) untuk mengurangi silau
+        parchment: '#f5f5f7', // canvas-parchment: kanvas utama mode terang
+        pearl: '#fafafc',     // surface-pearl: permukaan tombol sekunder
         // Navy Blue - Melambangkan kredibilitas dan wibawa akademis institusi
         primary: {
           DEFAULT: '#1E3A8A', // Navy Utama
