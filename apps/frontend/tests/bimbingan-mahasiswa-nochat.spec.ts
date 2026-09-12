@@ -54,15 +54,15 @@ test.describe('Bimbingan Akademik — Mahasiswa tanpa Chat', () => {
     await expect(page.locator('input[placeholder="Tulis pesan bimbingan..."]')).toHaveCount(0);
     await expect(page.locator('text=Tipe Bimbingan:')).toHaveCount(0);
 
-    // Session with respons textarea is rendered
+    // Session card is rendered compactly; reply through the detail modal thread.
     await expect(page.locator('text=Pertemuan Ke-1')).toBeVisible();
-    const responsInput = page.locator('textarea[placeholder*="respons"]');
-    await expect(responsInput).toBeVisible();
-
-    page.on('dialog', (dialog) => dialog.accept());
-    await responsInput.fill('Baik, akan saya perbaiki.');
-    await page.getByRole('button', { name: 'Simpan Respons' }).click();
-    await expect(page.locator('text=Baik, akan saya perbaiki.')).toBeVisible();
+    await page.getByRole('button', { name: /Detail Sesi & Percakapan/ }).first().click();
+    const dialog = page.locator('[role="dialog"]');
+    await expect(dialog).toBeVisible();
+    await dialog.getByPlaceholder('Tulis balasan...').fill('Baik, akan saya perbaiki.');
+    await dialog.getByRole('button', { name: 'Kirim' }).click();
+    await expect(dialog.locator('text=Baik, akan saya perbaiki.')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Tutup dialog' }).click();
 
     // Explicit mark-as-read button works
     const markRead = page.getByRole('button', { name: 'Tandai Sudah Dibaca' });
