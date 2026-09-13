@@ -7,6 +7,7 @@ type KelasKuliahQuery = PaginationQuery & {
   periodeId?: string;
   dosenId?: number | string;
   mataKuliahId?: number | string;
+  programStudiId?: number | string;
 };
 
 export class KelasKuliahController {
@@ -18,6 +19,7 @@ export class KelasKuliahController {
     const periodeId = query?.periodeId || undefined;
     let dosenId = query?.dosenId ? parseInt(String(query.dosenId)) : undefined;
     const mataKuliahId = query?.mataKuliahId ? parseInt(String(query.mataKuliahId)) : undefined;
+    const programStudiId = query?.programStudiId ? parseInt(String(query.programStudiId)) : undefined;
 
     if (getCurrentUser) {
       const user = await getCurrentUser();
@@ -38,7 +40,7 @@ export class KelasKuliahController {
       }
     }
 
-    return await KelasKuliahService.getAll(page, limit, search, periodeId, dosenId, mataKuliahId);
+    return await KelasKuliahService.getAll(page, limit, search, periodeId, dosenId, mataKuliahId, programStudiId);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
