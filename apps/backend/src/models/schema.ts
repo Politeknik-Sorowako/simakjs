@@ -941,21 +941,30 @@ export const komponenNilai = pgTable('komponen_nilai', {
     .$onUpdate(() => new Date()),
 });
 
-export const nilaiKomponenMahasiswa = pgTable('nilai_komponen_mahasiswa', {
-  id: serial('id').primaryKey(),
-  krsId: integer('krs_id')
-    .notNull()
-    .references(() => krs.id, { onDelete: 'cascade' }),
-  komponenNilaiId: integer('komponen_nilai_id')
-    .notNull()
-    .references(() => komponenNilai.id, { onDelete: 'cascade' }),
-  nilai: numeric('nilai', { precision: 5, scale: 2 }).notNull(), // 0.00 - 100.00
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at')
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const nilaiKomponenMahasiswa = pgTable(
+  'nilai_komponen_mahasiswa',
+  {
+    id: serial('id').primaryKey(),
+    krsId: integer('krs_id')
+      .notNull()
+      .references(() => krs.id, { onDelete: 'cascade' }),
+    komponenNilaiId: integer('komponen_nilai_id')
+      .notNull()
+      .references(() => komponenNilai.id, { onDelete: 'cascade' }),
+    nilai: numeric('nilai', { precision: 5, scale: 2 }).notNull(), // 0.00 - 100.00
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => {
+    return {
+      krsIdIdx: index('nilai_komponen_mahasiswa_krs_id_idx').on(table.krsId),
+      krsKomponenUnique: unique('nilai_komponen_mahasiswa_krs_komponen_unique').on(table.krsId, table.komponenNilaiId),
+    };
+  },
+);
 
 export const subKomponenNilai = pgTable(
   'sub_komponen_nilai',

@@ -302,4 +302,114 @@ describe('Nilai Akhir Langsung (M1) & Multi-Metode Input', () => {
     expect(parseFloat(finalKrs.nilaiAngka!)).toBe(86);
     expect(finalKrs.nilaiHuruf).toBe('A');
   });
+
+  describe('Dedupe & unique constraint', () => {
+    it('M2 duplikat komponen dalam satu krs disimpan satu baris (entri terakhir menang)', async () => {
+      const comps = await saveComponents([{ nama: 'Tugas', bobot: 100 }]);
+
+      const res = await app.handle(
+        new Request('http://localhost/yudisium/kelas/nilai', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            nilaiList: [
+              {
+                krsId,
+                nilaiKomponenList: [
+                  { komponenNilaiId: comps[0].id, nilai: 60 },
+                  { komponenNilaiId: comps[0].id, nilai: 90 },
+                ],
+              },
+            ],
+          }),
+        }),
+      );
+      expect(res.status).toBe(200);
+
+      const rows = await db
+        .select()
+        .from(nilaiKomponenMahasiswa)
+        .where(and(eq(nilaiKomponenMahasiswa.krsId, krsId), eq(nilaiKomponenMahasiswa.komponenNilaiId, comps[0].id)));
+      expect(rows.length).toBe(1);
+      expect(parseFloat(rows[0].nilai)).toBe(90);
+    });
+
+    it('M3 duplikat sub-komponen dalam satu krs disimpan satu baris (entitas terakhir menang)', async () => {
+      const comps = await saveComponents([{ nama: 'Kualitas', bobot: 100 }]);
+      const subResult = await saveSub(comps[0].id, [{ nama: 'Sub A', bobot: 100 }]);
+      const subId = subResult.data[0].id;
+
+      const res = await app.handle(
+        new Request('http://localhost/yudisium/kelas/nilai-sub', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            nilaiSubList: [
+              {
+                krsId,
+                subNilaiList: [
+                  { subKomponenNilaiId: subId, nilai: 70 },
+                  { subKomponenNilaiId: subId, nilai: 95 },
+                ],
+              },
+            ],
+          }),
+        }),
+      );
+      expect(res.status).toBe(200);
+
+      const rows = await db
+        .select()
+        .from(nilaiSubKomponenMahasiswa)
+        .where(
+          and(eq(nilaiSubKomponenMahasiswa.krsId, krsId), eq(nilaiSubKomponenMahasiswa.subKomponenNilaiId, subId)),
+        );
+      expect(rows.length).toBe(1);
+      expect(parseFloat(rows[0].nilai)).toBe(95);
+    });
+
+    it('M1 duplikat krsId disimpan satu nilai (entri terakhir menang)', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/yudisium/kelas/nilai-akhir', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({
+            kelasKuliahId: kelasId,
+            nilaiAkhirList: [
+              { krsId, nilai: 70 },
+              { krsId, nilai: 90 },
+            ],
+          }),
+        }),
+      );
+      expect(res.status).toBe(200);
+
+      const [finalKrs] = await db.select().from(krs).where(eq(krs.id, krsId));
+      expect(parseFloat(finalKrs.nilaiAngka!)).toBe(90);
+    });
+
+    it('unique constraint (krsId, komponenNilaiId) mencegah baris ganda', async () => {
+      const comps = await saveComponents([{ nama: 'Tugas', bobot: 100 }]);
+
+      await db.insert(nilaiKomponenMahasiswa).values({
+        krsId,
+        komponenNilaiId: comps[0].id,
+        nilai: '80',
+      });
+
+      let threw = false;
+      try {
+        await db.insert(nilaiKomponenMahasiswa).values({
+          krsId,
+          komponenNilaiId: comps[0].id,
+          nilai: '90',
+        });
+      } catch {
+        threw = true;
+      }
+      expect(threw).toBe(true);
+    });
+  });
 });

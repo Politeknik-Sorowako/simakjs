@@ -596,10 +596,16 @@ export default function InputNilai() {
       const col = headerDetected ? header.findIndex((h) => h === 'nilai_akhir' || h === 'nilai') : 1;
       if (col < 0) return { successCount: 0, errors: [{ line: 1, error: 'Kolom "nilai_akhir" tidak ditemukan.' }] };
       const entries: Array<{ krsId: number; nilai: number }> = [];
+      const seenKrs = new Set<number>();
       dataRows.forEach((row, i) => {
         const line = (headerDetected ? 2 : 1) + i;
         const krsId = resolveKrs(row[0], line);
         if (!krsId) return;
+        if (seenKrs.has(krsId)) {
+          errors.push({ line, error: `NIM ${row[0]} muncul lebih dari satu kali.` });
+          return;
+        }
+        seenKrs.add(krsId);
         const nilai = parseGradeInput(row[col]);
         if (nilai === null || nilai < 0 || nilai > 100) {
           errors.push({ line, error: 'Nilai akhir harus numerik 0-100.' });
@@ -629,14 +635,24 @@ export default function InputNilai() {
 
     if (method === 'komponen') {
       const nameToComp = new Map<string, number>();
+      const ambiguousComp = new Set<string>();
       for (const c of comps) {
         if (componentHasSub(c.id!)) continue;
-        nameToComp.set(c.nama.trim().toLowerCase(), c.id!);
+        const key = c.nama.trim().toLowerCase();
+        if (nameToComp.has(key)) ambiguousComp.add(key);
+        else nameToComp.set(key, c.id!);
       }
       const colMap: Array<{ col: number; komponenNilaiId: number }> = [];
       for (let col = 1; col < header.length; col++) {
         const name = header[col];
         if (!name) continue;
+        if (ambiguousComp.has(name)) {
+          errors.push({
+            line: 1,
+            error: `Nama komponen "${rows[0][col]}" dipakai oleh lebih dari satu komponen — ganti nama agar unik sebelum impor.`,
+          });
+          continue;
+        }
         const id = nameToComp.get(name);
         if (id === undefined) {
           errors.push({
@@ -648,6 +664,22 @@ export default function InputNilai() {
         colMap.push({ col, komponenNilaiId: id });
       }
       if (colMap.length === 0) return { successCount: 0, errors };
+
+      const seenComp = new Set<number>();
+      for (const entry of colMap) {
+        if (seenComp.has(entry.komponenNilaiId)) {
+          return {
+            successCount: 0,
+            errors: [
+              {
+                line: 1,
+                error: `Kolom "${rows[0][entry.col]}" duplikat — setiap komponen hanya boleh muncul satu kali.`,
+              },
+            ],
+          };
+        }
+        seenComp.add(entry.komponenNilaiId);
+      }
 
       const payload: Array<{
         krsId: number;
@@ -683,15 +715,25 @@ export default function InputNilai() {
 
     // method === 'sub'
     const nameToSub = new Map<string, number>();
+    const ambiguousSub = new Set<string>();
     for (const c of comps) {
       for (const s of subsByKomponen().get(c.id!) || []) {
-        nameToSub.set(s.nama.trim().toLowerCase(), s.id!);
+        const key = s.nama.trim().toLowerCase();
+        if (nameToSub.has(key)) ambiguousSub.add(key);
+        else nameToSub.set(key, s.id!);
       }
     }
     const colMap: Array<{ col: number; subKomponenNilaiId: number }> = [];
     for (let col = 1; col < header.length; col++) {
       const name = header[col];
       if (!name) continue;
+      if (ambiguousSub.has(name)) {
+        errors.push({
+          line: 1,
+          error: `Nama sub-komponen "${rows[0][col]}" dipakai oleh lebih dari satu definisi — ganti nama agar unik sebelum impor.`,
+        });
+        continue;
+      }
       const id = nameToSub.get(name);
       if (id === undefined) {
         errors.push({ line: 1, error: `Kolom "${rows[0][col]}" tidak cocok dengan sub-komponen manapun.` });
@@ -700,6 +742,22 @@ export default function InputNilai() {
       colMap.push({ col, subKomponenNilaiId: id });
     }
     if (colMap.length === 0) return { successCount: 0, errors };
+
+    const seenSub = new Set<number>();
+    for (const entry of colMap) {
+      if (seenSub.has(entry.subKomponenNilaiId)) {
+        return {
+          successCount: 0,
+          errors: [
+            {
+              line: 1,
+              error: `Kolom "${rows[0][entry.col]}" duplikat — setiap sub-komponen hanya boleh muncul satu kali.`,
+            },
+          ],
+        };
+      }
+      seenSub.add(entry.subKomponenNilaiId);
+    }
 
     const payloadSub: Array<{
       krsId: number;

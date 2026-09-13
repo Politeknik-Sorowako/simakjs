@@ -113,6 +113,15 @@ export interface NilaiAkhirInput {
   nilai: number;
 }
 
+export interface SaveNilaiResult {
+  id?: number;
+  mahasiswaId?: number;
+  kelasKuliahId?: number;
+  nilaiAngka?: string | null;
+  nilaiHuruf?: string | null;
+  nilaiIndeks?: string | null;
+}
+
 export interface NilaiMahasiswa {
   krsId: number;
   mahasiswaId: number;
@@ -245,8 +254,8 @@ export const khsController = {
       krsId: number;
       subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }>;
     }>,
-  ): Promise<{ message: string }> {
-    return fetchApi<{ message: string }>('/yudisium/kelas/nilai-sub', {
+  ): Promise<SaveNilaiResult[]> {
+    return fetchApi<SaveNilaiResult[]>('/yudisium/kelas/nilai-sub', {
       method: 'POST',
       body: JSON.stringify({ kelasKuliahId, nilaiSubList }),
     });
@@ -255,8 +264,8 @@ export const khsController = {
   async saveNilaiAkhir(
     kelasKuliahId: number,
     nilaiAkhirList: Array<{ krsId: number; nilai: number }>,
-  ): Promise<{ message: string }> {
-    return fetchApi<{ message: string }>('/yudisium/kelas/nilai-akhir', {
+  ): Promise<SaveNilaiResult[]> {
+    return fetchApi<SaveNilaiResult[]>('/yudisium/kelas/nilai-akhir', {
       method: 'POST',
       body: JSON.stringify({ kelasKuliahId, nilaiAkhirList }),
     });
@@ -268,8 +277,8 @@ export const khsController = {
       krsId: number;
       nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }>;
     }>,
-  ): Promise<{ message: string }> {
-    return fetchApi<{ message: string }>('/yudisium/kelas/nilai', {
+  ): Promise<SaveNilaiResult[]> {
+    return fetchApi<SaveNilaiResult[]>('/yudisium/kelas/nilai', {
       method: 'POST',
       body: JSON.stringify({ kelasKuliahId, nilaiList }),
     });

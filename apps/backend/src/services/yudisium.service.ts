@@ -400,6 +400,55 @@ export class YudisiumService {
     return num;
   }
 
+  /** Normalisasi input agar idempoten terhadap duplikat; entri terakhir menang. */
+  private static dedupeNilaiKomponen(
+    list: Array<{
+      krsId: number;
+      nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number | string }>;
+    }>,
+  ) {
+    const perKrs = new Map<number, Map<number, number | string>>();
+    for (const item of list) {
+      const map = perKrs.get(item.krsId) ?? new Map<number, number | string>();
+      for (const v of item.nilaiKomponenList) {
+        map.set(v.komponenNilaiId, v.nilai);
+      }
+      perKrs.set(item.krsId, map);
+    }
+    return [...perKrs.entries()].map(([krsId, map]) => ({
+      krsId,
+      nilaiKomponenList: [...map.entries()].map(([komponenNilaiId, nilai]) => ({ komponenNilaiId, nilai })),
+    }));
+  }
+
+  private static dedupeNilaiSub(
+    list: Array<{
+      krsId: number;
+      subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number | string }>;
+    }>,
+  ) {
+    const perKrs = new Map<number, Map<number, number | string>>();
+    for (const item of list) {
+      const map = perKrs.get(item.krsId) ?? new Map<number, number | string>();
+      for (const v of item.subNilaiList) {
+        map.set(v.subKomponenNilaiId, v.nilai);
+      }
+      perKrs.set(item.krsId, map);
+    }
+    return [...perKrs.entries()].map(([krsId, map]) => ({
+      krsId,
+      subNilaiList: [...map.entries()].map(([subKomponenNilaiId, nilai]) => ({ subKomponenNilaiId, nilai })),
+    }));
+  }
+
+  private static dedupeNilaiAkhir(list: Array<{ krsId: number; nilai: number | string }>) {
+    const map = new Map<number, number | string>();
+    for (const item of list) {
+      map.set(item.krsId, item.nilai);
+    }
+    return [...map.entries()].map(([krsId, nilai]) => ({ krsId, nilai }));
+  }
+
   static async saveNilaiMahasiswa(
     kelasKuliahId: number,
     list: Array<{
@@ -429,8 +478,11 @@ export class YudisiumService {
           )
         : new Map<number, SubKomponenDef[]>();
 
+    // Normalisasi duplikat: (krsId, komponenNilaiId) unik, entri terakhir menang.
+    const items = this.dedupeNilaiKomponen(list);
+
     // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
-    for (const item of list) {
+    for (const item of items) {
       for (const v of item.nilaiKomponenList) {
         this.assertNilaiRange(v.nilai, 'Nilai komponen');
         const subs = subDefsByKomponen.get(v.komponenNilaiId);
@@ -443,7 +495,7 @@ export class YudisiumService {
     return await db.transaction(async (tx) => {
       const results = [];
 
-      for (const item of list) {
+      for (const item of items) {
         // Delete existing grades for this KRS and components
         const compIds = item.nilaiKomponenList.map((v) => v.komponenNilaiId);
         if (compIds.length > 0) {
@@ -533,8 +585,11 @@ export class YudisiumService {
           )
         : new Map<number, SubKomponenDef[]>();
 
+    // Normalisasi duplikat: (krsId, subKomponenNilaiId) unik, entri terakhir menang.
+    const items = this.dedupeNilaiSub(list);
+
     // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
-    for (const item of list) {
+    for (const item of items) {
       for (const v of item.subNilaiList) {
         this.assertNilaiRange(v.nilai, 'Nilai sub-komponen');
       }
@@ -543,7 +598,7 @@ export class YudisiumService {
     return await db.transaction(async (tx) => {
       const results = [];
 
-      for (const item of list) {
+      for (const item of items) {
         const subIds = item.subNilaiList.map((v) => v.subKomponenNilaiId);
         if (subIds.length > 0) {
           await tx
@@ -612,8 +667,11 @@ export class YudisiumService {
       throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
     }
 
+    // Normalisasi duplikat: krsId unik, entri terakhir menang.
+    const items = this.dedupeNilaiAkhir(list);
+
     // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
-    for (const item of list) {
+    for (const item of items) {
       this.assertNilaiRange(item.nilai, 'Nilai akhir');
     }
 
@@ -623,7 +681,7 @@ export class YudisiumService {
     return await db.transaction(async (tx) => {
       const results = [];
 
-      for (const item of list) {
+      for (const item of items) {
         const [foundKrs] = await tx
           .select({ id: krs.id })
           .from(krs)
