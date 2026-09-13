@@ -87,6 +87,13 @@ export default function InputNilai() {
     return map;
   });
 
+  // Referensi stabil untuk komponen yang sedang di-expand agar editor tidak reset.
+  const expandedSubs = createMemo<SubKomponenNilai[]>(() => {
+    const id = expandedKomponenId();
+    if (id === null) return [];
+    return subsByKomponen().get(id) ?? [];
+  });
+
   const selectedClassDetails = () => classes()?.find((c) => c.id === selectedKelasId()) || null;
   const isClassLocked = () => selectedClassDetails()?.isLocked || false;
   const selectedProdiId = () => selectedClassDetails()?.mataKuliah?.programStudiId || null;
@@ -943,7 +950,7 @@ export default function InputNilai() {
                           <SubKomponenEditor
                             komponenId={komponenId() as number}
                             disabled={isClassLocked()}
-                            subs={subsByKomponen().get(komponenId() as number) || []}
+                            subs={expandedSubs()}
                             onSave={handleSaveSub}
                           />
                         </Show>

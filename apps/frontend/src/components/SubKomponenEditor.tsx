@@ -1,10 +1,10 @@
-import { createEffect, createSignal, For, Show } from 'solid-js';
+import { createEffect, createSignal, Index, Show } from 'solid-js';
 import type { SubKomponenNilai } from '../controllers/khsController';
 
 interface SubRow {
   id?: number;
   nama: string;
-  bobot: number;
+  bobot: string;
 }
 
 interface SubKomponenEditorProps {
@@ -14,36 +14,58 @@ interface SubKomponenEditorProps {
   onSave: (komponenId: number, list: Array<{ nama: string; bobot: number }>) => Promise<void>;
 }
 
+function signatureOf(subs: SubKomponenNilai[]): string {
+  return subs.map((s) => `${s.id ?? 'new'}:${s.bobot}`).join('|');
+}
+
+function parseBobot(value: string): number {
+  const cleaned = value.replace(',', '.');
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? num : 0;
+}
+
 export default function SubKomponenEditor(props: SubKomponenEditorProps) {
   const [rows, setRows] = createSignal<SubRow[]>([]);
   const [saving, setSaving] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
+  let dirty = false;
+  let syncedSignature = '';
+
   createEffect(() => {
     const current = props.subs || [];
-    setRows(current.map((s) => ({ id: s.id, nama: s.nama, bobot: Number(s.bobot) })));
+    const incoming = signatureOf(current);
+    // Hindari reset state lokal saat props hanya berubah identitas (mis. re-render),
+    // dan jangan timpa ketikan user yang belum disimpan.
+    if (incoming === syncedSignature) return;
+    if (dirty) return;
+
+    syncedSignature = incoming;
+    setRows(current.map((s) => ({ id: s.id, nama: s.nama, bobot: String(s.bobot) })));
+    setError(null);
   });
 
-  const totalBobot = () => rows().reduce((sum, row) => sum + (Number(row.bobot) || 0), 0);
+  const totalBobot = () => rows().reduce((sum, row) => sum + parseBobot(row.bobot), 0);
   const totalValid = () => rows().length === 0 || totalBobot() === 100;
 
   const updateRow = (index: number, field: 'nama' | 'bobot', value: string) => {
-    setRows((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, [field]: field === 'bobot' ? Number(value) : value } : row)),
-    );
+    dirty = true;
+    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, [field]: value } : row)));
   };
 
   const addRow = () => {
-    setRows((prev) => [...prev, { nama: '', bobot: 0 }]);
+    dirty = true;
+    setRows((prev) => [...prev, { nama: '', bobot: '' }]);
   };
 
   const removeRow = (index: number) => {
+    dirty = true;
     setRows((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
     setError(null);
-    const list = rows().map((row) => ({ nama: row.nama.trim(), bobot: Number(row.bobot) || 0 }));
+    const list = rows().map((row) => ({ nama: row.nama.trim(), bobot: parseBobot(row.bobot) }));
 
     if (list.some((row) => !row.nama)) {
       setError('Nama sub-komponen tidak boleh kosong.');
@@ -57,6 +79,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
     setSaving(true);
     try {
       await props.onSave(props.komponenId, list);
+      dirty = false;
     } finally {
       setSaving(false);
     }
@@ -68,30 +91,31 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
         Sub-Komponen (bobot relatif terhadap induk)
       </p>
 
-      <For each={rows()}>
+      <Index each={rows()}>
         {(row, idx) => (
           <div class="flex items-center gap-2">
             <input
               type="text"
               placeholder="Nama sub-komponen"
-              value={row.nama}
+              value={row().nama}
               disabled={props.disabled}
-              onInput={(e) => updateRow(idx(), 'nama', e.currentTarget.value)}
+              onInput={(e) => updateRow(idx, 'nama', e.currentTarget.value)}
               class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] flex-1 focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
             />
             <input
-              type="number"
+              type="text"
+              inputmode="decimal"
               placeholder="Bobot"
-              value={row.bobot}
+              value={row().bobot}
               disabled={props.disabled}
-              onInput={(e) => updateRow(idx(), 'bobot', e.currentTarget.value)}
+              onInput={(e) => updateRow(idx, 'bobot', e.currentTarget.value)}
               class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] w-14 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
             />
             <span class="text-[11px] text-secondary-400 font-bold">%</span>
             <Show when={!props.disabled}>
               <button
                 type="button"
-                onClick={() => removeRow(idx())}
+                onClick={() => removeRow(idx)}
                 class="text-rose-500 hover:text-rose-700 text-xs p-0.5"
               >
                 ❌
@@ -99,7 +123,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
             </Show>
           </div>
         )}
-      </For>
+      </Index>
 
       <div class="flex justify-between items-center">
         <Show when={!props.disabled} fallback={<span class="text-[10px] text-secondary-400">Terkunci.</span>}>
