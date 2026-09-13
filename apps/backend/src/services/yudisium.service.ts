@@ -392,6 +392,63 @@ export class YudisiumService {
     return map;
   }
 
+  private static assertNilaiRange(nilai: number | string, label: string): number {
+    const num = typeof nilai === 'number' ? nilai : parseFloat(String(nilai).replace(',', '.'));
+    if (!Number.isFinite(num) || num < 0 || num > 100) {
+      throw new Error(`${label} harus berada di rentang 0-100.`);
+    }
+    return num;
+  }
+
+  /** Normalisasi input agar idempoten terhadap duplikat; entri terakhir menang. */
+  private static dedupeNilaiKomponen(
+    list: Array<{
+      krsId: number;
+      nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number | string }>;
+    }>,
+  ) {
+    const perKrs = new Map<number, Map<number, number | string>>();
+    for (const item of list) {
+      const map = perKrs.get(item.krsId) ?? new Map<number, number | string>();
+      for (const v of item.nilaiKomponenList) {
+        map.set(v.komponenNilaiId, v.nilai);
+      }
+      perKrs.set(item.krsId, map);
+    }
+    return [...perKrs.entries()].map(([krsId, map]) => ({
+      krsId,
+      nilaiKomponenList: [...map.entries()].map(([komponenNilaiId, nilai]) => ({ komponenNilaiId, nilai })),
+    }));
+  }
+
+  private static dedupeNilaiSub(
+    list: Array<{
+      krsId: number;
+      subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number | string }>;
+    }>,
+  ) {
+    const perKrs = new Map<number, Map<number, number | string>>();
+    for (const item of list) {
+      const map = perKrs.get(item.krsId) ?? new Map<number, number | string>();
+      for (const v of item.subNilaiList) {
+        map.set(v.subKomponenNilaiId, v.nilai);
+      }
+      perKrs.set(item.krsId, map);
+    }
+    return [...perKrs.entries()].map(([krsId, map]) => ({
+      krsId,
+      subNilaiList: [...map.entries()].map(([subKomponenNilaiId, nilai]) => ({ subKomponenNilaiId, nilai })),
+    }));
+  }
+
+  private static dedupeNilaiAkhir(list: Array<{ krsId: number; nilai: number | string }>) {
+    const map = new Map<number, number | string>();
+    for (const item of list) {
+      map.set(item.krsId, item.nilai);
+    }
+    return [...map.entries()].map(([krsId, nilai]) => ({ krsId, nilai }));
+  }
+
   static async saveNilaiMahasiswa(
     kelasKuliahId: number,
     list: Array<{
@@ -421,10 +478,24 @@ export class YudisiumService {
           )
         : new Map<number, SubKomponenDef[]>();
 
+    // Normalisasi duplikat: (krsId, komponenNilaiId) unik, entri terakhir menang.
+    const items = this.dedupeNilaiKomponen(list);
+
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    for (const item of items) {
+      for (const v of item.nilaiKomponenList) {
+        this.assertNilaiRange(v.nilai, 'Nilai komponen');
+        const subs = subDefsByKomponen.get(v.komponenNilaiId);
+        if (subs && subs.length > 0) {
+          throw new Error('Komponen ini memiliki sub-komponen. Hapus sub-komponen dahulu atau input melalui sub.');
+        }
+      }
+    }
+
     return await db.transaction(async (tx) => {
       const results = [];
 
-      for (const item of list) {
+      for (const item of items) {
         // Delete existing grades for this KRS and components
         const compIds = item.nilaiKomponenList.map((v) => v.komponenNilaiId);
         if (compIds.length > 0) {
@@ -514,10 +585,20 @@ export class YudisiumService {
           )
         : new Map<number, SubKomponenDef[]>();
 
+    // Normalisasi duplikat: (krsId, subKomponenNilaiId) unik, entri terakhir menang.
+    const items = this.dedupeNilaiSub(list);
+
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    for (const item of items) {
+      for (const v of item.subNilaiList) {
+        this.assertNilaiRange(v.nilai, 'Nilai sub-komponen');
+      }
+    }
+
     return await db.transaction(async (tx) => {
       const results = [];
 
-      for (const item of list) {
+      for (const item of items) {
         const subIds = item.subNilaiList.map((v) => v.subKomponenNilaiId);
         if (subIds.length > 0) {
           await tx
@@ -569,6 +650,64 @@ export class YudisiumService {
             .returning();
           results.push(updatedKrs);
         }
+      }
+
+      return results;
+    });
+  }
+
+  static async saveNilaiAkhir(kelasKuliahId: number, list: Array<{ krsId: number; nilai: number | string }>) {
+    const foundKelas = await db.query.kelasKuliah.findFirst({
+      where: eq(kelasKuliah.id, kelasKuliahId),
+    });
+    if (!foundKelas) {
+      throw new Error('Kelas kuliah tidak ditemukan.');
+    }
+    if (foundKelas.isLocked) {
+      throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
+    }
+
+    // Normalisasi duplikat: krsId unik, entri terakhir menang.
+    const items = this.dedupeNilaiAkhir(list);
+
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    for (const item of items) {
+      this.assertNilaiRange(item.nilai, 'Nilai akhir');
+    }
+
+    const allRules = await db.select().from(konversiNilai);
+    const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
+
+    return await db.transaction(async (tx) => {
+      const results = [];
+
+      for (const item of items) {
+        const [foundKrs] = await tx
+          .select({ id: krs.id })
+          .from(krs)
+          .where(and(eq(krs.id, item.krsId), eq(krs.kelasKuliahId, kelasKuliahId)));
+        if (!foundKrs) {
+          throw new Error('KRS mahasiswa tidak ditemukan pada kelas ini.');
+        }
+
+        const score = parseFloat(this.assertNilaiRange(item.nilai, 'Nilai akhir').toFixed(2));
+        const conversion = resolveGradeFromRules(activeRules, score);
+
+        // Hapus nilai level halus agar NA manual tidak tertimpa saat lockKelas.
+        await tx.delete(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, item.krsId));
+        await tx.delete(nilaiSubKomponenMahasiswa).where(eq(nilaiSubKomponenMahasiswa.krsId, item.krsId));
+
+        const [updatedKrs] = await tx
+          .update(krs)
+          .set({
+            nilaiAngka: String(score),
+            nilaiHuruf: conversion.huruf,
+            nilaiIndeks: String(conversion.indeks),
+            updatedAt: new Date(),
+          })
+          .where(eq(krs.id, item.krsId))
+          .returning();
+        results.push(updatedKrs);
       }
 
       return results;

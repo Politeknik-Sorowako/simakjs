@@ -449,6 +449,13 @@
       "when": 1786600000014,
       "tag": "0063_sub_komponen_nilai",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1786600000015,
+      "tag": "0064_nilai_komponen_unique",
+      "breakpoints": true
     }
   ]
 }
