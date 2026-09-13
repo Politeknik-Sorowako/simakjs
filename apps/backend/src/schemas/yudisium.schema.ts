@@ -38,6 +38,33 @@ export const saveNilaiMahasiswaBody = t.Object({
   ),
 });
 
+export const saveSubKomponenBody = t.Object({
+  kelasKuliahId: t.Integer(),
+  komponenNilaiId: t.Integer(),
+  subKomponenList: t.Array(
+    t.Object({
+      nama: t.String({ minLength: 1, maxLength: 100 }),
+      bobot: t.Integer({ minimum: 1, maximum: 100 }),
+      urutan: t.Optional(t.Integer({ minimum: 0 })),
+    }),
+  ),
+});
+
+export const saveNilaiSubBody = t.Object({
+  kelasKuliahId: t.Integer(),
+  nilaiSubList: t.Array(
+    t.Object({
+      krsId: t.Integer(),
+      subNilaiList: t.Array(
+        t.Object({
+          subKomponenNilaiId: t.Integer(),
+          nilai: t.Number(),
+        }),
+      ),
+    }),
+  ),
+});
+
 export const getYudisiumSchema = {
   detail: {
     tags: ['Yudisium & Komponen Nilai'],
@@ -240,6 +267,79 @@ export const getNilaiMahasiswaYudisiumSchema = {
             }),
           ),
         ),
+        nilaiSub: t.Optional(
+          t.Array(
+            t.Object({
+              id: t.Optional(t.Integer()),
+              krsId: t.Optional(t.Integer()),
+              subKomponenNilaiId: t.Optional(t.Integer()),
+              nilai: t.Optional(t.Union([t.String(), t.Number()])),
+            }),
+          ),
+        ),
+      }),
+    ),
+  },
+};
+
+export const getSubKomponenYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Daftar Sub-Komponen Nilai Kelas',
+    description: 'Mengambil daftar sub-komponen nilai untuk seluruh komponen pada suatu Kelas Kuliah.',
+  },
+  params: t.Object({
+    kelasKuliahId: t.Numeric(),
+  }),
+  response: {
+    200: t.Array(
+      t.Object({
+        id: t.Integer({ default: 1 }),
+        komponenNilaiId: t.Integer({ default: 1 }),
+        nama: t.String({ default: 'Pengambilan 1' }),
+        bobot: t.Integer({ default: 20 }),
+        urutan: t.Integer({ default: 0 }),
+      }),
+    ),
+  },
+};
+
+export const saveSubKomponenYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Simpan Sub-Komponen Nilai',
+    description: 'Menyimpan (replace) definisi sub-komponen beserta bobot internalnya untuk satu komponen nilai.',
+  },
+  body: saveSubKomponenBody,
+  response: {
+    200: t.Array(
+      t.Object({
+        id: t.Optional(t.Integer({ default: 1 })),
+        komponenNilaiId: t.Optional(t.Integer({ default: 1 })),
+        nama: t.Optional(t.String({ default: 'Pengambilan 1' })),
+        bobot: t.Optional(t.Integer({ default: 20 })),
+        urutan: t.Optional(t.Integer({ default: 0 })),
+      }),
+    ),
+  },
+};
+
+export const saveNilaiSubYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Simpan Nilai Sub-Komponen Mahasiswa',
+    description: 'Menyimpan nilai sub-komponen mahasiswa dan menghitung ulang nilai akhir (NA) kelas.',
+  },
+  body: saveNilaiSubBody,
+  response: {
+    200: t.Array(
+      t.Object({
+        id: t.Optional(t.Integer({ default: 1 })),
+        mahasiswaId: t.Optional(t.Integer({ default: 1 })),
+        kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
+        nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: '85.5' })),
+        nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: 'A' })),
+        nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: '4.0' })),
       }),
     ),
   },

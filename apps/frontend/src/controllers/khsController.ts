@@ -93,6 +93,21 @@ export interface KomponenNilai {
   rencanaEvaluasiId?: number | null;
 }
 
+export interface SubKomponenNilai {
+  id?: number;
+  komponenNilaiId: number;
+  nama: string;
+  bobot: number;
+  urutan?: number;
+}
+
+export interface NilaiSubMahasiswa {
+  id: number;
+  krsId: number;
+  subKomponenNilaiId: number;
+  nilai: string;
+}
+
 export interface NilaiMahasiswa {
   krsId: number;
   mahasiswaId: number;
@@ -107,6 +122,7 @@ export interface NilaiMahasiswa {
     komponenNilaiId: number;
     nilai: string;
   }>;
+  nilaiSub?: NilaiSubMahasiswa[];
 }
 
 export interface RekapPerProdi {
@@ -201,6 +217,34 @@ export const khsController = {
 
   async getNilaiMahasiswa(kelasKuliahId: number): Promise<NilaiMahasiswa[]> {
     return fetchApi<NilaiMahasiswa[]>(`/yudisium/kelas/${kelasKuliahId}/nilai`);
+  },
+
+  async getSubKomponen(kelasKuliahId: number): Promise<SubKomponenNilai[]> {
+    return fetchApi<SubKomponenNilai[]>(`/yudisium/kelas/${kelasKuliahId}/sub-komponen`);
+  },
+
+  async saveSubKomponen(
+    kelasKuliahId: number,
+    komponenNilaiId: number,
+    subKomponenList: Array<{ nama: string; bobot: number; urutan?: number }>,
+  ): Promise<SubKomponenNilai[]> {
+    return fetchApi<SubKomponenNilai[]>('/yudisium/kelas/sub-komponen', {
+      method: 'POST',
+      body: JSON.stringify({ kelasKuliahId, komponenNilaiId, subKomponenList }),
+    });
+  },
+
+  async saveNilaiSub(
+    kelasKuliahId: number,
+    nilaiSubList: Array<{
+      krsId: number;
+      subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }>;
+    }>,
+  ): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>('/yudisium/kelas/nilai-sub', {
+      method: 'POST',
+      body: JSON.stringify({ kelasKuliahId, nilaiSubList }),
+    });
   },
 
   async saveNilaiMahasiswa(
