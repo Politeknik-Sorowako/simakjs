@@ -339,29 +339,34 @@ export default function InputNilai() {
     return '–';
   };
 
-  // Nilai level-1 suatu komponen: agregasi sub (weighted avg) atau nilai langsung
+  // Nilai level-1 suatu komponen: agregasi sub (bila lengkap) atau nilai langsung.
   const getDynamicKomponenScore = (krsId: number, komponenId: number, bobot: number) => {
+    const directGrade = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
     const subs = subsByKomponen().get(komponenId) || [];
-    if (subs.length === 0) {
-      const grade = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
-      return { score: grade, complete: grade !== null };
-    }
 
-    let total = 0;
-    let weight = 0;
-    let missing = 0;
-    for (const sub of subs) {
-      const grade = parseGradeInput(inputSubGrades()[`${krsId}_${sub.id}`]);
-      if (grade === null) {
-        missing += 1;
-        continue;
+    if (subs.length > 0) {
+      let total = 0;
+      let weight = 0;
+      let missing = 0;
+      for (const sub of subs) {
+        const grade = parseGradeInput(inputSubGrades()[`${krsId}_${sub.id}`]);
+        if (grade === null) {
+          missing += 1;
+          continue;
+        }
+        total += grade * (Number(sub.bobot) / 100);
+        weight += Number(sub.bobot);
       }
-      total += grade * (Number(sub.bobot) / 100);
-      weight += Number(sub.bobot);
+      if (missing === 0 && weight === 100) {
+        return { score: parseFloat(total.toFixed(2)), complete: true };
+      }
+      if (directGrade !== null) {
+        return { score: directGrade, complete: true };
+      }
+      return { score: null, complete: false };
     }
 
-    const complete = missing === 0 && weight === 100;
-    return { score: complete ? parseFloat(total.toFixed(2)) : null, complete };
+    return { score: directGrade, complete: directGrade !== null };
   };
 
   const getDynamicFinalGrade = (stud: { krsId: number }) => {
@@ -483,7 +488,7 @@ export default function InputNilai() {
     }
   };
 
-  // Save only direct component grades (M2 — tidak menyentuh nilai sub)
+  // Save direct component grades (M2) — termasuk menimpa komponen yang memiliki sub.
   const handleSaveKomponenOnly = async () => {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
@@ -491,14 +496,28 @@ export default function InputNilai() {
     const comps = components();
     if (!list || !comps) return;
 
+    // Deteksi mahasiswa yang akan kehilangan nilai sub karena komponennya diisi langsung.
+    const subIds = new Set(comps.flatMap((c) => (subsByKomponen().get(c.id!) || []).map((s) => s.id)));
+    const studentsWithSubValue = list.filter((stud) =>
+      (stud.nilaiSub || []).some((v) => subIds.has(v.subKomponenNilaiId)),
+    );
+
+    if (studentsWithSubValue.length > 0) {
+      if (
+        !confirm(
+          `${studentsWithSubValue.length} mahasiswa memiliki nilai sub-komponen pada komponen yang diisi nilai langsung. Nilai sub tersebut akan DIHAPUS (definisi sub tetap tersimpan). Lanjutkan?`,
+        )
+      ) {
+        return;
+      }
+    }
+
     const payload = list.map((stud) => ({
       krsId: stud.krsId,
-      nilaiKomponenList: comps
-        .filter((c) => !componentHasSub(c.id!))
-        .map((c) => ({
-          komponenNilaiId: c.id!,
-          nilai: parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]) ?? 0,
-        })),
+      nilaiKomponenList: comps.map((c) => ({
+        komponenNilaiId: c.id!,
+        nilai: parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]) ?? 0,
+      })),
     }));
 
     try {
@@ -644,7 +663,6 @@ export default function InputNilai() {
       const nameToComp = new Map<string, number>();
       const ambiguousComp = new Set<string>();
       for (const c of comps) {
-        if (componentHasSub(c.id!)) continue;
         const key = c.nama.trim().toLowerCase();
         if (nameToComp.has(key)) ambiguousComp.add(key);
         else nameToComp.set(key, c.id!);
@@ -664,7 +682,7 @@ export default function InputNilai() {
         if (id === undefined) {
           errors.push({
             line: 1,
-            error: `Kolom "${rows[0][col]}" tidak cocok dengan komponen (atau komponen memiliki sub-komponen).`,
+            error: `Kolom "${rows[0][col]}" tidak cocok dengan komponen manapun.`,
           });
           continue;
         }
@@ -710,6 +728,20 @@ export default function InputNilai() {
         if (nilaiKomponenList.length > 0) payload.push({ krsId, nilaiKomponenList });
       });
       if (payload.length === 0) return { successCount: 0, errors };
+
+      // Peringatan bila impor ini akan menghapus nilai sub-komponen yang ada.
+      const subIds = new Set(comps.flatMap((c) => (subsByKomponen().get(c.id!) || []).map((s) => s.id)));
+      const affected = students.filter((s) => (s.nilaiSub || []).some((v) => subIds.has(v.subKomponenNilaiId)));
+      if (affected.length > 0) {
+        if (
+          !confirm(
+            `${affected.length} mahasiswa memiliki nilai sub-komponen yang akan DIHAPUS oleh impor ini (definisi sub tetap tersimpan). Lanjutkan?`,
+          )
+        ) {
+          return { successCount: 0, errors: [{ line: 0, error: 'Impor dibatalkan oleh pengguna.' }] };
+        }
+      }
+
       try {
         await khsController.saveNilaiMahasiswa(kelasId, payload);
         refetchStudentsGrades();
@@ -1236,10 +1268,20 @@ export default function InputNilai() {
                                       when={activeMethod() === 'sub'}
                                       fallback={
                                         <div class="flex flex-col items-center gap-1">
-                                          <span class="text-[10px] font-bold text-brand-700">
-                                            Σ {komponenAggLabel(stud.krsId, c.id!, c.bobot)}
+                                          <input
+                                            type="text"
+                                            placeholder="0.00"
+                                            disabled={isClassLocked()}
+                                            value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
+                                            onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
+                                            class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                                          />
+                                          <span
+                                            class="text-[9px] text-amber-600"
+                                            title="Menyimpan nilai langsung akan menghapus nilai sub-komponen"
+                                          >
+                                            🧩 timpa sub
                                           </span>
-                                          <span class="text-[9px] text-secondary-400">→ tab Sub-Komponen</span>
                                         </div>
                                       }
                                     >

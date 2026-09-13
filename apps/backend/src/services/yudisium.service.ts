@@ -481,14 +481,12 @@ export class YudisiumService {
     // Normalisasi duplikat: (krsId, komponenNilaiId) unik, entri terakhir menang.
     const items = this.dedupeNilaiKomponen(list);
 
-    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB).
+    // Nilai langsung boleh menimpa komponen yang memiliki sub; nilai sub akan
+    // dibersihkan (definisi sub dipertahankan) agar tidak ada koeksistensi nilai.
     for (const item of items) {
       for (const v of item.nilaiKomponenList) {
         this.assertNilaiRange(v.nilai, 'Nilai komponen');
-        const subs = subDefsByKomponen.get(v.komponenNilaiId);
-        if (subs && subs.length > 0) {
-          throw new Error('Komponen ini memiliki sub-komponen. Hapus sub-komponen dahulu atau input melalui sub.');
-        }
       }
     }
 
@@ -505,6 +503,21 @@ export class YudisiumService {
               and(
                 eq(nilaiKomponenMahasiswa.krsId, item.krsId),
                 inArray(nilaiKomponenMahasiswa.komponenNilaiId, compIds),
+              ),
+            );
+        }
+
+        // Hapus nilai sub milik komponen yang kini diisi nilai langsung (simetri SoT).
+        const subIdsToClear = item.nilaiKomponenList.flatMap((v) =>
+          (subDefsByKomponen.get(v.komponenNilaiId) ?? []).map((s) => s.id),
+        );
+        if (subIdsToClear.length > 0) {
+          await tx
+            .delete(nilaiSubKomponenMahasiswa)
+            .where(
+              and(
+                eq(nilaiSubKomponenMahasiswa.krsId, item.krsId),
+                inArray(nilaiSubKomponenMahasiswa.subKomponenNilaiId, subIdsToClear),
               ),
             );
         }
@@ -588,6 +601,14 @@ export class YudisiumService {
     // Normalisasi duplikat: (krsId, subKomponenNilaiId) unik, entri terakhir menang.
     const items = this.dedupeNilaiSub(list);
 
+    // Pemetaan sub -> komponen induk untuk membersihkan nilai langsung L1.
+    const subToKomponen = new Map<number, number>();
+    for (const [komponenId, subs] of subDefsByKomponen) {
+      for (const sub of subs) {
+        subToKomponen.set(sub.id, komponenId);
+      }
+    }
+
     // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
     for (const item of items) {
       for (const v of item.subNilaiList) {
@@ -607,6 +628,21 @@ export class YudisiumService {
               and(
                 eq(nilaiSubKomponenMahasiswa.krsId, item.krsId),
                 inArray(nilaiSubKomponenMahasiswa.subKomponenNilaiId, subIds),
+              ),
+            );
+        }
+
+        // Hapus nilai langsung komponen induk agar agregasi sub yang menang (simetri SoT).
+        const parentCompIds = item.subNilaiList
+          .map((v) => subToKomponen.get(v.subKomponenNilaiId))
+          .filter((id): id is number => id !== undefined);
+        if (parentCompIds.length > 0) {
+          await tx
+            .delete(nilaiKomponenMahasiswa)
+            .where(
+              and(
+                eq(nilaiKomponenMahasiswa.krsId, item.krsId),
+                inArray(nilaiKomponenMahasiswa.komponenNilaiId, parentCompIds),
               ),
             );
         }
@@ -771,16 +807,18 @@ export class YudisiumService {
         const l1Map = new Map<number, number>();
         for (const comp of components) {
           const subs = subDefsByKomponen.get(comp.id) ?? [];
+          let l1: number | undefined;
           if (subs.length > 0) {
             const subResult = computeKomponenScore(subGrades, subs);
             if (subResult.complete && subResult.score !== null) {
-              l1Map.set(comp.id, subResult.score);
+              l1 = subResult.score;
             }
-          } else {
-            const direct = directGrades.get(comp.id);
-            if (direct !== undefined) {
-              l1Map.set(comp.id, direct);
-            }
+          }
+          if (l1 === undefined) {
+            l1 = directGrades.get(comp.id);
+          }
+          if (l1 !== undefined) {
+            l1Map.set(comp.id, l1);
           }
         }
         l1MapByKrs.set(krsItem.id, l1Map);

@@ -259,3 +259,31 @@ export const getDetailNilaiMKSchema = {
     periodeId: t.Optional(t.String()),
   }),
 };
+
+export const getRincianKomponenSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Rincian Nilai per Komponen (Mahasiswa)',
+    description:
+      'Mengambil nilai akhir dan rincian per komponen (tanpa sub-komponen) milik mahasiswa pada suatu kelas kuliah.',
+  },
+  query: t.Object({
+    kelasKuliahId: t.Numeric(),
+    mahasiswaId: t.Optional(t.Numeric()),
+  }),
+  response: {
+    200: t.Object({
+      krsId: t.Integer({ default: 1 }),
+      nilaiAngka: t.Union([t.String(), t.Null()], { default: '85.5' }),
+      nilaiHuruf: t.Union([t.String(), t.Null()], { default: 'A' }),
+      nilaiIndeks: t.Union([t.String(), t.Null()], { default: '4.0' }),
+      komponen: t.Array(
+        t.Object({
+          nama: t.String({ default: 'UTS' }),
+          bobot: t.Integer({ default: 30 }),
+          nilai: t.Union([t.Number(), t.Null()], { default: 80 }),
+        }),
+      ),
+    }),
+  },
+};

@@ -1,6 +1,7 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -89,6 +90,32 @@ export default function Khs() {
   const [showPrintUjian, setShowPrintUjian] = createSignal(false);
   const [showPrintKhs, setShowPrintKhs] = createSignal(false);
   const [showPrintTranskrip, setShowPrintTranskrip] = createSignal(false);
+
+  // Rincian nilai per komponen (read-only, mahasiswa)
+  const [showRincianModal, setShowRincianModal] = createSignal(false);
+  const [rincianTarget, setRincianTarget] = createSignal<{ kelasKuliahId: number; namaMk: string } | null>(null);
+
+  const [rincianData] = createResource(
+    () => {
+      const target = rincianTarget();
+      const mhsId = selectedMhsId();
+      if (!showRincianModal() || !target || !mhsId) return null;
+      return { kelasKuliahId: target.kelasKuliahId, mahasiswaId: mhsId };
+    },
+    async ({ kelasKuliahId, mahasiswaId }) => {
+      try {
+        return await khsController.getRincianKomponen(kelasKuliahId, mahasiswaId);
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  const openRincian = (item: { mataKuliah?: { nama: string }; kelasKuliah?: { id: number } }) => {
+    if (!item.kelasKuliah?.id) return;
+    setRincianTarget({ kelasKuliahId: item.kelasKuliah.id, namaMk: item.mataKuliah?.nama || '-' });
+    setShowRincianModal(true);
+  };
 
   // Load exam eligibility for print card
   const [eligibilityData] = createResource(
@@ -562,6 +589,9 @@ export default function Khs() {
                               <th class="p-3">Nilai Angka</th>
                               <th class="p-3">Nilai Huruf</th>
                               <th class="p-3">Nilai Indeks</th>
+                              <Show when={role() === 'mahasiswa'}>
+                                <th class="p-3">Rincian</th>
+                              </Show>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
@@ -570,7 +600,7 @@ export default function Khs() {
                               fallback={
                                 <tr>
                                   <td
-                                    colspan="6"
+                                    colspan={role() === 'mahasiswa' ? 7 : 6}
                                     class="p-4 text-center text-secondary-400 dark:text-secondary-300 italic"
                                   >
                                     Nilai belum dimasukkan atau belum disetujui Dosen PA.
@@ -602,6 +632,17 @@ export default function Khs() {
                                     </Show>
                                   </td>
                                   <td class="p-3">{item.nilaiIndeks || '-'}</td>
+                                  <Show when={role() === 'mahasiswa'}>
+                                    <td class="p-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => openRincian(item)}
+                                        class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-fine hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                                      >
+                                        🔍 Rincian
+                                      </button>
+                                    </td>
+                                  </Show>
                                 </tr>
                               )}
                             </For>
@@ -1139,6 +1180,79 @@ export default function Khs() {
             </div>
           </div>
         </Show>
+
+        {/* Modal Rincian Nilai per Komponen (Mahasiswa) */}
+        <Modal
+          show={showRincianModal()}
+          onClose={() => setShowRincianModal(false)}
+          title={`Rincian Nilai — ${rincianTarget()?.namaMk || ''}`}
+          maxWidth="lg"
+        >
+          <Show when={rincianData.loading}>
+            <div class="text-center py-8 text-secondary-400 dark:text-secondary-300">Memuat rincian nilai...</div>
+          </Show>
+
+          <Show when={!rincianData.loading && rincianData()}>
+            {(data) => (
+              <div class="flex flex-col gap-4">
+                <div class="grid grid-cols-3 gap-3">
+                  <div class="bg-secondary-50 dark:bg-secondary-800/60 rounded-xl p-3 text-center">
+                    <span class="block text-fine uppercase font-bold text-secondary-400">Nilai Angka</span>
+                    <span class="text-xl font-bold text-secondary-800 dark:text-white">{data().nilaiAngka ?? '-'}</span>
+                  </div>
+                  <div class="bg-secondary-50 dark:bg-secondary-800/60 rounded-xl p-3 text-center">
+                    <span class="block text-fine uppercase font-bold text-secondary-400">Huruf</span>
+                    <span class="text-xl font-bold text-brand-600">{data().nilaiHuruf ?? '-'}</span>
+                  </div>
+                  <div class="bg-secondary-50 dark:bg-secondary-800/60 rounded-xl p-3 text-center">
+                    <span class="block text-fine uppercase font-bold text-secondary-400">Indeks</span>
+                    <span class="text-xl font-bold text-secondary-800 dark:text-white">
+                      {data().nilaiIndeks ?? '-'}
+                    </span>
+                  </div>
+                </div>
+
+                <table class="w-full text-left text-caption border-collapse">
+                  <thead>
+                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                      <th class="p-3">Komponen Penilaian</th>
+                      <th class="p-3 text-center">Bobot</th>
+                      <th class="p-3 text-center">Nilai</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
+                    <For
+                      each={data().komponen}
+                      fallback={
+                        <tr>
+                          <td colspan="3" class="p-4 text-center text-secondary-400 italic">
+                            Belum ada komponen penilaian.
+                          </td>
+                        </tr>
+                      }
+                    >
+                      {(k) => (
+                        <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                          <td class="p-3 font-bold text-secondary-800 dark:text-white">{k.nama}</td>
+                          <td class="p-3 text-center">{k.bobot}%</td>
+                          <td class="p-3 text-center">{k.nilai !== null ? k.nilai.toFixed(2) : '-'}</td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+
+                <p class="text-fine text-secondary-400 dark:text-secondary-300">
+                  Nilai akhir dihitung otomatis dari komponen penilaian di atas.
+                </p>
+              </div>
+            )}
+          </Show>
+
+          <Show when={!rincianData.loading && !rincianData()}>
+            <div class="text-center py-8 text-secondary-400 dark:text-secondary-300">Rincian nilai tidak tersedia.</div>
+          </Show>
+        </Modal>
       </div>
     </MainLayout>
   );

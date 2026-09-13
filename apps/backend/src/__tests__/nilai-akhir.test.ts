@@ -244,7 +244,7 @@ describe('Nilai Akhir Langsung (M1) & Multi-Metode Input', () => {
     expect([400, 422]).toContain(subRes.status);
   });
 
-  it('M2 pada komponen yang memiliki sub-komponen ditolak', async () => {
+  it('M2 pada komponen bersub kini menimpa nilai langsung (definisi sub tetap)', async () => {
     const comps = await saveComponents([{ nama: 'Kualitas', bobot: 100 }]);
     await saveSub(comps[0].id, [
       { nama: 'A', bobot: 50 },
@@ -261,15 +261,17 @@ describe('Nilai Akhir Langsung (M1) & Multi-Metode Input', () => {
         }),
       }),
     );
-    expect(res.status).toBe(400);
-    const data = (await res.json()) as { error?: string };
-    expect(data.error).toContain('sub-komponen');
+    expect(res.status).toBe(200);
 
     const direct = await db
       .select()
       .from(nilaiKomponenMahasiswa)
       .where(and(eq(nilaiKomponenMahasiswa.krsId, krsId), eq(nilaiKomponenMahasiswa.komponenNilaiId, comps[0].id)));
-    expect(direct.length).toBe(0);
+    expect(direct.length).toBe(1);
+    expect(parseFloat(direct[0].nilai)).toBe(80);
+
+    const [finalKrs] = await db.select().from(krs).where(eq(krs.id, krsId));
+    expect(parseFloat(finalKrs.nilaiAngka!)).toBe(80);
   });
 
   it('M2 tetap berfungsi untuk komponen tanpa sub dan menghitung NA', async () => {

@@ -115,6 +115,47 @@ export class KhsController {
     }
   }
 
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getRincianKomponen({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+
+    const q = query as Record<string, string | undefined>;
+    const kelasKuliahId = q?.kelasKuliahId ? parseInt(q.kelasKuliahId) : Number.NaN;
+    if (Number.isNaN(kelasKuliahId)) {
+      set.status = 400;
+      return { error: 'ID Kelas Kuliah tidak valid.' };
+    }
+
+    // Mahasiswa hanya boleh melihat rincian miliknya sendiri.
+    let targetMhsId: number;
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+      targetMhsId = myMhsId;
+    } else {
+      const requested = q?.mahasiswaId ? parseInt(q.mahasiswaId) : Number.NaN;
+      if (Number.isNaN(requested)) {
+        set.status = 400;
+        return { error: 'ID Mahasiswa wajib dikirim.' };
+      }
+      targetMhsId = requested;
+    }
+
+    try {
+      return await KhsService.getRincianKomponen(targetMhsId, kelasKuliahId);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memproses rincian komponen.' };
+    }
+  }
+
   // --- KONVERSI NILAI ---
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
