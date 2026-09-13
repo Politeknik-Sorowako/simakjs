@@ -32,10 +32,26 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
   // Debounce pencarian agar tabel hanya refetch setelah user berhenti mengetik.
   let mhsSearchTimer: ReturnType<typeof setTimeout> | undefined;
   let kelasSearchTimer: ReturnType<typeof setTimeout> | undefined;
+  let mhsSearchRef: HTMLInputElement | undefined;
+  let kelasSearchRef: HTMLInputElement | undefined;
 
   onCleanup(() => {
     clearTimeout(mhsSearchTimer);
     clearTimeout(kelasSearchTimer);
+  });
+
+  // Input search bersifat uncontrolled (tanpa binding `value`) agar caret tidak
+  // pernah ditimpa saat reaktivitas berjalan. Reset dilakukan saat modal dibuka.
+  createEffect(() => {
+    if (!props.show) return;
+    clearTimeout(mhsSearchTimer);
+    clearTimeout(kelasSearchTimer);
+    setMhsSearch('');
+    setDebouncedMhsSearch('');
+    setKelasSearch('');
+    setDebouncedKelasSearch('');
+    if (mhsSearchRef) mhsSearchRef.value = '';
+    if (kelasSearchRef) kelasSearchRef.value = '';
   });
 
   createEffect(() => {
@@ -231,10 +247,10 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 Cari (NIM / Nama)
               </label>
               <input
+                ref={mhsSearchRef}
                 type="text"
                 placeholder="Pencarian..."
                 class="w-full px-2.5 py-1.5 text-xs border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 dark:text-white"
-                value={mhsSearch()}
                 onInput={(e) => setMhsSearch(e.currentTarget.value)}
               />
             </div>
@@ -342,10 +358,10 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 Cari Kelas / Mata Kuliah
               </label>
               <input
+                ref={kelasSearchRef}
                 type="text"
                 placeholder="Nama MK / Kode / Kelas..."
                 class="w-full px-2.5 py-1.5 text-xs border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 dark:text-white"
-                value={kelasSearch()}
                 onInput={(e) => setKelasSearch(e.currentTarget.value)}
               />
             </div>
