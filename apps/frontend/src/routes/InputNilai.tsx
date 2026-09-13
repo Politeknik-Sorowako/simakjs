@@ -2,13 +2,17 @@ import { createEffect, createMemo, createResource, createSignal, For, Index, Sho
 import { MainLayout } from '../components/MainLayout';
 import SubKomponenEditor from '../components/SubKomponenEditor';
 import { Button } from '../components/ui/Button';
+import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
-import { khsController, type SubKomponenNilai } from '../controllers/khsController';
+import { khsController, type NilaiMahasiswa, type SubKomponenNilai } from '../controllers/khsController';
 import { rpsController } from '../controllers/rpsController';
+import { isHeaderRow } from '../utils/csv';
+
+type InputMethod = 'akhir' | 'komponen' | 'sub';
 
 export default function InputNilai() {
   const auth = useAuth();
@@ -21,7 +25,10 @@ export default function InputNilai() {
   const [editableComponents, setEditableComponents] = createSignal<Array<{ name: string; bobot: number }>>([]);
   const [inputGrades, setInputGrades] = createSignal<Record<string, string>>({});
   const [inputSubGrades, setInputSubGrades] = createSignal<Record<string, string>>({});
+  const [inputAkhir, setInputAkhir] = createSignal<Record<string, string>>({});
   const [expandedKomponenId, setExpandedKomponenId] = createSignal<number | null>(null);
+  const [activeMethod, setActiveMethod] = createSignal<InputMethod>('komponen');
+  const [showImportModal, setShowImportModal] = createSignal(false);
 
   // 1. Load all Kelas Kuliah for Lecturer/Admin
   const [classes, { refetch: refetchClasses }] = createResource(
@@ -157,6 +164,19 @@ export default function InputNilai() {
     }
   });
 
+  // Sync stored final grades to M1 input states
+  createEffect(() => {
+    const sg = studentsGrades();
+    if (sg) {
+      const initial: Record<string, string> = {};
+      for (const stud of sg) {
+        initial[String(stud.krsId)] =
+          stud.nilaiAngka !== undefined && stud.nilaiAngka !== null ? stud.nilaiAngka.toString() : '';
+      }
+      setInputAkhir(initial);
+    }
+  });
+
   // Helper to add component
   const addComponent = () => {
     setEditableComponents((prev) => [...prev, { name: '', bobot: 0 }]);
@@ -187,6 +207,15 @@ export default function InputNilai() {
     const kelasId = selectedKelasId();
     if (!kelasId) {
       toast.showToast('Silakan pilih kelas kuliah terlebih dahulu.', 'error');
+      return;
+    }
+
+    if (
+      (components()?.length || 0) > 0 &&
+      !confirm(
+        'Menyimpan komponen nilai akan ME-RESET seluruh nilai akhir kelas ini (termasuk nilai komponen/sub yang sudah ada). Lanjutkan?',
+      )
+    ) {
       return;
     }
 
@@ -260,6 +289,47 @@ export default function InputNilai() {
     const cleaned = raw ? raw.replace(',', '.') : '';
     if (cleaned === '' || isNaN(Number(cleaned))) return null;
     return Number(cleaned);
+  };
+
+  const componentHasSub = (komponenId: number) => (subsByKomponen().get(komponenId) || []).length > 0;
+
+  // Preview huruf mutu dari aturan konversi (identik dengan fallback backend)
+  const getDynamicHuruf = (score: number | null): string | null => {
+    if (score === null || Number.isNaN(score)) return null;
+    const rules = konversiRules();
+    if (rules && rules.length > 0) {
+      for (const rule of rules) {
+        const min = parseFloat(rule.nilaiMin.toString());
+        const max = parseFloat(rule.nilaiMax.toString());
+        if (score >= min && score <= max) return rule.nilaiHuruf;
+      }
+      return 'E';
+    }
+    if (score >= 80) return 'A';
+    if (score >= 75) return 'B+';
+    if (score >= 70) return 'B';
+    if (score >= 65) return 'C+';
+    if (score >= 60) return 'C';
+    if (score >= 50) return 'D';
+    return 'E';
+  };
+
+  const isMahasiswaHasHalusData = (stud: NilaiMahasiswa) => {
+    const hasDirect = (stud.nilaiKomponen || []).some((v) => v.nilai !== null && v.nilai !== '');
+    const hasSub = (stud.nilaiSub || []).length > 0;
+    return hasDirect || hasSub;
+  };
+
+  const handleAkhirChange = (krsId: number, value: string) => {
+    const sanitized = value.replace(/[^0-9.,]/g, '');
+    setInputAkhir((prev) => ({ ...prev, [String(krsId)]: sanitized }));
+  };
+
+  const komponenAggLabel = (krsId: number, komponenId: number, bobot: number) => {
+    const result = getDynamicKomponenScore(krsId, komponenId, bobot);
+    if (result.complete && result.score !== null) return result.score.toFixed(2);
+    if (result.score !== null) return `${result.score.toFixed(2)}*`;
+    return '–';
   };
 
   // Nilai level-1 suatu komponen: agregasi sub (weighted avg) atau nilai langsung
@@ -388,6 +458,14 @@ export default function InputNilai() {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
 
+    if (
+      !confirm(
+        'Menyimpan sub-komponen akan ME-RESET nilai akhir kelas dan MENGHAPUS nilai langsung pada komponen ini. Lanjutkan?',
+      )
+    ) {
+      return;
+    }
+
     try {
       await khsController.saveSubKomponen(kelasId, komponenId, list);
       toast.showToast('Sub-komponen berhasil disimpan.', 'success');
@@ -395,6 +473,263 @@ export default function InputNilai() {
       refetchStudentsGrades();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menyimpan sub-komponen.', 'error');
+    }
+  };
+
+  // Save only direct component grades (M2 — tidak menyentuh nilai sub)
+  const handleSaveKomponenOnly = async () => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) return;
+    const list = studentsGrades();
+    const comps = components();
+    if (!list || !comps) return;
+
+    const payload = list.map((stud) => ({
+      krsId: stud.krsId,
+      nilaiKomponenList: comps
+        .filter((c) => !componentHasSub(c.id!))
+        .map((c) => ({
+          komponenNilaiId: c.id!,
+          nilai: parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]) ?? 0,
+        })),
+    }));
+
+    try {
+      await khsController.saveNilaiMahasiswa(kelasId, payload);
+      toast.showToast('Nilai komponen berhasil disimpan.', 'success');
+      refetchStudentsGrades();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan nilai komponen.', 'error');
+    }
+  };
+
+  // Save direct final grades (M1) — menghapus nilai komponen/sub bila ada
+  const handleSaveAkhir = async () => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) return;
+    const list = studentsGrades();
+    if (!list) return;
+
+    const entries = list
+      .map((stud) => {
+        const grade = parseGradeInput(inputAkhir()[String(stud.krsId)]);
+        return grade === null ? null : { krsId: stud.krsId, nilai: grade };
+      })
+      .filter((e): e is { krsId: number; nilai: number } => e !== null);
+
+    if (entries.length === 0) {
+      toast.showToast('Isi minimal satu nilai akhir.', 'error');
+      return;
+    }
+
+    const overwriteCount = list.filter(
+      (stud) => entries.some((e) => e.krsId === stud.krsId) && isMahasiswaHasHalusData(stud),
+    ).length;
+    if (overwriteCount > 0) {
+      if (
+        !confirm(
+          `${overwriteCount} mahasiswa memiliki nilai komponen/sub. Menyimpan nilai akhir langsung akan MENGHAPUS nilai komponen & sub mereka. Lanjutkan?`,
+        )
+      ) {
+        return;
+      }
+    }
+
+    try {
+      await khsController.saveNilaiAkhir(kelasId, entries);
+      toast.showToast('Nilai akhir berhasil disimpan.', 'success');
+      refetchStudentsGrades();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan nilai akhir.', 'error');
+    }
+  };
+
+  const importTemplateHeaders = createMemo(() => {
+    const method = activeMethod();
+    if (method === 'akhir') return ['nim', 'nilai_akhir'];
+    const headers = ['nim'];
+    if (method === 'sub') {
+      for (const c of components() || []) {
+        for (const s of subsByKomponen().get(c.id!) || []) headers.push(s.nama);
+      }
+    } else {
+      for (const c of components() || []) {
+        if (!componentHasSub(c.id!)) headers.push(c.nama);
+      }
+    }
+    return headers;
+  });
+
+  // Impor CSV sesuai metode aktif (header dinamis dari definisi aktual)
+  const handleImportNilais = async (rows: string[][]) => {
+    const kelasId = selectedKelasId();
+    const errors: { line: number; error: string }[] = [];
+    if (!kelasId) return { successCount: 0, errors: [{ line: 0, error: 'Pilih kelas terlebih dahulu.' }] };
+    if (!rows || rows.length === 0) {
+      return { successCount: 0, errors: [{ line: 1, error: 'File CSV kosong.' }] };
+    }
+
+    const method = activeMethod();
+    const students = studentsGrades() || [];
+    const nimToKrs = new Map(students.map((s) => [String(s.nim).trim().toLowerCase(), s.krsId]));
+    const headerDetected = isHeaderRow(rows[0]?.[0] ?? '', ['nim', 'nilai_akhir', 'nilai']);
+    const header = headerDetected ? rows[0].map((h) => String(h).trim().toLowerCase()) : [];
+    const dataRows = headerDetected ? rows.slice(1) : rows;
+
+    const resolveKrs = (nim: string | undefined, line: number): number | null => {
+      const key = String(nim ?? '')
+        .trim()
+        .toLowerCase();
+      if (!key) {
+        errors.push({ line, error: 'NIM kosong.' });
+        return null;
+      }
+      const id = nimToKrs.get(key);
+      if (!id) {
+        errors.push({ line, error: `NIM ${nim} tidak ditemukan di kelas ini.` });
+        return null;
+      }
+      return id;
+    };
+
+    if (method === 'akhir') {
+      const col = headerDetected ? header.findIndex((h) => h === 'nilai_akhir' || h === 'nilai') : 1;
+      if (col < 0) return { successCount: 0, errors: [{ line: 1, error: 'Kolom "nilai_akhir" tidak ditemukan.' }] };
+      const entries: Array<{ krsId: number; nilai: number }> = [];
+      dataRows.forEach((row, i) => {
+        const line = (headerDetected ? 2 : 1) + i;
+        const krsId = resolveKrs(row[0], line);
+        if (!krsId) return;
+        const nilai = parseGradeInput(row[col]);
+        if (nilai === null || nilai < 0 || nilai > 100) {
+          errors.push({ line, error: 'Nilai akhir harus numerik 0-100.' });
+          return;
+        }
+        entries.push({ krsId, nilai });
+      });
+      if (entries.length === 0) return { successCount: 0, errors };
+      try {
+        await khsController.saveNilaiAkhir(kelasId, entries);
+        refetchStudentsGrades();
+        return { successCount: entries.length, errors };
+      } catch (e: unknown) {
+        errors.push({ line: 0, error: e instanceof Error ? e.message : 'Gagal menyimpan nilai akhir.' });
+        return { successCount: 0, errors };
+      }
+    }
+
+    if (!headerDetected) {
+      return {
+        successCount: 0,
+        errors: [{ line: 1, error: 'Header kolom wajib ada untuk impor ini (contoh: nim,<nama kolom>).' }],
+      };
+    }
+
+    const comps = components() || [];
+
+    if (method === 'komponen') {
+      const nameToComp = new Map<string, number>();
+      for (const c of comps) {
+        if (componentHasSub(c.id!)) continue;
+        nameToComp.set(c.nama.trim().toLowerCase(), c.id!);
+      }
+      const colMap: Array<{ col: number; komponenNilaiId: number }> = [];
+      for (let col = 1; col < header.length; col++) {
+        const name = header[col];
+        if (!name) continue;
+        const id = nameToComp.get(name);
+        if (id === undefined) {
+          errors.push({
+            line: 1,
+            error: `Kolom "${rows[0][col]}" tidak cocok dengan komponen (atau komponen memiliki sub-komponen).`,
+          });
+          continue;
+        }
+        colMap.push({ col, komponenNilaiId: id });
+      }
+      if (colMap.length === 0) return { successCount: 0, errors };
+
+      const payload: Array<{
+        krsId: number;
+        nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }>;
+      }> = [];
+      dataRows.forEach((row, i) => {
+        const line = 2 + i;
+        const krsId = resolveKrs(row[0], line);
+        if (!krsId) return;
+        const nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }> = [];
+        for (const { col, komponenNilaiId } of colMap) {
+          const raw = row[col];
+          if (raw === undefined || String(raw).trim() === '') continue;
+          const nilai = parseGradeInput(raw);
+          if (nilai === null || nilai < 0 || nilai > 100) {
+            errors.push({ line, error: `Nilai "${rows[0][col]}" harus 0-100.` });
+            return;
+          }
+          nilaiKomponenList.push({ komponenNilaiId, nilai });
+        }
+        if (nilaiKomponenList.length > 0) payload.push({ krsId, nilaiKomponenList });
+      });
+      if (payload.length === 0) return { successCount: 0, errors };
+      try {
+        await khsController.saveNilaiMahasiswa(kelasId, payload);
+        refetchStudentsGrades();
+        return { successCount: payload.length, errors };
+      } catch (e: unknown) {
+        errors.push({ line: 0, error: e instanceof Error ? e.message : 'Gagal menyimpan nilai komponen.' });
+        return { successCount: 0, errors };
+      }
+    }
+
+    // method === 'sub'
+    const nameToSub = new Map<string, number>();
+    for (const c of comps) {
+      for (const s of subsByKomponen().get(c.id!) || []) {
+        nameToSub.set(s.nama.trim().toLowerCase(), s.id!);
+      }
+    }
+    const colMap: Array<{ col: number; subKomponenNilaiId: number }> = [];
+    for (let col = 1; col < header.length; col++) {
+      const name = header[col];
+      if (!name) continue;
+      const id = nameToSub.get(name);
+      if (id === undefined) {
+        errors.push({ line: 1, error: `Kolom "${rows[0][col]}" tidak cocok dengan sub-komponen manapun.` });
+        continue;
+      }
+      colMap.push({ col, subKomponenNilaiId: id });
+    }
+    if (colMap.length === 0) return { successCount: 0, errors };
+
+    const payloadSub: Array<{
+      krsId: number;
+      subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }>;
+    }> = [];
+    dataRows.forEach((row, i) => {
+      const line = 2 + i;
+      const krsId = resolveKrs(row[0], line);
+      if (!krsId) return;
+      const subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }> = [];
+      for (const { col, subKomponenNilaiId } of colMap) {
+        const raw = row[col];
+        if (raw === undefined || String(raw).trim() === '') continue;
+        const nilai = parseGradeInput(raw);
+        if (nilai === null || nilai < 0 || nilai > 100) {
+          errors.push({ line, error: `Nilai "${rows[0][col]}" harus 0-100.` });
+          return;
+        }
+        subNilaiList.push({ subKomponenNilaiId, nilai });
+      }
+      if (subNilaiList.length > 0) payloadSub.push({ krsId, subNilaiList });
+    });
+    if (payloadSub.length === 0) return { successCount: 0, errors };
+    try {
+      await khsController.saveNilaiSub(kelasId, payloadSub);
+      refetchStudentsGrades();
+      return { successCount: payloadSub.length, errors };
+    } catch (e: unknown) {
+      errors.push({ line: 0, error: e instanceof Error ? e.message : 'Gagal menyimpan nilai sub-komponen.' });
+      return { successCount: 0, errors };
     }
   };
 
@@ -601,71 +936,106 @@ export default function InputNilai() {
 
             {/* Right side: Student Grades Table */}
             <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
-              <div class="flex justify-between items-center border-b pb-2">
-                <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
-                <div class="flex gap-2">
-                  <Show when={(components()?.length || 0) > 0}>
-                    <Show
-                      when={!isClassLocked()}
-                      fallback={
-                        <div class="flex items-center gap-2">
-                          <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                            🔒 Nilai Kelas Telah Dikunci (Selesai)
-                          </span>
-                          <Show when={role() === 'admin' || role() === 'prodi' || role() === 'dosen'}>
-                            <button
-                              onClick={handleUnlockKelas}
-                              class="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
-                            >
-                              🔓 Buka Kunci
-                            </button>
-                          </Show>
-                        </div>
-                      }
-                    >
+              <div class="flex flex-col gap-3 border-b pb-3">
+                <div class="flex justify-between items-center">
+                  <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
+                  <Show when={isClassLocked()}>
+                    <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+                      🔒 Nilai Kelas Telah Dikunci (Selesai)
+                    </span>
+                  </Show>
+                </div>
+
+                {/* Method switcher */}
+                <div class="flex flex-wrap gap-2">
+                  <For
+                    each={[
+                      { id: 'akhir' as InputMethod, label: '1. Nilai Akhir Langsung' },
+                      { id: 'komponen' as InputMethod, label: '2. Nilai Komponen' },
+                      { id: 'sub' as InputMethod, label: '3. Nilai Sub-Komponen' },
+                    ]}
+                  >
+                    {(m) => (
+                      <button
+                        type="button"
+                        onClick={() => setActiveMethod(m.id)}
+                        class={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95 ${
+                          activeMethod() === m.id
+                            ? 'bg-brand-600 text-white border-brand-600'
+                            : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
+                        }`}
+                      >
+                        {m.label}
+                      </button>
+                    )}
+                  </For>
+                </div>
+
+                {/* Actions */}
+                <Show when={!isClassLocked()}>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Show when={activeMethod() === 'akhir'}>
+                      <button
+                        onClick={handleSaveAkhir}
+                        class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
+                      >
+                        Simpan Nilai Akhir
+                      </button>
+                    </Show>
+                    <Show when={activeMethod() === 'komponen'}>
+                      <button
+                        onClick={handleSaveKomponenOnly}
+                        class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
+                      >
+                        Simpan Nilai Komponen
+                      </button>
+                    </Show>
+                    <Show when={activeMethod() === 'sub'}>
                       <button
                         onClick={handleSaveGrades}
                         class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
                       >
-                        Simpan Nilai
-                      </button>
-                      <button
-                        onClick={handleLockKelas}
-                        class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs hover:bg-rose-700 active:scale-95 transition-all shadow-sm"
-                      >
-                        🔒 Kunci Nilai
+                        Simpan Nilai Sub
                       </button>
                     </Show>
+                    <button
+                      type="button"
+                      onClick={() => setShowImportModal(true)}
+                      class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
+                    >
+                      📥 Impor CSV
+                    </button>
+                    <button
+                      onClick={handleLockKelas}
+                      class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs hover:bg-rose-700 active:scale-95 transition-all shadow-sm"
+                    >
+                      🔒 Kunci Nilai
+                    </button>
+                  </div>
+                </Show>
+                <Show when={isClassLocked()}>
+                  <Show
+                    when={role() === 'admin' || role() === 'prodi' || role() === 'dosen' || role() === 'instruktur'}
+                  >
+                    <button
+                      onClick={handleUnlockKelas}
+                      class="self-start px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                    >
+                      🔓 Buka Kunci
+                    </button>
                   </Show>
-                </div>
+                </Show>
               </div>
 
-              <Show
-                when={(components()?.length || 0) > 0}
-                fallback={
-                  <div class="text-center py-12 text-secondary-400 italic">
-                    Harap tentukan dan simpan komponen bobot nilai (kiri) terlebih dahulu sebelum menginput nilai
-                    mahasiswa.
-                  </div>
-                }
-              >
+              {/* M1 — Nilai Akhir Langsung */}
+              <Show when={activeMethod() === 'akhir'}>
                 <table class="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
                       <th class="p-3">Mahasiswa</th>
-                      <For each={components()}>
-                        {(c) => (
-                          <th class="p-3 text-center">
-                            {c.nama} ({c.bobot}%)
-                            <Show when={(subsByKomponen().get(c.id!) || []).length > 0}>
-                              <span class="ml-1" title="Memiliki sub-komponen">
-                                🧩
-                              </span>
-                            </Show>
-                          </th>
-                        )}
-                      </For>
-                      <th class="p-3 text-center">Nilai Akhir</th>
+                      <th class="p-3 text-center">Nilai Akhir (0-100)</th>
+                      <th class="p-3 text-center">Huruf</th>
+                      <th class="p-3 text-center">Tersimpan</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
@@ -673,10 +1043,7 @@ export default function InputNilai() {
                       each={studentsGrades()}
                       fallback={
                         <tr>
-                          <td
-                            colspan={(components()?.length || 0) + 2}
-                            class="p-4 text-center text-secondary-400 italic"
-                          >
+                          <td colspan="4" class="p-4 text-center text-secondary-400 italic">
                             Tidak ada mahasiswa terdaftar di kelas ini.
                           </td>
                         </tr>
@@ -690,71 +1057,32 @@ export default function InputNilai() {
                               <div class="flex flex-col">
                                 <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
                                 <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
+                                <Show when={isMahasiswaHasHalusData(stud)}>
+                                  <span class="text-[9px] font-bold text-amber-600">
+                                    ⚠ punya nilai komponen/sub — akan dihapus
+                                  </span>
+                                </Show>
                               </div>
                             </div>
                           </td>
-                          <For each={components()}>
-                            {(c) => (
-                              <td class="p-3 text-center align-top">
-                                <Show
-                                  when={(subsByKomponen().get(c.id!) || []).length > 0}
-                                  fallback={
-                                    <input
-                                      type="text"
-                                      placeholder="0.00"
-                                      disabled={isClassLocked()}
-                                      value={
-                                        inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
-                                          ? inputGrades()[`${stud.krsId}_${c.id}`]
-                                          : ''
-                                      }
-                                      onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
-                                      class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
-                                    />
-                                  }
-                                >
-                                  <div class="flex flex-col gap-1 items-center">
-                                    <For each={subsByKomponen().get(c.id!)}>
-                                      {(sub) => (
-                                        <div class="flex items-center gap-1">
-                                          <span
-                                            class="text-[9px] text-secondary-400 max-w-[70px] truncate"
-                                            title={sub.nama}
-                                          >
-                                            {sub.nama}
-                                          </span>
-                                          <input
-                                            type="text"
-                                            placeholder="0.00"
-                                            disabled={isClassLocked()}
-                                            value={inputSubGrades()[`${stud.krsId}_${sub.id}`] ?? ''}
-                                            onInput={(e) =>
-                                              handleSubGradeChange(stud.krsId, sub.id!, e.currentTarget.value)
-                                            }
-                                            class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] w-14 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
-                                          />
-                                        </div>
-                                      )}
-                                    </For>
-                                  </div>
-                                </Show>
-                              </td>
-                            )}
-                          </For>
-                          <td class="p-3 text-center font-extrabold text-secondary-800 dark:text-white">
-                            <Show
-                              when={getDynamicFinalGrade(stud)}
-                              fallback={
-                                <Show when={stud.nilaiAngka} fallback="-">
-                                  {stud.nilaiAngka} ({stud.nilaiHuruf})
-                                </Show>
-                              }
-                            >
-                              {(res) => (
-                                <span>
-                                  {res().score} ({res().huruf})
-                                </span>
-                              )}
+                          <td class="p-3 text-center">
+                            <input
+                              type="text"
+                              placeholder="0.00"
+                              disabled={isClassLocked()}
+                              value={inputAkhir()[String(stud.krsId)] ?? ''}
+                              onInput={(e) => handleAkhirChange(stud.krsId, e.currentTarget.value)}
+                              class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-20 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                            />
+                          </td>
+                          <td class="p-3 text-center font-bold text-brand-700">
+                            {getDynamicHuruf(parseGradeInput(inputAkhir()[String(stud.krsId)])) ?? '-'}
+                          </td>
+                          <td class="p-3 text-center">
+                            <Show when={stud.nilaiAngka} fallback="-">
+                              <span>
+                                {stud.nilaiAngka} ({stud.nilaiHuruf})
+                              </span>
                             </Show>
                           </td>
                         </tr>
@@ -763,10 +1091,165 @@ export default function InputNilai() {
                   </tbody>
                 </table>
               </Show>
+
+              {/* M2 / M3 — Nilai Komponen & Sub-Komponen */}
+              <Show when={activeMethod() !== 'akhir'}>
+                <Show
+                  when={(components()?.length || 0) > 0}
+                  fallback={
+                    <div class="text-center py-12 text-secondary-400 italic">
+                      Harap tentukan dan simpan komponen bobot nilai (kiri) terlebih dahulu sebelum menginput nilai
+                      mahasiswa.
+                    </div>
+                  }
+                >
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th class="p-3">Mahasiswa</th>
+                        <For each={components()}>
+                          {(c) => (
+                            <th class="p-3 text-center">
+                              {c.nama} ({c.bobot}%)
+                              <Show when={componentHasSub(c.id!)}>
+                                <span class="ml-1" title="Memiliki sub-komponen">
+                                  🧩
+                                </span>
+                              </Show>
+                            </th>
+                          )}
+                        </For>
+                        <th class="p-3 text-center">Nilai Akhir</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
+                      <For
+                        each={studentsGrades()}
+                        fallback={
+                          <tr>
+                            <td
+                              colspan={(components()?.length || 0) + 2}
+                              class="p-4 text-center text-secondary-400 italic"
+                            >
+                              Tidak ada mahasiswa terdaftar di kelas ini.
+                            </td>
+                          </tr>
+                        }
+                      >
+                        {(stud) => (
+                          <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                            <td class="p-3">
+                              <div class="flex items-center gap-2">
+                                <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
+                                <div class="flex flex-col">
+                                  <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
+                                  <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <For each={components()}>
+                              {(c) => (
+                                <td class="p-3 text-center align-top">
+                                  <Show
+                                    when={componentHasSub(c.id!)}
+                                    fallback={
+                                      <input
+                                        type="text"
+                                        placeholder="0.00"
+                                        disabled={isClassLocked()}
+                                        value={
+                                          inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
+                                            ? inputGrades()[`${stud.krsId}_${c.id}`]
+                                            : ''
+                                        }
+                                        onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
+                                        class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                                      />
+                                    }
+                                  >
+                                    <Show
+                                      when={activeMethod() === 'sub'}
+                                      fallback={
+                                        <div class="flex flex-col items-center gap-1">
+                                          <span class="text-[10px] font-bold text-brand-700">
+                                            Σ {komponenAggLabel(stud.krsId, c.id!, c.bobot)}
+                                          </span>
+                                          <span class="text-[9px] text-secondary-400">→ tab Sub-Komponen</span>
+                                        </div>
+                                      }
+                                    >
+                                      <div class="flex flex-col gap-1 items-center">
+                                        <For each={subsByKomponen().get(c.id!)}>
+                                          {(sub) => (
+                                            <div class="flex items-center gap-1">
+                                              <span
+                                                class="text-[9px] text-secondary-400 max-w-[70px] truncate"
+                                                title={sub.nama}
+                                              >
+                                                {sub.nama}
+                                              </span>
+                                              <input
+                                                type="text"
+                                                placeholder="0.00"
+                                                disabled={isClassLocked()}
+                                                value={inputSubGrades()[`${stud.krsId}_${sub.id}`] ?? ''}
+                                                onInput={(e) =>
+                                                  handleSubGradeChange(stud.krsId, sub.id!, e.currentTarget.value)
+                                                }
+                                                class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] w-14 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                                              />
+                                            </div>
+                                          )}
+                                        </For>
+                                        <span class="text-[10px] font-bold text-secondary-600 dark:text-secondary-300">
+                                          Σ {komponenAggLabel(stud.krsId, c.id!, c.bobot)}
+                                        </span>
+                                      </div>
+                                    </Show>
+                                  </Show>
+                                </td>
+                              )}
+                            </For>
+                            <td class="p-3 text-center font-extrabold text-secondary-800 dark:text-white">
+                              <Show
+                                when={getDynamicFinalGrade(stud)}
+                                fallback={
+                                  <Show when={stud.nilaiAngka} fallback="-">
+                                    {stud.nilaiAngka} ({stud.nilaiHuruf})
+                                  </Show>
+                                }
+                              >
+                                {(res) => (
+                                  <span>
+                                    {res().score} ({res().huruf})
+                                  </span>
+                                )}
+                              </Show>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </Show>
+              </Show>
             </div>
           </div>
         </Show>
       </div>
+
+      <ImportCsvModal
+        show={showImportModal()}
+        onClose={() => setShowImportModal(false)}
+        importUrl=""
+        templateHeaders={importTemplateHeaders()}
+        title={`Nilai ${
+          activeMethod() === 'akhir' ? 'Akhir' : activeMethod() === 'komponen' ? 'Komponen' : 'Sub-Komponen'
+        }`}
+        description="Kolom pertama wajib 'nim'. Kolom lainnya menggunakan nama komponen/sub-komponen yang tertera pada template."
+        onImport={handleImportNilais}
+        onSuccess={() => refetchStudentsGrades()}
+      />
     </MainLayout>
   );
 }

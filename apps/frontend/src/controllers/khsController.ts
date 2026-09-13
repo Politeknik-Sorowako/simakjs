@@ -108,6 +108,11 @@ export interface NilaiSubMahasiswa {
   nilai: string;
 }
 
+export interface NilaiAkhirInput {
+  krsId: number;
+  nilai: number;
+}
+
 export interface NilaiMahasiswa {
   krsId: number;
   mahasiswaId: number;
@@ -244,6 +249,16 @@ export const khsController = {
     return fetchApi<{ message: string }>('/yudisium/kelas/nilai-sub', {
       method: 'POST',
       body: JSON.stringify({ kelasKuliahId, nilaiSubList }),
+    });
+  },
+
+  async saveNilaiAkhir(
+    kelasKuliahId: number,
+    nilaiAkhirList: Array<{ krsId: number; nilai: number }>,
+  ): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>('/yudisium/kelas/nilai-akhir', {
+      method: 'POST',
+      body: JSON.stringify({ kelasKuliahId, nilaiAkhirList }),
     });
   },
 

@@ -392,6 +392,14 @@ export class YudisiumService {
     return map;
   }
 
+  private static assertNilaiRange(nilai: number | string, label: string): number {
+    const num = typeof nilai === 'number' ? nilai : parseFloat(String(nilai).replace(',', '.'));
+    if (!Number.isFinite(num) || num < 0 || num > 100) {
+      throw new Error(`${label} harus berada di rentang 0-100.`);
+    }
+    return num;
+  }
+
   static async saveNilaiMahasiswa(
     kelasKuliahId: number,
     list: Array<{
@@ -420,6 +428,17 @@ export class YudisiumService {
             await db.select().from(subKomponenNilai).where(inArray(subKomponenNilai.komponenNilaiId, componentIds)),
           )
         : new Map<number, SubKomponenDef[]>();
+
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    for (const item of list) {
+      for (const v of item.nilaiKomponenList) {
+        this.assertNilaiRange(v.nilai, 'Nilai komponen');
+        const subs = subDefsByKomponen.get(v.komponenNilaiId);
+        if (subs && subs.length > 0) {
+          throw new Error('Komponen ini memiliki sub-komponen. Hapus sub-komponen dahulu atau input melalui sub.');
+        }
+      }
+    }
 
     return await db.transaction(async (tx) => {
       const results = [];
@@ -514,6 +533,13 @@ export class YudisiumService {
           )
         : new Map<number, SubKomponenDef[]>();
 
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    for (const item of list) {
+      for (const v of item.subNilaiList) {
+        this.assertNilaiRange(v.nilai, 'Nilai sub-komponen');
+      }
+    }
+
     return await db.transaction(async (tx) => {
       const results = [];
 
@@ -569,6 +595,61 @@ export class YudisiumService {
             .returning();
           results.push(updatedKrs);
         }
+      }
+
+      return results;
+    });
+  }
+
+  static async saveNilaiAkhir(kelasKuliahId: number, list: Array<{ krsId: number; nilai: number | string }>) {
+    const foundKelas = await db.query.kelasKuliah.findFirst({
+      where: eq(kelasKuliah.id, kelasKuliahId),
+    });
+    if (!foundKelas) {
+      throw new Error('Kelas kuliah tidak ditemukan.');
+    }
+    if (foundKelas.isLocked) {
+      throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
+    }
+
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    for (const item of list) {
+      this.assertNilaiRange(item.nilai, 'Nilai akhir');
+    }
+
+    const allRules = await db.select().from(konversiNilai);
+    const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
+
+    return await db.transaction(async (tx) => {
+      const results = [];
+
+      for (const item of list) {
+        const [foundKrs] = await tx
+          .select({ id: krs.id })
+          .from(krs)
+          .where(and(eq(krs.id, item.krsId), eq(krs.kelasKuliahId, kelasKuliahId)));
+        if (!foundKrs) {
+          throw new Error('KRS mahasiswa tidak ditemukan pada kelas ini.');
+        }
+
+        const score = parseFloat(this.assertNilaiRange(item.nilai, 'Nilai akhir').toFixed(2));
+        const conversion = resolveGradeFromRules(activeRules, score);
+
+        // Hapus nilai level halus agar NA manual tidak tertimpa saat lockKelas.
+        await tx.delete(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, item.krsId));
+        await tx.delete(nilaiSubKomponenMahasiswa).where(eq(nilaiSubKomponenMahasiswa.krsId, item.krsId));
+
+        const [updatedKrs] = await tx
+          .update(krs)
+          .set({
+            nilaiAngka: String(score),
+            nilaiHuruf: conversion.huruf,
+            nilaiIndeks: String(conversion.indeks),
+            updatedAt: new Date(),
+          })
+          .where(eq(krs.id, item.krsId))
+          .returning();
+        results.push(updatedKrs);
       }
 
       return results;

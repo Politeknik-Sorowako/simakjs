@@ -31,7 +31,7 @@ export const saveNilaiMahasiswaBody = t.Object({
       nilaiKomponenList: t.Array(
         t.Object({
           komponenNilaiId: t.Integer(),
-          nilai: t.Number(),
+          nilai: t.Number({ minimum: 0, maximum: 100 }),
         }),
       ),
     }),
@@ -58,9 +58,19 @@ export const saveNilaiSubBody = t.Object({
       subNilaiList: t.Array(
         t.Object({
           subKomponenNilaiId: t.Integer(),
-          nilai: t.Number(),
+          nilai: t.Number({ minimum: 0, maximum: 100 }),
         }),
       ),
+    }),
+  ),
+});
+
+export const saveNilaiAkhirBody = t.Object({
+  kelasKuliahId: t.Integer(),
+  nilaiAkhirList: t.Array(
+    t.Object({
+      krsId: t.Integer(),
+      nilai: t.Number({ minimum: 0, maximum: 100 }),
     }),
   ),
 });
@@ -403,5 +413,27 @@ export const unlockKelasYudisiumSchema = {
       nama: t.Optional(t.String({ default: 'Kelas A' })),
       isLocked: t.Optional(t.Boolean({ default: false })),
     }),
+  },
+};
+
+export const saveNilaiAkhirYudisiumSchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Simpan Nilai Akhir Langsung',
+    description:
+      'Menyimpan nilai akhir (NA) mahasiswa secara langsung dan menghapus nilai komponen/sub di bawahnya agar NA manual tidak tertimpa.',
+  },
+  body: saveNilaiAkhirBody,
+  response: {
+    200: t.Array(
+      t.Object({
+        id: t.Optional(t.Integer({ default: 1 })),
+        mahasiswaId: t.Optional(t.Integer({ default: 1 })),
+        kelasKuliahId: t.Optional(t.Integer({ default: 1 })),
+        nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: '85.5' })),
+        nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: 'A' })),
+        nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: '4.0' })),
+      }),
+    ),
   },
 };
