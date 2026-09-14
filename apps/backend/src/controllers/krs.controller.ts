@@ -106,16 +106,18 @@ export class KrsController {
           .from(kelasKuliah)
           .where(eq(kelasKuliah.id, body.kelasKuliahId))
           .limit(1);
-        if (kelas) {
-          const clearance = await KhsService.checkBebasTanggungan(myMhsId, kelas.periodeId);
-          if (!clearance.bebas) {
-            set.status = 403;
-            return {
-              error: clearance.detail,
-              reason: clearance.reason,
-              detail: clearance.detail,
-            };
-          }
+        if (!kelas) {
+          set.status = 400;
+          return { error: 'Kelas kuliah tidak ditemukan' };
+        }
+        const clearance = await KhsService.checkBebasTanggungan(myMhsId, kelas.periodeId);
+        if (!clearance.bebas) {
+          set.status = 403;
+          return {
+            error: clearance.detail,
+            reason: clearance.reason,
+            detail: clearance.detail,
+          };
         }
       }
     }

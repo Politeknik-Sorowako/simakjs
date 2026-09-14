@@ -118,6 +118,7 @@ export default function InputNilai() {
     void prodi;
     void search;
     if (!loaded || role() === 'mahasiswa') return;
+    if (!periode) return;
     fetchClasses(1, false);
   });
 
