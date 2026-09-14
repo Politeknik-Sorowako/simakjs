@@ -8,6 +8,7 @@ import {
   krs,
   mahasiswa,
   mataKuliah,
+  nilaiKomponenMahasiswa,
   periodeAkademik,
   programStudi,
   tagihan,
@@ -275,7 +276,7 @@ describe('KHS, Grade Components & Yudisium API', () => {
       expect(parseFloat(finalKrs.nilaiIndeks!)).toBe(4.0);
     });
 
-    it('mengubah komponen nilai harus me-reset nilai akhir KRS mahasiswa terkait menjadi null', async () => {
+    it('mengubah komposisi bobot mempertahankan nilai komponen & menghitung ulang NA', async () => {
       const compRes1 = await app.handle(
         new Request('http://localhost/yudisium/kelas/komponen', {
           method: 'POST',
@@ -317,8 +318,9 @@ describe('KHS, Grade Components & Yudisium API', () => {
       );
 
       const [krsBefore] = await db.select().from(krs).where(eq(krs.id, krsId));
-      expect(krsBefore.nilaiAngka).not.toBeNull();
+      expect(parseFloat(krsBefore.nilaiAngka!)).toBe(85);
 
+      // Ubah bobot dengan nama sama → id & nilai komponen dipertahankan, NA dihitung ulang.
       await app.handle(
         new Request('http://localhost/yudisium/kelas/komponen', {
           method: 'POST',
@@ -329,18 +331,19 @@ describe('KHS, Grade Components & Yudisium API', () => {
           body: JSON.stringify({
             kelasKuliahId: kelasId,
             komponenList: [
-              { nama: 'Tugas', bobot: 20 },
               { nama: 'UTS', bobot: 30 },
-              { nama: 'UAS', bobot: 50 },
+              { nama: 'UAS', bobot: 70 },
             ],
           }),
         }),
       );
 
+      const directRows = await db.select().from(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, krsId));
+      expect(directRows.length).toBe(2);
+
       const [krsAfter] = await db.select().from(krs).where(eq(krs.id, krsId));
-      expect(krsAfter.nilaiAngka).toBeNull();
-      expect(krsAfter.nilaiHuruf).toBeNull();
-      expect(krsAfter.nilaiIndeks).toBeNull();
+      expect(parseFloat(krsAfter.nilaiAngka!)).toBe(87);
+      expect(krsAfter.nilaiHuruf).toBe('A');
     });
   });
 

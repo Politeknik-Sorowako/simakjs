@@ -144,7 +144,7 @@ describe('Nilai Akhir Langsung (M1) & Multi-Metode Input', () => {
     expect(parseFloat(finalKrs.nilaiIndeks!)).toBe(4.0);
   });
 
-  it('M1 menghapus nilai komponen & sub milik mahasiswa tersebut (atomik)', async () => {
+  it('M1 mempertahankan nilai komponen & sub milik mahasiswa (non-destruktif)', async () => {
     const comps = await saveComponents([{ nama: 'Kualitas', bobot: 100 }]);
     const subResult = await saveSub(
       comps[0].id,
@@ -177,7 +177,7 @@ describe('Nilai Akhir Langsung (M1) & Multi-Metode Input', () => {
       .from(nilaiSubKomponenMahasiswa)
       .where(eq(nilaiSubKomponenMahasiswa.krsId, krsId));
     const afterDirect = await db.select().from(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, krsId));
-    expect(afterSub.length).toBe(0);
+    expect(afterSub.length).toBe(5);
     expect(afterDirect.length).toBe(0);
 
     const [finalKrs] = await db.select().from(krs).where(eq(krs.id, krsId));

@@ -67,7 +67,8 @@ export function computeKomponenScore(subGrades: Map<number, number>, subDefs: Su
 
 /**
  * Menghitung nilai akhir mata kuliah (NA) dari seluruh komponen.
- * Komponen yang memiliki sub memakai hasil agregasi sub; komponen tanpa sub memakai nilai langsung.
+ * Preseden: nilai langsung (override eksplisit) menang atas agregasi sub.
+ * Komponen tanpa nilai langsung memakai hasil agregasi sub bila lengkap.
  */
 export function buildFinalScore(
   components: KomponenDef[],
@@ -87,13 +88,13 @@ export function buildFinalScore(
     const direct = directGrades.get(comp.id);
     const subResult = subs.length > 0 ? computeKomponenScore(subGrades, subs) : { score: null, complete: false };
 
-    if (subResult.complete && subResult.score !== null) {
-      // Agregasi sub lengkap menang (nilai sub yang terakhir ditulis).
-      score = subResult.score;
-      complete = true;
-    } else if (direct !== undefined) {
-      // Tidak ada nilai sub (mis. ditimpa nilai langsung) → pakai nilai langsung.
+    if (direct !== undefined) {
+      // Override langsung menang; nilai sub tetap tersimpan di level bawah.
       score = direct;
+      complete = true;
+    } else if (subResult.complete && subResult.score !== null) {
+      // Tidak ada override → pakai agregasi sub yang lengkap.
+      score = subResult.score;
       complete = true;
     } else {
       score = subResult.score;

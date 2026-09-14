@@ -126,10 +126,14 @@ export class KhsService {
       const subs = subDefsByKomponen.get(c.id) ?? [];
       let nilai: number | null = null;
       if (subs.length > 0) {
-        const result = computeKomponenScore(subGrades, subs);
-        // Selaras dengan buildFinalScore: agregasi sub lengkap menang,
-        // jika tidak ada nilai sub (mis. ditimpa nilai langsung) pakai nilai langsung.
-        nilai = result.complete && result.score !== null ? result.score : (directGrades.get(c.id) ?? null);
+        const direct = directGrades.get(c.id);
+        if (direct !== undefined) {
+          // Selaras buildFinalScore: override langsung menang atas agregasi sub.
+          nilai = direct;
+        } else {
+          const result = computeKomponenScore(subGrades, subs);
+          nilai = result.complete && result.score !== null ? result.score : null;
+        }
       } else {
         nilai = directGrades.get(c.id) ?? null;
       }

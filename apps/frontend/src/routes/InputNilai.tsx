@@ -22,7 +22,9 @@ export default function InputNilai() {
 
   // Selected State
   const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
-  const [editableComponents, setEditableComponents] = createSignal<Array<{ name: string; bobot: number }>>([]);
+  const [editableComponents, setEditableComponents] = createSignal<Array<{ id?: number; name: string; bobot: number }>>(
+    [],
+  );
   const [inputGrades, setInputGrades] = createSignal<Record<string, string>>({});
   const [inputSubGrades, setInputSubGrades] = createSignal<Record<string, string>>({});
   const [inputAkhir, setInputAkhir] = createSignal<Record<string, string>>({});
@@ -133,7 +135,7 @@ export default function InputNilai() {
   createEffect(() => {
     const list = components();
     if (list && list.length > 0) {
-      setEditableComponents(list.map((c) => ({ name: c.nama, bobot: c.bobot })));
+      setEditableComponents(list.map((c) => ({ id: c.id, name: c.nama, bobot: c.bobot })));
     } else {
       setEditableComponents([]);
     }
@@ -217,15 +219,6 @@ export default function InputNilai() {
       return;
     }
 
-    if (
-      (components()?.length || 0) > 0 &&
-      !confirm(
-        'Menyimpan komponen nilai akan ME-RESET seluruh nilai akhir kelas ini (termasuk nilai komponen/sub yang sudah ada). Lanjutkan?',
-      )
-    ) {
-      return;
-    }
-
     const list = editableComponents();
     const totalBobot = list.reduce((sum, item) => sum + item.bobot, 0);
     if (totalBobot !== 100) {
@@ -243,9 +236,9 @@ export default function InputNilai() {
     try {
       await khsController.saveKomponen(
         kelasId,
-        list.map((c) => ({ nama: c.name, bobot: c.bobot })),
+        list.map((c) => ({ id: c.id, nama: c.name, bobot: c.bobot })),
       );
-      toast.showToast('Komponen nilai berhasil disimpan.', 'success');
+      toast.showToast('Bobot komponen berhasil disimpan. Nilai yang ada tetap dipertahankan.', 'success');
       refetchComponents();
       refetchStudentsGrades();
     } catch (e: unknown) {
@@ -258,8 +251,10 @@ export default function InputNilai() {
     const list = rencanaEvals();
     if (list && list.length > 0) {
       const totalRpsBobot = list.reduce((sum, item) => sum + Number(item.bobotEvaluasi), 0);
+      const existingByName = new Map((components() || []).map((c) => [c.nama.trim().toLowerCase(), c.id]));
       setEditableComponents(
         list.map((item) => ({
+          id: existingByName.get(item.namaEvaluasi.trim().toLowerCase()),
           name: item.namaEvaluasi,
           bobot: Number(item.bobotEvaluasi),
         })),
@@ -333,17 +328,23 @@ export default function InputNilai() {
   };
 
   const komponenAggLabel = (krsId: number, komponenId: number, bobot: number) => {
-    const result = getDynamicKomponenScore(krsId, komponenId, bobot);
-    if (result.complete && result.score !== null) return result.score.toFixed(2);
-    if (result.score !== null) return `${result.score.toFixed(2)}*`;
+    void bobot;
+    const direct = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
+    if (direct !== null) return `override ${direct.toFixed(2)}`;
+    const result = getDynamicKomponenScore(krsId, komponenId, 0);
+    if (result.complete && result.score !== null) return `Σ ${result.score.toFixed(2)}`;
     return '–';
   };
 
-  // Nilai level-1 suatu komponen: agregasi sub (bila lengkap) atau nilai langsung.
+  // Nilai level-1 suatu komponen: override langsung menang, fallback agregasi sub.
   const getDynamicKomponenScore = (krsId: number, komponenId: number, bobot: number) => {
+    void bobot;
     const directGrade = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
-    const subs = subsByKomponen().get(komponenId) || [];
+    if (directGrade !== null) {
+      return { score: directGrade, complete: true };
+    }
 
+    const subs = subsByKomponen().get(komponenId) || [];
     if (subs.length > 0) {
       let total = 0;
       let weight = 0;
@@ -360,13 +361,9 @@ export default function InputNilai() {
       if (missing === 0 && weight === 100) {
         return { score: parseFloat(total.toFixed(2)), complete: true };
       }
-      if (directGrade !== null) {
-        return { score: directGrade, complete: true };
-      }
-      return { score: null, complete: false };
     }
 
-    return { score: directGrade, complete: directGrade !== null };
+    return { score: null, complete: false };
   };
 
   const getDynamicFinalGrade = (stud: { krsId: number }) => {
@@ -439,15 +436,17 @@ export default function InputNilai() {
         if (subs.length > 0) {
           for (const sub of subs) {
             const grade = parseGradeInput(inputSubGrades()[`${stud.krsId}_${sub.id}`]);
-            subNilaiList.push({ subKomponenNilaiId: sub.id!, nilai: grade ?? 0 });
+            if (grade !== null) subNilaiList.push({ subKomponenNilaiId: sub.id!, nilai: grade });
           }
         } else {
           const grade = parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]);
-          nilaiKomponenList.push({ komponenNilaiId: c.id!, nilai: grade ?? 0 });
+          if (grade !== null) nilaiKomponenList.push({ komponenNilaiId: c.id!, nilai: grade });
         }
       }
 
-      payload.push({ krsId: stud.krsId, nilaiKomponenList });
+      if (nilaiKomponenList.length > 0) {
+        payload.push({ krsId: stud.krsId, nilaiKomponenList });
+      }
       if (subNilaiList.length > 0) {
         payloadSub.push({ krsId: stud.krsId, subNilaiList });
       }
@@ -466,21 +465,13 @@ export default function InputNilai() {
   };
 
   // Save sub-komponen definitions for one component
-  const handleSaveSub = async (komponenId: number, list: Array<{ nama: string; bobot: number }>) => {
+  const handleSaveSub = async (komponenId: number, list: Array<{ id?: number; nama: string; bobot: number }>) => {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
 
-    if (
-      !confirm(
-        'Menyimpan sub-komponen akan ME-RESET nilai akhir kelas dan MENGHAPUS nilai langsung pada komponen ini. Lanjutkan?',
-      )
-    ) {
-      return;
-    }
-
     try {
       await khsController.saveSubKomponen(kelasId, komponenId, list);
-      toast.showToast('Sub-komponen berhasil disimpan.', 'success');
+      toast.showToast('Sub-komponen berhasil disimpan. Nilai yang ada tetap dipertahankan.', 'success');
       refetchSubComponents();
       refetchStudentsGrades();
     } catch (e: unknown) {
@@ -496,29 +487,22 @@ export default function InputNilai() {
     const comps = components();
     if (!list || !comps) return;
 
-    // Deteksi mahasiswa yang akan kehilangan nilai sub karena komponennya diisi langsung.
-    const subIds = new Set(comps.flatMap((c) => (subsByKomponen().get(c.id!) || []).map((s) => s.id)));
-    const studentsWithSubValue = list.filter((stud) =>
-      (stud.nilaiSub || []).some((v) => subIds.has(v.subKomponenNilaiId)),
-    );
+    const payload = list
+      .map((stud) => ({
+        krsId: stud.krsId,
+        nilaiKomponenList: comps
+          .map((c) => ({
+            komponenNilaiId: c.id!,
+            nilai: parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]),
+          }))
+          .filter((v): v is { komponenNilaiId: number; nilai: number } => v.nilai !== null),
+      }))
+      .filter((item) => item.nilaiKomponenList.length > 0);
 
-    if (studentsWithSubValue.length > 0) {
-      if (
-        !confirm(
-          `${studentsWithSubValue.length} mahasiswa memiliki nilai sub-komponen pada komponen yang diisi nilai langsung. Nilai sub tersebut akan DIHAPUS (definisi sub tetap tersimpan). Lanjutkan?`,
-        )
-      ) {
-        return;
-      }
+    if (payload.length === 0) {
+      toast.showToast('Isi minimal satu nilai komponen.', 'error');
+      return;
     }
-
-    const payload = list.map((stud) => ({
-      krsId: stud.krsId,
-      nilaiKomponenList: comps.map((c) => ({
-        komponenNilaiId: c.id!,
-        nilai: parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]) ?? 0,
-      })),
-    }));
 
     try {
       await khsController.saveNilaiMahasiswa(kelasId, payload);
@@ -529,7 +513,7 @@ export default function InputNilai() {
     }
   };
 
-  // Save direct final grades (M1) — menghapus nilai komponen/sub bila ada
+  // Save direct final grades (M1) — non-destruktif, nilai komponen/sub dipertahankan
   const handleSaveAkhir = async () => {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
@@ -546,19 +530,6 @@ export default function InputNilai() {
     if (entries.length === 0) {
       toast.showToast('Isi minimal satu nilai akhir.', 'error');
       return;
-    }
-
-    const overwriteCount = list.filter(
-      (stud) => entries.some((e) => e.krsId === stud.krsId) && isMahasiswaHasHalusData(stud),
-    ).length;
-    if (overwriteCount > 0) {
-      if (
-        !confirm(
-          `${overwriteCount} mahasiswa memiliki nilai komponen/sub. Menyimpan nilai akhir langsung akan MENGHAPUS nilai komponen & sub mereka. Lanjutkan?`,
-        )
-      ) {
-        return;
-      }
     }
 
     try {
@@ -728,19 +699,6 @@ export default function InputNilai() {
         if (nilaiKomponenList.length > 0) payload.push({ krsId, nilaiKomponenList });
       });
       if (payload.length === 0) return { successCount: 0, errors };
-
-      // Peringatan bila impor ini akan menghapus nilai sub-komponen yang ada.
-      const subIds = new Set(comps.flatMap((c) => (subsByKomponen().get(c.id!) || []).map((s) => s.id)));
-      const affected = students.filter((s) => (s.nilaiSub || []).some((v) => subIds.has(v.subKomponenNilaiId)));
-      if (affected.length > 0) {
-        if (
-          !confirm(
-            `${affected.length} mahasiswa memiliki nilai sub-komponen yang akan DIHAPUS oleh impor ini (definisi sub tetap tersimpan). Lanjutkan?`,
-          )
-        ) {
-          return { successCount: 0, errors: [{ line: 0, error: 'Impor dibatalkan oleh pengguna.' }] };
-        }
-      }
 
       try {
         await khsController.saveNilaiMahasiswa(kelasId, payload);
@@ -1155,8 +1113,8 @@ export default function InputNilai() {
                                 <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
                                 <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
                                 <Show when={isMahasiswaHasHalusData(stud)}>
-                                  <span class="text-[9px] font-bold text-amber-600">
-                                    ⚠ punya nilai komponen/sub — akan dihapus
+                                  <span class="text-[9px] font-bold text-brand-600">
+                                    ℹ punya nilai komponen/sub — tetap dipertahankan
                                   </span>
                                 </Show>
                               </div>
@@ -1277,10 +1235,10 @@ export default function InputNilai() {
                                             class="border border-secondary-200 rounded-lg px-2 py-1 text-xs w-16 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
                                           />
                                           <span
-                                            class="text-[9px] text-amber-600"
-                                            title="Menyimpan nilai langsung akan menghapus nilai sub-komponen"
+                                            class="text-[9px] text-brand-600"
+                                            title="Nilai langsung menimpa agregasi sub; nilai sub tetap tersimpan"
                                           >
-                                            🧩 timpa sub
+                                            🧩 override
                                           </span>
                                         </div>
                                       }

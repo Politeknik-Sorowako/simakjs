@@ -20,10 +20,13 @@ import { db } from '../utils/db';
 import {
   buildFinalScore,
   computeKomponenScore,
+  type KomponenDef,
   type KonversiRule,
   resolveGradeFromRules,
   type SubKomponenDef,
 } from '../utils/grade-calc';
+
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export class YudisiumService {
   // --- YUDISIUM ---
@@ -198,7 +201,13 @@ export class YudisiumService {
 
   static async saveKomponen(
     kelasKuliahId: number,
-    list: Array<{ nama: string; bobot: number; subCpmkId?: number | null; rencanaEvaluasiId?: number | null }>,
+    list: Array<{
+      id?: number;
+      nama: string;
+      bobot: number;
+      subCpmkId?: number | null;
+      rencanaEvaluasiId?: number | null;
+    }>,
   ) {
     const foundKelas = await db.query.kelasKuliah.findFirst({
       where: eq(kelasKuliah.id, kelasKuliahId),
@@ -211,34 +220,83 @@ export class YudisiumService {
     if (totalBobot !== 100) {
       throw new Error('Total bobot komponen nilai harus tepat 100%.');
     }
+    for (const item of list) {
+      if (!item.nama.trim()) {
+        throw new Error('Nama komponen tidak boleh kosong.');
+      }
+    }
+
+    const allRules = await db.select().from(konversiNilai);
+    const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
 
     return await db.transaction(async (tx) => {
-      // Clear old components (will cascade delete grades in nilai_komponen_mahasiswa)
-      await tx.delete(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+      const existing = await tx.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+      const byId = new Map(existing.map((e) => [e.id, e]));
+      const byName = new Map(existing.map((e) => [e.nama.trim().toLowerCase(), e]));
+      const usedIds = new Set<number>();
+      const result: Array<typeof komponenNilai.$inferSelect> = [];
 
-      // Reset KRS grades for this class to ensure integrity
-      await tx
-        .update(krs)
-        .set({
-          nilaiAngka: null,
-          nilaiHuruf: null,
-          nilaiIndeks: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(krs.kelasKuliahId, kelasKuliahId));
+      // Diff-upsert: pertahankan id & nilai level bawah bila komponen masih ada.
+      for (const item of list) {
+        const key = item.nama.trim().toLowerCase();
+        const match = (item.id !== undefined ? byId.get(item.id) : undefined) ?? byName.get(key);
 
-      const inserts = list.map((item) => ({
-        kelasKuliahId,
-        nama: item.nama,
-        bobot: item.bobot,
-        subCpmkId: item.subCpmkId || null,
-        rencanaEvaluasiId: item.rencanaEvaluasiId || null,
-      }));
-
-      if (inserts.length > 0) {
-        return await tx.insert(komponenNilai).values(inserts).returning();
+        if (match && !usedIds.has(match.id)) {
+          usedIds.add(match.id);
+          const [updated] = await tx
+            .update(komponenNilai)
+            .set({
+              nama: item.nama,
+              bobot: item.bobot,
+              subCpmkId: item.subCpmkId !== undefined ? item.subCpmkId : match.subCpmkId,
+              rencanaEvaluasiId:
+                item.rencanaEvaluasiId !== undefined ? item.rencanaEvaluasiId : match.rencanaEvaluasiId,
+              updatedAt: new Date(),
+            })
+            .where(eq(komponenNilai.id, match.id))
+            .returning();
+          result.push(updated);
+        } else {
+          const [inserted] = await tx
+            .insert(komponenNilai)
+            .values({
+              kelasKuliahId,
+              nama: item.nama,
+              bobot: item.bobot,
+              subCpmkId: item.subCpmkId ?? null,
+              rencanaEvaluasiId: item.rencanaEvaluasiId ?? null,
+            })
+            .returning();
+          result.push(inserted);
+        }
       }
-      return [];
+
+      // Hapus hanya komponen yang benar-benar tidak lagi ada di komposisi.
+      const removedIds = existing.filter((e) => !usedIds.has(e.id)).map((e) => e.id);
+      if (removedIds.length > 0) {
+        await tx.delete(komponenNilai).where(inArray(komponenNilai.id, removedIds));
+      }
+
+      // Hitung ulang L0 seluruh kelas dari definisi bobot terbaru (tanpa reset nilai).
+      const components = await tx.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+      const componentDefs = components.map((c) => ({ id: c.id, bobot: c.bobot }));
+      const componentIds = components.map((c) => c.id);
+      const subRows =
+        componentIds.length > 0
+          ? await tx.select().from(subKomponenNilai).where(inArray(subKomponenNilai.komponenNilaiId, componentIds))
+          : [];
+      const subDefsByKomponen = this.buildSubDefsMap(subRows);
+      const krsRecords = await tx.select({ id: krs.id }).from(krs).where(eq(krs.kelasKuliahId, kelasKuliahId));
+
+      await this.recalcFinalGrades(
+        tx,
+        krsRecords.map((k) => k.id),
+        componentDefs,
+        subDefsByKomponen,
+        activeRules,
+      );
+
+      return result;
     });
   }
 
@@ -261,7 +319,7 @@ export class YudisiumService {
   static async saveSubKomponen(
     kelasKuliahId: number,
     komponenNilaiId: number,
-    list: Array<{ nama: string; bobot: number; urutan?: number }>,
+    list: Array<{ id?: number; nama: string; bobot: number; urutan?: number }>,
   ) {
     const foundKelas = await db.query.kelasKuliah.findFirst({
       where: eq(kelasKuliah.id, kelasKuliahId),
@@ -293,33 +351,78 @@ export class YudisiumService {
       }
     }
 
+    const allRules = await db.select().from(konversiNilai);
+    const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
+
     return await db.transaction(async (tx) => {
-      // Replace set: hapus sub lama (cascade nilai sub) lalu reset nilai akhir kelas.
-      await tx.delete(subKomponenNilai).where(eq(subKomponenNilai.komponenNilaiId, komponenNilaiId));
+      const existing = await tx
+        .select()
+        .from(subKomponenNilai)
+        .where(eq(subKomponenNilai.komponenNilaiId, komponenNilaiId));
+      const byId = new Map(existing.map((e) => [e.id, e]));
+      const byName = new Map(existing.map((e) => [e.nama.trim().toLowerCase(), e]));
+      const usedIds = new Set<number>();
+      const result: Array<typeof subKomponenNilai.$inferSelect> = [];
 
-      // Nilai langsung pada komponen ini tidak lagi relevan bila kini memakai sub-komponen.
-      await tx.delete(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.komponenNilaiId, komponenNilaiId));
+      // Diff-upsert: nilai sub lama dipertahankan selama definisinya masih ada.
+      for (let index = 0; index < list.length; index++) {
+        const item = list[index];
+        const key = item.nama.trim().toLowerCase();
+        const match = (item.id !== undefined ? byId.get(item.id) : undefined) ?? byName.get(key);
 
-      await tx
-        .update(krs)
-        .set({
-          nilaiAngka: null,
-          nilaiHuruf: null,
-          nilaiIndeks: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(krs.kelasKuliahId, kelasKuliahId));
+        if (match && !usedIds.has(match.id)) {
+          usedIds.add(match.id);
+          const [updated] = await tx
+            .update(subKomponenNilai)
+            .set({
+              nama: item.nama,
+              bobot: item.bobot,
+              urutan: item.urutan ?? index,
+              updatedAt: new Date(),
+            })
+            .where(eq(subKomponenNilai.id, match.id))
+            .returning();
+          result.push(updated);
+        } else {
+          const [inserted] = await tx
+            .insert(subKomponenNilai)
+            .values({
+              komponenNilaiId,
+              nama: item.nama,
+              bobot: item.bobot,
+              urutan: item.urutan ?? index,
+            })
+            .returning();
+          result.push(inserted);
+        }
+      }
 
-      if (list.length === 0) return [];
+      // Hapus hanya sub yang benar-benar dihilangkan dari komposisi.
+      const removedIds = existing.filter((e) => !usedIds.has(e.id)).map((e) => e.id);
+      if (removedIds.length > 0) {
+        await tx.delete(subKomponenNilai).where(inArray(subKomponenNilai.id, removedIds));
+      }
 
-      const inserts = list.map((item, index) => ({
-        komponenNilaiId,
-        nama: item.nama,
-        bobot: item.bobot,
-        urutan: item.urutan ?? index,
-      }));
+      // Hitung ulang L0 kelas dengan definisi sub terbaru; L1/L2 tidak dihapus.
+      const components = await tx.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasKuliahId));
+      const componentDefs = components.map((c) => ({ id: c.id, bobot: c.bobot }));
+      const componentIds = components.map((c) => c.id);
+      const subRows =
+        componentIds.length > 0
+          ? await tx.select().from(subKomponenNilai).where(inArray(subKomponenNilai.komponenNilaiId, componentIds))
+          : [];
+      const subDefsByKomponen = this.buildSubDefsMap(subRows);
+      const krsRecords = await tx.select({ id: krs.id }).from(krs).where(eq(krs.kelasKuliahId, kelasKuliahId));
 
-      return await tx.insert(subKomponenNilai).values(inserts).returning();
+      await this.recalcFinalGrades(
+        tx,
+        krsRecords.map((k) => k.id),
+        componentDefs,
+        subDefsByKomponen,
+        activeRules,
+      );
+
+      return result;
     });
   }
 
@@ -390,6 +493,47 @@ export class YudisiumService {
       map.set(row.komponenNilaiId, arr);
     }
     return map;
+  }
+
+  /**
+   * Menghitung ulang nilai akhir (L0) sekumpulan KRS dari nilai L1/L2 yang ada.
+   * Tidak pernah menghapus/menulis nilai level bawah; hanya meng-update `krs` bila bobot lengkap.
+   */
+  private static async recalcFinalGrades(
+    tx: DbTx,
+    krsIds: number[],
+    componentDefs: KomponenDef[],
+    subDefsByKomponen: Map<number, SubKomponenDef[]>,
+    activeRules: KonversiRule[],
+  ) {
+    const results = [];
+    for (const krsId of krsIds) {
+      const directRows = await tx.select().from(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, krsId));
+      const subRows = await tx
+        .select()
+        .from(nilaiSubKomponenMahasiswa)
+        .where(eq(nilaiSubKomponenMahasiswa.krsId, krsId));
+
+      const directGrades = new Map(directRows.map((g) => [g.komponenNilaiId, parseFloat(g.nilai)]));
+      const subGrades = new Map(subRows.map((g) => [g.subKomponenNilaiId, parseFloat(g.nilai)]));
+
+      const calc = buildFinalScore(componentDefs, subDefsByKomponen, directGrades, subGrades);
+      if (calc.registeredWeight !== 100) continue;
+
+      const conversion = resolveGradeFromRules(activeRules, calc.finalScore);
+      const [updatedKrs] = await tx
+        .update(krs)
+        .set({
+          nilaiAngka: String(calc.finalScore),
+          nilaiHuruf: conversion.huruf,
+          nilaiIndeks: String(conversion.indeks),
+          updatedAt: new Date(),
+        })
+        .where(eq(krs.id, krsId))
+        .returning();
+      if (updatedKrs) results.push(updatedKrs);
+    }
+    return results;
   }
 
   private static assertNilaiRange(nilai: number | string, label: string): number {
@@ -482,8 +626,8 @@ export class YudisiumService {
     const items = this.dedupeNilaiKomponen(list);
 
     // Validasi awal (fail fast, sebelum menulis apa pun ke DB).
-    // Nilai langsung boleh menimpa komponen yang memiliki sub; nilai sub akan
-    // dibersihkan (definisi sub dipertahankan) agar tidak ada koeksistensi nilai.
+    // Nilai langsung boleh menimpa perhitungan komponen bersub; nilai sub tetap
+    // tersimpan sebagai level dasar (hierarki non-destruktif).
     for (const item of items) {
       for (const v of item.nilaiKomponenList) {
         this.assertNilaiRange(v.nilai, 'Nilai komponen');
@@ -503,21 +647,6 @@ export class YudisiumService {
               and(
                 eq(nilaiKomponenMahasiswa.krsId, item.krsId),
                 inArray(nilaiKomponenMahasiswa.komponenNilaiId, compIds),
-              ),
-            );
-        }
-
-        // Hapus nilai sub milik komponen yang kini diisi nilai langsung (simetri SoT).
-        const subIdsToClear = item.nilaiKomponenList.flatMap((v) =>
-          (subDefsByKomponen.get(v.komponenNilaiId) ?? []).map((s) => s.id),
-        );
-        if (subIdsToClear.length > 0) {
-          await tx
-            .delete(nilaiSubKomponenMahasiswa)
-            .where(
-              and(
-                eq(nilaiSubKomponenMahasiswa.krsId, item.krsId),
-                inArray(nilaiSubKomponenMahasiswa.subKomponenNilaiId, subIdsToClear),
               ),
             );
         }
@@ -729,10 +858,7 @@ export class YudisiumService {
         const score = parseFloat(this.assertNilaiRange(item.nilai, 'Nilai akhir').toFixed(2));
         const conversion = resolveGradeFromRules(activeRules, score);
 
-        // Hapus nilai level halus agar NA manual tidak tertimpa saat lockKelas.
-        await tx.delete(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, item.krsId));
-        await tx.delete(nilaiSubKomponenMahasiswa).where(eq(nilaiSubKomponenMahasiswa.krsId, item.krsId));
-
+        // Nilai akhir manual tidak menghapus nilai komponen/sub di bawahnya (hierarki non-destruktif).
         const [updatedKrs] = await tx
           .update(krs)
           .set({
@@ -807,15 +933,13 @@ export class YudisiumService {
         const l1Map = new Map<number, number>();
         for (const comp of components) {
           const subs = subDefsByKomponen.get(comp.id) ?? [];
-          let l1: number | undefined;
-          if (subs.length > 0) {
+          // Preseden selaras buildFinalScore: override langsung menang, lalu agregasi sub.
+          let l1: number | undefined = directGrades.get(comp.id);
+          if (l1 === undefined && subs.length > 0) {
             const subResult = computeKomponenScore(subGrades, subs);
             if (subResult.complete && subResult.score !== null) {
               l1 = subResult.score;
             }
-          }
-          if (l1 === undefined) {
-            l1 = directGrades.get(comp.id);
           }
           if (l1 !== undefined) {
             l1Map.set(comp.id, l1);
