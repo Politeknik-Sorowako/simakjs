@@ -306,4 +306,51 @@ describe('Hierarki nilai non-destruktif (preserve + recalc)', () => {
       .where(eq(subKomponenNilai.komponenNilaiId, comps.data[1].id));
     expect(subRows.length).toBe(0);
   });
+
+  it('nama komponen duplikat ditolak tanpa write parsial', async () => {
+    const comps = await saveComponents([{ nama: 'UTS', bobot: 100 }]);
+    await postNilaiKomponen(comps.data[0].id, 80);
+
+    const res = await saveComponents([
+      { nama: 'UTS', bobot: 50 },
+      { nama: 'uts', bobot: 50 },
+    ]);
+    expect(res.status).toBe(400);
+
+    const allComps = await db.select().from(komponenNilai).where(eq(komponenNilai.kelasKuliahId, kelasId));
+    expect(allComps.length).toBe(1);
+    expect(allComps[0].bobot).toBe(100);
+
+    const directRows = await db.select().from(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, krsId));
+    expect(directRows.length).toBe(1);
+    expect(parseFloat((await getKrs()).nilaiAngka!)).toBe(80);
+  });
+
+  it('nama sub-komponen duplikat ditolak tanpa write parsial', async () => {
+    const comps = await saveComponents([{ nama: 'Kualitas', bobot: 100 }]);
+    const subs = await saveSub(comps.data[0].id, [
+      { nama: 'A', bobot: 50 },
+      { nama: 'B', bobot: 50 },
+    ]);
+    await postNilaiSub([
+      { subKomponenNilaiId: subs.data[0].id, nilai: 90 },
+      { subKomponenNilaiId: subs.data[1].id, nilai: 80 },
+    ]);
+
+    const res = await saveSub(comps.data[0].id, [
+      { nama: 'A', bobot: 40 },
+      { nama: 'a', bobot: 60 },
+    ]);
+    expect(res.status).toBe(400);
+
+    const allSubs = await db
+      .select()
+      .from(subKomponenNilai)
+      .where(eq(subKomponenNilai.komponenNilaiId, comps.data[0].id));
+    expect(allSubs.length).toBe(2);
+
+    const subRows = await db.select().from(nilaiSubKomponenMahasiswa).where(eq(nilaiSubKomponenMahasiswa.krsId, krsId));
+    expect(subRows.length).toBe(2);
+    expect(parseFloat((await getKrs()).nilaiAngka!)).toBe(85);
+  });
 });

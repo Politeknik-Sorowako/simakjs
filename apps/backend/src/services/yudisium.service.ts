@@ -220,10 +220,16 @@ export class YudisiumService {
     if (totalBobot !== 100) {
       throw new Error('Total bobot komponen nilai harus tepat 100%.');
     }
+    const seenNames = new Set<string>();
     for (const item of list) {
-      if (!item.nama.trim()) {
+      const key = item.nama.trim().toLowerCase();
+      if (!key) {
         throw new Error('Nama komponen tidak boleh kosong.');
       }
+      if (seenNames.has(key)) {
+        throw new Error('Nama komponen tidak boleh duplikat dalam satu kelas.');
+      }
+      seenNames.add(key);
     }
 
     const allRules = await db.select().from(konversiNilai);
@@ -344,10 +350,16 @@ export class YudisiumService {
       if (totalBobot !== 100) {
         throw new Error('Total bobot sub-komponen harus tepat 100%.');
       }
+      const seenNames = new Set<string>();
       for (const item of list) {
-        if (!item.nama.trim()) {
+        const key = item.nama.trim().toLowerCase();
+        if (!key) {
           throw new Error('Nama sub-komponen tidak boleh kosong.');
         }
+        if (seenNames.has(key)) {
+          throw new Error('Nama sub-komponen tidak boleh duplikat.');
+        }
+        seenNames.add(key);
       }
     }
 
@@ -506,16 +518,35 @@ export class YudisiumService {
     subDefsByKomponen: Map<number, SubKomponenDef[]>,
     activeRules: KonversiRule[],
   ) {
+    if (krsIds.length === 0) return [];
+
+    // Batch fetch L1 & L2 untuk seluruh KRS sekaligus (hindari N+1 read).
+    const directRows = await tx
+      .select()
+      .from(nilaiKomponenMahasiswa)
+      .where(inArray(nilaiKomponenMahasiswa.krsId, krsIds));
+    const subRows = await tx
+      .select()
+      .from(nilaiSubKomponenMahasiswa)
+      .where(inArray(nilaiSubKomponenMahasiswa.krsId, krsIds));
+
+    const directByKrs = new Map<number, Map<number, number>>();
+    for (const g of directRows) {
+      const map = directByKrs.get(g.krsId) ?? new Map<number, number>();
+      map.set(g.komponenNilaiId, parseFloat(g.nilai));
+      directByKrs.set(g.krsId, map);
+    }
+    const subByKrs = new Map<number, Map<number, number>>();
+    for (const g of subRows) {
+      const map = subByKrs.get(g.krsId) ?? new Map<number, number>();
+      map.set(g.subKomponenNilaiId, parseFloat(g.nilai));
+      subByKrs.set(g.krsId, map);
+    }
+
     const results = [];
     for (const krsId of krsIds) {
-      const directRows = await tx.select().from(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, krsId));
-      const subRows = await tx
-        .select()
-        .from(nilaiSubKomponenMahasiswa)
-        .where(eq(nilaiSubKomponenMahasiswa.krsId, krsId));
-
-      const directGrades = new Map(directRows.map((g) => [g.komponenNilaiId, parseFloat(g.nilai)]));
-      const subGrades = new Map(subRows.map((g) => [g.subKomponenNilaiId, parseFloat(g.nilai)]));
+      const directGrades = directByKrs.get(krsId) ?? new Map<number, number>();
+      const subGrades = subByKrs.get(krsId) ?? new Map<number, number>();
 
       const calc = buildFinalScore(componentDefs, subDefsByKomponen, directGrades, subGrades);
       if (calc.registeredWeight !== 100) continue;
