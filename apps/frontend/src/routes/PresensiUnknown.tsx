@@ -155,8 +155,28 @@ export default function PresensiUnknown() {
     }
     setSubmitting(true);
     try {
+      const isPraktikum = tab() === 'praktikum';
+      const sumber: 'BAP' | 'PRAKTIKUM' = isPraktikum ? 'PRAKTIKUM' : 'BAP';
+      const tanggal = isPraktikum
+        ? (item as PresensiPraktikumUnknownItem).bapPrakTanggal
+        : (item as PresensiUnknownItem).bapTanggal;
+
+      // Pre-check non-blocking: beri tahu admin bila baris terpusat belum tersinkron.
+      // Server tetap self-heal saat POST sehingga operasi tidak terhalang.
+      if (tanggal) {
+        try {
+          const rekap = await presensiController.getRekapHarian(item.mahasiswaId, tanggal);
+          const tersinkron = rekap.rows.some((r) => r.sumber === sumber && r.sumberId === item.id);
+          if (!tersinkron) {
+            toast.showToast('Data ketidakhadiran belum tersinkron. Sistem membentuk ulang secara otomatis...', 'info');
+          }
+        } catch {
+          // Pre-check gagal tidak menghentikan proses verifikasi.
+        }
+      }
+
       await presensiController.verifikasiUnknown({
-        sumber: tab() === 'praktikum' ? 'PRAKTIKUM' : 'BAP',
+        sumber,
         sumberId: item.id,
         statusKonfirmasi: resolveStatus().toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA',
         durasiMenit: isAnulir() ? 0 : resolveDurasi(),

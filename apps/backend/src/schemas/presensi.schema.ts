@@ -382,8 +382,10 @@ export const getUnknownPresensiSchema = {
 export const resolveUnknownPresensiSchema = {
   detail: {
     tags: ['Presensi'],
-    summary: 'Resolusi Presensi Unknown oleh Admin',
-    description: 'Memperbarui status presensi unknown menjadi sakit/izin/alpa berdasarkan verifikasi admin.',
+    summary: 'Resolusi Presensi Unknown oleh Admin (legacy)',
+    description:
+      'Legacy: memperbarui status presensi unknown dan menyinkronkan tabel terpusat ketidakhadiran. ' +
+      'Gunakan endpoint kanonik POST /ketidakhadiran/verifikasi-unknown.',
   },
   params: t.Object({
     id: t.Numeric(),
