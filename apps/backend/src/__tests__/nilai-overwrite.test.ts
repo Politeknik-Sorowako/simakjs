@@ -160,7 +160,7 @@ describe('Overwrite hierarki nilai & visibilitas mahasiswa', () => {
       }),
     );
 
-  it('M2 menimpa komponen bersub: nilai sub terhapus, definisi tetap, NA dari nilai langsung', async () => {
+  it('M2 menimpa komponen bersub: nilai sub dipertahankan, NA dari nilai langsung', async () => {
     const comps = await saveComponents([{ nama: 'Kualitas', bobot: 100 }]);
     const subs = await saveSub(comps[0].id, [
       { nama: 'A', bobot: 50 },
@@ -178,7 +178,7 @@ describe('Overwrite hierarki nilai & visibilitas mahasiswa', () => {
     expect(parseFloat(after.nilaiAngka!)).toBe(70);
 
     const subRows = await db.select().from(nilaiSubKomponenMahasiswa).where(eq(nilaiSubKomponenMahasiswa.krsId, krsId));
-    expect(subRows.length).toBe(0);
+    expect(subRows.length).toBe(2);
 
     const directRows = await db.select().from(nilaiKomponenMahasiswa).where(eq(nilaiKomponenMahasiswa.krsId, krsId));
     expect(directRows.length).toBe(1);

@@ -11,7 +11,7 @@ interface SubKomponenEditorProps {
   komponenId: number;
   disabled: boolean;
   subs: SubKomponenNilai[];
-  onSave: (komponenId: number, list: Array<{ nama: string; bobot: number }>) => Promise<void>;
+  onSave: (komponenId: number, list: Array<{ id?: number; nama: string; bobot: number }>) => Promise<void>;
 }
 
 function signatureOf(subs: SubKomponenNilai[]): string {
@@ -65,7 +65,11 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
 
   const handleSave = async () => {
     setError(null);
-    const list = rows().map((row) => ({ nama: row.nama.trim(), bobot: parseBobot(row.bobot) }));
+    const list = rows().map((row) => ({
+      ...(row.id !== undefined ? { id: row.id } : {}),
+      nama: row.nama.trim(),
+      bobot: parseBobot(row.bobot),
+    }));
 
     if (list.some((row) => !row.nama)) {
       setError('Nama sub-komponen tidak boleh kosong.');

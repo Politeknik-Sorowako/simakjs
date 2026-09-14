@@ -17,6 +17,7 @@ export const saveKomponenBody = t.Object({
   kelasKuliahId: t.Integer(),
   komponenList: t.Array(
     t.Object({
+      id: t.Optional(t.Integer()),
       nama: t.String({ minLength: 1, maxLength: 100 }),
       bobot: t.Integer({ minimum: 1, maximum: 100 }),
     }),
@@ -43,6 +44,7 @@ export const saveSubKomponenBody = t.Object({
   komponenNilaiId: t.Integer(),
   subKomponenList: t.Array(
     t.Object({
+      id: t.Optional(t.Integer()),
       nama: t.String({ minLength: 1, maxLength: 100 }),
       bobot: t.Integer({ minimum: 1, maximum: 100 }),
       urutan: t.Optional(t.Integer({ minimum: 0 })),
@@ -318,7 +320,8 @@ export const saveSubKomponenYudisiumSchema = {
   detail: {
     tags: ['Yudisium & Komponen Nilai'],
     summary: 'Simpan Sub-Komponen Nilai',
-    description: 'Menyimpan (replace) definisi sub-komponen beserta bobot internalnya untuk satu komponen nilai.',
+    description:
+      'Menyimpan (diff-upsert) definisi sub-komponen beserta bobot internalnya untuk satu komponen nilai tanpa mereset nilai.',
   },
   body: saveSubKomponenBody,
   response: {
@@ -420,8 +423,7 @@ export const saveNilaiAkhirYudisiumSchema = {
   detail: {
     tags: ['Yudisium & Komponen Nilai'],
     summary: 'Simpan Nilai Akhir Langsung',
-    description:
-      'Menyimpan nilai akhir (NA) mahasiswa secara langsung dan menghapus nilai komponen/sub di bawahnya agar NA manual tidak tertimpa.',
+    description: 'Menyimpan nilai akhir (NA) mahasiswa secara langsung tanpa menghapus nilai komponen/sub di bawahnya.',
   },
   body: saveNilaiAkhirBody,
   response: {

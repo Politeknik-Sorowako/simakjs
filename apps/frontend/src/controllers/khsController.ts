@@ -241,7 +241,13 @@ export const khsController = {
 
   async saveKomponen(
     kelasKuliahId: number,
-    komponenList: Omit<KomponenNilai, 'id' | 'kelasKuliahId'>[],
+    komponenList: Array<{
+      id?: number;
+      nama: string;
+      bobot: number;
+      subCpmkId?: number | null;
+      rencanaEvaluasiId?: number | null;
+    }>,
   ): Promise<KomponenNilai[]> {
     return fetchApi<KomponenNilai[]>('/yudisium/kelas/komponen', {
       method: 'POST',
@@ -260,7 +266,7 @@ export const khsController = {
   async saveSubKomponen(
     kelasKuliahId: number,
     komponenNilaiId: number,
-    subKomponenList: Array<{ nama: string; bobot: number; urutan?: number }>,
+    subKomponenList: Array<{ id?: number; nama: string; bobot: number; urutan?: number }>,
   ): Promise<SubKomponenNilai[]> {
     return fetchApi<SubKomponenNilai[]>('/yudisium/kelas/sub-komponen', {
       method: 'POST',
