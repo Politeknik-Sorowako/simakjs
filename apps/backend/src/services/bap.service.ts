@@ -6,6 +6,7 @@ import {
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
+  ketidakhadiranMahasiswa,
   periodeAkademik,
   presensi,
   rps,
@@ -389,10 +390,24 @@ export class BapService {
   }
 
   static async delete(id: number) {
-    await db.delete(presensi).where(eq(presensi.bapId, id));
-    await db.delete(bapTopik).where(eq(bapTopik.bapId, id));
-    const [deleted] = await db.delete(bap).where(eq(bap.id, id)).returning();
-    return deleted || null;
+    return await db.transaction(async (tx) => {
+      const oldPresensi = await tx.select({ id: presensi.id }).from(presensi).where(eq(presensi.bapId, id));
+      if (oldPresensi.length > 0) {
+        await tx.delete(ketidakhadiranMahasiswa).where(
+          and(
+            eq(ketidakhadiranMahasiswa.sumber, 'BAP'),
+            inArray(
+              ketidakhadiranMahasiswa.sumberId,
+              oldPresensi.map((p) => p.id),
+            ),
+          ),
+        );
+      }
+      await tx.delete(presensi).where(eq(presensi.bapId, id));
+      await tx.delete(bapTopik).where(eq(bapTopik.bapId, id));
+      const [deleted] = await tx.delete(bap).where(eq(bap.id, id)).returning();
+      return deleted || null;
+    });
   }
 
   static async duplicateBap(sourceBapId: number, newPertemuanKe: number, newTanggal?: string) {
@@ -417,42 +432,83 @@ export class BapService {
     const sourceTopiks = await db.select().from(bapTopik).where(eq(bapTopik.bapId, sourceBapId));
     const sourcePresensi = await db.select().from(presensi).where(eq(presensi.bapId, sourceBapId));
 
-    const [newBap] = await db
-      .insert(bap)
-      .values({
-        kelasKuliahId: sourceBap.kelasKuliahId,
-        tanggal: newTanggal || sourceBap.tanggal,
-        pertemuanKe: targetPertemuan,
-        tema: sourceBap.tema,
-        materi: sourceBap.materi,
-        catatan: sourceBap.catatan,
-        durasiMenit: sourceBap.durasiMenit,
-        cpmkId: sourceBap.cpmkId,
-        dosenId: sourceBap.dosenId,
-      })
-      .returning();
+    const newBap = await db.transaction(async (tx) => {
+      const [createdBap] = await tx
+        .insert(bap)
+        .values({
+          kelasKuliahId: sourceBap.kelasKuliahId,
+          tanggal: newTanggal || sourceBap.tanggal,
+          pertemuanKe: targetPertemuan,
+          tema: sourceBap.tema,
+          materi: sourceBap.materi,
+          catatan: sourceBap.catatan,
+          durasiMenit: sourceBap.durasiMenit,
+          cpmkId: sourceBap.cpmkId,
+          dosenId: sourceBap.dosenId,
+        })
+        .returning();
 
-    if (sourceTopiks.length > 0) {
-      await db.insert(bapTopik).values(
-        sourceTopiks.map((t) => ({
-          bapId: newBap.id,
-          topikId: t.topikId,
-          cpmkId: t.cpmkId,
-        })),
-      );
-    }
+      if (sourceTopiks.length > 0) {
+        await tx.insert(bapTopik).values(
+          sourceTopiks.map((t) => ({
+            bapId: createdBap.id,
+            topikId: t.topikId,
+            cpmkId: t.cpmkId,
+          })),
+        );
+      }
 
-    if (sourcePresensi.length > 0) {
-      await db.insert(presensi).values(
-        sourcePresensi.map((p) => ({
-          bapId: newBap.id,
-          mahasiswaId: p.mahasiswaId,
-          status: p.status,
-          durasiMangkir: p.durasiMangkir,
-          keterangan: p.keterangan,
-        })),
-      );
-    }
+      if (sourcePresensi.length > 0) {
+        const insertedPresensi = await tx
+          .insert(presensi)
+          .values(
+            sourcePresensi.map((p) => ({
+              bapId: createdBap.id,
+              mahasiswaId: p.mahasiswaId,
+              status: p.status,
+              durasiMangkir: p.durasiMangkir,
+              keterangan: p.keterangan,
+            })),
+          )
+          .returning({
+            id: presensi.id,
+            mahasiswaId: presensi.mahasiswaId,
+            status: presensi.status,
+            durasiMangkir: presensi.durasiMangkir,
+          });
+
+        // Sinkronkan ke tabel terpusat ketidakhadiran (single source of truth)
+        // agar duplikasi BAP tidak menghasilkan orphan unknown.
+        const absentRows = insertedPresensi.filter((row) => row.status !== 'hadir');
+        if (absentRows.length > 0) {
+          await tx
+            .insert(ketidakhadiranMahasiswa)
+            .values(
+              absentRows.map((row) => ({
+                mahasiswaId: row.mahasiswaId,
+                tanggal: createdBap.tanggal,
+                sumber: 'BAP' as const,
+                sumberId: row.id,
+                status: (row.status === 'telat' ? 'TERLAMBAT' : row.status.toUpperCase()) as
+                  | 'UNKNOWN'
+                  | 'SAKIT'
+                  | 'IZIN'
+                  | 'ALPA'
+                  | 'TERLAMBAT'
+                  | 'RUSAK',
+                durasiMenit: row.durasiMangkir,
+                keterangan: null,
+                isVerified: row.status !== 'unknown',
+              })),
+            )
+            .onConflictDoNothing({
+              target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+            });
+        }
+      }
+
+      return createdBap;
+    });
 
     return {
       ...newBap,

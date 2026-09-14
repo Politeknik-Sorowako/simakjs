@@ -383,18 +383,53 @@ export class PresensiService {
       durasiMangkir = 0;
     }
 
-    const [updated] = await db
-      .update(presensi)
-      .set({
-        status: isAnulir ? 'hadir' : newStatus,
-        durasiMangkir,
-        keteranganAdmin: keteranganAdmin || null,
-        lampiranEvidens: lampiranEvidens || null,
-        resolvedBy: adminUserId,
-        resolvedAt: new Date(),
-      })
-      .where(eq(presensi.id, presensiId))
-      .returning();
+    const updated = await db.transaction(async (tx) => {
+      const [result] = await tx
+        .update(presensi)
+        .set({
+          status: isAnulir ? 'hadir' : newStatus,
+          durasiMangkir,
+          keteranganAdmin: keteranganAdmin || null,
+          lampiranEvidens: lampiranEvidens || null,
+          resolvedBy: adminUserId,
+          resolvedAt: new Date(),
+        })
+        .where(eq(presensi.id, presensiId))
+        .returning();
+
+      // Sinkronkan ke tabel terpusat agar jalur lama ini tidak lagi menghasilkan
+      // orphan (presensi terverifikasi tanpa pasangan ketidakhadiran_mahasiswa).
+      if (bapRow) {
+        await tx
+          .insert(ketidakhadiranMahasiswa)
+          .values({
+            mahasiswaId: row.mahasiswaId,
+            tanggal: bapRow.tanggal,
+            sumber: 'BAP',
+            sumberId: presensiId,
+            status: isAnulir ? 'UNKNOWN' : (newStatus.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA'),
+            durasiMenit: durasiMangkir,
+            keterangan: keteranganAdmin || null,
+            isVerified: true,
+            verifiedBy: adminUserId,
+            verifiedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId],
+            set: {
+              status: isAnulir ? 'UNKNOWN' : (newStatus.toUpperCase() as 'SAKIT' | 'IZIN' | 'ALPA'),
+              durasiMenit: durasiMangkir,
+              keterangan: keteranganAdmin || null,
+              isVerified: true,
+              verifiedBy: adminUserId,
+              verifiedAt: new Date(),
+            },
+          });
+      }
+
+      return result;
+    });
+
     return updated || null;
   }
 

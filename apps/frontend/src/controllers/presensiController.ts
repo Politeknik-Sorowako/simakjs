@@ -1,4 +1,5 @@
 import { API_URL, fetchApi } from '../utils/api';
+import { RekapHarianResponse } from './apelController';
 import { PaginatedResponse } from './prodiController';
 
 export interface CPMK {
@@ -410,7 +411,7 @@ export const presensiController = {
   async verifikasiUnknown(data: {
     sumber: 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
     sumberId: number;
-    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'HADIR';
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR';
     durasiMenit?: number;
     keterangan?: string;
   }): Promise<Record<string, unknown>> {
@@ -418,6 +419,13 @@ export const presensiController = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  async getRekapHarian(mahasiswaId: number, tanggal: string): Promise<RekapHarianResponse> {
+    const params = new URLSearchParams();
+    params.set('mahasiswaId', String(mahasiswaId));
+    params.set('tanggal', tanggal);
+    return fetchApi<RekapHarianResponse>(`/ketidakhadiran/harian?${params.toString()}`);
   },
 
   // Rekap Kehadiran
