@@ -1,5 +1,6 @@
 import { KhsService } from '../services/khs.service';
 import { MahasiswaService } from '../services/mahasiswa.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
@@ -28,14 +29,16 @@ export class KhsController {
         return { error: 'Akses ditolak. Anda hanya dapat melihat KHS Anda sendiri.' };
       }
 
-      // Check clearance
-      const clearance = await KhsService.checkBebasTanggungan(targetMhsId, targetPeriodeId);
-      if (!clearance.bebas) {
-        return {
-          blocked: true,
-          reason: clearance.reason,
-          detail: clearance.detail,
-        };
+      // Check clearance (dapat dimatikan admin via BLOCK_KHS_JIKA_TANGGUNGAN)
+      if (await SystemParameterService.isKhsBlockEnabled()) {
+        const clearance = await KhsService.checkBebasTanggungan(targetMhsId, targetPeriodeId);
+        if (!clearance.bebas) {
+          return {
+            blocked: true,
+            reason: clearance.reason,
+            detail: clearance.detail,
+          };
+        }
       }
     }
 

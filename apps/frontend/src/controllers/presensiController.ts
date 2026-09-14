@@ -1,6 +1,26 @@
 import { API_URL, fetchApi } from '../utils/api';
-import { RekapHarianResponse } from './apelController';
 import { PaginatedResponse } from './prodiController';
+
+export interface RekapHarianRow {
+  id: number;
+  mahasiswaId: number;
+  tanggal: string;
+  sumber: 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
+  sumberId: number | null;
+  status: string;
+  durasiMenit: number;
+  keterangan?: string | null;
+  isVerified: boolean;
+}
+
+export interface RekapHarianResponse {
+  mahasiswaId: number;
+  tanggal: string;
+  maksHarian: number;
+  totalTerverifikasi: number;
+  sisaKuota: number;
+  rows: RekapHarianRow[];
+}
 
 export interface CPMK {
   id: number;

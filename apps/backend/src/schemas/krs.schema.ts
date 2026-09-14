@@ -126,6 +126,8 @@ export const createKrsSchema = {
     }),
     403: t.Object({
       error: t.String({ default: 'Akses ditolak.' }),
+      reason: t.Optional(t.String()),
+      detail: t.Optional(t.String()),
     }),
   },
 };

@@ -777,8 +777,7 @@ export class YudisiumService {
     }
 
     return await db.transaction(async (tx) => {
-      const results = [];
-
+      // Phase 1: Tulis (delete + insert) semua item sekaligus.
       for (const item of items) {
         const subIds = item.subNilaiList.map((v) => v.subKomponenNilaiId);
         if (subIds.length > 0) {
@@ -816,18 +815,37 @@ export class YudisiumService {
         if (inserts.length > 0) {
           await tx.insert(nilaiSubKomponenMahasiswa).values(inserts);
         }
+      }
 
-        const directRows = await tx
-          .select()
-          .from(nilaiKomponenMahasiswa)
-          .where(eq(nilaiKomponenMahasiswa.krsId, item.krsId));
-        const subRows = await tx
-          .select()
-          .from(nilaiSubKomponenMahasiswa)
-          .where(eq(nilaiSubKomponenMahasiswa.krsId, item.krsId));
+      // Phase 2: Batch-read semua data yang terdampak (2 query, bukan 2N).
+      const affectedKrsIds = items.map((i) => i.krsId);
+      const allDirectRows = await tx
+        .select()
+        .from(nilaiKomponenMahasiswa)
+        .where(inArray(nilaiKomponenMahasiswa.krsId, affectedKrsIds));
+      const allSubRows = await tx
+        .select()
+        .from(nilaiSubKomponenMahasiswa)
+        .where(inArray(nilaiSubKomponenMahasiswa.krsId, affectedKrsIds));
 
-        const directGrades = new Map(directRows.map((g) => [g.komponenNilaiId, parseFloat(g.nilai)]));
-        const subGrades = new Map(subRows.map((g) => [g.subKomponenNilaiId, parseFloat(g.nilai)]));
+      const directByKrs = new Map<number, Map<number, number>>();
+      for (const g of allDirectRows) {
+        const map = directByKrs.get(g.krsId) ?? new Map<number, number>();
+        map.set(g.komponenNilaiId, parseFloat(g.nilai));
+        directByKrs.set(g.krsId, map);
+      }
+      const subByKrs = new Map<number, Map<number, number>>();
+      for (const g of allSubRows) {
+        const map = subByKrs.get(g.krsId) ?? new Map<number, number>();
+        map.set(g.subKomponenNilaiId, parseFloat(g.nilai));
+        subByKrs.set(g.krsId, map);
+      }
+
+      // Phase 3: Hitung & update NA per KRS dari data yang sudah di-cache.
+      const results = [];
+      for (const item of items) {
+        const directGrades = directByKrs.get(item.krsId) ?? new Map<number, number>();
+        const subGrades = subByKrs.get(item.krsId) ?? new Map<number, number>();
 
         const calc = buildFinalScore(componentDefs, subDefsByKomponen, directGrades, subGrades);
 
@@ -886,7 +904,7 @@ export class YudisiumService {
           throw new Error('KRS mahasiswa tidak ditemukan pada kelas ini.');
         }
 
-        const score = parseFloat(this.assertNilaiRange(item.nilai, 'Nilai akhir').toFixed(2));
+        const score = parseFloat(Number(item.nilai).toFixed(2));
         const conversion = resolveGradeFromRules(activeRules, score);
 
         // Nilai akhir manual tidak menghapus nilai komponen/sub di bawahnya (hierarki non-destruktif).

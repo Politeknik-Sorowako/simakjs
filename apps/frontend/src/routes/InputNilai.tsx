@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, Index, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Index, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import SubKomponenEditor from '../components/SubKomponenEditor';
 import { Button } from '../components/ui/Button';
@@ -7,8 +7,11 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { kelasKuliahController } from '../controllers/kelasKuliahController';
+import { useWorkspace } from '../contexts/WorkspaceContext';
+import { type KelasKuliah, kelasKuliahController } from '../controllers/kelasKuliahController';
 import { khsController, type NilaiMahasiswa, type SubKomponenNilai } from '../controllers/khsController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { type Prodi, prodiController } from '../controllers/prodiController';
 import { rpsController } from '../controllers/rpsController';
 import { isHeaderRow } from '../utils/csv';
 
@@ -32,28 +35,119 @@ export default function InputNilai() {
   const [activeMethod, setActiveMethod] = createSignal<InputMethod>('komponen');
   const [showImportModal, setShowImportModal] = createSignal(false);
 
-  // 1. Load all Kelas Kuliah for Lecturer/Admin
-  const [classes, { refetch: refetchClasses }] = createResource(
-    () => {
-      if (role() !== 'mahasiswa') return true;
-      return null;
-    },
-    async () => {
-      try {
-        const res = await kelasKuliahController.getAll(undefined, 1, 100);
-        return res.data;
-      } catch (e) {
-        return [];
+  // 1. Filter periode & program studi (default: periode aktif + prodi workspace admin)
+  const workspace = useWorkspace();
+  const [periodes] = createResource(async () => {
+    try {
+      const res = await periodeAkademikController.getAll(undefined, 1, 100);
+      return res.data || [];
+    } catch {
+      return [];
+    }
+  });
+  const [prodis] = createResource(async () => {
+    if (role() === 'mahasiswa') return [];
+    try {
+      const res = await prodiController.getAll(undefined, 1, 100);
+      return res.data || [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [selectedPeriodeId, setSelectedPeriodeId] = createSignal('');
+  const [filterProdiId, setFilterProdiId] = createSignal<number | null>(null);
+
+  createEffect(() => {
+    const list = periodes();
+    if (list && list.length > 0 && !selectedPeriodeId()) {
+      const ws = workspace.activePeriodeId();
+      const wsMatch = ws && list.some((p) => p.id === ws) ? ws : null;
+      const aktif = list.find((p) => p.aktif)?.id ?? list[0].id;
+      setSelectedPeriodeId(wsMatch ?? aktif);
+    }
+  });
+
+  createEffect(() => {
+    const list = prodis();
+    if (list && list.length > 0 && filterProdiId() === null) {
+      const ws = workspace.activeProdiId();
+      if (ws && list.some((p) => p.id === ws)) {
+        setFilterProdiId(ws);
       }
-    },
-  );
+    }
+  });
+
+  // 2. Fetch Kelas Kuliah (server-side search + filter periode/prodi + load more)
+  const KELAS_PAGE_SIZE = 50;
+  const [classes, setClasses] = createSignal<KelasKuliah[]>([]);
+  const [classesLoading, setClassesLoading] = createSignal(false);
+  const [classesHasMore, setClassesHasMore] = createSignal(false);
+  const [classesPage, setClassesPage] = createSignal(1);
+  const [kelasSearch, setKelasSearch] = createSignal('');
+  let kelasDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const fetchClasses = async (page: number, append: boolean) => {
+    if (role() === 'mahasiswa') return;
+    setClassesLoading(true);
+    try {
+      const res = await kelasKuliahController.getAll(
+        kelasSearch() || undefined,
+        page,
+        KELAS_PAGE_SIZE,
+        filterProdiId() ?? undefined,
+        selectedPeriodeId() || undefined,
+      );
+      setClasses((prev) => (append ? [...prev, ...res.data] : res.data));
+      setClassesPage(page + 1);
+      setClassesHasMore(page < (res.meta?.totalPages || 1));
+    } catch {
+      toast.showToast('Gagal memuat daftar kelas kuliah', 'error');
+    } finally {
+      setClassesLoading(false);
+    }
+  };
+
+  // Muat ulang dari halaman 1 setiap filter berubah (tunggu periode termuat lebih dulu).
+  createEffect(() => {
+    const loaded = periodes();
+    const periode = selectedPeriodeId();
+    const prodi = filterProdiId();
+    const search = kelasSearch();
+    void periode;
+    void prodi;
+    void search;
+    if (!loaded || role() === 'mahasiswa') return;
+    if (!periode) return;
+    fetchClasses(1, false);
+  });
+
+  onCleanup(() => {
+    clearTimeout(kelasDebounceTimer);
+  });
+
+  const handleKelasSearch = (q: string) => {
+    setKelasSearch(q);
+    clearTimeout(kelasDebounceTimer);
+    kelasDebounceTimer = setTimeout(() => fetchClasses(1, false), 350);
+  };
+
+  const handleKelasLoadMore = () => {
+    if (classesHasMore() && !classesLoading()) {
+      fetchClasses(classesPage(), true);
+    }
+  };
+
+  const refetchClasses = () => {
+    fetchClasses(1, false);
+  };
 
   // 2. Load components for selected class
   const [components, { refetch: refetchComponents }] = createResource(selectedKelasId, async (kelasId) => {
     if (!kelasId) return [];
     try {
       return await khsController.getKomponen(kelasId);
-    } catch (e) {
+    } catch {
       return [];
     }
   });
@@ -64,7 +158,7 @@ export default function InputNilai() {
     try {
       const list = await khsController.getNilaiMahasiswa(kelasId);
       return (list || []).sort((a, b) => (a.nim || '').localeCompare(b.nim || '', 'id'));
-    } catch (e) {
+    } catch {
       return [];
     }
   });
@@ -74,7 +168,7 @@ export default function InputNilai() {
     if (!kelasId) return [];
     try {
       return await khsController.getSubKomponen(kelasId);
-    } catch (e) {
+    } catch {
       return [];
     }
   });
@@ -107,7 +201,7 @@ export default function InputNilai() {
         const rules = await khsController.getAllKonversi();
         const prodiRules = rules.filter((r) => r.programStudiId === prodiId);
         return prodiRules.length > 0 ? prodiRules : rules.filter((r) => r.programStudiId === null);
-      } catch (e) {
+      } catch {
         return [];
       }
     },
@@ -125,7 +219,7 @@ export default function InputNilai() {
       if (!mkId) return [];
       try {
         return await rpsController.getRencanaEvaluasi(mkId);
-      } catch (e) {
+      } catch {
         return [];
       }
     },
@@ -842,18 +936,52 @@ export default function InputNilai() {
         {/* Class Selection Card */}
         <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <h3 class="font-bold text-secondary-700 text-sm">Pilih Kelas Kuliah</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SearchableSelect
+              label="Periode Semester"
+              value={selectedPeriodeId()}
+              onChange={(val) => {
+                setSelectedPeriodeId(String(val));
+                setSelectedKelasId(null);
+              }}
+              options={
+                (periodes() || []).map((p: { id: string; nama: string; aktif?: boolean }) => ({
+                  label: `${p.nama} (${p.id})${p.aktif ? ' - Aktif' : ''}`,
+                  value: p.id,
+                })) || []
+              }
+              placeholder="-- Pilih Periode --"
+            />
+            <SearchableSelect
+              label="Program Studi"
+              value={filterProdiId() ?? ''}
+              onChange={(val) => {
+                setFilterProdiId(val ? Number(val) : null);
+                setSelectedKelasId(null);
+              }}
+              options={
+                (prodis() || []).map((p: Prodi) => ({
+                  label: `${p.nama} (${p.jenjang})`,
+                  value: p.id,
+                })) || []
+              }
+              placeholder="-- Semua Program Studi --"
+            />
             <SearchableSelect
               label="Kelas Kuliah"
               value={selectedKelasId() || ''}
               onChange={(val) => setSelectedKelasId(val ? Number(val) : null)}
               options={
                 classes()?.map((item) => ({
-                  label: `${item.mataKuliah?.kode ? `${item.mataKuliah.kode} - ` : ''}${item.mataKuliah?.nama || 'Mata Kuliah'} (${item.namaKelas}) - Periode ${item.periodeId}`,
+                  label: `${item.mataKuliah?.kode ? `${item.namaKelas} - ` : ''}${item.mataKuliah?.nama || 'Mata Kuliah'} (${item.mataKuliah?.kode || 'Kode MK'}) - Periode ${item.periodeId}`,
                   value: item.id,
                 })) || []
               }
               placeholder="-- Pilih / Cari Kelas Kuliah --"
+              onSearch={handleKelasSearch}
+              isLoading={classesLoading()}
+              hasMore={classesHasMore()}
+              onLoadMore={handleKelasLoadMore}
             />
           </div>
         </div>
@@ -861,7 +989,7 @@ export default function InputNilai() {
         <Show when={isRulesMissing()}>
           <div class="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 shadow-sm dark:bg-rose-900/30 dark:text-rose-400">
             <span class="font-bold flex items-center gap-1.5 text-rose-800 text-sm">
-              ⚠️ Peringatan: Aturan Konversi Belum Ditetapkan
+              ⚠ Peringatan: Aturan Konversi Belum Ditetapkan
             </span>
             <span>
               Aturan konversi nilai belum ditetapkan untuk program studi ini atau secara global. Silakan hubungi Admin
@@ -886,7 +1014,7 @@ export default function InputNilai() {
                 <h3 class="font-bold text-secondary-800 dark:text-white">Komposisi Bobot Nilai (%)</h3>
                 <Show when={isClassLocked()}>
                   <span class="px-2.5 py-1 bg-accent-50 text-accent-700 border border-accent-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400">
-                    🔒 Dikunci
+                    ⊘ Dikunci
                   </span>
                 </Show>
               </div>
@@ -924,7 +1052,7 @@ export default function InputNilai() {
                               onClick={() => setExpandedKomponenId(isExpanded() ? null : (komponenId() as number))}
                               class={`text-xs p-1 rounded ${isExpanded() ? 'text-brand-700' : 'text-secondary-400 hover:text-brand-600'}`}
                             >
-                              🧩
+                              [S]
                             </button>
                           </Show>
                           <Show when={!isClassLocked()}>
@@ -932,7 +1060,7 @@ export default function InputNilai() {
                               onClick={() => removeComponent(idx)}
                               class="text-rose-500 hover:text-rose-700 text-xs p-1"
                             >
-                              ❌
+                              ×
                             </button>
                           </Show>
                         </div>
@@ -961,14 +1089,14 @@ export default function InputNilai() {
                         onClick={addComponent}
                         class="text-brand-600 hover:text-brand-700 font-bold text-xs flex items-center gap-1 text-left"
                       >
-                        ➕ Tambah Komponen
+                        + Tambah Komponen
                       </button>
                       <Show when={(rencanaEvals()?.length || 0) > 0}>
                         <button
                           onClick={handleImportFromRps}
                           class="text-accent-600 hover:text-accent-700 font-bold text-xs flex items-center gap-1 text-left"
                         >
-                          📥 Ambil Komposisi dari RPS
+                          Ambil Komposisi dari RPS
                         </button>
                       </Show>
                     </div>
@@ -996,7 +1124,7 @@ export default function InputNilai() {
                   <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
                   <Show when={isClassLocked()}>
                     <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                      🔒 Nilai Kelas Telah Dikunci (Selesai)
+                      Nilai Kelas Telah Dikunci (Selesai)
                     </span>
                   </Show>
                 </div>
@@ -1058,13 +1186,13 @@ export default function InputNilai() {
                       onClick={() => setShowImportModal(true)}
                       class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
                     >
-                      📥 Impor CSV
+                      Impor CSV
                     </button>
                     <button
                       onClick={handleLockKelas}
                       class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs hover:bg-rose-700 active:scale-95 transition-all shadow-sm"
                     >
-                      🔒 Kunci Nilai
+                      Kunci Nilai
                     </button>
                   </div>
                 </Show>
@@ -1076,7 +1204,7 @@ export default function InputNilai() {
                       onClick={handleUnlockKelas}
                       class="self-start px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
                     >
-                      🔓 Buka Kunci
+                      Buka Kunci
                     </button>
                   </Show>
                 </Show>
@@ -1168,7 +1296,7 @@ export default function InputNilai() {
                               {c.nama} ({c.bobot}%)
                               <Show when={componentHasSub(c.id!)}>
                                 <span class="ml-1" title="Memiliki sub-komponen">
-                                  🧩
+                                  [S]
                                 </span>
                               </Show>
                             </th>
@@ -1238,7 +1366,7 @@ export default function InputNilai() {
                                             class="text-[9px] text-brand-600"
                                             title="Nilai langsung menimpa agregasi sub; nilai sub tetap tersimpan"
                                           >
-                                            🧩 override
+                                            [S] override
                                           </span>
                                         </div>
                                       }

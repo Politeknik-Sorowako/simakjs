@@ -15,6 +15,10 @@ import {
 import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
 
+// Batasi jumlah `console.warn` self-heal per sesisi proses agar tidak membanjiri log.
+const healedSources = new Set<string>();
+const SELF_HEAL_WARN_LIMIT = 10;
+
 export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
 export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR';
 
@@ -131,10 +135,14 @@ export class VerifikasiUnknownService {
       throw new Error('Data ketidakhadiran tidak ditemukan');
     }
 
-    console.warn(
-      `[self-heal] Baris ketidakhadiran hilang dibentuk ulang: sumber=${input.sumber} sumberId=${input.sumberId} ` +
-        `mahasiswaId=${source.mahasiswaId} tanggal=${source.tanggal}`,
-    );
+    const healKey = `${input.sumber}:${input.sumberId}`;
+    healedSources.add(healKey);
+    if (healedSources.size <= SELF_HEAL_WARN_LIMIT) {
+      console.warn(
+        `[self-heal] Baris ketidakhadiran hilang dibentuk ulang: sumber=${input.sumber} sumberId=${input.sumberId} ` +
+          `mahasiswaId=${source.mahasiswaId} tanggal=${source.tanggal}`,
+      );
+    }
 
     return healed;
   }
