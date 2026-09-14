@@ -122,7 +122,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
                 onClick={() => removeRow(idx)}
                 class="text-rose-500 hover:text-rose-700 text-xs p-0.5"
               >
-                ❌
+                ×
               </button>
             </Show>
           </div>
@@ -136,7 +136,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
             onClick={addRow}
             class="text-brand-600 hover:text-brand-700 font-bold text-[11px] flex items-center gap-1"
           >
-            ➕ Tambah Sub-Komponen
+            + Tambah Sub-Komponen
           </button>
         </Show>
         <span class={`text-[11px] font-bold ${totalValid() ? 'text-secondary-600' : 'text-rose-600'}`}>
