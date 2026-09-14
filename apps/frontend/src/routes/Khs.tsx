@@ -56,7 +56,7 @@ export default function Khs() {
     try {
       const res = await periodeAkademikController.getAll(undefined, 1, 100);
       return res.data;
-    } catch (e) {
+    } catch {
       return [];
     }
   });
@@ -128,7 +128,7 @@ export default function Khs() {
     async ({ mhsId, periodeId }) => {
       try {
         return await khsController.getExamEligibility(mhsId, periodeId);
-      } catch (e) {
+      } catch {
         return null;
       }
     },
@@ -379,7 +379,7 @@ export default function Khs() {
               <>
                 <Show when={overlappingIds.size > 0}>
                   <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl text-rose-800 shadow-sm flex items-center gap-3 mb-4 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
-                    <span class="text-xl">⚠️</span>
+                    <span class="text-xl">⚠</span>
                     <div>
                       <h4 class="font-bold text-caption">Peringatan: Rentang Nilai Beririsan</h4>
                       <p class="text-caption">
@@ -406,7 +406,7 @@ export default function Khs() {
                     }}
                     class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
                   >
-                    ➕ Tambah Aturan Konversi
+                    + Tambah Aturan Konversi
                   </button>
                 </div>
 
@@ -463,7 +463,7 @@ export default function Khs() {
                                   }
                                 >
                                   <span class="px-2 py-0.5 rounded text-fine font-bold bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-700 inline-flex items-center gap-1">
-                                    ⚠️ Beririsan
+                                    ⚠ Beririsan
                                   </span>
                                 </Show>
                               </td>
@@ -568,14 +568,14 @@ export default function Khs() {
                               disabled={khsData()?.blocked}
                               class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
                             >
-                              🖨️ Cetak Kartu Ujian
+                              Cetak Kartu Ujian
                             </button>
                             <button
                               onClick={() => setShowPrintKhs(true)}
                               disabled={khsData()?.blocked}
                               class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
                             >
-                              🖨️ Cetak KHS
+                              Cetak KHS
                             </button>
                           </div>
                         </div>
@@ -639,7 +639,7 @@ export default function Khs() {
                                         onClick={() => openRincian(item)}
                                         class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-fine hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
                                       >
-                                        🔍 Rincian
+                                        Rincian
                                       </button>
                                     </td>
                                   </Show>
@@ -654,7 +654,7 @@ export default function Khs() {
                 >
                   {/* Blocked View */}
                   <div class="bg-rose-50 border border-rose-200 p-8 rounded-2xl text-rose-800 shadow-sm flex flex-col items-center justify-center text-center gap-4 max-w-2xl mx-auto my-8">
-                    <span class="text-5xl">🔒</span>
+                    <span class="text-5xl">⊘</span>
                     <h2 class="text-xl font-bold tracking-tight text-rose-900">Akses KHS Diblokir Sementara</h2>
                     <p class="text-base font-medium leading-relaxed max-w-md text-rose-700">
                       Sesuai dengan ketentuan Buku Panduan Akademik, Anda harus melunasi seluruh kewajiban administrasi
@@ -708,7 +708,7 @@ export default function Khs() {
                         onClick={() => setShowPrintTranskrip(true)}
                         class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
                       >
-                        🖨️ Cetak Transkrip
+                        Cetak Transkrip
                       </button>
                     </div>
 
@@ -780,7 +780,7 @@ export default function Khs() {
                   onClick={() => setShowPrintUjian(false)}
                   class="text-secondary-400 dark:text-secondary-300 hover:text-secondary-600"
                 >
-                  ❌
+                  ×
                 </button>
               </div>
 
@@ -876,7 +876,7 @@ export default function Khs() {
                   onClick={() => window.print()}
                   class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
                 >
-                  🖨️ Cetak Sekarang
+                  Cetak Sekarang
                 </button>
               </div>
             </div>
@@ -892,7 +892,7 @@ export default function Khs() {
                   onClick={() => setShowPrintKhs(false)}
                   class="text-secondary-400 dark:text-secondary-300 hover:text-secondary-600"
                 >
-                  ❌
+                  ×
                 </button>
               </div>
 
@@ -971,7 +971,7 @@ export default function Khs() {
                   onClick={() => window.print()}
                   class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
                 >
-                  🖨️ Cetak Sekarang
+                  Cetak Sekarang
                 </button>
               </div>
             </div>
@@ -987,7 +987,7 @@ export default function Khs() {
                   onClick={() => setShowPrintTranskrip(false)}
                   class="text-secondary-400 dark:text-secondary-300 hover:text-secondary-600"
                 >
-                  ❌
+                  ×
                 </button>
               </div>
 
@@ -1069,7 +1069,7 @@ export default function Khs() {
                   onClick={() => window.print()}
                   class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
                 >
-                  🖨️ Cetak Sekarang
+                  Cetak Sekarang
                 </button>
               </div>
             </div>
@@ -1087,7 +1087,7 @@ export default function Khs() {
                   onClick={() => setShowKonversiModal(false)}
                   class="text-secondary-400 dark:text-secondary-300 hover:text-secondary-600"
                 >
-                  ❌
+                  ×
                 </button>
               </div>
 

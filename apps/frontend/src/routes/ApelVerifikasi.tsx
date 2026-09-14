@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, UnknownPresensiItem } from '../controllers/apelController';
+import { presensiController } from '../controllers/presensiController';
 import { PaginatedResponse, prodiController } from '../controllers/prodiController';
 import { fmtTanggal, fmtWaktu } from '../utils/format';
 
@@ -75,7 +76,7 @@ export default function ApelVerifikasi() {
       const m = verifyModal();
       return m ? { mahasiswaId: m.mahasiswaId, tanggal: m.tanggal } : null;
     },
-    (params) => apelController.getRekapHarian(params.mahasiswaId, params.tanggal),
+    (params) => presensiController.getRekapHarian(params.mahasiswaId, params.tanggal),
   );
 
   const selectedAbsence = createMemo(() => {
