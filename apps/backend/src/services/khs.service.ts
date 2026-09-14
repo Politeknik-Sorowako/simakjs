@@ -127,7 +127,9 @@ export class KhsService {
       let nilai: number | null = null;
       if (subs.length > 0) {
         const result = computeKomponenScore(subGrades, subs);
-        nilai = result.complete ? result.score : null;
+        // Selaras dengan buildFinalScore: agregasi sub lengkap menang,
+        // jika tidak ada nilai sub (mis. ditimpa nilai langsung) pakai nilai langsung.
+        nilai = result.complete && result.score !== null ? result.score : (directGrades.get(c.id) ?? null);
       } else {
         nilai = directGrades.get(c.id) ?? null;
       }

@@ -257,6 +257,29 @@ describe('Overwrite hierarki nilai & visibilitas mahasiswa', () => {
     expect(body.komponen[0].nilaiSub).toBeUndefined();
   });
 
+  it('rincian menampilkan nilai langsung setelah M2 menimpa komponen bersub', async () => {
+    const comps = await saveComponents([{ nama: 'Kualitas', bobot: 100 }]);
+    const subs = await saveSub(comps[0].id, [
+      { nama: 'A', bobot: 50 },
+      { nama: 'B', bobot: 50 },
+    ]);
+    await postNilaiSub(subs, 90, 80);
+    await postNilaiKomponen(comps[0].id, 70);
+
+    const res = await app.handle(
+      new Request(`http://localhost/khs/rincian-komponen?kelasKuliahId=${kelasId}`, {
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      nilaiAngka: string | null;
+      komponen: Array<{ nama: string; nilai: number | null }>;
+    };
+    expect(parseFloat(body.nilaiAngka!)).toBe(70);
+    expect(body.komponen[0].nilai).toBe(70);
+  });
+
   it('mahasiswa tidak bisa melihat rincian mahasiswa lain (dipaksa ke data sendiri)', async () => {
     const comps = await saveComponents([{ nama: 'Kualitas', bobot: 100 }]);
     await postNilaiKomponen(comps[0].id, 70);
