@@ -86,19 +86,39 @@ export class VerifikasiUnknownService {
       );
     }
 
-    await tx
-      .insert(ketidakhadiranMahasiswa)
-      .values({
-        mahasiswaId: source.mahasiswaId,
-        tanggal: source.tanggal,
-        sumber: input.sumber,
-        sumberId: input.sumberId,
-        status: 'UNKNOWN',
-        durasiMenit: Math.max(Number(source.durasiMenit) || 0, 0),
-        isVerified: false,
-        createdBy: adminUserId,
-      })
-      .onConflictDoNothing({ target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId] });
+    try {
+      await tx
+        .insert(ketidakhadiranMahasiswa)
+        .values({
+          mahasiswaId: source.mahasiswaId,
+          tanggal: source.tanggal,
+          sumber: input.sumber,
+          sumberId: input.sumberId,
+          status: 'UNKNOWN',
+          durasiMenit: Math.max(Number(source.durasiMenit) || 0, 0),
+          isVerified: false,
+          createdBy: adminUserId,
+        })
+        .onConflictDoNothing({ target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId] });
+    } catch (e: unknown) {
+      if (adminUserId !== null && isVerifiedByFkViolation(e)) {
+        await tx
+          .insert(ketidakhadiranMahasiswa)
+          .values({
+            mahasiswaId: source.mahasiswaId,
+            tanggal: source.tanggal,
+            sumber: input.sumber,
+            sumberId: input.sumberId,
+            status: 'UNKNOWN',
+            durasiMenit: Math.max(Number(source.durasiMenit) || 0, 0),
+            isVerified: false,
+            createdBy: null,
+          })
+          .onConflictDoNothing({ target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId] });
+      } else {
+        throw e;
+      }
+    }
 
     const [healed] = await tx
       .select()
