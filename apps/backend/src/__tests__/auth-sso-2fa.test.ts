@@ -263,11 +263,19 @@ describe('Autentikasi Lanjutan: SSO, Aktivasi Email & 2FA', () => {
 
   describe('3. Google Workspace SSO Login', () => {
     it('harus mengembalikan URL autentikasi Google OAuth', async () => {
-      const urlRes = await app.handle(new Request('http://localhost/auth/google/url'));
-      expect(urlRes.status).toBe(200);
-      const data = (await urlRes.json()) as { url: string };
-      expect(data.url).toContain('https://accounts.google.com/o/oauth2/v2/auth');
-      expect(data.url).toContain('hd=politekniksorowako.ac.id');
+      const originalClientId = process.env.GOOGLE_CLIENT_ID;
+      // Guard service menolak client id dummy/kosong; set nilai valid hanya untuk test ini.
+      process.env.GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com';
+      try {
+        const urlRes = await app.handle(new Request('http://localhost/auth/google/url'));
+        expect(urlRes.status).toBe(200);
+        const data = (await urlRes.json()) as { url: string };
+        expect(data.url).toContain('https://accounts.google.com/o/oauth2/v2/auth');
+        expect(data.url).toContain('hd=politekniksorowako.ac.id');
+      } finally {
+        if (originalClientId === undefined) delete process.env.GOOGLE_CLIENT_ID;
+        else process.env.GOOGLE_CLIENT_ID = originalClientId;
+      }
     });
 
     it('harus sukses menyinkronkan & membuat pengguna berdomain @politekniksorowako.ac.id', async () => {
