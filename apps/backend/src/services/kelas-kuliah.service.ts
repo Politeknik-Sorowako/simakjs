@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { dosen, dosenPengajarKelas, kelasKuliah, krs, mataKuliah, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -91,6 +91,7 @@ export class KelasKuliahService {
 
     const data = await db.query.kelasKuliah.findMany({
       where: whereClause,
+      orderBy: [asc(kelasKuliah.id)],
       limit,
       offset,
       with: {

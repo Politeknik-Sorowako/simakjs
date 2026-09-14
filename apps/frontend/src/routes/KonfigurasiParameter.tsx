@@ -19,6 +19,47 @@ const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
   { value: 'UTC', label: 'UTC (Universal Coordinated Time)' },
 ];
 
+interface ToggleCardProps {
+  title: string;
+  parameterKey: string;
+  description: string;
+  enabled: boolean;
+  saving: boolean;
+  onToggle: (value: string) => void;
+  onSave: () => void;
+}
+
+function ToggleCard(props: ToggleCardProps) {
+  return (
+    <Card>
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">{props.title}</span>
+            <Badge variant={props.enabled ? 'success' : 'warning'}>{props.enabled ? 'Aktif' : 'Nonaktif'}</Badge>
+          </div>
+          <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">{props.description}</p>
+          <p class="mt-0.5 text-xs text-secondary-400 font-mono">{props.parameterKey}</p>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <select
+            value={props.enabled ? 'true' : 'false'}
+            onChange={(e) => props.onToggle(e.currentTarget.value)}
+            class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+          >
+            <option value="true">Ya — Blokir</option>
+            <option value="false">Tidak — Izinkan</option>
+          </select>
+          <Button size="sm" loading={props.saving} onClick={props.onSave}>
+            Simpan
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function KonfigurasiParameter() {
   const [params, { refetch }] = createResource(() => systemController.getParameters());
   const [edits, setEdits] = createSignal<Record<string, string>>({});
@@ -70,6 +111,31 @@ export default function KonfigurasiParameter() {
       refetch();
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : 'Gagal memperbarui pengaturan KRS mandiri.');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  // Toggle blocking KHS & KRS karena tunggakan (pola sama dengan KRS mandiri).
+  const boolValue = (key: string, fallback: string) =>
+    (edits()[key] ?? String(params()?.find((p) => p.key === key)?.value ?? fallback)) === 'true';
+
+  const khsBlockEnabled = () => boolValue('BLOCK_KHS_JIKA_TANGGUNGAN', 'true');
+  const krsBlockEnabled = () => boolValue('BLOCK_KRS_JIKA_TANGGUNGAN', 'false');
+
+  const saveBoolParam = async (key: string, label: string, enabled: () => boolean) => {
+    setSavingKey(key);
+    try {
+      await systemController.updateParameter(key, enabled() ? 'true' : 'false');
+      setEdits((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      setNotice(`${label} berhasil diperbarui.`);
+      refetch();
+    } catch (e: unknown) {
+      setNotice(e instanceof Error ? e.message : `Gagal memperbarui ${label}.`);
     } finally {
       setSavingKey(null);
     }
@@ -128,8 +194,37 @@ export default function KonfigurasiParameter() {
           </Card>
         </div>
 
+        {/* Kontrol Blocking KHS & KRS karena tunggakan */}
+        <div class="mb-6 space-y-3">
+          <ToggleCard
+            title="Pemblokiran KHS karena Tunggakan"
+            parameterKey="BLOCK_KHS_JIKA_TANGGUNGAN"
+            description="Jika aktif, mahasiswa tidak dapat melihat KHS saat masih memiliki tunggakan SPP/kompensasi. Staff tidak terpengaruh."
+            enabled={khsBlockEnabled()}
+            saving={savingKey() === 'BLOCK_KHS_JIKA_TANGGUNGAN'}
+            onToggle={(val) => setField('BLOCK_KHS_JIKA_TANGGUNGAN', val)}
+            onSave={() => saveBoolParam('BLOCK_KHS_JIKA_TANGGUNGAN', 'Pemblokiran KHS', khsBlockEnabled)}
+          />
+          <ToggleCard
+            title="Pemblokiran KRS karena Tunggakan"
+            parameterKey="BLOCK_KRS_JIKA_TANGGUNGAN"
+            description="Jika aktif, mahasiswa tidak dapat melakukan pengisian KRS mandiri saat masih memiliki tunggakan SPP/kompensasi. Staff tidak terpengaruh."
+            enabled={krsBlockEnabled()}
+            saving={savingKey() === 'BLOCK_KRS_JIKA_TANGGUNGAN'}
+            onToggle={(val) => setField('BLOCK_KRS_JIKA_TANGGUNGAN', val)}
+            onSave={() => saveBoolParam('BLOCK_KRS_JIKA_TANGGUNGAN', 'Pemblokiran KRS', krsBlockEnabled)}
+          />
+        </div>
+
         <div class="space-y-3">
-          <For each={(params() || []).filter((p) => p.key !== 'KRS_MANDIRI_ENABLED')}>
+          <For
+            each={(params() || []).filter(
+              (p) =>
+                p.key !== 'KRS_MANDIRI_ENABLED' &&
+                p.key !== 'BLOCK_KHS_JIKA_TANGGUNGAN' &&
+                p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN',
+            )}
+          >
             {(p) => (
               <Card>
                 <div class="flex items-start justify-between gap-4">

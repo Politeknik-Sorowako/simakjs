@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { mahasiswa } from '../models/schema';
+import { kelasKuliah, mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
+import { KhsService } from '../services/khs.service';
 import { KrsService } from '../services/krs.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
@@ -96,6 +97,26 @@ export class KrsController {
       if (!krsMandiriEnabled) {
         set.status = 403;
         return { error: 'Pengisian KRS mandiri sedang dinonaktifkan oleh Admin. Silakan hubungi Prodi/Admin.' };
+      }
+
+      // Blokir KRS jika ada tunggakan (dapat diaktifkan admin via BLOCK_KRS_JIKA_TANGGUNGAN).
+      if (await SystemParameterService.isKrsBlockEnabled()) {
+        const [kelas] = await db
+          .select({ periodeId: kelasKuliah.periodeId })
+          .from(kelasKuliah)
+          .where(eq(kelasKuliah.id, body.kelasKuliahId))
+          .limit(1);
+        if (kelas) {
+          const clearance = await KhsService.checkBebasTanggungan(myMhsId, kelas.periodeId);
+          if (!clearance.bebas) {
+            set.status = 403;
+            return {
+              error: clearance.detail,
+              reason: clearance.reason,
+              detail: clearance.detail,
+            };
+          }
+        }
       }
     }
     try {

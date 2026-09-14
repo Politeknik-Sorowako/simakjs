@@ -29,6 +29,16 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'boolean',
     description: 'Izinkan mahasiswa melakukan pengisian KRS secara mandiri',
   },
+  BLOCK_KHS_JIKA_TANGGUNGAN: {
+    value: 'true',
+    type: 'boolean',
+    description: 'Blokir akses KHS mahasiswa jika masih memiliki tunggakan SPP/kompensasi',
+  },
+  BLOCK_KRS_JIKA_TANGGUNGAN: {
+    value: 'false',
+    type: 'boolean',
+    description: 'Blokir pengisian KRS mandiri mahasiswa jika masih memiliki tunggakan SPP/kompensasi',
+  },
   MAX_BIMBINGAN_ATTACHMENT_MB: {
     value: '2',
     type: 'number',
@@ -85,6 +95,20 @@ export class SystemParameterService {
   static async isKrsMandiriEnabled(): Promise<boolean> {
     const raw = await SystemParameterService.getRaw('KRS_MANDIRI_ENABLED');
     if (raw === null || raw === '') return true;
+    return raw === 'true' || raw === '1';
+  }
+
+  /** Blokir KHS saat ada tunggakan. Fail-open ke `true` (perilaku produksi saat ini). */
+  static async isKhsBlockEnabled(): Promise<boolean> {
+    const raw = await SystemParameterService.getRaw('BLOCK_KHS_JIKA_TANGGUNGAN');
+    if (raw === null || raw === '') return true;
+    return raw === 'true' || raw === '1';
+  }
+
+  /** Blokir KRS saat ada tunggakan. Fail-open ke `false` (opt-in, tidak memblokir massal). */
+  static async isKrsBlockEnabled(): Promise<boolean> {
+    const raw = await SystemParameterService.getRaw('BLOCK_KRS_JIKA_TANGGUNGAN');
+    if (raw === null || raw === '') return false;
     return raw === 'true' || raw === '1';
   }
 
