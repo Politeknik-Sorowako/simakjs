@@ -1,4 +1,4 @@
-import { useSearchParams } from '@solidjs/router';
+import { A, useSearchParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import EnrollmentQrModal from '../components/EnrollmentQrModal';
 import { MainLayout } from '../components/MainLayout';
@@ -1151,9 +1151,17 @@ export default function BapPresensi() {
             </p>
           </div>
           <Show when={selectedKelasId() && mainTab() === 'teori'}>
-            <Button onClick={openAddBap} variant="primary">
-              + Buat Pertemuan / BAP
-            </Button>
+            <div class="flex items-center gap-2">
+              <A
+                href={`/input-nilai?kelas=${selectedKelasId()}`}
+                class="inline-flex items-center px-4 py-2 text-base font-semibold rounded-full border border-brand-600 text-brand-700 hover:bg-brand-50 active:scale-95 transition-all dark:text-brand-300 dark:border-brand-700 dark:hover:bg-brand-900/30"
+              >
+                Input Nilai Kelas
+              </A>
+              <Button onClick={openAddBap} variant="primary">
+                + Buat Pertemuan / BAP
+              </Button>
+            </div>
           </Show>
         </div>
 
@@ -1532,6 +1540,12 @@ export default function BapPresensi() {
                         Input Nilai Praktikum
                       </Button>
                     </Show>
+                    <A
+                      href={`/input-nilai?kelas=${selectedKelasId()}&rombel=${selectedRombelId()}`}
+                      class="inline-flex items-center px-4 py-2 text-base font-semibold rounded-full border border-brand-600 text-brand-700 hover:bg-brand-50 active:scale-95 transition-all dark:text-brand-300 dark:border-brand-700 dark:hover:bg-brand-900/30"
+                    >
+                      Input Nilai Rombel
+                    </A>
                     <Button onClick={() => setShowPrintModal(true)} variant="accent">
                       Cetak BAP Praktikum
                     </Button>
