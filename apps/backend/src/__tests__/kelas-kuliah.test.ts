@@ -172,6 +172,66 @@ describe('7. Kelas Kuliah (/kelas-kuliah)', () => {
       const nonExistentBody = await nonExistentResponse.json();
       expect(nonExistentBody.data.length).toBe(0);
     });
+
+    it('harus menyaring kelas berdasarkan programStudiId mata kuliah', async () => {
+      const adminToken = await getAuthToken('admin-kelas@test.com', 'admin');
+
+      // Prodi kedua + mata kuliah + kelas
+      const prodi2Res = await app.handle(
+        new Request('http://localhost/prodi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({ kode: 'SI-KELAS-2', nama: 'Sistem Informasi Kelas 2', jenjang: 'D4' }),
+        }),
+      );
+      const prodi2 = (await prodi2Res.json()) as { id: number };
+
+      const mk2Res = await app.handle(
+        new Request('http://localhost/mata-kuliah', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            kode: 'MKKELAS002',
+            nama: 'Statistika',
+            sksTotal: 2,
+            programStudiId: prodi2.id,
+          }),
+        }),
+      );
+      const mk2 = (await mk2Res.json()) as { id: number };
+
+      await app.handle(
+        new Request('http://localhost/kelas-kuliah', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({ mataKuliahId: mk2.id, periodeId: '20232', namaKelas: 'SI-2A' }),
+        }),
+      );
+
+      // Tanpa filter → kedua prodi hadir
+      const allRes = await app.handle(new Request('http://localhost/kelas-kuliah', { method: 'GET' }));
+      const allBody = await allRes.json();
+      expect(allBody.data.length).toBeGreaterThanOrEqual(2);
+
+      // Filter prodi 1 → hanya kelas prodi 1
+      const prodi1Res = await app.handle(
+        new Request(`http://localhost/kelas-kuliah?programStudiId=${prodiId}`, { method: 'GET' }),
+      );
+      expect(prodi1Res.status).toBe(200);
+      const prodi1Body = await prodi1Res.json();
+      expect(prodi1Body.data.length).toBeGreaterThan(0);
+      const prodi1MkIds = prodi1Body.data.map((item: { mataKuliahId: number }) => item.mataKuliahId);
+      expect(prodi1MkIds).toContain(mkId);
+      expect(prodi1MkIds).not.toContain(mk2.id);
+
+      // Filter prodi 2 → hanya kelas prodi 2
+      const prodi2FilterRes = await app.handle(
+        new Request(`http://localhost/kelas-kuliah?programStudiId=${prodi2.id}`, { method: 'GET' }),
+      );
+      const prodi2Body = await prodi2FilterRes.json();
+      expect(prodi2Body.data.length).toBe(1);
+      expect(prodi2Body.data[0].mataKuliahId).toBe(mk2.id);
+    });
   });
 
   describe('GET /kelas-kuliah/:id', () => {

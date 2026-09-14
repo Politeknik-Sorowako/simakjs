@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from 'drizzle-orm';
 import {
   bap,
+  bapPraktikum,
   kelasKuliah,
   ketidakhadiranMahasiswa,
   mahasiswa,
@@ -16,6 +17,14 @@ import { SystemParameterService } from './system-parameter.service';
 
 export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
 export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR';
+
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+interface HealedSource {
+  mahasiswaId: number;
+  tanggal: string;
+  durasiMenit: number;
+}
 
 const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'HADIR'];
 
@@ -43,7 +52,7 @@ export class VerifikasiUnknownService {
    */
   static async verify(input: VerifyInput) {
     if (!STATUS_KONFIRMASI.includes(input.statusKonfirmasi)) {
-      throw new Error('Status konfirmasi harus SAKIT, IZIN, ALPA, atau HADIR');
+      throw new Error('Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, atau HADIR');
     }
 
     const adminUserId = Number(input.adminUserId) > 0 ? input.adminUserId : null;
@@ -58,9 +67,129 @@ export class VerifikasiUnknownService {
     }
   }
 
+  /**
+   * Self-healing: bila baris `ketidakhadiran_mahasiswa` belum ada (mis. orphan
+   * akibat copy BAP / re-save presensi yang tidak tersinkron), bentuk ulang baris
+   * terpusat dari tabel sumber (presensi/presensi_praktikum/presensi_apel) di
+   * dalam transaksi yang sama agar admin tidak terhalang saat anulir/koreksi.
+   */
+  private static async _healMissingAbsence(tx: DbTx, input: VerifyInput, adminUserId: number | null) {
+    const source = await VerifikasiUnknownService._resolveSourceForHeal(tx, input.sumber, input.sumberId);
+
+    if (!source) {
+      if (input.sumber === 'MANUAL') {
+        throw new Error('Data ketidakhadiran tidak ditemukan');
+      }
+      throw new Error(
+        `Data ketidakhadiran tidak ditemukan dan sumber presensi ${input.sumber} #${input.sumberId} tidak ada. ` +
+          'Kemungkinan data presensi sumber telah dihapus atau di-input ulang.',
+      );
+    }
+
+    try {
+      await tx
+        .insert(ketidakhadiranMahasiswa)
+        .values({
+          mahasiswaId: source.mahasiswaId,
+          tanggal: source.tanggal,
+          sumber: input.sumber,
+          sumberId: input.sumberId,
+          status: 'UNKNOWN',
+          durasiMenit: Math.max(Number(source.durasiMenit) || 0, 0),
+          isVerified: false,
+          createdBy: adminUserId,
+        })
+        .onConflictDoNothing({ target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId] });
+    } catch (e: unknown) {
+      if (adminUserId !== null && isVerifiedByFkViolation(e)) {
+        await tx
+          .insert(ketidakhadiranMahasiswa)
+          .values({
+            mahasiswaId: source.mahasiswaId,
+            tanggal: source.tanggal,
+            sumber: input.sumber,
+            sumberId: input.sumberId,
+            status: 'UNKNOWN',
+            durasiMenit: Math.max(Number(source.durasiMenit) || 0, 0),
+            isVerified: false,
+            createdBy: null,
+          })
+          .onConflictDoNothing({ target: [ketidakhadiranMahasiswa.sumber, ketidakhadiranMahasiswa.sumberId] });
+      } else {
+        throw e;
+      }
+    }
+
+    const [healed] = await tx
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(
+        and(eq(ketidakhadiranMahasiswa.sumber, input.sumber), eq(ketidakhadiranMahasiswa.sumberId, input.sumberId)),
+      );
+
+    if (!healed) {
+      throw new Error('Data ketidakhadiran tidak ditemukan');
+    }
+
+    console.warn(
+      `[self-heal] Baris ketidakhadiran hilang dibentuk ulang: sumber=${input.sumber} sumberId=${input.sumberId} ` +
+        `mahasiswaId=${source.mahasiswaId} tanggal=${source.tanggal}`,
+    );
+
+    return healed;
+  }
+
+  private static async _resolveSourceForHeal(
+    tx: DbTx,
+    sumber: KetidakhadiranSumber,
+    sumberId: number,
+  ): Promise<HealedSource | null> {
+    if (sumber === 'BAP') {
+      const [row] = await tx
+        .select({
+          mahasiswaId: presensi.mahasiswaId,
+          tanggal: bap.tanggal,
+          durasiMenit: bap.durasiMenit,
+        })
+        .from(presensi)
+        .innerJoin(bap, eq(presensi.bapId, bap.id))
+        .where(eq(presensi.id, sumberId));
+      return row ?? null;
+    }
+
+    if (sumber === 'APEL') {
+      const [row] = await tx
+        .select({
+          mahasiswaId: presensiApel.mahasiswaId,
+          tanggal: sesiApel.tanggal,
+          durasiMenit: presensiApel.menitTerlambat,
+        })
+        .from(presensiApel)
+        .innerJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))
+        .where(eq(presensiApel.id, sumberId));
+      if (!row) return null;
+      return { mahasiswaId: row.mahasiswaId, tanggal: row.tanggal, durasiMenit: row.durasiMenit ?? 0 };
+    }
+
+    if (sumber === 'PRAKTIKUM') {
+      const [row] = await tx
+        .select({
+          mahasiswaId: presensiPraktikum.mahasiswaId,
+          tanggal: bapPraktikum.tanggal,
+          durasiMenit: presensiPraktikum.durasiMangkir,
+        })
+        .from(presensiPraktikum)
+        .innerJoin(bapPraktikum, eq(presensiPraktikum.bapPraktikumId, bapPraktikum.id))
+        .where(eq(presensiPraktikum.id, sumberId));
+      return row ?? null;
+    }
+
+    return null;
+  }
+
   private static async _executeVerify(input: VerifyInput, adminUserId: number | null) {
     return await db.transaction(async (tx) => {
-      const [absence] = await tx
+      let [absence] = await tx
         .select()
         .from(ketidakhadiranMahasiswa)
         .where(
@@ -68,8 +197,9 @@ export class VerifikasiUnknownService {
         );
 
       if (!absence) {
-        throw new Error('Data ketidakhadiran tidak ditemukan');
+        absence = await VerifikasiUnknownService._healMissingAbsence(tx, input, adminUserId);
       }
+
       if (absence.sumber === 'MANUAL') {
         throw new Error('Data dengan sumber MANUAL tidak dapat diverifikasi melalui alur ini');
       }

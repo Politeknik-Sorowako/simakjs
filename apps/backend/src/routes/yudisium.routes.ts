@@ -5,11 +5,15 @@ import {
   getAllYudisiumSchema,
   getKomponenYudisiumSchema,
   getNilaiMahasiswaYudisiumSchema,
+  getSubKomponenYudisiumSchema,
   getYudisiumSchema,
   getYudisiumStatsSchema,
   lockKelasYudisiumSchema,
   saveKomponenYudisiumSchema,
+  saveNilaiAkhirYudisiumSchema,
   saveNilaiMahasiswaYudisiumSchema,
+  saveNilaiSubYudisiumSchema,
+  saveSubKomponenYudisiumSchema,
   submitPengajuanYudisiumSchema,
   unlockKelasYudisiumSchema,
   updateYudisiumStatusSchema,
@@ -26,7 +30,11 @@ export const yudisiumRoutes = new Elysia({ prefix: '/yudisium' })
   // Grade Components
   .get('/kelas/:kelasKuliahId/komponen', YudisiumController.getKomponen, getKomponenYudisiumSchema)
   .post('/kelas/komponen', YudisiumController.saveKomponen, saveKomponenYudisiumSchema)
+  .get('/kelas/:kelasKuliahId/sub-komponen', YudisiumController.getSubKomponen, getSubKomponenYudisiumSchema)
+  .post('/kelas/sub-komponen', YudisiumController.saveSubKomponen, saveSubKomponenYudisiumSchema)
   .get('/kelas/:kelasKuliahId/nilai', YudisiumController.getNilaiMahasiswa, getNilaiMahasiswaYudisiumSchema)
   .post('/kelas/nilai', YudisiumController.saveNilaiMahasiswa, saveNilaiMahasiswaYudisiumSchema)
+  .post('/kelas/nilai-sub', YudisiumController.saveNilaiSub, saveNilaiSubYudisiumSchema)
+  .post('/kelas/nilai-akhir', YudisiumController.saveNilaiAkhir, saveNilaiAkhirYudisiumSchema)
   .post('/kelas/:kelasKuliahId/lock', YudisiumController.lockKelas, lockKelasYudisiumSchema)
   .post('/kelas/:kelasKuliahId/unlock', YudisiumController.unlockKelas, unlockKelasYudisiumSchema);

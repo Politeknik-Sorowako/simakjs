@@ -12,6 +12,7 @@ import {
   getMatriksNilaiSchema,
   getRekapNilaiSchema,
   getRekapPerProdiSchema,
+  getRincianKomponenSchema,
   getTranskripSchema,
   saveKonversiNilaiSchema,
   saveSkalaPredikatSchema,
@@ -22,6 +23,7 @@ export const khsRoutes = new Elysia({ prefix: '/khs' })
   .get('/mahasiswa/:mhsId/periode/:periodeId', KhsController.getByMhsIdAndPeriode, getKhsSchema)
   .get('/mahasiswa/:mhsId/transkrip', KhsController.getTranskrip, getTranskripSchema)
   .get('/mahasiswa/:mhsId/periode/:periodeId/eligibility', KhsController.getExamEligibility, getExamEligibilitySchema)
+  .get('/rincian-komponen', KhsController.getRincianKomponen, getRincianKomponenSchema)
 
   // Rekap & Matriks Nilai
   .get('/rekap-nilai/:mhsId', KhsController.getRekapNilai, getRekapNilaiSchema)

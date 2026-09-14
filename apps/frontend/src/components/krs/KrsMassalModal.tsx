@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { kelasKuliahController } from '../../controllers/kelasKuliahController';
@@ -25,13 +25,45 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
   // Step 1: Mahasiswa selection state & filters
   const [selectedMhsIds, setSelectedMhsIds] = createSignal<number[]>([]);
   const [mhsSearch, setMhsSearch] = createSignal('');
+  const [debouncedMhsSearch, setDebouncedMhsSearch] = createSignal('');
   const [mhsProdiId, setMhsProdiId] = createSignal<number | undefined>(workspace.activeProdiId() || undefined);
   const [mhsStatus, setMhsStatus] = createSignal('aktif');
+
+  // Debounce pencarian agar tabel hanya refetch setelah user berhenti mengetik.
+  let mhsSearchTimer: ReturnType<typeof setTimeout> | undefined;
+  let kelasSearchTimer: ReturnType<typeof setTimeout> | undefined;
+  let mhsSearchRef: HTMLInputElement | undefined;
+  let kelasSearchRef: HTMLInputElement | undefined;
+
+  onCleanup(() => {
+    clearTimeout(mhsSearchTimer);
+    clearTimeout(kelasSearchTimer);
+  });
+
+  // Input search bersifat uncontrolled (tanpa binding `value`) agar caret tidak
+  // pernah ditimpa saat reaktivitas berjalan. Reset dilakukan saat modal dibuka.
+  createEffect(() => {
+    if (!props.show) return;
+    clearTimeout(mhsSearchTimer);
+    clearTimeout(kelasSearchTimer);
+    setMhsSearch('');
+    setDebouncedMhsSearch('');
+    setKelasSearch('');
+    setDebouncedKelasSearch('');
+    if (mhsSearchRef) mhsSearchRef.value = '';
+    if (kelasSearchRef) kelasSearchRef.value = '';
+  });
+
+  createEffect(() => {
+    const value = mhsSearch();
+    clearTimeout(mhsSearchTimer);
+    mhsSearchTimer = setTimeout(() => setDebouncedMhsSearch(value), 400);
+  });
 
   // Fetch Mahasiswa (limit 1000 for selection)
   const [mahasiswaList] = createResource(
     () => ({
-      search: mhsSearch(),
+      search: debouncedMhsSearch(),
       prodiId: mhsProdiId() || workspace.activeProdiId() || undefined,
       status: mhsStatus(),
     }),
@@ -46,12 +78,41 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
   // Step 2: Kelas Kuliah selection state & filters
   const [selectedKelasIds, setSelectedKelasIds] = createSignal<number[]>([]);
   const [kelasSearch, setKelasSearch] = createSignal('');
+  const [debouncedKelasSearch, setDebouncedKelasSearch] = createSignal('');
   const [kelasProdiId, setKelasProdiId] = createSignal<number | undefined>(workspace.activeProdiId() || undefined);
+
+  createEffect(() => {
+    const value = kelasSearch();
+    clearTimeout(kelasSearchTimer);
+    kelasSearchTimer = setTimeout(() => setDebouncedKelasSearch(value), 400);
+  });
+
+  // Program studi dari mahasiswa yang dipilih (langkah 1) → filter kelas.
+  const selectedProdis = createMemo(() => {
+    const ids = selectedMhsIds();
+    const list = mahasiswaList() || [];
+    const map = new Map<number, string>();
+    for (const m of list) {
+      if (ids.includes(m.id) && m.programStudiId) {
+        map.set(m.programStudiId, m.programStudi?.nama || `Prodi ${m.programStudiId}`);
+      }
+    }
+    return [...map.entries()].map(([id, nama]) => ({ id, nama }));
+  });
+
+  const singleProdiId = createMemo(() => (selectedProdis().length === 1 ? selectedProdis()[0].id : undefined));
+
+  createEffect(() => {
+    const only = singleProdiId();
+    if (only !== undefined && kelasProdiId() !== only) {
+      setKelasProdiId(only);
+    }
+  });
 
   // Fetch Kelas Kuliah
   const [kelasList] = createResource(
     () => ({
-      search: kelasSearch(),
+      search: debouncedKelasSearch(),
       prodiId: kelasProdiId() || workspace.activeProdiId() || undefined,
       periodeId: workspace.activePeriodeId(),
     }),
@@ -60,6 +121,14 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
       return res.data;
     },
   );
+
+  // Reset pilihan kelas saat filter kelas berubah agar tidak ada seleksi basi.
+  createEffect(() => {
+    debouncedKelasSearch();
+    kelasProdiId();
+    workspace.activePeriodeId();
+    setSelectedKelasIds([]);
+  });
 
   // Dropdown list
   const [prodiOptions] = createResource(() => prodiController.getAll(undefined, 1, 100));
@@ -178,10 +247,10 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 Cari (NIM / Nama)
               </label>
               <input
+                ref={mhsSearchRef}
                 type="text"
                 placeholder="Pencarian..."
                 class="w-full px-2.5 py-1.5 text-xs border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 dark:text-white"
-                value={mhsSearch()}
                 onInput={(e) => setMhsSearch(e.currentTarget.value)}
               />
             </div>
@@ -289,10 +358,10 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 Cari Kelas / Mata Kuliah
               </label>
               <input
+                ref={kelasSearchRef}
                 type="text"
                 placeholder="Nama MK / Kode / Kelas..."
                 class="w-full px-2.5 py-1.5 text-xs border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 dark:text-white"
-                value={kelasSearch()}
                 onInput={(e) => setKelasSearch(e.currentTarget.value)}
               />
             </div>
@@ -301,15 +370,33 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 Program Studi
               </label>
               <select
-                class="w-full px-2.5 py-1.5 text-xs border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 dark:text-white"
+                class="w-full px-2.5 py-1.5 text-xs border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 dark:text-white disabled:bg-secondary-100 disabled:text-secondary-500 dark:disabled:bg-secondary-800/60"
                 value={kelasProdiId() || ''}
+                disabled={singleProdiId() !== undefined}
                 onChange={(e) => setKelasProdiId(Number(e.currentTarget.value) || undefined)}
               >
                 <option value="">Semua Prodi</option>
                 <For each={prodiOptions()?.data || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
               </select>
+              <Show when={singleProdiId() !== undefined}>
+                <p class="mt-1 text-[10px] text-secondary-500 dark:text-secondary-400">
+                  Mengikuti program studi mahasiswa terpilih.
+                </p>
+              </Show>
             </div>
           </div>
+
+          <Show when={selectedProdis().length > 1}>
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+              <p class="font-bold">Mahasiswa terpilih berasal dari {selectedProdis().length} program studi</p>
+              <p class="mt-0.5">
+                {selectedProdis()
+                  .map((p) => p.nama)
+                  .join(', ')}
+                . Pilih program studi secara manual untuk menyaring kelas.
+              </p>
+            </div>
+          </Show>
 
           {/* Table Kelas Kuliah */}
           <div class="max-h-80 overflow-y-auto border border-secondary-200 dark:border-secondary-700 rounded-xl">

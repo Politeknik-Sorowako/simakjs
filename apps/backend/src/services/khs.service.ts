@@ -1,20 +1,25 @@
-import { and, count, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import {
   bap,
   bimbingan,
   dosen,
   dosenPengajarKelas,
   kelasKuliah,
+  komponenNilai,
   konversiNilai,
   krs,
   mahasiswa,
   mataKuliah,
+  nilaiKomponenMahasiswa,
+  nilaiSubKomponenMahasiswa,
   presensi,
   programStudi,
   skalaPredikatKelulusan,
+  subKomponenNilai,
   tagihan,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { computeKomponenScore } from '../utils/grade-calc';
 import { PresensiService } from './presensi.service';
 
 export interface KhsSummary {
@@ -57,6 +62,91 @@ export class KhsService {
     }
 
     return { bebas: true, reason: null, detail: null };
+  }
+
+  /**
+   * Rincian nilai per komponen untuk mahasiswa (read-only).
+   * Mengembalikan NA + daftar komponen (nama, bobot, nilai L1 agregat).
+   * TIDAK pernah menyertakan nilai/definisi sub-komponen.
+   */
+  static async getRincianKomponen(mahasiswaId: number, kelasKuliahId: number) {
+    const [krsRecord] = await db
+      .select({
+        id: krs.id,
+        nilaiAngka: krs.nilaiAngka,
+        nilaiHuruf: krs.nilaiHuruf,
+        nilaiIndeks: krs.nilaiIndeks,
+      })
+      .from(krs)
+      .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.kelasKuliahId, kelasKuliahId)));
+
+    if (!krsRecord) {
+      throw new Error('KRS mahasiswa tidak ditemukan pada kelas ini.');
+    }
+
+    const components = await db
+      .select({ id: komponenNilai.id, nama: komponenNilai.nama, bobot: komponenNilai.bobot })
+      .from(komponenNilai)
+      .where(eq(komponenNilai.kelasKuliahId, kelasKuliahId))
+      .orderBy(asc(komponenNilai.id));
+
+    const componentIds = components.map((c) => c.id);
+    const subDefs =
+      componentIds.length > 0
+        ? await db
+            .select({
+              id: subKomponenNilai.id,
+              komponenNilaiId: subKomponenNilai.komponenNilaiId,
+              bobot: subKomponenNilai.bobot,
+            })
+            .from(subKomponenNilai)
+            .where(inArray(subKomponenNilai.komponenNilaiId, componentIds))
+        : [];
+
+    const subDefsByKomponen = new Map<number, Array<{ id: number; bobot: number }>>();
+    for (const s of subDefs) {
+      const arr = subDefsByKomponen.get(s.komponenNilaiId) ?? [];
+      arr.push({ id: s.id, bobot: s.bobot });
+      subDefsByKomponen.set(s.komponenNilaiId, arr);
+    }
+
+    const directRows = await db
+      .select()
+      .from(nilaiKomponenMahasiswa)
+      .where(eq(nilaiKomponenMahasiswa.krsId, krsRecord.id));
+    const subRows = await db
+      .select()
+      .from(nilaiSubKomponenMahasiswa)
+      .where(eq(nilaiSubKomponenMahasiswa.krsId, krsRecord.id));
+
+    const directGrades = new Map(directRows.map((g) => [g.komponenNilaiId, parseFloat(g.nilai)]));
+    const subGrades = new Map(subRows.map((g) => [g.subKomponenNilaiId, parseFloat(g.nilai)]));
+
+    const komponen = components.map((c) => {
+      const subs = subDefsByKomponen.get(c.id) ?? [];
+      let nilai: number | null = null;
+      if (subs.length > 0) {
+        const direct = directGrades.get(c.id);
+        if (direct !== undefined) {
+          // Selaras buildFinalScore: override langsung menang atas agregasi sub.
+          nilai = direct;
+        } else {
+          const result = computeKomponenScore(subGrades, subs);
+          nilai = result.complete && result.score !== null ? result.score : null;
+        }
+      } else {
+        nilai = directGrades.get(c.id) ?? null;
+      }
+      return { nama: c.nama, bobot: c.bobot, nilai };
+    });
+
+    return {
+      krsId: krsRecord.id,
+      nilaiAngka: krsRecord.nilaiAngka,
+      nilaiHuruf: krsRecord.nilaiHuruf,
+      nilaiIndeks: krsRecord.nilaiIndeks,
+      komponen,
+    };
   }
 
   static async getKhs(mahasiswaId: number, periodeId: string) {

@@ -36,6 +36,7 @@ import {
   mataKuliah,
   mataKuliahBahanKajian,
   nilaiKomponenMahasiswa,
+  nilaiSubKomponenMahasiswa,
   notifications,
   pasalPelanggaran,
   pelanggaran,
@@ -55,6 +56,7 @@ import {
   skalaPredikatKelulusan,
   skemaTarif,
   subCpmk,
+  subKomponenNilai,
   systemFeedback,
   tagihan,
   transaksiPembayaran,
@@ -123,7 +125,9 @@ export async function clearDatabase() {
   await db.delete(skalaPredikatKelulusan);
   await db.delete(notifications);
   await db.delete(pengajuanYudisium);
+  await db.delete(nilaiSubKomponenMahasiswa);
   await db.delete(nilaiKomponenMahasiswa);
+  await db.delete(subKomponenNilai);
   await db.delete(komponenNilai);
   await db.delete(rencanaEvaluasiSubCpmk);
   await db.delete(rencanaEvaluasi);

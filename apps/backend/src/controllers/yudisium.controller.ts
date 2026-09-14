@@ -128,7 +128,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getKomponen({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -144,7 +144,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveKomponen({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -168,7 +168,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getNilaiMahasiswa({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -186,7 +186,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveNilaiMahasiswa({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -207,9 +207,99 @@ export class YudisiumController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async saveNilaiSub({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const scopeError = await guardKelasScope(user, body.kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+
+    try {
+      const result = await YudisiumService.saveNilaiSub(body.kelasKuliahId, body.nilaiSubList);
+      return result;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menyimpan nilai sub-komponen mahasiswa.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getSubKomponen({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const kelasKuliahId = parseInt(params.kelasKuliahId);
+    const scopeError = await guardKelasScope(user, kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+    return await YudisiumService.getSubKomponen(kelasKuliahId);
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async saveSubKomponen({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const scopeError = await guardKelasScope(user, body.kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+
+    try {
+      const result = await YudisiumService.saveSubKomponen(
+        body.kelasKuliahId,
+        body.komponenNilaiId,
+        body.subKomponenList,
+      );
+      set.status = 200;
+      return result;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menyimpan sub-komponen nilai.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async saveNilaiAkhir({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const scopeError = await guardKelasScope(user, body.kelasKuliahId);
+    if (scopeError) {
+      set.status = 403;
+      return { error: scopeError };
+    }
+
+    try {
+      const result = await YudisiumService.saveNilaiAkhir(body.kelasKuliahId, body.nilaiAkhirList);
+      return result;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menyimpan nilai akhir mahasiswa.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async lockKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -233,7 +323,7 @@ export class YudisiumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async unlockKelas({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Anda tidak memiliki wewenang untuk membuka kunci nilai kelas.' };
     }

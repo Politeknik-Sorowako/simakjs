@@ -26,7 +26,15 @@ export interface ImportKelasResult {
 }
 
 export class KelasKuliahService {
-  static async getAll(page = 1, limit = 10, search = '', periodeId?: string, dosenId?: number, mataKuliahId?: number) {
+  static async getAll(
+    page = 1,
+    limit = 10,
+    search = '',
+    periodeId?: string,
+    dosenId?: number,
+    mataKuliahId?: number,
+    programStudiId?: number,
+  ) {
     const offset = (page - 1) * limit;
     const conditions = [];
 
@@ -56,6 +64,13 @@ export class KelasKuliahService {
     }
     if (mataKuliahId !== undefined) {
       conditions.push(eq(kelasKuliah.mataKuliahId, mataKuliahId));
+    }
+    if (programStudiId !== undefined) {
+      const prodiMkSubquery = db
+        .select({ id: mataKuliah.id })
+        .from(mataKuliah)
+        .where(eq(mataKuliah.programStudiId, programStudiId));
+      conditions.push(inArray(kelasKuliah.mataKuliahId, prodiMkSubquery));
     }
     if (dosenId !== undefined) {
       const kelasSubquery = db
