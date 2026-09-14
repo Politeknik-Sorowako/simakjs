@@ -1168,9 +1168,9 @@ export class PresensiService {
         sks: mataKuliah.sksTotal,
         prodiNama: programStudi.nama,
         prodiId: mataKuliah.programStudiId,
-        dosenPengajar: sql<string>`COALESCE(kelas_dosen.dosen_nama, '-')`.as('dosen_pengajar'),
-        totalPertemuan: sql<number>`COALESCE(kelas_bap_count.total_pertemuan, 0)`.as('total_pertemuan'),
-        totalMahasiswa: sql<number>`COALESCE(kelas_krs_count.total_mahasiswa, 0)`.as('total_mahasiswa'),
+        dosenPengajar: sql<string>`COALESCE(MAX(kelas_dosen.dosen_nama), '-')`.as('dosen_pengajar'),
+        totalPertemuan: sql<number>`COALESCE(MAX(kelas_bap_count.total_pertemuan), 0)`.as('total_pertemuan'),
+        totalMahasiswa: sql<number>`COALESCE(MAX(kelas_krs_count.total_mahasiswa), 0)`.as('total_mahasiswa'),
         rataPersentaseHadir: sql<number>`COALESCE(AVG(CASE
             WHEN kelas_student_att.total_pertemuan > 0
             THEN (kelas_student_att.hadir_ok::float / kelas_student_att.total_pertemuan) * 100
