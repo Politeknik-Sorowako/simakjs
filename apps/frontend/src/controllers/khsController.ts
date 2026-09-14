@@ -173,6 +173,20 @@ export interface MahasiswaKeluarStats {
   perProdi: { prodiId: number; prodiNama: string; total: number }[];
 }
 
+export interface RincianKomponenItem {
+  nama: string;
+  bobot: number;
+  nilai: number | null;
+}
+
+export interface RincianKomponenMahasiswa {
+  krsId: number;
+  nilaiAngka: string | null;
+  nilaiHuruf: string | null;
+  nilaiIndeks: string | null;
+  komponen: RincianKomponenItem[];
+}
+
 export const khsController = {
   async getByMhsIdAndPeriode(mhsId: number, periodeId: string): Promise<KhsResponse> {
     return fetchApi<KhsResponse>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}`);
@@ -180,6 +194,12 @@ export const khsController = {
 
   async getTranskrip(mhsId: number): Promise<TranskripResponse> {
     return fetchApi<TranskripResponse>(`/khs/mahasiswa/${mhsId}/transkrip`);
+  },
+
+  async getRincianKomponen(kelasKuliahId: number, mahasiswaId?: number): Promise<RincianKomponenMahasiswa> {
+    const params = new URLSearchParams({ kelasKuliahId: String(kelasKuliahId) });
+    if (mahasiswaId) params.append('mahasiswaId', String(mahasiswaId));
+    return fetchApi<RincianKomponenMahasiswa>(`/khs/rincian-komponen?${params.toString()}`);
   },
 
   async getPengajuanYudisium(mhsId: number): Promise<PengajuanYudisium | null> {

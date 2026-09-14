@@ -84,14 +84,20 @@ export function buildFinalScore(
     let score: number | null = null;
     let complete = false;
 
-    if (subs.length > 0) {
-      const result = computeKomponenScore(subGrades, subs);
-      score = result.score;
-      complete = result.complete;
+    const direct = directGrades.get(comp.id);
+    const subResult = subs.length > 0 ? computeKomponenScore(subGrades, subs) : { score: null, complete: false };
+
+    if (subResult.complete && subResult.score !== null) {
+      // Agregasi sub lengkap menang (nilai sub yang terakhir ditulis).
+      score = subResult.score;
+      complete = true;
+    } else if (direct !== undefined) {
+      // Tidak ada nilai sub (mis. ditimpa nilai langsung) → pakai nilai langsung.
+      score = direct;
+      complete = true;
     } else {
-      const direct = directGrades.get(comp.id);
-      score = direct ?? null;
-      complete = direct !== undefined;
+      score = subResult.score;
+      complete = false;
     }
 
     if (!complete || score === null) {
