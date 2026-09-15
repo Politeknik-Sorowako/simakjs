@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { dosen } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -16,7 +16,14 @@ export interface CreateDosenDto {
 }
 
 export class DosenService {
-  static async getAll(page = 1, limit = 10, search = '', programStudiId?: number) {
+  static async getAll(
+    page = 1,
+    limit = 10,
+    search = '',
+    programStudiId?: number,
+    sortBy = 'nama',
+    sortOrder: 'asc' | 'desc' = 'asc',
+  ) {
     const offset = (page - 1) * limit;
     let conditions = [];
 
@@ -38,10 +45,19 @@ export class DosenService {
 
     const total = totalResult?.total || 0;
 
+    const sortColumnMap = {
+      nip: dosen.nip,
+      nama: dosen.nama,
+      email: dosen.email,
+      programStudiId: dosen.programStudiId,
+    } as const;
+    const sortColumn = sortColumnMap[sortBy as keyof typeof sortColumnMap] ?? dosen.nama;
+
     const data = await db.query.dosen.findMany({
       where: whereClause,
       limit,
       offset,
+      orderBy: sortOrder === 'desc' ? [desc(sortColumn)] : [asc(sortColumn)],
       with: {
         programStudi: true,
       },

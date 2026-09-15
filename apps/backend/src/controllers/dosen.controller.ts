@@ -4,22 +4,21 @@ import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class DosenController {
-  static async getAll({
-    query,
-    set,
-    getCurrentUser,
-    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  }: AuthContext<any, PaginationQuery & { programStudiId?: number }>): Promise<any> {
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const q = query as PaginationQuery & { programStudiId?: number; sortBy?: string; sortOrder?: string };
     const user = await getCurrentUser();
     if (!user || hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Guest tidak diizinkan mengakses data dosen.' };
     }
-    const page = query?.page ? parseInt(String(query.page)) : 1;
-    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
-    const search = query?.search || '';
-    const programStudiId = query?.programStudiId ? parseInt(String(query.programStudiId)) : undefined;
-    return await DosenService.getAll(page, limit, search, programStudiId);
+    const page = q?.page ? parseInt(String(q.page)) : 1;
+    const limit = q?.limit ? parseInt(String(q.limit)) : 10;
+    const search = q?.search || '';
+    const programStudiId = q?.programStudiId ? parseInt(String(q.programStudiId)) : undefined;
+    const sortBy = q?.sortBy || 'nama';
+    const sortOrder: 'asc' | 'desc' = q?.sortOrder === 'desc' ? 'desc' : 'asc';
+    return await DosenService.getAll(page, limit, search, programStudiId, sortBy, sortOrder);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

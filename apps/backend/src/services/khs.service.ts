@@ -19,8 +19,9 @@ import {
   tagihan,
 } from '../models/schema';
 import { db } from '../utils/db';
-import { computeKomponenScore } from '../utils/grade-calc';
+import { computeKomponenScore, type KonversiRule, resolveNilaiEnvelope } from '../utils/grade-calc';
 import { PresensiService } from './presensi.service';
+import { SystemParameterService } from './system-parameter.service';
 
 export interface KhsSummary {
   totalSks: number;
@@ -483,6 +484,116 @@ export class KhsService {
 
   static async deleteKonversi(id: number) {
     await db.delete(konversiNilai).where(eq(konversiNilai.id, id));
+  }
+
+  /**
+   * Rekap aturan konversi global + usulan rentang baru saat skala dibagi (mis. 100 -> 10).
+   * `targetMax` menentukan skala tujuan (100 atau 10). Usulan dihitung proporsional dari
+   * envelope saat ini; admin dapat mengubahnya sebelum konfirmasi massal.
+   */
+  static async getKonversiRekap(targetMax?: number) {
+    const rules = (await db.query.konversiNilai.findMany({
+      where: isNull(konversiNilai.programStudiId),
+      orderBy: [asc(konversiNilai.nilaiMin)],
+    })) as unknown as Array<{
+      id: number;
+      nilaiHuruf: string;
+      bobotIndeks: string;
+      nilaiMin: string;
+      nilaiMax: string;
+      predikat: string;
+    }>;
+
+    const envelope = resolveNilaiEnvelope(rules as KonversiRule[]);
+    const target = targetMax && targetMax > 0 ? targetMax : envelope.max;
+    const ratio = envelope.max > 0 ? target / envelope.max : 1;
+
+    const rekapRules = rules.map((r) => ({
+      id: r.id,
+      nilaiHuruf: r.nilaiHuruf,
+      bobotIndeks: r.bobotIndeks,
+      nilaiMin: parseFloat(String(r.nilaiMin)),
+      nilaiMax: parseFloat(String(r.nilaiMax)),
+      predikat: r.predikat,
+      usulanMin: Math.round(parseFloat(String(r.nilaiMin)) * ratio * 100) / 100,
+      usulanMax: Math.round(parseFloat(String(r.nilaiMax)) * ratio * 100) / 100,
+    }));
+
+    const targetEnvelope = { min: envelope.min * ratio, max: target };
+    const outside = await db
+      .select({ id: krs.id, nilaiAngka: krs.nilaiAngka, nilaiHuruf: krs.nilaiHuruf })
+      .from(krs)
+      .where(
+        sql`${krs.nilaiAngka} IS NOT NULL AND (CAST(${krs.nilaiAngka} AS NUMERIC) < ${targetEnvelope.min} OR CAST(${krs.nilaiAngka} AS NUMERIC) > ${targetEnvelope.max})`,
+      );
+
+    return {
+      currentEnvelope: envelope,
+      targetMax: target,
+      rules: rekapRules,
+      jumlahNilaiDiLuarRentang: outside.length,
+      contohNilaiDiLuarRentang: outside.slice(0, 50),
+    };
+  }
+
+  /**
+   * Konfirmasi massal perubahan aturan konversi nilai. Setiap baris diproses
+   * individual sehingga satu kegagalan tidak membatalkan baris lain.
+   */
+  static async bulkSaveKonversi(
+    rules: Array<{
+      id: number;
+      nilaiHuruf?: string;
+      bobotIndeks?: string | number;
+      nilaiMin: string | number;
+      nilaiMax: string | number;
+      predikat?: string;
+    }>,
+    updatedBy?: number,
+    targetMax?: number,
+  ) {
+    const results: Array<{ id: number; status: 'updated' | 'failed'; error?: string }> = [];
+    let updated = 0;
+
+    for (const row of rules) {
+      try {
+        const existing = await db.query.konversiNilai.findFirst({ where: eq(konversiNilai.id, row.id) });
+        if (!existing) {
+          results.push({ id: row.id, status: 'failed', error: 'Aturan tidak ditemukan.' });
+          continue;
+        }
+        const nMin = parseFloat(String(row.nilaiMin));
+        const nMax = parseFloat(String(row.nilaiMax));
+        if (!Number.isFinite(nMin) || !Number.isFinite(nMax) || nMin >= nMax) {
+          results.push({ id: row.id, status: 'failed', error: 'Nilai minimum harus lebih kecil dari maksimum.' });
+          continue;
+        }
+        await db
+          .update(konversiNilai)
+          .set({
+            nilaiHuruf: row.nilaiHuruf ?? existing.nilaiHuruf,
+            bobotIndeks: row.bobotIndeks !== undefined ? String(row.bobotIndeks) : existing.bobotIndeks,
+            nilaiMin: String(nMin),
+            nilaiMax: String(nMax),
+            predikat: row.predikat ?? existing.predikat,
+          })
+          .where(eq(konversiNilai.id, row.id));
+        updated += 1;
+        results.push({ id: row.id, status: 'updated' });
+      } catch (err: unknown) {
+        results.push({ id: row.id, status: 'failed', error: err instanceof Error ? err.message : 'Gagal menyimpan.' });
+      }
+    }
+
+    if (targetMax && targetMax > 0) {
+      await SystemParameterService.set('NILAI_SKALA_MAX', String(targetMax), updatedBy);
+    }
+
+    return {
+      updated,
+      failed: results.filter((r) => r.status === 'failed').length,
+      results,
+    };
   }
 
   // --- SKALA PREDIKAT KELULUSAN ---

@@ -3,6 +3,7 @@ import { PelanggaranController } from '../controllers/pelanggaran.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   createPelanggaranSchema,
+  deletePelanggaranSchema,
   getAllPelanggaranSchema,
   getPelanggaranMahasiswaSchema,
   getRekapPasalSchema,
@@ -19,4 +20,5 @@ export const pelanggaranRoutes = new Elysia({ prefix: '/pelanggaran' })
   .get('/rekap-pasal', PelanggaranController.getRekapPasal, getRekapPasalSchema)
   .get('/', PelanggaranController.getAll, getAllPelanggaranSchema)
   .put('/:id', PelanggaranController.update, updatePelanggaranSchema)
+  .delete('/:id', PelanggaranController.remove, deletePelanggaranSchema)
   .post('/import', PelanggaranController.importCsv, importPelanggaranSchema);

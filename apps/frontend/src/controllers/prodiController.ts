@@ -30,11 +30,19 @@ export interface PaginatedResponse<T> {
 }
 
 export const prodiController = {
-  async getAll(search?: string, page?: number, limit?: number): Promise<PaginatedResponse<Prodi>> {
+  async getAll(
+    search?: string,
+    page?: number,
+    limit?: number,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
+  ): Promise<PaginatedResponse<Prodi>> {
     const query: Record<string, string> = {};
     if (search) query.search = search;
     if (page) query.page = String(page);
     if (limit) query.limit = String(limit);
+    if (sortBy) query.sortBy = sortBy;
+    if (sortOrder) query.sortOrder = sortOrder;
     return unwrap<PaginatedResponse<Prodi>>(
       eden.prodi.get({ $query: query }) as unknown as Promise<{
         data?: PaginatedResponse<Prodi>;

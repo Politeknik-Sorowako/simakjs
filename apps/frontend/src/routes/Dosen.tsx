@@ -42,20 +42,7 @@ export default function Dosen() {
   const auth = useAuth();
   const workspace = useWorkspace();
 
-  // Fetch Dosen Data
-  const [dosens, { refetch }] = createResource(
-    () => ({
-      search: debouncedSearch(),
-      page: page(),
-      limit: limit(),
-      prodiId: workspace.activeProdiId(),
-    }),
-    ({ search, page, limit, prodiId }) => dosenController.getAll(search, page, limit, prodiId || undefined),
-  );
-
-  // Fetch Program Studi for Dropdown
-  const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
-
+  // Sorting state
   const [sortBy, setSortBy] = createSignal('nama');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
   const toggleSort = (field: string) => {
@@ -64,16 +51,27 @@ export default function Dosen() {
       setSortBy(field);
       setSortOrder('asc');
     }
+    resetPage();
   };
-  const sortedData = () => {
-    const data = dosens()?.data || [];
-    return [...data].sort((a, b) => {
-      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const cmp = String(aVal).localeCompare(String(bVal), 'id');
-      return sortOrder() === 'asc' ? cmp : -cmp;
-    });
-  };
+
+  // Fetch Dosen Data (server-side sort)
+  const [dosens, { refetch }] = createResource(
+    () => ({
+      search: debouncedSearch(),
+      page: page(),
+      limit: limit(),
+      prodiId: workspace.activeProdiId(),
+      sortBy: sortBy(),
+      sortOrder: sortOrder(),
+    }),
+    ({ search, page, limit, prodiId, sortBy: sb, sortOrder: so }) =>
+      dosenController.getAll(search, page, limit, prodiId || undefined, sb, so),
+  );
+
+  // Fetch Program Studi for Dropdown
+  const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
+
+  const sortedData = () => dosens()?.data || [];
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);

@@ -44,6 +44,11 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'number',
     description: 'Batas maksimal ukuran lampiran bimbingan dalam MB (default 2 MB)',
   },
+  NILAI_SKALA_MAX: {
+    value: '100',
+    type: 'number',
+    description: 'Skala maksimum nilai global yang berlaku (100 untuk 0-100, 10 untuk 0.00-10.00)',
+  },
 };
 
 export class SystemParameterService {

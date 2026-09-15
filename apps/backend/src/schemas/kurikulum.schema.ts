@@ -34,6 +34,7 @@ export const getKurikulumSchema = {
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
     prodiId: t.Optional(t.Numeric()),
+    programStudiId: t.Optional(t.Numeric()),
   }),
 };
 

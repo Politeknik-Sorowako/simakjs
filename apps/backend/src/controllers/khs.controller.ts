@@ -191,6 +191,53 @@ export class KhsController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getKonversiRekap({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const raw = (query as Record<string, string | undefined>)?.targetMax;
+    const targetMax = raw ? parseInt(raw) : undefined;
+    try {
+      return await KhsService.getKonversiRekap(targetMax);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal mengambil rekap konversi nilai.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bulkSaveKonversi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin.' };
+    }
+    try {
+      const payload = body as {
+        targetMax?: number;
+        rules: Array<{
+          id: number;
+          nilaiHuruf?: string;
+          bobotIndeks?: string | number;
+          nilaiMin: string | number;
+          nilaiMax: string | number;
+          predikat?: string;
+        }>;
+      };
+      if (!Array.isArray(payload?.rules) || payload.rules.length === 0) {
+        set.status = 400;
+        return { error: 'Tidak ada aturan konversi yang dikirim.' };
+      }
+      return await KhsService.bulkSaveKonversi(payload.rules, user.id, payload.targetMax);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal menyimpan konversi nilai massal.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteKonversi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'prodi'])) {

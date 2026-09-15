@@ -216,6 +216,40 @@ export const getAllKonversiSchema = {
   },
 };
 
+export const getKonversiRekapSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Rekap Aturan Konversi & Nilai di Luar Rentang',
+    description:
+      'Mengambil aturan konversi nilai global beserta usulan rentang baru (saat skala berubah) dan jumlah nilai mahasiswa di luar rentang target.',
+  },
+  query: t.Object({
+    targetMax: t.Optional(t.String()),
+  }),
+};
+
+export const bulkSaveKonversiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Konfirmasi Massal Perubahan Aturan Konversi Nilai',
+    description:
+      'Menyimpan perubahan sekumpulan aturan konversi nilai sekaligus. Setiap baris diproses individual; kegagalan satu baris tidak membatalkan baris lain.',
+  },
+  body: t.Object({
+    targetMax: t.Optional(t.Numeric()),
+    rules: t.Array(
+      t.Object({
+        id: t.Numeric(),
+        nilaiHuruf: t.Optional(t.String()),
+        bobotIndeks: t.Optional(t.Union([t.String(), t.Number()])),
+        nilaiMin: t.Union([t.String(), t.Number()]),
+        nilaiMax: t.Union([t.String(), t.Number()]),
+        predikat: t.Optional(t.String()),
+      }),
+    ),
+  }),
+};
+
 export const deleteKonversiSchema = {
   detail: {
     tags: ['KHS & Transkrip'],
