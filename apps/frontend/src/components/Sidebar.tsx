@@ -1862,6 +1862,32 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           </Show>
         </div>
 
+        <Show
+          when={
+            typeof window !== 'undefined' &&
+            !(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone)
+          }
+        >
+          <div class="pt-2 sidebar-footer-actions">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('trigger-pwa-install'))}
+              class="w-full flex items-center justify-center gap-1.5 py-1.5 bg-sky-950/40 hover:bg-sky-900/60 text-sky-300 hover:text-sky-200 rounded border border-sky-800/40 transition-all text-xs font-medium"
+              title={props.collapsed ? 'Pasang Aplikasi' : undefined}
+            >
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              <span class="sidebar-footer-text">Pasang Aplikasi</span>
+            </button>
+          </div>
+        </Show>
+
         <div class="flex gap-2 text-xs border-t border-brand-950/60 pt-2.5 sidebar-footer-actions">
           <A
             href="/profil"
