@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { KhsController } from '../controllers/khs.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  bulkSaveKonversiSchema,
   deleteKonversiSchema,
   deletePredikatSchema,
   getAllKonversiSchema,
@@ -9,6 +10,7 @@ import {
   getDetailNilaiMKSchema,
   getExamEligibilitySchema,
   getKhsSchema,
+  getKonversiRekapSchema,
   getMatriksNilaiSchema,
   getRekapNilaiSchema,
   getRekapPerProdiSchema,
@@ -33,7 +35,9 @@ export const khsRoutes = new Elysia({ prefix: '/khs' })
 
   // Konfigurasi Konversi Nilai
   .get('/konversi', KhsController.getAllKonversi, getAllKonversiSchema)
+  .get('/konversi/rekap', KhsController.getKonversiRekap, getKonversiRekapSchema)
   .post('/konversi', KhsController.saveKonversi, saveKonversiNilaiSchema)
+  .post('/konversi/bulk', KhsController.bulkSaveKonversi, bulkSaveKonversiSchema)
   .delete('/konversi/:id', KhsController.deleteKonversi, deleteKonversiSchema)
 
   // Konfigurasi Skala Predikat Kelulusan

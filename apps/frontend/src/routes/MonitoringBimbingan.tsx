@@ -6,12 +6,14 @@ import { Pagination } from '../components/ui/Pagination';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { bimbinganController, MonitoringBimbinganLengkapItem } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
 
 export default function MonitoringBimbingan() {
+  const workspace = useWorkspace();
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedDosenPa, setSelectedDosenPa] = createSignal<number | null>(null);
   const [printData, setPrintData] = createSignal<MonitoringBimbinganLengkapItem[]>([]);
@@ -32,14 +34,16 @@ export default function MonitoringBimbingan() {
     () => ({
       periodeId: selectedPeriode(),
       dosenPaId: selectedDosenPa(),
+      prodiId: workspace.activeProdiId(),
       search: debouncedSearch(),
       page: page(),
       limit: limit(),
     }),
-    async ({ periodeId, dosenPaId, search, page, limit }) => {
+    async ({ periodeId, dosenPaId, prodiId, search, page, limit }) => {
       return await bimbinganController.getMonitoringLengkap({
         periodeId: periodeId || undefined,
         dosenPaId: dosenPaId || undefined,
+        prodiId: prodiId || undefined,
         search: search || undefined,
         page,
         limit,
@@ -53,7 +57,8 @@ export default function MonitoringBimbingan() {
     const exportRes = await bimbinganController.getMonitoringLengkap({
       periodeId: selectedPeriode() || undefined,
       dosenPaId: selectedDosenPa() || undefined,
-      search: search() || undefined,
+      prodiId: workspace.activeProdiId() || undefined,
+      search: debouncedSearch() || undefined,
       page: 1,
       limit: 10000,
     });

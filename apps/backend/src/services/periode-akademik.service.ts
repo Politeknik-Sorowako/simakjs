@@ -1,4 +1,4 @@
-import { count, eq, ilike, ne, or } from 'drizzle-orm';
+import { asc, count, desc, eq, ilike, ne, or } from 'drizzle-orm';
 import { periodeAkademik } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -10,7 +10,7 @@ export interface CreatePeriodeDto {
 }
 
 export class PeriodeAkademikService {
-  static async getAll(page = 1, limit = 10, search = '') {
+  static async getAll(page = 1, limit = 10, search = '', sortBy = 'id', sortOrder: 'asc' | 'desc' = 'desc') {
     const offset = (page - 1) * limit;
     let whereClause = undefined;
 
@@ -22,7 +22,19 @@ export class PeriodeAkademikService {
 
     const total = totalResult?.total || 0;
 
-    const data = await db.select().from(periodeAkademik).where(whereClause).limit(limit).offset(offset);
+    const sortColumnMap = {
+      id: periodeAkademik.id,
+      nama: periodeAkademik.nama,
+      aktif: periodeAkademik.aktif,
+    } as const;
+    const sortColumn = sortColumnMap[sortBy as keyof typeof sortColumnMap] ?? periodeAkademik.id;
+    const data = await db
+      .select()
+      .from(periodeAkademik)
+      .where(whereClause)
+      .orderBy(sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn))
+      .limit(limit)
+      .offset(offset);
 
     const totalPages = Math.ceil(total / limit);
 

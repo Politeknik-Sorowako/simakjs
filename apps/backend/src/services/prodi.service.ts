@@ -1,4 +1,4 @@
-import { count, eq, ilike, or } from 'drizzle-orm';
+import { asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -19,7 +19,7 @@ type ProdiWriteData = Partial<{
 }>;
 
 export class ProdiService {
-  static async getAll(page = 1, limit = 10, search = '') {
+  static async getAll(page = 1, limit = 10, search = '', sortBy = 'kode', sortOrder: 'asc' | 'desc' = 'asc') {
     const offset = (page - 1) * limit;
     let whereClause = undefined;
 
@@ -30,7 +30,19 @@ export class ProdiService {
     const [totalResult] = await db.select({ total: count() }).from(programStudi).where(whereClause);
 
     const total = totalResult?.total || 0;
-    const data = await db.select().from(programStudi).where(whereClause).limit(limit).offset(offset);
+    const sortColumnMap = {
+      kode: programStudi.kode,
+      nama: programStudi.nama,
+      jenjang: programStudi.jenjang,
+    } as const;
+    const sortColumn = sortColumnMap[sortBy as keyof typeof sortColumnMap] ?? programStudi.kode;
+    const data = await db
+      .select()
+      .from(programStudi)
+      .where(whereClause)
+      .orderBy(sortOrder === 'desc' ? desc(sortColumn) : asc(sortColumn))
+      .limit(limit)
+      .offset(offset);
 
     const totalPages = Math.ceil(total / limit);
 

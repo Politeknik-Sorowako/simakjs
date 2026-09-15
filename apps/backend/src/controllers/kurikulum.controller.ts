@@ -4,6 +4,7 @@ import { AuthContext, PaginationQuery } from '../utils/types';
 
 export interface KurikulumQuery extends PaginationQuery {
   prodiId?: number;
+  programStudiId?: number;
 }
 
 export class KurikulumController {
@@ -12,7 +13,9 @@ export class KurikulumController {
     const page = query?.page ? parseInt(String(query.page)) : 1;
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
-    const prodiId = query?.prodiId ? Number(query.prodiId) : undefined;
+    // `programStudiId` diterima sebagai alias agar konsisten dengan entitas lain.
+    const prodiRaw = query?.prodiId ?? query?.programStudiId;
+    const prodiId = prodiRaw ? Number(prodiRaw) : undefined;
     return await KurikulumService.getAll(page, limit, search, prodiId);
   }
 

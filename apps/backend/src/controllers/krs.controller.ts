@@ -8,7 +8,14 @@ import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
-type KrsQuery = PaginationQuery & { kelasKuliahId?: number };
+type KrsQuery = PaginationQuery & {
+  kelasKuliahId?: number;
+  periodeId?: string;
+  programStudiId?: number;
+  isApproved?: string;
+  sortBy?: string;
+  sortOrder?: string;
+};
 
 export class KrsController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
@@ -33,6 +40,13 @@ export class KrsController {
     const limit = query?.limit ? parseInt(String(query.limit)) : 10;
     const search = query?.search || '';
     const kelasKuliahId = query?.kelasKuliahId ? parseInt(String(query.kelasKuliahId)) : undefined;
+    const periodeId = query?.periodeId || undefined;
+    const programStudiId = query?.programStudiId ? parseInt(String(query.programStudiId)) : undefined;
+    let isApproved: boolean | undefined = undefined;
+    if (query?.isApproved === 'true') isApproved = true;
+    else if (query?.isApproved === 'false') isApproved = false;
+    const sortBy = query?.sortBy || undefined;
+    const sortOrder: 'asc' | 'desc' = query?.sortOrder === 'desc' ? 'desc' : 'asc';
 
     let filterMhsId: number | undefined = undefined;
     let dosenPaId: number | undefined = undefined;
@@ -55,7 +69,13 @@ export class KrsController {
       }
     }
 
-    return await KrsService.getAll(page, limit, search, filterMhsId, dosenPaId, kelasKuliahId);
+    return await KrsService.getAll(page, limit, search, filterMhsId, dosenPaId, kelasKuliahId, {
+      periodeId,
+      programStudiId,
+      isApproved,
+      sortBy,
+      sortOrder,
+    });
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

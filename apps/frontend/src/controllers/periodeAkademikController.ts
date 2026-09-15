@@ -10,11 +10,19 @@ export interface PeriodeAkademik {
 }
 
 export const periodeAkademikController = {
-  async getAll(search?: string, page?: number, limit?: number): Promise<PaginatedResponse<PeriodeAkademik>> {
+  async getAll(
+    search?: string,
+    page?: number,
+    limit?: number,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
+  ): Promise<PaginatedResponse<PeriodeAkademik>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<PeriodeAkademik>>(`/periode-akademik${queryString}`);
   },

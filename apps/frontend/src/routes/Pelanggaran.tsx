@@ -181,6 +181,29 @@ export default function Pelanggaran() {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
 
+  // Hapus Pelanggaran State
+  const [deleteTarget, setDeleteTarget] = createSignal<IPelanggaran | null>(null);
+  const [deleting, setDeleting] = createSignal(false);
+  const canDelete = () => auth.hasRole(['admin', 'prodi', 'super_admin']);
+
+  const confirmDelete = async () => {
+    const target = deleteTarget();
+    if (!target) return;
+    setDeleting(true);
+    try {
+      await bimbinganController.deletePelanggaran(target.id);
+      toast.showToast('Catatan pelanggaran berhasil dihapus', 'success');
+      setDeleteTarget(null);
+      refetchAllViolations();
+      refetchStudentViolations();
+      refetchRekap();
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal menghapus data pelanggaran', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Preview / Cetak SP State
   const [selectedSpItem, setSelectedSpItem] = createSignal<IPelanggaran | null>(null);
   const [showSpModal, setShowSpModal] = createSignal(false);
@@ -735,6 +758,15 @@ export default function Pelanggaran() {
                                     Edit
                                   </Button>
                                 </Show>
+                                <Show when={canDelete()}>
+                                  <button
+                                    onClick={() => setDeleteTarget(item)}
+                                    class="py-1 px-2 text-fine font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all active:scale-95 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                                    title="Hapus catatan pelanggaran"
+                                  >
+                                    Hapus
+                                  </button>
+                                </Show>
                               </div>
                             </td>
                           </tr>
@@ -919,6 +951,26 @@ export default function Pelanggaran() {
             </Show>
           </div>
         </Show>
+
+        {/* Modal Konfirmasi Hapus Pelanggaran */}
+        <Modal show={!!deleteTarget()} onClose={() => setDeleteTarget(null)} title="Hapus Catatan Pelanggaran">
+          <div class="flex flex-col gap-4">
+            <p class="text-base text-secondary-600 dark:text-secondary-300">
+              Hapus permanen catatan pelanggaran{' '}
+              <span class="font-bold text-secondary-800 dark:text-white">{deleteTarget()?.jenisPelanggaran}</span> milik{' '}
+              <span class="font-bold text-secondary-800 dark:text-white">{deleteTarget()?.namaMahasiswa}</span> (
+              {deleteTarget()?.nim})? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div class="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting()}>
+                Batal
+              </Button>
+              <Button variant="danger" onClick={confirmDelete} disabled={deleting()}>
+                {deleting() ? 'Menghapus...' : 'Hapus'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Modal Entry Pelanggaran */}
         <Modal

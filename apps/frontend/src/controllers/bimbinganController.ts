@@ -401,6 +401,12 @@ export const bimbinganController = {
     });
   },
 
+  async deletePelanggaran(id: number): Promise<{ message: string; id: number }> {
+    return fetchApi<{ message: string; id: number }>(`/pelanggaran/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   async getMonitoringLengkap(filter?: {
     periodeId?: string;
     prodiId?: number;

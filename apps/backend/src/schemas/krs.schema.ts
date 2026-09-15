@@ -57,6 +57,11 @@ export const getKrsSchema = {
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
     kelasKuliahId: t.Optional(t.Numeric()),
+    periodeId: t.Optional(t.String()),
+    programStudiId: t.Optional(t.Numeric()),
+    isApproved: t.Optional(t.String()),
+    sortBy: t.Optional(t.String()),
+    sortOrder: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({

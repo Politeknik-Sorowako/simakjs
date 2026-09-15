@@ -46,6 +46,7 @@ export default function MataKuliah() {
       setSortBy(field as SortField);
       setSortOrder('asc');
     }
+    resetPage();
   };
 
   // Fetch program studi for dropdown

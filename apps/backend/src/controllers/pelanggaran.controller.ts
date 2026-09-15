@@ -177,6 +177,32 @@ export class PelanggaranController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async remove({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
+    }
+    try {
+      const id = parseInt(params.id);
+      if (Number.isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tidak valid.' };
+      }
+      const deleted = await PelanggaranService.remove(id);
+      if (!deleted) {
+        set.status = 404;
+        return { error: 'Data pelanggaran tidak ditemukan' };
+      }
+      return { message: 'Catatan pelanggaran berhasil dihapus', id: deleted.id };
+    } catch (err: unknown) {
+      console.error('[PelanggaranController.remove]', err);
+      set.status = 400;
+      return { error: safeErrorMessage(err, 'Gagal menghapus data pelanggaran') };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'prodi', 'super_admin'])) {

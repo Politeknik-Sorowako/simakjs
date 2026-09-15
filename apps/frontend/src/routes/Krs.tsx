@@ -94,6 +94,12 @@ export default function Krs() {
     }
   });
 
+  // Reset ke halaman 1 saat filter periode berubah.
+  createEffect(() => {
+    selectedPeriode();
+    mainPagination.resetPage();
+  });
+
   // Fetch pending students for batch approval
   const [pendingStudents, { refetch: refetchPending }] = createResource(
     () => ({
@@ -179,18 +185,29 @@ export default function Krs() {
       .filter(Boolean)
       .join(', ') || '-';
 
+  const serverSortBy = () => ({ mahasiswa: 'nama', status: 'isApproved' })[sortBy() as 'mahasiswa' | 'status'] ?? 'nim';
+
   // Fetch KRS data (filtered dynamically)
   const [krsData, { refetch }] = createResource(
     () => ({
       search: role() === 'mahasiswa' ? mahasiswaProfile()?.nim || '' : debouncedMainSearch(),
       page: mainPagination.page(),
       limit: mainPagination.limit(),
+      periodeId: selectedPeriode(),
+      programStudiId: workspace.activeProdiId() || undefined,
+      sortBy: serverSortBy(),
+      sortOrder: sortOrder(),
       mhsLoaded: role() === 'mahasiswa' ? !!mahasiswaProfile() : true,
     }),
-    async ({ search, page, limit, mhsLoaded }) => {
+    async ({ search, page, limit, periodeId, programStudiId, sortBy, sortOrder: order, mhsLoaded }) => {
       if (!mhsLoaded) return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 1 } };
       try {
-        return await krsController.getAll(search, page, limit);
+        return await krsController.getAll(search, page, limit, undefined, {
+          periodeId: periodeId || undefined,
+          programStudiId,
+          sortBy,
+          sortOrder: order,
+        });
       } catch (e: unknown) {
         toast.showToast((e as Error).message || 'Gagal memuat data KRS', 'error');
         throw e;

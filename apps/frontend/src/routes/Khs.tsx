@@ -5,7 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { khsController } from '../controllers/khsController';
+import { type KonversiRekap, type KonversiRekapRule, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
@@ -39,6 +39,62 @@ export default function Khs() {
       return await khsController.getAllKonversi();
     },
   );
+
+  // Rekap & Konversi Massal states
+  const [showBulkRekap, setShowBulkRekap] = createSignal(false);
+  const [bulkTargetMax, setBulkTargetMax] = createSignal<number>(10);
+  const [bulkRekap, setBulkRekap] = createSignal<KonversiRekap | null>(null);
+  const [bulkRows, setBulkRows] = createSignal<KonversiRekapRule[]>([]);
+  const [bulkLoading, setBulkLoading] = createSignal(false);
+
+  const loadBulkRekap = async (target: number) => {
+    setBulkLoading(true);
+    try {
+      const rekap = await khsController.getKonversiRekap(target);
+      setBulkRekap(rekap);
+      setBulkRows(rekap.rules.map((r) => ({ ...r })));
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memuat rekap konversi', 'error');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const openBulkRekap = () => {
+    setShowBulkRekap(true);
+    void loadBulkRekap(bulkTargetMax());
+  };
+
+  const updateBulkRow = (id: number, field: 'nilaiMin' | 'nilaiMax' | 'bobotIndeks', value: string) => {
+    setBulkRows((rows) => rows.map((r) => (r.id === id ? { ...r, [field]: value === '' ? 0 : Number(value) } : r)));
+  };
+
+  const handleBulkConfirm = async () => {
+    setBulkLoading(true);
+    try {
+      const res = await khsController.bulkSaveKonversi({
+        targetMax: bulkTargetMax(),
+        rules: bulkRows().map((r) => ({
+          id: r.id,
+          nilaiHuruf: r.nilaiHuruf,
+          bobotIndeks: r.bobotIndeks,
+          nilaiMin: r.nilaiMin,
+          nilaiMax: r.nilaiMax,
+          predikat: r.predikat,
+        })),
+      });
+      toast.showToast(
+        `Konversi massal selesai: ${res.updated} diperbarui, ${res.failed} gagal.`,
+        res.failed > 0 ? 'error' : 'success',
+      );
+      setShowBulkRekap(false);
+      refetchKonversis();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menyimpan konversi massal', 'error');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const [prodis] = createResource(
     () => {
@@ -393,21 +449,29 @@ export default function Khs() {
 
                 <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-secondary-100 shadow-sm mb-4 dark:bg-secondary-900/60 dark:border-secondary-800">
                   <h3 class="font-bold text-secondary-800 dark:text-white">Aturan Konversi Nilai Akademik</h3>
-                  <button
-                    onClick={() => {
-                      setKonversiId(null);
-                      setKonversiProdiId('');
-                      setNilaiHuruf('');
-                      setNilaiIndeks('');
-                      setNilaiMin('');
-                      setNilaiMax('');
-                      setPredikat('');
-                      setShowKonversiModal(true);
-                    }}
-                    class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
-                  >
-                    + Tambah Aturan Konversi
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      onClick={openBulkRekap}
+                      class="px-4 py-2 bg-white border border-secondary-200 text-secondary-700 font-bold rounded-xl text-caption hover:bg-secondary-50 active:scale-95 transition-all dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200 dark:hover:bg-secondary-800"
+                    >
+                      Rekap & Konversi Massal
+                    </button>
+                    <button
+                      onClick={() => {
+                        setKonversiId(null);
+                        setKonversiProdiId('');
+                        setNilaiHuruf('');
+                        setNilaiIndeks('');
+                        setNilaiMin('');
+                        setNilaiMax('');
+                        setPredikat('');
+                        setShowKonversiModal(true);
+                      }}
+                      class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
+                    >
+                      + Tambah Aturan Konversi
+                    </button>
+                  </div>
                 </div>
 
                 <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
@@ -1075,6 +1139,113 @@ export default function Khs() {
             </div>
           </div>
         </Show>
+        {/* --- ADMIN REKAP & KONVERSI MASSAL MODAL --- */}
+        <Show when={showBulkRekap()}>
+          <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-4 dark:bg-secondary-900 max-h-[90vh] overflow-y-auto">
+              <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="font-bold text-secondary-800 text-base dark:text-white">Rekap & Konversi Massal Nilai</h3>
+                <button
+                  onClick={() => setShowBulkRekap(false)}
+                  class="text-secondary-400 dark:text-secondary-300 hover:text-secondary-600"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div class="flex flex-wrap items-end gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-caption font-bold text-secondary-700 dark:text-secondary-200">Skala Tujuan</label>
+                  <select
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                    value={String(bulkTargetMax())}
+                    onChange={(e) => {
+                      const target = Number(e.currentTarget.value);
+                      setBulkTargetMax(target);
+                      void loadBulkRekap(target);
+                    }}
+                  >
+                    <option value="100">0 - 100</option>
+                    <option value="10">0.00 - 10.00</option>
+                  </select>
+                </div>
+                <Show when={bulkRekap()}>
+                  <div class="text-caption text-secondary-600 dark:text-secondary-300">
+                    Rentang saat ini: <b>{bulkRekap()?.currentEnvelope.min}</b> -{' '}
+                    <b>{bulkRekap()?.currentEnvelope.max}</b> · Nilai mahasiswa di luar rentang target:{' '}
+                    <b class={bulkRekap()?.jumlahNilaiDiLuarRentang ? 'text-rose-600' : 'text-emerald-600'}>
+                      {bulkRekap()?.jumlahNilaiDiLuarRentang}
+                    </b>
+                  </div>
+                </Show>
+                <Button variant="secondary" size="sm" onClick={() => loadBulkRekap(bulkTargetMax())}>
+                  Muat Ulang Rekap
+                </Button>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-caption border-collapse">
+                  <thead>
+                    <tr class="border-b border-secondary-100 text-secondary-400 uppercase tracking-wider font-bold dark:border-secondary-800">
+                      <th class="p-2">Huruf</th>
+                      <th class="p-2">Indeks</th>
+                      <th class="p-2">Min (usulan)</th>
+                      <th class="p-2">Max (usulan)</th>
+                      <th class="p-2">Predikat</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                    <For each={bulkRows()}>
+                      {(row) => (
+                        <tr>
+                          <td class="p-2 font-bold text-brand-600">{row.nilaiHuruf}</td>
+                          <td class="p-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              class="w-24 border border-secondary-200 rounded-lg px-2 py-1 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                              value={row.bobotIndeks}
+                              onInput={(e) => updateBulkRow(row.id, 'bobotIndeks', e.currentTarget.value)}
+                            />
+                          </td>
+                          <td class="p-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              class="w-24 border border-secondary-200 rounded-lg px-2 py-1 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                              value={row.nilaiMin}
+                              onInput={(e) => updateBulkRow(row.id, 'nilaiMin', e.currentTarget.value)}
+                            />
+                          </td>
+                          <td class="p-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              class="w-24 border border-secondary-200 rounded-lg px-2 py-1 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                              value={row.nilaiMax}
+                              onInput={(e) => updateBulkRow(row.id, 'nilaiMax', e.currentTarget.value)}
+                            />
+                          </td>
+                          <td class="p-2">{row.predikat}</td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="flex justify-end gap-3 border-t pt-3">
+                <Button variant="secondary" onClick={() => setShowBulkRekap(false)}>
+                  Batal
+                </Button>
+                <Button onClick={handleBulkConfirm} disabled={bulkLoading() || bulkRows().length === 0}>
+                  {bulkLoading() ? 'Memproses...' : 'Konfirmasi Massal'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Show>
+
         {/* --- ADMIN KONVERSI NILAI MODAL --- */}
         <Show when={showKonversiModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
