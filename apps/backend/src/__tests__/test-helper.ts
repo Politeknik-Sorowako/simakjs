@@ -10,7 +10,10 @@ import {
   bahanKajian,
   bahanKajianCpl,
   bap,
+  bapPraktikum,
+  bapTopik,
   bimbingan,
+  bimbinganAttachments,
   bimbinganThread,
   cpl,
   cplProfilLulusan,
@@ -40,27 +43,35 @@ import {
   nilaiSubKomponenMahasiswa,
   notifications,
   pasalPelanggaran,
+  passwordResets,
   pelanggaran,
   pengajuanCuti,
   pengajuanYudisium,
   periodeAkademik,
   presensi,
   presensiApel,
+  presensiPraktikum,
   profilLulusan,
   programStudi,
   rencanaEvaluasi,
   rencanaEvaluasiSubCpmk,
+  rombelEnrollmentLog,
+  rombelPraktikum,
+  rombelPraktikumMahasiswa,
   rps,
   rpsTopik,
   sesiApel,
   sesiBimbingan,
+  sesiBimbinganBalasan,
   skalaPredikatKelulusan,
   skemaTarif,
   subCpmk,
   subKomponenNilai,
   systemFeedback,
+  systemSettings,
   tagihan,
   transaksiPembayaran,
+  userRoles,
   users,
   visiMisiProdi,
 } from '../models/schema';
@@ -132,9 +143,12 @@ export async function clearDatabase() {
   await db.delete(komponenNilai);
   await db.delete(rencanaEvaluasiSubCpmk);
   await db.delete(rencanaEvaluasi);
+  await db.delete(bapTopik);
   await db.delete(rpsTopik);
   await db.delete(rps);
+  await db.delete(sesiBimbinganBalasan);
   await db.delete(sesiBimbingan);
+  await db.delete(bimbinganAttachments);
   await db.delete(bimbinganThread);
   await db.delete(bimbingan);
   await db.delete(kategoriBimbingan);
@@ -166,12 +180,20 @@ export async function clearDatabase() {
   await db.delete(kurikulumMataKuliah);
   await db.delete(kurikulum);
   await db.delete(dosenPengajarKelas);
+  await db.delete(presensiPraktikum);
+  await db.delete(bapPraktikum);
+  await db.delete(rombelPraktikumMahasiswa);
+  await db.delete(rombelEnrollmentLog);
+  await db.delete(rombelPraktikum);
   await db.delete(kelasKuliah);
   await db.delete(mataKuliah);
   await db.delete(mahasiswa);
   await db.delete(dosen);
   await db.delete(periodeAkademik);
   await db.delete(programStudi);
+  await db.delete(userRoles);
+  await db.delete(passwordResets);
+  await db.delete(systemSettings);
   await db.delete(users);
 }
 
