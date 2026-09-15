@@ -9,12 +9,20 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 - **Stack**: Bun monorepo (`apps/backend`: Elysia + Drizzle ORM + Postgres, `apps/frontend`: SolidJS + Vite + Tailwind), Biome v2.5.2.
 - **CI/CD & Deployment Workflow**: Primary deployment MUST go through GitHub Actions workflows. NEVER push directly to `development` (staging) or `main` (production) branches. **Staging-first rule**: ALL feature/hotfix changes MUST be submitted via a Pull Request (PR) targeting `development` first. Merging to `development` triggers the staging deploy (`deploy-staging.yml`). After staging is verified, promote to production ONLY via a separate PR `development -> main`; merging it triggers the production deploy (`deploy-production.yml`). Never open a feature/hotfix PR directly targeting `main` — `main` accepts only the `development -> main` promotion PR.
 - **NEVER delete `development` or `main` branches**: NEVER merge PRs with `--delete-branch` when the head branch is `development` or `main` (e.g. deploy-style PRs `development -> main`). These branches are the permanent source of truth for staging/production and MUST always exist on the remote. Only delete short-lived feature/hotfix branches. To merge a PR whose head is a protected branch, use `gh pr merge <N> --merge` WITHOUT `--delete-branch`.
-- **Pre-commit Checks**: Always run linting and strict type checks before committing:
+- **Pre-commit & Verification Checks**: Run linting and strict type checks before committing:
   ```bash
+  # 1. Linting (seluruh monorepo)
   bun run lint
+
+  # 2. Strict Type Check
   cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
   cd apps/frontend && bunx tsc --noEmit
   ```
+- **Testing Standards & Execution Optimization**:
+  - **Dilarang Menjalankan Blanket `bun test` di Root**: `bun test` di root memicu 70+ file integration test yang membutuhkan PostgreSQL aktif; jika DB tidak terhubung, setiap test mengalami timeout koneksi ~4 detik (menghabiskan waktu 20+ menit).
+  - **Targeted / Scoped Testing**: Hanya jalankan test untuk modul yang diubah, misalnya: `bun test apps/backend/src/tests/pelanggaran-delete.test.ts` atau `bun test -t "Pelanggaran"`.
+  - **Backend Integration Test**: Untuk menguji seluruh skenario backend dengan DB lokal, pastikan PostgreSQL test container aktif (`localhost:5433`), lalu jalankan `cd apps/backend && bun run test` (otomatis menjalankan `pre-test.ts` & migrasi test schema).
+  - **Perubahan Khusus Frontend**: Tidak perlu mengeksekusi backend integration test suite; cukup validasi via `bun run lint`, `tsc --noEmit` frontend, dan CI GitHub Actions.
 
 ---
 
