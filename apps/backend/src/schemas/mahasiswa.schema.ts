@@ -62,6 +62,7 @@ export const getMahasiswaSchema = {
     filterNama: t.Optional(t.String()),
     filterEmail: t.Optional(t.String()),
     filterStatus: t.Optional(t.String()),
+    hasAccount: t.Optional(t.Union([t.Boolean(), t.String()])),
     allStudents: t.Optional(t.Union([t.Boolean(), t.String()])),
   }),
   response: {

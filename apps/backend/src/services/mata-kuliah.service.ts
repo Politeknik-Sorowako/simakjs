@@ -149,15 +149,36 @@ export class MataKuliahService {
         };
       });
     } else {
-      // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
-      allData = allData.map((mk: any) => ({
-        ...mk,
-        semester: null,
-        kurikulum: null,
-        programStudi: mk.programStudi
-          ? { id: mk.programStudi.id, kode: mk.programStudi.kode, nama: mk.programStudi.nama }
-          : null,
-      }));
+      // Tanpa kurikulum: semester diambil dari pemetaan kurikulum (opsional scope prodi)
+      let semesterMap = new Map<number, number>();
+      if (semester !== undefined) {
+        const semRows = await db
+          .select({
+            mataKuliahId: kurikulumMataKuliah.mataKuliahId,
+            semester: kurikulumMataKuliah.semester,
+          })
+          .from(kurikulumMataKuliah)
+          .innerJoin(kurikulum, eq(kurikulumMataKuliah.kurikulumId, kurikulum.id))
+          .where(
+            programStudiId
+              ? and(eq(kurikulum.programStudiId, programStudiId), eq(kurikulumMataKuliah.semester, semester))
+              : eq(kurikulumMataKuliah.semester, semester),
+          );
+        semesterMap = new Map(semRows.map((r) => [r.mataKuliahId, r.semester]));
+      }
+
+      allData = allData
+        // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
+        .filter((mk: any) => semester === undefined || semesterMap.has(mk.id))
+        // biome-ignore lint/suspicious/noExplicitAny: Drizzle query result type transformation
+        .map((mk: any) => ({
+          ...mk,
+          semester: semesterMap.get(mk.id) ?? null,
+          kurikulum: null,
+          programStudi: mk.programStudi
+            ? { id: mk.programStudi.id, kode: mk.programStudi.kode, nama: mk.programStudi.nama }
+            : null,
+        }));
     }
 
     if (semester !== undefined) {

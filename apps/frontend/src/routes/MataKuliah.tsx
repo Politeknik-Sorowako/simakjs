@@ -307,10 +307,11 @@ export default function MataKuliah() {
               placeholder="Cari kode atau nama mata kuliah..."
               value={search()}
               onInput={(e) => {
-                setSearch(e.currentTarget.value);
+                const value = e.currentTarget.value;
+                setSearch(value);
                 clearTimeout(searchDebounceTimer);
                 searchDebounceTimer = setTimeout(() => {
-                  setDebouncedSearch(e.currentTarget.value);
+                  setDebouncedSearch(value);
                   resetPage();
                 }, 400);
               }}

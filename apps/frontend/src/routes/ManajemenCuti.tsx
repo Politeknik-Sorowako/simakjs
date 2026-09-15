@@ -444,10 +444,11 @@ export default function ManajemenCuti() {
                   placeholder="Cari NIM atau nama..."
                   value={pendingPagination.search()}
                   onInput={(e) => {
-                    pendingPagination.setSearch(e.currentTarget.value);
+                    const value = e.currentTarget.value;
+                    pendingPagination.setSearch(value);
                     clearTimeout(pendingSearchDebounceTimer);
                     pendingSearchDebounceTimer = setTimeout(() => {
-                      setDebouncedPendingSearch(e.currentTarget.value);
+                      setDebouncedPendingSearch(value);
                       pendingPagination.resetPage();
                     }, 400);
                   }}
@@ -651,10 +652,11 @@ export default function ManajemenCuti() {
                 placeholder="Cari NIM atau Nama..."
                 value={rejectedPagination.search()}
                 onInput={(e) => {
-                  rejectedPagination.setSearch(e.currentTarget.value);
+                  const value = e.currentTarget.value;
+                  rejectedPagination.setSearch(value);
                   clearTimeout(rejectedSearchDebounceTimer);
                   rejectedSearchDebounceTimer = setTimeout(() => {
-                    setDebouncedRejectedSearch(e.currentTarget.value);
+                    setDebouncedRejectedSearch(value);
                     rejectedPagination.resetPage();
                   }, 400);
                 }}
