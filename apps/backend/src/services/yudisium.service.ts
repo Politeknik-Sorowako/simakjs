@@ -22,7 +22,9 @@ import {
   computeKomponenScore,
   type KomponenDef,
   type KonversiRule,
+  type NilaiEnvelope,
   resolveGradeFromRules,
+  resolveNilaiEnvelope,
   type SubKomponenDef,
 } from '../utils/grade-calc';
 
@@ -567,10 +569,12 @@ export class YudisiumService {
     return results;
   }
 
-  private static assertNilaiRange(nilai: number | string, label: string): number {
+  private static assertNilaiRange(nilai: number | string, label: string, envelope: NilaiEnvelope): number {
     const num = typeof nilai === 'number' ? nilai : parseFloat(String(nilai).replace(',', '.'));
-    if (!Number.isFinite(num) || num < 0 || num > 100) {
-      throw new Error(`${label} harus berada di rentang 0-100.`);
+    if (!Number.isFinite(num) || num < envelope.min || num > envelope.max) {
+      throw new Error(
+        `${label} harus berada di rentang ${envelope.min} - ${envelope.max} sesuai aturan konversi nilai (/khs).`,
+      );
     }
     return num;
   }
@@ -641,6 +645,7 @@ export class YudisiumService {
     // Load global conversion rules (mata kuliah global, tidak terikat prodi)
     const allRules = await db.select().from(konversiNilai);
     const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
+    const envelope = resolveNilaiEnvelope(activeRules);
 
     const components = await this.getKomponen(kelasKuliahId);
     const componentDefs = components.map((c) => ({ id: c.id, bobot: c.bobot }));
@@ -661,7 +666,7 @@ export class YudisiumService {
     // tersimpan sebagai level dasar (hierarki non-destruktif).
     for (const item of items) {
       for (const v of item.nilaiKomponenList) {
-        this.assertNilaiRange(v.nilai, 'Nilai komponen');
+        this.assertNilaiRange(v.nilai, 'Nilai komponen', envelope);
       }
     }
 
@@ -746,6 +751,7 @@ export class YudisiumService {
 
     const allRules = await db.select().from(konversiNilai);
     const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
+    const envelope = resolveNilaiEnvelope(activeRules);
 
     const components = await this.getKomponen(kelasKuliahId);
     const componentDefs = components.map((c) => ({ id: c.id, bobot: c.bobot }));
@@ -772,7 +778,7 @@ export class YudisiumService {
     // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
     for (const item of items) {
       for (const v of item.subNilaiList) {
-        this.assertNilaiRange(v.nilai, 'Nilai sub-komponen');
+        this.assertNilaiRange(v.nilai, 'Nilai sub-komponen', envelope);
       }
     }
 
@@ -884,13 +890,14 @@ export class YudisiumService {
     // Normalisasi duplikat: krsId unik, entri terakhir menang.
     const items = this.dedupeNilaiAkhir(list);
 
-    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
-    for (const item of items) {
-      this.assertNilaiRange(item.nilai, 'Nilai akhir');
-    }
-
     const allRules = await db.select().from(konversiNilai);
     const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
+    const envelope = resolveNilaiEnvelope(activeRules);
+
+    // Validasi awal (fail fast, sebelum menulis apa pun ke DB)
+    for (const item of items) {
+      this.assertNilaiRange(item.nilai, 'Nilai akhir', envelope);
+    }
 
     return await db.transaction(async (tx) => {
       const results = [];

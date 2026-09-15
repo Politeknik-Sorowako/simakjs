@@ -24,12 +24,16 @@ export const dosenController = {
     page?: number,
     limit?: number,
     programStudiId?: number,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
   ): Promise<PaginatedResponse<Dosen>> {
     const query: Record<string, string> = {};
     if (search) query.search = search;
     if (page) query.page = String(page);
     if (limit) query.limit = String(limit);
     if (programStudiId) query.programStudiId = String(programStudiId);
+    if (sortBy) query.sortBy = sortBy;
+    if (sortOrder) query.sortOrder = sortOrder;
     return unwrap<PaginatedResponse<Dosen>>(
       eden.dosen.get({ $query: query }) as unknown as Promise<{
         data?: PaginatedResponse<Dosen>;

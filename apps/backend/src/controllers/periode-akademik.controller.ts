@@ -4,11 +4,14 @@ import { AuthContext, PaginationQuery } from '../utils/types';
 
 export class PeriodeAkademikController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getAll({ query }: AuthContext<any, PaginationQuery>): Promise<any> {
-    const page = query?.page ? parseInt(String(query.page)) : 1;
-    const limit = query?.limit ? parseInt(String(query.limit)) : 10;
-    const search = query?.search || '';
-    return await PeriodeAkademikService.getAll(page, limit, search);
+  static async getAll({ query }: AuthContext): Promise<any> {
+    const q = query as PaginationQuery & { sortBy?: string; sortOrder?: string };
+    const page = q?.page ? parseInt(String(q.page)) : 1;
+    const limit = q?.limit ? parseInt(String(q.limit)) : 10;
+    const search = q?.search || '';
+    const sortBy = q?.sortBy || 'id';
+    const sortOrder: 'asc' | 'desc' = q?.sortOrder === 'desc' ? 'desc' : 'asc';
+    return await PeriodeAkademikService.getAll(page, limit, search, sortBy, sortOrder);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

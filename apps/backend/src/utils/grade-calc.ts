@@ -31,6 +31,36 @@ export interface GradeResult {
   indeks: number;
 }
 
+export interface NilaiEnvelope {
+  min: number;
+  max: number;
+}
+
+/**
+ * Menentukan rentang nilai global yang berlaku dari aturan konversi nilai.
+ * Skala ditentukan oleh nilai maksimum aturan: <= 10 berarti skala 0.00-10.00,
+ * selain itu skala 0-100. Batas bawah selalu 0. Fallback ke 0-100 bila tidak
+ * ada aturan valid.
+ */
+export function resolveNilaiEnvelope(rules: KonversiRule[]): NilaiEnvelope {
+  let max = Number.NEGATIVE_INFINITY;
+
+  for (const rule of rules) {
+    const rMax = parseFloat(String(rule.nilaiMax));
+    if (!Number.isFinite(rMax)) continue;
+    if (rMax > max) max = rMax;
+  }
+
+  if (!Number.isFinite(max) || max <= 0) {
+    return { min: 0, max: 100 };
+  }
+  return { min: 0, max: max <= 10 ? 10 : 100 };
+}
+
+export function isScoreInEnvelope(score: number, envelope: NilaiEnvelope): boolean {
+  return Number.isFinite(score) && score >= envelope.min && score <= envelope.max;
+}
+
 function round2(value: number): number {
   return parseFloat(value.toFixed(2));
 }

@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
@@ -12,6 +13,7 @@ import { useToast } from '../contexts/ToastContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
+import { usePagination } from '../hooks/usePagination';
 import { getTodayString } from '../utils/format';
 
 export default function Pelanggaran() {
@@ -60,6 +62,11 @@ export default function Pelanggaran() {
   const [sortField, setSortField] = createSignal<SortField>('tanggal');
   const [sortDir, setSortDir] = createSignal<'asc' | 'desc'>('desc');
 
+  // Pagination state
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
+  const pageOptions = [10, 20, 50, 100];
+  const handleLimitChange = (newLimit: number) => setLimit(newLimit);
+
   const toggleSort = (field: SortField) => {
     if (sortField() === field) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -67,6 +74,7 @@ export default function Pelanggaran() {
       setSortField(field);
       setSortDir(field === 'tanggal' ? 'desc' : 'asc');
     }
+    resetPage();
   };
 
   const visibleViolations = createMemo(() => {
@@ -105,6 +113,12 @@ export default function Pelanggaran() {
       }
       return cmp * dir;
     });
+  });
+
+  const totalPages = createMemo(() => Math.ceil(visibleViolations().length / limit()) || 1);
+  const paginatedViolations = createMemo(() => {
+    const start = (page() - 1) * limit();
+    return visibleViolations().slice(start, start + limit());
   });
 
   // Load master pasal BPA (global + prodi scoped)
@@ -180,6 +194,29 @@ export default function Pelanggaran() {
   const [pelapor, setPelapor] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
   const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
+
+  // Hapus Pelanggaran State
+  const [deleteTarget, setDeleteTarget] = createSignal<IPelanggaran | null>(null);
+  const [deleting, setDeleting] = createSignal(false);
+  const canDelete = () => auth.hasRole(['admin', 'prodi', 'super_admin']);
+
+  const confirmDelete = async () => {
+    const target = deleteTarget();
+    if (!target) return;
+    setDeleting(true);
+    try {
+      await bimbinganController.deletePelanggaran(target.id);
+      toast.showToast('Catatan pelanggaran berhasil dihapus', 'success');
+      setDeleteTarget(null);
+      refetchAllViolations();
+      refetchStudentViolations();
+      refetchRekap();
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal menghapus data pelanggaran', 'error');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Preview / Cetak SP State
   const [selectedSpItem, setSelectedSpItem] = createSignal<IPelanggaran | null>(null);
@@ -600,7 +637,10 @@ export default function Pelanggaran() {
                 type="text"
                 placeholder="Cari nama, NIM, prodi, pasal, pelapor, atau keterangan..."
                 value={violationSearch()}
-                onInput={(e) => setViolationSearch(e.currentTarget.value)}
+                onInput={(e) => {
+                  setViolationSearch(e.currentTarget.value);
+                  resetPage();
+                }}
                 class="w-full sm:max-w-xs"
               />
               <span class="text-caption text-secondary-400 dark:text-secondary-300">
@@ -669,7 +709,7 @@ export default function Pelanggaran() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                      <For each={visibleViolations()}>
+                      <For each={paginatedViolations()}>
                         {(item) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                             <td class="p-3 font-bold text-secondary-800 dark:text-white">
@@ -735,6 +775,15 @@ export default function Pelanggaran() {
                                     Edit
                                   </Button>
                                 </Show>
+                                <Show when={canDelete()}>
+                                  <button
+                                    onClick={() => setDeleteTarget(item)}
+                                    class="py-1 px-2 text-fine font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all active:scale-95 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
+                                    title="Hapus catatan pelanggaran"
+                                  >
+                                    Hapus
+                                  </button>
+                                </Show>
                               </div>
                             </td>
                           </tr>
@@ -743,6 +792,15 @@ export default function Pelanggaran() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={page()}
+                  totalPages={totalPages()}
+                  total={visibleViolations().length}
+                  limit={limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={setPage}
+                  onLimitChange={handleLimitChange}
+                />
               </Show>
             </Show>
           </div>
@@ -919,6 +977,26 @@ export default function Pelanggaran() {
             </Show>
           </div>
         </Show>
+
+        {/* Modal Konfirmasi Hapus Pelanggaran */}
+        <Modal show={!!deleteTarget()} onClose={() => setDeleteTarget(null)} title="Hapus Catatan Pelanggaran">
+          <div class="flex flex-col gap-4">
+            <p class="text-base text-secondary-600 dark:text-secondary-300">
+              Hapus permanen catatan pelanggaran{' '}
+              <span class="font-bold text-secondary-800 dark:text-white">{deleteTarget()?.jenisPelanggaran}</span> milik{' '}
+              <span class="font-bold text-secondary-800 dark:text-white">{deleteTarget()?.namaMahasiswa}</span> (
+              {deleteTarget()?.nim})? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div class="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting()}>
+                Batal
+              </Button>
+              <Button variant="danger" onClick={confirmDelete} disabled={deleting()}>
+                {deleting() ? 'Menghapus...' : 'Hapus'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Modal Entry Pelanggaran */}
         <Modal

@@ -126,6 +126,76 @@ describe('6. Mata Kuliah (/mata-kuliah)', () => {
     });
   });
 
+  describe('GET /mata-kuliah - filter semester tanpa kurikulum', () => {
+    it('harus memfilter semester dari pemetaan kurikulum walau kurikulumId tidak dipilih', async () => {
+      const adminToken = await getAuthToken('admin-mk-semester@test.com', 'admin');
+
+      const createMk = async (kode: string, nama: string) => {
+        const res = await app.handle(
+          new Request('http://localhost/mata-kuliah', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+            body: JSON.stringify({ kode, nama, sksTotal: 3, programStudiId: prodiId }),
+          }),
+        );
+        return (await res.json()) as { id: number };
+      };
+
+      const mkSem1 = await createMk('MKSEM1', 'Mata Kuliah Semester 1');
+      const mkSem2 = await createMk('MKSEM2', 'Mata Kuliah Semester 2');
+      await createMk('MKNOTMAP', 'Mata Kuliah Tanpa Kurikulum');
+
+      await app.handle(
+        new Request('http://localhost/periode-akademik', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({ id: '20241', nama: '2024/2025 Ganjil', aktif: true }),
+        }),
+      );
+
+      const kurRes = await app.handle(
+        new Request('http://localhost/kurikulum', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            kode: 'KUR-MK-SEM',
+            nama: 'Kurikulum MK Semester',
+            programStudiId: prodiId,
+            semesterMulai: '20241',
+            jumlahSksLulus: 144,
+            jumlahSksWajib: 120,
+            jumlahSksPilihan: 24,
+          }),
+        }),
+      );
+      const kur = (await kurRes.json()) as { id: number };
+
+      const addMk = async (mataKuliahId: number, semester: number) => {
+        await app.handle(
+          new Request(`http://localhost/kurikulum/${kur.id}/mata-kuliah`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+            body: JSON.stringify({ mataKuliahId, semester, sksMataKuliah: 3 }),
+          }),
+        );
+      };
+      await addMk(mkSem1.id, 1);
+      await addMk(mkSem2.id, 2);
+
+      const response = await app.handle(
+        new Request(`http://localhost/mata-kuliah?semester=1&programStudiId=${prodiId}`, { method: 'GET' }),
+      );
+      expect(response.status).toBe(200);
+      const body = (await response.json()) as { data: { kode: string; semester: number | null }[] };
+      const kodes = body.data.map((mk) => mk.kode);
+
+      expect(kodes).toContain('MKSEM1');
+      expect(kodes).not.toContain('MKSEM2');
+      expect(kodes).not.toContain('MKNOTMAP');
+      expect(body.data.find((mk) => mk.kode === 'MKSEM1')?.semester).toBe(1);
+    });
+  });
+
   describe('GET /mata-kuliah/:id', () => {
     let mkId: number;
 

@@ -17,6 +17,8 @@ export const getPeriodeSchema = {
     page: t.Optional(t.Numeric({ default: 1 })),
     limit: t.Optional(t.Numeric({ default: 10 })),
     search: t.Optional(t.String({ default: '' })),
+    sortBy: t.Optional(t.String()),
+    sortOrder: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({

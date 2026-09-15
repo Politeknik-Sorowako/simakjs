@@ -40,19 +40,6 @@ export default function PeriodeAkademik() {
     { header: 'Status Aktif', accessor: (row: IPeriode) => (row.aktif ? 'Aktif' : 'Tidak Aktif') },
   ];
 
-  // Fetch Periode Data
-  const [periodes, { refetch }] = createResource(
-    () => ({ search: debouncedSearch(), page: page(), limit: limit() }),
-    async ({ search, page, limit }) => {
-      try {
-        return await periodeAkademikController.getAll(search, page, limit);
-      } catch (e: unknown) {
-        toast.showToast((e as Error).message || 'Gagal memuat data periode akademik', 'error');
-        throw e;
-      }
-    },
-  );
-
   const [sortBy, setSortBy] = createSignal('id');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
   const toggleSort = (field: string) => {
@@ -61,16 +48,23 @@ export default function PeriodeAkademik() {
       setSortBy(field);
       setSortOrder('asc');
     }
+    resetPage();
   };
-  const sortedData = () => {
-    const data = periodes()?.data || [];
-    return [...data].sort((a, b) => {
-      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const cmp = String(aVal).localeCompare(String(bVal), 'id');
-      return sortOrder() === 'asc' ? cmp : -cmp;
-    });
-  };
+
+  // Fetch Periode Data (server-side sort)
+  const [periodes, { refetch }] = createResource(
+    () => ({ search: debouncedSearch(), page: page(), limit: limit(), sortBy: sortBy(), sortOrder: sortOrder() }),
+    async ({ search, page, limit, sortBy: sb, sortOrder: so }) => {
+      try {
+        return await periodeAkademikController.getAll(search, page, limit, sb, so);
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat data periode akademik', 'error');
+        throw e;
+      }
+    },
+  );
+
+  const sortedData = () => periodes()?.data || [];
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -171,10 +165,11 @@ export default function PeriodeAkademik() {
             value={search()}
             aria-label="Cari periode akademik"
             onInput={(e) => {
-              setSearch(e.currentTarget.value);
+              const value = e.currentTarget.value;
+              setSearch(value);
               clearTimeout(searchDebounceTimer);
               searchDebounceTimer = setTimeout(() => {
-                setDebouncedSearch(e.currentTarget.value);
+                setDebouncedSearch(value);
                 resetPage();
               }, 400);
             }}

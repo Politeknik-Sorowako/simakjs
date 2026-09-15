@@ -503,4 +503,13 @@ export class PelanggaranService {
     const [updated] = await db.update(pelanggaran).set(data).where(eq(pelanggaran.id, id)).returning();
     return updated || null;
   }
+
+  /**
+   * Hard-delete satu catatan pelanggaran. Tidak terhubung dengan kompensasi.
+   * Audit log ditulis otomatis oleh `audit.plugin.ts` (hook DELETE).
+   */
+  static async remove(id: number) {
+    const [deleted] = await db.delete(pelanggaran).where(eq(pelanggaran.id, id)).returning();
+    return deleted || null;
+  }
 }

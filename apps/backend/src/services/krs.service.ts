@@ -1,4 +1,4 @@
-import { and, count, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
 import {
   angkatanKurikulum,
   dosen,
@@ -75,12 +75,25 @@ export class KrsService {
     mahasiswaId?: number,
     dosenPaId?: number,
     kelasKuliahId?: number,
+    options?: {
+      periodeId?: string;
+      programStudiId?: number;
+      isApproved?: boolean;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
   ) {
     const offset = (page - 1) * limit;
 
     const searchConditions: SQL<unknown>[] = [];
     if (search) {
-      const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
+      const orCondition = or(
+        ilike(mahasiswa.nama, `%${search}%`),
+        ilike(mahasiswa.nim, `%${search}%`),
+        ilike(mataKuliah.nama, `%${search}%`),
+        ilike(mataKuliah.kode, `%${search}%`),
+        ilike(kelasKuliah.namaKelas, `%${search}%`),
+      );
       if (orCondition) searchConditions.push(orCondition);
     }
     if (mahasiswaId !== undefined) {
@@ -92,6 +105,15 @@ export class KrsService {
     if (kelasKuliahId !== undefined) {
       searchConditions.push(eq(krs.kelasKuliahId, kelasKuliahId));
     }
+    if (options?.periodeId) {
+      searchConditions.push(eq(kelasKuliah.periodeId, options.periodeId));
+    }
+    if (options?.programStudiId !== undefined) {
+      searchConditions.push(eq(mahasiswa.programStudiId, options.programStudiId));
+    }
+    if (options?.isApproved !== undefined) {
+      searchConditions.push(eq(krs.isApproved, options.isApproved));
+    }
 
     const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
 
@@ -99,9 +121,23 @@ export class KrsService {
       .select({ total: count() })
       .from(krs)
       .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .leftJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .where(whereClause);
 
     const total = totalResult?.total || 0;
+
+    const sortColumnMap = {
+      nim: mahasiswa.nim,
+      nama: mahasiswa.nama,
+      nilaiAngka: krs.nilaiAngka,
+      nilaiHuruf: krs.nilaiHuruf,
+      isApproved: krs.isApproved,
+      createdAt: krs.createdAt,
+      id: krs.id,
+    } as const;
+    const sortColumn = sortColumnMap[options?.sortBy as keyof typeof sortColumnMap] ?? mahasiswa.nim;
+    const sortDirection = options?.sortOrder === 'desc' ? desc : asc;
 
     const rows = await db
       .select({
@@ -141,9 +177,10 @@ export class KrsService {
       .from(krs)
       .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
       .leftJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .leftJoin(dosen, eq(krs.approvedById, dosen.id))
       .where(whereClause)
-      .orderBy(mahasiswa.nim, krs.id)
+      .orderBy(sortDirection(sortColumn), krs.id)
       .limit(limit)
       .offset(offset);
 

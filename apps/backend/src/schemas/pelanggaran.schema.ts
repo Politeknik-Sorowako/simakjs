@@ -190,6 +190,23 @@ export const updatePelanggaranSchema = {
   },
 };
 
+export const deletePelanggaranSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Hapus Catatan Pelanggaran',
+    description: 'Menghapus permanen satu catatan pelanggaran mahasiswa (Admin/Admin Prodi).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({ message: t.String(), id: t.Integer() }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  },
+};
+
 export const importPelanggaranSchema = {
   detail: {
     tags: ['Kedisiplinan'],

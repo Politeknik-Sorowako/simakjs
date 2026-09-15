@@ -37,12 +37,24 @@ export const krsController = {
     page?: number,
     limit?: number,
     kelasKuliahId?: number,
+    filters?: {
+      periodeId?: string;
+      programStudiId?: number;
+      isApproved?: boolean;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    },
   ): Promise<PaginatedResponse<Krs>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
     if (kelasKuliahId) params.append('kelasKuliahId', String(kelasKuliahId));
+    if (filters?.periodeId) params.append('periodeId', filters.periodeId);
+    if (filters?.programStudiId) params.append('programStudiId', String(filters.programStudiId));
+    if (filters?.isApproved !== undefined) params.append('isApproved', String(filters.isApproved));
+    if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Krs>>(`/krs${queryString}`);
   },

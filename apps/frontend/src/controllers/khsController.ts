@@ -32,6 +32,25 @@ export interface KonversiNilai {
   predikat: string;
 }
 
+export interface KonversiRekapRule {
+  id: number;
+  nilaiHuruf: string;
+  bobotIndeks: number | string;
+  nilaiMin: number;
+  nilaiMax: number;
+  predikat: string;
+  usulanMin: number;
+  usulanMax: number;
+}
+
+export interface KonversiRekap {
+  currentEnvelope: { min: number; max: number };
+  targetMax: number;
+  rules: KonversiRekapRule[];
+  jumlahNilaiDiLuarRentang: number;
+  contohNilaiDiLuarRentang: Array<{ id: number; nilaiAngka: string | null; nilaiHuruf: string | null }>;
+}
+
 export interface PredikatKelulusan {
   id: number;
   predikat: string;
@@ -474,6 +493,31 @@ export const khsController = {
     return fetchApi<{ message: string }>(`/khs/konversi/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  async getKonversiRekap(targetMax?: number): Promise<KonversiRekap> {
+    const qs = targetMax ? `?targetMax=${targetMax}` : '';
+    return fetchApi<KonversiRekap>(`/khs/konversi/rekap${qs}`);
+  },
+
+  async bulkSaveKonversi(payload: {
+    targetMax?: number;
+    rules: Array<{
+      id: number;
+      nilaiHuruf?: string;
+      bobotIndeks?: string | number;
+      nilaiMin: string | number;
+      nilaiMax: string | number;
+      predikat?: string;
+    }>;
+  }): Promise<{ updated: number; failed: number; results: { id: number; status: string; error?: string }[] }> {
+    return fetchApi<{ updated: number; failed: number; results: { id: number; status: string; error?: string }[] }>(
+      '/khs/konversi/bulk',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
   },
 
   // --- SKALA PREDIKAT KELULUSAN ---

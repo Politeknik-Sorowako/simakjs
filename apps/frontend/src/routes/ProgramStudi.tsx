@@ -31,12 +31,6 @@ export default function ProgramStudi() {
     { header: 'Jenjang', accessor: 'jenjang' },
   ];
 
-  // Fetch data
-  const [prodis, { refetch }] = createResource(
-    () => ({ search: debouncedSearch(), page: page(), limit: limit() }),
-    ({ search, page, limit }) => prodiController.getAll(search, page, limit),
-  );
-
   // Sorting state
   const [sortBy, setSortBy] = createSignal('kode');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
@@ -48,17 +42,16 @@ export default function ProgramStudi() {
       setSortBy(field);
       setSortOrder('asc');
     }
+    resetPage();
   };
 
-  const sortedData = () => {
-    const data = prodis()?.data || [];
-    return [...data].sort((a, b) => {
-      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const cmp = String(aVal).localeCompare(String(bVal), 'id');
-      return sortOrder() === 'asc' ? cmp : -cmp;
-    });
-  };
+  // Fetch data (server-side sort agar seluruh data terurut, bukan hanya halaman aktif)
+  const [prodis, { refetch }] = createResource(
+    () => ({ search: debouncedSearch(), page: page(), limit: limit(), sortBy: sortBy(), sortOrder: sortOrder() }),
+    ({ search, page, limit, sortBy: sb, sortOrder: so }) => prodiController.getAll(search, page, limit, sb, so),
+  );
+
+  const sortedData = () => prodis()?.data || [];
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -219,10 +212,11 @@ export default function ProgramStudi() {
             placeholder="Cari prodi..."
             value={search()}
             onInput={(e) => {
-              setSearch(e.currentTarget.value);
+              const value = e.currentTarget.value;
+              setSearch(value);
               clearTimeout(searchDebounceTimer);
               searchDebounceTimer = setTimeout(() => {
-                setDebouncedSearch(e.currentTarget.value);
+                setDebouncedSearch(value);
                 resetPage();
               }, 400);
             }}
