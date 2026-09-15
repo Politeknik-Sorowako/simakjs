@@ -15,7 +15,10 @@ export default function PwaInstallPrompt() {
   const isIosDevice = (): boolean => {
     if (typeof window === 'undefined') return false;
     const ua = window.navigator.userAgent.toLowerCase();
-    return /iphone|ipad|ipod/.test(ua) && !('MSStream' in window);
+    const isIosUa = /iphone|ipad|ipod/.test(ua);
+    const isIpadOs =
+      ua.includes('macintosh') && Boolean(window.navigator.maxTouchPoints && window.navigator.maxTouchPoints > 1);
+    return (isIosUa || isIpadOs) && !('MSStream' in window);
   };
 
   const checkDismissed = (): boolean => {
