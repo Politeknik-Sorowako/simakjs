@@ -21,6 +21,7 @@ import {
   dosenPengajarKelas,
   feedbackComments,
   feedbackLikes,
+  kategoriBimbingan,
   kelasKuliah,
   kelompokApel,
   kelompokApelAnggota,
@@ -136,6 +137,7 @@ export async function clearDatabase() {
   await db.delete(sesiBimbingan);
   await db.delete(bimbinganThread);
   await db.delete(bimbingan);
+  await db.delete(kategoriBimbingan);
   await db.delete(pelanggaran);
   await db.delete(pasalPelanggaran);
   await db.delete(presensiApel);
