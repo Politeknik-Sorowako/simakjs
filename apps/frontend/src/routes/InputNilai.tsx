@@ -1,3 +1,4 @@
+import { useSearchParams } from '@solidjs/router';
 import { createEffect, createMemo, createResource, createSignal, For, Index, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import SubKomponenEditor from '../components/SubKomponenEditor';
@@ -12,6 +13,7 @@ import { type KelasKuliah, kelasKuliahController } from '../controllers/kelasKul
 import { khsController, type NilaiMahasiswa, type SubKomponenNilai } from '../controllers/khsController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { type Prodi, prodiController } from '../controllers/prodiController';
+import { rombelPraktikumController } from '../controllers/rombelPraktikumController';
 import { rpsController } from '../controllers/rpsController';
 import { isHeaderRow } from '../utils/csv';
 
@@ -24,7 +26,15 @@ export default function InputNilai() {
   const role = () => user()?.role;
 
   // Selected State
-  const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(null);
+  const [searchParams] = useSearchParams();
+  const initialKelasId =
+    searchParams.kelas || searchParams.kelasId ? Number(searchParams.kelas || searchParams.kelasId) : null;
+  const initialRombelId = searchParams.rombel ? Number(searchParams.rombel) : null;
+  const [selectedKelasId, setSelectedKelasId] = createSignal<number | null>(initialKelasId);
+  const [selectedRombelId, setSelectedRombelId] = createSignal<number | null>(initialRombelId);
+  const [selectedKrsIds, setSelectedKrsIds] = createSignal<Set<number>>(new Set());
+  const [bulkValue, setBulkValue] = createSignal('');
+  const [bulkKomponenId, setBulkKomponenId] = createSignal<number | null>(null);
   const [editableComponents, setEditableComponents] = createSignal<Array<{ id?: number; name: string; bobot: number }>>(
     [],
   );
@@ -190,6 +200,93 @@ export default function InputNilai() {
     return subsByKomponen().get(id) ?? [];
   });
 
+  // 3c. Load rombel praktikum untuk kelas terpilih (untuk mode rombel via ?rombel=)
+  const [rombelData] = createResource(selectedKelasId, async (kelasId) => {
+    if (!kelasId) return [];
+    try {
+      return await rombelPraktikumController.getByKelas(kelasId);
+    } catch {
+      return [];
+    }
+  });
+
+  const currentRombel = () => (rombelData() || []).find((r) => r.id === selectedRombelId()) || null;
+
+  // Daftar mahasiswa yang ditampilkan: semua KRS, atau hanya anggota rombel terpilih.
+  const visibleStudents = createMemo<NilaiMahasiswa[]>(() => {
+    const all = studentsGrades() || [];
+    const rombelId = selectedRombelId();
+    if (!rombelId) return all;
+    const rombel = currentRombel();
+    if (!rombel) return all;
+    const memberIds = new Set((rombel.mahasiswaList || []).map((m) => m.mahasiswaId));
+    return all.filter((stud) => memberIds.has(stud.mahasiswaId));
+  });
+
+  // Anggota rombel yang belum punya KRS di kelas induk → tidak dapat diberi nilai.
+  const rombelNonKrs = createMemo(() => {
+    if (!selectedRombelId()) return [];
+    const rombel = currentRombel();
+    if (!rombel) return [];
+    const krsMhsIds = new Set((studentsGrades() || []).map((stud) => stud.mahasiswaId));
+    return (rombel.mahasiswaList || []).filter((m) => !krsMhsIds.has(m.mahasiswaId));
+  });
+
+  // Target simpan: subset terpilih bila ada, selain itu seluruh mahasiswa yang tampil.
+  const targetStudents = () => {
+    const all = studentsGrades() || [];
+    const sel = selectedKrsIds();
+    if (sel.size > 0) return all.filter((stud) => sel.has(stud.krsId));
+    return visibleStudents();
+  };
+
+  const hasStoredKomponen = (stud: NilaiMahasiswa, komponenNilaiId: number) =>
+    (stud.nilaiKomponen || []).some((v) => v.komponenNilaiId === komponenNilaiId && v.nilai !== null && v.nilai !== '');
+
+  const isAkhirCellEmpty = (stud: NilaiMahasiswa) =>
+    !inputAkhir()[String(stud.krsId)] && (stud.nilaiAngka === null || stud.nilaiAngka === undefined);
+
+  const isKomponenCellEmpty = (stud: NilaiMahasiswa, komponenNilaiId: number) =>
+    !inputGrades()[`${stud.krsId}_${komponenNilaiId}`] && !hasStoredKomponen(stud, komponenNilaiId);
+
+  const isKrsSelected = (krsId: number) => selectedKrsIds().has(krsId);
+
+  const toggleKrsSelected = (krsId: number) => {
+    setSelectedKrsIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(krsId)) next.delete(krsId);
+      else next.add(krsId);
+      return next;
+    });
+  };
+
+  const allVisibleSelected = () => {
+    const list = visibleStudents();
+    return list.length > 0 && list.every((stud) => selectedKrsIds().has(stud.krsId));
+  };
+
+  const toggleSelectAll = () => {
+    const list = visibleStudents();
+    if (allVisibleSelected()) {
+      setSelectedKrsIds((prev) => {
+        const next = new Set(prev);
+        for (const stud of list) next.delete(stud.krsId);
+        return next;
+      });
+    } else {
+      setSelectedKrsIds((prev) => {
+        const next = new Set(prev);
+        for (const stud of list) next.add(stud.krsId);
+        return next;
+      });
+    }
+  };
+
+  const selectedCount = () => {
+    const sel = selectedKrsIds();
+    return visibleStudents().filter((stud) => sel.has(stud.krsId)).length;
+  };
+
   const selectedClassDetails = () => classes()?.find((c) => c.id === selectedKelasId()) || null;
   const isClassLocked = () => selectedClassDetails()?.isLocked || false;
   const selectedProdiId = () => selectedClassDetails()?.mataKuliah?.programStudiId || null;
@@ -278,6 +375,50 @@ export default function InputNilai() {
       }
       setInputAkhir(initial);
     }
+  });
+
+  // Reset seleksi mahasiswa setiap kelas berganti.
+  let lastKelasForSelection: number | null = null;
+  createEffect(() => {
+    const id = selectedKelasId();
+    if (id !== lastKelasForSelection) {
+      lastKelasForSelection = id;
+      setSelectedKrsIds(new Set<number>());
+    }
+  });
+
+  // Komponen default untuk bulk nilai (mode komponen).
+  createEffect(() => {
+    const comps = components();
+    const current = bulkKomponenId();
+    if (comps && comps.length > 0) {
+      if (current === null || !comps.some((c) => c.id === current)) {
+        setBulkKomponenId(comps[0].id ?? null);
+      }
+    } else {
+      setBulkKomponenId(null);
+    }
+  });
+
+  // Deep-link ?kelas=<id>: pastikan kelas tetap ada di daftar walau di luar halaman filter.
+  createEffect(() => {
+    const id = selectedKelasId();
+    const list = classes();
+    if (!id || !list) return;
+    if (list.some((c) => c.id === id)) return;
+    let cancelled = false;
+    kelasKuliahController
+      .getById(id)
+      .then((detail) => {
+        if (cancelled) return;
+        setClasses((prev) => [...prev.filter((c) => c.id !== detail.id), detail]);
+      })
+      .catch(() => {
+        /* kelas tidak ditemukan / tanpa akses */
+      });
+    onCleanup(() => {
+      cancelled = true;
+    });
   });
 
   // Helper to add component
@@ -421,6 +562,70 @@ export default function InputNilai() {
     setInputAkhir((prev) => ({ ...prev, [String(krsId)]: sanitized }));
   };
 
+  // Bulk "nilai awal": hanya mengisi sel yang masih kosong untuk mahasiswa terpilih.
+  const handleBulkApply = () => {
+    const method = activeMethod();
+    if (method === 'sub') return;
+
+    const sel = selectedKrsIds();
+    if (sel.size === 0) {
+      toast.showToast('Pilih minimal satu mahasiswa terlebih dahulu.', 'error');
+      return;
+    }
+
+    const val = parseGradeInput(bulkValue());
+    if (val === null || val < 0 || val > 100) {
+      toast.showToast('Nilai awal harus numerik 0-100.', 'error');
+      return;
+    }
+
+    const list = visibleStudents() || [];
+    let filled = 0;
+    let skipped = 0;
+
+    if (method === 'akhir') {
+      for (const stud of list) {
+        if (!sel.has(stud.krsId)) continue;
+        if (isAkhirCellEmpty(stud)) filled += 1;
+        else skipped += 1;
+      }
+      setInputAkhir((prev) => {
+        const next = { ...prev };
+        for (const stud of list) {
+          if (!sel.has(stud.krsId)) continue;
+          if (isAkhirCellEmpty(stud)) next[String(stud.krsId)] = String(val);
+        }
+        return next;
+      });
+    } else {
+      const komponenId = bulkKomponenId();
+      if (!komponenId) {
+        toast.showToast('Pilih komponen terlebih dahulu.', 'error');
+        return;
+      }
+      for (const stud of list) {
+        if (!sel.has(stud.krsId)) continue;
+        if (isKomponenCellEmpty(stud, komponenId)) filled += 1;
+        else skipped += 1;
+      }
+      setInputGrades((prev) => {
+        const next = { ...prev };
+        for (const stud of list) {
+          if (!sel.has(stud.krsId)) continue;
+          if (isKomponenCellEmpty(stud, komponenId)) next[`${stud.krsId}_${komponenId}`] = String(val);
+        }
+        return next;
+      });
+    }
+
+    toast.showToast(`Terisi ${filled}, dilewati ${skipped} (sudah ada nilai).`, filled > 0 ? 'success' : 'info');
+  };
+
+  const clearSelection = () => {
+    setSelectedKrsIds(new Set<number>());
+    setBulkValue('');
+  };
+
   const komponenAggLabel = (krsId: number, komponenId: number, bobot: number) => {
     void bobot;
     const direct = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
@@ -508,7 +713,7 @@ export default function InputNilai() {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
 
-    const list = studentsGrades();
+    const list = targetStudents();
     const comps = components();
     if (!list || !comps) return;
 
@@ -577,7 +782,7 @@ export default function InputNilai() {
   const handleSaveKomponenOnly = async () => {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
-    const list = studentsGrades();
+    const list = targetStudents();
     const comps = components();
     if (!list || !comps) return;
 
@@ -611,7 +816,7 @@ export default function InputNilai() {
   const handleSaveAkhir = async () => {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
-    const list = studentsGrades();
+    const list = targetStudents();
     if (!list) return;
 
     const entries = list
@@ -970,7 +1175,10 @@ export default function InputNilai() {
             <SearchableSelect
               label="Kelas Kuliah"
               value={selectedKelasId() || ''}
-              onChange={(val) => setSelectedKelasId(val ? Number(val) : null)}
+              onChange={(val) => {
+                setSelectedKelasId(val ? Number(val) : null);
+                setSelectedRombelId(null);
+              }}
               options={
                 classes()?.map((item) => ({
                   label: `${item.mataKuliah?.kode ? `${item.namaKelas} - ` : ''}${item.mataKuliah?.nama || 'Mata Kuliah'} (${item.mataKuliah?.kode || 'Kode MK'}) - Periode ${item.periodeId}`,
@@ -1007,6 +1215,41 @@ export default function InputNilai() {
             </div>
           }
         >
+          <Show when={selectedRombelId() && currentRombel()}>
+            <div class="flex flex-col gap-3 mb-6">
+              <div class="bg-brand-50 border border-brand-200 text-brand-800 p-4 rounded-2xl text-xs flex flex-wrap items-center justify-between gap-3 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                <div class="flex flex-col gap-0.5">
+                  <span class="font-bold text-sm">Mode Rombel: {currentRombel()?.namaGroup}</span>
+                  <span>
+                    Menampilkan {visibleStudents().length} dari {(studentsGrades() || []).length} mahasiswa KRS pada
+                    kelas ini.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRombelId(null)}
+                  class="px-3 py-1.5 rounded-full bg-white text-brand-700 border border-brand-300 font-semibold hover:bg-brand-100 active:scale-95 transition-all dark:bg-secondary-800 dark:text-brand-300 dark:border-brand-700"
+                >
+                  Tampilkan semua mahasiswa
+                </button>
+              </div>
+              <Show when={rombelNonKrs().length > 0}>
+                <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-xs flex flex-col gap-1 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+                  <span class="font-bold">Peringatan: {rombelNonKrs().length} anggota rombel belum terdaftar KRS</span>
+                  <span>
+                    Mahasiswa berikut tidak memiliki KRS di kelas induk sehingga nilainya tidak dapat disimpan lewat
+                    halaman ini:
+                  </span>
+                  <span class="font-medium">
+                    {rombelNonKrs()
+                      .map((m) => m.mahasiswa?.nama || `#${m.mahasiswaId}`)
+                      .join(', ')}
+                  </span>
+                </div>
+              </Show>
+            </div>
+          </Show>
+
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left side: Component Weights Management */}
             <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 h-fit dark:bg-secondary-900 dark:border-secondary-800">
@@ -1162,7 +1405,7 @@ export default function InputNilai() {
                         onClick={handleSaveAkhir}
                         class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
                       >
-                        Simpan Nilai Akhir
+                        {selectedCount() > 0 ? `Simpan Terpilih (${selectedCount()})` : 'Simpan Nilai Akhir'}
                       </button>
                     </Show>
                     <Show when={activeMethod() === 'komponen'}>
@@ -1170,7 +1413,7 @@ export default function InputNilai() {
                         onClick={handleSaveKomponenOnly}
                         class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
                       >
-                        Simpan Nilai Komponen
+                        {selectedCount() > 0 ? `Simpan Terpilih (${selectedCount()})` : 'Simpan Nilai Komponen'}
                       </button>
                     </Show>
                     <Show when={activeMethod() === 'sub'}>
@@ -1178,7 +1421,7 @@ export default function InputNilai() {
                         onClick={handleSaveGrades}
                         class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
                       >
-                        Simpan Nilai Sub
+                        {selectedCount() > 0 ? `Simpan Terpilih (${selectedCount()})` : 'Simpan Nilai Sub'}
                       </button>
                     </Show>
                     <button
@@ -1195,6 +1438,62 @@ export default function InputNilai() {
                       Kunci Nilai
                     </button>
                   </div>
+
+                  {/* Bulk nilai awal — hanya mengisi sel kosong mahasiswa terpilih */}
+                  <Show when={activeMethod() !== 'sub'}>
+                    <div class="flex flex-wrap items-end gap-2 bg-secondary-50 border border-secondary-100 rounded-xl p-3 dark:bg-secondary-800/50 dark:border-secondary-700">
+                      <div class="flex flex-col gap-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">
+                          Nilai Awal (0-100)
+                        </span>
+                        <input
+                          type="text"
+                          inputmode="decimal"
+                          placeholder="0.00"
+                          value={bulkValue()}
+                          onInput={(e) => setBulkValue(e.currentTarget.value.replace(/[^0-9.,]/g, ''))}
+                          class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs w-24 text-center focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                        />
+                      </div>
+                      <Show when={activeMethod() === 'komponen'}>
+                        <div class="flex flex-col gap-1">
+                          <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">
+                            Komponen
+                          </span>
+                          <select
+                            value={bulkKomponenId() ?? ''}
+                            onChange={(e) =>
+                              setBulkKomponenId(e.currentTarget.value ? Number(e.currentTarget.value) : null)
+                            }
+                            class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                          >
+                            <option value="">-- Pilih Komponen --</option>
+                            <For each={components() || []}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
+                          </select>
+                        </div>
+                      </Show>
+                      <button
+                        type="button"
+                        onClick={handleBulkApply}
+                        disabled={selectedCount() === 0}
+                        class="px-3 py-1.5 rounded-full bg-brand-600 text-white font-bold text-xs hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Terapkan ke Terpilih
+                      </button>
+                      <Show when={selectedCount() > 0}>
+                        <span class="text-[11px] font-semibold text-brand-700 dark:text-brand-300">
+                          {selectedCount()} mahasiswa dipilih
+                        </span>
+                        <button
+                          type="button"
+                          onClick={clearSelection}
+                          class="text-[11px] font-semibold text-secondary-500 hover:text-rose-600 underline"
+                        >
+                          Bersihkan seleksi
+                        </button>
+                      </Show>
+                    </div>
+                  </Show>
                 </Show>
                 <Show when={isClassLocked()}>
                   <Show
@@ -1215,6 +1514,15 @@ export default function InputNilai() {
                 <table class="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                      <th class="p-3 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          aria-label="Pilih semua mahasiswa"
+                          checked={allVisibleSelected()}
+                          onChange={toggleSelectAll}
+                          class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                        />
+                      </th>
                       <th class="p-3">Mahasiswa</th>
                       <th class="p-3 text-center">Nilai Akhir (0-100)</th>
                       <th class="p-3 text-center">Huruf</th>
@@ -1223,10 +1531,10 @@ export default function InputNilai() {
                   </thead>
                   <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
                     <For
-                      each={studentsGrades()}
+                      each={visibleStudents()}
                       fallback={
                         <tr>
-                          <td colspan="4" class="p-4 text-center text-secondary-400 italic">
+                          <td colspan="5" class="p-4 text-center text-secondary-400 italic">
                             Tidak ada mahasiswa terdaftar di kelas ini.
                           </td>
                         </tr>
@@ -1234,6 +1542,15 @@ export default function InputNilai() {
                     >
                       {(stud) => (
                         <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                          <td class="p-3 text-center">
+                            <input
+                              type="checkbox"
+                              aria-label={`Pilih ${stud.nama}`}
+                              checked={isKrsSelected(stud.krsId)}
+                              onChange={() => toggleKrsSelected(stud.krsId)}
+                              class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                            />
+                          </td>
                           <td class="p-3">
                             <div class="flex items-center gap-2">
                               <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
@@ -1289,6 +1606,15 @@ export default function InputNilai() {
                   <table class="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th class="p-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label="Pilih semua mahasiswa"
+                            checked={allVisibleSelected()}
+                            onChange={toggleSelectAll}
+                            class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                          />
+                        </th>
                         <th class="p-3">Mahasiswa</th>
                         <For each={components()}>
                           {(c) => (
@@ -1307,11 +1633,11 @@ export default function InputNilai() {
                     </thead>
                     <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
                       <For
-                        each={studentsGrades()}
+                        each={visibleStudents()}
                         fallback={
                           <tr>
                             <td
-                              colspan={(components()?.length || 0) + 2}
+                              colspan={(components()?.length || 0) + 3}
                               class="p-4 text-center text-secondary-400 italic"
                             >
                               Tidak ada mahasiswa terdaftar di kelas ini.
@@ -1321,6 +1647,15 @@ export default function InputNilai() {
                       >
                         {(stud) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                            <td class="p-3 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Pilih ${stud.nama}`}
+                                checked={isKrsSelected(stud.krsId)}
+                                onChange={() => toggleKrsSelected(stud.krsId)}
+                                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                              />
+                            </td>
                             <td class="p-3">
                               <div class="flex items-center gap-2">
                                 <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
