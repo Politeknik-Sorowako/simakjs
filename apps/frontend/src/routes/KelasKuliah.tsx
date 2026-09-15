@@ -402,10 +402,11 @@ export default function KelasKuliah() {
             placeholder="Cari kelas, MK, atau dosen..."
             value={search()}
             onInput={(e) => {
-              setSearch(e.currentTarget.value);
+              const value = e.currentTarget.value;
+              setSearch(value);
               clearTimeout(searchDebounceTimer);
               searchDebounceTimer = setTimeout(() => {
-                setDebouncedSearch(e.currentTarget.value);
+                setDebouncedSearch(value);
                 resetPage();
               }, 400);
             }}
@@ -442,6 +443,7 @@ export default function KelasKuliah() {
                 variant="secondary"
                 onClick={() => {
                   setSearch('');
+                  setDebouncedSearch('');
                   setSelectedMatkulFilter(undefined);
                   setSelectedDosenFilter(undefined);
                   resetPage();

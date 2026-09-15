@@ -232,6 +232,30 @@ describe('3. Mahasiswa (/mahasiswa)', () => {
       expect(body.data[0].nim).toBe('12345678');
     });
 
+    it('harus memfilter mahasiswa berdasarkan status kepemilikan akun (hasAccount)', async () => {
+      await getAuthToken('budi@test.com', 'mahasiswa');
+
+      const withAccount = await app.handle(
+        new Request('http://localhost/mahasiswa?hasAccount=true', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(withAccount.status).toBe(200);
+      const withBody = (await withAccount.json()) as { data: { nim: string }[] };
+      expect(withBody.data.map((m) => m.nim)).toEqual(['12345678']);
+
+      const withoutAccount = await app.handle(
+        new Request('http://localhost/mahasiswa?hasAccount=false', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(withoutAccount.status).toBe(200);
+      const withoutBody = (await withoutAccount.json()) as { data: { nim: string }[] };
+      expect(withoutBody.data.map((m) => m.nim)).toEqual(['12345679']);
+    });
+
     it('harus sukses mengambil mahasiswa aktif lintas prodi dan non-PA bagi dosen ketika allStudents=true dan filterStatus=aktif', async () => {
       const dosenToken = await getAuthToken('dosen-allstudents@test.com', 'dosen');
       const response = await app.handle(

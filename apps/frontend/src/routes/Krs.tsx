@@ -645,10 +645,11 @@ export default function Krs() {
                 placeholder="Cari NIM atau Nama..."
                 value={mainPagination.search()}
                 onInput={(e) => {
-                  mainPagination.setSearch(e.currentTarget.value);
+                  const value = e.currentTarget.value;
+                  mainPagination.setSearch(value);
                   clearTimeout(searchDebounceTimer);
                   searchDebounceTimer = setTimeout(() => {
-                    setDebouncedMainSearch(e.currentTarget.value);
+                    setDebouncedMainSearch(value);
                     mainPagination.resetPage();
                   }, 400);
                 }}
