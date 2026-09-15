@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
@@ -12,6 +13,7 @@ import { useToast } from '../contexts/ToastContext';
 import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
+import { usePagination } from '../hooks/usePagination';
 import { getTodayString } from '../utils/format';
 
 export default function Pelanggaran() {
@@ -60,6 +62,11 @@ export default function Pelanggaran() {
   const [sortField, setSortField] = createSignal<SortField>('tanggal');
   const [sortDir, setSortDir] = createSignal<'asc' | 'desc'>('desc');
 
+  // Pagination state
+  const { page, limit, setPage, setLimit, resetPage } = usePagination();
+  const pageOptions = [10, 20, 50, 100];
+  const handleLimitChange = (newLimit: number) => setLimit(newLimit);
+
   const toggleSort = (field: SortField) => {
     if (sortField() === field) {
       setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -67,6 +74,7 @@ export default function Pelanggaran() {
       setSortField(field);
       setSortDir(field === 'tanggal' ? 'desc' : 'asc');
     }
+    resetPage();
   };
 
   const visibleViolations = createMemo(() => {
@@ -105,6 +113,12 @@ export default function Pelanggaran() {
       }
       return cmp * dir;
     });
+  });
+
+  const totalPages = createMemo(() => Math.ceil(visibleViolations().length / limit()) || 1);
+  const paginatedViolations = createMemo(() => {
+    const start = (page() - 1) * limit();
+    return visibleViolations().slice(start, start + limit());
   });
 
   // Load master pasal BPA (global + prodi scoped)
@@ -623,7 +637,10 @@ export default function Pelanggaran() {
                 type="text"
                 placeholder="Cari nama, NIM, prodi, pasal, pelapor, atau keterangan..."
                 value={violationSearch()}
-                onInput={(e) => setViolationSearch(e.currentTarget.value)}
+                onInput={(e) => {
+                  setViolationSearch(e.currentTarget.value);
+                  resetPage();
+                }}
                 class="w-full sm:max-w-xs"
               />
               <span class="text-caption text-secondary-400 dark:text-secondary-300">
@@ -692,7 +709,7 @@ export default function Pelanggaran() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                      <For each={visibleViolations()}>
+                      <For each={paginatedViolations()}>
                         {(item) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                             <td class="p-3 font-bold text-secondary-800 dark:text-white">
@@ -775,6 +792,15 @@ export default function Pelanggaran() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={page()}
+                  totalPages={totalPages()}
+                  total={visibleViolations().length}
+                  limit={limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={setPage}
+                  onLimitChange={handleLimitChange}
+                />
               </Show>
             </Show>
           </div>

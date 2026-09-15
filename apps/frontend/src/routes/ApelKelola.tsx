@@ -1,4 +1,5 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { useBeforeLeave } from '@solidjs/router';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { IconActionButton } from '../components/ui/IconActionButton';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
@@ -32,6 +33,11 @@ export default function ApelKelola() {
   const [catatanSesi, setCatatanSesi] = createSignal('');
   const [presensiData, setPresensiData] = createSignal<PresensiApelItem[]>([]);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
+
+  // Auto-save & unsaved guard state
+  const [saveStatus, setSaveStatus] = createSignal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
+  let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   // Hanya admin/super_admin yang boleh menetapkan sakit/izin/alpa secara manual.
   // Dosen/PJ apel hanya dapat memilih Hadir, Terlambat (+durasi), atau Unknown.
@@ -167,9 +173,39 @@ export default function ApelKelola() {
       if (!sesiId) return null;
       const data = await apelController.getSesiPresensi(sesiId);
       setPresensiData(data.presensi);
+      setHasUnsavedChanges(false);
+      setSaveStatus('idle');
       return data;
     },
   );
+
+  // Bersihkan timer autosave saat berganti sesi atau komponen di-unmount.
+  createEffect(() => {
+    selectedSesi();
+    clearTimeout(autoSaveTimer);
+  });
+  onCleanup(() => clearTimeout(autoSaveTimer));
+
+  // Auto-save guard: peringatkan pengguna sebelum meninggalkan rute.
+  useBeforeLeave((e) => {
+    if (hasUnsavedChanges()) {
+      if (!confirm('Ada perubahan presensi apel yang belum tersimpan. Yakin ingin meninggalkan halaman?')) {
+        e.preventDefault();
+      }
+    }
+  });
+
+  // Auto-save guard: peringatkan pengguna sebelum menutup/menyegarkan tab.
+  onMount(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges()) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    onCleanup(() => window.removeEventListener('beforeunload', handleBeforeUnload));
+  });
 
   // Resource Pemantauan Kelompok Apel Hari Ini (acuan kelompok yang dibuka / mungkin terlewat)
   const [tanggalPanel, setTanggalPanel] = createSignal(getTodayString());
@@ -297,6 +333,36 @@ export default function ApelKelola() {
     }
   };
 
+  const buildPresensiPayload = () =>
+    presensiData().map((p) => ({
+      mahasiswaId: p.mahasiswaId,
+      status: p.status,
+      menitTerlambat: p.menitTerlambat,
+      keterangan: p.keterangan || null,
+    }));
+
+  const triggerAutoSave = async () => {
+    clearTimeout(autoSaveTimer);
+    const sesi = sesiPresensi()?.sesi;
+    if (!selectedSesi() || !sesi || sesi.isClosed) return;
+    setSaveStatus('saving');
+    try {
+      await apelController.submitPresensi(selectedSesi()!, buildPresensiPayload());
+      setSaveStatus('saved');
+      setHasUnsavedChanges(false);
+    } catch (e: unknown) {
+      setSaveStatus('error');
+      toast.showToast(e instanceof Error ? e.message : 'Gagal menyimpan presensi', 'error');
+    }
+  };
+
+  const scheduleAutoSave = (delay = 600) => {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      void triggerAutoSave();
+    }, delay);
+  };
+
   const handleStatusChange = (
     mahasiswaId: number,
     newStatus: 'hadir' | 'terlambat' | 'unknown' | 'sakit' | 'izin' | 'alpa',
@@ -318,6 +384,8 @@ export default function ApelKelola() {
         return p;
       }),
     );
+    setHasUnsavedChanges(true);
+    void triggerAutoSave();
   };
 
   const handleMenitChange = (mahasiswaId: number, menit: number) => {
@@ -329,6 +397,8 @@ export default function ApelKelola() {
         return p;
       }),
     );
+    setHasUnsavedChanges(true);
+    scheduleAutoSave();
   };
 
   const handleKeteranganChange = (mahasiswaId: number, ket: string) => {
@@ -340,22 +410,21 @@ export default function ApelKelola() {
         return p;
       }),
     );
+    setHasUnsavedChanges(true);
+    void triggerAutoSave();
   };
 
   const handleSubmit = async () => {
     if (!selectedSesi()) return;
     try {
       setIsSubmitting(true);
-      const list = presensiData().map((p) => ({
-        mahasiswaId: p.mahasiswaId,
-        status: p.status,
-        menitTerlambat: p.menitTerlambat,
-        keterangan: p.keterangan || null,
-      }));
-      await apelController.submitPresensi(selectedSesi()!, list);
+      await apelController.submitPresensi(selectedSesi()!, buildPresensiPayload());
+      setHasUnsavedChanges(false);
+      setSaveStatus('saved');
       toast.showToast('Presensi berhasil disimpan', 'success');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal menyimpan presensi';
+      setSaveStatus('error');
       toast.showToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
@@ -788,6 +857,44 @@ export default function ApelKelola() {
                     </p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2 shrink-0 justify-end">
+                    <Show when={saveStatus() !== 'idle'}>
+                      <span
+                        class={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-fine font-semibold ${
+                          saveStatus() === 'saving'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                            : saveStatus() === 'saved'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'
+                              : 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300'
+                        }`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <Show
+                          when={saveStatus() === 'saving'}
+                          fallback={
+                            <Show when={saveStatus() === 'saved'} fallback={<span aria-hidden="true">⚠</span>}>
+                              <span aria-hidden="true">✓</span>
+                            </Show>
+                          }
+                        >
+                          <svg class="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                            <path
+                              class="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                        </Show>
+                        <span>
+                          {saveStatus() === 'saving'
+                            ? 'Menyimpan...'
+                            : saveStatus() === 'saved'
+                              ? 'Tersimpan otomatis'
+                              : 'Gagal menyimpan'}
+                        </span>
+                      </span>
+                    </Show>
                     <IconActionButton
                       label="Simpan"
                       variant="green"
@@ -1009,6 +1116,8 @@ export default function ApelKelola() {
                                     onInput={(e) => {
                                       const val = parseInt(e.currentTarget.value) || 0;
                                       item.menitTerlambat = val;
+                                      setHasUnsavedChanges(true);
+                                      scheduleAutoSave();
                                     }}
                                     onChange={(e) => {
                                       const val = parseInt(e.currentTarget.value) || 0;
