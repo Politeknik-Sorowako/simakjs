@@ -9,7 +9,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
-import { Prodi, prodiController } from '../controllers/prodiController';
+import { Prodi, ProdiStatus, prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
 import { API_URL } from '../utils/api';
 import { ExportColumn } from '../utils/export';
@@ -34,6 +34,7 @@ export default function ProgramStudi() {
   // Sorting state
   const [sortBy, setSortBy] = createSignal('kode');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const [filterStatus, setFilterStatus] = createSignal<ProdiStatus | ''>('');
 
   const toggleSort = (field: string) => {
     if (sortBy() === field) {
@@ -47,11 +48,41 @@ export default function ProgramStudi() {
 
   // Fetch data (server-side sort agar seluruh data terurut, bukan hanya halaman aktif)
   const [prodis, { refetch }] = createResource(
-    () => ({ search: debouncedSearch(), page: page(), limit: limit(), sortBy: sortBy(), sortOrder: sortOrder() }),
-    ({ search, page, limit, sortBy: sb, sortOrder: so }) => prodiController.getAll(search, page, limit, sb, so),
+    () => ({
+      search: debouncedSearch(),
+      page: page(),
+      limit: limit(),
+      sortBy: sortBy(),
+      sortOrder: sortOrder(),
+      filterStatus: filterStatus(),
+    }),
+    ({ search, page, limit, sortBy: sb, sortOrder: so, filterStatus: fs }) =>
+      prodiController.getAll(search, page, limit, sb, so, fs || undefined),
   );
 
   const sortedData = () => prodis()?.data || [];
+
+  const statusMeta = (s?: ProdiStatus) => {
+    switch (s) {
+      case 'tidak_aktif':
+        return {
+          label: 'TIDAK AKTIF',
+          class: 'bg-red-50 text-red-700 border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+        };
+      case 'persiapan':
+        return {
+          label: 'PERSIAPAN',
+          class:
+            'bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800',
+        };
+      default:
+        return {
+          label: 'AKTIF',
+          class:
+            'bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800',
+        };
+    }
+  };
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
@@ -59,6 +90,7 @@ export default function ProgramStudi() {
   const [kode, setKode] = createSignal('');
   const [nama, setNama] = createSignal('');
   const [jenjang, setJenjang] = createSignal('D4');
+  const [status, setStatus] = createSignal<ProdiStatus>('aktif');
   const [kodeProdiPddikti, setKodeProdiPddikti] = createSignal('');
   const [nomorSkIzin, setNomorSkIzin] = createSignal('');
   const [tanggalSkIzin, setTanggalSkIzin] = createSignal('');
@@ -78,6 +110,7 @@ export default function ProgramStudi() {
     setKode('');
     setNama('');
     setJenjang('D4');
+    setStatus('aktif');
     setKodeProdiPddikti('');
     setNomorSkIzin('');
     setTanggalSkIzin('');
@@ -96,6 +129,7 @@ export default function ProgramStudi() {
     setKode(item.kode);
     setNama(item.nama);
     setJenjang(item.jenjang);
+    setStatus(item.status || 'aktif');
     setKodeProdiPddikti(item.kodeProdiPddikti || '');
     setNomorSkIzin(item.nomorSkIzinOperasional || '');
     setTanggalSkIzin(item.tanggalSkIzinOperasional || '');
@@ -131,6 +165,7 @@ export default function ProgramStudi() {
     kode: kode(),
     nama: nama(),
     jenjang: jenjang(),
+    status: status(),
     kodeProdiPddikti: orNull(kodeProdiPddikti()),
     nomorSkIzinOperasional: orNull(nomorSkIzin()),
     tanggalSkIzinOperasional: orNull(tanggalSkIzin()),
@@ -206,21 +241,40 @@ export default function ProgramStudi() {
           onSuccess={() => refetch()}
         />
 
-        {/* Search */}
-        <div class="max-w-xs">
-          <Input
-            placeholder="Cari prodi..."
-            value={search()}
-            onInput={(e) => {
-              const value = e.currentTarget.value;
-              setSearch(value);
-              clearTimeout(searchDebounceTimer);
-              searchDebounceTimer = setTimeout(() => {
-                setDebouncedSearch(value);
+        {/* Search & Filter */}
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+          <div class="max-w-xs w-full">
+            <Input
+              placeholder="Cari prodi..."
+              value={search()}
+              onInput={(e) => {
+                const value = e.currentTarget.value;
+                setSearch(value);
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(value);
+                  resetPage();
+                }, 400);
+              }}
+            />
+          </div>
+          <div class="max-w-[200px] w-full">
+            <Input
+              isSelect
+              label="Status"
+              value={filterStatus()}
+              onChange={(e) => {
+                setFilterStatus(e.currentTarget.value as ProdiStatus | '');
                 resetPage();
-              }, 400);
-            }}
-          />
+              }}
+              selectOptions={[
+                { label: 'Semua Status', value: '' },
+                { label: 'Aktif', value: 'aktif' },
+                { label: 'Tidak Aktif', value: 'tidak_aktif' },
+                { label: 'Persiapan', value: 'persiapan' },
+              ]}
+            />
+          </div>
         </div>
 
         {/* Data Table */}
@@ -235,6 +289,9 @@ export default function ProgramStudi() {
               </SortableHeader>,
               <SortableHeader field="jenjang" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                 Jenjang
+              </SortableHeader>,
+              <SortableHeader field="status" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                Status
               </SortableHeader>,
               <SortableHeader field="kodeProdiPddikti" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                 Kode PDDIKTI
@@ -253,6 +310,13 @@ export default function ProgramStudi() {
                   <td class="px-6 py-4">
                     <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-50 text-brand-700 border border-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-800">
                       {item.jenjang}
+                    </span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span
+                      class={`px-2.5 py-1 text-xs font-semibold rounded-full border ${statusMeta(item.status).class}`}
+                    >
+                      {statusMeta(item.status).label}
                     </span>
                   </td>
                   <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200">
@@ -298,7 +362,7 @@ export default function ProgramStudi() {
             </For>
             <Show when={prodis()?.data.length === 0}>
               <tr>
-                <td colspan="6" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                <td colspan="7" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data program studi ditemukan.
                 </td>
               </tr>
@@ -350,6 +414,17 @@ export default function ProgramStudi() {
                 { label: 'D3', value: 'D3' },
                 { label: 'D4', value: 'D4' },
                 { label: 'S1', value: 'S1' },
+              ]}
+            />
+            <Input
+              isSelect
+              label="Status"
+              value={status()}
+              onChange={(e) => setStatus(e.currentTarget.value as ProdiStatus)}
+              selectOptions={[
+                { label: 'Aktif', value: 'aktif' },
+                { label: 'Tidak Aktif', value: 'tidak_aktif' },
+                { label: 'Persiapan', value: 'persiapan' },
               ]}
             />
 

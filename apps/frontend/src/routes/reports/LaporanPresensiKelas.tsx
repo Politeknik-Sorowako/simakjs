@@ -865,8 +865,14 @@ export default function LaporanPresensiKelas() {
                               <For each={data.detail || []}>
                                 {(k) => (
                                   <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                                    <td class="py-2 px-3 font-semibold text-secondary-800 dark:text-white">
-                                      {k.kodeMk} - {k.namaMk} ({k.namaKelas})
+                                    <td class="py-2 px-3">
+                                      <div class="font-semibold text-secondary-800 dark:text-white">
+                                        {k.kodeMk ? `${k.kodeMk} - ` : ''}
+                                        {k.namaMk || '-'}
+                                      </div>
+                                      <div class="text-caption text-brand-600 dark:text-brand-400 font-bold">
+                                        Kelas: {k.namaKelas || '-'}
+                                      </div>
                                     </td>
                                     <td class="py-2 px-3 text-center font-bold">{k.totalPertemuan}</td>
                                     <td class="py-2 px-3 text-center font-bold text-green-600">{k.hadir}</td>

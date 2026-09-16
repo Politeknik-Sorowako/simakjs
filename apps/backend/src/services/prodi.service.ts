@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, ilike, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { programStudi } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -6,6 +6,7 @@ type ProdiWriteData = Partial<{
   kode: string;
   nama: string;
   jenjang: string;
+  status: 'aktif' | 'tidak_aktif' | 'persiapan';
   idPddikti: string | null;
   kodeProdiPddikti: string | null;
   nomorSkIzinOperasional: string | null;
@@ -19,13 +20,26 @@ type ProdiWriteData = Partial<{
 }>;
 
 export class ProdiService {
-  static async getAll(page = 1, limit = 10, search = '', sortBy = 'kode', sortOrder: 'asc' | 'desc' = 'asc') {
+  static async getAll(
+    page = 1,
+    limit = 10,
+    search = '',
+    sortBy = 'kode',
+    sortOrder: 'asc' | 'desc' = 'asc',
+    filterStatus?: string,
+  ) {
     const offset = (page - 1) * limit;
-    let whereClause = undefined;
+    const conditions: SQL<unknown>[] = [];
 
     if (search) {
-      whereClause = or(ilike(programStudi.nama, `%${search}%`), ilike(programStudi.kode, `%${search}%`));
+      const searchCond = or(ilike(programStudi.nama, `%${search}%`), ilike(programStudi.kode, `%${search}%`));
+      if (searchCond) conditions.push(searchCond);
     }
+    if (filterStatus && filterStatus.trim()) {
+      conditions.push(eq(programStudi.status, filterStatus.trim()));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [totalResult] = await db.select({ total: count() }).from(programStudi).where(whereClause);
 
@@ -34,6 +48,7 @@ export class ProdiService {
       kode: programStudi.kode,
       nama: programStudi.nama,
       jenjang: programStudi.jenjang,
+      status: programStudi.status,
     } as const;
     const sortColumn = sortColumnMap[sortBy as keyof typeof sortColumnMap] ?? programStudi.kode;
     const data = await db
