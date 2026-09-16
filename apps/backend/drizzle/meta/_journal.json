@@ -484,6 +484,13 @@
       "when": 1786600000019,
       "tag": "0068_add_audit_log_status_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1786600000020,
+      "tag": "0069_update_legacy_probe_audit_logs",
+      "breakpoints": true
     }
   ]
 }
