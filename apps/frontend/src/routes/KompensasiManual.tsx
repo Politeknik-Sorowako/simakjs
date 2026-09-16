@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, type JSX, onCleanup, Show, Suspense } from 'solid-js';
+import { createMemo, createResource, createSignal, For, type JSX, onCleanup, onMount, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -105,8 +105,6 @@ export default function KompensasiManual() {
   const [jenisKompen, setJenisKompen] = createSignal<string | number>('');
   const [durasiMenit, setDurasiMenit] = createSignal(0);
   const [keterangan, setKeterangan] = createSignal('');
-  const [searchMhsInput, setSearchMhsInput] = createSignal('');
-  const [mhsPage, setMhsPage] = createSignal(1);
   const [isSubmitting, setIsSubmitting] = createSignal(false);
 
   // Warning Confirmation Modal state
@@ -261,21 +259,31 @@ export default function KompensasiManual() {
 
   // Resources
   const [allMhs, setAllMhs] = createSignal<Mahasiswa[]>([]);
-  const [mhsData] = createResource(
-    () => ({ search: searchMhsInput(), page: mhsPage() }),
-    async ({ search, page }) => {
+  const [mhsLoading, setMhsLoading] = createSignal(false);
+  const [mhsHasMore, setMhsHasMore] = createSignal(false);
+  const [mhsPage, setMhsPage] = createSignal(1);
+  const [mhsSearch, setMhsSearch] = createSignal('');
+
+  const fetchMahasiswa = async (page: number, search: string, append = false) => {
+    setMhsLoading(true);
+    try {
       const res = await mahasiswaController.getAll(search || undefined, page, 50, undefined, {
         filterStatus: 'aktif',
         allStudents: true,
       });
-      if (page === 1) {
-        setAllMhs(res.data || []);
-      } else {
-        setAllMhs((prev) => [...prev, ...(res.data || [])]);
-      }
-      return res;
-    },
-  );
+      setAllMhs((prev) => (append ? [...prev, ...(res.data || [])] : res.data || []));
+      setMhsPage(page + 1);
+      setMhsHasMore(page < (res.meta?.totalPages || 1));
+    } catch {
+      // silently ignore search errors
+    } finally {
+      setMhsLoading(false);
+    }
+  };
+
+  onMount(() => {
+    fetchMahasiswa(1, '', false);
+  });
 
   const mhsOptions = createMemo<SelectOption[]>(() => {
     const list = allMhs();
@@ -299,20 +307,15 @@ export default function KompensasiManual() {
     }
   };
 
-  const mhsHasMore = () => {
-    const meta = mhsData()?.meta;
-    if (!meta) return false;
-    return meta.page < meta.totalPages;
-  };
-
   const handleMhsSearch = (query: string) => {
-    setAllMhs([]);
-    setMhsPage(1);
-    setSearchMhsInput(query);
+    setMhsSearch(query);
+    fetchMahasiswa(1, query, false);
   };
 
   const handleLoadMore = () => {
-    if (mhsHasMore()) setMhsPage((p) => p + 1);
+    if (mhsHasMore() && !mhsLoading()) {
+      fetchMahasiswa(mhsPage(), mhsSearch(), true);
+    }
   };
 
   const [kompensasiList, { refetch }] = createResource(
@@ -748,7 +751,7 @@ export default function KompensasiManual() {
               onChange={setSelectedMhsId}
               placeholder="Cari NIM atau Nama Mahasiswa..."
               onSearch={handleMhsSearch}
-              isLoading={mhsData.loading}
+              isLoading={mhsLoading()}
               hasMore={mhsHasMore()}
               onLoadMore={handleLoadMore}
             />
