@@ -103,6 +103,9 @@ export class AuditService {
           ilike(auditLogs.entityName, `%${search}%`),
           ilike(auditLogs.tableName, `%${search}%`),
           ilike(auditLogs.detail, `%${search}%`),
+          ilike(auditLogs.ipAddress, `%${search}%`),
+          ilike(auditLogs.userName, `%${search}%`),
+          ilike(auditLogs.entityId, `%${search}%`),
           ilike(users.nama, `%${search}%`),
         ),
       );
