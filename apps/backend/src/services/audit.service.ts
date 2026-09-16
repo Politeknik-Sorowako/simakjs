@@ -212,37 +212,54 @@ export class AuditService {
       statusCategory,
     );
 
-    const rows = await db
-      .select({ log: auditLogs, liveUserName: users.nama })
-      .from(auditLogs)
-      .leftJoin(users, eq(auditLogs.userId, users.id))
-      .where(whereClause ?? undefined)
-      .orderBy(desc(auditLogs.timestamp))
-      .limit(limit);
-
     const headers = ['Waktu', 'User', 'Role', 'Aksi', 'Module', 'Entitas', 'Deskripsi', 'Status HTTP', 'IP', 'Detail'];
     const escape = (val: string | number | null | undefined): string => {
       const s = val == null ? '' : String(val);
       return `"${s.replace(/"/g, '""')}"`;
     };
-    const lines = rows.map((row) => {
-      const r = row.log;
-      const resolvedUserName = r.userName ?? row.liveUserName ?? (r.userId ? `User #${r.userId}` : 'Sistem');
-      const entitas = r.entityName ?? r.entityId ?? '';
-      const httpStatus = r.statusCode ? String(r.statusCode) : '200';
-      return [
-        escape(r.timestamp?.toISOString()),
-        escape(resolvedUserName),
-        escape(r.userRole),
-        escape(r.actionType),
-        escape(r.module),
-        escape(entitas),
-        escape(r.description),
-        escape(httpStatus),
-        escape(r.ipAddress),
-        escape(r.detail),
-      ].join(',');
-    });
+
+    // Fetch rows in bounded batches to avoid a single large query / memory spike.
+    const batchSize = 1000;
+    const lines: string[] = [];
+    let offset = 0;
+    while (offset < limit) {
+      const currentBatch = Math.min(batchSize, limit - offset);
+      const rows = await db
+        .select({ log: auditLogs, liveUserName: users.nama })
+        .from(auditLogs)
+        .leftJoin(users, eq(auditLogs.userId, users.id))
+        .where(whereClause ?? undefined)
+        .orderBy(desc(auditLogs.timestamp))
+        .limit(currentBatch)
+        .offset(offset);
+
+      if (rows.length === 0) break;
+
+      for (const row of rows) {
+        const r = row.log;
+        const resolvedUserName = r.userName ?? row.liveUserName ?? (r.userId ? `User #${r.userId}` : 'Sistem');
+        const entitas = r.entityName ?? r.entityId ?? '';
+        const httpStatus = r.statusCode ? String(r.statusCode) : '200';
+        lines.push(
+          [
+            escape(r.timestamp?.toISOString()),
+            escape(resolvedUserName),
+            escape(r.userRole),
+            escape(r.actionType),
+            escape(r.module),
+            escape(entitas),
+            escape(r.description),
+            escape(httpStatus),
+            escape(r.ipAddress),
+            escape(r.detail),
+          ].join(','),
+        );
+      }
+
+      offset += rows.length;
+      if (rows.length < currentBatch) break;
+    }
+
     return [headers.join(','), ...lines].join('\r\n');
   }
 
