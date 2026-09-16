@@ -15,6 +15,8 @@ export interface CreateAuditLogDto {
   entityName?: string | null;
   description: string;
   detail?: string | null;
+  statusCode?: number | null;
+  isSuccess?: boolean | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -36,6 +38,8 @@ export class AuditService {
           entityName: data.entityName ?? null,
           description: data.description,
           detail: data.detail ?? null,
+          statusCode: data.statusCode ?? 200,
+          isSuccess: data.isSuccess ?? (data.statusCode ?? 200) < 400,
           metadata: data.metadata ?? null,
         })
         .returning();
@@ -55,6 +59,7 @@ export class AuditService {
     search?: string,
     tableName?: string,
     userName?: string,
+    statusCategory?: string,
   ) {
     const conditions = [];
 
@@ -79,6 +84,16 @@ export class AuditService {
     if (endDate) {
       conditions.push(lte(auditLogs.timestamp, new Date(`${endDate}T23:59:59.999`)));
     }
+    if (statusCategory === 'success') {
+      conditions.push(eq(auditLogs.isSuccess, true));
+    } else if (statusCategory === 'client_error') {
+      conditions.push(and(gte(auditLogs.statusCode, 400), lte(auditLogs.statusCode, 499)));
+    } else if (statusCategory === 'server_error') {
+      conditions.push(gte(auditLogs.statusCode, 500));
+    } else if (statusCategory === 'failed') {
+      conditions.push(eq(auditLogs.isSuccess, false));
+    }
+
     if (search) {
       conditions.push(
         or(
@@ -107,6 +122,7 @@ export class AuditService {
     search?: string,
     tableName?: string,
     userName?: string,
+    statusCategory?: string,
   ) {
     const offset = (page - 1) * limit;
     const whereClause = AuditService.buildFilters(
@@ -118,13 +134,15 @@ export class AuditService {
       search,
       tableName,
       userName,
+      statusCategory,
     );
 
-    const [totalResult] = await db
-      .select({ total: count() })
-      .from(auditLogs)
-      .leftJoin(users, eq(auditLogs.userId, users.id))
-      .where(whereClause);
+    const requiresUserJoin = Boolean(userName || search);
+    const countQuery = requiresUserJoin
+      ? db.select({ total: count() }).from(auditLogs).leftJoin(users, eq(auditLogs.userId, users.id)).where(whereClause)
+      : db.select({ total: count() }).from(auditLogs).where(whereClause);
+
+    const [totalResult] = await countQuery;
     const total = totalResult?.total || 0;
 
     const rows = await db
@@ -177,6 +195,7 @@ export class AuditService {
     limit = 10000,
     tableName?: string,
     userName?: string,
+    statusCategory?: string,
   ): Promise<string> {
     const whereClause = AuditService.buildFilters(
       module,
@@ -187,6 +206,7 @@ export class AuditService {
       search,
       tableName,
       userName,
+      statusCategory,
     );
 
     const rows = await db
@@ -197,7 +217,7 @@ export class AuditService {
       .orderBy(desc(auditLogs.timestamp))
       .limit(limit);
 
-    const headers = ['Waktu', 'User', 'Role', 'Aksi', 'Module', 'Entitas', 'Deskripsi', 'IP', 'Detail'];
+    const headers = ['Waktu', 'User', 'Role', 'Aksi', 'Module', 'Entitas', 'Deskripsi', 'Status HTTP', 'IP', 'Detail'];
     const escape = (val: string | number | null | undefined): string => {
       const s = val == null ? '' : String(val);
       return `"${s.replace(/"/g, '""')}"`;
@@ -206,6 +226,7 @@ export class AuditService {
       const r = row.log;
       const resolvedUserName = r.userName ?? row.liveUserName ?? (r.userId ? `User #${r.userId}` : 'Sistem');
       const entitas = r.entityName ?? r.entityId ?? '';
+      const httpStatus = r.statusCode ? String(r.statusCode) : '200';
       return [
         escape(r.timestamp?.toISOString()),
         escape(resolvedUserName),
@@ -214,6 +235,7 @@ export class AuditService {
         escape(r.module),
         escape(entitas),
         escape(r.description),
+        escape(httpStatus),
         escape(r.ipAddress),
         escape(r.detail),
       ].join(',');

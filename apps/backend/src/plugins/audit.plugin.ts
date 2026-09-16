@@ -3,12 +3,17 @@ import {
   bap,
   dosen,
   kelasKuliah,
+  kompensasiBayar,
   krs,
+  kurikulum,
   mahasiswa,
   mataKuliah,
+  nilaiPraktik,
   pelanggaran,
   presensi,
   programStudi,
+  sesiApel,
+  tagihan,
   users,
 } from '../models/schema';
 import { AuditService } from '../services/audit.service';
@@ -132,6 +137,20 @@ async function resolveEntity(module: string, rawId: string | null): Promise<Enti
       return { ...base, entityName: `${row.nama} (${row.kode})`, parts };
     }
 
+    if (module === 'kelas-kuliah' || module === 'kelaskuliah') {
+      const [row] = await db
+        .select({ namaKelas: kelasKuliah.namaKelas, mkNama: mataKuliah.nama, mkKode: mataKuliah.kode })
+        .from(kelasKuliah)
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(eq(kelasKuliah.id, id));
+      if (!row) return base;
+      const parts: string[] = [];
+      pushMkParts(parts, row.mkNama, row.mkKode);
+      const pKelas = part('Kelas', row.namaKelas);
+      if (pKelas) parts.push(pKelas);
+      return { ...base, entityName: `${row.mkNama} - ${row.namaKelas}`, parts };
+    }
+
     if (module === 'users' || module === 'user') {
       const [row] = await db.select({ nama: users.nama, email: users.email }).from(users).where(eq(users.id, id));
       if (!row) return base;
@@ -221,6 +240,76 @@ async function resolveEntity(module: string, rawId: string | null): Promise<Enti
       pushMhsParts(parts, row.nim, row.nama, row.prodi);
       return { ...base, entityName: `${row.nama} (${row.nim})`, parts };
     }
+
+    if (module === 'tagihan') {
+      const [row] = await db
+        .select({ nim: mahasiswa.nim, nama: mahasiswa.nama, nominal: tagihan.nominal })
+        .from(tagihan)
+        .innerJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))
+        .where(eq(tagihan.id, id));
+      if (!row) return base;
+      const parts: string[] = [];
+      pushMhsParts(parts, row.nim, row.nama);
+      const pNominal = part('Nominal', row.nominal != null ? `Rp ${row.nominal}` : null);
+      if (pNominal) parts.push(pNominal);
+      return { ...base, entityName: `${row.nama} (Rp ${row.nominal})`, parts };
+    }
+
+    if (module === 'kompensasi-bayar') {
+      const [row] = await db
+        .select({ nim: mahasiswa.nim, nama: mahasiswa.nama, menit: kompensasiBayar.jumlahMenit })
+        .from(kompensasiBayar)
+        .innerJoin(mahasiswa, eq(kompensasiBayar.mahasiswaId, mahasiswa.id))
+        .where(eq(kompensasiBayar.id, id));
+      if (!row) return base;
+      const parts: string[] = [];
+      pushMhsParts(parts, row.nim, row.nama);
+      const pMenit = part('Menit Kompensasi', String(row.menit));
+      if (pMenit) parts.push(pMenit);
+      return { ...base, entityName: `${row.nama} (${row.menit} menit)`, parts };
+    }
+
+    if (module === 'sesi-apel') {
+      const [row] = await db
+        .select({ tanggal: sesiApel.tanggal, shift: sesiApel.shift })
+        .from(sesiApel)
+        .where(eq(sesiApel.id, id));
+      if (!row) return base;
+      const parts: string[] = [];
+      const pShift = part('Shift', row.shift);
+      const pTgl = part('Tanggal', row.tanggal ? String(row.tanggal) : null);
+      if (pShift) parts.push(pShift);
+      if (pTgl) parts.push(pTgl);
+      return { ...base, entityName: `Apel Shift ${row.shift} (${row.tanggal})`, parts };
+    }
+
+    if (module === 'kurikulum') {
+      const [row] = await db
+        .select({ nama: kurikulum.nama, kode: kurikulum.kode })
+        .from(kurikulum)
+        .where(eq(kurikulum.id, id));
+      if (!row) return base;
+      const parts: string[] = [];
+      const pNama = part('Kurikulum', row.nama);
+      const pKode = part('Kode', row.kode);
+      if (pNama) parts.push(pNama);
+      if (pKode) parts.push(pKode);
+      return { ...base, entityName: `${row.nama} (${row.kode})`, parts };
+    }
+
+    if (module === 'nilai-praktik') {
+      const [row] = await db
+        .select({ nim: mahasiswa.nim, nama: mahasiswa.nama, nilai: nilaiPraktik.nilaiAngka })
+        .from(nilaiPraktik)
+        .innerJoin(mahasiswa, eq(nilaiPraktik.mahasiswaId, mahasiswa.id))
+        .where(eq(nilaiPraktik.id, id));
+      if (!row) return base;
+      const parts: string[] = [];
+      pushMhsParts(parts, row.nim, row.nama);
+      const pNilai = part('Nilai Angka', String(row.nilai));
+      if (pNilai) parts.push(pNilai);
+      return { ...base, entityName: `${row.nama} (Nilai: ${row.nilai})`, parts };
+    }
   } catch {
     // Ignore lookup errors; fall back to generic info.
   }
@@ -287,6 +376,13 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
     return;
   }
 
+  const statusCode = typeof set?.status === 'number' ? set.status : 200;
+
+  // Ignore 404 Not Found (fake route probes / bot scanners)
+  if (statusCode === 404) {
+    return;
+  }
+
   let actionType = 'UPDATE';
   if (method === 'POST') actionType = path.includes('/auth/login') ? 'LOGIN' : 'CREATE';
   if (method === 'DELETE') actionType = 'DELETE';
@@ -306,8 +402,6 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
       '127.0.0.1';
     const userAgent = request.headers.get('user-agent') || 'Unknown';
 
-    const statusCode = typeof set?.status === 'number' ? set.status : 200;
-
     const cached = entityCache.get(request);
     const tableName = cached?.tableName ?? resolveTableName(module);
     const entityId = cached?.entityId ?? extractRecordId(responseValue);
@@ -318,6 +412,13 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
     const waktu = formatAuditDateTime(new Date(), tz);
 
     const summary = summarizeResponse(responseValue);
+    const errorMessage =
+      summary?.kind === 'error'
+        ? summary.message
+        : responseValue && typeof responseValue === 'object' && 'error' in (responseValue as Record<string, unknown>)
+          ? String((responseValue as Record<string, unknown>).error)
+          : null;
+
     let description = formatDescription({
       waktu,
       userName,
@@ -325,6 +426,9 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
       actionType,
       tableName,
       recordId: entityId,
+      statusCode,
+      errorMessage,
+      module,
     });
     if (summary?.kind === 'bulk') {
       description = `${description} ${formatBulkSentence(summary)}`;
@@ -341,6 +445,8 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
 
     const detail = formatDetail({ module, url: path, parts: detailParts });
 
+    const isSuccess = statusCode < 400;
+
     const inserted = await AuditService.log({
       userId,
       userName,
@@ -354,10 +460,13 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
       entityName,
       description,
       detail,
+      statusCode,
+      isSuccess,
       metadata: {
         method,
         path,
         statusCode,
+        isSuccess,
         ...(summary ? { responseSummary: summary } : {}),
       },
     });

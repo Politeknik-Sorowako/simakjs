@@ -111,6 +111,22 @@ describe('audit-format', () => {
         'Budi keluar (logout)',
       );
     });
+
+    it('formats failure responses (statusCode >= 400)', () => {
+      const result = formatDescription({
+        waktu: '2026-09-10 14:00:00',
+        userName: 'Budi',
+        userRole: 'dosen',
+        actionType: 'CREATE',
+        tableName: 'nilai_praktik',
+        module: 'nilai-praktik',
+        statusCode: 422,
+        errorMessage: 'Nilai di luar rentang 0-100',
+      });
+      expect(result).toBe(
+        '[2026-09-10 14:00:00] Budi (dosen) gagal melakukan tambah data pada Penilaian Praktik: Nilai di luar rentang 0-100 (HTTP 422).',
+      );
+    });
   });
 
   describe('formatDetail', () => {

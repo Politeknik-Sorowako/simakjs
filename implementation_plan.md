@@ -1,86 +1,177 @@
-# Implementation Plan: Penyesuaian PWA untuk Instalasi Aplikasi SIMAK Vokasi
+# Implementation Plan: Penyempurnaan Sistem Audit Log SIMAK Vokasi
 
-Memastikan aplikasi SIMAK Vokasi dapat diinstal sebagai Progressive Web App (PWA) di perangkat pengguna (Desktop Chromium, Android, dan iOS Safari) pada lingkungan development maupun production, sehingga pengguna dapat membuka aplikasi langsung dari homescreen/layar utama alih-alih melalui browser.
-
----
-
-## 1. Analisis Masalah & Kebutuhan
-
-### Akar Masalah Saat Ini:
-1. **Race Condition `beforeinstallprompt`**: Listener dipasang di `onMount()` komponen SolidJS, sementara browser menembakkan event tersebut lebih awal sebelum bundle JS selesai dimuat. Akibatnya prompt tidak pernah muncul.
-2. **Konfigurasi Nginx Production**: Header `Content-Type` pada `nginx.conf` menggunakan `add_header Content-Type application/manifest+json;` yang mengakibatkan duplikasi header MIME type pada `manifest.webmanifest`.
-3. **Ketiadaan Dukungan Khusus iOS Safari**: Safari di iOS tidak mendukung event `beforeinstallprompt`, sehingga pengguna iPhone/iPad memerlukan panduan visual khusus (*Share* $\rightarrow$ *Add to Home Screen*).
-4. **PWA Nonaktif di Mode Development**: `vite-plugin-pwa` tidak mengaktifkan service worker di dev mode secara default tanpa `devOptions.enabled: true`.
-5. **Ketiadaan Opsi Pasang Manual**: Tidak ada tombol "Pasang Aplikasi" di antarmuka utama (Sidebar/Profil) jika pengguna ingin menginstal setelah menutup prompt awal.
+Penyempurnaan menyeluruh pada modul Audit Log SIMAK Vokasi agar menghasilkan jejak audit yang kontekstual, bermakna, akurat secara status, bersih dari noise bot scanner, dilengkapi fitur ekspor fleksibel (filtered vs seluruh data), serta dioptimalkan dari segi arsitektur query database agar efisien dan tidak membebani performa server.
 
 ---
 
-## 2. Target Files to Modify / Create
+## 1. Analisis Kebutuhan & Akar Masalah
 
-| File Path | Aksi | Deskripsi Perubahan |
-| :--- | :--- | :--- |
-| [apps/frontend/index.html](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/index.html) | MODIFY | Tangkap event `beforeinstallprompt` seawal mungkin via script inline di `<head>`, simpan ke `window.deferredPwaPrompt`, dan bersihkan tag manifest redundan. |
-| [apps/frontend/src/pwa.d.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/pwa.d.ts) | MODIFY | Deklarasi tipe TypeScript untuk `BeforeInstallPromptEvent`, `window.deferredPwaPrompt`, dan `navigator.standalone`. |
-| [apps/frontend/vite.config.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/vite.config.ts) | MODIFY | Aktifkan `devOptions: { enabled: true }` dan lengkapi manifest metadata (`id`, `theme_color`, `categories`, `shortcuts`). |
-| [apps/frontend/nginx.conf](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/nginx.conf) | MODIFY | Perbaiki penanganan MIME type `.webmanifest` menggunakan `default_type application/manifest+json;` dan optimasi header `Cache-Control`. |
-| [apps/frontend/src/components/pwa/PwaInstallPrompt.tsx](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/components/pwa/PwaInstallPrompt.tsx) | MODIFY | Refactor komponen: konsumsi event global, deteksi mode *standalone*, sediakan panduan iOS Safari, dan terapkan desain Apple-inspired (@DESIGN.md). |
-| [apps/frontend/src/components/Sidebar.tsx](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/components/Sidebar.tsx) | MODIFY | Tambahkan opsi/tombol "Pasang Aplikasi" di bagian bawah navigasi sidebar (hanya muncul jika belum dalam mode standalone). |
-| [apps/frontend/tests/pwa.spec.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/tests/pwa.spec.ts) | MODIFY | Tambahkan pengujian E2E untuk validasi manifest headers, PWA metadata, dan ketersediaan listener instalasi. |
+### A. Evaluasi Beban Server & Volume Log (1.000 Data dalam 7 Hari)
+1. **Dampak Performa:** 1.000 data dalam 7 hari (~142 baris/hari atau ~6 baris/jam) hanya memakan penyimpanan ~1 MB di PostgreSQL. Secara komputasi dan I/O, volume ini **sangat ringan dan aman**.
+2. **Kualitas Data & Noise:** Angka ini cepat meningkat karena sistem saat ini mencatat request bot scanner fiktif (seperti `POST /rds/execute` $\rightarrow$ 404) dan request gagal (4xx/5xx) seolah-olah sebagai perubahan data sukses ("Sistem melakukan tambah data...").
+3. **Optimasi Query yang Diperlukan:**
+   - Menghilangkan `leftJoin` redundan ke tabel `users` pada eksekusi `count(*)` jika tidak ada filter nama user.
+   - Menambahkan kolom fisik `status_code` dan `is_success` terindeks untuk menggantikan scanning field `metadata (JSONB)` yang lambat saat dataset membesar.
+   - Menerapkan streaming / chunked fetching pada ekspor CSV untuk mencegah lonjakan konsumsi memori (*memory spike*).
 
 ---
 
-## 3. Tahapan Eksekusi (Step-by-Step Implementation)
+## 2. Rincian Fitur yang Dikembangkan
 
-### Tahap 1: Early Event Capture & Manifest Clean-up
-- **Langkah 1.1**: Tambahkan inline script di `<head>` [apps/frontend/index.html](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/index.html) untuk mencegat `beforeinstallprompt`, memanggil `e.preventDefault()`, menyimpan ke `window.deferredPwaPrompt`, dan mentrigger `window.dispatchEvent(new Event('pwa-prompt-ready'))`.
-- **Langkah 1.2**: Hapus deklarasi manual `<link rel="manifest">` dari `index.html` agar tidak terjadi duplikasi dengan injeksi otomatis dari `vite-plugin-pwa`.
-- **Langkah 1.3**: Perbarui [apps/frontend/src/pwa.d.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/pwa.d.ts) dengan tipe `Window.deferredPwaPrompt` dan `Navigator.standalone`.
-
-### Tahap 2: Konfigurasi Build & Server (Vite & Nginx)
-- **Langkah 2.1**: Pada [apps/frontend/vite.config.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/vite.config.ts), tambahkan `devOptions: { enabled: true, type: 'classic' }` agar pengujian Service Worker dapat dilakukan di lingkungan lokal/development.
-- **Langkah 2.2**: Pada [apps/frontend/nginx.conf](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/nginx.conf), ubah konfigurasi `location ~* \.webmanifest$` untuk menggunakan `default_type application/manifest+json;` dan pastikan `location = /sw.js` memiliki header `no-cache` yang tepat.
-
-### Tahap 3: Penyempurnaan Komponen PWA Install Prompt & Standalone Mode
-- **Langkah 3.1**: Refactor [apps/frontend/src/components/pwa/PwaInstallPrompt.tsx](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/components/pwa/PwaInstallPrompt.tsx):
-  - Tambahkan fungsi helper deteksi mode standalone (`window.matchMedia('(display-mode: standalone)').matches` atau `(navigator as SafeAny).standalone === true`). Jika bernilai `true`, jangan tampilkan prompt apapun.
-  - Tangani platform iOS: Jika user agent iOS (iPhone/iPad/iPod) dan bukan standalone, tampilkan modal/banner instruksi instalasi iOS (panduan tekan tombol Share $\rightarrow$ Tambah ke Layar Utama).
-  - Tangani platform Android/Chromium: Gunakan `window.deferredPwaPrompt` dan dengarkan event `pwa-prompt-ready` untuk memicu instalasi saat tombol "Pasang" diklik.
-  - Sediakan mekanisme penyimpanan status "dismiss" di `localStorage` dengan *cooldown* (misal 7 hari) agar tidak mengganggu pengguna.
-  - Sesuaikan tampilan dengan gaya Apple-inspired (@DESIGN.md): rounded pill, typography ladder, backdrop-blur, subtle hairline border.
-
-### Tahap 4: Penambahan Tombol Instalasi Manual di Navigasi
-- **Langkah 4.1**: Pada [apps/frontend/src/components/Sidebar.tsx](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/components/Sidebar.tsx), sediakan tombol "Pasang Aplikasi" di bagian footer navigasi yang memicu fungsi instalasi/panduan PWA jika aplikasi dibuka di browser biasa.
-
-### Tahap 5: Pengujian & Validasi
-- **Langkah 5.1**: Perbarui pengujian pada [apps/frontend/tests/pwa.spec.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/tests/pwa.spec.ts) untuk memverifikasi manifest, meta tag, dan handling event PWA.
-- **Langkah 5.2**: Jalankan linting Biome (`bun run lint`) dan pemeriksaan tipe ketat TypeScript (`bunx tsc --noEmit`).
-- **Langkah 5.3**: Jalankan build production (`bun run --cwd apps/frontend build`) dan preview lokal (`bun run --cwd apps/frontend serve`) untuk memverifikasi Service Worker aktif dan prompt instalasi berfungsi dengan baik.
+1. **Pembersihan Noise & Koreksi Status (Backend Hook):**
+   - Mengabaikan (*early return*) request dengan status HTTP 404 Not Found (endpoint tidak terdaftar/bot probe).
+   - Membedakan aksi `SUKSES` ($< 400$) vs `GAGAL` ($\ge 400$) pada deskripsi dan metadata.
+2. **Format Deskripsi Kontekstual & Human-Readable:**
+   - Menggunakan kamus label modul ramah manusia (`MODULE_DISPLAY_NAMES`) menggantikan nama tabel fisik database.
+   - Memperluas resolusi entitas (`resolveEntity`) untuk modul `tagihan`, `kelas-kuliah`, `kompensasi-bayar`, `sesi-apel`, `kurikulum`, dan `nilai-praktik`.
+3. **Filter Tingkat Lanjut Berdasarkan Status Respons:**
+   - Opsi filter status pada UI dan Backend: `Semua`, `Sukses (2xx)`, `Gagal Validasi / Izin (4xx)`, dan `Error Server (5xx)`.
+4. **Fleksibilitas Ekspor CSV:**
+   - **Download Log Terfilter:** Mengunduh CSV hanya untuk data yang cocok dengan kriteria pencarian/filter aktif.
+   - **Export Seluruh Audit Log:** Mengunduh seluruh arsip audit log (dengan limit pengaman / chunking).
+5. **Optimasi Query & Struktur Database:**
+   - Migrasi idempotent: Penambahan kolom `status_code` (integer), `is_success` (boolean), serta indeks komposit `(is_success, timestamp)` dan `(status_code, timestamp)`.
+   - Optimasi query Drizzle ORM pada `AuditService.getAll` dan `AuditService.exportCsv`.
 
 ---
 
-## 4. Verification Plan
+## 3. User Review Required
+
+> [!IMPORTANT]
+> **Kebijakan Pengabaian HTTP 404 pada Audit Log:**  
+> Request mutasi (`POST/PUT/DELETE`) yang menghasilkan respons `404 Not Found` (seperti bot scanning probe URL fiktif `/rds/execute`, `/.env`, `/wp-login.php`) **tidak akan dicatat ke tabel `audit_logs`**, karena tidak ada entitas akademik atau data yang termodifikasi. Log ini tetap dapat dipantau melalui log web server / Nginx / WAF jika diperlukan untuk analisis keamanan jaringan.
+
+---
+
+## 4. Proposed Changes
+
+### Backend Components
+
+#### [NEW] [0068_add_audit_log_status_columns.sql](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/drizzle/0068_add_audit_log_status_columns.sql)
+- Migrasi SQL idempotent:
+  - `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS status_code INTEGER DEFAULT 200;`
+  - `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_success BOOLEAN DEFAULT TRUE;`
+  - `CREATE INDEX IF NOT EXISTS idx_audit_logs_status_timestamp ON audit_logs (status_code, timestamp);`
+  - `CREATE INDEX IF NOT EXISTS idx_audit_logs_success_timestamp ON audit_logs (is_success, timestamp);`
+
+#### [MODIFY] [apps/backend/src/models/schema.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/models/schema.ts)
+- Tambahkan definisi kolom `statusCode` dan `isSuccess` pada tabel `auditLogs` beserta indeksnya.
+
+#### [MODIFY] [apps/backend/src/plugins/audit.plugin.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/plugins/audit.plugin.ts)
+- Pada `auditBeforeHandle` & `auditAfterResponse`:
+  - Abaikan pencatatan jika `set?.status === 404`.
+  - Simpan `statusCode` dan `isSuccess = statusCode < 400` ke tabel `audit_logs`.
+  - Perluas fungsi `resolveEntity()` untuk:
+    - `tagihan`: Nama Mahasiswa + NIM + Jenis Tagihan.
+    - `kelas-kuliah`: Nama Kelas + Kode/Nama Mata Kuliah.
+    - `kompensasi-bayar`: Nama Mahasiswa + NIM + Total Menit Kompensasi.
+    - `sesi-apel`: Nama Sesi Apel + Tanggal Pelaksanaan.
+    - `kurikulum`: Nama Kurikulum + Tahun Berlaku.
+    - `nilai-praktik`: Nama Mahasiswa + Mata Kuliah/Komponen.
+
+#### [MODIFY] [apps/backend/src/utils/audit-format.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/utils/audit-format.ts)
+- Tambahkan `MODULE_DISPLAY_NAMES` untuk pemetaan modul ke nama bahasa Indonesia.
+- Perbarui `formatDescription`:
+  - Jika `statusCode >= 400`: `"[waktu] [User] gagal melakukan [aksi] pada [Modul]: [Pesan Error] (HTTP [Status])."`
+  - Jika sukses: Format standar deskriptif dengan modul ramah manusia.
+
+#### [MODIFY] [apps/backend/src/services/audit.service.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/services/audit.service.ts)
+- Optimasi `buildFilters`:
+  - Tambahkan filter `statusCategory` (`'all' | 'success' | 'client_error' | 'server_error'`).
+- Optimasi `getAll`:
+  - Hilangkan `leftJoin(users)` pada `count(*)` jika tidak ada filter pencarian `userName` atau keyword `search`.
+- Optimasi `exportCsv`:
+  - Dukung ekspor hasil filter maupun ekspor penuh (*all*).
+  - Gunakan batching saat mengambil baris data untuk mencegah *out-of-memory*.
+
+#### [MODIFY] [apps/backend/src/controllers/audit.controller.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/controllers/audit.controller.ts)
+- Terima parameter query `statusCategory` (`'all' | 'success' | 'client_error' | 'server_error'`) pada endpoint `getAll` dan `exportCsv`.
+
+#### [MODIFY] [apps/backend/src/__tests__/audit-format.test.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/__tests__/audit-format.test.ts)
+- Tambahkan unit test untuk format aksi gagal, label modul ramah manusia, dan kompatibilitas regex format lama.
+
+#### [MODIFY] [apps/backend/src/__tests__/audit-log.test.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/__tests__/audit-log.test.ts)
+- Tambahkan integration test untuk validasi pengabaian status 404 dan filtering status respons.
+
+---
+
+### Frontend Components
+
+#### [MODIFY] [apps/frontend/src/controllers/auditController.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/controllers/auditController.ts)
+- Perbarui interface `AuditLog` dengan kolom `statusCode` dan `isSuccess`.
+- Tambahkan opsi `statusCategory?: 'all' | 'success' | 'client_error' | 'server_error'` pada `AuditLogFilters`.
+- Tambahkan helper `exportAllCsv()` terpisah atau flag `isFullExport` pada `exportCsv()`.
+
+#### [MODIFY] [apps/frontend/src/routes/AuditLog.tsx](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/routes/AuditLog.tsx)
+- Tambahkan tab/pill filter status respons:
+  - `Semua Status`
+  - `Sukses (2xx)`
+  - `Gagal Validasi / Izin (4xx)`
+  - `Error Server (5xx)`
+- Pisahkan aksi ekspor menjadi 2 opsi:
+  - **"Export Hasil Filter (CSV)"** (mengunduh data sesuai filter aktif).
+  - **"Export Seluruh Log (CSV)"** (mengunduh seluruh log dari database).
+- Tampilkan badge status respons pada baris tabel:
+  - Hijau: `SUKSES (200/201)`
+  - Kuning/Oranye: `GAGAL (400/403/422)`
+  - Merah: `ERROR (500)`
+- Tampilkan nama modul yang komunikatif pada dropdown dan tabel.
+- Tampilkan rincian kegagalan/error pada modal Detail Audit Log.
+
+---
+
+## 5. Step-by-Step Implementation
+
+### Tahap 1: Struktur Data & Migrasi Database
+- **Langkah 1.1**: Buat berkas migrasi SQL idempotent `0068_add_audit_log_status_columns.sql` dan update `apps/backend/src/models/schema.ts`.
+- **Langkah 1.2**: Eksekusi migrasi menggunakan `bun run db:safe-migrate`.
+
+### Tahap 2: Backend Plugin & Formatter Refactoring
+- **Langkah 2.1**: Update `apps/backend/src/utils/audit-format.ts` dengan kamus modul ramah manusia dan generator deskripsi kontekstual.
+- **Langkah 2.2**: Update `apps/backend/src/plugins/audit.plugin.ts` untuk mengabaikan 404, menyimpan `statusCode`/`isSuccess`, serta menambahkan resolver entitas (`tagihan`, `kelas-kuliah`, `kompensasi`, `sesi-apel`, `kurikulum`, `nilai-praktik`).
+
+### Tahap 3: Optimasi Query & Endpoint Controller Backend
+- **Langkah 3.1**: Update `apps/backend/src/services/audit.service.ts` untuk optimasi `count(*)`, filtering `statusCategory`, dan ekspor data aman.
+- **Langkah 3.2**: Update `apps/backend/src/controllers/audit.controller.ts` untuk mendukung parameter `statusCategory`.
+
+### Tahap 4: Antarmuka Pengguna (Frontend SolidJS)
+- **Langkah 4.1**: Update `apps/frontend/src/controllers/auditController.ts` dengan tipe data baru dan fungsi ekspor.
+- **Langkah 4.2**: Update `apps/frontend/src/routes/AuditLog.tsx` dengan filter status respons, tombol ekspor ganda (filtered vs all), badge visual Apple-inspired, dan modal detail yang informatif.
+
+### Tahap 5: Pengujian, Linting & Verifikasi
+- **Langkah 5.1**: Jalankan unit test `bun test apps/backend/src/__tests__/audit-format.test.ts`.
+- **Langkah 5.2**: Jalankan linting `bun run lint` dan type check `bunx tsc --noEmit`.
+
+---
+
+## 6. Verification Plan
 
 ### Automated Verification
 ```bash
-# 1. Linting seluruh monorepo
+# 1. Unit Testing Formatter Audit Log
+bun test apps/backend/src/__tests__/audit-format.test.ts
+
+# 2. Monorepo Linting (Biome)
 bun run lint
 
-# 2. Strict Type Check frontend
+# 3. Strict TypeScript Compilation Check
+cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
 cd apps/frontend && bunx tsc --noEmit
-
-# 3. Production Build Validation
-bun run --cwd apps/frontend build
 ```
 
 ### Manual Verification
-1. **Desktop Chrome / Edge**:
-   - Buka aplikasi di `localhost:3001` (dev atau serve).
-   - Pastikan ikon pasang muncul di address bar browser dan banner "Pasang SIMAK Vokasi" muncul di pojok kiri bawah.
-   - Klik "Pasang" dan verifikasi aplikasi terbuka di jendela aplikasi *standalone*.
-2. **Mobile Android (Chrome)**:
-   - Buka aplikasi via HTTPS/localhost.
-   - Verifikasi dialog native instalasi PWA muncul saat tombol "Pasang" diklik.
-3. **Mobile iOS (Safari)**:
-   - Buka aplikasi di Safari.
-   - Verifikasi banner panduan instalasi iOS muncul (menjelaskan langkah Share $\rightarrow$ Tambah ke Layar Utama).
-   - Setelah ditambahkan ke layar utama dan dibuka dari ikon homescreen, verifikasi banner tidak muncul kembali (karena status *standalone* aktif).
+1. **Verifikasi Penolakan Noise 404:**
+   - Jalankan `curl -X POST http://localhost:3000/rds/execute` atau `POST /api/random-probe`.
+   - Pastikan tidak ada data baru yang masuk ke tabel `audit_logs`.
+2. **Verifikasi Pencatatan Aksi Gagal:**
+   - Picu kegagalan validasi (HTTP 422) atau unauthorized (HTTP 401/403).
+   - Verifikasi log mencatat status `GAGAL` beserta pesan error dan tidak menuliskan "berhasil tambah data".
+3. **Verifikasi Filter Status Respons di UI:**
+   - Pilih tab "Gagal Validasi / Izin (4xx)" di halaman Audit Log.
+   - Pastikan hanya transaksi gagal yang muncul.
+4. **Verifikasi Fitur Ekspor CSV:**
+   - Uji tombol "Export Hasil Filter" dan periksa isi CSV sesuai dengan filter aktif.
+   - Uji tombol "Export Seluruh Log" dan periksa seluruh data terunduh dengan lengkap.
+5. **Verifikasi Resolusi Entitas:**
+   - Lakukan operasi CRUD pada modul `tagihan` atau `kelas-kuliah`.
+   - Pastikan kolom Entitas menampilkan nama mahasiswa / nama kelas dengan jelas.

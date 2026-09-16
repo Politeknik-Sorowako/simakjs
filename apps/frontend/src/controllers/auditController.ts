@@ -15,6 +15,8 @@ export interface AuditLog {
   entityName?: string | null;
   description: string;
   detail?: string | null;
+  statusCode?: number | null;
+  isSuccess?: boolean | null;
   metadata?: Record<string, unknown> | null;
 }
 
@@ -38,6 +40,8 @@ export interface AuditLogFilters {
   startDate?: string;
   endDate?: string;
   search?: string;
+  statusCategory?: 'all' | 'success' | 'client_error' | 'server_error' | 'failed';
+  isFull?: boolean;
 }
 
 export const auditController = {
@@ -52,19 +56,29 @@ export const auditController = {
     if (params?.startDate) searchParams.set('startDate', params.startDate);
     if (params?.endDate) searchParams.set('endDate', params.endDate);
     if (params?.search) searchParams.set('search', params.search);
+    if (params?.statusCategory && params.statusCategory !== 'all') {
+      searchParams.set('statusCategory', params.statusCategory);
+    }
     const qs = searchParams.toString();
     return fetchApi<AuditLogResponse>(`/audit-logs${qs ? `?${qs}` : ''}`);
   },
 
-  exportCsv: async (params?: AuditLogFilters): Promise<void> => {
+  exportCsv: async (params?: AuditLogFilters, isFullExport = false): Promise<void> => {
     const searchParams = new URLSearchParams();
-    if (params?.module) searchParams.set('module', params.module);
-    if (params?.actionType) searchParams.set('actionType', params.actionType);
-    if (params?.tableName) searchParams.set('tableName', params.tableName);
-    if (params?.userName) searchParams.set('userName', params.userName);
-    if (params?.startDate) searchParams.set('startDate', params.startDate);
-    if (params?.endDate) searchParams.set('endDate', params.endDate);
-    if (params?.search) searchParams.set('search', params.search);
+    if (isFullExport || params?.isFull) {
+      searchParams.set('full', 'true');
+    } else {
+      if (params?.module) searchParams.set('module', params.module);
+      if (params?.actionType) searchParams.set('actionType', params.actionType);
+      if (params?.tableName) searchParams.set('tableName', params.tableName);
+      if (params?.userName) searchParams.set('userName', params.userName);
+      if (params?.startDate) searchParams.set('startDate', params.startDate);
+      if (params?.endDate) searchParams.set('endDate', params.endDate);
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.statusCategory && params.statusCategory !== 'all') {
+        searchParams.set('statusCategory', params.statusCategory);
+      }
+    }
     const qs = searchParams.toString();
     const res = await fetch(`${API_URL}/audit-logs/export${qs ? `?${qs}` : ''}`, {
       method: 'GET',
@@ -78,7 +92,8 @@ export const auditController = {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    const prefix = isFullExport || params?.isFull ? 'all-audit-logs' : 'filtered-audit-logs';
+    link.download = `${prefix}-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
