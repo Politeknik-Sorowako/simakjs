@@ -4,6 +4,7 @@ export const prodiBody = t.Object({
   kode: t.String({ default: 'TI' }),
   nama: t.String({ default: 'Teknik Informatika' }),
   jenjang: t.String({ default: 'D4' }),
+  status: t.Optional(t.Union([t.Literal('aktif'), t.Literal('tidak_aktif'), t.Literal('persiapan')])),
   idPddikti: t.Optional(t.Union([t.String(), t.Null()])),
   kodeProdiPddikti: t.Optional(t.Union([t.String(), t.Null()])),
   nomorSkIzinOperasional: t.Optional(t.Union([t.String(), t.Null()])),
@@ -21,6 +22,7 @@ export const updateProdiBody = t.Partial(
     kode: t.String(),
     nama: t.String(),
     jenjang: t.String(),
+    status: t.Union([t.Literal('aktif'), t.Literal('tidak_aktif'), t.Literal('persiapan')]),
     idPddikti: t.Union([t.String(), t.Null()]),
     kodeProdiPddikti: t.Union([t.String(), t.Null()]),
     nomorSkIzinOperasional: t.Union([t.String(), t.Null()]),
@@ -35,6 +37,7 @@ export const updateProdiBody = t.Partial(
 );
 
 export const prodiExtraResponseFields = {
+  status: t.Union([t.String(), t.Null()], { default: 'aktif' }),
   kodeProdiPddikti: t.Union([t.String(), t.Null()], { default: null }),
   nomorSkIzinOperasional: t.Union([t.String(), t.Null()], { default: null }),
   tanggalSkIzinOperasional: t.Union([t.String(), t.Null()], { default: null }),
@@ -58,6 +61,7 @@ export const getProdiSchema = {
     search: t.Optional(t.String({ default: '' })),
     sortBy: t.Optional(t.String()),
     sortOrder: t.Optional(t.String()),
+    filterStatus: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({

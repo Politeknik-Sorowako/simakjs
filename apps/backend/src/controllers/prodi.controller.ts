@@ -8,13 +8,14 @@ import { AuthContext, PaginationQuery } from '../utils/types';
 export class ProdiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query }: AuthContext): Promise<any> {
-    const q = query as PaginationQuery & { sortBy?: string; sortOrder?: string };
+    const q = query as PaginationQuery & { sortBy?: string; sortOrder?: string; filterStatus?: string };
     const page = q?.page ? parseInt(String(q.page)) : 1;
     const limit = q?.limit ? parseInt(String(q.limit)) : 10;
     const search = q?.search || '';
     const sortBy = q?.sortBy || 'kode';
     const sortOrder: 'asc' | 'desc' = q?.sortOrder === 'desc' ? 'desc' : 'asc';
-    return await ProdiService.getAll(page, limit, search, sortBy, sortOrder);
+    const filterStatus = q?.filterStatus || undefined;
+    return await ProdiService.getAll(page, limit, search, sortBy, sortOrder, filterStatus);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

@@ -1,11 +1,14 @@
 import { fetchApi } from '../utils/api';
 import { eden, unwrap } from '../utils/eden';
 
+export type ProdiStatus = 'aktif' | 'tidak_aktif' | 'persiapan';
+
 export interface Prodi {
   id: number;
   kode: string;
   nama: string;
   jenjang: string;
+  status?: ProdiStatus;
   idPddikti?: string | null;
   kodeProdiPddikti?: string | null;
   nomorSkIzinOperasional?: string | null;
@@ -36,6 +39,7 @@ export const prodiController = {
     limit?: number,
     sortBy?: string,
     sortOrder?: 'asc' | 'desc',
+    filterStatus?: ProdiStatus,
   ): Promise<PaginatedResponse<Prodi>> {
     const query: Record<string, string> = {};
     if (search) query.search = search;
@@ -43,6 +47,7 @@ export const prodiController = {
     if (limit) query.limit = String(limit);
     if (sortBy) query.sortBy = sortBy;
     if (sortOrder) query.sortOrder = sortOrder;
+    if (filterStatus) query.filterStatus = filterStatus;
     return unwrap<PaginatedResponse<Prodi>>(
       eden.prodi.get({ $query: query }) as unknown as Promise<{
         data?: PaginatedResponse<Prodi>;
@@ -58,7 +63,7 @@ export const prodiController = {
   async create(data: Omit<Prodi, 'id'>): Promise<Prodi> {
     return unwrap<Prodi>(
       eden.prodi.post(
-        data as { kode: string; nama: string; jenjang: string; idPddikti?: string },
+        data as { kode: string; nama: string; jenjang: string; status?: ProdiStatus; idPddikti?: string },
       ) as unknown as Promise<{
         data?: Prodi;
         error?: unknown;
