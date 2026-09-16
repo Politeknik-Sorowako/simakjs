@@ -19,6 +19,8 @@ import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
 import { getTodayString } from '../utils/format';
 
+const SINGLE_ROLE_ONLY = ['super_admin', 'mahasiswa', 'guest', 'calon_mahasiswa'];
+
 const fallbackRoleOptions: { value: string; label: string }[] = [
   { value: 'admin', label: 'Admin' },
   { value: 'kaprodi', label: 'Kaprodi' },
@@ -163,6 +165,28 @@ export default function Pengguna() {
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal memperbarui cakupan prodi', 'error');
     }
+  };
+
+  const isRoleSelectionDisabled = (value: string) => {
+    if (value === 'super_admin') return !auth.hasRole(['super_admin']);
+    const selected = selectedRoles();
+    if (selected.includes(value)) return false;
+    // A single-role option cannot be added alongside other roles.
+    if (selected.some((r) => SINGLE_ROLE_ONLY.includes(r))) return true;
+    if (SINGLE_ROLE_ONLY.includes(value)) return selected.length > 0;
+    return false;
+  };
+
+  const toggleRoleSelection = (value: string) => {
+    const selected = selectedRoles();
+    if (selected.includes(value)) {
+      setSelectedRoles(selected.filter((x) => x !== value));
+      return;
+    }
+    const next = [...selected, value];
+    // Reject combinations that mix single-role with any other role.
+    if (next.length > 1 && next.some((r) => SINGLE_ROLE_ONLY.includes(r))) return;
+    setSelectedRoles(next);
   };
 
   const handleSaveRoles = async () => {
@@ -621,16 +645,11 @@ export default function Pengguna() {
                   <input
                     type="checkbox"
                     checked={selectedRoles().includes(r.value)}
-                    onChange={(e) => {
-                      if (e.currentTarget.checked) {
-                        setSelectedRoles([...selectedRoles(), r.value]);
-                      } else {
-                        setSelectedRoles(selectedRoles().filter((x) => x !== r.value));
-                      }
-                    }}
-                    class="rounded text-brand-600 focus:ring-brand-500 h-4 w-4"
+                    disabled={isRoleSelectionDisabled(r.value)}
+                    onChange={() => toggleRoleSelection(r.value)}
+                    class="rounded text-brand-600 focus:ring-brand-500 h-4 w-4 disabled:opacity-40 disabled:cursor-not-allowed"
                   />
-                  <span>{r.label}</span>
+                  <span class={isRoleSelectionDisabled(r.value) ? 'opacity-50' : ''}>{r.label}</span>
                 </label>
               )}
             </For>

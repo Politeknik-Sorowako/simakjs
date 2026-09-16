@@ -1,177 +1,159 @@
-# Implementation Plan: Penyempurnaan Sistem Audit Log SIMAK Vokasi
+# Implementation Plan: Hak Akses Gabungan untuk User Multi-Role (Union Role)
 
-Penyempurnaan menyeluruh pada modul Audit Log SIMAK Vokasi agar menghasilkan jejak audit yang kontekstual, bermakna, akurat secara status, bersih dari noise bot scanner, dilengkapi fitur ekspor fleksibel (filtered vs seluruh data), serta dioptimalkan dari segi arsitektur query database agar efisien dan tidak membebani performa server.
-
----
-
-## 1. Analisis Kebutuhan & Akar Masalah
-
-### A. Evaluasi Beban Server & Volume Log (1.000 Data dalam 7 Hari)
-1. **Dampak Performa:** 1.000 data dalam 7 hari (~142 baris/hari atau ~6 baris/jam) hanya memakan penyimpanan ~1 MB di PostgreSQL. Secara komputasi dan I/O, volume ini **sangat ringan dan aman**.
-2. **Kualitas Data & Noise:** Angka ini cepat meningkat karena sistem saat ini mencatat request bot scanner fiktif (seperti `POST /rds/execute` $\rightarrow$ 404) dan request gagal (4xx/5xx) seolah-olah sebagai perubahan data sukses ("Sistem melakukan tambah data...").
-3. **Optimasi Query yang Diperlukan:**
-   - Menghilangkan `leftJoin` redundan ke tabel `users` pada eksekusi `count(*)` jika tidak ada filter nama user.
-   - Menambahkan kolom fisik `status_code` dan `is_success` terindeks untuk menggantikan scanning field `metadata (JSONB)` yang lambat saat dataset membesar.
-   - Menerapkan streaming / chunked fetching pada ekspor CSV untuk mencegah lonjakan konsumsi memori (*memory spike*).
+Dokumen perencanaan struktural. **Belum berisi implementasi kode penuh.** Tujuannya memetakan dependensi, file target, urutan eksekusi, dan pengujian.
 
 ---
 
-## 2. Rincian Fitur yang Dikembangkan
+## 1. Latar Belakang & Akar Masalah
 
-1. **Pembersihan Noise & Koreksi Status (Backend Hook):**
-   - Mengabaikan (*early return*) request dengan status HTTP 404 Not Found (endpoint tidak terdaftar/bot probe).
-   - Membedakan aksi `SUKSES` ($< 400$) vs `GAGAL` ($\ge 400$) pada deskripsi dan metadata.
-2. **Format Deskripsi Kontekstual & Human-Readable:**
-   - Menggunakan kamus label modul ramah manusia (`MODULE_DISPLAY_NAMES`) menggantikan nama tabel fisik database.
-   - Memperluas resolusi entitas (`resolveEntity`) untuk modul `tagihan`, `kelas-kuliah`, `kompensasi-bayar`, `sesi-apel`, `kurikulum`, dan `nilai-praktik`.
-3. **Filter Tingkat Lanjut Berdasarkan Status Respons:**
-   - Opsi filter status pada UI dan Backend: `Semua`, `Sukses (2xx)`, `Gagal Validasi / Izin (4xx)`, dan `Error Server (5xx)`.
-4. **Fleksibilitas Ekspor CSV:**
-   - **Download Log Terfilter:** Mengunduh CSV hanya untuk data yang cocok dengan kriteria pencarian/filter aktif.
-   - **Export Seluruh Audit Log:** Mengunduh seluruh arsip audit log (dengan limit pengaman / chunking).
-5. **Optimasi Query & Struktur Database:**
-   - Migrasi idempotent: Penambahan kolom `status_code` (integer), `is_success` (boolean), serta indeks komposit `(is_success, timestamp)` dan `(status_code, timestamp)`.
-   - Optimasi query Drizzle ORM pada `AuditService.getAll` dan `AuditService.exportCsv`.
+Seorang user dapat memegang beberapa role sekaligus (mis. `dosen` + `prodi`, atau `admin` + `dosen`). Saat ini otorisasi di banyak tempat masih memeriksa **role tunggal** (`users.role` / `currentUser.role`), bukan gabungan (`roles[]`). Akibatnya:
+
+- User `dosen` + `prodi` dengan primary role `dosen` **ditolak** saat mengakses endpoint yang mensyaratkan `prodi`.
+- Menu Sidebar dan `ProtectedRoute` hanya menampilkan/mengizinkan menu primary role.
+- Guard scope dosen (`guardMkScope`, `guardKelasScope`, `guardRombelScope`) tetap membatasi user yang seharusnya punya akses penuh via role `prodi`/`admin`.
+
+**Prinsip target:** `hasRole(user, allowed)` = `true` bila **salah satu** role di `user.roles[]` cocok. `users.role` hanya legacy/primary untuk display & fallback, bukan sumber otorisasi.
 
 ---
 
-## 3. User Review Required
+## 2. Kondisi Eksisting (Sudah Multi-Role-Ready)
 
-> [!IMPORTANT]
-> **Kebijakan Pengabaian HTTP 404 pada Audit Log:**  
-> Request mutasi (`POST/PUT/DELETE`) yang menghasilkan respons `404 Not Found` (seperti bot scanning probe URL fiktif `/rds/execute`, `/.env`, `/wp-login.php`) **tidak akan dicatat ke tabel `audit_logs`**, karena tidak ada entitas akademik atau data yang termodifikasi. Log ini tetap dapat dipantau melalui log web server / Nginx / WAF jika diperlukan untuk analisis keamanan jaringan.
+| Komponen | Lokasi | Status |
+| :--- | :--- | :--- |
+| Tabel `user_roles (userId, role)` | `apps/backend/src/models/schema.ts` | Ada |
+| `UserPayload { role, roles[] }` | `apps/backend/src/utils/types.ts` | Ada |
+| `hasRole()`, `validateRoleCombination()`, `SINGLE_ROLE_ONLY`, `MULTI_ROLE_ALLOWED` | `apps/backend/src/utils/role.ts` | Ada |
+| Derive `roles` dari JWT | `apps/backend/src/middlewares/auth.middleware.ts` | Ada |
+| `getRolesForUser()`, login kembalikan `role + roles` | `apps/backend/src/services/auth.service.ts` | Ada |
+| `updateUserRoles` + validasi kombinasi + sinkron `users.role = roles[0]` | `apps/backend/src/controllers/user.controller.ts` | Ada |
+| `hasRole()` union di frontend | `apps/frontend/src/contexts/AuthContext.tsx` | Ada |
+| Modal "Atur Peran" (checkbox multi-role) | `apps/frontend/src/routes/Pengguna.tsx` | Ada |
 
----
-
-## 4. Proposed Changes
-
-### Backend Components
-
-#### [NEW] [0068_add_audit_log_status_columns.sql](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/drizzle/0068_add_audit_log_status_columns.sql)
-- Migrasi SQL idempotent:
-  - `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS status_code INTEGER DEFAULT 200;`
-  - `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_success BOOLEAN DEFAULT TRUE;`
-  - `CREATE INDEX IF NOT EXISTS idx_audit_logs_status_timestamp ON audit_logs (status_code, timestamp);`
-  - `CREATE INDEX IF NOT EXISTS idx_audit_logs_success_timestamp ON audit_logs (is_success, timestamp);`
-
-#### [MODIFY] [apps/backend/src/models/schema.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/models/schema.ts)
-- Tambahkan definisi kolom `statusCode` dan `isSuccess` pada tabel `auditLogs` beserta indeksnya.
-
-#### [MODIFY] [apps/backend/src/plugins/audit.plugin.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/plugins/audit.plugin.ts)
-- Pada `auditBeforeHandle` & `auditAfterResponse`:
-  - Abaikan pencatatan jika `set?.status === 404`.
-  - Simpan `statusCode` dan `isSuccess = statusCode < 400` ke tabel `audit_logs`.
-  - Perluas fungsi `resolveEntity()` untuk:
-    - `tagihan`: Nama Mahasiswa + NIM + Jenis Tagihan.
-    - `kelas-kuliah`: Nama Kelas + Kode/Nama Mata Kuliah.
-    - `kompensasi-bayar`: Nama Mahasiswa + NIM + Total Menit Kompensasi.
-    - `sesi-apel`: Nama Sesi Apel + Tanggal Pelaksanaan.
-    - `kurikulum`: Nama Kurikulum + Tahun Berlaku.
-    - `nilai-praktik`: Nama Mahasiswa + Mata Kuliah/Komponen.
-
-#### [MODIFY] [apps/backend/src/utils/audit-format.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/utils/audit-format.ts)
-- Tambahkan `MODULE_DISPLAY_NAMES` untuk pemetaan modul ke nama bahasa Indonesia.
-- Perbarui `formatDescription`:
-  - Jika `statusCode >= 400`: `"[waktu] [User] gagal melakukan [aksi] pada [Modul]: [Pesan Error] (HTTP [Status])."`
-  - Jika sukses: Format standar deskriptif dengan modul ramah manusia.
-
-#### [MODIFY] [apps/backend/src/services/audit.service.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/services/audit.service.ts)
-- Optimasi `buildFilters`:
-  - Tambahkan filter `statusCategory` (`'all' | 'success' | 'client_error' | 'server_error'`).
-- Optimasi `getAll`:
-  - Hilangkan `leftJoin(users)` pada `count(*)` jika tidak ada filter pencarian `userName` atau keyword `search`.
-- Optimasi `exportCsv`:
-  - Dukung ekspor hasil filter maupun ekspor penuh (*all*).
-  - Gunakan batching saat mengambil baris data untuk mencegah *out-of-memory*.
-
-#### [MODIFY] [apps/backend/src/controllers/audit.controller.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/controllers/audit.controller.ts)
-- Terima parameter query `statusCategory` (`'all' | 'success' | 'client_error' | 'server_error'`) pada endpoint `getAll` dan `exportCsv`.
-
-#### [MODIFY] [apps/backend/src/__tests__/audit-format.test.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/__tests__/audit-format.test.ts)
-- Tambahkan unit test untuk format aksi gagal, label modul ramah manusia, dan kompatibilitas regex format lama.
-
-#### [MODIFY] [apps/backend/src/__tests__/audit-log.test.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/__tests__/audit-log.test.ts)
-- Tambahkan integration test untuk validasi pengabaian status 404 dan filtering status respons.
+**Tidak diperlukan migrasi DB baru.** `user_roles` sudah tersedia.
 
 ---
 
-### Frontend Components
+## 3. Daftar Celah (Gap) yang Harus Ditutup
 
-#### [MODIFY] [apps/frontend/src/controllers/auditController.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/controllers/auditController.ts)
-- Perbarui interface `AuditLog` dengan kolom `statusCode` dan `isSuccess`.
-- Tambahkan opsi `statusCategory?: 'all' | 'success' | 'client_error' | 'server_error'` pada `AuditLogFilters`.
-- Tambahkan helper `exportAllCsv()` terpisah atau flag `isFullExport` pada `exportCsv()`.
-
-#### [MODIFY] [apps/frontend/src/routes/AuditLog.tsx](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/routes/AuditLog.tsx)
-- Tambahkan tab/pill filter status respons:
-  - `Semua Status`
-  - `Sukses (2xx)`
-  - `Gagal Validasi / Izin (4xx)`
-  - `Error Server (5xx)`
-- Pisahkan aksi ekspor menjadi 2 opsi:
-  - **"Export Hasil Filter (CSV)"** (mengunduh data sesuai filter aktif).
-  - **"Export Seluruh Log (CSV)"** (mengunduh seluruh log dari database).
-- Tampilkan badge status respons pada baris tabel:
-  - Hijau: `SUKSES (200/201)`
-  - Kuning/Oranye: `GAGAL (400/403/422)`
-  - Merah: `ERROR (500)`
-- Tampilkan nama modul yang komunikatif pada dropdown dan tabel.
-- Tampilkan rincian kegagalan/error pada modal Detail Audit Log.
+| # | File | Masalah |
+| :--- | :--- | :--- |
+| B1 | `apps/backend/src/utils/types.ts` (`allowed()`) | `roles.includes(user.role)` — hanya cek primary. Dipakai ~30 controller. |
+| B2 | `apps/backend/src/controllers/user.controller.ts` | Cek langsung `currentUser.role !== 'admin'/'super_admin'` di banyak method. |
+| B3 | `apps/backend/src/utils/dosen-scope.ts` (`isPrivilegedScope`) | User `dosen+prodi` dianggap non-privileged sehingga di-scope sebagai dosen. |
+| B4 | `apps/backend/src/controllers/kategori-bimbingan.controller.ts` | `isAuthorized(currentUser.role)` single string. |
+| B5 | `apps/backend/src/services/rbac.service.ts` (`hasRolePermission(role)`) | Hanya menerima satu role; belum ada agregasi union. |
+| B6 | `apps/backend/src/app.ts`, `plugins/audit.plugin.ts`, `routes/admisi-admin.routes.ts`, `routes/e2e.routes.ts` | Membaca `payload.role` / `user.role` langsung. |
+| F1 | `apps/frontend/src/components/ProtectedRoute.tsx` | `auth.user()?.role` + `includes(userRole)` single-role. |
+| F2 | `apps/frontend/src/components/Sidebar.tsx` | `role() === 'admin'` dsb. Menu = primary saja, bukan union. |
+| F3 | `apps/frontend/src/routes/Pengguna.tsx` | Checkbox modal belum cegah kombinasi invalid / uncheck terakhir; label belum 1:1 backend. |
 
 ---
 
-## 5. Step-by-Step Implementation
+## 4. Dependensi & Urutan Implementasi
 
-### Tahap 1: Struktur Data & Migrasi Database
-- **Langkah 1.1**: Buat berkas migrasi SQL idempotent `0068_add_audit_log_status_columns.sql` dan update `apps/backend/src/models/schema.ts`.
-- **Langkah 1.2**: Eksekusi migrasi menggunakan `bun run db:safe-migrate`.
-
-### Tahap 2: Backend Plugin & Formatter Refactoring
-- **Langkah 2.1**: Update `apps/backend/src/utils/audit-format.ts` dengan kamus modul ramah manusia dan generator deskripsi kontekstual.
-- **Langkah 2.2**: Update `apps/backend/src/plugins/audit.plugin.ts` untuk mengabaikan 404, menyimpan `statusCode`/`isSuccess`, serta menambahkan resolver entitas (`tagihan`, `kelas-kuliah`, `kompensasi`, `sesi-apel`, `kurikulum`, `nilai-praktik`).
-
-### Tahap 3: Optimasi Query & Endpoint Controller Backend
-- **Langkah 3.1**: Update `apps/backend/src/services/audit.service.ts` untuk optimasi `count(*)`, filtering `statusCategory`, dan ekspor data aman.
-- **Langkah 3.2**: Update `apps/backend/src/controllers/audit.controller.ts` untuk mendukung parameter `statusCategory`.
-
-### Tahap 4: Antarmuka Pengguna (Frontend SolidJS)
-- **Langkah 4.1**: Update `apps/frontend/src/controllers/auditController.ts` dengan tipe data baru dan fungsi ekspor.
-- **Langkah 4.2**: Update `apps/frontend/src/routes/AuditLog.tsx` dengan filter status respons, tombol ekspor ganda (filtered vs all), badge visual Apple-inspired, dan modal detail yang informatif.
-
-### Tahap 5: Pengujian, Linting & Verifikasi
-- **Langkah 5.1**: Jalankan unit test `bun test apps/backend/src/__tests__/audit-format.test.ts`.
-- **Langkah 5.2**: Jalankan linting `bun run lint` dan type check `bunx tsc --noEmit`.
-
----
-
-## 6. Verification Plan
-
-### Automated Verification
-```bash
-# 1. Unit Testing Formatter Audit Log
-bun test apps/backend/src/__tests__/audit-format.test.ts
-
-# 2. Monorepo Linting (Biome)
-bun run lint
-
-# 3. Strict TypeScript Compilation Check
-cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
-cd apps/frontend && bunx tsc --noEmit
+```
+B1 (allowed union)
+  → B2 (user.controller) + B4 (kategori-bimbingan)
+    → B3 (dosen-scope privileged) + verifikasi prodi-scope
+      → B5 (rbac union)
+        → B6 (audit/route payload role)
+          → F1 (ProtectedRoute) + F2 (Sidebar) + F3 (Pengguna modal)
+            → JWT refresh & sinkronisasi + pengujian
 ```
 
-### Manual Verification
-1. **Verifikasi Penolakan Noise 404:**
-   - Jalankan `curl -X POST http://localhost:3000/rds/execute` atau `POST /api/random-probe`.
-   - Pastikan tidak ada data baru yang masuk ke tabel `audit_logs`.
-2. **Verifikasi Pencatatan Aksi Gagal:**
-   - Picu kegagalan validasi (HTTP 422) atau unauthorized (HTTP 401/403).
-   - Verifikasi log mencatat status `GAGAL` beserta pesan error dan tidak menuliskan "berhasil tambah data".
-3. **Verifikasi Filter Status Respons di UI:**
-   - Pilih tab "Gagal Validasi / Izin (4xx)" di halaman Audit Log.
-   - Pastikan hanya transaksi gagal yang muncul.
-4. **Verifikasi Fitur Ekspor CSV:**
-   - Uji tombol "Export Hasil Filter" dan periksa isi CSV sesuai dengan filter aktif.
-   - Uji tombol "Export Seluruh Log" dan periksa seluruh data terunduh dengan lengkap.
-5. **Verifikasi Resolusi Entitas:**
-   - Lakukan operasi CRUD pada modul `tagihan` atau `kelas-kuliah`.
-   - Pastikan kolom Entitas menampilkan nama mahasiswa / nama kelas dengan jelas.
+Catatan: `users.role` tetap diisi `roles[0]` sebagai legacy. Tidak ada perubahan skema DB.
+
+---
+
+## 5. Rencana Perubahan per Fase
+
+### Fase 0 — Baseline (read-only)
+- Catat status awal: `bun run lint`, `tsc` backend (`tsconfig.ci.json`), `tsc` frontend.
+
+### Fase 1 — Backend: otorisasi inti
+1. `utils/types.ts` — ubah `allowed()` agar mendelegasikan ke logika `hasRole()` (union `roles[]` dengan fallback `[role]`). Pertahankan signature agar pemanggil tidak berubah.
+2. `controllers/user.controller.ts` — ganti semua cek `currentUser.role !== '...'` menjadi `hasRole(currentUser, [...])` pada: `toggleActive`, `updateRole` (legacy), `importCsv`, `resetPassword`, `forcePasswordChange`, `updateProdiScope`, `generateAccounts`, `generateAccountsAsync`. Lengkapi `updateRole.validRoles` yang belum memuat `kaprodi`, `plp`, `instruktur`.
+3. `controllers/kategori-bimbingan.controller.ts` — ubah `isAuthorized(role: string)` menjadi menerima `UserPayload` dan memakai `hasRole`.
+4. `controllers/auth.controller.ts`, `app.ts` (WS handler), `routes/admisi-admin.routes.ts`, `routes/e2e.routes.ts`, `plugins/audit.plugin.ts` — ganti pembacaan `role` langsung dengan helper union; audit tetap menyimpan primary role + `roles[]` untuk observabilitas.
+
+### Fase 2 — Backend: scope dosen vs prodi/admin
+5. `utils/dosen-scope.ts` — perbaiki `isPrivilegedScope()`: kembalikan `true` jika user memiliki role privileged apa pun (`super_admin`, `admin`, `kaprodi`, `prodi`, `keuangan`). Dengan demikian user `dosen+prodi` lolos guard (full access), sedangkan `dosen`/`instruktur`/`plp` murni tetap di-scope.
+6. `utils/role.ts` — verifikasi `canAccessAllProdi()` tetap `isGlobalScope || hasRole(['super_admin','admin'])`. **Jangan longgarkan tanpa persetujuan** (risiko pelebaran akses).
+7. `services/prodi-scope.service.ts`, `services/pelanggaran.service.ts` — verifikasi pola dual-check (`user_roles` + fallback `users.role`) tetap konsisten.
+
+### Fase 3 — Backend: RBAC granular union
+8. `services/rbac.service.ts` — tambah helper union, mis. `hasRolePermissionForUser(roles: string[], module, action)` dan `getUserEffectivePermissions(roles[])`. Konfirmasi mapping `prodi → Kaprodi` di `ROLE_TO_GROUP` (pertahankan default).
+
+### Fase 4 — Frontend: union akses
+9. `components/ProtectedRoute.tsx` — ganti `user.role` menjadi `auth.hasRole(allowedRoles)`; pertahankan bypass `super_admin`; lengkapi tipe role yang hilang (`kaprodi`, `plp`).
+10. `components/Sidebar.tsx` — ganti semua `role() === 'x'` menjadi `auth.hasRole(['x'])`; contoh `isAdminMgmt = () => auth.hasRole(['admin','super_admin'])`. Menu otomatis menjadi union.
+11. `contexts/AuthContext.tsx` — tidak ada perubahan logika wajib; opsional normalisasi `roles` saat `login()` (dedupe + fallback `[role]`).
+12. `routes/Pengguna.tsx` — hardening modal "Atur Peran" tanpa mengubah desain:
+    - Cegah kombinasi invalid (`SINGLE_ROLE_ONLY` tidak boleh digabung).
+    - Cegah menghapus role terakhir (`selectedRoles.length === 0`).
+    - Sembunyikan/disable `super_admin` kecuali aktor `super_admin`.
+    - Samakan label dengan `ROLE_LABELS` backend atau pakai `roleTypes()` dari API.
+    - Jika admin mengubah peran dirinya sendiri, paksa refresh sesi (`logout` / refetch `/auth/me`).
+
+### Fase 5 — JWT & sinkronisasi sesi
+13. Pastikan login/register/`validateUser` selalu mengisi `roles[]` via `getRolesForUser()`.
+14. `sso.service.ts`, `admisi.service.ts` — pastikan respons auth menyertakan `roles` secara konsisten.
+15. Setelah `updateUserRoles` pada diri sendiri, frontend wajib memperbarui `localStorage` / re-login agar JWT lama tidak dipakai.
+
+---
+
+## 6. File Target
+
+**Backend:** `utils/types.ts`, `utils/role.ts`, `utils/dosen-scope.ts`, `controllers/user.controller.ts`, `controllers/kategori-bimbingan.controller.ts`, `controllers/auth.controller.ts`, `services/rbac.service.ts`, `services/auth.service.ts`, `middlewares/auth.middleware.ts` (verifikasi), `plugins/audit.plugin.ts`, `app.ts`, `routes/admisi-admin.routes.ts`, `routes/e2e.routes.ts`.
+
+**Frontend:** `components/ProtectedRoute.tsx`, `components/Sidebar.tsx`, `contexts/AuthContext.tsx`, `routes/Pengguna.tsx`, `controllers/userController.ts` (verifikasi typing).
+
+---
+
+## 7. Rencana Pengujian
+
+### Unit / Integration (targeted, hindari `bun test` blanket di root)
+- `apps/backend/src/tests/rbac-multirole.test.ts` (baru):
+  - `allowed()` union & fallback `[role]`.
+  - `hasRole()` multi-role.
+  - `validateRoleCombination`: tolak `mahasiswa+dosen`, izinkan `dosen+prodi`, tolak `super_admin` via API.
+- `apps/backend/src/__tests__/user-roles.test.ts` (perluas/buat):
+  - `updateUserRoles` sukses `['dosen','prodi']`.
+  - Gagal `['mahasiswa','dosen']`.
+  - Non-super_admin gagal memberikan `super_admin`.
+  - `users.role` tersinkron `roles[0]`.
+- `dosen-scope.test.ts` (baru):
+  - `dosen` murni dibatasi.
+  - `dosen+prodi` lolos `guardMkScope`/`guardKelasScope`.
+
+### Manual (Frontend)
+- Login sebagai `dosen + prodi` → Sidebar menampilkan menu Dosen **dan** Admin Prodi.
+- Buka route keduanya → `ProtectedRoute` tidak memantulkan ke Dashboard.
+- Modal "Atur Peran": kombinasi invalid ter-disable, simpan sukses menampilkan badge role gabungan.
+
+### Perintah verifikasi
+```bash
+bun run lint
+cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
+cd apps/frontend && bunx tsc --noEmit
+bun test apps/backend/src/tests/rbac-multirole.test.ts
+```
+
+---
+
+## 8. Risiko & Keputusan yang Butuh Konfirmasi
+
+1. Mapping `prodi → Kaprodi` di `RbacService.ROLE_TO_GROUP` — pertahankan atau pisah? (default: pertahankan).
+2. `canAccessAllProdi` hanya `super_admin`/`admin`; user `prodi` murni tetap di-scope `userProdiScopes`. Jangan longgarkan tanpa persetujuan.
+3. Legacy `updateRole` (single) vs `updateUserRoles` (multi) — pertahankan keduanya; arahkan UI hanya ke multi.
+4. Tidak ada migrasi DB. Backup tetap wajib sebelum deploy staging/produksi. PR staging-first ke `development`, promosi via `development → main`.
+
+---
+
+## 9. Kriteria Selesai (Definition of Done)
+
+- User `dosen + prodi` lolos `allowed(user, ['prodi'])` **dan** `allowed(user, ['dosen'])`.
+- Sidebar + `ProtectedRoute` menampilkan/mengizinkan **union** menu.
+- `guardMkScope`/`guardKelasScope`/`guardRombelScope` lolos untuk pemegang `prodi`/`admin` walau juga `dosen`.
+- Kombinasi role invalid ditolak backend **dan** dicegah di UI modal.
+- `bun run lint`, kedua `tsc`, dan test scoped hijau.

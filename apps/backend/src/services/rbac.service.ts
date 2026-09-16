@@ -196,11 +196,39 @@ export class RbacService {
     });
   }
 
-  static async hasRolePermission(role: string, module: string, action: string): Promise<boolean> {
+  /** Synchronous single-role permission check against the role-group profile. */
+  private static isActionAllowedForRole(role: string, action: string): boolean {
     if (role === 'super_admin' || role === 'admin') return true;
     const group = ROLE_TO_GROUP[role];
     const profile = group ? ROLE_GROUP_PROFILE[group] : undefined;
-    if (profile && profile.includes(action)) return true;
-    return false;
+    return Boolean(profile && profile.includes(action));
+  }
+
+  static async hasRolePermission(role: string, module: string, action: string): Promise<boolean> {
+    return RbacService.isActionAllowedForRole(role, action);
+  }
+
+  /**
+   * Multi-role-aware permission check: grants access when ANY of the user's
+   * roles has the requested permission (union semantics).
+   */
+  static hasRolePermissionForUser(roles: string[], module: string, action: string): boolean {
+    return roles.some((role) => RbacService.isActionAllowedForRole(role, action));
+  }
+
+  /** Aggregates the effective actions per module across all of a user's roles. */
+  static getUserEffectivePermissions(roles: string[]): Record<string, string[]> {
+    const result: Record<string, string[]> = {};
+    const actions = ['view', 'create', 'update', 'delete', 'export', 'approve'];
+    for (const module of DEFAULT_MODULES) {
+      for (const role of roles) {
+        for (const action of actions) {
+          if (!RbacService.isActionAllowedForRole(role, action)) continue;
+          result[module] = result[module] || [];
+          if (!result[module].includes(action)) result[module].push(action);
+        }
+      }
+    }
+    return result;
   }
 }

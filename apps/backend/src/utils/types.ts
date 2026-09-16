@@ -25,8 +25,16 @@ export interface UserPayload {
   isGlobalScope?: boolean;
 }
 
+/**
+ * Returns true when the user holds at least one of the allowed roles.
+ * Multi-role users are evaluated against the union (`roles[]`), falling back
+ * to the legacy primary `role` when `roles` is absent or empty.
+ */
 export function allowed(user: UserPayload | null | undefined, roles: UserRole[]): boolean {
   if (!user) return false;
+  if (Array.isArray(user.roles) && user.roles.length > 0) {
+    return user.roles.some((r) => roles.includes(r));
+  }
   return roles.includes(user.role);
 }
 

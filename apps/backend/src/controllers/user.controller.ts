@@ -146,7 +146,7 @@ export class UserController {
   static async toggleActive({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+      if (!currentUser || !hasRole(currentUser, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -195,7 +195,7 @@ export class UserController {
   static async updateRole({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+      if (!currentUser || !hasRole(currentUser, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -211,10 +211,13 @@ export class UserController {
       const validRoles = [
         'super_admin',
         'admin',
+        'kaprodi',
         'dosen',
-        'mahasiswa',
         'prodi',
         'keuangan',
+        'plp',
+        'instruktur',
+        'mahasiswa',
         'guest',
         'calon_mahasiswa',
       ];
@@ -223,7 +226,7 @@ export class UserController {
         return { error: 'Peran tidak valid' };
       }
 
-      if (newRole === 'super_admin' && currentUser.role !== 'super_admin') {
+      if (newRole === 'super_admin' && !hasRole(currentUser, ['super_admin'])) {
         set.status = 403;
         return { error: 'Hanya Super Admin yang dapat menetapkan peran Super Admin.' };
       }
@@ -451,7 +454,7 @@ export class UserController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -472,7 +475,7 @@ export class UserController {
   static async resetPassword({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || currentUser.role !== 'admin') {
+      if (!currentUser || !hasRole(currentUser, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -505,7 +508,7 @@ export class UserController {
   static async forcePasswordChange({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || currentUser.role !== 'admin') {
+      if (!currentUser || !hasRole(currentUser, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -547,7 +550,7 @@ export class UserController {
   static async updateProdiScope({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'super_admin')) {
+      if (!currentUser || !hasRole(currentUser, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -589,7 +592,7 @@ export class UserController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generateAccounts({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -611,7 +614,7 @@ export class UserController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generateAccountsAsync({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

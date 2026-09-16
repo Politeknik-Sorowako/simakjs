@@ -7,7 +7,6 @@ import { eden } from '../utils/eden';
 
 export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed?: boolean; onExpand?: () => void }) {
   const auth = useAuth();
-  const role = () => auth.user()?.role;
   const location = useLocation();
   const path = () => location.pathname;
 
@@ -122,16 +121,16 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
     }
   });
 
-  const isAdmin = () => role() === 'admin';
-  const isDosen = () => role() === 'dosen';
-  const isMahasiswa = () => role() === 'mahasiswa';
-  const isProdi = () => role() === 'prodi';
-  const isKeuangan = () => role() === 'keuangan';
-  const isInstruktur = () => role() === 'instruktur';
-  const isCalonMhs = () => role() === 'calon_mahasiswa';
-  const isSuperAdmin = () => role() === 'super_admin';
-  const isAdminMgmt = () => role() === 'admin' || role() === 'super_admin';
-  const notGuest = () => role() !== 'guest';
+  const isAdmin = () => auth.hasRole(['admin']);
+  const isDosen = () => auth.hasRole(['dosen']);
+  const isMahasiswa = () => auth.hasRole(['mahasiswa']);
+  const isProdi = () => auth.hasRole(['prodi']);
+  const isKeuangan = () => auth.hasRole(['keuangan']);
+  const isInstruktur = () => auth.hasRole(['instruktur']);
+  const isCalonMhs = () => auth.hasRole(['calon_mahasiswa']);
+  const isSuperAdmin = () => auth.hasRole(['super_admin']);
+  const isAdminMgmt = () => auth.hasRole(['admin', 'super_admin']);
+  const notGuest = () => !auth.hasRole(['guest']);
   const isMahasiswaOrMore = () => !isCalonMhs() && notGuest();
 
   return (
@@ -1361,7 +1360,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     Detail Kompensasi
                   </A>
                 </Show>
-                <Show when={role() !== 'mahasiswa' && role() !== 'guest'}>
+                <Show when={!auth.hasRole(['mahasiswa', 'guest'])}>
                   <A
                     href="/manajemen-cuti"
                     onClick={() => props.onClose()}

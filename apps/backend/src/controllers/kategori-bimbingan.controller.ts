@@ -1,9 +1,10 @@
 import { KategoriBimbinganService } from '../services/kategori-bimbingan.service';
-import { AuthContext } from '../utils/types';
+import { hasRole } from '../utils/role';
+import { AuthContext, UserPayload } from '../utils/types';
 
 export class KategoriBimbinganController {
-  private static isAuthorized(role?: string): boolean {
-    return ['admin', 'super_admin', 'prodi'].includes(role || '');
+  private static isAuthorized(user: UserPayload | null | undefined): boolean {
+    return hasRole(user, ['admin', 'super_admin', 'prodi']);
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -23,7 +24,7 @@ export class KategoriBimbinganController {
     const { body, set, getCurrentUser } = ctx;
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser.role)) {
+      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser)) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda tidak memiliki izin mengelola kategori bimbingan' };
       }
@@ -40,7 +41,7 @@ export class KategoriBimbinganController {
     const { params, body, set, getCurrentUser } = ctx;
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser.role)) {
+      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser)) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda tidak memiliki izin mengelola kategori bimbingan' };
       }
@@ -60,7 +61,7 @@ export class KategoriBimbinganController {
     const { params, set, getCurrentUser } = ctx;
     try {
       const currentUser = await getCurrentUser();
-      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser.role)) {
+      if (!currentUser || !KategoriBimbinganController.isAuthorized(currentUser)) {
         set.status = 403;
         return { error: 'Akses ditolak. Anda tidak memiliki izin mengelola kategori bimbingan' };
       }
