@@ -86,6 +86,7 @@ export const programStudi = pgTable('program_studi', {
   kode: varchar('kode', { length: 50 }).notNull().unique(),
   nama: varchar('nama', { length: 255 }).notNull(),
   jenjang: varchar('jenjang', { length: 10 }).notNull(), // D3, D4, dll.
+  status: varchar('status', { length: 20 }).notNull().default('aktif'), // 'aktif', 'tidak_aktif', 'persiapan'
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
   kodeProdiPddikti: varchar('kode_prodi_pddikti', { length: 50 }),
   nomorSkIzinOperasional: varchar('nomor_sk_izin_operasional', { length: 100 }),

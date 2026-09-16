@@ -1022,6 +1022,8 @@ export class PresensiService {
       .select({
         id: kelasKuliah.id,
         namaKelas: kelasKuliah.namaKelas,
+        kodeMk: mataKuliah.kode,
+        namaMk: mataKuliah.nama,
         namaMataKuliah: mataKuliah.nama,
       })
       .from(kelasKuliah)
@@ -1037,6 +1039,9 @@ export class PresensiService {
       if (bapIds.length === 0) {
         hasil.push({
           kelasKuliahId: k.id,
+          namaKelas: k.namaKelas,
+          kodeMk: k.kodeMk,
+          namaMk: k.namaMk,
           namaMataKuliah: k.namaMataKuliah || k.namaKelas,
           totalPertemuan: 0,
           hadir: 0,
@@ -1063,6 +1068,9 @@ export class PresensiService {
       const pt = bapIds.length;
       hasil.push({
         kelasKuliahId: k.id,
+        namaKelas: k.namaKelas,
+        kodeMk: k.kodeMk,
+        namaMk: k.namaMk,
         namaMataKuliah: k.namaMataKuliah || k.namaKelas,
         totalPertemuan: pt,
         hadir: Number(p?.hadir || 0),
