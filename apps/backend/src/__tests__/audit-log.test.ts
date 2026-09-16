@@ -125,17 +125,116 @@ describe('Audit Log & Backup System', () => {
       expect(byDetail.data.length).toBe(1);
     });
 
-    it('should export CSV with the required 9-column header', async () => {
+    it('should search audit logs by ipAddress, userName, or entityId', async () => {
+      await AuditService.log({
+        actionType: 'READ',
+        module: 'system',
+        ipAddress: '85.239.151.78',
+        userName: 'AttackerBot',
+        entityId: 'ATTACK_99',
+        description: 'Suspicious request',
+      });
+
+      const byIp = await AuditService.getAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        '85.239.151.78',
+      );
+      expect(byIp.data.length).toBe(1);
+      expect(byIp.data[0].ipAddress).toBe('85.239.151.78');
+
+      const byUser = await AuditService.getAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'AttackerBot',
+      );
+      expect(byUser.data.length).toBe(1);
+
+      const byEntity = await AuditService.getAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'ATTACK_99',
+      );
+      expect(byEntity.data.length).toBe(1);
+    });
+
+    it('should export CSV with the required 10-column header including Status HTTP', async () => {
       await AuditService.log({
         actionType: 'DELETE',
         module: 'krs',
         tableName: 'krs',
         description: 'Menghapus krs',
+        statusCode: 200,
       });
 
       const csv = await AuditService.exportCsv();
       const header = csv.split('\r\n')[0];
-      expect(header).toBe('Waktu,User,Role,Aksi,Module,Entitas,Deskripsi,IP,Detail');
+      expect(header).toBe('Waktu,User,Role,Aksi,Module,Entitas,Deskripsi,Status HTTP,IP,Detail');
+    });
+
+    it('should filter audit logs by statusCategory (success vs failed)', async () => {
+      await AuditService.log({
+        actionType: 'CREATE',
+        module: 'mahasiswa',
+        description: 'Berhasil membuat mahasiswa',
+        statusCode: 200,
+        isSuccess: true,
+      });
+
+      await AuditService.log({
+        actionType: 'CREATE',
+        module: 'mahasiswa',
+        description: 'Gagal membuat mahasiswa (422)',
+        statusCode: 422,
+        isSuccess: false,
+      });
+
+      const successLogs = await AuditService.getAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'success',
+      );
+      expect(successLogs.data.length).toBe(1);
+      expect(successLogs.data[0].statusCode).toBe(200);
+
+      const failedLogs = await AuditService.getAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'failed',
+      );
+      expect(failedLogs.data.length).toBe(1);
+      expect(failedLogs.data[0].statusCode).toBe(422);
     });
   });
 

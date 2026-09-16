@@ -477,6 +477,14 @@
       "when": 1786600000018,
       "tag": "0067_add_program_studi_status",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1786600000019,
+      "tag": "0068_add_audit_log_status_columns",
+      "breakpoints": true
     }
   ]
 }
+
