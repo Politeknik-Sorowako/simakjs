@@ -2436,6 +2436,8 @@ export const auditLogs = pgTable(
     description: text('description').notNull(),
     detail: text('detail'),
     metadata: jsonb('metadata'),
+    statusCode: integer('status_code').default(200),
+    isSuccess: boolean('is_success').default(true),
   },
   (table) => ({
     timestampIdx: index('idx_audit_logs_timestamp').on(table.timestamp),
@@ -2443,6 +2445,8 @@ export const auditLogs = pgTable(
     actionModuleIdx: index('idx_audit_logs_action_module').on(table.actionType, table.module),
     tableNameIdx: index('idx_audit_logs_table_name').on(table.tableName),
     userTimestampIdx: index('idx_audit_logs_user_timestamp').on(table.userId, table.timestamp),
+    statusTimestampIdx: index('idx_audit_logs_status_timestamp').on(table.statusCode, table.timestamp),
+    successTimestampIdx: index('idx_audit_logs_success_timestamp').on(table.isSuccess, table.timestamp),
   }),
 );
 

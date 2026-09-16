@@ -29,6 +29,7 @@ export class AuditController {
       const search = (q.search as string) || undefined;
       const tableName = (q.tableName as string) || undefined;
       const userName = (q.userName as string) || undefined;
+      const statusCategory = (q.statusCategory as string) || (q.status as string) || undefined;
 
       const result = await AuditService.getAll(
         page,
@@ -41,6 +42,7 @@ export class AuditController {
         search,
         tableName,
         userName,
+        statusCategory,
       );
 
       return result;
@@ -83,16 +85,19 @@ export class AuditController {
       }
 
       const q = (query || {}) as Record<string, unknown>;
-      const module = (q.module as string) || undefined;
-      const actionType = (q.actionType as string) || undefined;
-      const userId = q.userId ? parseInt(q.userId as string, 10) : undefined;
-      const startDate = (q.startDate as string) || undefined;
-      const endDate = (q.endDate as string) || undefined;
-      const search = (q.search as string) || undefined;
-      const tableName = (q.tableName as string) || undefined;
-      const userName = (q.userName as string) || undefined;
-      const rawLimit = parseInt((q.limit as string) || '10000', 10);
-      const limit = Number.isNaN(rawLimit) ? 10000 : Math.min(Math.max(rawLimit, 1), 20000);
+      const isFull = q.full === 'true' || q.isFull === 'true';
+      const module = isFull ? undefined : (q.module as string) || undefined;
+      const actionType = isFull ? undefined : (q.actionType as string) || undefined;
+      const userId = isFull ? undefined : q.userId ? parseInt(q.userId as string, 10) : undefined;
+      const startDate = isFull ? undefined : (q.startDate as string) || undefined;
+      const endDate = isFull ? undefined : (q.endDate as string) || undefined;
+      const search = isFull ? undefined : (q.search as string) || undefined;
+      const tableName = isFull ? undefined : (q.tableName as string) || undefined;
+      const userName = isFull ? undefined : (q.userName as string) || undefined;
+      const statusCategory = isFull ? undefined : (q.statusCategory as string) || (q.status as string) || undefined;
+
+      const rawLimit = parseInt((q.limit as string) || (isFull ? '50000' : '10000'), 10);
+      const limit = Number.isNaN(rawLimit) ? 10000 : Math.min(Math.max(rawLimit, 1), 50000);
 
       const csv = await AuditService.exportCsv(
         module,
@@ -104,10 +109,12 @@ export class AuditController {
         limit,
         tableName,
         userName,
+        statusCategory,
       );
       set.headers['Content-Type'] = 'text/csv; charset=utf-8';
+      const prefix = isFull ? 'all-audit-logs' : 'audit-logs';
       set.headers['Content-Disposition'] =
-        `attachment; filename="audit-logs-${await getNowDateString(await SystemParameterService.getTimezone())}.csv"`;
+        `attachment; filename="${prefix}-${await getNowDateString(await SystemParameterService.getTimezone())}.csv"`;
       return csv;
     } catch (error: unknown) {
       set.status = 500;

@@ -75,6 +75,69 @@ export function resolveTableName(module: string): string {
   return module.replace(/-/g, '_');
 }
 
+export const MODULE_DISPLAY_NAMES: Record<string, string> = {
+  mahasiswa: 'Mahasiswa',
+  'mahasiswa-keluar': 'Mahasiswa Keluar',
+  dosen: 'Dosen',
+  'mata-kuliah': 'Mata Kuliah',
+  'kelas-kuliah': 'Kelas Perkuliahan',
+  'dosen-pengajar': 'Plotting Dosen Pengajar',
+  krs: 'Kartu Rencana Studi (KRS)',
+  presensi: 'Presensi Perkuliahan',
+  bap: 'Berita Acara Perkuliahan (BAP)',
+  'bap-praktikum': 'BAP Praktikum',
+  'presensi-praktikum': 'Presensi Praktikum',
+  'rombel-praktikum': 'Rombel Praktikum',
+  'kompensasi-bayar': 'Pembayaran Kompensasi',
+  'kompensasi-manual': 'Kompensasi Manual',
+  pelanggaran: 'Kedisiplinan & Pelanggaran',
+  'pasal-pelanggaran': 'Pasal Pelanggaran',
+  'kelompok-apel': 'Kelompok Apel',
+  'sesi-apel': 'Sesi Apel Kedisiplinan',
+  'presensi-apel': 'Presensi Apel',
+  bimbingan: 'Bimbingan Akademik',
+  'kategori-bimbingan': 'Kategori Bimbingan',
+  'nilai-praktik': 'Penilaian Praktik',
+  'komponen-nilai': 'Komponen Nilai',
+  tagihan: 'Tagihan Keuangan/SPP',
+  'transaksi-pembayaran': 'Transaksi Pembayaran',
+  'pengajuan-cuti': 'Pengajuan Cuti',
+  'pengajuan-yudisium': 'Pengajuan Yudisium',
+  kurikulum: 'Kurikulum OBE',
+  'kurikulum-mata-kuliah': 'Kurikulum Mata Kuliah',
+  'angkatan-kurikulum': 'Angkatan Kurikulum',
+  rps: 'Rencana Pembelajaran Semester (RPS)',
+  'rps-topik': 'Topik RPS',
+  'rencana-evaluasi': 'Rencana Evaluasi',
+  cpmk: 'CPMK',
+  'sub-cpmk': 'Sub-CPMK',
+  cpl: 'CPL',
+  'profil-lulusan': 'Profil Lulusan',
+  'bahan-kajian': 'Bahan Kajian',
+  'visi-misi': 'Visi Misi Prodi',
+  'visi-misi-prodi': 'Visi Misi Prodi',
+  'program-studi': 'Program Studi',
+  'periode-akademik': 'Periode Akademik',
+  users: 'Pengguna Sistem',
+  user: 'Pengguna Sistem',
+  'user-roles': 'Peran Pengguna',
+  'role-permissions': 'Izin Peran',
+  'audit-logs': 'Audit Log',
+  notifications: 'Notifikasi',
+  feedback: 'Feedback Sistem',
+  'evaluasi-kurikulum': 'Evaluasi Kurikulum',
+  'evaluasi-sistem': 'Evaluasi Sistem',
+  'system-parameters': 'Pengaturan Sistem',
+  settings: 'Pengaturan Sistem',
+  pddikti: 'Integrasi PDDIKTI',
+  admisi: 'Pendaftaran Admisi',
+};
+
+export function getModuleDisplayName(module: string): string {
+  if (!module) return 'Sistem';
+  return MODULE_DISPLAY_NAMES[module] || module;
+}
+
 const ACTION_VERB: Record<string, string> = {
   CREATE: 'tambah',
   UPDATE: 'update',
@@ -89,17 +152,28 @@ export interface DescriptionInput {
   actionType: string;
   tableName: string;
   recordId?: string | null;
+  statusCode?: number | null;
+  errorMessage?: string | null;
+  module?: string | null;
 }
 
 /**
  * Builds the required description format:
  * `[waktu:datetime] [user] melakukan [tambah/update/delete] data pada tabel [nama_table] record id [record_id].`
  *
- * For non-mutation actions (LOGIN/LOGOUT) a human-readable fallback is returned.
+ * For failed requests (statusCode >= 400) or non-mutation actions (LOGIN/LOGOUT) a clear human-readable description is returned.
  */
 export function formatDescription(input: DescriptionInput): string {
   const user = formatAuditUser(input.userName, input.userRole);
   const verb = ACTION_VERB[input.actionType];
+  const statusCode = input.statusCode ?? 200;
+
+  if (statusCode >= 400) {
+    const actionLabel = verb || input.actionType.toLowerCase();
+    const moduleName = input.module ? getModuleDisplayName(input.module) : input.tableName;
+    const errText = input.errorMessage ? `: ${input.errorMessage}` : '';
+    return `[${input.waktu}] ${user} gagal melakukan ${actionLabel} data pada ${moduleName}${errText} (HTTP ${statusCode}).`;
+  }
 
   if (!verb) {
     if (input.actionType === 'LOGIN') return `${user} masuk (login)`;
