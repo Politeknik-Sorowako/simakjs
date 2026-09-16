@@ -95,4 +95,50 @@ test.describe('Kompensasi Manual — Pencarian Fokus', () => {
     // Tabel tetap ada (refetch parsial, bukan unmount penuh)
     await expect(page.locator('table')).toBeVisible();
   });
+
+  test('pencarian mahasiswa di dalam modal Tambah Kompensasi tidak me-refresh halaman', async ({ page }) => {
+    // Login sebagai admin
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@simak.id');
+    await page.fill('input[type="password"]', 'password123');
+    await page.click('button[type="submit"]');
+    await expect(page).toHaveURL(/\/dashboard/);
+
+    await page.goto('/kompensasi-manual');
+
+    // Buka modal Tambah Kompensasi
+    await page.getByRole('button', { name: /Tambah Kompensasi/ }).click();
+    const dialog = page.getByRole('dialog', { name: 'Tambah Kompensasi Manual' });
+    await expect(dialog).toBeVisible();
+
+    // Catat URL sebelum mengetik untuk memastikan tidak ada navigasi/refresh penuh
+    const urlBefore = page.url();
+
+    // Buka dropdown SearchableSelect mahasiswa dan ketik pencarian
+    const combo = dialog.getByRole('combobox');
+    await combo.click();
+    const mhsSearch = dialog.getByPlaceholder('Ketik untuk mencari...');
+    await expect(mhsSearch).toBeFocused();
+    await mhsSearch.type('0102');
+
+    // Modal harus tetap terbuka (tidak ter-unmount / tidak refresh)
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Tambah Kompensasi Manual')).toBeVisible();
+
+    // Tidak boleh muncul full-screen RouteLoadingFallback
+    const fullScreenLoader = page.locator('.min-h-screen', { hasText: 'Memuat Halaman' });
+    await expect(fullScreenLoader).toHaveCount(0);
+
+    // URL tidak berubah (tidak ada refresh/navigasi penuh)
+    expect(page.url()).toBe(urlBefore);
+
+    // Fokus tetap terjaga di input pencarian di dalam modal
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.getAttribute('placeholder') ?? null))
+      .toBe('Ketik untuk mencari...');
+
+    // Dropdown tetap menampilkan pilihan (terfilter) atau pesan kosong tanpa menutup modal
+    const listbox = dialog.getByRole('listbox');
+    await expect(listbox).toBeVisible();
+  });
 });
