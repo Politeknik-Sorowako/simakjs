@@ -395,6 +395,7 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
     const userId = user?.id ?? null;
     const userName = user?.nama ?? null;
     const userRole = user?.role ?? null;
+    const userRoles = Array.isArray(user?.roles) && user.roles.length > 0 ? user.roles : userRole ? [userRole] : null;
 
     const ipAddress =
       request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
@@ -467,6 +468,7 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
         path,
         statusCode,
         isSuccess,
+        ...(userRoles ? { userRoles } : {}),
         ...(summary ? { responseSummary: summary } : {}),
       },
     });

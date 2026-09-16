@@ -10,8 +10,8 @@ import {
   rpsTopik,
 } from '../models/schema';
 import { db } from './db';
-import { hasRole } from './role';
-import type { UserPayload } from './types';
+import { getRoles } from './role';
+import type { UserPayload, UserRole } from './types';
 
 export async function getDosenIdByEmail(email?: string | null): Promise<number | null> {
   if (!email) return null;
@@ -68,9 +68,18 @@ export async function isDosenTeachesMkInPeriode(
   return rows.length > 0;
 }
 
-/** Returns true when the user is NOT dosen/instruktur (admin/prodi have full access). */
+/**
+ * Operational teaching roles that are subject to MK/kelas/rombel scoping.
+ * A user is considered privileged (full access, bypassing teaching scope) as
+ * soon as they hold ANY role outside this set — e.g. a `dosen + prodi` user
+ * gets prodi's full access even though they also teach.
+ */
+export const TEACHING_SCOPE_ROLES: UserRole[] = ['dosen', 'instruktur'];
+
+/** Returns true when the user is NOT subject to teaching scope (admin/prodi have full access). */
 export function isPrivilegedScope(user: UserPayload | null | undefined): boolean {
-  return !hasRole(user, ['dosen', 'instruktur']);
+  if (!user) return true;
+  return getRoles(user).some((role) => !TEACHING_SCOPE_ROLES.includes(role));
 }
 
 /**

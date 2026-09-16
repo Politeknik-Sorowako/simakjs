@@ -14,10 +14,11 @@ import {
   verifyDocumentSchema,
   verifyPaymentSchema,
 } from '../schemas/admisi-admin.schema';
+import { hasRole } from '../utils/role';
 
 const adminGuard = new Elysia({ name: 'admin-guard' }).use(authMiddleware).derive(async ({ getCurrentUser, set }) => {
   const user = await getCurrentUser();
-  if (!user || user.role !== 'admin') {
+  if (!user || !hasRole(user, ['admin', 'super_admin'])) {
     set.status = 403;
     throw new Error('Akses ditolak. Hanya admin yang dapat mengakses endpoint ini.');
   }

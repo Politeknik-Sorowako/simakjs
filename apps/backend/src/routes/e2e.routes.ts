@@ -43,6 +43,7 @@ import {
 } from '../models/schema';
 import { resetE2eSchema } from '../schemas/e2e.schema';
 import { db } from '../utils/db';
+import { hasRole } from '../utils/role';
 
 export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post(
   '/reset',
@@ -52,7 +53,7 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
       return { error: 'Endpoint ini tidak dapat dijalankan di mode production.' };
     }
     const user = await getCurrentUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya admin yang dapat mereset database.' };
     }

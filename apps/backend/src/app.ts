@@ -298,7 +298,11 @@ export const app = new Elysia()
           ws.close();
           return;
         }
-        const payload = (await ws.data.jwt.verify(token)) as { role: string; email: string } | null;
+        const payload = (await ws.data.jwt.verify(token)) as {
+          role: string;
+          roles?: string[];
+          email: string;
+        } | null;
         if (!payload) {
           ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
           ws.close();
@@ -327,11 +331,11 @@ export const app = new Elysia()
           return;
         }
 
-        const userRole = payload.role as string;
+        const userRoles = Array.isArray(payload.roles) && payload.roles.length > 0 ? payload.roles : [payload.role];
         const userEmail = payload.email as string;
-        const isAdmin = userRole === 'admin';
-        const isDosenPa = userRole === 'dosen' && bimbingan.dosen?.email === userEmail;
-        const isMahasiswa = userRole === 'mahasiswa' && bimbingan.mahasiswa?.email === userEmail;
+        const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
+        const isDosenPa = userRoles.includes('dosen') && bimbingan.dosen?.email === userEmail;
+        const isMahasiswa = userRoles.includes('mahasiswa') && bimbingan.mahasiswa?.email === userEmail;
 
         if (!isAdmin && !isDosenPa && !isMahasiswa) {
           ws.send(JSON.stringify({ error: 'Forbidden: You are not a participant of this bimbingan' }));

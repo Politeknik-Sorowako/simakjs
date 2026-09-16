@@ -7,12 +7,14 @@ interface ProtectedRouteProps {
   allowedRoles?: (
     | 'super_admin'
     | 'admin'
+    | 'kaprodi'
     | 'dosen'
     | 'mahasiswa'
     | 'prodi'
     | 'keuangan'
     | 'guest'
     | 'calon_mahasiswa'
+    | 'plp'
     | 'instruktur'
   )[];
 }
@@ -34,21 +36,9 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
 
   const hasAccess = () => {
     if (!auth.isAuthenticated()) return false;
-    const userRole = auth.user()?.role;
-    if (userRole === 'super_admin') return true;
+    if (auth.hasRole(['super_admin'])) return true;
     if (!props.allowedRoles) return true;
-    return props.allowedRoles.includes(
-      userRole as
-        | 'super_admin'
-        | 'admin'
-        | 'dosen'
-        | 'mahasiswa'
-        | 'prodi'
-        | 'keuangan'
-        | 'guest'
-        | 'calon_mahasiswa'
-        | 'instruktur',
-    );
+    return auth.hasRole(props.allowedRoles);
   };
 
   return (
