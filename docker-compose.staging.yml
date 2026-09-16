@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simak_password_staging}
       POSTGRES_DB: ${POSTGRES_DB:-simak_vokasi_staging}
     ports:
-      - "${POSTGRES_PORT:-5434}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5434}:5432"
     volumes:
       - pgdata_staging:/var/lib/postgresql/data
     healthcheck:
@@ -29,7 +29,7 @@ services:
     init: true
     container_name: simak_backend_staging
     ports:
-      - "${BACKEND_PORT:-3001}:3000"
+      - "127.0.0.1:${BACKEND_PORT:-3001}:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-simak_user_staging}:${POSTGRES_PASSWORD:-simak_password_staging}@db_staging:5432/${POSTGRES_DB:-simak_vokasi_staging}
       PORT: "3000"
@@ -68,7 +68,7 @@ services:
     init: true
     container_name: simak_frontend_staging
     ports:
-      - "${FRONTEND_PORT:-8082}:80"
+      - "127.0.0.1:${FRONTEND_PORT:-8082}:80"
     depends_on:
       - backend_staging
 
