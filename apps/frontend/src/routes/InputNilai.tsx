@@ -2553,8 +2553,8 @@ export default function InputNilai() {
                           <div class="flex items-center gap-2">
                             <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
                             <div class="flex flex-col">
-                              <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
-                              <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
+                              <span class="font-bold text-sm text-secondary-800 dark:text-white">{stud.nama}</span>
+                              <span class="text-[11px] text-secondary-400">NIM: {stud.nim}</span>
                               <Show when={isMahasiswaHasHalusData(stud)}>
                                 <span class="text-[9px] font-bold text-brand-600">
                                   ℹ punya nilai komponen/sub — tetap dipertahankan
@@ -2664,8 +2664,8 @@ export default function InputNilai() {
                             <div class="flex items-center gap-2">
                               <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
                               <div class="flex flex-col">
-                                <span class="font-bold text-secondary-800 dark:text-white">{stud.nama}</span>
-                                <span class="text-[10px] text-secondary-400">NIM: {stud.nim}</span>
+                                <span class="font-bold text-sm text-secondary-800 dark:text-white">{stud.nama}</span>
+                                <span class="text-[11px] text-secondary-400">NIM: {stud.nim}</span>
                               </div>
                             </div>
                           </td>
