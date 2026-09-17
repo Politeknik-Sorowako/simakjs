@@ -104,6 +104,7 @@ export interface MonitoringBimbinganLengkapItem {
   namaMahasiswa: string;
   foto?: string | null;
   prodiId: number | null;
+  prodiNama: string | null;
   dosenPaId: number | null;
   dosenPaNama: string;
   periodeId: string;
@@ -415,6 +416,8 @@ export const bimbinganController = {
     search?: string;
     page?: number;
     limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }): Promise<PaginatedResponse<MonitoringBimbinganLengkapItem>> {
     const params = new URLSearchParams();
     if (filter?.periodeId) params.append('periodeId', filter.periodeId);
@@ -424,6 +427,8 @@ export const bimbinganController = {
     if (filter?.search) params.append('search', filter.search);
     if (filter?.page) params.append('page', String(filter.page));
     if (filter?.limit) params.append('limit', String(filter.limit));
+    if (filter?.sortBy) params.append('sortBy', filter.sortBy);
+    if (filter?.sortBy && filter?.sortOrder) params.append('sortOrder', filter.sortOrder);
     const query = params.toString() ? `?${params.toString()}` : '';
     const res = await fetchApi<PaginatedResponse<MonitoringBimbinganLengkapItem>>(
       `/bimbingan/monitoring-lengkap${query}`,

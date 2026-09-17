@@ -3,15 +3,19 @@ import {
   bap,
   dosen,
   kelasKuliah,
+  kelompokApel,
   kompensasiBayar,
+  komponenNilai,
   krs,
   kurikulum,
   mahasiswa,
   mataKuliah,
   nilaiPraktik,
   pelanggaran,
+  periodeAkademik,
   presensi,
   programStudi,
+  rombelPraktikum,
   sesiApel,
   tagihan,
   users,
@@ -243,16 +247,26 @@ async function resolveEntity(module: string, rawId: string | null): Promise<Enti
 
     if (module === 'tagihan') {
       const [row] = await db
-        .select({ nim: mahasiswa.nim, nama: mahasiswa.nama, nominal: tagihan.nominal })
+        .select({
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          nominal: tagihan.nominal,
+          status: tagihan.status,
+          periodeId: tagihan.periodeId,
+        })
         .from(tagihan)
         .innerJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))
         .where(eq(tagihan.id, id));
       if (!row) return base;
       const parts: string[] = [];
       pushMhsParts(parts, row.nim, row.nama);
+      const pJenis = part('Jenis Tagihan', `SPP/UKT ${row.periodeId}`);
+      const pStatus = part('Status Tagihan', row.status);
       const pNominal = part('Nominal', row.nominal != null ? `Rp ${row.nominal}` : null);
+      if (pJenis) parts.push(pJenis);
+      if (pStatus) parts.push(pStatus);
       if (pNominal) parts.push(pNominal);
-      return { ...base, entityName: `${row.nama} (Rp ${row.nominal})`, parts };
+      return { ...base, entityName: `${row.nama} (${row.periodeId} - Rp ${row.nominal})`, parts };
     }
 
     if (module === 'kompensasi-bayar') {
@@ -271,42 +285,70 @@ async function resolveEntity(module: string, rawId: string | null): Promise<Enti
 
     if (module === 'sesi-apel') {
       const [row] = await db
-        .select({ tanggal: sesiApel.tanggal, shift: sesiApel.shift })
+        .select({
+          tanggal: sesiApel.tanggal,
+          shift: sesiApel.shift,
+          namaKelompok: kelompokApel.namaKelompok,
+        })
         .from(sesiApel)
+        .leftJoin(kelompokApel, eq(sesiApel.kelompokApelId, kelompokApel.id))
         .where(eq(sesiApel.id, id));
       if (!row) return base;
+      const namaSesi = row.namaKelompok ? `${row.namaKelompok} - Shift ${row.shift}` : `Apel Shift ${row.shift}`;
       const parts: string[] = [];
-      const pShift = part('Shift', row.shift);
-      const pTgl = part('Tanggal', row.tanggal ? String(row.tanggal) : null);
-      if (pShift) parts.push(pShift);
+      const pNama = part('Nama Sesi Apel', namaSesi);
+      const pTgl = part('Tanggal Pelaksanaan', row.tanggal ? String(row.tanggal) : null);
+      if (pNama) parts.push(pNama);
       if (pTgl) parts.push(pTgl);
-      return { ...base, entityName: `Apel Shift ${row.shift} (${row.tanggal})`, parts };
+      return { ...base, entityName: `${namaSesi} (${row.tanggal})`, parts };
     }
 
     if (module === 'kurikulum') {
       const [row] = await db
-        .select({ nama: kurikulum.nama, kode: kurikulum.kode })
+        .select({
+          nama: kurikulum.nama,
+          kode: kurikulum.kode,
+          semesterMulai: kurikulum.semesterMulai,
+          periodeNama: periodeAkademik.nama,
+        })
         .from(kurikulum)
+        .leftJoin(periodeAkademik, eq(kurikulum.semesterMulai, periodeAkademik.id))
         .where(eq(kurikulum.id, id));
       if (!row) return base;
       const parts: string[] = [];
       const pNama = part('Kurikulum', row.nama);
       const pKode = part('Kode', row.kode);
+      const pTahun = part('Tahun Berlaku', row.periodeNama ?? row.semesterMulai);
       if (pNama) parts.push(pNama);
       if (pKode) parts.push(pKode);
+      if (pTahun) parts.push(pTahun);
       return { ...base, entityName: `${row.nama} (${row.kode})`, parts };
     }
 
     if (module === 'nilai-praktik') {
       const [row] = await db
-        .select({ nim: mahasiswa.nim, nama: mahasiswa.nama, nilai: nilaiPraktik.nilaiAngka })
+        .select({
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          nilai: nilaiPraktik.nilaiAngka,
+          mkNama: mataKuliah.nama,
+          mkKode: mataKuliah.kode,
+          komponenNama: komponenNilai.nama,
+        })
         .from(nilaiPraktik)
         .innerJoin(mahasiswa, eq(nilaiPraktik.mahasiswaId, mahasiswa.id))
+        .leftJoin(rombelPraktikum, eq(nilaiPraktik.rombelPraktikumId, rombelPraktikum.id))
+        .leftJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
+        .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .leftJoin(komponenNilai, eq(nilaiPraktik.komponenNilaiId, komponenNilai.id))
         .where(eq(nilaiPraktik.id, id));
       if (!row) return base;
       const parts: string[] = [];
       pushMhsParts(parts, row.nim, row.nama);
-      const pNilai = part('Nilai Angka', String(row.nilai));
+      pushMkParts(parts, row.mkNama, row.mkKode);
+      const pKomponen = part('Komponen', row.komponenNama);
+      const pNilai = part('Nilai Angka', row.nilai != null ? String(row.nilai) : null);
+      if (pKomponen) parts.push(pKomponen);
       if (pNilai) parts.push(pNilai);
       return { ...base, entityName: `${row.nama} (Nilai: ${row.nilai})`, parts };
     }

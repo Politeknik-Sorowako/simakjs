@@ -3,6 +3,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
@@ -10,12 +11,16 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { bimbinganController, MonitoringBimbinganLengkapItem } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
 
 export default function MonitoringBimbingan() {
   const workspace = useWorkspace();
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
+  const [selectedProdi, setSelectedProdi] = createSignal<number | null>(null);
   const [selectedDosenPa, setSelectedDosenPa] = createSignal<number | null>(null);
+  const [sortBy, setSortBy] = createSignal('');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
   const [printData, setPrintData] = createSignal<MonitoringBimbinganLengkapItem[]>([]);
   const { page, limit, setPage, setLimit, search, setSearch, resetPage } = usePagination(10);
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
@@ -23,28 +28,45 @@ export default function MonitoringBimbingan() {
 
   onCleanup(() => clearTimeout(searchDebounceTimer));
 
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'totalSesi' ? 'desc' : 'asc');
+    }
+    resetPage();
+  };
+
   // Load Periode Akademik
   const [periodes] = createResource(() => periodeAkademikController.getAll());
 
   // Load Dosen list
   const [dosenList] = createResource(() => dosenController.getAll('', 1, 500));
 
+  // Load Prodi list
+  const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
+
   // Load Monitoring Data
   const [monitoringData] = createResource(
     () => ({
       periodeId: selectedPeriode(),
+      prodiId: selectedProdi() ?? workspace.activeProdiId(),
       dosenPaId: selectedDosenPa(),
-      prodiId: workspace.activeProdiId(),
       search: debouncedSearch(),
+      sortBy: sortBy(),
+      sortOrder: sortOrder(),
       page: page(),
       limit: limit(),
     }),
-    async ({ periodeId, dosenPaId, prodiId, search, page, limit }) => {
+    async ({ periodeId, prodiId, dosenPaId, search, sortBy, sortOrder, page, limit }) => {
       return await bimbinganController.getMonitoringLengkap({
         periodeId: periodeId || undefined,
-        dosenPaId: dosenPaId || undefined,
         prodiId: prodiId || undefined,
+        dosenPaId: dosenPaId || undefined,
         search: search || undefined,
+        sortBy: sortBy || undefined,
+        sortOrder: sortBy ? sortOrder : undefined,
         page,
         limit,
       });
@@ -53,12 +75,20 @@ export default function MonitoringBimbingan() {
 
   const data = () => monitoringData()?.data || [];
 
+  const selectedProdiNama = () => {
+    const id = selectedProdi() ?? workspace.activeProdiId();
+    if (!id) return 'Semua Program Studi';
+    return prodis()?.data?.find((p) => p.id === id)?.nama || 'Semua Program Studi';
+  };
+
   const handleExportCSV = async () => {
     const exportRes = await bimbinganController.getMonitoringLengkap({
       periodeId: selectedPeriode() || undefined,
+      prodiId: selectedProdi() ?? workspace.activeProdiId() ?? undefined,
       dosenPaId: selectedDosenPa() || undefined,
-      prodiId: workspace.activeProdiId() || undefined,
       search: debouncedSearch() || undefined,
+      sortBy: sortBy() || undefined,
+      sortOrder: sortBy() ? sortOrder() : undefined,
       page: 1,
       limit: 10000,
     });
@@ -66,10 +96,19 @@ export default function MonitoringBimbingan() {
     if (exportData.length === 0) return;
 
     const safeStr = (val: unknown) => `"${String(val ?? '').replace(/"/g, '""')}"`;
-    const headers = ['NIM', 'Nama Mahasiswa', 'Dosen PA', 'Periode', 'Jumlah Sesi Bimbingan', 'Status Persetujuan'];
+    const headers = [
+      'NIM',
+      'Nama Mahasiswa',
+      'Prodi',
+      'Dosen PA',
+      'Periode',
+      'Jumlah Sesi Bimbingan',
+      'Status Persetujuan',
+    ];
     const rows = exportData.map((item) => [
       safeStr(item.nim),
       safeStr(item.namaMahasiswa),
+      safeStr(item.prodiNama || '-'),
       safeStr(item.dosenPaNama),
       safeStr(item.periodeId),
       item.totalSesi,
@@ -90,8 +129,11 @@ export default function MonitoringBimbingan() {
   const handlePrint = async () => {
     const printRes = await bimbinganController.getMonitoringLengkap({
       periodeId: selectedPeriode() || undefined,
+      prodiId: selectedProdi() ?? workspace.activeProdiId() ?? undefined,
       dosenPaId: selectedDosenPa() || undefined,
       search: search() || undefined,
+      sortBy: sortBy() || undefined,
+      sortOrder: sortBy() ? sortOrder() : undefined,
       page: 1,
       limit: 10000,
     });
@@ -123,6 +165,7 @@ export default function MonitoringBimbingan() {
         <div class="hidden print:block mb-4 text-center">
           <h2 class="text-xl font-bold">LAPORAN MONITORING PELAKSANAAN BIMBINGAN MAHASISWA</h2>
           <p class="text-xs">Periode Akademik: {selectedPeriode() || 'Aktif'}</p>
+          <p class="text-xs">Program Studi: {selectedProdiNama()}</p>
         </div>
 
         {/* Filters */}
@@ -148,6 +191,23 @@ export default function MonitoringBimbingan() {
                     </option>
                   )}
                 </For>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-secondary-600 dark:text-secondary-300 mb-1">
+                Program Studi
+              </label>
+              <select
+                class="text-xs p-2 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-800 dark:text-white"
+                value={selectedProdi() ?? ''}
+                onChange={(e) => {
+                  setSelectedProdi(e.currentTarget.value ? Number(e.currentTarget.value) : null);
+                  resetPage();
+                }}
+              >
+                <option value="">-- Semua Program Studi --</option>
+                <For each={prodis()?.data || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
               </select>
             </div>
 
@@ -195,7 +255,28 @@ export default function MonitoringBimbingan() {
               when={data().length > 0}
               fallback={<p class="text-center text-xs text-secondary-400 py-8">Tidak ada data bimbingan ditemukan.</p>}
             >
-              <Table headers={['No', 'NIM', 'Nama Mahasiswa', 'Dosen PA', 'Periode', 'Jumlah Sesi', 'Status Approval']}>
+              <Table
+                headers={[
+                  'No',
+                  <SortableHeader field="nim" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    NIM
+                  </SortableHeader>,
+                  <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Nama Mahasiswa
+                  </SortableHeader>,
+                  <SortableHeader field="prodi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Prodi
+                  </SortableHeader>,
+                  <SortableHeader field="dosenPa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Dosen PA
+                  </SortableHeader>,
+                  'Periode',
+                  <SortableHeader field="totalSesi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Jumlah Sesi
+                  </SortableHeader>,
+                  'Status Approval',
+                ]}
+              >
                 <For each={data()}>
                   {(item: MonitoringBimbinganLengkapItem, index: () => number) => (
                     <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40 transition-colors">
@@ -210,6 +291,9 @@ export default function MonitoringBimbingan() {
                           <StudentAvatar foto={item.foto} nama={item.namaMahasiswa} nim={item.nim} size="sm" />
                           {item.namaMahasiswa}
                         </div>
+                      </td>
+                      <td class="px-6 py-4 text-xs text-secondary-700 dark:text-secondary-300">
+                        {item.prodiNama || '-'}
                       </td>
                       <td class="px-6 py-4 text-xs text-secondary-700 dark:text-secondary-300">{item.dosenPaNama}</td>
                       <td class="px-6 py-4 text-xs font-mono text-secondary-600 dark:text-secondary-400">
@@ -247,13 +331,16 @@ export default function MonitoringBimbingan() {
 
         {/* Print-Only Table (renders all filtered rows) */}
         <div class="hidden print:block">
-          <Table headers={['No', 'NIM', 'Nama Mahasiswa', 'Dosen PA', 'Periode', 'Jumlah Sesi', 'Status Approval']}>
+          <Table
+            headers={['No', 'NIM', 'Nama Mahasiswa', 'Prodi', 'Dosen PA', 'Periode', 'Jumlah Sesi', 'Status Approval']}
+          >
             <For each={printData()}>
               {(item: MonitoringBimbinganLengkapItem, index: () => number) => (
                 <tr>
                   <td class="px-3 py-2 text-xs">{index() + 1}</td>
                   <td class="px-3 py-2 text-xs">{item.nim}</td>
                   <td class="px-3 py-2 text-xs">{item.namaMahasiswa}</td>
+                  <td class="px-3 py-2 text-xs">{item.prodiNama || '-'}</td>
                   <td class="px-3 py-2 text-xs">{item.dosenPaNama}</td>
                   <td class="px-3 py-2 text-xs">{item.periodeId}</td>
                   <td class="px-3 py-2 text-xs">{item.totalSesi}</td>
