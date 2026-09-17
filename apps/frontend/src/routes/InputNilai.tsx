@@ -852,24 +852,13 @@ export default function InputNilai() {
     return '–';
   };
 
-  // Hitung agregat sub dari draft saat ini (menggunakan inputSubGrades live).
+  // Hitung agregat sub dari draft saat ini (delegasi ke getDynamicKomponenScore,
+  // abaikan nilai L1 yang mungkin sedang di-override).
   const computeAutoL1Value = (krsId: number, komponenId: number): string => {
-    const subs = subsByKomponen().get(komponenId) ?? [];
-    let total = 0;
-    let weight = 0;
-    let missing = 0;
-    for (const sub of subs) {
-      if (sub.id === undefined) continue;
-      const n = parseGradeInput(inputSubGrades()[`${krsId}_${sub.id}`]);
-      if (n === null) {
-        missing += 1;
-        continue;
-      }
-      total += n * (Number(sub.bobot) / 100);
-      weight += Number(sub.bobot);
-    }
-    const complete = missing === 0 && weight === 100;
-    return complete ? total.toFixed(2) : '0';
+    const grades = { ...inputGrades() };
+    delete grades[`${krsId}_${komponenId}`];
+    const result = getDynamicKomponenScore(krsId, komponenId, 0, grades, inputSubGrades());
+    return result.complete && result.score !== null ? result.score.toFixed(2) : '';
   };
 
   // Kembalikan L1 ke nilai otomatis (agregat sub) setelah override.
