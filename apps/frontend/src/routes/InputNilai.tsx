@@ -671,12 +671,6 @@ export default function InputNilai() {
 
   const componentHasSub = (komponenId: number) => (subsByKomponen().get(komponenId) || []).length > 0;
 
-  const isMahasiswaHasHalusData = (stud: NilaiMahasiswa) => {
-    const hasDirect = (stud.nilaiKomponen || []).some((v) => v.nilai !== null && v.nilai !== '');
-    const hasSub = (stud.nilaiSub || []).length > 0;
-    return hasDirect || hasSub;
-  };
-
   // Bulk "nilai awal": hanya mengisi sel yang masih kosong untuk mahasiswa terpilih.
   const handleBulkApply = () => {
     const sel = selectedKrsIds();
@@ -2404,6 +2398,7 @@ export default function InputNilai() {
             <div class="flex flex-wrap items-center gap-2">
               <DropdownMenu
                 position="right"
+                disabled={isExporting() || isClassLocked()}
                 triggerAriaLabel="Ekspor nilai"
                 triggerClass="px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-secondary-100 hover:bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-200"
                 trigger={
