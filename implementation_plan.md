@@ -1,177 +1,216 @@
-# Implementation Plan: Penyempurnaan Sistem Audit Log SIMAK Vokasi
+# Implementation Plan (Follow-up): PDF DNU, Toleransi Bobot, Pemetaan Impor Nilai
 
-Penyempurnaan menyeluruh pada modul Audit Log SIMAK Vokasi agar menghasilkan jejak audit yang kontekstual, bermakna, akurat secara status, bersih dari noise bot scanner, dilengkapi fitur ekspor fleksibel (filtered vs seluruh data), serta dioptimalkan dari segi arsitektur query database agar efisien dan tidak membebani performa server.
-
----
-
-## 1. Analisis Kebutuhan & Akar Masalah
-
-### A. Evaluasi Beban Server & Volume Log (1.000 Data dalam 7 Hari)
-1. **Dampak Performa:** 1.000 data dalam 7 hari (~142 baris/hari atau ~6 baris/jam) hanya memakan penyimpanan ~1 MB di PostgreSQL. Secara komputasi dan I/O, volume ini **sangat ringan dan aman**.
-2. **Kualitas Data & Noise:** Angka ini cepat meningkat karena sistem saat ini mencatat request bot scanner fiktif (seperti `POST /rds/execute` $\rightarrow$ 404) dan request gagal (4xx/5xx) seolah-olah sebagai perubahan data sukses ("Sistem melakukan tambah data...").
-3. **Optimasi Query yang Diperlukan:**
-   - Menghilangkan `leftJoin` redundan ke tabel `users` pada eksekusi `count(*)` jika tidak ada filter nama user.
-   - Menambahkan kolom fisik `status_code` dan `is_success` terindeks untuk menggantikan scanning field `metadata (JSONB)` yang lambat saat dataset membesar.
-   - Menerapkan streaming / chunked fetching pada ekspor CSV untuk mencegah lonjakan konsumsi memori (*memory spike*).
+Dokumen perencanaan struktural untuk item yang **belum diimplementasi** pada PR #399
+(`feat/input-nilai-export-redesign`). Belum berisi implementasi kode penuh. Tanpa migrasi DB.
 
 ---
 
-## 2. Rincian Fitur yang Dikembangkan
+## 0. Konteks & Keputusan yang Sudah Dikunci
 
-1. **Pembersihan Noise & Koreksi Status (Backend Hook):**
-   - Mengabaikan (*early return*) request dengan status HTTP 404 Not Found (endpoint tidak terdaftar/bot probe).
-   - Membedakan aksi `SUKSES` ($< 400$) vs `GAGAL` ($\ge 400$) pada deskripsi dan metadata.
-2. **Format Deskripsi Kontekstual & Human-Readable:**
-   - Menggunakan kamus label modul ramah manusia (`MODULE_DISPLAY_NAMES`) menggantikan nama tabel fisik database.
-   - Memperluas resolusi entitas (`resolveEntity`) untuk modul `tagihan`, `kelas-kuliah`, `kompensasi-bayar`, `sesi-apel`, `kurikulum`, dan `nilai-praktik`.
-3. **Filter Tingkat Lanjut Berdasarkan Status Respons:**
-   - Opsi filter status pada UI dan Backend: `Semua`, `Sukses (2xx)`, `Gagal Validasi / Izin (4xx)`, dan `Error Server (5xx)`.
-4. **Fleksibilitas Ekspor CSV:**
-   - **Download Log Terfilter:** Mengunduh CSV hanya untuk data yang cocok dengan kriteria pencarian/filter aktif.
-   - **Export Seluruh Audit Log:** Mengunduh seluruh arsip audit log (dengan limit pengaman / chunking).
-5. **Optimasi Query & Struktur Database:**
-   - Migrasi idempotent: Penambahan kolom `status_code` (integer), `is_success` (boolean), serta indeks komposit `(is_success, timestamp)` dan `(status_code, timestamp)`.
-   - Optimasi query Drizzle ORM pada `AuditService.getAll` dan `AuditService.exportCsv`.
+PR #399 masih **OPEN** (belum di-merge). Tiga item sengaja ditunda dan menjadi scope dokumen ini:
 
----
+| Kode | Item | Keputusan |
+| :--- | :--- | :--- |
+| F3 | Pemetaan kolom impor manual + pratinjau + unduh error | Opsi B: panel lokal di `InputNilai.tsx`, `ImportCsvModal` tidak diubah |
+| F1 | PDF DNU (Daftar Nilai Ujian) siap cetak | **Kop resmi institusi** (logo + nama + alamat); `exportToPDF` diberi parameter opsional dengan default tidak berubah |
+| F2 | Toleransi bobot desimal | Disetujui, **EPS 0.01**, FE + BE + test serentak dalam satu PR |
 
-## 3. User Review Required
+**Urutan eksekusi:** F3 -> F1 -> F2. Rekomendasi satu PR per item (staging-first ke `development`).
+**Prasyarat:** branch follow-up dibuat dari `development` **setelah PR #399 merge** untuk menghindari
+konflik pada `apps/frontend/src/routes/InputNilai.tsx`.
 
-> [!IMPORTANT]
-> **Kebijakan Pengabaian HTTP 404 pada Audit Log:**  
-> Request mutasi (`POST/PUT/DELETE`) yang menghasilkan respons `404 Not Found` (seperti bot scanning probe URL fiktif `/rds/execute`, `/.env`, `/wp-login.php`) **tidak akan dicatat ke tabel `audit_logs`**, karena tidak ada entitas akademik atau data yang termodifikasi. Log ini tetap dapat dipantau melalui log web server / Nginx / WAF jika diperlukan untuk analisis keamanan jaringan.
+**Tidak dikerjakan (eksplisit):**
+- Endpoint export backend (`GET /yudisium/kelas/:id/export`) — kondisional, hanya bila terbukti berat (>500 mhs).
+- Persist alias nama kolom impor; normalisasi bobot otomatis; `nilai-export.test.ts` backend (export tetap client-side).
 
 ---
 
-## 4. Proposed Changes
+## 1. F3 — Pemetaan Kolom Impor Manual + Pratinjau + Unduh Error
 
-### Backend Components
+### 1.1 Latar Belakang
+`handleImportNilais` (`InputNilai.tsx`) mencocokkan nama kolom CSV ke komponen/sub **by-name** (case-insensitive).
+Satu perbedaan huruf/spasi membuat seluruh kolom ditolak tanpa jalan perbaikan di UI. Auto-match
+`templateHeaders` tetap dipertahankan sebagai default.
 
-#### [NEW] [0068_add_audit_log_status_columns.sql](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/drizzle/0068_add_audit_log_status_columns.sql)
-- Migrasi SQL idempotent:
-  - `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS status_code INTEGER DEFAULT 200;`
-  - `ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS is_success BOOLEAN DEFAULT TRUE;`
-  - `CREATE INDEX IF NOT EXISTS idx_audit_logs_status_timestamp ON audit_logs (status_code, timestamp);`
-  - `CREATE INDEX IF NOT EXISTS idx_audit_logs_success_timestamp ON audit_logs (is_success, timestamp);`
+### 1.2 Target File
+- **Modify:** `apps/frontend/src/routes/InputNilai.tsx`
+  - State baru: `pendingImportRows: string[][] | null`, `columnMapping: Record<number, string>`.
+  - Alur baru: `ImportCsvModal.onImport` tidak langsung menyimpan; ia mengembalikan error "perlu pemetaan"
+    ATAU modal menyerahkan rows mentah ke handler lokal. Rancangan dipilih saat eksekusi:
+    (i) tangkap `onImport` di wrapper lokal lalu tampilkan panel, atau
+    (ii) tambah callback `onParsed(rows)` pada pemakaian modal (tanpa ubah komponen bersama).
+  - Panel "Pemetaan Kolom Impor" (modal/section): per kolom CSV -> dropdown target (`nim`, nama komponen,
+    nama sub, atau `Abaikan`), pratinjau 5 baris, tombol `Unduh Daftar Error`, `Lanjutkan Impor`.
+  - Fungsi normalisasi header: ganti header CSV sesuai mapping lalu teruskan ke `handleImportNilais`
+    **tanpa mengubah logika validasi/save** di dalamnya.
+- **Tidak diubah:** `apps/frontend/src/components/ui/ImportCsvModal.tsx` (dipakai lintas halaman),
+  `apps/frontend/src/utils/export.ts` (reuse `exportToCSV` untuk unduh error), backend.
 
-#### [MODIFY] [apps/backend/src/models/schema.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/models/schema.ts)
-- Tambahkan definisi kolom `statusCode` dan `isSuccess` pada tabel `auditLogs` beserta indeksnya.
+### 1.3 Perilaku
+1. User pilih file -> `parseCsv` -> deteksi header.
+2. Auto-match: nama kolom identik dengan `templateHeaders`/definisi -> mapping terisi otomatis.
+3. Kolom tak dikenal -> default `Abaikan` + sorot; user bisa petakan manual.
+4. Validasi ringan saat pratinjau: duplikat NIM, nilai non-numerik, di luar envelope. Error per baris
+   dapat diunduh sebagai CSV.
+5. `Lanjutkan Impor` -> kirim rows ternormalisasi ke `handleImportNilais` -> validasi + simpan backend tetap
+   menjadi penentu akhir (envelope, lock, dedupe).
 
-#### [MODIFY] [apps/backend/src/plugins/audit.plugin.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/plugins/audit.plugin.ts)
-- Pada `auditBeforeHandle` & `auditAfterResponse`:
-  - Abaikan pencatatan jika `set?.status === 404`.
-  - Simpan `statusCode` dan `isSuccess = statusCode < 400` ke tabel `audit_logs`.
-  - Perluas fungsi `resolveEntity()` untuk:
-    - `tagihan`: Nama Mahasiswa + NIM + Jenis Tagihan.
-    - `kelas-kuliah`: Nama Kelas + Kode/Nama Mata Kuliah.
-    - `kompensasi-bayar`: Nama Mahasiswa + NIM + Total Menit Kompensasi.
-    - `sesi-apel`: Nama Sesi Apel + Tanggal Pelaksanaan.
-    - `kurikulum`: Nama Kurikulum + Tahun Berlaku.
-    - `nilai-praktik`: Nama Mahasiswa + Mata Kuliah/Komponen.
+### 1.4 Dependensi
+- Definisi komponen (`components()`), sub (`subsByKomponen()`), `nilaiEnvelope()`, `parseGradeInput`,
+  `studentsGrades()` (peta NIM->krsId) — semuanya sudah tersedia di PR #399.
+- `exportToCSV` (`utils/export.ts`).
 
-#### [MODIFY] [apps/backend/src/utils/audit-format.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/utils/audit-format.ts)
-- Tambahkan `MODULE_DISPLAY_NAMES` untuk pemetaan modul ke nama bahasa Indonesia.
-- Perbarui `formatDescription`:
-  - Jika `statusCode >= 400`: `"[waktu] [User] gagal melakukan [aksi] pada [Modul]: [Pesan Error] (HTTP [Status])."`
-  - Jika sukses: Format standar deskriptif dengan modul ramah manusia.
+### 1.5 Risiko
+| Risiko | Mitigasi |
+| :--- | :--- |
+| Duplikat nama sub antar-komponen | Tetap ditolak seperti perilaku lama; pesan jelas di panel mapping |
+| Modal bersama berubah | Opsi B: tidak menyentuh `ImportCsvModal`; semua logika di `InputNilai.tsx` |
+| Mapping hanya sesi berjalan | Diterima (tanpa persist) |
 
-#### [MODIFY] [apps/backend/src/services/audit.service.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/services/audit.service.ts)
-- Optimasi `buildFilters`:
-  - Tambahkan filter `statusCategory` (`'all' | 'success' | 'client_error' | 'server_error'`).
-- Optimasi `getAll`:
-  - Hilangkan `leftJoin(users)` pada `count(*)` jika tidak ada filter pencarian `userName` atau keyword `search`.
-- Optimasi `exportCsv`:
-  - Dukung ekspor hasil filter maupun ekspor penuh (*all*).
-  - Gunakan batching saat mengambil baris data untuk mencegah *out-of-memory*.
-
-#### [MODIFY] [apps/backend/src/controllers/audit.controller.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/controllers/audit.controller.ts)
-- Terima parameter query `statusCategory` (`'all' | 'success' | 'client_error' | 'server_error'`) pada endpoint `getAll` dan `exportCsv`.
-
-#### [MODIFY] [apps/backend/src/__tests__/audit-format.test.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/__tests__/audit-format.test.ts)
-- Tambahkan unit test untuk format aksi gagal, label modul ramah manusia, dan kompatibilitas regex format lama.
-
-#### [MODIFY] [apps/backend/src/__tests__/audit-log.test.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/backend/src/__tests__/audit-log.test.ts)
-- Tambahkan integration test untuk validasi pengabaian status 404 dan filtering status respons.
-
----
-
-### Frontend Components
-
-#### [MODIFY] [apps/frontend/src/controllers/auditController.ts](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/controllers/auditController.ts)
-- Perbarui interface `AuditLog` dengan kolom `statusCode` dan `isSuccess`.
-- Tambahkan opsi `statusCategory?: 'all' | 'success' | 'client_error' | 'server_error'` pada `AuditLogFilters`.
-- Tambahkan helper `exportAllCsv()` terpisah atau flag `isFullExport` pada `exportCsv()`.
-
-#### [MODIFY] [apps/frontend/src/routes/AuditLog.tsx](file:///home/nasrulhamid/app-projects/simakjs/apps/frontend/src/routes/AuditLog.tsx)
-- Tambahkan tab/pill filter status respons:
-  - `Semua Status`
-  - `Sukses (2xx)`
-  - `Gagal Validasi / Izin (4xx)`
-  - `Error Server (5xx)`
-- Pisahkan aksi ekspor menjadi 2 opsi:
-  - **"Export Hasil Filter (CSV)"** (mengunduh data sesuai filter aktif).
-  - **"Export Seluruh Log (CSV)"** (mengunduh seluruh log dari database).
-- Tampilkan badge status respons pada baris tabel:
-  - Hijau: `SUKSES (200/201)`
-  - Kuning/Oranye: `GAGAL (400/403/422)`
-  - Merah: `ERROR (500)`
-- Tampilkan nama modul yang komunikatif pada dropdown dan tabel.
-- Tampilkan rincian kegagalan/error pada modal Detail Audit Log.
+### 1.6 Langkah Eksekusi
+1. S0 baseline: `bun run lint`, `biome ci`, `tsc` FE.
+2. Tambah state + penangkapan rows mentah dari modal.
+3. Bangun panel mapping + auto-match + pratinjau 5 baris.
+4. Tambah normalisasi header + tombol unduh error + tombol lanjutkan.
+5. QA round-trip: CSV ejaan salah -> mapping manual -> impor sukses; template terisi -> auto-match tanpa mapping.
+6. Verifikasi + PR `development`.
 
 ---
 
-## 5. Step-by-Step Implementation
+## 2. F1 — PDF DNU (Daftar Nilai Ujian) dengan Kop Resmi
 
-### Tahap 1: Struktur Data & Migrasi Database
-- **Langkah 1.1**: Buat berkas migrasi SQL idempotent `0068_add_audit_log_status_columns.sql` dan update `apps/backend/src/models/schema.ts`.
-- **Langkah 1.2**: Eksekusi migrasi menggunakan `bun run db:safe-migrate`.
+### 2.1 Latar Belakang
+Belum ada dokumen cetak resmi nilai per MK. PDF DNU = kop institusi + tabel nilai + footer tanggal &
+tanda tangan (dosen pengampu, kaprodi). Helper `exportToPDF` (`utils/export.ts:65-129`) sudah ada
+(landscape A4, kop generik, footer "SIMAK Vokasi"), tetapi **belum mendukung kop resmi institusi**.
 
-### Tahap 2: Backend Plugin & Formatter Refactoring
-- **Langkah 2.1**: Update `apps/backend/src/utils/audit-format.ts` dengan kamus modul ramah manusia dan generator deskripsi kontekstual.
-- **Langkah 2.2**: Update `apps/backend/src/plugins/audit.plugin.ts` untuk mengabaikan 404, menyimpan `statusCode`/`isSuccess`, serta menambahkan resolver entitas (`tagihan`, `kelas-kuliah`, `kompensasi`, `sesi-apel`, `kurikulum`, `nilai-praktik`).
+### 2.2 Target File
+- **Modify:** `apps/frontend/src/utils/export.ts`
+  - Tambah parameter **opsional** pada `exportToPDF` (mis. `options?: { kop?: { logoUrl?: string; institusi?: string; alamat?: string; judulDokumen?: string }; signatures?: string[] }`).
+  - **Default tidak berubah** agar pemakai lain (`KHS`, laporan) tidak terdampak.
+- **Modify:** `apps/frontend/src/routes/InputNilai.tsx`
+  - `handleExportPDF`: rakit baris dari **nilai tersimpan** memakai `buildRingkasanRows` + `buildRingkasanColumns`
+    (sudah ada di PR #399), panggil `exportToPDF(...)` dengan kop + tanda tangan.
+  - Tombol `Cetak PDF (DNU)` di Actions + sticky bar.
+- **Aset:** sumber logo institusi perlu diverifikasi (kemungkinan `apps/frontend/public/`). Bila logo belum
+  tersedia, blokir F1 dan minta aset ke user (jangan menebak URL/path).
+- **Tidak diubah:** backend.
 
-### Tahap 3: Optimasi Query & Endpoint Controller Backend
-- **Langkah 3.1**: Update `apps/backend/src/services/audit.service.ts` untuk optimasi `count(*)`, filtering `statusCategory`, dan ekspor data aman.
-- **Langkah 3.2**: Update `apps/backend/src/controllers/audit.controller.ts` untuk mendukung parameter `statusCategory`.
+### 2.3 Format Dokumen
+- Orientasi landscape A4.
+- Kop: logo + nama institusi + alamat + judul `DAFTAR NILAI UJIAN` + baris MK/kelas/periode/prodi/dosen.
+- Tabel: `No | NIM | Nama | [Komponen (bobot%) ...] | Nilai Akhir | Huruf | Indeks`.
+- Footer: tanggal cetak + kolom tanda tangan (Dosen Pengampu, Kaprodi) + nomor halaman.
+- Strategi tabel lebar (komponen banyak): font 7–8pt + kolom padat; **varian ringkas** (tanpa kolom komponen,
+  hanya NA/Huruf/Indeks) sebagai opsi bila komponen > ambang tertentu. Ambang diputuskan saat eksekusi.
 
-### Tahap 4: Antarmuka Pengguna (Frontend SolidJS)
-- **Langkah 4.1**: Update `apps/frontend/src/controllers/auditController.ts` dengan tipe data baru dan fungsi ekspor.
-- **Langkah 4.2**: Update `apps/frontend/src/routes/AuditLog.tsx` dengan filter status respons, tombol ekspor ganda (filtered vs all), badge visual Apple-inspired, dan modal detail yang informatif.
+### 2.4 Risiko
+| Risiko | Mitigasi |
+| :--- | :--- |
+| Perubahan helper merusak halaman lain | Parameter baru opsional; default = perilaku kini; regresi manual KHS/laporan |
+| Logo belum tersedia | Verifikasi aset lebih dulu; tanpa aset -> tunda F1, minta ke user |
+| Tabel terlalu lebar | Font padat + opsi varian ringkas; uji 30–100 baris + multi-halaman |
 
-### Tahap 5: Pengujian, Linting & Verifikasi
-- **Langkah 5.1**: Jalankan unit test `bun test apps/backend/src/__tests__/audit-format.test.ts`.
-- **Langkah 5.2**: Jalankan linting `bun run lint` dan type check `bunx tsc --noEmit`.
+### 2.5 Langkah Eksekusi
+1. Verifikasi aset logo + kunci format kop & label tanda tangan.
+2. Tambah parameter opsional di `exportToPDF` (tanpa mengubah default).
+3. Implementasi `handleExportPDF` + tombol.
+4. QA cetak: A4 landscape, header berulang tiap halaman, tanda tangan, dark-mode tidak ikut.
+5. Verifikasi + PR `development`.
 
 ---
 
-## 6. Verification Plan
+## 3. F2 — Toleransi Bobot Desimal (EPS 0.01)
 
-### Automated Verification
-```bash
-# 1. Unit Testing Formatter Audit Log
-bun test apps/backend/src/__tests__/audit-format.test.ts
+### 3.1 Latar Belakang
+Validasi total bobot memakai kesetaraan float strict `!== 100` di:
+- `apps/frontend/src/routes/InputNilai.tsx` (`handleSaveComponents`),
+- `apps/frontend/src/components/SubKomponenEditor.tsx` (validasi 100%),
+- `apps/backend/src/services/yudisium.service.ts` (save komponen + sub).
 
-# 2. Monorepo Linting (Biome)
-bun run lint
+Akibatnya bobot desimal wajar (mis. `33.33 + 33.33 + 33.34`) berisiko ditolak. `recalcFinalGrades`
+juga melewatkan KRS bila bobot terdaftar `!= 100`, sehingga NA lama dipertahankan diam-diam.
 
-# 3. Strict TypeScript Compilation Check
-cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
-cd apps/frontend && bunx tsc --noEmit
+### 3.2 Keputusan
+- **EPS = 0.01.** Lolos bila `Math.abs(total - 100) < 0.01`.
+- NA memakai bobot **apa adanya**, tanpa normalisasi. Selisih `<0.01` poin dianggap negligible dan
+  didokumentasikan pada komentar kode.
+- Perubahan FE + BE + test dalam **satu PR** (hindari divergensi).
+
+### 3.3 Target File
+- **Modify:** `apps/backend/src/utils/grade-calc.ts`
+  - Konstanta tunggal `BOBOT_EPSILON = 0.01` + helper `isBobotComplete(weight: number): boolean`.
+  - Terapkan di `computeKomponenScore` (`weight === 100`) dan `buildFinalScore` (`registeredWeight === 100`).
+- **Modify:** `apps/backend/src/services/yudisium.service.ts`
+  - Ganti cek `!= 100` komponen & sub dengan `isBobotComplete(...)` (jangan duplikasi angka).
+- **Modify:** `apps/frontend/src/routes/InputNilai.tsx`
+  - `handleSaveComponents` pakai `Math.abs(total - 100) < 0.01`; tambah indikator lolos/gagal pada `Total: {..}%`.
+- **Modify:** `apps/frontend/src/components/SubKomponenEditor.tsx`
+  - Validasi `totalBobot` pakai toleransi yang sama.
+- **Modify (test):** `apps/backend/src/__tests__/nilai-akhir.test.ts` (tambah kasus 99.99 lolos, 99.0 ditolak),
+  verifikasi `sub-komponen.test.ts`, `nilai-envelope.test.ts`.
+
+### 3.4 Risiko
+| Risiko | Mitigasi |
+| :--- | :--- |
+| Divergensi FE/BE | Satu konstanta di BE + konstanta FE yang sama; test di kedua sisi dalam PR yang sama |
+| Kelengkapan NA berubah | `isBobotComplete` menggantikan `=== 100` secara konsisten di kalkulasi & validasi |
+| Bobot 99.0 ikut lolos | Diuji eksplisit ditolak (di luar EPS) |
+
+### 3.5 Langkah Eksekusi
+1. S0 baseline: lint + biome ci + tsc BE/FE + test nilai regresi.
+2. Tambah `BOBOT_EPSILON` + `isBobotComplete` di `grade-calc.ts`.
+3. Terapkan di `yudisium.service.ts` (komponen + sub).
+4. Terapkan di FE (`InputNilai.tsx`, `SubKomponenEditor.tsx`).
+5. Update/tambah test (99.99 lolos, 99.0 ditolak, agregasi & leaf).
+6. Verifikasi + PR `development`.
+
+---
+
+## 4. Ringkasan Urutan & Verifikasi
+
+```
+F3 (mapping impor)  -> F1 (PDF DNU, butuh aset logo)  -> F2 (EPS 0.01, FE+BE+test)
 ```
 
-### Manual Verification
-1. **Verifikasi Penolakan Noise 404:**
-   - Jalankan `curl -X POST http://localhost:3000/rds/execute` atau `POST /api/random-probe`.
-   - Pastikan tidak ada data baru yang masuk ke tabel `audit_logs`.
-2. **Verifikasi Pencatatan Aksi Gagal:**
-   - Picu kegagalan validasi (HTTP 422) atau unauthorized (HTTP 401/403).
-   - Verifikasi log mencatat status `GAGAL` beserta pesan error dan tidak menuliskan "berhasil tambah data".
-3. **Verifikasi Filter Status Respons di UI:**
-   - Pilih tab "Gagal Validasi / Izin (4xx)" di halaman Audit Log.
-   - Pastikan hanya transaksi gagal yang muncul.
-4. **Verifikasi Fitur Ekspor CSV:**
-   - Uji tombol "Export Hasil Filter" dan periksa isi CSV sesuai dengan filter aktif.
-   - Uji tombol "Export Seluruh Log" dan periksa seluruh data terunduh dengan lengkap.
-5. **Verifikasi Resolusi Entitas:**
-   - Lakukan operasi CRUD pada modul `tagihan` atau `kelas-kuliah`.
-   - Pastikan kolom Entitas menampilkan nama mahasiswa / nama kelas dengan jelas.
+Verifikasi tiap PR:
+```bash
+bun run lint
+bunx @biomejs/biome ci .
+cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
+cd apps/frontend && bunx tsc --noEmit
+# khusus F2 (DB test lokal localhost:5433):
+bun test apps/backend/src/__tests__/nilai-akhir.test.ts
+```
+Semua PR menyasar `development` (staging-first); tanpa migrasi DB.
+
+## 5. Kriteria Selesai per Item
+- [ ] **F3:** CSV dengan nama kolom beda ejaan dapat dipetakan manual dan diimpor; error per baris dapat diunduh;
+      template terisi tetap auto-match; `ImportCsvModal` & backend tidak berubah.
+- [ ] **F1:** satu klik mengunduh PDF DNU landscape dengan kop resmi + tanda tangan + nomor halaman;
+      `exportToPDF` default tidak berubah untuk pemakai lain.
+- [ ] **F2:** bobot `99.99` lolos dan `99.0` ditolak di FE & BE; test regresi nilai hijau; `lint`/`tsc` hijau.
+
+---
+
+## 6. Status Implementasi (diperbarui saat eksekusi)
+
+### Selesai
+- **F3** — Panel pemetaan kolom impor (`Modal` lokal) + auto-match + pratinjau 5 baris + unduh daftar error +
+  tombol Lanjutkan. `ImportCsvModal` dan backend tidak disentuh.
+- **F1** — Tombol `Cetak PDF (DNU)` dengan kop resmi institusi (logo `src/assets/logo.png` dimuat sebagai data URL),
+  info MK/kelas/periode/prodi/dosen, dan blok tanda tangan (Dosen Pengampu, Ketua Program Studi).
+  `exportToPDF` diberi parameter opsional `PdfKopOptions`; default pemakai lain tidak berubah.
+
+### F2 DIBATALKAN — bobot persen cukup bilangan bulat
+Target bobot desimal (toleransi EPS 0.01) **dibatalkan** setelah evaluasi: bobot persen tidak perlu format
+desimal. Alasan teknis tambahan: kolom `komponen_nilai.bobot` dan `sub_komponen_nilai.bobot` bertipe
+`integer`, sehingga bobot desimal mustahil dipersist tanpa migrasi `numeric(5,2)` yang memperluas scope.
+
+Seluruh perubahan F2 yang sempat dibuat telah **di-revert**:
+- `grade-calc.ts`: `BOBOT_EPSILON`/`isBobotComplete` dihapus; kembali `weight === 100` / `registeredWeight === 100`.
+- `yudisium.service.ts`: kembali perbandingan strict `!== 100` / `=== 100`.
+- `yudisium.schema.ts` & `khs.schema.ts`: `bobot` kembali `t.Integer`.
+- `InputNilai.tsx` & `SubKomponenEditor.tsx`: helper toleransi dihapus; kembali strict `=== 100`.
+- Test toleransi dihapus.
+Tidak ada migrasi DB. F1 dan F3 tetap berlaku.

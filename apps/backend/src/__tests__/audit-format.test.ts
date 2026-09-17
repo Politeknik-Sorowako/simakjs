@@ -6,6 +6,7 @@ import {
   formatDescription,
   formatDetail,
   formatSummaryForDetail,
+  getModuleDisplayName,
   resolveTableName,
   summarizeResponse,
 } from '../utils/audit-format';
@@ -23,6 +24,20 @@ describe('audit-format', () => {
     it('falls back to snake_case for unknown modules', () => {
       expect(resolveTableName('some-new-feature')).toBe('some_new_feature');
       expect(resolveTableName('')).toBe('unknown');
+    });
+  });
+
+  describe('getModuleDisplayName', () => {
+    it('maps known modules to human-readable Indonesian labels', () => {
+      expect(getModuleDisplayName('mahasiswa')).toBe('Mahasiswa');
+      expect(getModuleDisplayName('nilai-praktik')).toBe('Penilaian Praktik');
+      expect(getModuleDisplayName('tagihan')).toBe('Tagihan Keuangan/SPP');
+      expect(getModuleDisplayName('kompensasi-bayar')).toBe('Pembayaran Kompensasi');
+    });
+
+    it('falls back to the raw module and handles empty input', () => {
+      expect(getModuleDisplayName('some-new-module')).toBe('some-new-module');
+      expect(getModuleDisplayName('')).toBe('Sistem');
     });
   });
 
