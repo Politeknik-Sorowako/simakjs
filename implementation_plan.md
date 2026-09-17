@@ -1,159 +1,128 @@
-# Implementation Plan: Hak Akses Gabungan untuk User Multi-Role (Union Role)
+# Implementation Plan: Filter Prodi + Kolom Prodi + Sorting Tabel `/monitoring-bimbingan`
 
-Dokumen perencanaan struktural. **Belum berisi implementasi kode penuh.** Tujuannya memetakan dependensi, file target, urutan eksekusi, dan pengujian.
-
----
-
-## 1. Latar Belakang & Akar Masalah
-
-Seorang user dapat memegang beberapa role sekaligus (mis. `dosen` + `prodi`, atau `admin` + `dosen`). Saat ini otorisasi di banyak tempat masih memeriksa **role tunggal** (`users.role` / `currentUser.role`), bukan gabungan (`roles[]`). Akibatnya:
-
-- User `dosen` + `prodi` dengan primary role `dosen` **ditolak** saat mengakses endpoint yang mensyaratkan `prodi`.
-- Menu Sidebar dan `ProtectedRoute` hanya menampilkan/mengizinkan menu primary role.
-- Guard scope dosen (`guardMkScope`, `guardKelasScope`, `guardRombelScope`) tetap membatasi user yang seharusnya punya akses penuh via role `prodi`/`admin`.
-
-**Prinsip target:** `hasRole(user, allowed)` = `true` bila **salah satu** role di `user.roles[]` cocok. `users.role` hanya legacy/primary untuk display & fallback, bukan sumber otorisasi.
+Dokumen perencanaan struktural. Tujuan: menambah filter Program Studi, menampilkan kolom Program Studi mahasiswa, dan mengizinkan sorting tabel monitoring bimbingan.
 
 ---
 
-## 2. Kondisi Eksisting (Sudah Multi-Role-Ready)
+## 1. Latar Belakang
 
-| Komponen | Lokasi | Status |
-| :--- | :--- | :--- |
-| Tabel `user_roles (userId, role)` | `apps/backend/src/models/schema.ts` | Ada |
-| `UserPayload { role, roles[] }` | `apps/backend/src/utils/types.ts` | Ada |
-| `hasRole()`, `validateRoleCombination()`, `SINGLE_ROLE_ONLY`, `MULTI_ROLE_ALLOWED` | `apps/backend/src/utils/role.ts` | Ada |
-| Derive `roles` dari JWT | `apps/backend/src/middlewares/auth.middleware.ts` | Ada |
-| `getRolesForUser()`, login kembalikan `role + roles` | `apps/backend/src/services/auth.service.ts` | Ada |
-| `updateUserRoles` + validasi kombinasi + sinkron `users.role = roles[0]` | `apps/backend/src/controllers/user.controller.ts` | Ada |
-| `hasRole()` union di frontend | `apps/frontend/src/contexts/AuthContext.tsx` | Ada |
-| Modal "Atur Peran" (checkbox multi-role) | `apps/frontend/src/routes/Pengguna.tsx` | Ada |
+Halaman `apps/frontend/src/routes/MonitoringBimbingan.tsx` saat ini:
+- Filter: Periode Semester, Dosen PA, dan search (NIM/Mahasiswa/Dosen, debounced 400ms).
+- Prodi hanya implisit via `workspace.activeProdiId()` (hanya aktif untuk role `admin`), tanpa dropdown eksplisit.
+- Tabel: `['No','NIM','Nama Mahasiswa','Dosen PA','Periode','Jumlah Sesi','Status Approval']` — tanpa kolom Prodi, tanpa sorting server-side.
+- Export CSV & print: tanpa kolom Prodi. `handlePrint` juga tidak mengirim `prodiId`.
 
-**Tidak diperlukan migrasi DB baru.** `user_roles` sudah tersedia.
+Target:
+1. Filter Program Studi eksplisit (dropdown).
+2. Tampilkan **Program Studi mahasiswa** pada tabel, CSV, dan print.
+3. Sorting server-side berdasarkan `nim`, `nama mahasiswa`, `dosen PA`, `prodi`, dan `jumlah sesi`.
 
----
-
-## 3. Daftar Celah (Gap) yang Harus Ditutup
-
-| # | File | Masalah |
-| :--- | :--- | :--- |
-| B1 | `apps/backend/src/utils/types.ts` (`allowed()`) | `roles.includes(user.role)` — hanya cek primary. Dipakai ~30 controller. |
-| B2 | `apps/backend/src/controllers/user.controller.ts` | Cek langsung `currentUser.role !== 'admin'/'super_admin'` di banyak method. |
-| B3 | `apps/backend/src/utils/dosen-scope.ts` (`isPrivilegedScope`) | User `dosen+prodi` dianggap non-privileged sehingga di-scope sebagai dosen. |
-| B4 | `apps/backend/src/controllers/kategori-bimbingan.controller.ts` | `isAuthorized(currentUser.role)` single string. |
-| B5 | `apps/backend/src/services/rbac.service.ts` (`hasRolePermission(role)`) | Hanya menerima satu role; belum ada agregasi union. |
-| B6 | `apps/backend/src/app.ts`, `plugins/audit.plugin.ts`, `routes/admisi-admin.routes.ts`, `routes/e2e.routes.ts` | Membaca `payload.role` / `user.role` langsung. |
-| F1 | `apps/frontend/src/components/ProtectedRoute.tsx` | `auth.user()?.role` + `includes(userRole)` single-role. |
-| F2 | `apps/frontend/src/components/Sidebar.tsx` | `role() === 'admin'` dsb. Menu = primary saja, bukan union. |
-| F3 | `apps/frontend/src/routes/Pengguna.tsx` | Checkbox modal belum cegah kombinasi invalid / uncheck terakhir; label belum 1:1 backend. |
+Nilai Prodi diambil dari **program studi mahasiswa** (`mahasiswa.programStudiId -> programStudi.nama`), bukan prodi dosen PA.
 
 ---
 
-## 4. Dependensi & Urutan Implementasi
+## 2. Keputusan Desain
 
-```
-B1 (allowed union)
-  → B2 (user.controller) + B4 (kategori-bimbingan)
-    → B3 (dosen-scope privileged) + verifikasi prodi-scope
-      → B5 (rbac union)
-        → B6 (audit/route payload role)
-          → F1 (ProtectedRoute) + F2 (Sidebar) + F3 (Pengguna modal)
-            → JWT refresh & sinkronisasi + pengujian
-```
-
-Catatan: `users.role` tetap diisi `roles[0]` sebagai legacy. Tidak ada perubahan skema DB.
+- **Server-side sorting** via query param `sortBy` + `sortOrder` (pola `ApelVerifikasi.tsx`, `LaporanKompensasi.tsx`). Client-side ditolak karena hanya mengurutkan halaman aktif dan merusak paginasi/export.
+- **`totalSesi` (derived)** diurutkan dengan Opsi A: muat seluruh baris terfilter, hitung `totalSesi` in-memory, sort global, lalu slice per halaman. Kolom lain (`nim/nama/dosenPa/prodi`) memakai `ORDER BY` DB.
+- **Filter Prodi efektif**: `selectedProdi() ?? workspace.activeProdiId() ?? undefined`, reset ke halaman 1 saat berubah.
+- Kontrak sort: `'nim' | 'nama' | 'dosenPa' | 'prodi' | 'totalSesi'`; default `sortBy` kosong -> fallback perilaku lama `asc(mahasiswa.id)`.
 
 ---
 
-## 5. Rencana Perubahan per Fase
+## 3. File Target
 
-### Fase 0 — Baseline (read-only)
-- Catat status awal: `bun run lint`, `tsc` backend (`tsconfig.ci.json`), `tsc` frontend.
+### Backend
+1. `apps/backend/src/schemas/bimbingan.schema.ts` — tambah `getMonitoringLengkapSchema` (query validation).
+2. `apps/backend/src/routes/bimbingan.routes.ts` — pasang schema pada `/monitoring-lengkap`.
+3. `apps/backend/src/controllers/bimbingan.controller.ts` — parse + whitelist `sortBy`/`sortOrder`.
+4. `apps/backend/src/services/bimbingan.service.ts` — `leftJoin(programStudi)`, select `prodiNama`, sorting whitelist + cabang `totalSesi`, mapping `prodiNama`.
 
-### Fase 1 — Backend: otorisasi inti
-1. `utils/types.ts` — ubah `allowed()` agar mendelegasikan ke logika `hasRole()` (union `roles[]` dengan fallback `[role]`). Pertahankan signature agar pemanggil tidak berubah.
-2. `controllers/user.controller.ts` — ganti semua cek `currentUser.role !== '...'` menjadi `hasRole(currentUser, [...])` pada: `toggleActive`, `updateRole` (legacy), `importCsv`, `resetPassword`, `forcePasswordChange`, `updateProdiScope`, `generateAccounts`, `generateAccountsAsync`. Lengkapi `updateRole.validRoles` yang belum memuat `kaprodi`, `plp`, `instruktur`.
-3. `controllers/kategori-bimbingan.controller.ts` — ubah `isAuthorized(role: string)` menjadi menerima `UserPayload` dan memakai `hasRole`.
-4. `controllers/auth.controller.ts`, `app.ts` (WS handler), `routes/admisi-admin.routes.ts`, `routes/e2e.routes.ts`, `plugins/audit.plugin.ts` — ganti pembacaan `role` langsung dengan helper union; audit tetap menyimpan primary role + `roles[]` untuk observabilitas.
+### Frontend
+5. `apps/frontend/src/controllers/bimbinganController.ts` — tipe `prodiNama`, param `sortBy`/`sortOrder`.
+6. `apps/frontend/src/routes/MonitoringBimbingan.tsx` — dropdown Prodi, kolom Prodi (tabel/CSV/print), `SortableHeader`, plumbing filter + sort.
 
-### Fase 2 — Backend: scope dosen vs prodi/admin
-5. `utils/dosen-scope.ts` — perbaiki `isPrivilegedScope()`: kembalikan `true` jika user memiliki role privileged apa pun (`super_admin`, `admin`, `kaprodi`, `prodi`, `keuangan`). Dengan demikian user `dosen+prodi` lolos guard (full access), sedangkan `dosen`/`instruktur`/`plp` murni tetap di-scope.
-6. `utils/role.ts` — verifikasi `canAccessAllProdi()` tetap `isGlobalScope || hasRole(['super_admin','admin'])`. **Jangan longgarkan tanpa persetujuan** (risiko pelebaran akses).
-7. `services/prodi-scope.service.ts`, `services/pelanggaran.service.ts` — verifikasi pola dual-check (`user_roles` + fallback `users.role`) tetap konsisten.
+### Test
+7. `apps/backend/src/__tests__/bimbingan-monitoring-sort.test.ts` — integration test filter prodi + sorting.
 
-### Fase 3 — Backend: RBAC granular union
-8. `services/rbac.service.ts` — tambah helper union, mis. `hasRolePermissionForUser(roles: string[], module, action)` dan `getUserEffectivePermissions(roles[])`. Konfirmasi mapping `prodi → Kaprodi` di `ROLE_TO_GROUP` (pertahankan default).
-
-### Fase 4 — Frontend: union akses
-9. `components/ProtectedRoute.tsx` — ganti `user.role` menjadi `auth.hasRole(allowedRoles)`; pertahankan bypass `super_admin`; lengkapi tipe role yang hilang (`kaprodi`, `plp`).
-10. `components/Sidebar.tsx` — ganti semua `role() === 'x'` menjadi `auth.hasRole(['x'])`; contoh `isAdminMgmt = () => auth.hasRole(['admin','super_admin'])`. Menu otomatis menjadi union.
-11. `contexts/AuthContext.tsx` — tidak ada perubahan logika wajib; opsional normalisasi `roles` saat `login()` (dedupe + fallback `[role]`).
-12. `routes/Pengguna.tsx` — hardening modal "Atur Peran" tanpa mengubah desain:
-    - Cegah kombinasi invalid (`SINGLE_ROLE_ONLY` tidak boleh digabung).
-    - Cegah menghapus role terakhir (`selectedRoles.length === 0`).
-    - Sembunyikan/disable `super_admin` kecuali aktor `super_admin`.
-    - Samakan label dengan `ROLE_LABELS` backend atau pakai `roleTypes()` dari API.
-    - Jika admin mengubah peran dirinya sendiri, paksa refresh sesi (`logout` / refetch `/auth/me`).
-
-### Fase 5 — JWT & sinkronisasi sesi
-13. Pastikan login/register/`validateUser` selalu mengisi `roles[]` via `getRolesForUser()`.
-14. `sso.service.ts`, `admisi.service.ts` — pastikan respons auth menyertakan `roles` secara konsisten.
-15. Setelah `updateUserRoles` pada diri sendiri, frontend wajib memperbarui `localStorage` / re-login agar JWT lama tidak dipakai.
+Tidak diubah: `Table.tsx`, `SortableHeader.tsx`, `WorkspaceContext.tsx`, `prodiController.ts`, migrasi DB, `schema.ts`.
 
 ---
 
-## 6. File Target
+## 4. Rincian Perubahan
 
-**Backend:** `utils/types.ts`, `utils/role.ts`, `utils/dosen-scope.ts`, `controllers/user.controller.ts`, `controllers/kategori-bimbingan.controller.ts`, `controllers/auth.controller.ts`, `services/rbac.service.ts`, `services/auth.service.ts`, `middlewares/auth.middleware.ts` (verifikasi), `plugins/audit.plugin.ts`, `app.ts`, `routes/admisi-admin.routes.ts`, `routes/e2e.routes.ts`.
+### 4.1 Backend Service (`getMonitoringBimbinganLengkap`)
+- Tambah `leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))` pada query data dan count query.
+- Tambah `prodiNama: programStudi.nama` pada select dan respons (`mhs.prodiNama || '-'`).
+- Whitelist sort DB:
+  - `nim -> mahasiswa.nim`
+  - `nama -> mahasiswa.nama`
+  - `dosenPa -> dosen.nama`
+  - `prodi -> programStudi.nama`
+- `sortBy === 'totalSesi'`: muat seluruh mahasiswa terfilter, batch load `bimbingan` + `sesiBimbingan`, hitung `totalSesi`, sort global (tiebreak `mahasiswa.id`), slice `offset..offset+limit`.
+- `sortBy` kosong/invalid: fallback `asc(mahasiswa.id)` (perilaku lama).
+- `meta.total`/`meta.totalPages` konsisten dengan set terfilter.
 
-**Frontend:** `components/ProtectedRoute.tsx`, `components/Sidebar.tsx`, `contexts/AuthContext.tsx`, `routes/Pengguna.tsx`, `controllers/userController.ts` (verifikasi typing).
+### 4.2 Backend Controller
+- Parse `sortBy` (string) dan `sortOrder` (`'asc' | 'desc'`, default `asc`).
+- Validasi whitelist `['nim','nama','dosenPa','prodi','totalSesi']`; invalid -> `undefined`.
 
----
+### 4.3 Backend Schema & Route
+- `getMonitoringLengkapSchema.query`: `periodeId`, `prodiId`, `dosenPaId`, `kategori`, `search`, `page`, `limit`, `sortBy`, `sortOrder`.
 
-## 7. Rencana Pengujian
+### 4.4 Frontend Controller
+- `MonitoringBimbinganLengkapItem`: tambah `prodiNama: string | null`.
+- `getMonitoringLengkap(filter)`: tambah `sortBy?: string; sortOrder?: 'asc' | 'desc'` + append ke `URLSearchParams`.
 
-### Unit / Integration (targeted, hindari `bun test` blanket di root)
-- `apps/backend/src/tests/rbac-multirole.test.ts` (baru):
-  - `allowed()` union & fallback `[role]`.
-  - `hasRole()` multi-role.
-  - `validateRoleCombination`: tolak `mahasiswa+dosen`, izinkan `dosen+prodi`, tolak `super_admin` via API.
-- `apps/backend/src/__tests__/user-roles.test.ts` (perluas/buat):
-  - `updateUserRoles` sukses `['dosen','prodi']`.
-  - Gagal `['mahasiswa','dosen']`.
-  - Non-super_admin gagal memberikan `super_admin`.
-  - `users.role` tersinkron `roles[0]`.
-- `dosen-scope.test.ts` (baru):
-  - `dosen` murni dibatasi.
-  - `dosen+prodi` lolos `guardMkScope`/`guardKelasScope`.
-
-### Manual (Frontend)
-- Login sebagai `dosen + prodi` → Sidebar menampilkan menu Dosen **dan** Admin Prodi.
-- Buka route keduanya → `ProtectedRoute` tidak memantulkan ke Dashboard.
-- Modal "Atur Peran": kombinasi invalid ter-disable, simpan sukses menampilkan badge role gabungan.
-
-### Perintah verifikasi
-```bash
-bun run lint
-cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
-cd apps/frontend && bunx tsc --noEmit
-bun test apps/backend/src/tests/rbac-multirole.test.ts
-```
+### 4.5 Frontend Page
+- State: `selectedProdi`, `sortBy`, `sortOrder`; `toggleSort(field)` (default `totalSesi -> desc`, lainnya `asc`); `prodis` resource.
+- Resource `monitoringData` key += `prodiId`, `sortBy`, `sortOrder`.
+- Dropdown Prodi di bar filter (`-- Semua Prodi --`).
+- Tabel: kolom Prodi setelah Nama Mahasiswa; `SortableHeader` untuk NIM, Nama, Prodi, Dosen PA, Jumlah Sesi.
+- CSV: tambah kolom Prodi; sertakan `prodiId/sortBy/sortOrder` pada fetch export.
+- Print: sertakan `prodiId/sortBy/sortOrder` (perbaiki bug), tambah kolom Prodi, tampilkan Prodi terpilih di header cetak.
 
 ---
 
-## 8. Risiko & Keputusan yang Butuh Konfirmasi
+## 5. Pengujian
 
-1. Mapping `prodi → Kaprodi` di `RbacService.ROLE_TO_GROUP` — pertahankan atau pisah? (default: pertahankan).
-2. `canAccessAllProdi` hanya `super_admin`/`admin`; user `prodi` murni tetap di-scope `userProdiScopes`. Jangan longgarkan tanpa persetujuan.
-3. Legacy `updateRole` (single) vs `updateUserRoles` (multi) — pertahankan keduanya; arahkan UI hanya ke multi.
-4. Tidak ada migrasi DB. Backup tetap wajib sebelum deploy staging/produksi. PR staging-first ke `development`, promosi via `development → main`.
+Targeted test saja (hindari `bun test` blanket di root).
+
+- `apps/backend/src/__tests__/bimbingan-monitoring-sort.test.ts`:
+  - `prodiNama` hadir di setiap row.
+  - Filter `prodiId` memotong benar; kombinasi `prodiId + search + sort` benar.
+  - Sort `nim/nama/dosenPa/prodi` asc/desc benar.
+  - Sort `totalSesi` desc/asc benar lintas halaman.
+  - `sortBy` invalid -> fallback tanpa error; `sortOrder` tanpa `sortBy` diabaikan.
+  - `meta.total`/`meta.totalPages` konsisten.
+- Frontend: `bun run lint` + `bunx biome ci .` + `bunx tsc --noEmit`.
 
 ---
 
-## 9. Kriteria Selesai (Definition of Done)
+## 6. Risiko
 
-- User `dosen + prodi` lolos `allowed(user, ['prodi'])` **dan** `allowed(user, ['dosen'])`.
-- Sidebar + `ProtectedRoute` menampilkan/mengizinkan **union** menu.
-- `guardMkScope`/`guardKelasScope`/`guardRombelScope` lolos untuk pemegang `prodi`/`admin` walau juga `dosen`.
-- Kombinasi role invalid ditolak backend **dan** dicegah di UI modal.
-- `bun run lint`, kedua `tsc`, dan test scoped hijau.
+- `programStudiId` NULL -> `prodiNama` NULL ditampilkan `'-'`.
+- Konsistensi join pada count query.
+- Perubahan struktur CSV (penambahan kolom Prodi) diumumkan di PR.
+- Scoping role prodi/dosen tetap mengikuti guard eksisting; tidak melebarkan akses.
+
+---
+
+## 7. Urutan Eksekusi
+
+1. Backend schema + route.
+2. Backend controller.
+3. Backend service.
+4. Test backend + targeted run.
+5. Frontend controller.
+6. Frontend page.
+7. Verifikasi lint + tsc + manual QA.
+8. PR staging-first ke `development`.
+
+---
+
+## 8. Kriteria Selesai
+
+- Dropdown Prodi memfilter tabel, CSV, dan print.
+- Kolom Prodi tampil di tabel/CSV/print dan dapat diurutkan bersama NIM, Nama, Dosen PA, Jumlah Sesi.
+- `lint` + `tsc` hijau, test baru hijau, tanpa migrasi DB, tanpa push langsung ke `development`/`main`.
