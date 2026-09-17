@@ -19,10 +19,26 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
   cd apps/frontend && bunx tsc --noEmit
   ```
 - **Testing Standards & Execution Optimization**:
+  - **Verification Ladder (L1 → L2 → L3)**: Gunakan tangga verifikasi agar tidak boros waktu:
+    - **L1 (setiap edit, < 5 dtk)**: `bunx biome check <file-yang-diubah>`.
+    - **L2 (per milestone)**: test scoped modul yang diubah + `bunx tsc --noEmit` bila menyentuh tipe.
+    - **L3 (hanya bila menyentuh kode bersama `grade-calc`/service/schema/middleware ATAU tepat sebelum merge PR)**: `cd apps/backend && bun run test` (full suite). Dilarang mengulang L3 berkali-kali "untuk memastikan".
+    - `bunx vite build`/`tsc` hanya per milestone & sebelum push final; selebihnya andalkan CI (Lint/Type Check/Build ±1 menit).
   - **Dilarang Menjalankan Blanket `bun test` di Root**: `bun test` di root memicu 70+ file integration test yang membutuhkan PostgreSQL aktif; jika DB tidak terhubung, setiap test mengalami timeout koneksi ~4 detik (menghabiskan waktu 20+ menit).
   - **Targeted / Scoped Testing**: Hanya jalankan test untuk modul yang diubah, misalnya: `bun test apps/backend/src/tests/pelanggaran-delete.test.ts` atau `bun test -t "Pelanggaran"`.
   - **Backend Integration Test**: Untuk menguji seluruh skenario backend dengan DB lokal, pastikan PostgreSQL test container aktif (`localhost:5433`), lalu jalankan `cd apps/backend && bun run test` (otomatis menjalankan `pre-test.ts` & migrasi test schema).
   - **Perubahan Khusus Frontend**: Tidak perlu mengeksekusi backend integration test suite; cukup validasi via `bun run lint`, `tsc --noEmit` frontend, dan CI GitHub Actions.
+  - **File Test Berat & Flaky**: Untuk file dengan seeding berat (mis. `bimbingan-pelanggaran`, `dosen-pengajar-scoping`) jalankan `bun test --timeout 15000 <file>`. Kegagalan `beforeEach hook timed out` atau duplikat `dosen_nip_unique` umumnya **environmental** (hook terinterupsi), bukan regresi kode.
+  - **Runbook Reset DB Test Tercemar**: Jika data sisa menyebabkan duplikat/unique violation, truncate seluruh tabel test lalu jalankan pre-test:
+    ```bash
+    SQL=$(docker exec simak_db psql -U simak_user -d simak_vokasi_test -tAc "SELECT 'TRUNCATE TABLE ' || string_agg(quote_ident(tablename), ', ') || ' RESTART IDENTITY CASCADE;' FROM pg_tables WHERE schemaname='public';")
+    docker exec simak_db psql -U simak_user -d simak_vokasi_test -c "$SQL"
+    cd apps/backend && bun run src/scripts/pre-test.ts
+    ```
+- **Merge & Review Efficiency**:
+  - **Plan Kerja Tidak Di-commit**: Simpan rencana kerja di `.opencode/plans/<slug>.md` (tidak di-commit ke feature branch) agar tidak memicu konflik antar-PR (mis. dua PR yang sama-sama menulis `implementation_plan.md`).
+  - **Auto-merge**: Setelah push & CI mulai, gunakan `gh pr merge <N> --auto --merge` alih-alih polling manual `mergeStateStatus`. Tetap target `development`; jangan hapus protected branch.
+  - **Verifikasi Sasaran Review**: Sebelum menjalankan reviewer/agent, pastikan `gh pr view <N> --json number,title,headRefName,state` cocok dengan PR yang dimaksud dan cantumkan nomor + judul PR secara eksplisit di prompt.
 
 ---
 

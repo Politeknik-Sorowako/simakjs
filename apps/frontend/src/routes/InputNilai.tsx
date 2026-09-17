@@ -12,7 +12,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { type KelasKuliah, kelasKuliahController } from '../controllers/kelasKuliahController';
-import { khsController, type NilaiMahasiswa, type SubKomponenNilai } from '../controllers/khsController';
+import {
+  type KomponenNilai,
+  khsController,
+  type NilaiMahasiswa,
+  type SubKomponenNilai,
+} from '../controllers/khsController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { type Prodi, prodiController } from '../controllers/prodiController';
 import { rombelPraktikumController } from '../controllers/rombelPraktikumController';
@@ -21,6 +26,9 @@ import { isHeaderRow } from '../utils/csv';
 import { type ExportColumn, exportToCSV, exportToExcelMultipleSheets, exportToPDF } from '../utils/export';
 
 type InputMethod = 'akhir' | 'komponen' | 'sub';
+
+// A2: cache data URL logo institusi agar tidak dibaca ulang setiap ekspor PDF.
+let pdfLogoCache: string | null = null;
 
 export default function InputNilai() {
   const auth = useAuth();
@@ -55,6 +63,12 @@ export default function InputNilai() {
   const [showMappingModal, setShowMappingModal] = createSignal(false);
   const [pendingImportRows, setPendingImportRows] = createSignal<string[][]>([]);
   const [columnMapping, setColumnMapping] = createSignal<Record<number, string>>({});
+  // Snapshot draft yang di-debounce untuk perhitungan rekap (hindari hitung tiap keystroke).
+  const [rekapSnapshot, setRekapSnapshot] = createSignal<{
+    grades: Record<string, string>;
+    subGrades: Record<string, string>;
+    akhir: Record<string, string>;
+  }>({ grades: {}, subGrades: {}, akhir: {} });
 
   // 1. Filter periode & program studi (default: periode aktif + prodi workspace admin)
   const workspace = useWorkspace();
@@ -203,6 +217,11 @@ export default function InputNilai() {
     }
     return map;
   });
+
+  // A3: hanya komponen yang sudah memiliki id (dari server) yang diproses.
+  const validComponents = createMemo(() =>
+    (components() || []).filter((c): c is KomponenNilai & { id: number } => typeof c.id === 'number'),
+  );
 
   // Referensi stabil untuk komponen yang sedang di-expand agar editor tidak reset.
   const expandedSubs = createMemo<SubKomponenNilai[]>(() => {
@@ -430,7 +449,7 @@ export default function InputNilai() {
 
   // Komponen default untuk bulk nilai (mode komponen).
   createEffect(() => {
-    const comps = components();
+    const comps = validComponents();
     const current = bulkKomponenId();
     if (comps && comps.length > 0) {
       if (current === null || !comps.some((c) => c.id === current)) {
@@ -562,6 +581,16 @@ export default function InputNilai() {
     });
 
   const dirtyCount = () => dirtyKeys().size;
+  const isDirty = (key: string) => dirtyKeys().has(key);
+
+  // A4b: batalkan semua draft yang belum disimpan, kembalikan ke nilai server.
+  const handleDiscardChanges = () => {
+    if (dirtyCount() === 0) return;
+    if (!confirm('Batalkan semua perubahan yang belum disimpan dan kembalikan ke nilai tersimpan?')) return;
+    clearDirty('a:', 'g:', 's:');
+    refetchStudentsGrades();
+    toast.showToast('Perubahan yang belum disimpan dibatalkan.', 'info');
+  };
 
   // Handle student grade change
   const handleGradeChange = (krsId: number, komponenNilaiId: number, value: string) => {
@@ -738,9 +767,15 @@ export default function InputNilai() {
   };
 
   // Nilai level-1 suatu komponen: override langsung menang, fallback agregasi sub.
-  const getDynamicKomponenScore = (krsId: number, komponenId: number, bobot: number) => {
+  const getDynamicKomponenScore = (
+    krsId: number,
+    komponenId: number,
+    bobot: number,
+    grades: Record<string, string> = inputGrades(),
+    subGrades: Record<string, string> = inputSubGrades(),
+  ) => {
     void bobot;
-    const directGrade = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
+    const directGrade = parseGradeInput(grades[`${krsId}_${komponenId}`]);
     if (directGrade !== null) {
       return { score: directGrade, complete: true };
     }
@@ -751,7 +786,7 @@ export default function InputNilai() {
       let weight = 0;
       let missing = 0;
       for (const sub of subs) {
-        const grade = parseGradeInput(inputSubGrades()[`${krsId}_${sub.id}`]);
+        const grade = parseGradeInput(subGrades[`${krsId}_${sub.id}`]);
         if (grade === null) {
           missing += 1;
           continue;
@@ -767,14 +802,18 @@ export default function InputNilai() {
     return { score: null, complete: false };
   };
 
-  const getDynamicFinalGrade = (stud: { krsId: number }) => {
-    const list = components();
+  const getDynamicFinalGrade = (
+    stud: { krsId: number },
+    grades: Record<string, string> = inputGrades(),
+    subGrades: Record<string, string> = inputSubGrades(),
+  ) => {
+    const list = validComponents();
     if (!list || list.length === 0) return null;
 
     let totalScore = 0;
     let totalBobot = 0;
     for (const c of list) {
-      const result = getDynamicKomponenScore(stud.krsId, c.id!, c.bobot);
+      const result = getDynamicKomponenScore(stud.krsId, c.id, c.bobot, grades, subGrades);
       if (!result.complete || result.score === null) return null;
       totalScore += result.score * (c.bobot / 100);
       totalBobot += c.bobot;
@@ -867,7 +906,7 @@ export default function InputNilai() {
   };
 
   const buildRingkasanColumns = (): ExportColumn[] => {
-    const comps = components() || [];
+    const comps = validComponents();
     return [
       { header: 'NIM', accessor: 'nim' },
       { header: 'Nama', accessor: 'nama' },
@@ -884,12 +923,12 @@ export default function InputNilai() {
   };
 
   const buildRingkasanRows = (data: NilaiMahasiswa[]): Record<string, string | number>[] => {
-    const comps = components() || [];
+    const comps = validComponents();
     return data.map((d) => {
       const row: Record<string, string | number> = { nim: d.nim, nama: d.nama };
       let kosong = 0;
       for (const c of comps) {
-        const score = storedKomponenScore(d, c.id!);
+        const score = storedKomponenScore(d, c.id);
         row[`komp_${c.id}`] = score === null ? '-' : score;
         if (score === null) kosong += 1;
       }
@@ -909,7 +948,7 @@ export default function InputNilai() {
     setIsExporting(true);
     try {
       const data = (await khsController.getNilaiMahasiswa(kelasId)) || [];
-      const comps = components() || [];
+      const comps = validComponents();
       const subs = subComponents() || [];
       const kelas = selectedClassDetails();
 
@@ -918,7 +957,7 @@ export default function InputNilai() {
         for (const c of comps) {
           const subsOf = subs.filter((s) => s.komponenNilaiId === c.id);
           const hasL1 = (d.nilaiKomponen || []).some((v) => v.komponenNilaiId === c.id);
-          const agregat = storedKomponenScore(d, c.id!) ?? '-';
+          const agregat = storedKomponenScore(d, c.id) ?? '-';
           if (subsOf.length === 0) {
             detailRows.push({
               nim: d.nim,
@@ -1042,7 +1081,7 @@ export default function InputNilai() {
     setIsExporting(true);
     try {
       const data = (await khsController.getNilaiMahasiswa(kelasId)) || [];
-      const comps = components() || [];
+      const comps = validComponents();
       const method = activeMethod();
       const columns: ExportColumn[] = [{ header: 'nim', accessor: 'nim' }];
 
@@ -1050,13 +1089,13 @@ export default function InputNilai() {
         columns.push({ header: 'nilai_akhir', accessor: 'nilai_akhir' });
       } else if (method === 'sub') {
         for (const c of comps) {
-          for (const s of subsByKomponen().get(c.id!) || []) {
+          for (const s of subsByKomponen().get(c.id) || []) {
             columns.push({ header: s.nama, accessor: `sub_${s.id}` });
           }
         }
       } else {
         for (const c of comps) {
-          if (!componentHasSub(c.id!)) columns.push({ header: c.nama, accessor: `komp_${c.id}` });
+          if (!componentHasSub(c.id)) columns.push({ header: c.nama, accessor: `komp_${c.id}` });
         }
       }
 
@@ -1066,15 +1105,15 @@ export default function InputNilai() {
           row.nilai_akhir = d.nilaiAngka ?? '';
         } else if (method === 'sub') {
           for (const c of comps) {
-            for (const s of subsByKomponen().get(c.id!) || []) {
+            for (const s of subsByKomponen().get(c.id) || []) {
               const raw = (d.nilaiSub || []).find((v) => v.subKomponenNilaiId === s.id);
               row[`sub_${s.id}`] = raw ? String(raw.nilai) : '';
             }
           }
         } else {
           for (const c of comps) {
-            if (componentHasSub(c.id!)) continue;
-            row[`komp_${c.id}`] = storedKomponenScore(d, c.id!) ?? '';
+            if (componentHasSub(c.id)) continue;
+            row[`komp_${c.id}`] = storedKomponenScore(d, c.id) ?? '';
           }
         }
         return row;
@@ -1090,8 +1129,9 @@ export default function InputNilai() {
   };
 
   // Muat logo institusi sebagai data URL untuk kop PDF
-  const loadPdfLogoDataUrl = (): Promise<string | null> =>
-    new Promise((resolve) => {
+  const loadPdfLogoDataUrl = (): Promise<string | null> => {
+    if (pdfLogoCache !== null) return Promise.resolve(pdfLogoCache);
+    return new Promise((resolve) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
@@ -1105,7 +1145,9 @@ export default function InputNilai() {
             return;
           }
           ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
+          const dataUrl = canvas.toDataURL('image/png');
+          pdfLogoCache = dataUrl;
+          resolve(dataUrl);
         } catch {
           resolve(null);
         }
@@ -1113,6 +1155,7 @@ export default function InputNilai() {
       img.onerror = () => resolve(null);
       img.src = logoImg;
     });
+  };
 
   const handleExportPDF = async () => {
     const kelasId = selectedKelasId();
@@ -1158,10 +1201,22 @@ export default function InputNilai() {
   };
 
   // ===== Rekap pra-simpan =====
+  // A1: debounce snapshot draft agar rekap tidak dihitung setiap keystroke.
+  let rekapDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  createEffect(() => {
+    const grades = inputGrades();
+    const subGrades = inputSubGrades();
+    const akhir = inputAkhir();
+    clearTimeout(rekapDebounceTimer);
+    rekapDebounceTimer = setTimeout(() => setRekapSnapshot({ grades, subGrades, akhir }), 180);
+  });
+  onCleanup(() => clearTimeout(rekapDebounceTimer));
+
   const rekapRows = createMemo(() => {
     if (!showRekap()) return [];
+    const snap = rekapSnapshot();
     return visibleStudents().map((stud) => {
-      const live = getDynamicFinalGrade(stud);
+      const live = getDynamicFinalGrade(stud, snap.grades, snap.subGrades);
       const liveScore = live?.score ?? null;
       const stored = toNum(stud.nilaiAngka);
       const delta = liveScore !== null && stored !== null ? parseFloat((liveScore - stored).toFixed(2)) : null;
@@ -1179,22 +1234,24 @@ export default function InputNilai() {
 
   const rekapOverall = createMemo(() => {
     const list = visibleStudents();
+    const snap = rekapSnapshot();
     const total = list.length;
     let lengkap = 0;
     for (const stud of list) {
-      if (getDynamicFinalGrade(stud) !== null) lengkap += 1;
+      if (getDynamicFinalGrade(stud, snap.grades, snap.subGrades) !== null) lengkap += 1;
     }
     return { total, lengkap, belum: total - lengkap };
   });
 
   const rekapKomponen = createMemo(() => {
     if (!showRekap()) return [];
-    return (components() || []).map((c) => {
+    const snap = rekapSnapshot();
+    return validComponents().map((c) => {
       const scores: number[] = [];
       let filled = 0;
       const total = visibleStudents().length;
       for (const stud of visibleStudents()) {
-        const res = getDynamicKomponenScore(stud.krsId, c.id!, c.bobot);
+        const res = getDynamicKomponenScore(stud.krsId, c.id, c.bobot, snap.grades, snap.subGrades);
         if (res.complete && res.score !== null) {
           filled += 1;
           scores.push(res.score);
@@ -1213,7 +1270,7 @@ export default function InputNilai() {
   });
 
   const displayComponents = createMemo(() => {
-    const all = components() || [];
+    const all = validComponents();
     const focus = focusKomponenId();
     if (focus === null) return all;
     return all.filter((c) => c.id === focus);
@@ -1235,7 +1292,7 @@ export default function InputNilai() {
     if (!kelasId) return;
 
     const list = targetStudents();
-    const comps = components();
+    const comps = validComponents();
     if (!list || !comps) return;
 
     const payload: Array<{
@@ -1252,7 +1309,7 @@ export default function InputNilai() {
       const subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }> = [];
 
       for (const c of comps) {
-        const subs = subsByKomponen().get(c.id!) || [];
+        const subs = subsByKomponen().get(c.id) || [];
         if (subs.length > 0) {
           for (const sub of subs) {
             const grade = parseGradeInput(inputSubGrades()[`${stud.krsId}_${sub.id}`]);
@@ -1260,7 +1317,7 @@ export default function InputNilai() {
           }
         } else {
           const grade = parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]);
-          if (grade !== null) nilaiKomponenList.push({ komponenNilaiId: c.id!, nilai: grade });
+          if (grade !== null) nilaiKomponenList.push({ komponenNilaiId: c.id, nilai: grade });
         }
       }
 
@@ -1305,7 +1362,7 @@ export default function InputNilai() {
     const kelasId = selectedKelasId();
     if (!kelasId) return;
     const list = targetStudents();
-    const comps = components();
+    const comps = validComponents();
     if (!list || !comps) return;
 
     const payload = list
@@ -1313,7 +1370,7 @@ export default function InputNilai() {
         krsId: stud.krsId,
         nilaiKomponenList: comps
           .map((c) => ({
-            komponenNilaiId: c.id!,
+            komponenNilaiId: c.id,
             nilai: parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]),
           }))
           .filter((v): v is { komponenNilaiId: number; nilai: number } => v.nilai !== null),
@@ -1369,12 +1426,12 @@ export default function InputNilai() {
     if (method === 'akhir') return ['nim', 'nilai_akhir'];
     const headers = ['nim'];
     if (method === 'sub') {
-      for (const c of components() || []) {
-        for (const s of subsByKomponen().get(c.id!) || []) headers.push(s.nama);
+      for (const c of validComponents()) {
+        for (const s of subsByKomponen().get(c.id) || []) headers.push(s.nama);
       }
     } else {
-      for (const c of components() || []) {
-        if (!componentHasSub(c.id!)) headers.push(c.nama);
+      for (const c of validComponents()) {
+        if (!componentHasSub(c.id)) headers.push(c.nama);
       }
     }
     return headers;
@@ -1452,7 +1509,7 @@ export default function InputNilai() {
       };
     }
 
-    const comps = components() || [];
+    const comps = validComponents();
 
     if (method === 'komponen') {
       const nameToComp = new Map<string, number>();
@@ -1460,7 +1517,7 @@ export default function InputNilai() {
       for (const c of comps) {
         const key = c.nama.trim().toLowerCase();
         if (nameToComp.has(key)) ambiguousComp.add(key);
-        else nameToComp.set(key, c.id!);
+        else nameToComp.set(key, c.id);
       }
       const colMap: Array<{ col: number; komponenNilaiId: number }> = [];
       for (let col = 1; col < header.length; col++) {
@@ -1539,7 +1596,7 @@ export default function InputNilai() {
     const nameToSub = new Map<string, number>();
     const ambiguousSub = new Set<string>();
     for (const c of comps) {
-      for (const s of subsByKomponen().get(c.id!) || []) {
+      for (const s of subsByKomponen().get(c.id) || []) {
         const key = s.nama.trim().toLowerCase();
         if (nameToSub.has(key)) ambiguousSub.add(key);
         else nameToSub.set(key, s.id!);
@@ -1620,8 +1677,8 @@ export default function InputNilai() {
     if (method === 'sub') {
       return (subComponents() || []).map((s) => ({ key: s.nama, label: `Sub: ${s.nama} (${s.bobot}%)` }));
     }
-    return (components() || [])
-      .filter((c) => !componentHasSub(c.id!))
+    return validComponents()
+      .filter((c) => !componentHasSub(c.id))
       .map((c) => ({ key: c.nama, label: `${c.nama} (${c.bobot}%)` }));
   });
 
@@ -2186,11 +2243,11 @@ export default function InputNilai() {
                     >
                       Semua Komponen
                     </button>
-                    <For each={components()}>
+                    <For each={validComponents()}>
                       {(c) => (
                         <button
                           type="button"
-                          onClick={() => setFocusKomponenId(c.id!)}
+                          onClick={() => setFocusKomponenId(c.id)}
                           class={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 ${
                             focusKomponenId() === c.id
                               ? 'bg-brand-600 text-white border-brand-600'
@@ -2304,7 +2361,7 @@ export default function InputNilai() {
                           class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                         >
                           <option value="">-- Pilih Komponen --</option>
-                          <For each={components() || []}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
+                          <For each={validComponents()}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
                         </select>
                       </div>
                     </Show>
@@ -2319,11 +2376,11 @@ export default function InputNilai() {
                           class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                         >
                           <option value="">-- Pilih Sub-Komponen --</option>
-                          <For each={components() || []}>
+                          <For each={validComponents()}>
                             {(c) => (
-                              <Show when={componentHasSub(c.id!)}>
+                              <Show when={componentHasSub(c.id)}>
                                 <optgroup label={c.nama}>
-                                  <For each={subsByKomponen().get(c.id!) || []}>
+                                  <For each={subsByKomponen().get(c.id) || []}>
                                     {(s) => (
                                       <option value={s.id}>
                                         {s.nama} ({s.bobot}%)
@@ -2441,7 +2498,9 @@ export default function InputNilai() {
                               class={`border rounded-lg px-2 h-11 w-20 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                                 isCellInvalid(inputAkhir()[String(stud.krsId)])
                                   ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                  : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                                  : isDirty(`a:${stud.krsId}`)
+                                    ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
+                                    : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
                               }`}
                             />
                           </td>
@@ -2490,7 +2549,7 @@ export default function InputNilai() {
                           {(c) => (
                             <th class="p-3 text-center">
                               {c.nama} ({c.bobot}%)
-                              <Show when={componentHasSub(c.id!)}>
+                              <Show when={componentHasSub(c.id)}>
                                 <span class="ml-1" title="Memiliki sub-komponen">
                                   [S]
                                 </span>
@@ -2539,7 +2598,7 @@ export default function InputNilai() {
                               {(c) => (
                                 <td class="p-3 text-center align-top">
                                   <Show
-                                    when={componentHasSub(c.id!)}
+                                    when={componentHasSub(c.id)}
                                     fallback={
                                       <input
                                         type="text"
@@ -2550,11 +2609,13 @@ export default function InputNilai() {
                                             ? inputGrades()[`${stud.krsId}_${c.id}`]
                                             : ''
                                         }
-                                        onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
+                                        onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
                                         class={`border rounded-lg px-2 h-11 w-20 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                                           isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
                                             ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                            : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                                            : isDirty(`g:${stud.krsId}_${c.id}`)
+                                              ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
+                                              : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
                                         }`}
                                       />
                                     }
@@ -2568,11 +2629,13 @@ export default function InputNilai() {
                                             placeholder="0.00"
                                             disabled={isClassLocked()}
                                             value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
-                                            onInput={(e) => handleGradeChange(stud.krsId, c.id!, e.currentTarget.value)}
+                                            onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
                                             class={`border rounded-lg px-2 h-11 w-20 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                                               isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
                                                 ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                                : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                                                : isDirty(`g:${stud.krsId}_${c.id}`)
+                                                  ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
+                                                  : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
                                             }`}
                                           />
                                           <span
@@ -2585,7 +2648,7 @@ export default function InputNilai() {
                                       }
                                     >
                                       <div class="flex flex-col gap-1 items-center">
-                                        <For each={subsByKomponen().get(c.id!)}>
+                                        <For each={subsByKomponen().get(c.id)}>
                                           {(sub) => (
                                             <div class="flex items-center gap-1">
                                               <span
@@ -2605,14 +2668,16 @@ export default function InputNilai() {
                                                 class={`border rounded-lg px-2 h-10 w-16 text-center text-xs focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                                                   isCellInvalid(inputSubGrades()[`${stud.krsId}_${sub.id}`])
                                                     ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                                    : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                                                    : isDirty(`s:${stud.krsId}_${sub.id}`)
+                                                      ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
+                                                      : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
                                                 }`}
                                               />
                                             </div>
                                           )}
                                         </For>
                                         <span class="text-[10px] font-bold text-secondary-600 dark:text-secondary-300">
-                                          Σ {komponenAggLabel(stud.krsId, c.id!, c.bobot)}
+                                          Σ {komponenAggLabel(stud.krsId, c.id, c.bobot)}
                                         </span>
                                       </div>
                                     </Show>
@@ -2706,6 +2771,11 @@ export default function InputNilai() {
               >
                 Cetak PDF (DNU)
               </Button>
+              <Show when={!isClassLocked() && dirtyCount() > 0}>
+                <Button variant="secondary" size="sm" onClick={handleDiscardChanges}>
+                  Batalkan perubahan
+                </Button>
+              </Show>
               <Show when={!isClassLocked()}>
                 <Button
                   variant="primary"
