@@ -60,12 +60,17 @@ export default function InputNilai() {
   const [bulkSubId, setBulkSubId] = createSignal<number | null>(null);
   const [dirtyKeys, setDirtyKeys] = createSignal<Set<string>>(new Set());
   const [showRekap, setShowRekap] = createSignal(true);
-  const [showBobot, setShowBobot] = createSignal(true);
+  const [showBobot, setShowBobot] = createSignal(false);
+  const [showPanelKomponen, setShowPanelKomponen] = createSignal(false);
+  const [showPanelMahasiswa, setShowPanelMahasiswa] = createSignal(false);
+  // Nilai L1 yang ditulis otomatis dari popup sub-komponen (kunci `${krsId}_${komponenId}`).
+  const [autoAggKeys, setAutoAggKeys] = createSignal<Set<string>>(new Set());
   const [subPopup, setSubPopup] = createSignal<{
     student: NilaiMahasiswa;
     komponen: KomponenNilai & { id: number };
     subs: SubKomponenNilai[];
     initial: Record<number, string>;
+    storedValues: Record<number, string>;
   } | null>(null);
   const [isExporting, setIsExporting] = createSignal(false);
   const [showMappingModal, setShowMappingModal] = createSignal(false);
@@ -454,6 +459,7 @@ export default function InputNilai() {
     if (id !== lastKelasForSelection) {
       lastKelasForSelection = id;
       setSelectedKrsIds(new Set<number>());
+      setAutoAggKeys(new Set<string>());
     }
   });
 
@@ -598,6 +604,7 @@ export default function InputNilai() {
     if (dirtyCount() === 0) return;
     if (!confirm('Batalkan semua perubahan yang belum disimpan dan kembalikan ke nilai tersimpan?')) return;
     clearDirty('a:', 'g:', 's:');
+    setAutoAggKeys(new Set<string>());
     refetchStudentsGrades();
     toast.showToast('Perubahan yang belum disimpan dibatalkan.', 'info');
   };
@@ -611,10 +618,16 @@ export default function InputNilai() {
       ...prev,
       [`${krsId}_${komponenNilaiId}`]: sanitized,
     }));
+    // Ketikan manual bukan lagi nilai otomatis dari popup.
+    setAutoAggKeys((prev) => {
+      const next = new Set(prev);
+      next.delete(`${krsId}_${komponenNilaiId}`);
+      return next;
+    });
   };
 
   // Draft nilai sub-komponen dari popup (belum dikirim ke server).
-  const handleSubDraftSave = (krsId: number, values: Record<number, string>) => {
+  const handleSubDraftSave = (krsId: number, komponenId: number, values: Record<number, string>) => {
     setInputSubGrades((prev) => {
       const next = { ...prev };
       for (const [subId, val] of Object.entries(values)) next[`${krsId}_${subId}`] = val;
@@ -625,17 +638,55 @@ export default function InputNilai() {
       for (const subId of Object.keys(values)) next.add(`s:${krsId}_${subId}`);
       return next;
     });
-    toast.showToast('Draft nilai sub-komponen tersimpan. Klik Simpan untuk mengirim ke server.', 'info');
+
+    // Hitung agregat sub → sinkronkan ke nilai level komponen (L1).
+    const subs = subsByKomponen().get(komponenId) ?? [];
+    let total = 0;
+    let weight = 0;
+    let missing = 0;
+    for (const sub of subs) {
+      if (sub.id === undefined) continue;
+      const n = parseGradeInput(values[sub.id]);
+      if (n === null) {
+        missing += 1;
+        continue;
+      }
+      total += n * (Number(sub.bobot) / 100);
+      weight += Number(sub.bobot);
+    }
+    const complete = missing === 0 && weight === 100;
+    const autoValue = complete ? total.toFixed(2) : '0';
+    const l1Key = `${krsId}_${komponenId}`;
+    setInputGrades((prev) => ({ ...prev, [l1Key]: autoValue }));
+    setDirtyKeys((prev) => {
+      const next = new Set(prev);
+      next.add(`g:${l1Key}`);
+      return next;
+    });
+    setAutoAggKeys((prev) => {
+      const next = new Set(prev);
+      next.add(l1Key);
+      return next;
+    });
+    toast.showToast(
+      complete
+        ? `Agregat Σ ${autoValue} disalin ke nilai komponen. Klik Simpan untuk mengirim ke server.`
+        : 'Sub-komponen belum lengkap — nilai komponen diisi 0. Klik Simpan untuk mengirim ke server.',
+      'info',
+    );
   };
 
   const openSubPopup = (student: NilaiMahasiswa, komponen: KomponenNilai & { id: number }) => {
     const subs = subsByKomponen().get(komponen.id) ?? [];
     const initial: Record<number, string> = {};
+    const storedValues: Record<number, string> = {};
     for (const sub of subs) {
       if (sub.id === undefined) continue;
       initial[sub.id] = inputSubGrades()[`${student.krsId}_${sub.id}`] ?? '';
+      const stored = (student.nilaiSub || []).find((v) => v.subKomponenNilaiId === sub.id);
+      storedValues[sub.id] = stored?.nilai !== undefined && stored?.nilai !== null ? stored.nilai.toString() : '';
     }
-    setSubPopup({ student, komponen, subs, initial });
+    setSubPopup({ student, komponen, subs, initial, storedValues });
   };
 
   const parseGradeInput = (raw: string | undefined): number | null => {
@@ -772,6 +823,11 @@ export default function InputNilai() {
         for (const krsId of targets) next.add(`g:${krsId}_${komponenId}`);
         return next;
       });
+      setAutoAggKeys((prev) => {
+        const next = new Set(prev);
+        for (const krsId of targets) next.delete(`${krsId}_${komponenId}`);
+        return next;
+      });
     }
 
     toast.showToast(`Terisi ${filled}, dilewati ${skipped} (sudah ada nilai).`, filled > 0 ? 'success' : 'info');
@@ -784,7 +840,10 @@ export default function InputNilai() {
 
   const komponenAggLabel = (krsId: number, komponenId: number, bobot: number) => {
     void bobot;
-    const direct = parseGradeInput(inputGrades()[`${krsId}_${komponenId}`]);
+    const l1Key = `${krsId}_${komponenId}`;
+    const direct = parseGradeInput(inputGrades()[l1Key]);
+    const isAuto = autoAggKeys().has(l1Key);
+    if (direct !== null && isAuto) return `Σ ${direct.toFixed(2)}`;
     if (direct !== null) return `override ${direct.toFixed(2)}`;
     const result = getDynamicKomponenScore(krsId, komponenId, 0);
     if (result.complete && result.score !== null) return `Σ ${result.score.toFixed(2)}`;
@@ -1360,6 +1419,7 @@ export default function InputNilai() {
       }
       await khsController.saveNilaiMahasiswa(kelasId, payload);
       clearDirty('s:', 'g:');
+      setAutoAggKeys(new Set<string>());
       toast.showToast('Nilai mahasiswa berhasil disimpan.', 'success');
       refetchStudentsGrades();
     } catch (e: unknown) {
@@ -1430,6 +1490,7 @@ export default function InputNilai() {
         await khsController.saveNilaiMahasiswa(kelasId, payload);
       }
       clearDirty('s:', 'g:');
+      setAutoAggKeys(new Set<string>());
       toast.showToast('Nilai komponen berhasil disimpan.', 'success');
       refetchStudentsGrades();
     } catch (e: unknown) {
@@ -1629,6 +1690,7 @@ export default function InputNilai() {
       try {
         await khsController.saveNilaiMahasiswa(kelasId, payload);
         clearDirty('g:');
+        setAutoAggKeys(new Set<string>());
         refetchStudentsGrades();
         return { successCount: payload.length, errors };
       } catch (e: unknown) {
@@ -2058,26 +2120,92 @@ export default function InputNilai() {
                       <p class="text-lg font-bold text-secondary-800 dark:text-white">{selectedCount()}</p>
                     </div>
                   </div>
+                </Show>
 
-                  <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                    <div class="flex flex-col gap-2">
-                      <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">Per Komponen</h4>
-                      <Show
-                        when={rekapKomponen().length > 0}
-                        fallback={<p class="text-xs text-secondary-400 italic">Belum ada komponen.</p>}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <Show when={!isClassLocked()}>
+                    {/* Panel Per Komponen */}
+                    <div class="rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowPanelKomponen((v) => !v)}
+                        class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
                       >
+                        <span class="flex flex-wrap items-center gap-2">
+                          <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">Per Komponen</h4>
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
+                            {rekapKomponen().length} komponen
+                          </span>
+                        </span>
+                        <span class="text-secondary-400 text-xs">{showPanelKomponen() ? '▲' : '▼'}</span>
+                      </button>
+                      <Show when={showPanelKomponen()}>
+                        <Show
+                          when={rekapKomponen().length > 0}
+                          fallback={<p class="text-xs text-secondary-400 italic">Belum ada komponen.</p>}
+                        >
+                          <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
+                            <For each={rekapKomponen()}>
+                              {(k) => (
+                                <div class="flex items-center justify-between gap-2 rounded-lg border border-secondary-100 dark:border-secondary-800 px-3 py-2">
+                                  <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200 truncate">
+                                    {k.nama} ({k.bobot}%)
+                                  </span>
+                                  <span class="text-[11px] text-secondary-500 whitespace-nowrap">
+                                    {k.filled}/{k.total} terisi
+                                    <Show when={k.min !== null}>
+                                      {' '}
+                                      • {k.min}–{k.max}
+                                    </Show>
+                                  </span>
+                                </div>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
+                      </Show>
+                    </div>
+
+                    {/* Panel Per Mahasiswa */}
+                    <div class="rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowPanelMahasiswa((v) => !v)}
+                        class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
+                      >
+                        <span class="flex flex-wrap items-center gap-2">
+                          <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
+                            Per Mahasiswa (NA Live vs Tersimpan)
+                          </h4>
+                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
+                            {rekapOverall().lengkap}/{rekapOverall().total}
+                          </span>
+                        </span>
+                        <span class="text-secondary-400 text-xs">{showPanelMahasiswa() ? '▲' : '▼'}</span>
+                      </button>
+                      <Show when={showPanelMahasiswa()}>
                         <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
-                          <For each={rekapKomponen()}>
-                            {(k) => (
+                          <For each={rekapRows()}>
+                            {(r) => (
                               <div class="flex items-center justify-between gap-2 rounded-lg border border-secondary-100 dark:border-secondary-800 px-3 py-2">
-                                <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200 truncate">
-                                  {k.nama} ({k.bobot}%)
+                                <span class="flex flex-col">
+                                  <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200">
+                                    {r.nama}
+                                  </span>
+                                  <span class="text-[10px] text-secondary-400 font-mono">{r.nim}</span>
                                 </span>
-                                <span class="text-[11px] text-secondary-500 whitespace-nowrap">
-                                  {k.filled}/{k.total} terisi
-                                  <Show when={k.min !== null}>
-                                    {' '}
-                                    • {k.min}–{k.max}
+                                <span class="flex items-center gap-2 text-[11px] whitespace-nowrap">
+                                  <span class="text-secondary-500">
+                                    {r.live ?? '-'}
+                                    <Show when={r.liveHuruf}> ({r.liveHuruf})</Show>
+                                  </span>
+                                  <Show when={r.delta !== null && r.delta !== 0}>
+                                    <span
+                                      class={`font-bold ${(r.delta ?? 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                                    >
+                                      {(r.delta ?? 0) > 0 ? '+' : ''}
+                                      {r.delta}
+                                    </span>
                                   </Show>
                                 </span>
                               </div>
@@ -2086,83 +2214,55 @@ export default function InputNilai() {
                         </div>
                       </Show>
                     </div>
-
-                    <div class="flex flex-col gap-2">
-                      <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
-                        Per Mahasiswa (NA Live vs Tersimpan)
-                      </h4>
-                      <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
-                        <For each={rekapRows()}>
-                          {(r) => (
-                            <div class="flex items-center justify-between gap-2 rounded-lg border border-secondary-100 dark:border-secondary-800 px-3 py-2">
-                              <span class="flex flex-col">
-                                <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200">
-                                  {r.nama}
-                                </span>
-                                <span class="text-[10px] text-secondary-400 font-mono">{r.nim}</span>
-                              </span>
-                              <span class="flex items-center gap-2 text-[11px] whitespace-nowrap">
-                                <span class="text-secondary-500">
-                                  {r.live ?? '-'}
-                                  <Show when={r.liveHuruf}> ({r.liveHuruf})</Show>
-                                </span>
-                                <Show when={r.delta !== null && r.delta !== 0}>
-                                  <span
-                                    class={`font-bold ${(r.delta ?? 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}
-                                  >
-                                    {(r.delta ?? 0) > 0 ? '+' : ''}
-                                    {r.delta}
-                                  </span>
-                                </Show>
-                              </span>
-                            </div>
-                          )}
-                        </For>
-                      </div>
-                    </div>
-                  </div>
-                </Show>
-
-                {/* Komposisi Bobot Nilai (accordion) */}
-                <div class="border-t border-secondary-100 dark:border-secondary-800 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowBobot((v) => !v)}
-                    class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
-                  >
-                    <span class="flex flex-wrap items-center gap-2">
-                      <h4 class="font-bold text-secondary-800 dark:text-white text-sm">Komposisi Bobot Nilai (%)</h4>
-                      <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
-                        Total {totalBobot()}%
-                      </span>
-                      <Show when={isClassLocked()}>
-                        <span class="px-2.5 py-1 bg-accent-50 text-accent-700 border border-accent-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400">
-                          ⊘ Dikunci
-                        </span>
-                      </Show>
-                    </span>
-                    <span class="text-secondary-400 text-xs">{showBobot() ? '▲' : '▼'}</span>
-                  </button>
-                  <Show when={showBobot()}>
-                    <div class="mt-4">
-                      <KomposisiBobotPanel
-                        editableComponents={editableComponents()}
-                        komponenIdAt={(idx) => components()?.[idx]?.id}
-                        expandedKomponenId={expandedKomponenId()}
-                        expandedSubs={expandedSubs()}
-                        isLocked={isClassLocked()}
-                        rencanaEvalsCount={rencanaEvals()?.length || 0}
-                        totalBobot={totalBobot()}
-                        onToggleExpand={(id) => setExpandedKomponenId(expandedKomponenId() === id ? null : id)}
-                        onUpdateField={updateComponentField}
-                        onRemove={removeComponent}
-                        onAdd={addComponent}
-                        onSave={handleSaveComponents}
-                        onImportFromRps={handleImportFromRps}
-                        onSaveSub={handleSaveSub}
-                      />
-                    </div>
                   </Show>
+
+                  {/* Panel Komposisi Bobot */}
+                  <div
+                    class={`rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4 ${
+                      isClassLocked() ? 'md:col-span-3' : ''
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setShowBobot((v) => !v)}
+                      class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
+                    >
+                      <span class="flex flex-wrap items-center gap-2">
+                        <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
+                          Komposisi Bobot Nilai (%)
+                        </h4>
+                        <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
+                          Total {totalBobot()}%
+                        </span>
+                        <Show when={isClassLocked()}>
+                          <span class="px-2.5 py-1 bg-accent-50 text-accent-700 border border-accent-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400">
+                            ⊘ Dikunci
+                          </span>
+                        </Show>
+                      </span>
+                      <span class="text-secondary-400 text-xs">{showBobot() ? '▲' : '▼'}</span>
+                    </button>
+                    <Show when={showBobot()}>
+                      <div>
+                        <KomposisiBobotPanel
+                          editableComponents={editableComponents()}
+                          komponenIdAt={(idx) => components()?.[idx]?.id}
+                          expandedKomponenId={expandedKomponenId()}
+                          expandedSubs={expandedSubs()}
+                          isLocked={isClassLocked()}
+                          rencanaEvalsCount={rencanaEvals()?.length || 0}
+                          totalBobot={totalBobot()}
+                          onToggleExpand={(id) => setExpandedKomponenId(expandedKomponenId() === id ? null : id)}
+                          onUpdateField={updateComponentField}
+                          onRemove={removeComponent}
+                          onAdd={addComponent}
+                          onSave={handleSaveComponents}
+                          onImportFromRps={handleImportFromRps}
+                          onSaveSub={handleSaveSub}
+                        />
+                      </div>
+                    </Show>
+                  </div>
                 </div>
               </div>
             </Show>
@@ -2866,6 +2966,7 @@ export default function InputNilai() {
             komponen={popup.komponen}
             subs={popup.subs}
             initialValues={popup.initial}
+            storedValues={popup.storedValues}
             envelope={nilaiEnvelope()}
             isLocked={isClassLocked()}
             onDraftSave={handleSubDraftSave}
