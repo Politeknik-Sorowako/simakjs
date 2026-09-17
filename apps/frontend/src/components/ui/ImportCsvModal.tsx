@@ -1,4 +1,4 @@
-import { createSignal, For, Show } from 'solid-js';
+import { createSignal, For, type JSX, Show } from 'solid-js';
 import { fetchApi } from '../../utils/api';
 import { parseCsv } from '../../utils/csv';
 import { Button } from './Button';
@@ -12,6 +12,7 @@ interface ImportCsvModalProps {
   customTemplateRows?: string[][];
   title: string;
   description?: string;
+  headerExtras?: JSX.Element;
   onSuccess: () => void;
   onImport?: (
     rows: string[][],
@@ -149,6 +150,10 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
             Unduh Template
           </Button>
         </div>
+
+        <Show when={props.headerExtras}>
+          <div>{props.headerExtras}</div>
+        </Show>
 
         <Show when={props.description}>
           <div class="p-3 bg-secondary-50 dark:bg-secondary-800/50 border border-secondary-200 dark:border-secondary-800 rounded-lg text-xs text-secondary-600 dark:text-secondary-300 leading-relaxed">

@@ -5,6 +5,7 @@ import KomposisiBobotPanel from '../components/input-nilai/KomposisiBobotPanel';
 import SubNilaiPopup from '../components/input-nilai/SubNilaiPopup';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { DropdownMenu } from '../components/ui/DropdownMenu';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
@@ -26,7 +27,7 @@ import { rpsController } from '../controllers/rpsController';
 import { isHeaderRow } from '../utils/csv';
 import { type ExportColumn, exportToCSV, exportToExcelMultipleSheets, exportToPDF } from '../utils/export';
 
-type InputMethod = 'akhir' | 'komponen' | 'sub';
+type ImportTemplate = 'akhir' | 'komponen' | 'sub';
 
 // A2: cache data URL logo institusi agar tidak dibaca ulang setiap ekspor PDF.
 let pdfLogoCache: string | null = null;
@@ -52,12 +53,10 @@ export default function InputNilai() {
   );
   const [inputGrades, setInputGrades] = createSignal<Record<string, string>>({});
   const [inputSubGrades, setInputSubGrades] = createSignal<Record<string, string>>({});
-  const [inputAkhir, setInputAkhir] = createSignal<Record<string, string>>({});
   const [expandedKomponenId, setExpandedKomponenId] = createSignal<number | null>(null);
-  const [activeMethod, setActiveMethod] = createSignal<InputMethod>('komponen');
   const [showImportModal, setShowImportModal] = createSignal(false);
+  const [importTemplate, setImportTemplate] = createSignal<ImportTemplate>('komponen');
   const [focusKomponenId, setFocusKomponenId] = createSignal<number | null>(null);
-  const [bulkSubId, setBulkSubId] = createSignal<number | null>(null);
   const [dirtyKeys, setDirtyKeys] = createSignal<Set<string>>(new Set());
   const [showRekap, setShowRekap] = createSignal(true);
   const [showBobot, setShowBobot] = createSignal(false);
@@ -82,8 +81,7 @@ export default function InputNilai() {
   const [rekapSnapshot, setRekapSnapshot] = createSignal<{
     grades: Record<string, string>;
     subGrades: Record<string, string>;
-    akhir: Record<string, string>;
-  }>({ grades: {}, subGrades: {}, akhir: {} });
+  }>({ grades: {}, subGrades: {} });
 
   // 1. Filter periode & program studi (default: periode aktif + prodi workspace admin)
   const workspace = useWorkspace();
@@ -290,9 +288,6 @@ export default function InputNilai() {
   const hasStoredKomponen = (stud: NilaiMahasiswa, komponenNilaiId: number) =>
     (stud.nilaiKomponen || []).some((v) => v.komponenNilaiId === komponenNilaiId && v.nilai !== null && v.nilai !== '');
 
-  const isAkhirCellEmpty = (stud: NilaiMahasiswa) =>
-    !inputAkhir()[String(stud.krsId)] && (stud.nilaiAngka === null || stud.nilaiAngka === undefined);
-
   const isKomponenCellEmpty = (stud: NilaiMahasiswa, komponenNilaiId: number) =>
     !inputGrades()[`${stud.krsId}_${komponenNilaiId}`] && !hasStoredKomponen(stud, komponenNilaiId);
 
@@ -422,29 +417,6 @@ export default function InputNilai() {
         const next = { ...initial };
         for (const key of dirty) {
           if (key.startsWith('s:')) {
-            const rawKey = key.slice(2);
-            if (rawKey in prev) next[rawKey] = prev[rawKey];
-          }
-        }
-        return next;
-      });
-    }
-  });
-
-  // Sync stored final grades to M1 input states (preserve draft)
-  createEffect(() => {
-    const sg = studentsGrades();
-    if (sg) {
-      const dirty = dirtyKeys();
-      const initial: Record<string, string> = {};
-      for (const stud of sg) {
-        initial[String(stud.krsId)] =
-          stud.nilaiAngka !== undefined && stud.nilaiAngka !== null ? stud.nilaiAngka.toString() : '';
-      }
-      setInputAkhir((prev) => {
-        const next = { ...initial };
-        for (const key of dirty) {
-          if (key.startsWith('a:')) {
             const rawKey = key.slice(2);
             if (rawKey in prev) next[rawKey] = prev[rawKey];
           }
@@ -699,49 +671,14 @@ export default function InputNilai() {
 
   const componentHasSub = (komponenId: number) => (subsByKomponen().get(komponenId) || []).length > 0;
 
-  // Preview huruf mutu dari aturan konversi (identik dengan fallback backend)
-  const getDynamicHuruf = (score: number | null): string | null => {
-    if (score === null || Number.isNaN(score)) return null;
-    const rules = konversiRules();
-    if (rules && rules.length > 0) {
-      for (const rule of rules) {
-        const min = parseFloat(rule.nilaiMin.toString());
-        const max = parseFloat(rule.nilaiMax.toString());
-        if (score >= min && score <= max) return rule.nilaiHuruf;
-      }
-      return 'E';
-    }
-    if (score >= 80) return 'A';
-    if (score >= 75) return 'B+';
-    if (score >= 70) return 'B';
-    if (score >= 65) return 'C+';
-    if (score >= 60) return 'C';
-    if (score >= 50) return 'D';
-    return 'E';
-  };
-
   const isMahasiswaHasHalusData = (stud: NilaiMahasiswa) => {
     const hasDirect = (stud.nilaiKomponen || []).some((v) => v.nilai !== null && v.nilai !== '');
     const hasSub = (stud.nilaiSub || []).length > 0;
     return hasDirect || hasSub;
   };
 
-  const handleAkhirChange = (krsId: number, value: string) => {
-    const sanitized = value.replace(/[^0-9.,]/g, '');
-    markDirty(`a:${krsId}`);
-    setInputAkhir((prev) => ({ ...prev, [String(krsId)]: sanitized }));
-  };
-
-  const isSubCellEmpty = (stud: NilaiMahasiswa, subKomponenNilaiId: number) =>
-    !inputSubGrades()[`${stud.krsId}_${subKomponenNilaiId}`] &&
-    !(stud.nilaiSub || []).some(
-      (v) => v.subKomponenNilaiId === subKomponenNilaiId && v.nilai !== null && v.nilai !== '',
-    );
-
   // Bulk "nilai awal": hanya mengisi sel yang masih kosong untuk mahasiswa terpilih.
   const handleBulkApply = () => {
-    const method = activeMethod();
-
     const sel = selectedKrsIds();
     if (sel.size === 0) {
       toast.showToast('Pilih minimal satu mahasiswa terlebih dahulu.', 'error');
@@ -758,79 +695,34 @@ export default function InputNilai() {
     let filled = 0;
     let skipped = 0;
 
-    if (method === 'akhir') {
-      const targets: number[] = [];
-      for (const stud of list) {
-        if (!sel.has(stud.krsId)) continue;
-        if (isAkhirCellEmpty(stud)) {
-          filled += 1;
-          targets.push(stud.krsId);
-        } else skipped += 1;
-      }
-      setInputAkhir((prev) => {
-        const next = { ...prev };
-        for (const krsId of targets) next[String(krsId)] = String(val);
-        return next;
-      });
-      setDirtyKeys((prev) => {
-        const next = new Set(prev);
-        for (const krsId of targets) next.add(`a:${krsId}`);
-        return next;
-      });
-    } else if (method === 'sub') {
-      const subId = bulkSubId();
-      if (!subId) {
-        toast.showToast('Pilih sub-komponen terlebih dahulu.', 'error');
-        return;
-      }
-      const targets: number[] = [];
-      for (const stud of list) {
-        if (!sel.has(stud.krsId)) continue;
-        if (isSubCellEmpty(stud, subId)) {
-          filled += 1;
-          targets.push(stud.krsId);
-        } else skipped += 1;
-      }
-      setInputSubGrades((prev) => {
-        const next = { ...prev };
-        for (const krsId of targets) next[`${krsId}_${subId}`] = String(val);
-        return next;
-      });
-      setDirtyKeys((prev) => {
-        const next = new Set(prev);
-        for (const krsId of targets) next.add(`s:${krsId}_${subId}`);
-        return next;
-      });
-    } else {
-      const komponenId = bulkKomponenId();
-      if (!komponenId) {
-        toast.showToast('Pilih komponen terlebih dahulu.', 'error');
-        return;
-      }
-      const targets: number[] = [];
-      for (const stud of list) {
-        if (!sel.has(stud.krsId)) continue;
-        if (isKomponenCellEmpty(stud, komponenId)) {
-          filled += 1;
-          targets.push(stud.krsId);
-        } else skipped += 1;
-      }
-      setInputGrades((prev) => {
-        const next = { ...prev };
-        for (const krsId of targets) next[`${krsId}_${komponenId}`] = String(val);
-        return next;
-      });
-      setDirtyKeys((prev) => {
-        const next = new Set(prev);
-        for (const krsId of targets) next.add(`g:${krsId}_${komponenId}`);
-        return next;
-      });
-      setAutoAggKeys((prev) => {
-        const next = new Set(prev);
-        for (const krsId of targets) next.delete(`${krsId}_${komponenId}`);
-        return next;
-      });
+    const komponenId = bulkKomponenId();
+    if (!komponenId) {
+      toast.showToast('Pilih komponen terlebih dahulu.', 'error');
+      return;
     }
+    const targets: number[] = [];
+    for (const stud of list) {
+      if (!sel.has(stud.krsId)) continue;
+      if (isKomponenCellEmpty(stud, komponenId)) {
+        filled += 1;
+        targets.push(stud.krsId);
+      } else skipped += 1;
+    }
+    setInputGrades((prev) => {
+      const next = { ...prev };
+      for (const krsId of targets) next[`${krsId}_${komponenId}`] = String(val);
+      return next;
+    });
+    setDirtyKeys((prev) => {
+      const next = new Set(prev);
+      for (const krsId of targets) next.add(`g:${krsId}_${komponenId}`);
+      return next;
+    });
+    setAutoAggKeys((prev) => {
+      const next = new Set(prev);
+      for (const krsId of targets) next.delete(`${krsId}_${komponenId}`);
+      return next;
+    });
 
     toast.showToast(`Terisi ${filled}, dilewati ${skipped} (sudah ada nilai).`, filled > 0 ? 'success' : 'info');
   };
@@ -1199,7 +1091,7 @@ export default function InputNilai() {
     try {
       const data = (await khsController.getNilaiMahasiswa(kelasId)) || [];
       const comps = validComponents();
-      const method = activeMethod();
+      const method = importTemplate();
       const columns: ExportColumn[] = [{ header: 'nim', accessor: 'nim' }];
 
       if (method === 'akhir') {
@@ -1322,9 +1214,8 @@ export default function InputNilai() {
   createEffect(() => {
     const grades = inputGrades();
     const subGrades = inputSubGrades();
-    const akhir = inputAkhir();
     clearTimeout(rekapDebounceTimer);
-    rekapDebounceTimer = setTimeout(() => setRekapSnapshot({ grades, subGrades, akhir }), 180);
+    rekapDebounceTimer = setTimeout(() => setRekapSnapshot({ grades, subGrades }), 180);
   });
   onCleanup(() => clearTimeout(rekapDebounceTimer));
 
@@ -1391,73 +1282,6 @@ export default function InputNilai() {
     if (focus === null) return all;
     return all.filter((c) => c.id === focus);
   });
-
-  const switchMethod = (m: InputMethod) => {
-    if (m === activeMethod()) return;
-    if (dirtyCount() > 0) {
-      const ok = confirm('Ada nilai yang belum disimpan. Draft tetap dipertahankan saat berpindah metode. Lanjutkan?');
-      if (!ok) return;
-    }
-    setActiveMethod(m);
-    setFocusKomponenId(null);
-  };
-
-  // Save all student grades (level-1 langsung + nilai sub-komponen)
-  const handleSaveGrades = async () => {
-    const kelasId = selectedKelasId();
-    if (!kelasId) return;
-
-    const list = targetStudents();
-    const comps = validComponents();
-    if (!list || !comps) return;
-
-    const payload: Array<{
-      krsId: number;
-      nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }>;
-    }> = [];
-    const payloadSub: Array<{
-      krsId: number;
-      subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }>;
-    }> = [];
-
-    for (const stud of list) {
-      const nilaiKomponenList: Array<{ komponenNilaiId: number; nilai: number }> = [];
-      const subNilaiList: Array<{ subKomponenNilaiId: number; nilai: number }> = [];
-
-      for (const c of comps) {
-        const subs = subsByKomponen().get(c.id) || [];
-        if (subs.length > 0) {
-          for (const sub of subs) {
-            const grade = parseGradeInput(inputSubGrades()[`${stud.krsId}_${sub.id}`]);
-            if (grade !== null) subNilaiList.push({ subKomponenNilaiId: sub.id!, nilai: grade });
-          }
-        } else {
-          const grade = parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]);
-          if (grade !== null) nilaiKomponenList.push({ komponenNilaiId: c.id, nilai: grade });
-        }
-      }
-
-      if (nilaiKomponenList.length > 0) {
-        payload.push({ krsId: stud.krsId, nilaiKomponenList });
-      }
-      if (subNilaiList.length > 0) {
-        payloadSub.push({ krsId: stud.krsId, subNilaiList });
-      }
-    }
-
-    try {
-      if (payloadSub.length > 0) {
-        await khsController.saveNilaiSub(kelasId, payloadSub);
-      }
-      await khsController.saveNilaiMahasiswa(kelasId, payload);
-      clearDirty('s:', 'g:');
-      setAutoAggKeys(new Set<string>());
-      toast.showToast('Nilai mahasiswa berhasil disimpan.', 'success');
-      refetchStudentsGrades();
-    } catch (e: unknown) {
-      toast.showToast((e as Error).message || 'Gagal menyimpan nilai.', 'error');
-    }
-  };
 
   // Save sub-komponen definitions for one component
   const handleSaveSub = async (komponenId: number, list: Array<{ id?: number; nama: string; bobot: number }>) => {
@@ -1530,37 +1354,8 @@ export default function InputNilai() {
     }
   };
 
-  // Save direct final grades (M1) — non-destruktif, nilai komponen/sub dipertahankan
-  const handleSaveAkhir = async () => {
-    const kelasId = selectedKelasId();
-    if (!kelasId) return;
-    const list = targetStudents();
-    if (!list) return;
-
-    const entries = list
-      .map((stud) => {
-        const grade = parseGradeInput(inputAkhir()[String(stud.krsId)]);
-        return grade === null ? null : { krsId: stud.krsId, nilai: grade };
-      })
-      .filter((e): e is { krsId: number; nilai: number } => e !== null);
-
-    if (entries.length === 0) {
-      toast.showToast('Isi minimal satu nilai akhir.', 'error');
-      return;
-    }
-
-    try {
-      await khsController.saveNilaiAkhir(kelasId, entries);
-      clearDirty('a:');
-      toast.showToast('Nilai akhir berhasil disimpan.', 'success');
-      refetchStudentsGrades();
-    } catch (e: unknown) {
-      toast.showToast((e as Error).message || 'Gagal menyimpan nilai akhir.', 'error');
-    }
-  };
-
   const importTemplateHeaders = createMemo(() => {
-    const method = activeMethod();
+    const method = importTemplate();
     if (method === 'akhir') return ['nim', 'nilai_akhir'];
     const headers = ['nim'];
     if (method === 'sub') {
@@ -1584,7 +1379,7 @@ export default function InputNilai() {
       return { successCount: 0, errors: [{ line: 1, error: 'File CSV kosong.' }] };
     }
 
-    const method = activeMethod();
+    const method = importTemplate();
     const students = studentsGrades() || [];
     const nimToKrs = new Map(students.map((s) => [String(s.nim).trim().toLowerCase(), s.krsId]));
     const headerDetected = isHeaderRow(rows[0]?.[0] ?? '', ['nim', 'nilai_akhir', 'nilai']);
@@ -1812,7 +1607,7 @@ export default function InputNilai() {
 
   // ===== Pemetaan kolom impor (F3) =====
   const mappingTargetOptions = createMemo(() => {
-    const method = activeMethod();
+    const method = importTemplate();
     if (method === 'sub') {
       return (subComponents() || []).map((s) => ({ key: s.nama, label: `Sub: ${s.nama} (${s.bobot}%)` }));
     }
@@ -1896,7 +1691,7 @@ export default function InputNilai() {
     mode: string,
   ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> => {
     void mode;
-    const method = activeMethod();
+    const method = importTemplate();
     const headerDetected = isHeaderRow(rows[0]?.[0] ?? '', ['nim', 'nilai_akhir', 'nilai']);
     if (method === 'akhir' || !headerDetected || rows.length < 2) {
       return processImport(rows);
@@ -2310,33 +2105,8 @@ export default function InputNilai() {
                 </Show>
               </div>
 
-              {/* Method switcher */}
-              <div class="flex flex-wrap gap-2">
-                <For
-                  each={[
-                    { id: 'akhir' as InputMethod, label: '1. Nilai Akhir Langsung' },
-                    { id: 'komponen' as InputMethod, label: '2. Nilai Komponen' },
-                    { id: 'sub' as InputMethod, label: '3. Nilai Sub-Komponen' },
-                  ]}
-                >
-                  {(m) => (
-                    <button
-                      type="button"
-                      onClick={() => switchMethod(m.id)}
-                      class={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95 ${
-                        activeMethod() === m.id
-                          ? 'bg-brand-600 text-white border-brand-600'
-                          : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
-                      }`}
-                    >
-                      {m.label}
-                    </button>
-                  )}
-                </For>
-              </div>
-
               {/* Focus selector — mode fokus satu komponen agar tabel mudah dibaca */}
-              <Show when={activeMethod() !== 'akhir' && (components()?.length || 0) > 1}>
+              <Show when={(components()?.length || 0) > 1}>
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Fokus Kolom</span>
                   <button
@@ -2368,80 +2138,7 @@ export default function InputNilai() {
                 </div>
               </Show>
 
-              {/* Actions */}
               <Show when={!isClassLocked()}>
-                <div class="flex flex-wrap items-center gap-2">
-                  <Show when={activeMethod() === 'akhir'}>
-                    <button
-                      onClick={handleSaveAkhir}
-                      class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
-                    >
-                      {selectedCount() > 0 ? `Simpan Terpilih (${selectedCount()})` : 'Simpan Nilai Akhir'}
-                    </button>
-                  </Show>
-                  <Show when={activeMethod() === 'komponen'}>
-                    <button
-                      onClick={handleSaveKomponenOnly}
-                      class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
-                    >
-                      {selectedCount() > 0 ? `Simpan Terpilih (${selectedCount()})` : 'Simpan Nilai Komponen'}
-                    </button>
-                  </Show>
-                  <Show when={activeMethod() === 'sub'}>
-                    <button
-                      onClick={handleSaveGrades}
-                      class="px-4 py-2 bg-accent-600 text-white font-bold rounded-xl text-xs hover:bg-accent-700 active:scale-95 transition-all shadow-sm"
-                    >
-                      {selectedCount() > 0 ? `Simpan Terpilih (${selectedCount()})` : 'Simpan Nilai Sub'}
-                    </button>
-                  </Show>
-                  <button
-                    type="button"
-                    onClick={() => setShowImportModal(true)}
-                    class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
-                  >
-                    Impor CSV
-                  </button>
-                  <button
-                    onClick={handleLockKelas}
-                    class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-xs hover:bg-rose-700 active:scale-95 transition-all shadow-sm"
-                  >
-                    Kunci Nilai
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExportXLSX}
-                    disabled={isExporting()}
-                    class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-xl text-xs hover:bg-emerald-700 active:scale-95 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isExporting() ? 'Menyiapkan…' : 'Ekspor Excel'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExportCSVFile}
-                    disabled={isExporting()}
-                    class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
-                  >
-                    Ekspor CSV
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownloadTemplate}
-                    disabled={isExporting()}
-                    class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
-                  >
-                    Unduh Template
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExportPDF}
-                    disabled={isExporting()}
-                    class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
-                  >
-                    Cetak PDF (DNU)
-                  </button>
-                </div>
-
                 {/* Bulk nilai awal — hanya mengisi sel kosong mahasiswa terpilih */}
                 <div class="flex flex-wrap items-end gap-2 bg-secondary-50 border border-secondary-100 rounded-xl p-3 dark:bg-secondary-800/50 dark:border-secondary-700">
                   <div class="flex flex-col gap-1">
@@ -2457,50 +2154,17 @@ export default function InputNilai() {
                       class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs w-24 text-center focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                     />
                   </div>
-                  <Show when={activeMethod() === 'komponen'}>
-                    <div class="flex flex-col gap-1">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Komponen</span>
-                      <select
-                        value={bulkKomponenId() ?? ''}
-                        onChange={(e) =>
-                          setBulkKomponenId(e.currentTarget.value ? Number(e.currentTarget.value) : null)
-                        }
-                        class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
-                      >
-                        <option value="">-- Pilih Komponen --</option>
-                        <For each={validComponents()}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
-                      </select>
-                    </div>
-                  </Show>
-                  <Show when={activeMethod() === 'sub'}>
-                    <div class="flex flex-col gap-1">
-                      <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">
-                        Sub-Komponen
-                      </span>
-                      <select
-                        value={bulkSubId() ?? ''}
-                        onChange={(e) => setBulkSubId(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
-                        class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
-                      >
-                        <option value="">-- Pilih Sub-Komponen --</option>
-                        <For each={validComponents()}>
-                          {(c) => (
-                            <Show when={componentHasSub(c.id)}>
-                              <optgroup label={c.nama}>
-                                <For each={subsByKomponen().get(c.id) || []}>
-                                  {(s) => (
-                                    <option value={s.id}>
-                                      {s.nama} ({s.bobot}%)
-                                    </option>
-                                  )}
-                                </For>
-                              </optgroup>
-                            </Show>
-                          )}
-                        </For>
-                      </select>
-                    </div>
-                  </Show>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Komponen</span>
+                    <select
+                      value={bulkKomponenId() ?? ''}
+                      onChange={(e) => setBulkKomponenId(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
+                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                    >
+                      <option value="">-- Pilih Komponen --</option>
+                      <For each={validComponents()}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
+                    </select>
+                  </div>
                   <button
                     type="button"
                     onClick={handleBulkApply}
@@ -2523,20 +2187,17 @@ export default function InputNilai() {
                   </Show>
                 </div>
               </Show>
-              <Show when={isClassLocked()}>
-                <Show when={role() === 'admin' || role() === 'prodi' || role() === 'dosen' || role() === 'instruktur'}>
-                  <button
-                    onClick={handleUnlockKelas}
-                    class="self-start px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
-                  >
-                    Buka Kunci
-                  </button>
-                </Show>
-              </Show>
             </div>
 
-            {/* M1 — Nilai Akhir Langsung */}
-            <Show when={activeMethod() === 'akhir'}>
+            {/* M2 / M3 — Nilai Komponen & Sub-Komponen */}
+            <Show
+              when={(components()?.length || 0) > 0}
+              fallback={
+                <div class="text-center py-12 text-secondary-400 italic">
+                  Harap tentukan dan simpan komponen bobot nilai terlebih dahulu sebelum menginput nilai mahasiswa.
+                </div>
+              }
+            >
               <table class="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
@@ -2550,11 +2211,19 @@ export default function InputNilai() {
                       />
                     </th>
                     <th class="p-3">Mahasiswa</th>
-                    <th class="p-3 text-center sticky right-0 bg-secondary-50/95 dark:bg-secondary-800 backdrop-blur-sm">
-                      Nilai Akhir (0-{nilaiEnvelope().max})
-                    </th>
-                    <th class="p-3 text-center">Huruf</th>
-                    <th class="p-3 text-center">Tersimpan</th>
+                    <For each={displayComponents()}>
+                      {(c) => (
+                        <th class="p-3 text-center">
+                          {c.nama} ({c.bobot}%)
+                          <Show when={componentHasSub(c.id)}>
+                            <span class="ml-1" title="Memiliki sub-komponen">
+                              [S]
+                            </span>
+                          </Show>
+                        </th>
+                      )}
+                    </For>
+                    <th class="p-3 text-center">Nilai Akhir</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
@@ -2562,7 +2231,10 @@ export default function InputNilai() {
                     each={visibleStudents()}
                     fallback={
                       <tr>
-                        <td colspan="5" class="p-4 text-center text-secondary-400 italic">
+                        <td
+                          colspan={(displayComponents()?.length || 0) + 3}
+                          class="p-4 text-center text-secondary-400 italic"
+                        >
                           Tidak ada mahasiswa terdaftar di kelas ini.
                         </td>
                       </tr>
@@ -2585,38 +2257,113 @@ export default function InputNilai() {
                             <div class="flex flex-col">
                               <span class="font-bold text-sm text-secondary-800 dark:text-white">{stud.nama}</span>
                               <span class="text-[11px] text-secondary-400">NIM: {stud.nim}</span>
-                              <Show when={isMahasiswaHasHalusData(stud)}>
-                                <span class="text-[9px] font-bold text-brand-600">
-                                  ℹ punya nilai komponen/sub — tetap dipertahankan
-                                </span>
-                              </Show>
                             </div>
                           </div>
                         </td>
-                        <td class="p-3 text-center">
-                          <input
-                            type="text"
-                            placeholder="0.00"
-                            disabled={isClassLocked()}
-                            value={inputAkhir()[String(stud.krsId)] ?? ''}
-                            onInput={(e) => handleAkhirChange(stud.krsId, e.currentTarget.value)}
-                            class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
-                              isCellInvalid(inputAkhir()[String(stud.krsId)])
-                                ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                : isDirty(`a:${stud.krsId}`)
-                                  ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
-                                  : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
-                            }`}
-                          />
-                        </td>
-                        <td class="p-3 text-center font-bold text-brand-700">
-                          {getDynamicHuruf(parseGradeInput(inputAkhir()[String(stud.krsId)])) ?? '-'}
-                        </td>
-                        <td class="p-3 text-center">
-                          <Show when={stud.nilaiAngka} fallback="-">
-                            <span>
-                              {stud.nilaiAngka} ({stud.nilaiHuruf})
-                            </span>
+                        <For each={displayComponents()}>
+                          {(c) => (
+                            <td class="p-3 text-center align-top">
+                              <Show
+                                when={componentHasSub(c.id)}
+                                fallback={
+                                  <input
+                                    type="text"
+                                    placeholder="0.00"
+                                    disabled={isClassLocked()}
+                                    value={
+                                      inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
+                                        ? inputGrades()[`${stud.krsId}_${c.id}`]
+                                        : ''
+                                    }
+                                    onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
+                                    class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
+                                      isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
+                                        ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
+                                        : isDirty(`g:${stud.krsId}_${c.id}`)
+                                          ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
+                                          : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                                    }`}
+                                  />
+                                }
+                              >
+                                <div class="flex flex-col items-center gap-1">
+                                  <Show
+                                    when={overrideL1Key() === `${stud.krsId}_${c.id}`}
+                                    fallback={
+                                      <span
+                                        class={`text-sm font-bold cursor-pointer select-none rounded px-1 hover:bg-secondary-100 dark:hover:bg-secondary-800 ${
+                                          isDirty(`g:${stud.krsId}_${c.id}`)
+                                            ? 'text-amber-600 dark:text-amber-400'
+                                            : 'text-secondary-800 dark:text-white'
+                                        }`}
+                                        title="Double-click untuk override nilai komponen"
+                                        onDblClick={() => beginL1Override(stud.krsId, c.id)}
+                                      >
+                                        {komponenAggLabel(stud.krsId, c.id, c.bobot)}
+                                      </span>
+                                    }
+                                  >
+                                    <div class="flex items-center gap-1">
+                                      <input
+                                        type="text"
+                                        placeholder="0.00"
+                                        disabled={isClassLocked()}
+                                        ref={(el) => el?.focus()}
+                                        value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
+                                        onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
+                                        onBlur={() => setOverrideL1Key(null)}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter') setOverrideL1Key(null);
+                                          if (e.key === 'Escape') resetL1ToAuto(stud.krsId, c.id);
+                                        }}
+                                        class={`border rounded-lg px-2 h-10 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
+                                          isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
+                                            ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
+                                            : 'border-brand-400 focus:border-brand-500 focus:ring-brand-500/20 dark:border-brand-700'
+                                        }`}
+                                      />
+                                      <button
+                                        type="button"
+                                        disabled={isClassLocked()}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          resetL1ToAuto(stud.krsId, c.id);
+                                        }}
+                                        title="Kembali ke agregat sub-komponen"
+                                        class="text-brand-600 hover:text-brand-800 text-sm font-bold px-1"
+                                      >
+                                        ↩
+                                      </button>
+                                    </div>
+                                  </Show>
+                                  <button
+                                    type="button"
+                                    disabled={isClassLocked()}
+                                    onClick={() => openSubPopup(stud, c)}
+                                    title="Input nilai sub-komponen"
+                                    class="px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-semibold hover:bg-brand-100 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800"
+                                  >
+                                    Input Sub [S]
+                                  </button>
+                                </div>
+                              </Show>
+                            </td>
+                          )}
+                        </For>
+                        <td class="p-3 text-center font-extrabold text-secondary-800 dark:text-white sticky right-0 bg-white dark:bg-secondary-900">
+                          <Show
+                            when={getDynamicFinalGrade(stud)}
+                            fallback={
+                              <Show when={stud.nilaiAngka} fallback="-">
+                                {stud.nilaiAngka} ({stud.nilaiHuruf})
+                              </Show>
+                            }
+                          >
+                            {(res) => (
+                              <span>
+                                {res().score} ({res().huruf})
+                              </span>
+                            )}
                           </Show>
                         </td>
                       </tr>
@@ -2624,193 +2371,6 @@ export default function InputNilai() {
                   </For>
                 </tbody>
               </table>
-            </Show>
-
-            {/* M2 / M3 — Nilai Komponen & Sub-Komponen */}
-            <Show when={activeMethod() !== 'akhir'}>
-              <Show
-                when={(components()?.length || 0) > 0}
-                fallback={
-                  <div class="text-center py-12 text-secondary-400 italic">
-                    Harap tentukan dan simpan komponen bobot nilai (kiri) terlebih dahulu sebelum menginput nilai
-                    mahasiswa.
-                  </div>
-                }
-              >
-                <table class="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
-                      <th class="p-3 w-10 text-center">
-                        <input
-                          type="checkbox"
-                          aria-label="Pilih semua mahasiswa"
-                          checked={allVisibleSelected()}
-                          onChange={toggleSelectAll}
-                          class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
-                        />
-                      </th>
-                      <th class="p-3">Mahasiswa</th>
-                      <For each={displayComponents()}>
-                        {(c) => (
-                          <th class="p-3 text-center">
-                            {c.nama} ({c.bobot}%)
-                            <Show when={componentHasSub(c.id)}>
-                              <span class="ml-1" title="Memiliki sub-komponen">
-                                [S]
-                              </span>
-                            </Show>
-                          </th>
-                        )}
-                      </For>
-                      <th class="p-3 text-center">Nilai Akhir</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
-                    <For
-                      each={visibleStudents()}
-                      fallback={
-                        <tr>
-                          <td
-                            colspan={(displayComponents()?.length || 0) + 3}
-                            class="p-4 text-center text-secondary-400 italic"
-                          >
-                            Tidak ada mahasiswa terdaftar di kelas ini.
-                          </td>
-                        </tr>
-                      }
-                    >
-                      {(stud) => (
-                        <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                          <td class="p-3 text-center">
-                            <input
-                              type="checkbox"
-                              aria-label={`Pilih ${stud.nama}`}
-                              checked={isKrsSelected(stud.krsId)}
-                              onChange={() => toggleKrsSelected(stud.krsId)}
-                              class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
-                            />
-                          </td>
-                          <td class="p-3">
-                            <div class="flex items-center gap-2">
-                              <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
-                              <div class="flex flex-col">
-                                <span class="font-bold text-sm text-secondary-800 dark:text-white">{stud.nama}</span>
-                                <span class="text-[11px] text-secondary-400">NIM: {stud.nim}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <For each={displayComponents()}>
-                            {(c) => (
-                              <td class="p-3 text-center align-top">
-                                <Show
-                                  when={componentHasSub(c.id)}
-                                  fallback={
-                                    <input
-                                      type="text"
-                                      placeholder="0.00"
-                                      disabled={isClassLocked()}
-                                      value={
-                                        inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
-                                          ? inputGrades()[`${stud.krsId}_${c.id}`]
-                                          : ''
-                                      }
-                                      onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
-                                      class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
-                                        isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
-                                          ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                          : isDirty(`g:${stud.krsId}_${c.id}`)
-                                            ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
-                                            : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
-                                      }`}
-                                    />
-                                  }
-                                >
-                                  <div class="flex flex-col items-center gap-1">
-                                    <Show
-                                      when={overrideL1Key() === `${stud.krsId}_${c.id}`}
-                                      fallback={
-                                        <span
-                                          class={`text-sm font-bold cursor-pointer select-none rounded px-1 hover:bg-secondary-100 dark:hover:bg-secondary-800 ${
-                                            isDirty(`g:${stud.krsId}_${c.id}`)
-                                              ? 'text-amber-600 dark:text-amber-400'
-                                              : 'text-secondary-800 dark:text-white'
-                                          }`}
-                                          title="Double-click untuk override nilai komponen"
-                                          onDblClick={() => beginL1Override(stud.krsId, c.id)}
-                                        >
-                                          {komponenAggLabel(stud.krsId, c.id, c.bobot)}
-                                        </span>
-                                      }
-                                    >
-                                      <div class="flex items-center gap-1">
-                                        <input
-                                          type="text"
-                                          placeholder="0.00"
-                                          disabled={isClassLocked()}
-                                          ref={(el) => el?.focus()}
-                                          value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
-                                          onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
-                                          onBlur={() => setOverrideL1Key(null)}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter') setOverrideL1Key(null);
-                                            if (e.key === 'Escape') resetL1ToAuto(stud.krsId, c.id);
-                                          }}
-                                          class={`border rounded-lg px-2 h-10 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
-                                            isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
-                                              ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                              : 'border-brand-400 focus:border-brand-500 focus:ring-brand-500/20 dark:border-brand-700'
-                                          }`}
-                                        />
-                                        <button
-                                          type="button"
-                                          disabled={isClassLocked()}
-                                          onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            resetL1ToAuto(stud.krsId, c.id);
-                                          }}
-                                          title="Kembali ke agregat sub-komponen"
-                                          class="text-brand-600 hover:text-brand-800 text-sm font-bold px-1"
-                                        >
-                                          ↩
-                                        </button>
-                                      </div>
-                                    </Show>
-                                    <button
-                                      type="button"
-                                      disabled={isClassLocked()}
-                                      onClick={() => openSubPopup(stud, c)}
-                                      title="Input nilai sub-komponen"
-                                      class="px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-semibold hover:bg-brand-100 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800"
-                                    >
-                                      Input Sub [S]
-                                    </button>
-                                  </div>
-                                </Show>
-                              </td>
-                            )}
-                          </For>
-                          <td class="p-3 text-center font-extrabold text-secondary-800 dark:text-white sticky right-0 bg-white dark:bg-secondary-900">
-                            <Show
-                              when={getDynamicFinalGrade(stud)}
-                              fallback={
-                                <Show when={stud.nilaiAngka} fallback="-">
-                                  {stud.nilaiAngka} ({stud.nilaiHuruf})
-                                </Show>
-                              }
-                            >
-                              {(res) => (
-                                <span>
-                                  {res().score} ({res().huruf})
-                                </span>
-                              )}
-                            </Show>
-                          </td>
-                        </tr>
-                      )}
-                    </For>
-                  </tbody>
-                </table>
-              </Show>
             </Show>
           </div>
         </Show>
@@ -2842,29 +2402,44 @@ export default function InputNilai() {
               </Show>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+              <DropdownMenu
+                position="right"
+                triggerAriaLabel="Ekspor nilai"
+                triggerClass="px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-secondary-100 hover:bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-200"
+                trigger={
+                  <>
+                    <span>Ekspor</span>
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                }
+                items={[
+                  {
+                    label: 'Ekspor Excel',
+                    onClick: handleExportXLSX,
+                    disabled: isExporting() || isClassLocked(),
+                    loading: isExporting(),
+                  },
+                  {
+                    label: 'Ekspor CSV',
+                    onClick: handleExportCSVFile,
+                    disabled: isExporting() || isClassLocked(),
+                  },
+                  {
+                    label: 'Unduh Template',
+                    onClick: handleDownloadTemplate,
+                    disabled: isExporting() || isClassLocked(),
+                  },
+                ]}
+              />
               <Button
                 variant="secondary"
                 size="sm"
                 disabled={isExporting() || isClassLocked()}
-                onClick={handleExportXLSX}
+                onClick={() => setShowImportModal(true)}
               >
-                Ekspor Excel
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={isExporting() || isClassLocked()}
-                onClick={handleExportCSVFile}
-              >
-                Ekspor CSV
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={isExporting() || isClassLocked()}
-                onClick={handleDownloadTemplate}
-              >
-                Unduh Template
+                Impor
               </Button>
               <Button
                 variant="secondary"
@@ -2872,24 +2447,33 @@ export default function InputNilai() {
                 disabled={isExporting() || isClassLocked()}
                 onClick={handleExportPDF}
               >
-                Cetak PDF (DNU)
+                Cetak
               </Button>
+              <Show
+                when={!isClassLocked()}
+                fallback={
+                  <Show
+                    when={role() === 'admin' || role() === 'prodi' || role() === 'dosen' || role() === 'instruktur'}
+                  >
+                    <Button variant="primary" size="sm" onClick={handleUnlockKelas}>
+                      Buka Kunci
+                    </Button>
+                  </Show>
+                }
+              >
+                <Button variant="danger" size="sm" onClick={handleLockKelas}>
+                  Kunci Nilai
+                </Button>
+              </Show>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
               <Show when={!isClassLocked() && dirtyCount() > 0}>
-                <Button variant="secondary" size="sm" onClick={handleDiscardChanges}>
-                  Batalkan perubahan
+                <Button variant="danger" size="sm" onClick={handleDiscardChanges}>
+                  Batalkan Perubahan
                 </Button>
               </Show>
               <Show when={!isClassLocked()}>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => {
-                    const method = activeMethod();
-                    if (method === 'akhir') handleSaveAkhir();
-                    else if (method === 'komponen') handleSaveKomponenOnly();
-                    else handleSaveGrades();
-                  }}
-                >
+                <Button variant="primary" size="sm" onClick={handleSaveKomponenOnly}>
                   Simpan{selectedCount() > 0 ? ` (${selectedCount()})` : ''}
                 </Button>
               </Show>
@@ -3013,9 +2597,39 @@ export default function InputNilai() {
         importUrl=""
         templateHeaders={importTemplateHeaders()}
         title={`Nilai ${
-          activeMethod() === 'akhir' ? 'Akhir' : activeMethod() === 'komponen' ? 'Komponen' : 'Sub-Komponen'
+          importTemplate() === 'akhir' ? 'Akhir' : importTemplate() === 'komponen' ? 'Komponen' : 'Sub-Komponen'
         }`}
-        description="Kolom pertama wajib 'nim'. Kolom lainnya menggunakan nama komponen/sub-komponen yang tertera pada template."
+        description="Kolom pertama wajib 'nim'. Kolom lainnya mengikuti template yang dipilih."
+        headerExtras={
+          <div class="flex flex-col gap-2">
+            <span class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Pilihan Template Impor</span>
+            <div class="flex flex-wrap gap-2">
+              <For
+                each={
+                  [
+                    { id: 'akhir' as ImportTemplate, label: 'Nilai akhir saja' },
+                    { id: 'komponen' as ImportTemplate, label: 'Nilai komponen' },
+                    { id: 'sub' as ImportTemplate, label: 'Sampai level sub-komponen' },
+                  ] as const
+                }
+              >
+                {(t) => (
+                  <button
+                    type="button"
+                    onClick={() => setImportTemplate(t.id)}
+                    class={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95 ${
+                      importTemplate() === t.id
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                )}
+              </For>
+            </div>
+          </div>
+        }
         onImport={handleImportNilais}
         onSuccess={() => refetchStudentsGrades()}
       />
