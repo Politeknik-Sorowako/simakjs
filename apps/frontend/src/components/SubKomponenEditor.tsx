@@ -24,13 +24,6 @@ function parseBobot(value: string): number {
   return Number.isFinite(num) ? num : 0;
 }
 
-// Selaras dengan BOBOT_EPSILON backend: bobot desimal (mis. 33.33 x3) tidak pernah
-// tepat 100 dalam floating-point.
-const BOBOT_EPSILON = 0.01;
-function isBobotComplete(weight: number): boolean {
-  return Math.abs(Math.round((100 - weight) * 100) / 100) <= BOBOT_EPSILON;
-}
-
 export default function SubKomponenEditor(props: SubKomponenEditorProps) {
   const [rows, setRows] = createSignal<SubRow[]>([]);
   const [saving, setSaving] = createSignal(false);
@@ -53,7 +46,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
   });
 
   const totalBobot = () => rows().reduce((sum, row) => sum + parseBobot(row.bobot), 0);
-  const totalValid = () => rows().length === 0 || isBobotComplete(totalBobot());
+  const totalValid = () => rows().length === 0 || totalBobot() === 100;
 
   const updateRow = (index: number, field: 'nama' | 'bobot', value: string) => {
     dirty = true;
@@ -82,7 +75,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
       setError('Nama sub-komponen tidak boleh kosong.');
       return;
     }
-    if (list.length > 0 && !isBobotComplete(totalBobot())) {
+    if (list.length > 0 && totalBobot() !== 100) {
       setError('Total bobot sub-komponen harus tepat 100%.');
       return;
     }

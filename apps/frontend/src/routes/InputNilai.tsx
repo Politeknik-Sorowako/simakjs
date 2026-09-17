@@ -22,11 +22,6 @@ import { type ExportColumn, exportToCSV, exportToExcelMultipleSheets, exportToPD
 
 type InputMethod = 'akhir' | 'komponen' | 'sub';
 
-// Selaras dengan BOBOT_EPSILON backend: bobot desimal (mis. 33.33 x3) tidak pernah
-// tepat 100 dalam floating-point.
-const BOBOT_EPSILON = 0.01;
-const isBobotComplete = (weight: number) => Math.abs(Math.round((100 - weight) * 100) / 100) <= BOBOT_EPSILON;
-
 export default function InputNilai() {
   const auth = useAuth();
   const toast = useToast();
@@ -502,7 +497,7 @@ export default function InputNilai() {
 
     const list = editableComponents();
     const totalBobot = list.reduce((sum, item) => sum + item.bobot, 0);
-    if (!isBobotComplete(totalBobot)) {
+    if (totalBobot !== 100) {
       toast.showToast('Total bobot komponen nilai harus tepat 100%.', 'error');
       return;
     }
@@ -785,7 +780,7 @@ export default function InputNilai() {
       totalBobot += c.bobot;
     }
 
-    if (!isBobotComplete(totalBobot)) return null;
+    if (totalBobot !== 100) return null;
 
     const finalScore = parseFloat(totalScore.toFixed(2));
 
@@ -2123,15 +2118,8 @@ export default function InputNilai() {
                       </Show>
                     </div>
                   </Show>
-                  <span
-                    class={`text-xs font-bold ${
-                      isBobotComplete(editableComponents().reduce((sum, item) => sum + item.bobot, 0))
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-rose-600 dark:text-rose-400'
-                    }`}
-                  >
+                  <span class="text-xs font-bold text-secondary-600">
                     Total: {editableComponents().reduce((sum, item) => sum + item.bobot, 0)}%
-                    {isBobotComplete(editableComponents().reduce((sum, item) => sum + item.bobot, 0)) ? ' ✓' : ' ✗'}
                   </span>
                 </div>
 

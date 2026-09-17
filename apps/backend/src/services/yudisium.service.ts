@@ -20,7 +20,6 @@ import { db } from '../utils/db';
 import {
   buildFinalScore,
   computeKomponenScore,
-  isBobotComplete,
   type KomponenDef,
   type KonversiRule,
   type NilaiEnvelope,
@@ -220,7 +219,7 @@ export class YudisiumService {
     }
 
     const totalBobot = list.reduce((sum, item) => sum + item.bobot, 0);
-    if (!isBobotComplete(totalBobot)) {
+    if (totalBobot !== 100) {
       throw new Error('Total bobot komponen nilai harus tepat 100%.');
     }
     const seenNames = new Set<string>();
@@ -350,7 +349,7 @@ export class YudisiumService {
 
     if (list.length > 0) {
       const totalBobot = list.reduce((sum, item) => sum + item.bobot, 0);
-      if (!isBobotComplete(totalBobot)) {
+      if (totalBobot !== 100) {
         throw new Error('Total bobot sub-komponen harus tepat 100%.');
       }
       const seenNames = new Set<string>();
@@ -552,7 +551,7 @@ export class YudisiumService {
       const subGrades = subByKrs.get(krsId) ?? new Map<number, number>();
 
       const calc = buildFinalScore(componentDefs, subDefsByKomponen, directGrades, subGrades);
-      if (!isBobotComplete(calc.registeredWeight)) continue;
+      if (calc.registeredWeight !== 100) continue;
 
       const conversion = resolveGradeFromRules(activeRules, calc.finalScore);
       const [updatedKrs] = await tx
@@ -715,7 +714,7 @@ export class YudisiumService {
         const calc = buildFinalScore(componentDefs, subDefsByKomponen, directGrades, subGrades);
 
         // Update KRS only if weights are correct (e.g. all components/sub are entered)
-        if (isBobotComplete(calc.registeredWeight)) {
+        if (calc.registeredWeight === 100) {
           const conversion = resolveGradeFromRules(activeRules, calc.finalScore);
 
           const [updatedKrs] = await tx
@@ -856,7 +855,7 @@ export class YudisiumService {
 
         const calc = buildFinalScore(componentDefs, subDefsByKomponen, directGrades, subGrades);
 
-        if (isBobotComplete(calc.registeredWeight)) {
+        if (calc.registeredWeight === 100) {
           const conversion = resolveGradeFromRules(activeRules, calc.finalScore);
 
           const [updatedKrs] = await tx
@@ -1004,7 +1003,7 @@ export class YudisiumService {
         }
         l1MapByKrs.set(krsItem.id, l1Map);
 
-        if (isBobotComplete(totalWeight) && isBobotComplete(calc.registeredWeight)) {
+        if (totalWeight === 100 && calc.registeredWeight === 100) {
           const conversion = resolveGradeFromRules(activeRules, calc.finalScore);
 
           await tx

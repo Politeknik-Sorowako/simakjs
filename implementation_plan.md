@@ -201,19 +201,16 @@ Semua PR menyasar `development` (staging-first); tanpa migrasi DB.
 - **F1** — Tombol `Cetak PDF (DNU)` dengan kop resmi institusi (logo `src/assets/logo.png` dimuat sebagai data URL),
   info MK/kelas/periode/prodi/dosen, dan blok tanda tangan (Dosen Pengampu, Ketua Program Studi).
   `exportToPDF` diberi parameter opsional `PdfKopOptions`; default pemakai lain tidak berubah.
-- **F2 (parsial)** — Toleransi `isBobotComplete` (EPS 0.01, membandingkan `round2(100 - weight)`) di
-  `grade-calc.ts`, `yudisium.service.ts` (komponen/sub), `InputNilai.tsx`, `SubKomponenEditor.tsx`.
-  Schema `bobot` (body + response `yudisium`/`khs`) diubah `t.Integer` -> `t.Number`. Unit test murni
-  `isBobotComplete` ditambahkan; regresi ditolak (99.0) diuji di endpoint.
 
-### BLOCKER: F2 memerlukan migrasi DB (bertentangan dengan asumsi plan)
-Kolom `komponen_nilai.bobot` dan `sub_komponen_nilai.bobot` di `schema.ts` bertipe **`integer`**
-(`integer('bobot')`), sehingga bobot desimal (mis. `33.33`) gagal di level Postgres
-(`insert ... bobot=33.33` ditolak). Karena itu **bobot desimal belum dapat dipersist** tanpa migrasi:
+### F2 DIBATALKAN — bobot persen cukup bilangan bulat
+Target bobot desimal (toleransi EPS 0.01) **dibatalkan** setelah evaluasi: bobot persen tidak perlu format
+desimal. Alasan teknis tambahan: kolom `komponen_nilai.bobot` dan `sub_komponen_nilai.bobot` bertipe
+`integer`, sehingga bobot desimal mustahil dipersist tanpa migrasi `numeric(5,2)` yang memperluas scope.
 
-- Ubah kolom menjadi `numeric(5,2) { mode: 'number' }` (Drizzle mendukung `mode: 'number'` agar TS tetap `number`).
-- Migrasi idempotent + snapshot `drizzle-kit`, wajib backup DB sebelum deploy staging/produksi (AGENTS.md).
-- Dampak: memperluas scope plan (yang semula menyatakan "tanpa migrasi DB").
-
-Keputusan diperlukan: setujui PR migrasi terpisah `0070_nilai_bobot_numeric.sql`, atau batalkan target bobot desimal.
-Selama belum ada migrasi, validasi toleran tetap aman (no-op untuk bobot integer) namun tidak membuka input desimal.
+Seluruh perubahan F2 yang sempat dibuat telah **di-revert**:
+- `grade-calc.ts`: `BOBOT_EPSILON`/`isBobotComplete` dihapus; kembali `weight === 100` / `registeredWeight === 100`.
+- `yudisium.service.ts`: kembali perbandingan strict `!== 100` / `=== 100`.
+- `yudisium.schema.ts` & `khs.schema.ts`: `bobot` kembali `t.Integer`.
+- `InputNilai.tsx` & `SubKomponenEditor.tsx`: helper toleransi dihapus; kembali strict `=== 100`.
+- Test toleransi dihapus.
+Tidak ada migrasi DB. F1 dan F3 tetap berlaku.
