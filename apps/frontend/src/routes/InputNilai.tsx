@@ -1,9 +1,11 @@
 import { useSearchParams } from '@solidjs/router';
 import { createEffect, createMemo, createResource, createSignal, For, Index, onCleanup, Show } from 'solid-js';
+import logoImg from '../assets/logo.png';
 import { MainLayout } from '../components/MainLayout';
 import SubKomponenEditor from '../components/SubKomponenEditor';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
+import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,9 +18,14 @@ import { type Prodi, prodiController } from '../controllers/prodiController';
 import { rombelPraktikumController } from '../controllers/rombelPraktikumController';
 import { rpsController } from '../controllers/rpsController';
 import { isHeaderRow } from '../utils/csv';
-import { type ExportColumn, exportToCSV, exportToExcelMultipleSheets } from '../utils/export';
+import { type ExportColumn, exportToCSV, exportToExcelMultipleSheets, exportToPDF } from '../utils/export';
 
 type InputMethod = 'akhir' | 'komponen' | 'sub';
+
+// Selaras dengan BOBOT_EPSILON backend: bobot desimal (mis. 33.33 x3) tidak pernah
+// tepat 100 dalam floating-point.
+const BOBOT_EPSILON = 0.01;
+const isBobotComplete = (weight: number) => Math.abs(Math.round((100 - weight) * 100) / 100) <= BOBOT_EPSILON;
 
 export default function InputNilai() {
   const auth = useAuth();
@@ -50,6 +57,9 @@ export default function InputNilai() {
   const [dirtyKeys, setDirtyKeys] = createSignal<Set<string>>(new Set());
   const [showRekap, setShowRekap] = createSignal(true);
   const [isExporting, setIsExporting] = createSignal(false);
+  const [showMappingModal, setShowMappingModal] = createSignal(false);
+  const [pendingImportRows, setPendingImportRows] = createSignal<string[][]>([]);
+  const [columnMapping, setColumnMapping] = createSignal<Record<number, string>>({});
 
   // 1. Filter periode & program studi (default: periode aktif + prodi workspace admin)
   const workspace = useWorkspace();
@@ -492,7 +502,7 @@ export default function InputNilai() {
 
     const list = editableComponents();
     const totalBobot = list.reduce((sum, item) => sum + item.bobot, 0);
-    if (totalBobot !== 100) {
+    if (!isBobotComplete(totalBobot)) {
       toast.showToast('Total bobot komponen nilai harus tepat 100%.', 'error');
       return;
     }
@@ -775,7 +785,7 @@ export default function InputNilai() {
       totalBobot += c.bobot;
     }
 
-    if (totalBobot !== 100) return null;
+    if (!isBobotComplete(totalBobot)) return null;
 
     const finalScore = parseFloat(totalScore.toFixed(2));
 
@@ -1084,6 +1094,74 @@ export default function InputNilai() {
     }
   };
 
+  // Muat logo institusi sebagai data URL untuk kop PDF
+  const loadPdfLogoDataUrl = (): Promise<string | null> =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(null);
+            return;
+          }
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = logoImg;
+    });
+
+  const handleExportPDF = async () => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) return;
+    setIsExporting(true);
+    try {
+      const data = (await khsController.getNilaiMahasiswa(kelasId)) || [];
+      const kelas = selectedClassDetails();
+      const logoDataUrl = await loadPdfLogoDataUrl();
+      const periode = kelas?.periodeId || selectedPeriodeId() || '-';
+      const pengampu = (kelas?.dosenPengajarKelas || [])
+        .map((d) => d.dosen?.nama)
+        .filter((n): n is string => Boolean(n))
+        .join(', ');
+
+      exportToPDF(
+        buildRingkasanRows(data),
+        buildRingkasanColumns(),
+        exportFilename(),
+        'DAFTAR NILAI UJIAN',
+        undefined,
+        {
+          logoDataUrl: logoDataUrl ?? undefined,
+          institusi: 'POLITEKNIK SOROWAKO',
+          alamat: 'Program Pendidikan Vokasi',
+          judulDokumen: 'DAFTAR NILAI UJIAN',
+          infoLines: [
+            `Mata Kuliah: ${kelas?.mataKuliah?.nama || '-'} (${kelas?.mataKuliah?.kode || '-'})`,
+            `Kelas: ${kelas?.namaKelas || '-'}  |  Periode: ${periode}`,
+            `Program Studi: ${kelas?.mataKuliah?.programStudi?.nama || '-'}`,
+            `Dosen Pengampu: ${pengampu || '-'}`,
+            `Rentang Nilai: 0 - ${nilaiEnvelope().max}`,
+          ],
+          signatures: ['Dosen Pengampu', 'Ketua Program Studi'],
+        },
+      );
+      toast.showToast('Berhasil mengekspor Daftar Nilai Ujian (PDF).', 'success');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengekspor PDF.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // ===== Rekap pra-simpan =====
   const rekapRows = createMemo(() => {
     if (!showRekap()) return [];
@@ -1308,7 +1386,7 @@ export default function InputNilai() {
   });
 
   // Impor CSV sesuai metode aktif (header dinamis dari definisi aktual)
-  const handleImportNilais = async (rows: string[][]) => {
+  const processImport = async (rows: string[][]) => {
     const kelasId = selectedKelasId();
     const errors: { line: number; error: string }[] = [];
     if (!kelasId) return { successCount: 0, errors: [{ line: 0, error: 'Pilih kelas terlebih dahulu.' }] };
@@ -1539,6 +1617,141 @@ export default function InputNilai() {
       errors.push({ line: 0, error: e instanceof Error ? e.message : 'Gagal menyimpan nilai sub-komponen.' });
       return { successCount: 0, errors };
     }
+  };
+
+  // ===== Pemetaan kolom impor (F3) =====
+  const mappingTargetOptions = createMemo(() => {
+    const method = activeMethod();
+    if (method === 'sub') {
+      return (subComponents() || []).map((s) => ({ key: s.nama, label: `Sub: ${s.nama} (${s.bobot}%)` }));
+    }
+    return (components() || [])
+      .filter((c) => !componentHasSub(c.id!))
+      .map((c) => ({ key: c.nama, label: `${c.nama} (${c.bobot}%)` }));
+  });
+
+  const mappingKeptColumns = createMemo(() =>
+    Object.keys(columnMapping())
+      .map(Number)
+      .filter((i) => columnMapping()[i] !== '__ignore__')
+      .sort((a, b) => a - b),
+  );
+
+  const mappingDiagnostics = createMemo(() => {
+    const rows = pendingImportRows();
+    const errors: { line: number; error: string }[] = [];
+    const duplicateTargets: string[] = [];
+    if (rows.length < 1) return { errors, duplicateTargets };
+
+    const mapping = columnMapping();
+    const targetKeys = Object.values(mapping).filter((k) => k !== '__ignore__' && k !== '__nim__');
+    const counts = new Map<string, number>();
+    for (const k of targetKeys) counts.set(k, (counts.get(k) || 0) + 1);
+    for (const [k, c] of counts.entries()) if (c > 1) duplicateTargets.push(k);
+
+    const nimToKrs = new Map(
+      (studentsGrades() || []).map((s) => [String(s.nim).trim().toLowerCase(), s.krsId] as const),
+    );
+    const kept = Object.keys(mapping)
+      .map(Number)
+      .filter((i) => mapping[i] !== '__ignore__');
+
+    rows.slice(1).forEach((r, i) => {
+      const line = 2 + i;
+      const nim = String(r[0] ?? '').trim();
+      if (!nim) errors.push({ line, error: 'NIM kosong.' });
+      else if (!nimToKrs.has(nim.toLowerCase()))
+        errors.push({ line, error: `NIM ${nim} tidak ditemukan di kelas ini.` });
+      for (const col of kept) {
+        if (col === 0) continue;
+        const raw = r[col];
+        if (raw === undefined || String(raw).trim() === '') continue;
+        const n = parseGradeInput(raw);
+        if (n === null || n < nilaiEnvelope().min || n > nilaiEnvelope().max) {
+          errors.push({
+            line,
+            error: `Kolom "${rows[0][col] ?? col}" -> ${mapping[col]}: nilai harus ${nilaiEnvelope().min}-${nilaiEnvelope().max}.`,
+          });
+        }
+      }
+    });
+
+    return { errors, duplicateTargets };
+  });
+
+  const buildNormalizedImportRows = (): string[][] => {
+    const rows = pendingImportRows();
+    const mapping = columnMapping();
+    const kept = mappingKeptColumns();
+    const headerRow = kept.map((i) => (i === 0 ? 'nim' : mapping[i]));
+    const dataRows = rows.slice(1).map((r) => kept.map((i) => r[i] ?? ''));
+    return [headerRow, ...dataRows];
+  };
+
+  const handleDownloadImportErrors = () => {
+    const errors = mappingDiagnostics().errors;
+    if (errors.length === 0) return;
+    exportToCSV(
+      errors.map((e) => ({ baris: e.line, kendala: e.error })),
+      [
+        { header: 'Baris', accessor: 'baris' },
+        { header: 'Kendala', accessor: 'kendala' },
+      ],
+      'error_impor_nilai',
+    );
+  };
+
+  // Wrapper dipakai ImportCsvModal: bila header perlu dipetakan, buka panel pemetaan.
+  const handleImportNilais = async (
+    rows: string[][],
+    mode: string,
+  ): Promise<{ successCount: number; errors: { line: number; error: string }[] }> => {
+    void mode;
+    const method = activeMethod();
+    const headerDetected = isHeaderRow(rows[0]?.[0] ?? '', ['nim', 'nilai_akhir', 'nilai']);
+    if (method === 'akhir' || !headerDetected || rows.length < 2) {
+      return processImport(rows);
+    }
+
+    const targets = mappingTargetOptions();
+    const header = rows[0].map((h) => String(h).trim().toLowerCase());
+    const mapping: Record<number, string> = { 0: '__nim__' };
+    for (let i = 1; i < header.length; i++) {
+      const match = targets.find((t) => t.key.trim().toLowerCase() === header[i]);
+      mapping[i] = match ? match.key : '__ignore__';
+    }
+    setColumnMapping(mapping);
+    setPendingImportRows(rows);
+    setShowImportModal(false);
+    setShowMappingModal(true);
+    return {
+      successCount: 0,
+      errors: [{ line: 1, error: 'Silakan lengkapi pemetaan kolom pada panel yang terbuka.' }],
+    };
+  };
+
+  const handleConfirmMapping = async () => {
+    const diag = mappingDiagnostics();
+    if (diag.duplicateTargets.length > 0) {
+      toast.showToast(`Target terpetakan lebih dari sekali: ${diag.duplicateTargets.join(', ')}`, 'error');
+      return;
+    }
+    const mappedCount = mappingKeptColumns().filter((i) => i !== 0).length;
+    if (mappedCount === 0) {
+      toast.showToast('Petakan minimal satu kolom ke komponen/sub-komponen.', 'error');
+      return;
+    }
+    const normalized = buildNormalizedImportRows();
+    setShowMappingModal(false);
+    setPendingImportRows([]);
+    setColumnMapping({});
+    await processImport(normalized);
+  };
+
+  const handleCloseMapping = () => {
+    setShowMappingModal(false);
+    setPendingImportRows([]);
+    setColumnMapping({});
   };
 
   const handleLockKelas = async () => {
@@ -1910,8 +2123,15 @@ export default function InputNilai() {
                       </Show>
                     </div>
                   </Show>
-                  <span class="text-xs font-bold text-secondary-600">
+                  <span
+                    class={`text-xs font-bold ${
+                      isBobotComplete(editableComponents().reduce((sum, item) => sum + item.bobot, 0))
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-rose-600 dark:text-rose-400'
+                    }`}
+                  >
                     Total: {editableComponents().reduce((sum, item) => sum + item.bobot, 0)}%
+                    {isBobotComplete(editableComponents().reduce((sum, item) => sum + item.bobot, 0)) ? ' ✓' : ' ✗'}
                   </span>
                 </div>
 
@@ -2059,6 +2279,14 @@ export default function InputNilai() {
                       class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
                     >
                       Unduh Template
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleExportPDF}
+                      disabled={isExporting()}
+                      class="px-4 py-2 bg-secondary-100 text-secondary-700 font-bold rounded-xl text-xs hover:bg-secondary-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
+                    >
+                      Cetak PDF (DNU)
                     </button>
                   </div>
 
@@ -2482,6 +2710,14 @@ export default function InputNilai() {
               >
                 Unduh Template
               </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={isExporting() || isClassLocked()}
+                onClick={handleExportPDF}
+              >
+                Cetak PDF (DNU)
+              </Button>
               <Show when={!isClassLocked()}>
                 <Button
                   variant="primary"
@@ -2500,6 +2736,115 @@ export default function InputNilai() {
           </div>
         </div>
       </Show>
+
+      {/* F3 — Panel pemetaan kolom impor */}
+      <Modal show={showMappingModal()} onClose={handleCloseMapping} title="Pemetaan Kolom Impor Nilai" maxWidth="xl">
+        <div class="flex flex-col gap-4">
+          <p class="text-xs text-secondary-600 dark:text-secondary-300 leading-relaxed">
+            Cocokkan setiap kolom CSV ke komponen/sub-komponen tujuan. Kolom pertama selalu NIM, kolom kosong diabaikan,
+            dan validasi akhir tetap dilakukan saat menyimpan.
+          </p>
+
+          <div class="flex flex-col gap-2">
+            <span class="text-xs font-bold text-secondary-700 dark:text-secondary-200">Pemetaan Kolom</span>
+            <div class="flex flex-col gap-2 max-h-52 overflow-y-auto pr-1">
+              <For each={(pendingImportRows()[0] || []).map((h, i) => ({ h, i }))}>
+                {(col) => (
+                  <div class="flex items-center justify-between gap-3 rounded-lg border border-secondary-100 dark:border-secondary-800 px-3 py-2">
+                    <span class="text-xs font-mono text-secondary-600 dark:text-secondary-300 truncate">
+                      {col.i === 0 ? 'NIM (kolom 1)' : `${col.h || `Kolom ${col.i + 1}`}`}
+                    </span>
+                    <Show
+                      when={col.i !== 0}
+                      fallback={<span class="text-[11px] font-semibold text-secondary-400">NIM</span>}
+                    >
+                      <select
+                        value={columnMapping()[col.i] ?? '__ignore__'}
+                        onChange={(e) => setColumnMapping((prev) => ({ ...prev, [col.i]: e.currentTarget.value }))}
+                        class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs min-w-56 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                      >
+                        <option value="__ignore__">-- Abaikan kolom ini --</option>
+                        <For each={mappingTargetOptions()}>{(t) => <option value={t.key}>{t.label}</option>}</For>
+                      </select>
+                    </Show>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+
+          <Show when={mappingDiagnostics().duplicateTargets.length > 0}>
+            <div class="p-3 bg-rose-50 text-rose-700 rounded-lg text-xs font-medium dark:bg-rose-900/30 dark:text-rose-400">
+              Target terpetakan lebih dari sekali: {mappingDiagnostics().duplicateTargets.join(', ')}
+            </div>
+          </Show>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
+              Pratinjau (5 baris pertama)
+            </span>
+            <div class="overflow-auto max-h-52 border border-secondary-200 dark:border-secondary-800 rounded-lg">
+              <table class="min-w-full text-left text-xs">
+                <thead class="bg-secondary-50 dark:bg-secondary-800 text-secondary-600 dark:text-secondary-300 font-bold">
+                  <tr>
+                    <For each={mappingKeptColumns()}>
+                      {(i) => <th class="px-3 py-2 whitespace-nowrap">{i === 0 ? 'NIM' : columnMapping()[i]}</th>}
+                    </For>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-secondary-100 dark:divide-secondary-800">
+                  <For each={pendingImportRows().slice(1, 6)}>
+                    {(row) => (
+                      <tr>
+                        <For each={mappingKeptColumns()}>
+                          {(i) => (
+                            <td class="px-3 py-1.5 text-secondary-700 dark:text-secondary-200">{row[i] ?? ''}</td>
+                          )}
+                        </For>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <Show when={mappingDiagnostics().errors.length > 0}>
+            <div class="flex flex-col gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl dark:bg-amber-900/20 dark:border-amber-800">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold text-amber-800 dark:text-amber-300">
+                  {mappingDiagnostics().errors.length} baris bermasalah (baris lain tetap dapat diimpor)
+                </span>
+                <Button variant="secondary" size="sm" onClick={handleDownloadImportErrors}>
+                  Unduh Daftar Error
+                </Button>
+              </div>
+              <div class="max-h-32 overflow-y-auto text-[11px] font-mono text-amber-800 dark:text-amber-300 flex flex-col gap-0.5">
+                <For each={mappingDiagnostics().errors.slice(0, 50)}>
+                  {(e) => (
+                    <span>
+                      Baris {e.line}: {e.error}
+                    </span>
+                  )}
+                </For>
+              </div>
+            </div>
+          </Show>
+
+          <div class="flex justify-end gap-2">
+            <Button variant="secondary" onClick={handleCloseMapping}>
+              Batal
+            </Button>
+            <Button
+              variant="primary"
+              disabled={mappingKeptColumns().length <= 1 || mappingDiagnostics().duplicateTargets.length > 0}
+              onClick={handleConfirmMapping}
+            >
+              Lanjutkan Impor
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <ImportCsvModal
         show={showImportModal()}

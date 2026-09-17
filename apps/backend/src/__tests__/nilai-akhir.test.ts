@@ -15,6 +15,7 @@ import {
   programStudi,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { isBobotComplete } from '../utils/grade-calc';
 import { clearDatabase, getAuthToken } from './test-helper';
 
 describe('Nilai Akhir Langsung (M1) & Multi-Metode Input', () => {
@@ -412,6 +413,35 @@ describe('Nilai Akhir Langsung (M1) & Multi-Metode Input', () => {
         threw = true;
       }
       expect(threw).toBe(true);
+    });
+  });
+
+  describe('Toleransi bobot desimal (BOBOT_EPSILON 0.01)', () => {
+    const postKomponen = (list: Array<{ nama: string; bobot: number }>) =>
+      app.handle(
+        new Request('http://localhost/yudisium/kelas/komponen', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ kelasKuliahId: kelasId, komponenList: list }),
+        }),
+      );
+
+    it('isBobotComplete menerima 99.99 dan menolak 99.0', () => {
+      // 33.33 x3 = 99.99 dengan galat floating-point (0.010000000000005).
+      expect(isBobotComplete(33.33 + 33.33 + 33.33)).toBe(true);
+      expect(isBobotComplete(99.99)).toBe(true);
+      expect(isBobotComplete(100)).toBe(true);
+      expect(isBobotComplete(99.0)).toBe(false);
+      expect(isBobotComplete(100.5)).toBe(false);
+    });
+
+    it('menolak total bobot komponen 99.0 di endpoint', async () => {
+      const res = await postKomponen([
+        { nama: 'A', bobot: 33 },
+        { nama: 'B', bobot: 33 },
+        { nama: 'C', bobot: 33 },
+      ]);
+      expect(res.status).toBe(400);
     });
   });
 });

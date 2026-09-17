@@ -66,6 +66,17 @@ function round2(value: number): number {
 }
 
 /**
+ * Toleransi total bobot (dalam persen). Bobot desimal seperti 33.33 + 33.33 + 33.34
+ * tidak pernah tepat 100 dalam floating-point; selisih < 0.01 diperlakukan lengkap.
+ */
+export const BOBOT_EPSILON = 0.01;
+
+/** Total bobot dianggap lengkap bila |round2(100 - weight)| <= BOBOT_EPSILON. */
+export function isBobotComplete(weight: number): boolean {
+  return Math.abs(round2(100 - weight)) <= BOBOT_EPSILON;
+}
+
+/**
  * Menghitung nilai suatu komponen dari nilai sub-komponennya (weighted average).
  * Bobot sub relatif terhadap induk; dianggap lengkap jika seluruh sub terisi dan total bobot sub == 100.
  */
@@ -88,7 +99,7 @@ export function computeKomponenScore(subGrades: Map<number, number>, subDefs: Su
     weight += def.bobot;
   }
 
-  const complete = missing === 0 && weight === 100;
+  const complete = missing === 0 && isBobotComplete(weight);
   if (weight === 0) {
     return { score: null, complete: false };
   }
@@ -143,7 +154,7 @@ export function buildFinalScore(
   return {
     finalScore: round2(finalScore),
     registeredWeight,
-    isComplete: isComplete && registeredWeight === 100,
+    isComplete: isComplete && isBobotComplete(registeredWeight),
   };
 }
 

@@ -1,233 +1,219 @@
-# Implementation Plan: Export Nilai + Redesign Metode Input `/input-nilai`
+# Implementation Plan (Follow-up): PDF DNU, Toleransi Bobot, Pemetaan Impor Nilai
 
-## 1. Latar Belakang & Scope
+Dokumen perencanaan struktural untuk item yang **belum diimplementasi** pada PR #399
+(`feat/input-nilai-export-redesign`). Belum berisi implementasi kode penuh. Tanpa migrasi DB.
 
-Halaman `apps/frontend/src/routes/InputNilai.tsx` (1783 baris) adalah satu-satunya
-layanan input nilai per `kelasKuliah`, dengan 3 metode non-destruktif:
-M1 nilai akhir, M2 per komponen, M3 per sub-komponen. Dua permintaan:
+---
 
-1. **Export nilai MK dari level sub-komponen sampai nilai akhir** (belum ada tombol
-   export sama sekali; satu-satunya arah data keluar adalah simpan ke server).
-2. **Redesign metode penginputan agar jelas terbaca & mudah dioperasikan**
-   (tabel melebar tak terkendali, input mikro `w-14/w-16`, draft tertimpa refetch,
-   tanpa rekap pra-simpan, bulk timpang, impor rapuh nama).
+## 0. Konteks & Keputusan yang Sudah Dikunci
 
-Tanpa perubahan skema DB. Kalkulasi preseden tetap (`grade-calc.ts`):
-nilai langsung (L1) menang atas agregasi sub (L2); NA dihitung ulang hanya bila
-bobot terdaftar `===100`. Validasi bobot tetap strict `===100` (toleransi epsilon
-menjadi follow-up terpisah, belum disetujui). PDF DNU ditunda dari PR ini.
+PR #399 masih **OPEN** (belum di-merge). Tiga item sengaja ditunda dan menjadi scope dokumen ini:
 
-## 2. Keputusan Desain
+| Kode | Item | Keputusan |
+| :--- | :--- | :--- |
+| F3 | Pemetaan kolom impor manual + pratinjau + unduh error | Opsi B: panel lokal di `InputNilai.tsx`, `ImportCsvModal` tidak diubah |
+| F1 | PDF DNU (Daftar Nilai Ujian) siap cetak | **Kop resmi institusi** (logo + nama + alamat); `exportToPDF` diberi parameter opsional dengan default tidak berubah |
+| F2 | Toleransi bobot desimal | Disetujui, **EPS 0.01**, FE + BE + test serentak dalam satu PR |
 
-- **D1. Export client-side dulu.** `GET /yudisium/kelas/:id/nilai` + `komponen` + `sub-komponen` sudah mengembalikan seluruh L0+L1+L2 satu kelas → cukup untuk workbook via `exportToExcelMultipleSheets`. Endpoint backend (`GET /yudisium/kelas/:id/export`) hanya follow-up bila butuh arsip otoritatif / kelas >500 mhs.
-- **D2. Redesign bertahap, tanpa ubah API/kontrak simpan.** Urutan: sticky action bar + rekap pra-simpan → mode fokus-satu-komponen + input 44px → bulk M3 + template terisi + pemetaan kolom impor.
-- **D3. NA di export = NA tersimpan**, bukan live preview. Kolom `Status` + `Sisa Kosong` sebagai penanda kelengkapan. Live preview hanya di layar (panel rekap).
-- **D4. Skala envelope ditampilkan di panel definisi** (`0-10` vs `0-100`) agar dosen tahu rentang valid.
-- **D5. Bobot tetap strict `===100`.** Follow-up terpisah bila disetujui.
-- **D6. PDF DNU ditunda.** PR ini hanya XLSX multi-sheet + CSV + Template Terisi.
+**Urutan eksekusi:** F3 -> F1 -> F2. Rekomendasi satu PR per item (staging-first ke `development`).
+**Prasyarat:** branch follow-up dibuat dari `development` **setelah PR #399 merge** untuk menghindari
+konflik pada `apps/frontend/src/routes/InputNilai.tsx`.
 
-## 3. Pain Points UX + Redesign Terstruktur
+**Tidak dikerjakan (eksplisit):**
+- Endpoint export backend (`GET /yudisium/kelas/:id/export`) — kondisional, hanya bila terbukti berat (>500 mhs).
+- Persist alias nama kolom impor; normalisasi bobot otomatis; `nilai-export.test.ts` backend (export tetap client-side).
 
-| # | Pain point | Usulan | Prioritas |
-|---|---|---|---|
-| P1 | Tabel raksasa satu layar: N kolom komponen, M3 = N sub input vertikal, scroll ganda, header tidak sticky, kolom Mahasiswa tidak frozen | Mode **fokus-satu-komponen** (S-C): tab/dropdown komponen aktif, tabel `☑ | Mahasiswa (frozen) | Nilai fokus | Status`, kolom NA frozen kanan; M3 tampilkan sub sebagai baris kartu per-mahasiswa (bukan kolom bersarang) | Tinggi |
-| P2 | Input mikro `w-14/w-16/w-20 text-xs/11px`, label sub truncate, target tap di bawah 44px | Input tinggi 44px font 17px `rounded-lg 18px`, border hairline + fokus `#0071e3`, sel invalid ring rose + pesan (S-D) | Tinggi |
-| P3 | Draft tertimpa refetch | Dirty-guard: `refetch` pasca-simpan tidak menimpa draft belum-simpan; badge `Belum disimpan (N)`; konfirmasi ganti kelas/metode bila dirty (S-E) | Tinggi |
-| P4 | Tanpa rekap pra-simpan | Panel per-mahasiswa (NA live vs tersimpan + delta), per-komponen (rata-rata, % terisi, min/max), daftar sel kosong/invalid (S-B) | Tinggi |
-| P5 | Tanpa export sama sekali | Tombol `Export XLSX` + `Export CSV` + `Unduh Template Terisi` (§5.1) | Tinggi |
-| P6 | Bulk timpang: M3 tidak ada bulk | Bulk-fill per sub terpilih, isi-kosong-saja (S-F) | Sedang |
-| P7 | Impor rapuh nama | Pemetaan kolom manual (dropdown CSV→target) + pratinjau 5 baris + unduh error per baris (S-G) | Sedang |
-| P8 | Sticky action bar: tombol Simpan harus scroll ke atas | Sticky bar bawah: ringkasan kiri + aksi kanan (S-A) | Tinggi |
-| P9 | Tombol `Simpan Terpilih (N)` tanpa ringkasan status | Rekap: `Terisi X/Y • Σ bobot=100% • envelope 0-100` (S-B) | Sedang |
-| P10 | Bulk hanya satu komponen per aksi | Samakan semantik M1/M2/M3; bulk M3 iterasi sub terpilih (S-F) | Sedang |
+---
 
-## 4. Target File
+## 1. F3 — Pemetaan Kolom Impor Manual + Pratinjau + Unduh Error
 
-### Modify
-1. **`apps/frontend/src/routes/InputNilai.tsx`** — ekstensif: tombol Export XLSX/CSV/Template, sticky action bar, rekap pra-simpan, mode fokus-satu-komponen, input 44px + ring invalid, dirty-guard draft, bulk M3, pemetaan kolom impor, badge envelope.
-2. **`apps/frontend/src/controllers/khsController.ts`** — opsional: ekstrak builder workbook ke sini bila logika terlalu panjang di page (tiru `KompensasiManual` pattern: data fetching tetap di page, export cols didefinisikan di page).
-3. **`apps/frontend/src/components/SubKomponenEditor.tsx`** — referensi pola `dirty`/`syncedSignature` untuk guard draft halaman; minim ubah.
-4. **`apps/frontend/src/utils/export.ts`** — tidak diubah (helper sudah cukup; `exportToExcel`, `exportToExcelMultipleSheets`, `exportToCSV` dipakai langsung).
+### 1.1 Latar Belakang
+`handleImportNilais` (`InputNilai.tsx`) mencocokkan nama kolom CSV ke komponen/sub **by-name** (case-insensitive).
+Satu perbedaan huruf/spasi membuat seluruh kolom ditolak tanpa jalan perbaikan di UI. Auto-match
+`templateHeaders` tetap dipertahankan sebagai default.
 
-### Tidak diubah
-Backend (`yudisium.*`, `grade-calc.ts`, `schema.ts`), migrasi DB, `Table.tsx`, `WorkspaceContext`, kontrak save M1/M2/M3, `konversiRules` flow.
+### 1.2 Target File
+- **Modify:** `apps/frontend/src/routes/InputNilai.tsx`
+  - State baru: `pendingImportRows: string[][] | null`, `columnMapping: Record<number, string>`.
+  - Alur baru: `ImportCsvModal.onImport` tidak langsung menyimpan; ia mengembalikan error "perlu pemetaan"
+    ATAU modal menyerahkan rows mentah ke handler lokal. Rancangan dipilih saat eksekusi:
+    (i) tangkap `onImport` di wrapper lokal lalu tampilkan panel, atau
+    (ii) tambah callback `onParsed(rows)` pada pemakaian modal (tanpa ubah komponen bersama).
+  - Panel "Pemetaan Kolom Impor" (modal/section): per kolom CSV -> dropdown target (`nim`, nama komponen,
+    nama sub, atau `Abaikan`), pratinjau 5 baris, tombol `Unduh Daftar Error`, `Lanjutkan Impor`.
+  - Fungsi normalisasi header: ganti header CSV sesuai mapping lalu teruskan ke `handleImportNilais`
+    **tanpa mengubah logika validasi/save** di dalamnya.
+- **Tidak diubah:** `apps/frontend/src/components/ui/ImportCsvModal.tsx` (dipakai lintas halaman),
+  `apps/frontend/src/utils/export.ts` (reuse `exportToCSV` untuk unduh error), backend.
 
-## 5. Rincian Perubahan
+### 1.3 Perilaku
+1. User pilih file -> `parseCsv` -> deteksi header.
+2. Auto-match: nama kolom identik dengan `templateHeaders`/definisi -> mapping terisi otomatis.
+3. Kolom tak dikenal -> default `Abaikan` + sorot; user bisa petakan manual.
+4. Validasi ringan saat pratinjau: duplikat NIM, nilai non-numerik, di luar envelope. Error per baris
+   dapat diunduh sebagai CSV.
+5. `Lanjutkan Impor` -> kirim rows ternormalisasi ke `handleImportNilais` -> validasi + simpan backend tetap
+   menjadi penentu akhir (envelope, lock, dedupe).
 
-### 5.1 Export (client-side, 3 format)
+### 1.4 Dependensi
+- Definisi komponen (`components()`), sub (`subsByKomponen()`), `nilaiEnvelope()`, `parseGradeInput`,
+  `studentsGrades()` (peta NIM->krsId) — semuanya sudah tersedia di PR #399.
+- `exportToCSV` (`utils/export.ts`).
 
-**Sumber data:** `getNilaiMahasiswa(kelasId)` → L0 + L1 + L2 per mahasiswa;
-`getKomponen(kelasId)` → daftar komponen + bobot;
-`getSubKomponen(kelasId)` → daftar sub per komponen + bobot.
-
-Pola tiruan: `KompensasiManual.tsx:227-258` / `LaporanKompensasi.tsx:154-186` — fetch penuh (`getNilaiMahasiswa` sudah return full kelas), definisi `ExportColumn[]`, panggil helper.
-
-#### Export XLSX (multi-sheet)
-
-Sheet 1 **Ringkasan**:
-```
-NIM | Nama | [Komponen A (30%) | Komponen B (40%) | ... ] | Nilai Akhir | Huruf | Indeks | Status | Sisa Kosong
-```
-- Kolom komponen dinamis, berisi NA dari level L1 (`nilaiKomponen[].nilai`) atau
-  aggregated dari L2 bila tidak ada override L1.
-- `Nilai Akhir` = `nilaiAngka` (L0, NA tersimpan).
-- `Huruf/Indeks` dari `nilaiHuruf`/`nilaiIndeks`.
-- `Status` = `isComplete ? 'Lengkap' : 'Belum Lengkap'` (per krs).
-- `Sisa Kosong` = jumlah sel kosong per baris (informasi, bukan validasi).
-
-Sheet 2 **Detail Sub-Komponen**:
-```
-NIM | Nama | Komponen | Bobot Komponen | Sub-Komponen | Bobot Sub | Nilai | Agregat Komponen | Sumber
-```
-- `Agregat Komponen` = hasil `computeKomponenScore` (atau L1 override bila ada).
-- `Sumber` = `'L1'` bila ada `nilaiKomponen`, `'L2-agregated'` bila dari sub.
-
-Sheet 3 **Definisi + Meta**:
-```
-Komponen | Bobot% | Sub-Komponen | Bobot Sub% | envelope | kelas | periode | prodi | total_mahasiswa | locked_by | exported_at
-```
-
-**Filename:** `Nilai_{kodeMK}_{namaKelas}_{periode}.xlsx`
-
-#### Export CSV
-Format sama Sheet 1 Ringkasan, single file dengan BOM `\uFEFF`.
-
-#### Unduh Template Terisi
-Header kompatibel 1:1 dengan `handleImportNilais` (`importTemplateHeaders:843-857`):
-nama komponen/sub aktual sebagai header kolom; baris berisi NIM + nilai tersimpan
-(agregasi L2 atau L1 override); `Σ` dan `NA` sebagai kolom terakhir (read-only).
-Tujuan: dosen mengunduh, mengedit offline, mengimpor ulang via `ImportCsvModal`.
-
-#### Implementasi
-
-```
-const handleExportXLSX = async () => {
-  setIsExporting(true);
-  try {
-    const data = await khsController.getNilaiMahasiswa(kelasId);
-    const comps = components();          // dari getKomponen
-    const subs = subComponents();        // dari getSubKomponen
-    const konv = konversiRules();
-
-    // Sheet 1
-    const ringkasan = data.map(d => {
-      const row = { nim: d.nim, nama: d.nama, ... };
-      for (const c of comps) {
-        const l1 = d.nilaiKomponen?.find(n => n.komponenNilaiId === c.id)?.nilai;
-        const subGrades = new Map((d.nilaiSub ?? []).filter(...).map(...));
-        const subDefs = subs.filter(s => s.komponenNilaiId === c.id);
-        row[c.nama] = l1 ?? (subDefs.length > 0 ? computeKomponenScore(subGrades, subDefs).score : null) ?? '-';
-      }
-      row['Nilai Akhir'] = d.nilaiAngka ?? '-';
-      row['Huruf'] = d.nilaiHuruf ?? '-';
-      row['Status'] = d.nilaiAngka !== null ? 'Lengkap' : 'Belum';
-      return row;
-    });
-
-    // Sheet 2, Sheet 3 similarly
-    exportToExcelMultipleSheets([...], filename);
-  } finally { setIsExporting(false); }
-};
-```
-
-### 5.2 Sticky Action Bar (S-A)
-
-Di bawah layar (`fixed bottom-0 z-40`), dua kolom:
-- **Kiri:** ringkasan live — `Terisi X/Y sel • Σ bobot = 100% • envelope 0-100 • {locked ? '🔒 Terkunci' : '🔓 Terbuka'}`.
-- **Kanan:** tombol aksi — `Simpan Terpilih ({selectedCount})` (primer pill) + `Export XLSX` (ghost) + `Export CSV` (ghost) + `Unduh Template` (ghost).
-- Tombol `Kunci` tetap di panel kiri (posisi atas, tidak di sticky bar).
-- `show` hanya bila `selectedKelasId()` terisi; `hidden print:hidden` agar tidak ikut export/cetak.
-
-### 5.3 Rekap Pra-Simpan (S-B)
-
-Panel di bawah komposisi bobot (kiri grid), expandable:
-- **Per-mahasiswa:** tabel ringkas `NIM | Nama | NA Live | NA Tersimpan | Delta | Status | Sisa Kosong`, di-sort by `Delta` desc default (perbaikan terbanyak di atas). Klik baris → scroll ke baris di tabel utama.
-- **Per-komponen:** kartu mini `Komponen A: 85.00 | Terisi 28/30 | Min 45 | Max 98`.
-- **Ringkasan global:** `Total: 30 mhs • Kelengkapan: 28/30 (93%) • Belum simpan: 5 sel`.
-- Live update via `createMemo` berbasis `inputGrades`/`inputSubGrades`/`inputAkhir` + `studentsGrades`.
-
-### 5.4 Mode Fokus-Satu-Komponen (S-C)
-
-**Di atas tabel**, bar switcher pill + dropdown komponen:
-
-```
-[ Semua Komponen | Komponen A (30%) | Komponen B (40%) | ... ]  envelope: 0-100
-```
-
-- `Semua Komponen` = tampil tabel penuh seperti sekarang (backward-compatible, tetap dipertahankan sebagai fallback).
-- Pilih komponen spesifik → tabel mengecil:
-  - Kolom: `☑ | Mahasiswa (avatar + NIM + Nama, frozen) | Nilai {nama} (44px input) | Status`.
-  - Untuk M3 (sub aktif): dropdown `Sub` di atas kolom nilai → nilainya `Sub A (30%) | Sub B (70%)`; input sesuai sub aktif; `Agregat` tetap terlihat.
-  - Kolom `NA` frozen di kanan (selalu terlihat meski scroll horizontal).
-- Tombol `Simpan` tetap (bulk atau per-baris, tidak berubah).
-- Tabel `overflow-x-auto` tidak diperlukan lagi pada mode fokus (kolom menyusut).
-
-### 5.5 Input 44px + Validasi Visual (S-D)
-
-- Input: `h-11 px-3 py-2 text-base rounded-lg border border-secondary-200 dark:border-secondary-700 focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20` (44px height, 17px text).
-- Sel `text-center` untuk numeric; `w-20` (120px) cukup untuk 3 digit + desimal.
-- Sel invalid (di luar `0-100` / envelope): `ring-2 ring-rose-500 bg-rose-50 dark:bg-rose-950/30` + tooltip/pes kecil `12px text-rose-600`.
-- Agregat `Σ` sub naik ke `text-xs font-medium` (bukan 9px); badge `L1`/`L2` sebagai penanda sumber.
-- Tombol `Simpan`: `active:scale-95` tetap; loading state pada tombol saat submit.
-
-### 5.6 Dirty-Guard Draft (S-E)
-
-Pola dari `SubKomponenEditor.tsx:17-46`:
-- `dirty = false` awal; set `dirty = true` saat `setInput*()` dipanggil dari user input (bukan dari sync server).
-- Sebelum `setInput*()` dari effect sync server: skip bila `dirty === true`.
-- Reset `dirty = false` setelah `refetchStudentsGrades` berhasil.
-- Badge di sticky bar: `Belum disimpan (N sel)` berdasarkan jumlah `dirty` keys.
-- Saat ganti kelas/mode/periode: `if (dirty()) confirm('...')` sebelum proceed.
-- Defer: karena kedua `createSignal` tetap, implementation memerlukan `Set<string>` terpisah untuk track `dirtyKeys` per metode.
-
-### 5.7 Bulk M3 (S-F)
-
-- Tombol `Bulk Isi Sub` (hanya bila `activeMethod === 'sub'`).
-- Pilih target sub (dropdown dari `subComponents`), input nilai, target: mahasiswa ter-checkbox **yang sel sub-nya masih kosong**.
-- Pola sama `handleBulkFill` M1/M2: `isSubCellEmpty(key)`, lapor `Terisi X, dilewati Y`.
-- Validasi `0-100` + envelope.
-
-### 5.8 Pemetaan Kolom Impor (S-G)
-
-Di `ImportCsvModal` atau step baru sebelum impor:
-- Tampilkan kolom CSV yang terdeteksi + dropdown mapping ke komponen/sub target.
-- Pratinjau 5 baris pertama + validasi per baris (duplikat NIM, non-numerik, out-of-range).
-- Daftar error per baris bisa diunduh sebagai CSV terpisah (`exportToCSV`).
-- Pertahankan `templateHeaders` sebagai default auto-match bila nama identik.
-
-## 6. Pengujian
-
-- **Targeted backend** (DB test `localhost:5433`, larang blanket root):
-  `bun test apps/backend/src/__tests__/nilai-export.test.ts` — matriks L2→L1→L0, preseden override L1 atas L2, `isComplete` vs bobot ≠100, huruf via rules + fallback, envelope 0-10 vs 0-100, uniqueness constraint `(krsId, komponenNilaiId)`.
-- **Regresi wajib:** `bun test apps/backend/src/__tests__/nilai-akhir.test.ts nilai-envelope.test.ts sub-komponen.test.ts nilai-overwrite.test.ts nilai-hierarchy-preserve.test.ts`.
-- **Frontend:** `bun run lint`, `bunx biome ci .`, `cd apps/frontend && bunx tsc --noEmit`.
-- **QA manual:** sticky bar muncul, rekap akurat, mode fokus komponen berpindah, input 44px, dark mode kontras, 375px scrollable, export XLSX dibuka di Excel tanpa error, template terisi → impor round-trip, dirty-guard mempertahankan draft.
-
-## 7. Risiko
-
+### 1.5 Risiko
 | Risiko | Mitigasi |
-|---|---|
-| Kelas besar → workbook sheet 2 (L2) sangat lebar | Batasi export per kelas terpilih; follow-up endpoint backend bila >500 mhs |
-| NA live vs tersimpan membingungkan arsip | Export hanya pakai NA tersimpan (bukan live) + kolom Status |
-| Mirror kalkulasi FE/BE divergen | Export memakai fungsi preview eksisting; tidak ada logika kalkulasi baru |
-| Mode fokus-satu-komponen menambah kompleksitas state | Pertahankan `activeMethod` sebagai prioritas render; `Semua Komponen` = backward-compatible fallback |
-| Bulk M3 menambah iteration loop | Iterasi `subComponents` per komponen; bulk hanya isi kosong (non-destruktif) |
+| :--- | :--- |
+| Duplikat nama sub antar-komponen | Tetap ditolak seperti perilaku lama; pesan jelas di panel mapping |
+| Modal bersama berubah | Opsi B: tidak menyentuh `ImportCsvModal`; semua logika di `InputNilai.tsx` |
+| Mapping hanya sesi berjalan | Diterima (tanpa persist) |
 
-## 8. Langkah Eksekusi
+### 1.6 Langkah Eksekusi
+1. S0 baseline: `bun run lint`, `biome ci`, `tsc` FE.
+2. Tambah state + penangkapan rows mentah dari modal.
+3. Bangun panel mapping + auto-match + pratinjau 5 baris.
+4. Tambah normalisasi header + tombol unduh error + tombol lanjutkan.
+5. QA round-trip: CSV ejaan salah -> mapping manual -> impor sukses; template terisi -> auto-match tanpa mapping.
+6. Verifikasi + PR `development`.
 
-1. **S0 baseline:** `bun run lint`, `tsc` BE (`tsconfig.ci.json`) + FE, test regresi nilai (5 file).
-2. **S1 export XLSX multi-sheet + CSV** (tiru `KompensasiManual/LaporanKompensasi`); `isExporting` state + toast.
-3. **S2 Unduh Template Terisi** (kompatibel 1:1 `handleImportNilais`); round-trip verify.
-4. **S3 sticky action bar** (fixed bottom, ringkasan + aksi); `show` bila kelas terpilih.
-5. **S4 rekap pra-simpan** (per-mahasiswa delta, per-komponen stat, ringkasan global).
-6. **S5 mode fokus-satu-komponen** (dropdown komponen, tabel 4 kolom, NA frozen kanan).
-7. **S6 input 44px + validasi visual** (ring rose + pesan, envelope badge, label sub).
-8. **S7 dirty-guard draft** + bulk M3 + pemetaan kolom impor.
-9. **S8 verifikasi penuh** (lint + biome ci + tsc ×2 + test regresi + QA manual + export round-trip).
-10. **S9 PR staging-first** ke `development`.
+---
 
-## 9. Kriteria Selesai
+## 2. F1 — PDF DNU (Daftar Nilai Ujian) dengan Kop Resmi
 
-- [ ] Satu klik mengunduh XLSX (3 sheets: ringkasan + sub-komponen + definisi), CSV, dan Template yang bisa diimpor ulang.
-- [ ] Dosen mengisi puluhan baris tanpa scroll-ganda tersesat; input ≥44px terbaca; draft tak hilang saat refetch; rekap pra-simpan akurat.
-- [ ] `lint` + `biome ci` + kedua `tsc` hijau; test baru + regresi nilai hijau; tanpa migrasi; PR ke `development`.
+### 2.1 Latar Belakang
+Belum ada dokumen cetak resmi nilai per MK. PDF DNU = kop institusi + tabel nilai + footer tanggal &
+tanda tangan (dosen pengampu, kaprodi). Helper `exportToPDF` (`utils/export.ts:65-129`) sudah ada
+(landscape A4, kop generik, footer "SIMAK Vokasi"), tetapi **belum mendukung kop resmi institusi**.
+
+### 2.2 Target File
+- **Modify:** `apps/frontend/src/utils/export.ts`
+  - Tambah parameter **opsional** pada `exportToPDF` (mis. `options?: { kop?: { logoUrl?: string; institusi?: string; alamat?: string; judulDokumen?: string }; signatures?: string[] }`).
+  - **Default tidak berubah** agar pemakai lain (`KHS`, laporan) tidak terdampak.
+- **Modify:** `apps/frontend/src/routes/InputNilai.tsx`
+  - `handleExportPDF`: rakit baris dari **nilai tersimpan** memakai `buildRingkasanRows` + `buildRingkasanColumns`
+    (sudah ada di PR #399), panggil `exportToPDF(...)` dengan kop + tanda tangan.
+  - Tombol `Cetak PDF (DNU)` di Actions + sticky bar.
+- **Aset:** sumber logo institusi perlu diverifikasi (kemungkinan `apps/frontend/public/`). Bila logo belum
+  tersedia, blokir F1 dan minta aset ke user (jangan menebak URL/path).
+- **Tidak diubah:** backend.
+
+### 2.3 Format Dokumen
+- Orientasi landscape A4.
+- Kop: logo + nama institusi + alamat + judul `DAFTAR NILAI UJIAN` + baris MK/kelas/periode/prodi/dosen.
+- Tabel: `No | NIM | Nama | [Komponen (bobot%) ...] | Nilai Akhir | Huruf | Indeks`.
+- Footer: tanggal cetak + kolom tanda tangan (Dosen Pengampu, Kaprodi) + nomor halaman.
+- Strategi tabel lebar (komponen banyak): font 7–8pt + kolom padat; **varian ringkas** (tanpa kolom komponen,
+  hanya NA/Huruf/Indeks) sebagai opsi bila komponen > ambang tertentu. Ambang diputuskan saat eksekusi.
+
+### 2.4 Risiko
+| Risiko | Mitigasi |
+| :--- | :--- |
+| Perubahan helper merusak halaman lain | Parameter baru opsional; default = perilaku kini; regresi manual KHS/laporan |
+| Logo belum tersedia | Verifikasi aset lebih dulu; tanpa aset -> tunda F1, minta ke user |
+| Tabel terlalu lebar | Font padat + opsi varian ringkas; uji 30–100 baris + multi-halaman |
+
+### 2.5 Langkah Eksekusi
+1. Verifikasi aset logo + kunci format kop & label tanda tangan.
+2. Tambah parameter opsional di `exportToPDF` (tanpa mengubah default).
+3. Implementasi `handleExportPDF` + tombol.
+4. QA cetak: A4 landscape, header berulang tiap halaman, tanda tangan, dark-mode tidak ikut.
+5. Verifikasi + PR `development`.
+
+---
+
+## 3. F2 — Toleransi Bobot Desimal (EPS 0.01)
+
+### 3.1 Latar Belakang
+Validasi total bobot memakai kesetaraan float strict `!== 100` di:
+- `apps/frontend/src/routes/InputNilai.tsx` (`handleSaveComponents`),
+- `apps/frontend/src/components/SubKomponenEditor.tsx` (validasi 100%),
+- `apps/backend/src/services/yudisium.service.ts` (save komponen + sub).
+
+Akibatnya bobot desimal wajar (mis. `33.33 + 33.33 + 33.34`) berisiko ditolak. `recalcFinalGrades`
+juga melewatkan KRS bila bobot terdaftar `!= 100`, sehingga NA lama dipertahankan diam-diam.
+
+### 3.2 Keputusan
+- **EPS = 0.01.** Lolos bila `Math.abs(total - 100) < 0.01`.
+- NA memakai bobot **apa adanya**, tanpa normalisasi. Selisih `<0.01` poin dianggap negligible dan
+  didokumentasikan pada komentar kode.
+- Perubahan FE + BE + test dalam **satu PR** (hindari divergensi).
+
+### 3.3 Target File
+- **Modify:** `apps/backend/src/utils/grade-calc.ts`
+  - Konstanta tunggal `BOBOT_EPSILON = 0.01` + helper `isBobotComplete(weight: number): boolean`.
+  - Terapkan di `computeKomponenScore` (`weight === 100`) dan `buildFinalScore` (`registeredWeight === 100`).
+- **Modify:** `apps/backend/src/services/yudisium.service.ts`
+  - Ganti cek `!= 100` komponen & sub dengan `isBobotComplete(...)` (jangan duplikasi angka).
+- **Modify:** `apps/frontend/src/routes/InputNilai.tsx`
+  - `handleSaveComponents` pakai `Math.abs(total - 100) < 0.01`; tambah indikator lolos/gagal pada `Total: {..}%`.
+- **Modify:** `apps/frontend/src/components/SubKomponenEditor.tsx`
+  - Validasi `totalBobot` pakai toleransi yang sama.
+- **Modify (test):** `apps/backend/src/__tests__/nilai-akhir.test.ts` (tambah kasus 99.99 lolos, 99.0 ditolak),
+  verifikasi `sub-komponen.test.ts`, `nilai-envelope.test.ts`.
+
+### 3.4 Risiko
+| Risiko | Mitigasi |
+| :--- | :--- |
+| Divergensi FE/BE | Satu konstanta di BE + konstanta FE yang sama; test di kedua sisi dalam PR yang sama |
+| Kelengkapan NA berubah | `isBobotComplete` menggantikan `=== 100` secara konsisten di kalkulasi & validasi |
+| Bobot 99.0 ikut lolos | Diuji eksplisit ditolak (di luar EPS) |
+
+### 3.5 Langkah Eksekusi
+1. S0 baseline: lint + biome ci + tsc BE/FE + test nilai regresi.
+2. Tambah `BOBOT_EPSILON` + `isBobotComplete` di `grade-calc.ts`.
+3. Terapkan di `yudisium.service.ts` (komponen + sub).
+4. Terapkan di FE (`InputNilai.tsx`, `SubKomponenEditor.tsx`).
+5. Update/tambah test (99.99 lolos, 99.0 ditolak, agregasi & leaf).
+6. Verifikasi + PR `development`.
+
+---
+
+## 4. Ringkasan Urutan & Verifikasi
+
+```
+F3 (mapping impor)  -> F1 (PDF DNU, butuh aset logo)  -> F2 (EPS 0.01, FE+BE+test)
+```
+
+Verifikasi tiap PR:
+```bash
+bun run lint
+bunx @biomejs/biome ci .
+cd apps/backend && bunx tsc --noEmit -p tsconfig.ci.json
+cd apps/frontend && bunx tsc --noEmit
+# khusus F2 (DB test lokal localhost:5433):
+bun test apps/backend/src/__tests__/nilai-akhir.test.ts
+```
+Semua PR menyasar `development` (staging-first); tanpa migrasi DB.
+
+## 5. Kriteria Selesai per Item
+- [ ] **F3:** CSV dengan nama kolom beda ejaan dapat dipetakan manual dan diimpor; error per baris dapat diunduh;
+      template terisi tetap auto-match; `ImportCsvModal` & backend tidak berubah.
+- [ ] **F1:** satu klik mengunduh PDF DNU landscape dengan kop resmi + tanda tangan + nomor halaman;
+      `exportToPDF` default tidak berubah untuk pemakai lain.
+- [ ] **F2:** bobot `99.99` lolos dan `99.0` ditolak di FE & BE; test regresi nilai hijau; `lint`/`tsc` hijau.
+
+---
+
+## 6. Status Implementasi (diperbarui saat eksekusi)
+
+### Selesai
+- **F3** — Panel pemetaan kolom impor (`Modal` lokal) + auto-match + pratinjau 5 baris + unduh daftar error +
+  tombol Lanjutkan. `ImportCsvModal` dan backend tidak disentuh.
+- **F1** — Tombol `Cetak PDF (DNU)` dengan kop resmi institusi (logo `src/assets/logo.png` dimuat sebagai data URL),
+  info MK/kelas/periode/prodi/dosen, dan blok tanda tangan (Dosen Pengampu, Ketua Program Studi).
+  `exportToPDF` diberi parameter opsional `PdfKopOptions`; default pemakai lain tidak berubah.
+- **F2 (parsial)** — Toleransi `isBobotComplete` (EPS 0.01, membandingkan `round2(100 - weight)`) di
+  `grade-calc.ts`, `yudisium.service.ts` (komponen/sub), `InputNilai.tsx`, `SubKomponenEditor.tsx`.
+  Schema `bobot` (body + response `yudisium`/`khs`) diubah `t.Integer` -> `t.Number`. Unit test murni
+  `isBobotComplete` ditambahkan; regresi ditolak (99.0) diuji di endpoint.
+
+### BLOCKER: F2 memerlukan migrasi DB (bertentangan dengan asumsi plan)
+Kolom `komponen_nilai.bobot` dan `sub_komponen_nilai.bobot` di `schema.ts` bertipe **`integer`**
+(`integer('bobot')`), sehingga bobot desimal (mis. `33.33`) gagal di level Postgres
+(`insert ... bobot=33.33` ditolak). Karena itu **bobot desimal belum dapat dipersist** tanpa migrasi:
+
+- Ubah kolom menjadi `numeric(5,2) { mode: 'number' }` (Drizzle mendukung `mode: 'number'` agar TS tetap `number`).
+- Migrasi idempotent + snapshot `drizzle-kit`, wajib backup DB sebelum deploy staging/produksi (AGENTS.md).
+- Dampak: memperluas scope plan (yang semula menyatakan "tanpa migrasi DB").
+
+Keputusan diperlukan: setujui PR migrasi terpisah `0070_nilai_bobot_numeric.sql`, atau batalkan target bobot desimal.
+Selama belum ada migrasi, validasi toleran tetap aman (no-op untuk bobot integer) namun tidak membuka input desimal.

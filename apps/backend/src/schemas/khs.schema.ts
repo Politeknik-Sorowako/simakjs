@@ -314,7 +314,7 @@ export const getRincianKomponenSchema = {
       komponen: t.Array(
         t.Object({
           nama: t.String({ default: 'UTS' }),
-          bobot: t.Integer({ default: 30 }),
+          bobot: t.Number({ default: 30 }),
           nilai: t.Union([t.Number(), t.Null()], { default: 80 }),
         }),
       ),
