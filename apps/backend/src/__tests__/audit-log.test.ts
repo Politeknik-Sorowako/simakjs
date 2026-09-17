@@ -236,6 +236,55 @@ describe('Audit Log & Backup System', () => {
       expect(failedLogs.data.length).toBe(1);
       expect(failedLogs.data[0].statusCode).toBe(422);
     });
+
+    it('should filter audit logs by client_error vs server_error categories', async () => {
+      await AuditService.log({
+        actionType: 'CREATE',
+        module: 'mahasiswa',
+        description: 'Validasi gagal',
+        statusCode: 422,
+        isSuccess: false,
+      });
+      await AuditService.log({
+        actionType: 'CREATE',
+        module: 'mahasiswa',
+        description: 'Kesalahan server',
+        statusCode: 500,
+        isSuccess: false,
+      });
+
+      const clientErrors = await AuditService.getAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'client_error',
+      );
+      expect(clientErrors.data.length).toBe(1);
+      expect(clientErrors.data[0].statusCode).toBe(422);
+
+      const serverErrors = await AuditService.getAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'server_error',
+      );
+      expect(serverErrors.data.length).toBe(1);
+      expect(serverErrors.data[0].statusCode).toBe(500);
+    });
   });
 
   describe('Audit Log API Endpoints', () => {
@@ -380,6 +429,45 @@ describe('Audit Log & Backup System', () => {
       expect(row!.description).toContain('tabel mahasiswa');
       expect(row!.description).toContain('0 sukses');
       expect(row!.detail).toContain('Ringkasan');
+    });
+
+    it('should ignore 404 Not Found bot probe requests', async () => {
+      const response = await app.handle(new Request('http://localhost/rds/execute', { method: 'POST' }));
+      expect(response.status).toBe(404);
+
+      // onAfterResponse runs asynchronously; give it time before asserting.
+      await new Promise((r) => setTimeout(r, 300));
+
+      const logs = await AuditService.getAll(1, 100);
+      expect(logs.meta.total).toBe(0);
+    });
+
+    it('should record failed mutations with isSuccess=false and the real HTTP status', async () => {
+      const token = await getAuthToken('mhs_fail_audit@test.com', 'mahasiswa');
+
+      const response = await app.handle(
+        new Request('http://localhost/mahasiswa/999999', {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(response.status).toBeGreaterThanOrEqual(400);
+
+      let row: typeof auditLogs.$inferSelect | undefined;
+      for (let i = 0; i < 20; i++) {
+        [row] = await db
+          .select()
+          .from(auditLogs)
+          .where(eq(auditLogs.module, 'mahasiswa'))
+          .orderBy(desc(auditLogs.timestamp))
+          .limit(1);
+        if (row) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      expect(row).toBeDefined();
+      expect(row!.isSuccess).toBe(false);
+      expect(row!.statusCode).toBe(response.status);
     });
   });
 });
