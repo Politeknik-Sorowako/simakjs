@@ -65,6 +65,8 @@ export default function InputNilai() {
   const [showPanelMahasiswa, setShowPanelMahasiswa] = createSignal(false);
   // Nilai L1 yang ditulis otomatis dari popup sub-komponen (kunci `${krsId}_${komponenId}`).
   const [autoAggKeys, setAutoAggKeys] = createSignal<Set<string>>(new Set());
+  // Key `${krsId}_${komponenId}` yang sedang dalam mode override inline (double-click teks Σ).
+  const [overrideL1Key, setOverrideL1Key] = createSignal<string | null>(null);
   const [subPopup, setSubPopup] = createSignal<{
     student: NilaiMahasiswa;
     komponen: KomponenNilai & { id: number };
@@ -850,6 +852,48 @@ export default function InputNilai() {
     return '–';
   };
 
+  // Hitung agregat sub dari draft saat ini (menggunakan inputSubGrades live).
+  const computeAutoL1Value = (krsId: number, komponenId: number): string => {
+    const subs = subsByKomponen().get(komponenId) ?? [];
+    let total = 0;
+    let weight = 0;
+    let missing = 0;
+    for (const sub of subs) {
+      if (sub.id === undefined) continue;
+      const n = parseGradeInput(inputSubGrades()[`${krsId}_${sub.id}`]);
+      if (n === null) {
+        missing += 1;
+        continue;
+      }
+      total += n * (Number(sub.bobot) / 100);
+      weight += Number(sub.bobot);
+    }
+    const complete = missing === 0 && weight === 100;
+    return complete ? total.toFixed(2) : '0';
+  };
+
+  // Kembalikan L1 ke nilai otomatis (agregat sub) setelah override.
+  const resetL1ToAuto = (krsId: number, komponenId: number) => {
+    const l1Key = `${krsId}_${komponenId}`;
+    setInputGrades((prev) => ({ ...prev, [l1Key]: computeAutoL1Value(krsId, komponenId) }));
+    setDirtyKeys((prev) => {
+      const next = new Set(prev);
+      next.add(`g:${l1Key}`);
+      return next;
+    });
+    setAutoAggKeys((prev) => {
+      const next = new Set(prev);
+      next.add(l1Key);
+      return next;
+    });
+    setOverrideL1Key(null);
+  };
+
+  const beginL1Override = (krsId: number, komponenId: number) => {
+    if (isClassLocked()) return;
+    setOverrideL1Key(`${krsId}_${komponenId}`);
+  };
+
   // Nilai level-1 suatu komponen: override langsung menang, fallback agregasi sub.
   const getDynamicKomponenScore = (
     krsId: number,
@@ -1179,7 +1223,7 @@ export default function InputNilai() {
         }
       } else {
         for (const c of comps) {
-          if (!componentHasSub(c.id)) columns.push({ header: c.nama, accessor: `komp_${c.id}` });
+          columns.push({ header: c.nama, accessor: `komp_${c.id}` });
         }
       }
 
@@ -1196,7 +1240,6 @@ export default function InputNilai() {
           }
         } else {
           for (const c of comps) {
-            if (componentHasSub(c.id)) continue;
             row[`komp_${c.id}`] = storedKomponenScore(d, c.id) ?? '';
           }
         }
@@ -1537,7 +1580,7 @@ export default function InputNilai() {
       }
     } else {
       for (const c of validComponents()) {
-        if (!componentHasSub(c.id)) headers.push(c.nama);
+        headers.push(c.nama);
       }
     }
     return headers;
@@ -1784,9 +1827,7 @@ export default function InputNilai() {
     if (method === 'sub') {
       return (subComponents() || []).map((s) => ({ key: s.nama, label: `Sub: ${s.nama} (${s.bobot}%)` }));
     }
-    return validComponents()
-      .filter((c) => !componentHasSub(c.id))
-      .map((c) => ({ key: c.nama, label: `${c.nama} (${c.bobot}%)` }));
+    return validComponents().map((c) => ({ key: c.nama, label: `${c.nama} (${c.bobot}%)` }));
   });
 
   const mappingKeptColumns = createMemo(() =>
@@ -2696,20 +2737,55 @@ export default function InputNilai() {
                                   }
                                 >
                                   <div class="flex flex-col items-center gap-1">
-                                    <input
-                                      type="text"
-                                      placeholder="0.00"
-                                      disabled={isClassLocked()}
-                                      value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
-                                      onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
-                                      class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
-                                        isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
-                                          ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                          : isDirty(`g:${stud.krsId}_${c.id}`)
-                                            ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
-                                            : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
-                                      }`}
-                                    />
+                                    <Show
+                                      when={overrideL1Key() === `${stud.krsId}_${c.id}`}
+                                      fallback={
+                                        <span
+                                          class={`text-sm font-bold cursor-pointer select-none rounded px-1 hover:bg-secondary-100 dark:hover:bg-secondary-800 ${
+                                            isDirty(`g:${stud.krsId}_${c.id}`)
+                                              ? 'text-amber-600 dark:text-amber-400'
+                                              : 'text-secondary-800 dark:text-white'
+                                          }`}
+                                          title="Double-click untuk override nilai komponen"
+                                          onDblClick={() => beginL1Override(stud.krsId, c.id)}
+                                        >
+                                          {komponenAggLabel(stud.krsId, c.id, c.bobot)}
+                                        </span>
+                                      }
+                                    >
+                                      <div class="flex items-center gap-1">
+                                        <input
+                                          type="text"
+                                          placeholder="0.00"
+                                          disabled={isClassLocked()}
+                                          ref={(el) => el?.focus()}
+                                          value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
+                                          onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
+                                          onBlur={() => setOverrideL1Key(null)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') setOverrideL1Key(null);
+                                            if (e.key === 'Escape') resetL1ToAuto(stud.krsId, c.id);
+                                          }}
+                                          class={`border rounded-lg px-2 h-10 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
+                                            isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
+                                              ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
+                                              : 'border-brand-400 focus:border-brand-500 focus:ring-brand-500/20 dark:border-brand-700'
+                                          }`}
+                                        />
+                                        <button
+                                          type="button"
+                                          disabled={isClassLocked()}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            resetL1ToAuto(stud.krsId, c.id);
+                                          }}
+                                          title="Kembali ke agregat sub-komponen"
+                                          class="text-brand-600 hover:text-brand-800 text-sm font-bold px-1"
+                                        >
+                                          ↩
+                                        </button>
+                                      </div>
+                                    </Show>
                                     <button
                                       type="button"
                                       disabled={isClassLocked()}
@@ -2719,9 +2795,6 @@ export default function InputNilai() {
                                     >
                                       Input Sub [S]
                                     </button>
-                                    <span class="text-[10px] font-bold text-secondary-600 dark:text-secondary-300">
-                                      Σ {komponenAggLabel(stud.krsId, c.id, c.bobot)}
-                                    </span>
                                   </div>
                                 </Show>
                               </td>
