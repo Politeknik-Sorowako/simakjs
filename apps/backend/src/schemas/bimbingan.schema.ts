@@ -279,3 +279,24 @@ export const getBimbinganMonitoringSchema = {
     description: 'Admin atau Kaprodi memantau seluruh status bimbingan mahasiswa pada periode aktif.',
   },
 };
+
+export const getMonitoringLengkapSchema = {
+  detail: {
+    tags: ['Bimbingan'],
+    summary: 'Monitoring Bimbingan Lengkap (Filter & Sorting)',
+    description:
+      'Memantau pelaksanaan bimbingan lengkap dengan filter periode, prodi, dosen PA, pencarian, serta sorting server-side.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String({ error: 'Periode tidak valid' })),
+    prodiId: t.Optional(t.String({ error: 'Prodi ID tidak valid' })),
+    programStudiId: t.Optional(t.String({ error: 'Program Studi ID tidak valid' })),
+    dosenPaId: t.Optional(t.String({ error: 'Dosen PA ID tidak valid' })),
+    kategori: t.Optional(t.String({ error: 'Kategori tidak valid' })),
+    search: t.Optional(t.String({ error: 'Pencarian tidak valid' })),
+    page: t.Optional(t.String({ error: 'Page tidak valid' })),
+    limit: t.Optional(t.String({ error: 'Limit tidak valid' })),
+    sortBy: t.Optional(t.String({ error: 'Kolom urut tidak valid' })),
+    sortOrder: t.Optional(t.String({ error: 'Arah urut tidak valid' })),
+  }),
+};

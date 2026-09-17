@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, type SQL } from 'drizzle-orm';
 import {
   bimbingan,
   bimbinganAttachments,
@@ -718,6 +718,8 @@ export class BimbinganService {
     search?: string;
     page?: number;
     limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }) {
     const activePeriode = await this.getActivePeriode();
     const rawPeriodeId = filter?.periodeId || activePeriode?.id;
@@ -732,20 +734,9 @@ export class BimbinganService {
     const offset = (page - 1) * limit;
     const search = filter?.search?.trim();
     const kategori = filter?.kategori;
-
-    const mhsQuery = db
-      .select({
-        id: mahasiswa.id,
-        nim: mahasiswa.nim,
-        nama: mahasiswa.nama,
-        foto: mahasiswa.foto,
-        prodiId: mahasiswa.programStudiId,
-        dosenPaId: mahasiswa.dosenPaId,
-        dosenPaNama: dosen.nama,
-      })
-      .from(mahasiswa)
-      .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
-      .orderBy(asc(mahasiswa.id));
+    const sortBy = filter?.sortBy;
+    const sortOrder: 'asc' | 'desc' = filter?.sortOrder === 'desc' ? 'desc' : 'asc';
+    const isTotalSesiSort = sortBy === 'totalSesi';
 
     const conditions = [];
     if (filter?.dosenPaId) {
@@ -766,12 +757,46 @@ export class BimbinganService {
       .select({ total: count() })
       .from(mahasiswa)
       .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .where(whereClause);
 
     const total = totalResult?.total || 0;
     const totalPages = Math.ceil(total / limit);
 
-    const listMahasiswa = await mhsQuery.where(whereClause).limit(limit).offset(offset);
+    const sortColumns: Record<string, { asc: SQL; desc: SQL }> = {
+      nim: { asc: asc(mahasiswa.nim), desc: desc(mahasiswa.nim) },
+      nama: { asc: asc(mahasiswa.nama), desc: desc(mahasiswa.nama) },
+      dosenPa: { asc: asc(dosen.nama), desc: desc(dosen.nama) },
+      prodi: { asc: asc(programStudi.nama), desc: desc(programStudi.nama) },
+    };
+
+    const buildMhsQuery = () =>
+      db
+        .select({
+          id: mahasiswa.id,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          foto: mahasiswa.foto,
+          prodiId: mahasiswa.programStudiId,
+          prodiNama: programStudi.nama,
+          dosenPaId: mahasiswa.dosenPaId,
+          dosenPaNama: dosen.nama,
+        })
+        .from(mahasiswa)
+        .leftJoin(dosen, eq(mahasiswa.dosenPaId, dosen.id))
+        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+        .where(whereClause);
+
+    const effectiveSortBy = sortBy && sortColumns[sortBy] ? sortBy : undefined;
+    const orderClause = effectiveSortBy
+      ? sortOrder === 'desc'
+        ? sortColumns[effectiveSortBy].desc
+        : sortColumns[effectiveSortBy].asc
+      : asc(mahasiswa.id);
+
+    const listMahasiswa = isTotalSesiSort
+      ? await buildMhsQuery()
+      : await buildMhsQuery().orderBy(orderClause).limit(limit).offset(offset);
     const pageMahasiswaIds = listMahasiswa.map((m) => m.id);
 
     const bimbConditions = [eq(bimbingan.periodeId, targetPeriodeId)];
@@ -816,7 +841,7 @@ export class BimbinganService {
       }
     }
 
-    const data = listMahasiswa.map((mhs) => {
+    const allData = listMahasiswa.map((mhs) => {
       const bimb = bimbinganMap.get(mhs.id);
       const sesiList = bimb ? sesiMap.get(bimb.id) || [] : [];
       const topik = bimb?.topikBimbingan || bimb?.permasalahan || null;
@@ -824,7 +849,9 @@ export class BimbinganService {
         mahasiswaId: mhs.id,
         nim: mhs.nim,
         namaMahasiswa: mhs.nama,
+        foto: mhs.foto,
         prodiId: mhs.prodiId,
+        prodiNama: mhs.prodiNama || '-',
         dosenPaId: mhs.dosenPaId,
         dosenPaNama: mhs.dosenPaNama || 'Belum Ditentukan',
         periodeId: targetPeriodeId,
@@ -840,6 +867,16 @@ export class BimbinganService {
         sesiList,
       };
     });
+
+    const data = isTotalSesiSort
+      ? [...allData]
+          .sort((a, b) => {
+            const diff = a.totalSesi - b.totalSesi;
+            if (diff !== 0) return sortOrder === 'desc' ? -diff : diff;
+            return a.mahasiswaId - b.mahasiswaId;
+          })
+          .slice(offset, offset + limit)
+      : allData;
 
     return { data, meta: { total, page, limit, totalPages } };
   }

@@ -735,14 +735,21 @@ export class BimbinganController {
 
     try {
       const prodiRaw = query?.prodiId ?? query?.programStudiId;
+      const SORTABLE_FIELDS = ['nim', 'nama', 'dosenPa', 'prodi', 'totalSesi'];
+      const sortByRaw = query?.sortBy ? String(query.sortBy) : undefined;
+      const sortBy = sortByRaw && SORTABLE_FIELDS.includes(sortByRaw) ? sortByRaw : undefined;
+      const sortOrderRaw = query?.sortOrder ? String(query.sortOrder) : undefined;
+      const sortOrder = sortBy && sortOrderRaw === 'desc' ? 'desc' : 'asc';
       const filter = {
         periodeId: query?.periodeId ? String(query.periodeId) : undefined,
         prodiId: prodiRaw ? parseInt(String(prodiRaw)) : undefined,
-        dosenPaId: query?.dosenPaId ? parseInt(query.dosenPaId) : undefined,
+        dosenPaId: query?.dosenPaId ? parseInt(String(query.dosenPaId)) : undefined,
         kategori: query?.kategori ? String(query.kategori) : undefined,
         search: query?.search ? String(query.search) : undefined,
-        page: query?.page ? parseInt(query.page) : 1,
-        limit: query?.limit ? parseInt(query.limit) : 10,
+        page: query?.page ? parseInt(String(query.page)) : 1,
+        limit: query?.limit ? parseInt(String(query.limit)) : 10,
+        sortBy,
+        sortOrder: sortBy ? (sortOrder as 'asc' | 'desc') : undefined,
       };
       const result = await BimbinganService.getMonitoringBimbinganLengkap(filter);
       return result;
