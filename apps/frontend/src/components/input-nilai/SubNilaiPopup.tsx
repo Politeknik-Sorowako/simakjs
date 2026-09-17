@@ -8,9 +8,10 @@ interface SubNilaiPopupProps {
   komponen: KomponenNilai & { id: number };
   subs: SubKomponenNilai[];
   initialValues: Record<number, string>;
+  storedValues: Record<number, string>;
   envelope: { min: number; max: number };
   isLocked: boolean;
-  onDraftSave: (krsId: number, values: Record<number, string>) => void;
+  onDraftSave: (krsId: number, komponenId: number, values: Record<number, string>) => void;
   onClose: () => void;
 }
 
@@ -38,6 +39,8 @@ export default function SubNilaiPopup(props: SubNilaiPopupProps) {
     return n < props.envelope.min || n > props.envelope.max;
   };
 
+  const isChanged = (subId: number): boolean => (values()[subId] ?? '') !== (props.storedValues[subId] ?? '');
+
   const hasInvalid = createMemo(() => validSubs().some((sub) => isInvalid(values()[sub.id])));
 
   const aggregate = createMemo(() => {
@@ -64,7 +67,7 @@ export default function SubNilaiPopup(props: SubNilaiPopupProps) {
 
   const handleSave = () => {
     if (props.isLocked || hasInvalid()) return;
-    props.onDraftSave(props.student.krsId, values());
+    props.onDraftSave(props.student.krsId, props.komponen.id, values());
     props.onClose();
   };
 
@@ -91,6 +94,9 @@ export default function SubNilaiPopup(props: SubNilaiPopupProps) {
                     class="text-xs font-semibold text-secondary-700 dark:text-secondary-200 flex-1"
                   >
                     {sub.nama} ({sub.bobot}%)
+                    <Show when={isChanged(sub.id)}>
+                      <span class="ml-1 text-[10px] font-bold text-amber-600 dark:text-amber-400">• berubah</span>
+                    </Show>
                   </label>
                   <input
                     id={`sub-nilai-${sub.id}`}
@@ -103,7 +109,9 @@ export default function SubNilaiPopup(props: SubNilaiPopupProps) {
                     class={`border rounded-lg px-2 h-11 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                       isInvalid(values()[sub.id])
                         ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                        : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                        : isChanged(sub.id)
+                          ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
+                          : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
                     }`}
                   />
                 </div>
