@@ -28,8 +28,9 @@ export function persistRefreshedToken(token: string): void {
   window.dispatchEvent(new CustomEvent('simak:token-refresh', { detail: { token } }));
 }
 
-/** Membaca header respons X-Refresh-Token dan menerapkannya bila ada. */
+/** Membaca header respons X-Refresh-Token dan menerapkannya bila ada (hanya untuk respons OK). */
 export function applyRefreshedToken(response: Response): void {
+  if (!response.ok) return;
   const refreshed = response.headers.get('X-Refresh-Token');
   if (refreshed) persistRefreshedToken(refreshed);
 }
