@@ -65,6 +65,15 @@ import { SystemParameterService } from './services/system-parameter.service';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
+// Endpoint background (polling/health/public) tidak boleh memperpanjang sesi idle.
+// Client dapat meng-opt-out eksplisit lewat header X-Background: 1 untuk endpoint polling lain.
+const NO_SLIDE_PATHS = ['/notifications', '/system/version', '/system/health', '/system/changelog'];
+
+function isNoSlideRequest(path: string, headers: Record<string, string | undefined>): boolean {
+  if (headers['x-background'] === '1') return true;
+  return NO_SLIDE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
 // Direktori penyimpanan berkas surat izin/sakit (dibuat aman di awal startup).
 mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursive: true });
 // Direktori lampiran bimbingan & dokumen SK prodi.
@@ -158,6 +167,7 @@ export const app = new Elysia()
         : ['http://localhost:8080', 'http://localhost:3000'],
       credentials: true,
       allowedHeaders: ['Content-Type', 'Authorization'],
+      exposeHeaders: ['X-Refresh-Token'],
     }),
   )
   .onError(({ code, error, set }) => {
@@ -359,9 +369,11 @@ export const app = new Elysia()
   .use(authMiddleware)
   .onBeforeHandle(auditBeforeHandle)
   .onAfterResponse(auditAfterResponse)
-  .onAfterHandle(async ({ jwt, set, cookie, headers }) => {
+  .onAfterHandle(async ({ jwt, set, cookie, headers, path }) => {
     try {
       // Sliding idle session: perpanjang JWT saat sisa umur token < 50% durasi sesi.
+      // Request background/polling dikecualikan agar tidak memperpanjang sesi idle.
+      if (isNoSlideRequest(path, headers as Record<string, string | undefined>)) return;
       const authHeader = headers['authorization'];
       const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
       const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookieToken;

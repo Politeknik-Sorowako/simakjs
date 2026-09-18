@@ -38,7 +38,9 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
   const fetchNotifs = async () => {
     if (!auth.user()) return;
     try {
-      const data = await fetchApi<NotificationItem[]>('/notifications');
+      const data = await fetchApi<NotificationItem[]>('/notifications', {
+        headers: { 'X-Background': '1' },
+      });
       setNotifications(data || []);
     } catch {
       // ignore
@@ -48,7 +50,7 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
   createEffect(() => {
     if (auth.user()) {
       fetchNotifs();
-      const timer = setInterval(fetchNotifs, 10000);
+      const timer = setInterval(fetchNotifs, 60000);
       onCleanup(() => clearInterval(timer));
     }
   });
