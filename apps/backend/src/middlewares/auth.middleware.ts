@@ -11,6 +11,8 @@ export const authMiddleware = new Elysia({ name: 'auth-middleware' }).use(jwtPlu
       if (typeof token !== 'string') return null;
       const payload = await ctx.jwt.verify(token);
       if (!payload) return null;
+      const exp = (payload as { exp?: number }).exp;
+      if (typeof exp === 'number' && exp * 1000 <= Date.now()) return null;
       const base = payload as unknown as { role: UserRole; roles?: unknown };
       const roles: UserRole[] = Array.isArray(base.roles) && base.roles.length > 0 ? base.roles : [base.role];
       return { ...(payload as unknown as UserPayload), roles };

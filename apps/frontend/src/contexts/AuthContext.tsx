@@ -1,5 +1,7 @@
-import { createContext, createEffect, createSignal, JSX, useContext } from 'solid-js';
+import { createContext, createEffect, createSignal, JSX, onCleanup, onMount, useContext } from 'solid-js';
 import { API_URL } from '../utils/api';
+import { decodeTokenExp } from '../utils/token';
+import { useToast } from './ToastContext';
 
 export interface User {
   id: number;
@@ -48,6 +50,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
   const [user, setUser] = createSignal<User | null>(null);
   const [token, setToken] = createSignal<string | null>(null);
   const [localTheme, setLocalTheme] = createSignal(localStorage.getItem('theme') || 'light');
+  const toast = useToast();
 
   // Initialize from localStorage
   const localToken = localStorage.getItem('token');
@@ -104,6 +107,70 @@ export function AuthProvider(props: { children: JSX.Element }) {
       });
     }
   };
+
+  // --- Sesi idle timeout (sliding): logout otomatis saat token kedaluwarsa. ---
+  const IDLE_WARN_MS = 5 * 60 * 1000;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let warnTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const clearSessionTimers = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    if (warnTimer) clearTimeout(warnTimer);
+    idleTimer = undefined;
+    warnTimer = undefined;
+  };
+
+  const scheduleSessionTimeout = () => {
+    clearSessionTimers();
+    const current = token();
+    if (!current) return;
+    const exp = decodeTokenExp(current);
+    if (exp === null) return;
+    const remainingMs = exp * 1000 - Date.now();
+    if (remainingMs <= 0) {
+      logout();
+      window.location.href = '/login';
+      return;
+    }
+    const warnMs = remainingMs - IDLE_WARN_MS;
+    if (warnMs > 0) {
+      warnTimer = setTimeout(() => {
+        toast.showToast('Sesi Anda akan berakhir dalam 5 menit. Lanjutkan aktivitas untuk tetap masuk.', 'info');
+      }, warnMs);
+    }
+    idleTimer = setTimeout(() => {
+      logout();
+      window.location.href = '/login';
+    }, remainingMs);
+  };
+
+  const onTokenRefresh = (e: Event) => {
+    const detail = (e as CustomEvent<{ token?: string }>).detail;
+    if (detail?.token) {
+      setToken(detail.token);
+    }
+  };
+
+  const resetIdle = () => scheduleSessionTimeout();
+
+  onMount(() => {
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    for (const ev of events) window.addEventListener(ev, resetIdle);
+    window.addEventListener('simak:token-refresh', onTokenRefresh);
+    if (token()) scheduleSessionTimeout();
+  });
+
+  onCleanup(() => {
+    clearSessionTimers();
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    for (const ev of events) window.removeEventListener(ev, resetIdle);
+    window.removeEventListener('simak:token-refresh', onTokenRefresh);
+  });
+
+  createEffect(() => {
+    void token();
+    scheduleSessionTimeout();
+  });
 
   const setTheme = (newTheme: string) => {
     setLocalTheme(newTheme);

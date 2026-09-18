@@ -1,6 +1,7 @@
 import type { App } from '@backend/app';
 import { edenTreaty } from '@elysiajs/eden';
 import { API_URL } from './api';
+import { applyRefreshedToken } from './token';
 
 interface EdenError {
   status?: number;
@@ -168,6 +169,9 @@ export const eden = edenTreaty<App>(API_URL, {
     if (token && !headers.has('Authorization')) {
       headers.set('Authorization', `Bearer ${token}`);
     }
-    return fetch(input, { ...init, headers, credentials: 'include' });
+    return fetch(input, { ...init, headers, credentials: 'include' }).then((response) => {
+      applyRefreshedToken(response);
+      return response;
+    });
   }) as typeof fetch,
 });

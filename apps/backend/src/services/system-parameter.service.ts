@@ -49,7 +49,17 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'number',
     description: 'Skala maksimum nilai global yang berlaku (100 untuk 0-100, 10 untuk 0.00-10.00)',
   },
+  SESSION_DURATION_MINUTES: {
+    value: '480',
+    type: 'number',
+    description:
+      'Durasi sesi login dalam menit (idle timeout). Sesi berakhir jika tidak ada aktivitas selama durasi ini. Berlaku untuk login/refresh token berikutnya.',
+  },
 };
+
+const SESSION_DURATION_MIN = 15;
+const SESSION_DURATION_MAX = 10080;
+const SESSION_DURATION_DEFAULT = 480;
 
 export class SystemParameterService {
   private static invalidate(key?: string) {
@@ -95,6 +105,19 @@ export class SystemParameterService {
 
   static async getTimezone(): Promise<string> {
     return (await SystemParameterService.getRaw('TIMEZONE')) || 'Asia/Makassar';
+  }
+
+  /** Durasi sesi login (idle timeout) dalam menit, diklamp ke rentang 15–10080. */
+  static async getSessionDurationMinutes(): Promise<number> {
+    const raw = await SystemParameterService.getRaw('SESSION_DURATION_MINUTES');
+    const parsed = Number(raw);
+    if (raw === null || raw === '' || !Number.isFinite(parsed)) return SESSION_DURATION_DEFAULT;
+    return Math.min(SESSION_DURATION_MAX, Math.max(SESSION_DURATION_MIN, Math.floor(parsed)));
+  }
+
+  /** Durasi sesi login (idle timeout) dalam detik, diklamp ke rentang 15–10080 menit. */
+  static async getSessionDurationSeconds(): Promise<number> {
+    return (await SystemParameterService.getSessionDurationMinutes()) * 60;
   }
 
   static async isKrsMandiriEnabled(): Promise<boolean> {
