@@ -177,6 +177,30 @@ export default function KonfigurasiParameter() {
     }
   };
 
+  // Kill-switch: paksa logout semua sesi via SESSION_EPOCH.
+  const [confirmBump, setConfirmBump] = createSignal(false);
+  const [bumping, setBumping] = createSignal(false);
+  const epochParam = () => params()?.find((p) => p.key === 'SESSION_EPOCH') ?? null;
+
+  const bumpSessionEpoch = async () => {
+    if (!confirmBump()) {
+      setConfirmBump(true);
+      setTimeout(() => setConfirmBump(false), 4000);
+      return;
+    }
+    setBumping(true);
+    try {
+      const res = await systemController.bumpSessionEpoch();
+      setNotice(res.message || 'Semua sesi pengguna dipaksa logout.');
+      setConfirmBump(false);
+      refetch();
+    } catch (e: unknown) {
+      setNotice(e instanceof Error ? e.message : 'Gagal memaksa logout semua sesi.');
+    } finally {
+      setBumping(false);
+    }
+  };
+
   return (
     <MainLayout>
       <div class="max-w-3xl mx-auto">
@@ -307,6 +331,41 @@ export default function KonfigurasiParameter() {
           </Card>
         </div>
 
+        {/* Paksa Logout Semua Sesi (Kill-Switch) */}
+        <div class="mb-6">
+          <Card>
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                    Paksa Logout Semua Sesi
+                  </span>
+                  <Badge variant="danger">SESSION_EPOCH</Badge>
+                </div>
+                <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                  Memaksa semua pengguna yang sedang login untuk login ulang (kill-switch). Gunakan setelah mengubah
+                  durasi sesi atau saat terjadi insiden keamanan. Token yang diterbitkan sebelum epoch ini langsung
+                  ditolak pada request berikutnya.
+                </p>
+                <p class="mt-0.5 text-xs text-secondary-400">
+                  Epoch sesi saat ini: <span class="font-mono">{epochParam()?.value ?? '1'}</span>
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant={confirmBump() ? 'danger' : 'secondary'}
+                  loading={bumping()}
+                  onClick={bumpSessionEpoch}
+                >
+                  {confirmBump() ? 'Yakin? Klik lagi untuk konfirmasi' : 'Paksa Logout Semua Sesi'}
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         <div class="space-y-3">
           <For
             each={(params() || []).filter(
@@ -314,7 +373,8 @@ export default function KonfigurasiParameter() {
                 p.key !== 'KRS_MANDIRI_ENABLED' &&
                 p.key !== 'BLOCK_KHS_JIKA_TANGGUNGAN' &&
                 p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
-                p.key !== 'SESSION_DURATION_MINUTES',
+                p.key !== 'SESSION_DURATION_MINUTES' &&
+                p.key !== 'SESSION_EPOCH',
             )}
           >
             {(p) => (

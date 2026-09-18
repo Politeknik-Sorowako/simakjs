@@ -17,12 +17,13 @@ function decodePayload(token: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) as Record<string, unknown>;
 }
 
-function craftJwt(claims: Record<string, unknown>, expOffsetSec: number): string {
+function craftJwt(claims: Record<string, unknown>, expOffsetSec: number, sessEpoch: number | null = 1): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET environment variable is required');
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const body = b64url(JSON.stringify({ ...claims, iat: now, exp: now + expOffsetSec }));
+  const payload = sessEpoch === null ? { ...claims } : { ...claims, sessEpoch };
+  const body = b64url(JSON.stringify({ ...payload, iat: now, exp: now + expOffsetSec }));
   const sig = createHmac('sha256', secret)
     .update(`${header}.${body}`)
     .digest('base64')
@@ -194,6 +195,7 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
     const expired = craftJwt(
       { id: 1, role: 'admin', roles: ['admin'], email: 'admin-exp@test.com', nama: 'Admin', isGlobalScope: false },
       -60,
+      1,
     );
     const resp = await app.handle(
       new Request('http://localhost/system/parameters', {
@@ -237,6 +239,103 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
         body: JSON.stringify({ value: '480' }),
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('token tanpa sessEpoch (fail-closed) ditolak middleware', async () => {
+    const noEpoch = craftJwt(
+      { id: 1, role: 'admin', roles: ['admin'], email: 'admin-noepoch@test.com', nama: 'Admin', isGlobalScope: false },
+      3600,
+      null,
+    );
+    const resp = await app.handle(
+      new Request('http://localhost/system/parameters', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${noEpoch}` },
+      }),
+    );
+    expect(resp.status).toBe(403);
+    expect(resp.headers.get('x-refresh-token')).toBeNull();
+  });
+
+  it('token dengan sessEpoch basi (kill-switch) ditolak middleware', async () => {
+    const stale = craftJwt(
+      { id: 1, role: 'admin', roles: ['admin'], email: 'admin-stale@test.com', nama: 'Admin', isGlobalScope: false },
+      3600,
+      1,
+    );
+    await SystemParameterService.incrementSessionEpoch();
+    const resp = await app.handle(
+      new Request('http://localhost/system/parameters', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${stale}` },
+      }),
+    );
+    expect(resp.status).toBe(403);
+  });
+
+  it('bump SESSION_EPOCH menaikkan epoch; token lama ditolak, login baru diterima', async () => {
+    const before = await SystemParameterService.getSessionEpoch();
+    const res = await app.handle(
+      new Request('http://localhost/system/session-epoch/bump', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${await getAuthToken('admin-bump@test.com', 'admin')}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { sessionEpoch: number };
+    expect(body.sessionEpoch).toBe(before + 1);
+    expect(await SystemParameterService.getSessionEpoch()).toBe(before + 1);
+
+    // Token lama (epoch before) kini ditolak.
+    const stale = craftJwt(
+      { id: 1, role: 'admin', roles: ['admin'], email: 'admin-old@test.com', nama: 'Admin', isGlobalScope: false },
+      3600,
+      before,
+    );
+    const rejected = await app.handle(
+      new Request('http://localhost/system/parameters', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${stale}` },
+      }),
+    );
+    expect(rejected.status).toBe(403);
+
+    // Login baru memakai epoch terbaru → valid.
+    await createActiveUser('session-newepoch@test.com');
+    const { status, data } = await login('session-newepoch@test.com');
+    expect(status).toBe(200);
+    const payload = decodePayload(data.token as string);
+    expect(payload.sessEpoch).toBe(before + 1);
+    const ok = await app.handle(
+      new Request('http://localhost/settings/public', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${data.token as string}` },
+      }),
+    );
+    expect(ok.status).toBe(200);
+  });
+
+  it('PUT /system/parameters/SESSION_EPOCH ditolak (hanya via bump endpoint)', async () => {
+    const adminToken = await getAuthToken('admin-epoch-put@test.com', 'admin');
+    const res = await app.handle(
+      new Request('http://localhost/system/parameters/SESSION_EPOCH', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ value: '99' }),
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('bump endpoint menolak non-admin', async () => {
+    const dosenToken = await getAuthToken('dosen-epoch-bump@test.com', 'dosen');
+    const res = await app.handle(
+      new Request('http://localhost/system/session-epoch/bump', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${dosenToken}` },
       }),
     );
     expect(res.status).toBe(403);

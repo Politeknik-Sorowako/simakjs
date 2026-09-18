@@ -72,4 +72,10 @@ export const systemController = {
       body: JSON.stringify({ value, description }),
     });
   },
+
+  async bumpSessionEpoch(): Promise<{ message: string; sessionEpoch: number }> {
+    return fetchApi<{ message: string; sessionEpoch: number }>('/system/session-epoch/bump', {
+      method: 'POST',
+    });
+  },
 };

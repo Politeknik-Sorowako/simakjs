@@ -55,11 +55,18 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     description:
       'Durasi sesi login dalam menit (idle timeout). Sesi berakhir jika tidak ada aktivitas selama durasi ini. Berlaku untuk login/refresh token berikutnya.',
   },
+  SESSION_EPOCH: {
+    value: '1',
+    type: 'number',
+    description:
+      'Epoch sesi (kill-switch). Menaikkan nilai ini memaksa semua pengguna login ulang: token yang dibubuhi sessEpoch lebih kecil dari nilai ini ditolak.',
+  },
 };
 
 const SESSION_DURATION_MIN = 15;
 const SESSION_DURATION_MAX = 10080;
 const SESSION_DURATION_DEFAULT = 480;
+const SESSION_EPOCH_DEFAULT = 1;
 
 export class SystemParameterService {
   private static invalidate(key?: string) {
@@ -118,6 +125,21 @@ export class SystemParameterService {
   /** Durasi sesi login (idle timeout) dalam detik, diklamp ke rentang 15–10080 menit. */
   static async getSessionDurationSeconds(): Promise<number> {
     return (await SystemParameterService.getSessionDurationMinutes()) * 60;
+  }
+
+  /** Epoch sesi saat ini (min 1). Token dengan sessEpoch < nilai ini ditolak. */
+  static async getSessionEpoch(): Promise<number> {
+    const raw = await SystemParameterService.getRaw('SESSION_EPOCH');
+    const parsed = Number(raw);
+    if (raw === null || raw === '' || !Number.isFinite(parsed)) return SESSION_EPOCH_DEFAULT;
+    return Math.max(SESSION_EPOCH_DEFAULT, Math.floor(parsed));
+  }
+
+  /** Menaikkan epoch sesi (kill-switch) dan mengembalikan nilai baru. */
+  static async incrementSessionEpoch(): Promise<number> {
+    const next = (await SystemParameterService.getSessionEpoch()) + 1;
+    await SystemParameterService.set('SESSION_EPOCH', String(next));
+    return next;
   }
 
   static async isKrsMandiriEnabled(): Promise<boolean> {

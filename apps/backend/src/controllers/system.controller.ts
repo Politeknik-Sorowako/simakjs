@@ -69,6 +69,10 @@ export class SystemController {
       }
       value = String(Math.floor(minutes));
     }
+    if (key === 'SESSION_EPOCH') {
+      set.status = 400;
+      return { error: 'SESSION_EPOCH hanya boleh dinaikkan via endpoint paksa logout' };
+    }
     try {
       const row = await SystemParameterService.set(key, String(value), user.id, description);
       return { key: row.key, value: row.value };
@@ -76,6 +80,18 @@ export class SystemController {
       set.status = 500;
       return { error: e instanceof Error ? e.message : 'Gagal memperbarui parameter' };
     }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bumpSessionEpoch({ set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user || !isSuperAdminOrAdmin(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
+    }
+    const epoch = await SystemParameterService.incrementSessionEpoch();
+    set.status = 200;
+    return { message: `Semua sesi pengguna dipaksa logout. Epoch sesi sekarang: ${epoch}`, sessionEpoch: epoch };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
