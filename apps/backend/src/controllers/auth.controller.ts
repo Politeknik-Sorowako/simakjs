@@ -4,6 +4,7 @@ import { users } from '../models/schema';
 import { AccountActivationService } from '../services/account-activation.service';
 import { AuthService } from '../services/auth.service';
 import { SsoService } from '../services/sso.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { TwoFactorService } from '../services/two-factor.service';
 import { db } from '../utils/db';
 import { getFrontendBaseUrl } from '../utils/frontend-url';
@@ -14,9 +15,14 @@ import type { AuthContext } from '../utils/types';
 const loginRateLimit = new Map<string, { count: number; resetTime: number }>();
 const forgotRateLimit = new Map<string, { count: number; resetTime: number }>();
 
+const TWO_FA_INTERIM_TTL_SECONDS = 10 * 60;
+
 export class AuthController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async logout({ set }: AuthContext): Promise<any> {
+  static async logout({ set, cookie }: AuthContext): Promise<any> {
+    if (cookie?.access_token) {
+      cookie.access_token.remove();
+    }
     set.status = 200;
     return { message: 'Logout berhasil' };
   }
@@ -73,9 +79,12 @@ export class AuthController {
     }
 
     if (user.twoFactorEnabled) {
+      const now = Math.floor(Date.now() / 1000);
       const twoFactorToken = await jwt.sign({
         id: user.id,
         stage: '2fa_required',
+        iat: now,
+        exp: now + TWO_FA_INTERIM_TTL_SECONDS,
       });
       set.status = 200;
       return {
@@ -85,6 +94,8 @@ export class AuthController {
       };
     }
 
+    const sessionDurationSeconds = await SystemParameterService.getSessionDurationSeconds();
+    const now = Math.floor(Date.now() / 1000);
     const token = await jwt.sign({
       id: user.id,
       email: user.email,
@@ -93,6 +104,8 @@ export class AuthController {
       roles: user.roles,
       mustChangePassword: user.mustChangePassword,
       isGlobalScope: user.isGlobalScope ?? false,
+      iat: now,
+      exp: now + sessionDurationSeconds,
     });
 
     if (cookie?.access_token) {
@@ -102,7 +115,7 @@ export class AuthController {
         secure: process.env.NODE_ENV === 'production',
         path: '/',
         sameSite: 'strict',
-        maxAge: 7 * 24 * 60 * 60,
+        maxAge: sessionDurationSeconds,
       });
     }
 
@@ -155,9 +168,12 @@ export class AuthController {
       }
 
       if (user.twoFactorEnabled) {
+        const now = Math.floor(Date.now() / 1000);
         const twoFactorToken = await jwt.sign({
           id: user.id,
           stage: '2fa_required',
+          iat: now,
+          exp: now + TWO_FA_INTERIM_TTL_SECONDS,
         });
         set.status = 200;
         return {
@@ -167,6 +183,8 @@ export class AuthController {
         };
       }
 
+      const sessionDurationSeconds = await SystemParameterService.getSessionDurationSeconds();
+      const now = Math.floor(Date.now() / 1000);
       const token = await jwt.sign({
         id: user.id,
         email: user.email,
@@ -175,6 +193,8 @@ export class AuthController {
         roles: user.roles,
         mustChangePassword: user.mustChangePassword,
         isGlobalScope: user.isGlobalScope ?? false,
+        iat: now,
+        exp: now + sessionDurationSeconds,
       });
 
       if (cookie?.access_token) {
@@ -184,7 +204,7 @@ export class AuthController {
           secure: process.env.NODE_ENV === 'production',
           path: '/',
           sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60,
+          maxAge: sessionDurationSeconds,
         });
       }
 
@@ -411,6 +431,8 @@ export class AuthController {
       }
 
       const roles = await AuthService.getRolesForUser(user.id);
+      const sessionDurationSeconds = await SystemParameterService.getSessionDurationSeconds();
+      const now = Math.floor(Date.now() / 1000);
       const token = await jwt.sign({
         id: user.id,
         email: user.email,
@@ -419,6 +441,8 @@ export class AuthController {
         roles,
         mustChangePassword: user.mustChangePassword,
         isGlobalScope: user.isGlobalScope ?? false,
+        iat: now,
+        exp: now + sessionDurationSeconds,
       });
 
       if (cookie?.access_token) {
@@ -428,7 +452,7 @@ export class AuthController {
           secure: process.env.NODE_ENV === 'production',
           path: '/',
           sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60,
+          maxAge: sessionDurationSeconds,
         });
       }
 

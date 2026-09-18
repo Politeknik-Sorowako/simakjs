@@ -1,3 +1,5 @@
+import { applyRefreshedToken } from './token';
+
 export const API_URL = (() => {
   if (import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== '') {
     return import.meta.env.VITE_API_URL;
@@ -79,6 +81,7 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
   }
 
   const response = await fetch(`${API_URL}${endpoint}`, config);
+  applyRefreshedToken(response);
 
   let data: unknown;
   const isJson = response.headers.get('content-type')?.includes('application/json');

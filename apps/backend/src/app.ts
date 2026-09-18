@@ -61,6 +61,7 @@ import { userRoutes } from './routes/user.routes';
 import { verifikasiUnknownRoutes } from './routes/verifikasi-unknown.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
+import { SystemParameterService } from './services/system-parameter.service';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -358,6 +359,36 @@ export const app = new Elysia()
   .use(authMiddleware)
   .onBeforeHandle(auditBeforeHandle)
   .onAfterResponse(auditAfterResponse)
+  .onAfterHandle(async ({ jwt, set, cookie, headers }) => {
+    try {
+      // Sliding idle session: perpanjang JWT saat sisa umur token < 50% durasi sesi.
+      const authHeader = headers['authorization'];
+      const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
+      const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookieToken;
+      if (typeof rawToken !== 'string') return;
+      const payload = (await jwt.verify(rawToken)) as (Record<string, unknown> & { exp?: number }) | null;
+      if (!payload || typeof payload.exp !== 'number') return;
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (payload.exp <= nowSec) return;
+      const durationSec = await SystemParameterService.getSessionDurationSeconds();
+      if (payload.exp - nowSec >= durationSec / 2) return;
+      const { iat: _iat, exp: _exp, ...claims } = payload;
+      const refreshed = await jwt.sign({ ...claims, iat: true, exp: nowSec + durationSec });
+      set.headers['X-Refresh-Token'] = refreshed;
+      if (cookie?.access_token) {
+        cookie.access_token.set({
+          value: refreshed,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+          sameSite: 'strict',
+          maxAge: durationSec,
+        });
+      }
+    } catch {
+      // Token lama tetap berlaku sampai exp-nya; refresh gagal tidak menggagalkan request.
+    }
+  })
   .use(authRoutes)
   .use(admisiRoutes)
   .use(apelRoutes)

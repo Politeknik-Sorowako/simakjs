@@ -51,7 +51,7 @@ export class SystemController {
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
     const key = (params as Record<string, unknown>)?.key as string;
-    const value = ((body as Record<string, unknown>)?.value as string) ?? null;
+    let value = ((body as Record<string, unknown>)?.value as string) ?? null;
     const description = ((body as Record<string, unknown>)?.description as string) ?? undefined;
     if (!key || value === null || value === undefined) {
       set.status = 400;
@@ -60,6 +60,14 @@ export class SystemController {
     if (!/^[A-Z0-9_]+$/.test(key)) {
       set.status = 400;
       return { error: 'key hanya boleh mengandung huruf besar, angka, dan underscore' };
+    }
+    if (key === 'SESSION_DURATION_MINUTES') {
+      const minutes = Number(value);
+      if (!Number.isFinite(minutes) || minutes < 15 || minutes > 10080) {
+        set.status = 400;
+        return { error: 'Durasi sesi harus berupa angka antara 15 dan 10080 menit' };
+      }
+      value = String(Math.floor(minutes));
     }
     try {
       const row = await SystemParameterService.set(key, String(value), user.id, description);

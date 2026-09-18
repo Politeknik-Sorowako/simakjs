@@ -19,6 +19,15 @@ const TIMEZONE_OPTIONS: { value: string; label: string }[] = [
   { value: 'UTC', label: 'UTC (Universal Coordinated Time)' },
 ];
 
+const SESSION_PRESETS: { value: number; label: string }[] = [
+  { value: 30, label: '30 menit' },
+  { value: 60, label: '1 jam' },
+  { value: 240, label: '4 jam' },
+  { value: 480, label: '8 jam (Default)' },
+  { value: 1440, label: '24 jam' },
+  { value: 10080, label: '7 hari' },
+];
+
 interface ToggleCardProps {
   title: string;
   parameterKey: string;
@@ -141,6 +150,33 @@ export default function KonfigurasiParameter() {
     }
   };
 
+  // Durasi sesi login (idle timeout) — preset + custom.
+  const sessionParam = () => params()?.find((p) => p.key === 'SESSION_DURATION_MINUTES') ?? null;
+  const sessionValue = () => edits().SESSION_DURATION_MINUTES ?? String(sessionParam()?.value ?? '480');
+  const sessionIsPreset = () => SESSION_PRESETS.some((p) => String(p.value) === sessionValue());
+  const sessionHasChanges = () => {
+    const current = edits().SESSION_DURATION_MINUTES;
+    return current !== undefined && current !== String(sessionParam()?.value ?? '480');
+  };
+
+  const saveSessionDuration = async () => {
+    setSavingKey('SESSION_DURATION_MINUTES');
+    try {
+      await systemController.updateParameter('SESSION_DURATION_MINUTES', sessionValue());
+      setEdits((prev) => {
+        const next = { ...prev };
+        delete next.SESSION_DURATION_MINUTES;
+        return next;
+      });
+      setNotice('Durasi sesi login berhasil diperbarui. Berlaku untuk login/refresh token berikutnya.');
+      refetch();
+    } catch (e: unknown) {
+      setNotice(e instanceof Error ? e.message : 'Gagal memperbarui durasi sesi login.');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
   return (
     <MainLayout>
       <div class="max-w-3xl mx-auto">
@@ -216,13 +252,69 @@ export default function KonfigurasiParameter() {
           />
         </div>
 
+        {/* Durasi Sesi Login (Idle Timeout) */}
+        <div class="mb-6">
+          <Card>
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                    Durasi Sesi Login (Idle Timeout)
+                  </span>
+                  <Badge variant="info">SESSION_DURATION_MINUTES</Badge>
+                </div>
+                <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                  Mengatur berapa lama pengguna harus login kembali setelah tidak ada aktivitas. Sesi berakhir jika
+                  pengguna tidak beraktivitas selama durasi ini (idle). Berlaku efektif untuk login/refresh token
+                  berikutnya.
+                </p>
+                <p class="mt-0.5 text-xs text-secondary-400">Rentang: 15 – 10080 menit. Default: 480 menit (8 jam).</p>
+              </div>
+
+              <div class="flex items-center gap-2 shrink-0">
+                <select
+                  value={sessionIsPreset() ? sessionValue() : 'custom'}
+                  onChange={(e) => {
+                    const v = e.currentTarget.value;
+                    if (v === 'custom') return;
+                    setField('SESSION_DURATION_MINUTES', v);
+                  }}
+                  class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+                >
+                  <For each={SESSION_PRESETS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
+                  <option value="custom">Lainnya (custom)</option>
+                </select>
+                <Show when={!sessionIsPreset()}>
+                  <Input
+                    type="number"
+                    min={15}
+                    max={10080}
+                    value={sessionValue()}
+                    onInput={(e) => setField('SESSION_DURATION_MINUTES', e.currentTarget.value)}
+                    class="w-28"
+                  />
+                </Show>
+                <Button
+                  size="sm"
+                  loading={savingKey() === 'SESSION_DURATION_MINUTES'}
+                  disabled={!sessionHasChanges()}
+                  onClick={saveSessionDuration}
+                >
+                  Simpan
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+
         <div class="space-y-3">
           <For
             each={(params() || []).filter(
               (p) =>
                 p.key !== 'KRS_MANDIRI_ENABLED' &&
                 p.key !== 'BLOCK_KHS_JIKA_TANGGUNGAN' &&
-                p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN',
+                p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
+                p.key !== 'SESSION_DURATION_MINUTES',
             )}
           >
             {(p) => (
