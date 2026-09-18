@@ -26,6 +26,7 @@ Daftar item keamanan yang teridentifikasi tapi belum diimplementasikan. Dikelomp
 - [ ] **WebSocket token via query param**: `app.ts:295` — token dikirim via `?token=` yang bisa bocor ke access log/proxy. Pindah ke `Sec-WebSocket-Protocol` header.
 - [ ] **Token storage di localStorage**: Frontend simpan JWT di `localStorage` — rentan XSS curi token. httpOnly cookie sudah tersedia sebagai alternatif (backend sudah set). Evaluasi migrasi penuh ke cookie-only.
 - [ ] **Admin role whitelist**: Register tidak memblokir role `kaprodi`, `prodi`, `plp`, `instruktur` secara eksplisit — hanya `admin`, `prodi`, `keuangan` yang diblokir. Pastikan tidak ada role sensitif yang bisa didaftarkan mandiri.
+- [ ] **Kontrak 401 vs 403 tidak konsisten**: Banyak controller memetakan `!user` (tidak login/kedaluwarsa/kill-switch) ke `403`, padahal secara semantik harus `401`; `403` seharusnya hanya untuk role mismatch. Frontend `fetchApi` hanya auto-logout+redirect pada `401`. Mitigasi saat ini: poller notifikasi (401) + redirect langsung setelah bump menutup gap, tapi refactor kontrak endpoint perlu dijadwalkan.
 
 ---
 

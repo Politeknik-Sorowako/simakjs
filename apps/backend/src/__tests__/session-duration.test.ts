@@ -17,13 +17,15 @@ function decodePayload(token: string): Record<string, unknown> {
   return JSON.parse(Buffer.from(b64, 'base64').toString('utf8')) as Record<string, unknown>;
 }
 
-function craftJwt(claims: Record<string, unknown>, expOffsetSec: number, sessEpoch: number | null = 1): string {
+function craftJwt(claims: Record<string, unknown>, expOffsetSec: number | null, sessEpoch: number | null = 1): string {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new Error('JWT_SECRET environment variable is required');
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = sessEpoch === null ? { ...claims } : { ...claims, sessEpoch };
-  const body = b64url(JSON.stringify({ ...payload, iat: now, exp: now + expOffsetSec }));
+  const withEpoch = sessEpoch === null ? { ...claims } : { ...claims, sessEpoch };
+  const withExp =
+    expOffsetSec === null ? { ...withEpoch, iat: now } : { ...withEpoch, iat: now, exp: now + expOffsetSec };
+  const body = b64url(JSON.stringify(withExp));
   const sig = createHmac('sha256', secret)
     .update(`${header}.${body}`)
     .digest('base64')
@@ -260,6 +262,22 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
     expect(resp.headers.get('x-refresh-token')).toBeNull();
   });
 
+  it('token tanpa exp (fail-closed) ditolak middleware', async () => {
+    const noExp = craftJwt(
+      { id: 1, role: 'admin', roles: ['admin'], email: 'admin-noexp@test.com', nama: 'Admin', isGlobalScope: false },
+      null,
+      1,
+    );
+    const resp = await app.handle(
+      new Request('http://localhost/system/parameters', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${noExp}` },
+      }),
+    );
+    expect(resp.status).toBe(403);
+    expect(resp.headers.get('x-refresh-token')).toBeNull();
+  });
+
   it('token dengan sessEpoch basi (kill-switch) ditolak middleware', async () => {
     const stale = craftJwt(
       { id: 1, role: 'admin', roles: ['admin'], email: 'admin-stale@test.com', nama: 'Admin', isGlobalScope: false },
@@ -277,7 +295,10 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
   });
 
   it('bump SESSION_EPOCH menaikkan epoch; token lama ditolak, login baru diterima', async () => {
+    // Set baseline eksplisit (hindari cache param 10s yang basi setelah clearDatabase).
+    await SystemParameterService.set('SESSION_EPOCH', '1');
     const before = await SystemParameterService.getSessionEpoch();
+    expect(before).toBe(1);
     const res = await app.handle(
       new Request('http://localhost/system/session-epoch/bump', {
         method: 'POST',

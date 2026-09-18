@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { systemSettings } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -135,11 +135,32 @@ export class SystemParameterService {
     return Math.max(SESSION_EPOCH_DEFAULT, Math.floor(parsed));
   }
 
-  /** Menaikkan epoch sesi (kill-switch) dan mengembalikan nilai baru. */
+  /** Menaikkan epoch sesi (kill-switch) secara atomik dan mengembalikan nilai baru. */
   static async incrementSessionEpoch(): Promise<number> {
-    const next = (await SystemParameterService.getSessionEpoch()) + 1;
-    await SystemParameterService.set('SESSION_EPOCH', String(next));
-    return next;
+    // UPDATE atomik (row-lock Postgres) → aman terhadap bump konkuren.
+    const [updated] = await db
+      .update(systemSettings)
+      .set({ value: sql`${systemSettings.value}::int + 1`, updatedAt: new Date() })
+      .where(eq(systemSettings.key, 'SESSION_EPOCH'))
+      .returning();
+    SystemParameterService.invalidate('SESSION_EPOCH');
+    if (updated) {
+      const parsed = Number(updated.value);
+      return Number.isFinite(parsed) ? Math.max(SESSION_EPOCH_DEFAULT, parsed) : SESSION_EPOCH_DEFAULT;
+    }
+    // Baris belum ada (mis. tabel test di-bersihkan) → insert default+1.
+    const [inserted] = await db
+      .insert(systemSettings)
+      .values({
+        key: 'SESSION_EPOCH',
+        value: String(SESSION_EPOCH_DEFAULT + 1),
+        paramType: 'number',
+        description: DEFAULT_PARAMS.SESSION_EPOCH.description,
+      })
+      .onConflictDoNothing()
+      .returning();
+    const parsed = Number(inserted?.value);
+    return Number.isFinite(parsed) ? Math.max(SESSION_EPOCH_DEFAULT, parsed) : SESSION_EPOCH_DEFAULT + 1;
   }
 
   static async isKrsMandiriEnabled(): Promise<boolean> {

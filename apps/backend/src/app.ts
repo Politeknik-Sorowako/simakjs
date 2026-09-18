@@ -167,7 +167,7 @@ export const app = new Elysia()
         ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
         : ['http://localhost:8080', 'http://localhost:3000'],
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Background'],
       exposeHeaders: ['X-Refresh-Token'],
     }),
   )

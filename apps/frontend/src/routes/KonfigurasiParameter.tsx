@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -181,11 +181,16 @@ export default function KonfigurasiParameter() {
   const [confirmBump, setConfirmBump] = createSignal(false);
   const [bumping, setBumping] = createSignal(false);
   const epochParam = () => params()?.find((p) => p.key === 'SESSION_EPOCH') ?? null;
+  let confirmResetTimer: ReturnType<typeof setTimeout> | undefined;
+
+  onCleanup(() => {
+    if (confirmResetTimer) clearTimeout(confirmResetTimer);
+  });
 
   const bumpSessionEpoch = async () => {
     if (!confirmBump()) {
       setConfirmBump(true);
-      setTimeout(() => setConfirmBump(false), 4000);
+      confirmResetTimer = setTimeout(() => setConfirmBump(false), 4000);
       return;
     }
     setBumping(true);
@@ -193,7 +198,10 @@ export default function KonfigurasiParameter() {
       const res = await systemController.bumpSessionEpoch();
       setNotice(res.message || 'Semua sesi pengguna dipaksa logout.');
       setConfirmBump(false);
-      refetch();
+      // Sesi admin sendiri ikut diinvalidasi oleh bump → arahkan ke login.
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : 'Gagal memaksa logout semua sesi.');
     } finally {
