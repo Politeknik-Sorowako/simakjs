@@ -1,48 +1,86 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
-import { bimbinganController } from '../../controllers/bimbinganController';
+import { useAuth } from '../../contexts/AuthContext';
+import { type BkdRekap, bkdController } from '../../controllers/bkdController';
 import { dosenController } from '../../controllers/dosenController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import { ExportColumn } from '../../utils/export';
 
+const PRESENSI_STATUS: {
+  key: keyof { hadir: number; sakit: number; izin: number; alpa: number; telat: number };
+  label: string;
+}[] = [
+  { key: 'hadir', label: 'H' },
+  { key: 'sakit', label: 'S' },
+  { key: 'izin', label: 'I' },
+  { key: 'alpa', label: 'A' },
+  { key: 'telat', label: 'T' },
+];
+
 export default function LaporanBKD() {
+  const auth = useAuth();
+  const isDosenRole = () => auth.hasRole(['dosen']);
+
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [selectedDosen, setSelectedDosen] = createSignal('');
 
   const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
-  const [dosens] = createResource(() => dosenController.getAll('', 1, 100));
+  const [dosens] = createResource(() => dosenController.getAll('', 1, 1000));
 
   const [rekap] = createResource(
     () => ({ dosenId: selectedDosen(), periodeId: selectedPeriode() }),
     async ({ dosenId, periodeId }) => {
+      if (!periodeId) return null;
+      // Dosen dipaksa self di backend; kirim placeholder bila role dosen tanpa pilihan.
+      const targetDosen = isDosenRole() ? Number(dosenId) || 0 : Number(dosenId);
+      if (!targetDosen) return null;
       try {
-        return await bimbinganController.getRekapBkd(dosenId ? parseInt(dosenId) : undefined, periodeId || undefined);
+        return await bkdController.getRekap(targetDosen, periodeId);
       } catch {
-        return { data: [] };
+        return null;
       }
     },
   );
 
+  // Auto-resolve dosen pertama untuk role dosen agar langsung terisi.
+  createEffect(() => {
+    if (isDosenRole() && !selectedDosen() && dosens()?.data?.length) {
+      const d = dosens()?.data[0];
+      if (d) setSelectedDosen(String(d.id));
+    }
+  });
+
+  const rows = (): BkdRekap['mengajar'] => rekap()?.data.mengajar || [];
+  const bimbingan = () => rekap()?.data.bimbingan || [];
+  const ringkasan = () => rekap()?.data.ringkasan;
+
   const columns: ExportColumn[] = [
     {
-      header: 'NIM',
-      accessor: (row: Record<string, unknown>) => {
-        const mhs = row.mahasiswa as { nim?: string } | undefined;
-        return mhs?.nim || '-';
-      },
+      header: 'Kode MK',
+      accessor: (row: Record<string, unknown>) => (row.mataKuliah as { kode?: string })?.kode || '-',
     },
     {
-      header: 'Mahasiswa',
-      accessor: (row: Record<string, unknown>) => {
-        const mhs = row.mahasiswa as { nama?: string } | undefined;
-        return mhs?.nama || '-';
-      },
+      header: 'Mata Kuliah',
+      accessor: (row: Record<string, unknown>) => (row.mataKuliah as { nama?: string })?.nama || '-',
     },
-    { header: 'Ringkasan', accessor: 'ringkasan' },
-    { header: 'Status', accessor: (row: Record<string, unknown>) => (row.isApproved ? 'Disetujui' : 'Pending') },
-    { header: 'BKD', accessor: (row: Record<string, unknown>) => (row.statusBkd ? 'Ya' : 'Tidak') },
+    { header: 'Kelas', accessor: 'namaKelas' },
+    { header: 'SKS', accessor: (row: Record<string, unknown>) => (row.mataKuliah as { sks?: number })?.sks ?? '-' },
+    { header: 'Pertemuan', accessor: 'jumlahPertemuan' },
+    { header: 'Total Menit', accessor: 'totalMenit' },
+    {
+      header: 'Hadir',
+      accessor: (row: Record<string, unknown>) => (row.presensi as { hadir?: number })?.hadir ?? 0,
+    },
+    {
+      header: 'Alpa',
+      accessor: (row: Record<string, unknown>) => (row.presensi as { alpa?: number })?.alpa ?? 0,
+    },
+    {
+      header: '% Hadir',
+      accessor: (row: Record<string, unknown>) => (row.presensi as { persen?: number })?.persen ?? 0,
+    },
   ];
 
   return (
@@ -52,10 +90,19 @@ export default function LaporanBKD() {
           <div>
             <h1 class="page-title">Laporan BKD / Beban Dosen</h1>
             <p class="text-base text-secondary-500 dark:text-secondary-200">
-              Rekapitulasi beban kerja dosen (BKD) per semester
+              Rekapitulasi beban kerja dosen: mengajar, presensi, dan bimbingan akademik per periode
             </p>
           </div>
-          <ExportButtonGroup data={() => rekap()?.data || []} columns={columns} filename="BKD" title="Laporan BKD" />
+          <div class="flex items-center gap-2">
+            <a
+              href={`/bkd/cetak?dosenId=${selectedDosen() || (isDosenRole() ? 0 : '')}&periodeId=${selectedPeriode()}`}
+              target="_blank"
+              class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 print:hidden"
+            >
+              🖨️ Cetak Mandiri
+            </a>
+            <ExportButtonGroup data={() => rows()} columns={columns} filename="BKD" title="Laporan BKD / Beban Dosen" />
+          </div>
         </div>
 
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4">
@@ -68,7 +115,7 @@ export default function LaporanBKD() {
               value={selectedPeriode()}
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
             >
-              <option value="">Semua Periode</option>
+              <option value="">Pilih Periode</option>
               <For each={periodes()?.data || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
             </select>
           </div>
@@ -76,139 +123,200 @@ export default function LaporanBKD() {
             <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Dosen
             </label>
-            <select
-              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-              value={selectedDosen()}
-              onChange={(e) => setSelectedDosen(e.currentTarget.value)}
+            <Show
+              when={!isDosenRole()}
+              fallback={
+                <div class="px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white">
+                  Diri sendiri (sesuai login)
+                </div>
+              }
             >
-              <option value="">Semua Dosen</option>
-              <For each={dosens()?.data || []}>
-                {(d: { id: number; nama: string; nip: string }) => (
-                  <option value={d.id}>
-                    {d.nama} ({d.nip})
-                  </option>
-                )}
-              </For>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard
-            title="Total Bimbingan"
-            value={rekap()?.data?.length || 0}
-            color="brand"
-            icon={
-              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            }
-          />
-          <StatCard
-            title="Disetujui"
-            value={rekap()?.data?.filter((r: { isApproved: boolean }) => r.isApproved).length || 0}
-            color="green"
-            icon={
-              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
-          />
-          <StatCard
-            title="BKD Aktif"
-            value={rekap()?.data?.filter((r) => r.sesi?.some((s) => s.statusBkd)).length || 0}
-            color="accent"
-            icon={
-              <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                />
-              </svg>
-            }
-          />
-        </div>
-
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
-          <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-            <h3 class="text-base font-bold text-secondary-800 dark:text-white">Detail Bimbingan</h3>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-table border-collapse">
-              <thead>
-                <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
-                  <th class="py-3 px-5">Mahasiswa</th>
-                  <th class="py-3 px-5">Ringkasan</th>
-                  <th class="py-3 px-5 text-center">Status</th>
-                  <th class="py-3 px-5 text-center">BKD</th>
-                </tr>
-              </thead>
-              <tbody>
-                <For
-                  each={rekap()?.data || []}
-                  fallback={
-                    <tr>
-                      <td colspan="4" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
-                        Tidak ada data
-                      </td>
-                    </tr>
-                  }
-                >
-                  {(r: {
-                    mahasiswa?: { nama: string; nim: string };
-                    ringkasan: string | null;
-                    isApproved: boolean;
-                    sesi?: { statusBkd: boolean }[];
-                  }) => (
-                    <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                      <td class="py-3 px-5">
-                        <div class="font-semibold text-secondary-800 dark:text-white">{r.mahasiswa?.nama || '-'}</div>
-                        <div class="text-caption text-secondary-400 dark:text-secondary-300">
-                          {r.mahasiswa?.nim || ''}
-                        </div>
-                      </td>
-                      <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{r.ringkasan || '-'}</td>
-                      <td class="py-3 px-5 text-center">
-                        <span
-                          class={
-                            'px-2 py-0.5 rounded-full text-caption font-bold ' +
-                            (r.isApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700')
-                          }
-                        >
-                          {r.isApproved ? 'Disetujui' : 'Pending'}
-                        </span>
-                      </td>
-                      <td class="py-3 px-5 text-center">
-                        <span
-                          class={
-                            'px-2 py-0.5 rounded-full text-caption font-bold ' +
-                            (r.sesi?.some((s) => s.statusBkd)
-                              ? 'bg-blue-50 text-blue-700'
-                              : 'bg-secondary-50 text-secondary-500 dark:text-secondary-300')
-                          }
-                        >
-                          {r.sesi?.some((s) => s.statusBkd) ? 'Ya' : 'Tidak'}
-                        </span>
-                      </td>
-                    </tr>
+              <select
+                class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                value={selectedDosen()}
+                onChange={(e) => setSelectedDosen(e.currentTarget.value)}
+              >
+                <option value="">Pilih Dosen</option>
+                <For each={dosens()?.data || []}>
+                  {(d: { id: number; nama: string; nip: string }) => (
+                    <option value={d.id}>
+                      {d.nama} ({d.nip})
+                    </option>
                   )}
                 </For>
-              </tbody>
-            </table>
+              </select>
+            </Show>
           </div>
         </div>
+
+        <Show when={!rekap()}>
+          <div class="rounded-2xl border border-secondary-100 bg-white p-10 text-center text-secondary-400 dark:bg-secondary-900 dark:border-secondary-800">
+            {rekap.loading ? 'Memuat laporan...' : 'Pilih periode (dan dosen) untuk menampilkan laporan.'}
+          </div>
+        </Show>
+
+        <Show when={rekap()}>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <StatCard
+              title="Total SKS"
+              value={ringkasan()?.totalSks || 0}
+              color="brand"
+              icon={<span class="text-2xl">📚</span>}
+            />
+            <StatCard
+              title="Total Pertemuan"
+              value={ringkasan()?.totalPertemuan || 0}
+              color="green"
+              icon={<span class="text-2xl">🗓️</span>}
+            />
+            <StatCard
+              title="Total Menit"
+              value={ringkasan()?.totalMenit || 0}
+              color="accent"
+              icon={<span class="text-2xl">⏱️</span>}
+            />
+            <StatCard
+              title="Total Kelas"
+              value={ringkasan()?.totalMengajar || 0}
+              color="brand"
+              icon={<span class="text-2xl">🏫</span>}
+            />
+            <StatCard
+              title="Bimbingan"
+              value={ringkasan()?.totalBimbingan || 0}
+              color="green"
+              icon={<span class="text-2xl">🤝</span>}
+            />
+          </div>
+
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rekap Mengajar &amp; Presensi</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-table border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-5">Mata Kuliah</th>
+                    <th class="py-3 px-5">Kelas</th>
+                    <th class="py-3 px-5 text-center">SKS</th>
+                    <th class="py-3 px-5 text-center">Pertemuan</th>
+                    <th class="py-3 px-5 text-center">Menit</th>
+                    <th class="py-3 px-5 text-center">Presensi (H/S/I/A/T)</th>
+                    <th class="py-3 px-5 text-center">% Hadir</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={rows()}
+                    fallback={
+                      <tr>
+                        <td colspan="7" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
+                          Tidak ada data mengajar
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(r) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-5">
+                          <div class="font-semibold text-secondary-800 dark:text-white">{r.mataKuliah.nama}</div>
+                          <div class="text-caption text-secondary-400 dark:text-secondary-300">{r.mataKuliah.kode}</div>
+                        </td>
+                        <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{r.namaKelas}</td>
+                        <td class="py-3 px-5 text-center">{r.mataKuliah.sks}</td>
+                        <td class="py-3 px-5 text-center">{r.jumlahPertemuan}</td>
+                        <td class="py-3 px-5 text-center">{r.totalMenit}</td>
+                        <td class="py-3 px-5 text-center whitespace-nowrap">
+                          <For each={PRESENSI_STATUS}>
+                            {(st) => (
+                              <span class="mx-1 inline-block">
+                                <span class="font-bold text-secondary-800 dark:text-white">{st.label}</span>:{' '}
+                                {r.presensi[st.key]}
+                              </span>
+                            )}
+                          </For>
+                        </td>
+                        <td class="py-3 px-5 text-center">
+                          <span
+                            class={
+                              'px-2 py-0.5 rounded-full text-caption font-bold ' +
+                              (r.presensi.persen >= 80 ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700')
+                            }
+                          >
+                            {r.presensi.persen}%
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Riwayat Bimbingan Akademik</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-table border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-5">Mahasiswa</th>
+                    <th class="py-3 px-5 text-center">Sesi</th>
+                    <th class="py-3 px-5 text-center">Status</th>
+                    <th class="py-3 px-5 text-center">BKD</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={bimbingan()}
+                    fallback={
+                      <tr>
+                        <td colspan="4" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
+                          Tidak ada data bimbingan
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(r) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-5">
+                          <div class="font-semibold text-secondary-800 dark:text-white">{r.mahasiswa?.nama || '-'}</div>
+                          <div class="text-caption text-secondary-400 dark:text-secondary-300">
+                            {r.mahasiswa?.nim || ''}
+                          </div>
+                        </td>
+                        <td class="py-3 px-5 text-center">{r.sesi?.length || 0}</td>
+                        <td class="py-3 px-5 text-center">
+                          <span
+                            class={
+                              'px-2 py-0.5 rounded-full text-caption font-bold ' +
+                              (r.isApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700')
+                            }
+                          >
+                            {r.isApproved ? 'Disetujui' : 'Pending'}
+                          </span>
+                        </td>
+                        <td class="py-3 px-5 text-center">
+                          <span
+                            class={
+                              'px-2 py-0.5 rounded-full text-caption font-bold ' +
+                              (r.statusBkd ? 'bg-blue-50 text-blue-700' : 'bg-secondary-50 text-secondary-500')
+                            }
+                          >
+                            {r.statusBkd ? 'Ya' : 'Tidak'}
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </Show>
       </div>
     </MainLayout>
   );
