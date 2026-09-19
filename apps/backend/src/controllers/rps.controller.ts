@@ -12,7 +12,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bulkGenerate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -44,7 +48,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createRps({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -61,7 +69,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateRps({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -84,7 +96,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async addTopik({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -104,7 +120,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateTopik({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -127,7 +147,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteTopik({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -166,7 +190,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createRencanaEvaluasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -188,7 +216,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateRencanaEvaluasi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -216,7 +248,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async copyRps({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -242,7 +278,11 @@ export class RpsController {
   static async getAvailableSources({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur', 'prodi', 'super_admin'])) {
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+      if (!hasRole(user, ['admin', 'dosen', 'instruktur', 'prodi', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -259,7 +299,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteRencanaEvaluasi({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -297,7 +341,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async attachEvaluasiSubCpmk({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -318,7 +366,11 @@ export class RpsController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async detachEvaluasiSubCpmk({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

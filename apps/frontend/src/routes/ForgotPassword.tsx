@@ -21,13 +21,11 @@ export default function ForgotPassword() {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [successMsg, setSuccessMsg] = createSignal('');
   const [loading, setLoading] = createSignal(false);
-  const [resetToken, setResetToken] = createSignal('');
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
-    setResetToken('');
 
     const result = emailSchema.safeParse({ email: email() });
     if (!result.success) {
@@ -44,9 +42,6 @@ export default function ForgotPassword() {
       const msg = 'Token reset password berhasil dibuat!';
       setSuccessMsg(msg);
       toast.showToast(msg, 'success');
-      if (res.token) {
-        setResetToken(res.token);
-      }
     } catch (e: unknown) {
       const errText = (e as Error).message || 'Gagal membuat token reset';
       setErrorMsg(errText);

@@ -206,7 +206,11 @@ export class RombelPraktikumController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async getUnknownPresensiPraktikum({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin', 'prodi'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }

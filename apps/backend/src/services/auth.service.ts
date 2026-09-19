@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { passwordResets, userRoles, users } from '../models/schema';
 import { db } from '../utils/db';
+import { assertValidPassword } from '../utils/password-policy';
 import type { UserRole } from '../utils/types';
 
 async function hashToken(token: string): Promise<string> {
@@ -21,12 +22,9 @@ export class AuthService {
     return legacy ? [legacy.role] : [];
   }
 
-  static async register(
-    email: string,
-    password: string,
-    nama: string,
-    role?: 'admin' | 'dosen' | 'mahasiswa' | 'guest',
-  ) {
+  static async register(email: string, password: string, nama: string, role?: UserRole) {
+    assertValidPassword(password);
+
     const hashedPassword = await Bun.password.hash(password, {
       algorithm: 'bcrypt',
       cost: 12,
@@ -102,6 +100,20 @@ export class AuthService {
     const tokenHash = await hashToken(token);
     await db.delete(passwordResets).where(eq(passwordResets.email, email));
     await db.insert(passwordResets).values({ email, token: tokenHash, expiresAt });
+  }
+
+  /**
+   * Membuat token reset untuk email, mengembalikan token mentah bila email
+   * terdaftar, atau `null` bila tidak (menjaga no-user-enumeration).
+   * Token mentah hanya diberikan ke pemanggil (email sender / test), tidak
+   * pernah bocor ke response body endpoint publik.
+   */
+  static async createPasswordResetForEmail(email: string): Promise<string | null> {
+    const user = await AuthService.findByEmail(email);
+    if (!user) return null;
+    const token = crypto.randomUUID();
+    await AuthService.createPasswordReset(email, token, new Date(Date.now() + 3600000));
+    return token;
   }
 
   static async getPasswordReset(token: string) {

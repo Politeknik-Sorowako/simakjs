@@ -13,7 +13,11 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async saveBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -59,7 +63,11 @@ export class PresensiController {
   static async getLaporanKompensasi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin', 'dosen'])) {
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+      if (!hasRole(user, ['admin', 'dosen'])) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
       }
@@ -93,7 +101,11 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getLaporanKompensasiStats({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -148,7 +160,11 @@ export class PresensiController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   }: AuthContext<any, { kelasKuliahId?: string }>): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'instruktur'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -195,7 +211,11 @@ export class PresensiController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   >): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -216,7 +236,11 @@ export class PresensiController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   >): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -229,7 +253,11 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bayarKompensasi({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -245,7 +273,11 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateKompensasiBayar({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -266,7 +298,11 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importKompensasiBayar({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi', 'keuangan'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'prodi', 'keuangan'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin/Admin Prodi/Keuangan.' };
     }
@@ -286,7 +322,11 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getUnknownPresensi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin', 'prodi'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }
@@ -308,7 +348,11 @@ export class PresensiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async resolveUnknown({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin', 'prodi'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
     }

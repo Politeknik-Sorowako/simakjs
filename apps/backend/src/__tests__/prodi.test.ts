@@ -126,7 +126,7 @@ describe('2. Program Studi (/prodi)', () => {
           body: JSON.stringify({ kode: 'TI-GST', nama: 'TI Guest', jenjang: 'D4' }),
         }),
       );
-      expect(resGuest.status).toBe(403);
+      expect(resGuest.status).toBe(401);
     });
   });
 

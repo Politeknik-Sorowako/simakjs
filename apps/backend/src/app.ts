@@ -61,8 +61,46 @@ import { userRoutes } from './routes/user.routes';
 import { verifikasiUnknownRoutes } from './routes/verifikasi-unknown.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
+import { SystemParameterService } from './services/system-parameter.service';
+import { isSessionClaimsValid } from './utils/session-token';
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Endpoint background (polling/health/public) tidak boleh memperpanjang sesi idle.
+// Client dapat meng-opt-out eksplisit lewat header X-Background: 1 untuk endpoint polling lain.
+const NO_SLIDE_PATHS = ['/notifications', '/system/version', '/system/health', '/system/changelog'];
+
+function isNoSlideRequest(path: string, headers: Record<string, string | undefined>): boolean {
+  if (headers['x-background'] === '1') return true;
+  return NO_SLIDE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
+// Endpoint publik yang boleh diakses tanpa sesi valid (login/forgot/reset,
+// settings publik, health, enroll publik). Token mati yang dikirim ke sini
+// tidak boleh ditolak 401 agar alur publik (mis. login ulang) tetap jalan.
+const PUBLIC_NO_SESSION_PATHS = [
+  '/auth',
+  '/settings/public',
+  '/system/version',
+  '/system/changelog',
+  '/system/health',
+  '/health',
+  '/rombel/enroll',
+  '/rombel-praktikum/public',
+];
+
+function isPublicNoSessionPath(path: string): boolean {
+  return PUBLIC_NO_SESSION_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
+function extractToken(
+  headers: Record<string, string | undefined>,
+  cookie: { access_token?: { value?: string } } | undefined,
+): string | null {
+  const authHeader = headers['authorization'];
+  const cookieToken = cookie?.access_token?.value;
+  return authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : (cookieToken ?? null);
+}
 
 // Direktori penyimpanan berkas surat izin/sakit (dibuat aman di awal startup).
 mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursive: true });
@@ -156,7 +194,8 @@ export const app = new Elysia()
         ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
         : ['http://localhost:8080', 'http://localhost:3000'],
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Background'],
+      exposeHeaders: ['X-Refresh-Token'],
     }),
   )
   .onError(({ code, error, set }) => {
@@ -216,7 +255,7 @@ export const app = new Elysia()
     const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
     const token = headerToken || cookieToken;
 
-    if (!token || !(await jwt.verify(token))) {
+    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
       set.status = 401;
       return { error: 'Unauthorized: Silakan login terlebih dahulu' };
     }
@@ -243,7 +282,7 @@ export const app = new Elysia()
     const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
     const token = headerToken || cookieToken;
 
-    if (!token || !(await jwt.verify(token))) {
+    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
       set.status = 401;
       return { error: 'Unauthorized: Silakan login terlebih dahulu' };
     }
@@ -269,7 +308,7 @@ export const app = new Elysia()
     const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
     const token = headerToken || cookieToken;
 
-    if (!token || !(await jwt.verify(token))) {
+    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
       set.status = 401;
       return { error: 'Unauthorized: Silakan login terlebih dahulu' };
     }
@@ -289,75 +328,61 @@ export const app = new Elysia()
     set.headers['Cache-Control'] = 'private, max-age=3600';
     return file;
   })
-  .ws('/bimbingan/ws/:bimbinganId', {
-    async open(ws) {
-      try {
-        const token = ws.data.query?.token;
-        if (!token) {
-          ws.send(JSON.stringify({ error: 'Unauthorized: Missing token' }));
-          ws.close();
-          return;
-        }
-        const payload = (await ws.data.jwt.verify(token)) as {
-          role: string;
-          roles?: string[];
-          email: string;
-        } | null;
-        if (!payload) {
-          ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
-          ws.close();
-          return;
-        }
-
-        const bimbinganId = Number(ws.data.params.bimbinganId);
-        if (!bimbinganId) {
-          ws.send(JSON.stringify({ error: 'Invalid bimbingan ID' }));
-          ws.close();
-          return;
-        }
-
-        const { bimbingan: bimbinganTable } = await import('./models/schema');
-        const { db } = await import('./utils/db');
-        const { eq } = await import('drizzle-orm');
-
-        const bimbingan = await db.query.bimbingan.findFirst({
-          where: eq(bimbinganTable.id, bimbinganId),
-          with: { mahasiswa: true, dosen: true },
-        });
-
-        if (!bimbingan) {
-          ws.send(JSON.stringify({ error: 'Bimbingan not found' }));
-          ws.close();
-          return;
-        }
-
-        const userRoles = Array.isArray(payload.roles) && payload.roles.length > 0 ? payload.roles : [payload.role];
-        const userEmail = payload.email as string;
-        const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
-        const isDosenPa = userRoles.includes('dosen') && bimbingan.dosen?.email === userEmail;
-        const isMahasiswa = userRoles.includes('mahasiswa') && bimbingan.mahasiswa?.email === userEmail;
-
-        if (!isAdmin && !isDosenPa && !isMahasiswa) {
-          ws.send(JSON.stringify({ error: 'Forbidden: You are not a participant of this bimbingan' }));
-          ws.close();
-          return;
-        }
-
-        ws.subscribe(`bimbingan-${bimbinganId}`);
-      } catch (err: unknown) {
-        console.error('[WS] Error in open handler:', err instanceof Error ? err.message : err);
-        try {
-          ws.send(JSON.stringify({ error: 'Internal server error' }));
-          ws.close();
-        } catch {
-          // ws may already be closed
-        }
-      }
-    },
-  })
   .use(authMiddleware)
   .onBeforeHandle(auditBeforeHandle)
+  .onBeforeHandle(async ({ jwt, set, cookie, headers, path }) => {
+    // Sesi mati (exp kedaluwarsa / kill-switch SESSION_EPOCH / token tanpa
+    // exp atau sessEpoch) yang DIPRESENTASIKAN harus balas 401, bukan 403,
+    // agar frontend bisa auto-logout & redirect /login. Endpoint publik tetap
+    // boleh diakses (mis. login ulang). Request tanpa token dibiarkan — controller
+    // yang menentukan (publik atau 403).
+    try {
+      if (isPublicNoSessionPath(path)) return;
+      const rawToken = extractToken(headers as Record<string, string | undefined>, cookie);
+      if (typeof rawToken !== 'string') return;
+      const payload = await jwt.verify(rawToken);
+      if (!(await isSessionClaimsValid(payload))) {
+        set.status = 401;
+        return { error: 'Sesi Anda tidak valid atau telah berakhir. Silakan login kembali.' };
+      }
+    } catch {
+      set.status = 401;
+      return { error: 'Sesi Anda tidak valid atau telah berakhir. Silakan login kembali.' };
+    }
+  })
   .onAfterResponse(auditAfterResponse)
+  .onAfterHandle(async ({ jwt, set, cookie, headers, path }) => {
+    try {
+      // Sliding idle session: perpanjang JWT saat sisa umur token < 50% durasi sesi.
+      // Request background/polling dikecualikan agar tidak memperpanjang sesi idle.
+      if (isNoSlideRequest(path, headers as Record<string, string | undefined>)) return;
+      const rawToken = extractToken(headers as Record<string, string | undefined>, cookie);
+      if (typeof rawToken !== 'string') return;
+      const payload = (await jwt.verify(rawToken)) as (Record<string, unknown> & { exp?: number }) | null;
+      if (!payload || !(await isSessionClaimsValid(payload))) return;
+      const exp = payload.exp;
+      if (typeof exp !== 'number') return;
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (exp <= nowSec) return;
+      const durationSec = await SystemParameterService.getSessionDurationSeconds();
+      if (exp - nowSec >= durationSec / 2) return;
+      const { iat: _iat, exp: _exp, ...claims } = payload;
+      const refreshed = await jwt.sign({ ...claims, iat: true, exp: nowSec + durationSec });
+      set.headers['X-Refresh-Token'] = refreshed;
+      if (cookie?.access_token) {
+        cookie.access_token.set({
+          value: refreshed,
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          path: '/',
+          sameSite: 'strict',
+          maxAge: durationSec,
+        });
+      }
+    } catch {
+      // Token lama tetap berlaku sampai exp-nya; refresh gagal tidak menggagalkan request.
+    }
+  })
   .use(authRoutes)
   .use(admisiRoutes)
   .use(apelRoutes)

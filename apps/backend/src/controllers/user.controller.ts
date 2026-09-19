@@ -2,6 +2,7 @@ import { count, eq, ilike, inArray, or } from 'drizzle-orm';
 import { userRoles, users } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { db } from '../utils/db';
+import { validatePassword } from '../utils/password-policy';
 import { hasRole, validateRoleCombination } from '../utils/role';
 import { AuthContext, UserRole } from '../utils/types';
 
@@ -21,7 +22,11 @@ export class UserController {
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+      if (!hasRole(user, ['admin', 'super_admin'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
       }
@@ -414,9 +419,10 @@ export class UserController {
           set.status = 400;
           return { error: 'Kata sandi saat ini salah' };
         }
-        if (password.length < 6) {
+        const passwordError = validatePassword(password);
+        if (passwordError) {
           set.status = 400;
-          return { error: 'Password minimal harus 6 karakter' };
+          return { error: passwordError };
         }
         updateData.password = await Bun.password.hash(password, {
           algorithm: 'bcrypt',
@@ -454,7 +460,11 @@ export class UserController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin.' };
     }
@@ -488,9 +498,10 @@ export class UserController {
 
       // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
       const newPassword = (body as any)?.password;
-      if (!newPassword || newPassword.length < 6) {
+      const passwordError = validatePassword(newPassword || '');
+      if (passwordError) {
         set.status = 400;
-        return { error: 'Password minimal 6 karakter' };
+        return { error: passwordError };
       }
 
       const hashed = await Bun.password.hash(newPassword, { algorithm: 'bcrypt', cost: 12 });
@@ -592,7 +603,11 @@ export class UserController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generateAccounts({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -614,7 +629,11 @@ export class UserController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async generateAccountsAsync({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'super_admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

@@ -25,7 +25,11 @@ export class SystemController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getParameters({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
@@ -46,12 +50,16 @@ export class SystemController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateParameter({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
     const key = (params as Record<string, unknown>)?.key as string;
-    const value = ((body as Record<string, unknown>)?.value as string) ?? null;
+    let value = ((body as Record<string, unknown>)?.value as string) ?? null;
     const description = ((body as Record<string, unknown>)?.description as string) ?? undefined;
     if (!key || value === null || value === undefined) {
       set.status = 400;
@@ -60,6 +68,18 @@ export class SystemController {
     if (!/^[A-Z0-9_]+$/.test(key)) {
       set.status = 400;
       return { error: 'key hanya boleh mengandung huruf besar, angka, dan underscore' };
+    }
+    if (key === 'SESSION_DURATION_MINUTES') {
+      const minutes = Number(value);
+      if (!Number.isFinite(minutes) || minutes < 15 || minutes > 10080) {
+        set.status = 400;
+        return { error: 'Durasi sesi harus berupa angka antara 15 dan 10080 menit' };
+      }
+      value = String(Math.floor(minutes));
+    }
+    if (key === 'SESSION_EPOCH') {
+      set.status = 400;
+      return { error: 'SESSION_EPOCH hanya boleh dinaikkan via endpoint paksa logout' };
     }
     try {
       const row = await SystemParameterService.set(key, String(value), user.id, description);
@@ -71,9 +91,29 @@ export class SystemController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bumpSessionEpoch({ set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
+    }
+    const epoch = await SystemParameterService.incrementSessionEpoch();
+    set.status = 200;
+    return { message: `Semua sesi pengguna dipaksa logout. Epoch sesi sekarang: ${epoch}`, sessionEpoch: epoch };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getSettings({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }

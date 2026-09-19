@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { passwordResets, users } from '../models/schema';
+import { users } from '../models/schema';
+import { AuthService } from '../services/auth.service';
 import { db } from '../utils/db';
 import { clearDatabase, ErrorResponse, LoginSuccessResponse, RegisterSuccessResponse } from './test-helper';
 
@@ -18,7 +19,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'dosen@test.com',
-            password: 'password123',
+            password: 'Password123',
             nama: 'Dosen Test',
             role: 'dosen',
           }),
@@ -37,7 +38,7 @@ describe('1. Autentikasi (/auth)', () => {
     it('harus gagal registrasi jika email sudah terdaftar', async () => {
       const payload = {
         email: 'duplicate@test.com',
-        password: 'password123',
+        password: 'Password123',
         nama: 'Duplicate Test',
         role: 'mahasiswa' as const,
       };
@@ -70,7 +71,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'invalid-email-format',
-            password: 'password123',
+            password: 'Password123',
             nama: 'Invalid Test',
             role: 'mahasiswa',
           }),
@@ -96,6 +97,44 @@ describe('1. Autentikasi (/auth)', () => {
 
       expect(response.status).toBe(422);
     });
+
+    it('harus gagal registrasi jika password tanpa huruf kapital dan angka', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'nocaps@test.com',
+            password: 'lowercaseonly',
+            nama: 'No Caps Test',
+            role: 'mahasiswa',
+          }),
+        }),
+      );
+
+      expect(response.status).toBe(422);
+      const body = (await response.json()) as ErrorResponse;
+      expect(body.error).toContain('huruf kapital dan angka');
+    });
+
+    it('harus menolak registrasi dengan role sensitif (allowlist)', async () => {
+      for (const role of ['admin', 'super_admin', 'kaprodi', 'plp', 'instruktur', 'keuangan', 'prodi']) {
+        const response = await app.handle(
+          new Request('http://localhost/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: `${role}-${Date.now()}@test.com`,
+              password: 'Password123',
+              nama: 'Role Test',
+              role,
+            }),
+          }),
+        );
+
+        expect([403, 422]).toContain(response.status);
+      }
+    });
   });
 
   describe('POST /auth/login', () => {
@@ -106,7 +145,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'user@test.com',
-            password: 'password123',
+            password: 'Password123',
             nama: 'User Test',
             role: 'mahasiswa',
           }),
@@ -121,7 +160,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'user@test.com',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );
@@ -141,7 +180,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'user@test.com',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );
@@ -160,7 +199,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'unregistered@test.com',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );
@@ -199,7 +238,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'reset@test.com',
-            password: 'oldpassword123',
+            password: 'OldPassword123',
             nama: 'Reset Test',
             role: 'mahasiswa',
           }),
@@ -208,6 +247,9 @@ describe('1. Autentikasi (/auth)', () => {
     });
 
     it('harus sukses membuat token reset password untuk email terdaftar', async () => {
+      const token = await AuthService.createPasswordResetForEmail('reset@test.com');
+      expect(token).toBeDefined();
+
       const response = await app.handle(
         new Request('http://localhost/auth/forgot-password', {
           method: 'POST',
@@ -218,7 +260,9 @@ describe('1. Autentikasi (/auth)', () => {
 
       expect(response.status).toBe(200);
       const body = (await response.json()) as Record<string, unknown>;
-      expect(body.token).toBeDefined();
+      expect(body.message).toBeDefined();
+      // Token tidak boleh bocor ke response body publik.
+      expect(body.token).toBeUndefined();
     });
 
     it('harus memberikan response 200 untuk email tidak terdaftar (security: no user enumeration)', async () => {
@@ -234,17 +278,8 @@ describe('1. Autentikasi (/auth)', () => {
     });
 
     it('harus sukses mereset password dengan token valid', async () => {
-      const forgotResponse = await app.handle(
-        new Request('http://localhost/auth/forgot-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'reset@test.com' }),
-        }),
-      );
-      expect(forgotResponse.status).toBe(200);
-
-      const forgotBody = (await forgotResponse.json()) as { token: string };
-      const token = forgotBody.token;
+      const token = await AuthService.createPasswordResetForEmail('reset@test.com');
+      expect(token).toBeDefined();
 
       const resetResponse = await app.handle(
         new Request('http://localhost/auth/reset-password', {

@@ -26,12 +26,13 @@ interface DropdownMenuProps {
   triggerAriaLabel?: string;
   items: DropdownMenuItem[];
   position?: 'left' | 'right';
+  disabled?: boolean;
 }
 
 export function DropdownMenu(props: DropdownMenuProps) {
   const [open, setOpen] = createSignal(false);
   const [resolvedPos, setResolvedPos] = createSignal<'left' | 'right'>(props.position === 'left' ? 'left' : 'right');
-  const [local] = splitProps(props, ['trigger', 'triggerClass', 'triggerAriaLabel', 'items', 'position']);
+  const [local] = splitProps(props, ['trigger', 'triggerClass', 'triggerAriaLabel', 'items', 'position', 'disabled']);
   let triggerRef: HTMLButtonElement | undefined;
 
   const resolvePosition = () => {
@@ -80,13 +81,15 @@ export function DropdownMenu(props: DropdownMenuProps) {
         type="button"
         aria-label={local.triggerAriaLabel || 'Aksi'}
         aria-expanded={open()}
+        disabled={local.disabled}
         onClick={(e) => {
+          if (local.disabled) return;
           e.stopPropagation();
           const next = !open();
           if (next) resolvePosition();
           setOpen(next);
         }}
-        class={`inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-secondary-900 active:scale-[0.98] ${
+        class={`inline-flex items-center justify-center gap-2 font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-secondary-900 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
           local.triggerClass ||
           'p-2 rounded-lg bg-secondary-100 hover:bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-300'
         }`}

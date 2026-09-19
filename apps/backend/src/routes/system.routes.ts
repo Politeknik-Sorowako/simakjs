@@ -103,4 +103,12 @@ export const systemRoutes = new Elysia({ prefix: '/system' })
       403: t.Object({ error: t.String() }),
       500: t.Object({ error: t.String() }),
     },
+  })
+  .post('/session-epoch/bump', SystemController.bumpSessionEpoch, {
+    detail: { tags: ['Sistem'], summary: 'Paksa logout semua sesi (kill-switch)' },
+    response: {
+      200: t.Object({ message: t.String(), sessionEpoch: t.Number() }),
+      403: t.Object({ error: t.String() }),
+      500: t.Object({ error: t.String() }),
+    },
   });

@@ -21,7 +21,7 @@ describe('Autentikasi Lanjutan: SSO, Aktivasi Email & 2FA', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'mahasiswa@politekniksorowako.ac.id',
-            password: 'password123',
+            password: 'Password123',
             nama: 'Mahasiswa Test',
             role: 'mahasiswa',
           }),
@@ -75,7 +75,7 @@ describe('Autentikasi Lanjutan: SSO, Aktivasi Email & 2FA', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'resend@politekniksorowako.ac.id',
-            password: 'password123',
+            password: 'Password123',
             nama: 'Resend Test',
             role: 'mahasiswa',
           }),
@@ -154,7 +154,7 @@ describe('Autentikasi Lanjutan: SSO, Aktivasi Email & 2FA', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'active2fa@politekniksorowako.ac.id',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );
@@ -223,7 +223,7 @@ describe('Autentikasi Lanjutan: SSO, Aktivasi Email & 2FA', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'recovery2fa@politekniksorowako.ac.id',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );

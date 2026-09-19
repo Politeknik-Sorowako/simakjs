@@ -1,5 +1,22 @@
-import { createContext, createEffect, createSignal, JSX, useContext } from 'solid-js';
+import { createContext, createEffect, createSignal, JSX, onCleanup, onMount, useContext } from 'solid-js';
 import { API_URL } from '../utils/api';
+import { useToast } from './ToastContext';
+
+interface MeResponse {
+  user: User | null;
+  exp: number | null;
+}
+
+async function fetchMe(): Promise<MeResponse | null> {
+  try {
+    const res = await fetch(`${API_URL}/auth/me`, { method: 'GET', credentials: 'include' });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { user?: User | null; exp?: number | null };
+    return { user: data.user ?? null, exp: typeof data.exp === 'number' ? data.exp : null };
+  } catch {
+    return null;
+  }
+}
 
 export interface User {
   id: number;
@@ -28,9 +45,8 @@ export type UserRole = User['role'];
 
 interface AuthContextType {
   user: () => User | null;
-  token: () => string | null;
   isAuthenticated: () => boolean;
-  login: (token: string, user: User) => void;
+  login: (user: User) => void;
   logout: () => void;
   updateUser: (updatedFields: Partial<User>) => void;
   theme: () => string;
@@ -44,66 +60,130 @@ export const SINGLE_ROLE_ONLY: UserRole[] = ['super_admin', 'mahasiswa', 'guest'
 export const MULTI_ROLE_ALLOWED: UserRole[] = ['admin', 'kaprodi', 'prodi', 'dosen', 'keuangan', 'plp', 'instruktur'];
 export const ALL_ROLES: UserRole[] = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
 
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/activate', '/rombel/enroll'];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export function AuthProvider(props: { children: JSX.Element }) {
   const [user, setUser] = createSignal<User | null>(null);
-  const [token, setToken] = createSignal<string | null>(null);
+  const [sessionExp, setSessionExp] = createSignal<number | null>(null);
+  const [bootstrapped, setBootstrapped] = createSignal(false);
   const [localTheme, setLocalTheme] = createSignal(localStorage.getItem('theme') || 'light');
+  const toast = useToast();
 
-  // Initialize from localStorage
-  const localToken = localStorage.getItem('token');
-  const localUser = localStorage.getItem('user');
-  if (localToken && localUser) {
-    setToken(localToken);
-    try {
-      const parsedUser = JSON.parse(localUser);
-      setUser(parsedUser);
-      if (parsedUser.theme) {
-        setLocalTheme(parsedUser.theme);
-      }
-    } catch (_) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    }
-  }
-
-  // Theme is reactively handled by ThemeProvider
-
-  const login = (newToken: string, newUser: User) => {
-    setToken(newToken);
+  const login = async (newUser: User) => {
     setUser(newUser);
-    localStorage.setItem('token', newToken);
-    localStorage.setItem('user', JSON.stringify(newUser));
     if (newUser.theme) {
       setLocalTheme(newUser.theme);
       localStorage.setItem('theme', newUser.theme);
+    }
+    // Ambil exp sesi via /auth/me agar idle timer aktif segera
+    // (terutama untuk SSO & 2FA di mana bootstrap belum punya cookie).
+    try {
+      const me = await fetchMe();
+      if (me?.exp) setSessionExp(me.exp);
+    } catch {
+      // Biarkan tanpa exp — timer idle tidak aktif, sesi tetap aman server-side.
     }
   };
 
   const updateUser = (updatedFields: Partial<User>) => {
     const current = user();
     if (current) {
-      const updated = { ...current, ...updatedFields };
-      setUser(updated);
-      localStorage.setItem('user', JSON.stringify(updated));
+      setUser({ ...current, ...updatedFields });
     }
   };
 
   const logout = () => {
-    const currentToken = token();
-    setToken(null);
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    if (currentToken) {
-      void fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${currentToken}` },
-        credentials: 'include',
-      }).catch(() => {
-        // Logout audit recording is best-effort; ignore failures.
-      });
+    setSessionExp(null);
+    void fetch(`${API_URL}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => {
+      // Logout audit recording is best-effort; ignore failures.
+    });
+  };
+
+  // --- Sesi idle timeout (sliding): logout otomatis saat token kedaluwarsa. ---
+  const IDLE_WARN_MS = 5 * 60 * 1000;
+  let idleTimer: ReturnType<typeof setTimeout> | undefined;
+  let warnTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const clearSessionTimers = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    if (warnTimer) clearTimeout(warnTimer);
+    idleTimer = undefined;
+    warnTimer = undefined;
+  };
+
+  const scheduleSessionTimeout = () => {
+    clearSessionTimers();
+    const exp = sessionExp();
+    if (exp === null) return;
+    const remainingMs = exp * 1000 - Date.now();
+    if (remainingMs <= 0) {
+      logout();
+      window.location.href = '/login';
+      return;
+    }
+    const warnMs = remainingMs - IDLE_WARN_MS;
+    if (warnMs > 0) {
+      warnTimer = setTimeout(() => {
+        toast.showToast('Sesi Anda akan berakhir dalam 5 menit. Lanjutkan aktivitas untuk tetap masuk.', 'info');
+      }, warnMs);
+    }
+    idleTimer = setTimeout(() => {
+      logout();
+      window.location.href = '/login';
+    }, remainingMs);
+  };
+
+  const onTokenRefresh = (e: Event) => {
+    const detail = (e as CustomEvent<{ exp?: number }>).detail;
+    if (typeof detail?.exp === 'number' && Number.isFinite(detail.exp)) {
+      setSessionExp(detail.exp);
     }
   };
+
+  const resetIdle = () => scheduleSessionTimeout();
+
+  onMount(async () => {
+    // Di halaman publik, jangan probe /auth/me (selalu 401 tanpa sesi) —
+    // hindari noise console. Login/enroll akan set sesi lalu bootstrap di
+    // rute berikutnya.
+    if (typeof window !== 'undefined' && isPublicPath(window.location.pathname)) {
+      setBootstrapped(true);
+    } else {
+      const me = await fetchMe();
+      if (me && me.user) {
+        setUser(me.user);
+        setSessionExp(me.exp);
+        if (me.user.theme) setLocalTheme(me.user.theme);
+      }
+      setBootstrapped(true);
+    }
+
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    for (const ev of events) window.addEventListener(ev, resetIdle);
+    window.addEventListener('simak:token-refresh', onTokenRefresh);
+    if (sessionExp() !== null) scheduleSessionTimeout();
+  });
+
+  onCleanup(() => {
+    clearSessionTimers();
+    const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
+    for (const ev of events) window.removeEventListener(ev, resetIdle);
+    window.removeEventListener('simak:token-refresh', onTokenRefresh);
+  });
+
+  createEffect(() => {
+    void sessionExp();
+    void bootstrapped();
+    scheduleSessionTimeout();
+  });
 
   const setTheme = (newTheme: string) => {
     setLocalTheme(newTheme);
@@ -111,7 +191,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
   };
 
   const theme = () => user()?.theme || localTheme();
-  const isAuthenticated = () => !!token();
+  const isAuthenticated = () => bootstrapped() && !!user();
   const hasRole = (allowedRoles: UserRole[]) => {
     const current = user();
     if (!current) return false;
@@ -120,7 +200,7 @@ export function AuthProvider(props: { children: JSX.Element }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated, login, logout, updateUser, theme, setTheme, hasRole }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, updateUser, theme, setTheme, hasRole }}>
       {props.children}
     </AuthContext.Provider>
   );

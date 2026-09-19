@@ -11,7 +11,11 @@ export class AuditController {
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+      if (!hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -56,7 +60,11 @@ export class AuditController {
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+      if (!hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -79,7 +87,11 @@ export class AuditController {
   static async exportCsv({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+      if (!hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }
@@ -126,7 +138,11 @@ export class AuditController {
   static async purge({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!user || !hasRole(user, [...AUDIT_ROLES])) {
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+      if (!hasRole(user, [...AUDIT_ROLES])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin.' };
       }

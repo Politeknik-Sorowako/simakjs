@@ -53,7 +53,11 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -107,7 +111,11 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -148,7 +156,11 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -176,7 +188,11 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async duplicate({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -203,7 +219,11 @@ export class BapController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateBapBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
