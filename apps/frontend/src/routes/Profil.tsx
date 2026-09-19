@@ -95,7 +95,7 @@ export default function Profil() {
       );
       toast.showToast(res.message, 'success');
 
-      auth.login(localStorage.getItem('token') || '', {
+      auth.login({
         ...user()!,
         nama: res.user.nama as string,
         avatar: res.user.avatar as string | undefined,

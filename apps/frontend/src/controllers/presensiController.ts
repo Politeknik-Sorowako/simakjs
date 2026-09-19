@@ -609,10 +609,8 @@ export const presensiController = {
   },
 
   async getLampiranBlobUrl(filename: string): Promise<string> {
-    const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/presensi/berkas/${encodeURIComponent(filename)}`, {
       credentials: 'include' as const,
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     });
     if (!res.ok) {
       throw new Error(res.status === 403 ? 'Akses ditolak untuk berkas ini.' : 'Gagal memuat berkas surat.');

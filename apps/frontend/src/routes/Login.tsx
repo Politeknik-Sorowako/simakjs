@@ -206,7 +206,7 @@ export default function Login() {
       const response = await authController.twoFactorVerifyLogin(twoFactorToken(), totpCode().trim(), isRecoveryMode());
       sessionStorage.removeItem('2fa_token');
       if (response.token && response.user) {
-        auth.login(response.token, response.user);
+        auth.login(response.user);
         toast.showToast('Login 2FA berhasil!', 'success');
         const redirectUrl = getSafeRedirectUrl(searchParams.redirect);
         if (redirectUrl) {
@@ -265,7 +265,7 @@ export default function Login() {
           setIs2FAStep(true);
           toast.showToast('Masukkan kode 2FA dari aplikasi authenticator Anda.', 'info');
         } else if (response.token && response.user) {
-          auth.login(response.token, response.user);
+          auth.login(response.user);
           toast.showToast('Login berhasil! Selamat datang.', 'success');
           const redirectUrl = getSafeRedirectUrl(searchParams.redirect);
           if (redirectUrl) {

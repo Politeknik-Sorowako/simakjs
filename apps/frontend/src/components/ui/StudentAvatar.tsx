@@ -28,10 +28,8 @@ export function StudentAvatar(props: StudentAvatarProps) {
     if (!url) return;
     setDownloading(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const res = await fetch(url, {
         credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error('Gagal mengunduh foto');
       const blob = await res.blob();
