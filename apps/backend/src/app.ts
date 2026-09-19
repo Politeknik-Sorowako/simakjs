@@ -75,6 +75,33 @@ function isNoSlideRequest(path: string, headers: Record<string, string | undefin
   return NO_SLIDE_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
 }
 
+// Endpoint publik yang boleh diakses tanpa sesi valid (login/forgot/reset,
+// settings publik, health, enroll publik). Token mati yang dikirim ke sini
+// tidak boleh ditolak 401 agar alur publik (mis. login ulang) tetap jalan.
+const PUBLIC_NO_SESSION_PATHS = [
+  '/auth',
+  '/settings/public',
+  '/system/version',
+  '/system/changelog',
+  '/system/health',
+  '/health',
+  '/rombel/enroll',
+  '/rombel-praktikum/public',
+];
+
+function isPublicNoSessionPath(path: string): boolean {
+  return PUBLIC_NO_SESSION_PATHS.some((p) => path === p || path.startsWith(`${p}/`));
+}
+
+function extractToken(
+  headers: Record<string, string | undefined>,
+  cookie: { access_token?: { value?: string } } | undefined,
+): string | null {
+  const authHeader = headers['authorization'];
+  const cookieToken = cookie?.access_token?.value;
+  return authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : (cookieToken ?? null);
+}
+
 // Direktori penyimpanan berkas surat izin/sakit (dibuat aman di awal startup).
 mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursive: true });
 // Direktori lampiran bimbingan & dokumen SK prodi.
@@ -369,15 +396,33 @@ export const app = new Elysia()
   })
   .use(authMiddleware)
   .onBeforeHandle(auditBeforeHandle)
+  .onBeforeHandle(async ({ jwt, set, cookie, headers, path }) => {
+    // Sesi mati (exp kedaluwarsa / kill-switch SESSION_EPOCH / token tanpa
+    // exp atau sessEpoch) yang DIPRESENTASIKAN harus balas 401, bukan 403,
+    // agar frontend bisa auto-logout & redirect /login. Endpoint publik tetap
+    // boleh diakses (mis. login ulang). Request tanpa token dibiarkan — controller
+    // yang menentukan (publik atau 403).
+    try {
+      if (isPublicNoSessionPath(path)) return;
+      const rawToken = extractToken(headers as Record<string, string | undefined>, cookie);
+      if (typeof rawToken !== 'string') return;
+      const payload = await jwt.verify(rawToken);
+      if (!(await isSessionClaimsValid(payload))) {
+        set.status = 401;
+        return { error: 'Sesi Anda tidak valid atau telah berakhir. Silakan login kembali.' };
+      }
+    } catch {
+      set.status = 401;
+      return { error: 'Sesi Anda tidak valid atau telah berakhir. Silakan login kembali.' };
+    }
+  })
   .onAfterResponse(auditAfterResponse)
   .onAfterHandle(async ({ jwt, set, cookie, headers, path }) => {
     try {
       // Sliding idle session: perpanjang JWT saat sisa umur token < 50% durasi sesi.
       // Request background/polling dikecualikan agar tidak memperpanjang sesi idle.
       if (isNoSlideRequest(path, headers as Record<string, string | undefined>)) return;
-      const authHeader = headers['authorization'];
-      const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
-      const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookieToken;
+      const rawToken = extractToken(headers as Record<string, string | undefined>, cookie);
       if (typeof rawToken !== 'string') return;
       const payload = (await jwt.verify(rawToken)) as (Record<string, unknown> & { exp?: number }) | null;
       if (!payload || !(await isSessionClaimsValid(payload))) return;

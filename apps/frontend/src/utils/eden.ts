@@ -171,6 +171,12 @@ export const eden = edenTreaty<App>(API_URL, {
     }
     return fetch(input, { ...init, headers, credentials: 'include' }).then((response) => {
       applyRefreshedToken(response);
+      // Sesi mati (exp/kill-switch) → backend balas 401; bersihkan state & arahkan ke login.
+      if (response.status === 401 && token) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
       return response;
     });
   }) as typeof fetch,
