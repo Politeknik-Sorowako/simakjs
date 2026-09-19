@@ -205,8 +205,8 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
         headers: { Authorization: `Bearer ${expired}` },
       }),
     );
-    // getCurrentUser() === null → controller mengembalikan 403 (bukan akses).
-    expect(resp.status).toBe(403);
+    // Token mati yang dipresentasikan → 401 (agar frontend auto-logout & redirect /login).
+    expect(resp.status).toBe(401);
     expect(resp.headers.get('x-refresh-token')).toBeNull();
   });
 
@@ -258,7 +258,7 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
         headers: { Authorization: `Bearer ${noEpoch}` },
       }),
     );
-    expect(resp.status).toBe(403);
+    expect(resp.status).toBe(401);
     expect(resp.headers.get('x-refresh-token')).toBeNull();
   });
 
@@ -274,7 +274,7 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
         headers: { Authorization: `Bearer ${noExp}` },
       }),
     );
-    expect(resp.status).toBe(403);
+    expect(resp.status).toBe(401);
     expect(resp.headers.get('x-refresh-token')).toBeNull();
   });
 
@@ -291,7 +291,7 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
         headers: { Authorization: `Bearer ${stale}` },
       }),
     );
-    expect(resp.status).toBe(403);
+    expect(resp.status).toBe(401);
   });
 
   it('bump SESSION_EPOCH menaikkan epoch; token lama ditolak, login baru diterima', async () => {
@@ -322,7 +322,7 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
         headers: { Authorization: `Bearer ${stale}` },
       }),
     );
-    expect(rejected.status).toBe(403);
+    expect(rejected.status).toBe(401);
 
     // Login baru memakai epoch terbaru → valid.
     await createActiveUser('session-newepoch@test.com');
