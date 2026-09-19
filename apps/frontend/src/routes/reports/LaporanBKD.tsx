@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { type BkdRekap, bkdController } from '../../controllers/bkdController';
 import { dosenController } from '../../controllers/dosenController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
+import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helpers';
 import { ExportColumn } from '../../utils/export';
 
 const PRESENSI_STATUS: {
@@ -55,6 +56,12 @@ export default function LaporanBKD() {
   const rows = (): BkdRekap['mengajar'] => rekap()?.data.mengajar || [];
   const bimbingan = () => rekap()?.data.bimbingan || [];
   const ringkasan = () => rekap()?.data.ringkasan;
+
+  // Tabel A: rekap bimbingan per tanggal.
+  const rekapBimbingan = createMemo(() => hitungRekapPerTanggal(bimbingan()));
+
+  // Tabel B: rincian per sesi bimbingan.
+  const rincianBimbingan = createMemo(() => hitungRincianSesi(bimbingan()));
 
   const columns: ExportColumn[] = [
     {
@@ -257,21 +264,62 @@ export default function LaporanBKD() {
 
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Riwayat Bimbingan Akademik</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rekap Bimbingan per Tanggal</h3>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-table border-collapse">
                 <thead>
                   <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
-                    <th class="py-3 px-5">Mahasiswa</th>
-                    <th class="py-3 px-5 text-center">Sesi</th>
-                    <th class="py-3 px-5 text-center">Status</th>
-                    <th class="py-3 px-5 text-center">BKD</th>
+                    <th class="py-3 px-5">Tanggal Bimbingan</th>
+                    <th class="py-3 px-5 text-center">Jumlah Sesi</th>
+                    <th class="py-3 px-5">Daftar Mahasiswa</th>
                   </tr>
                 </thead>
                 <tbody>
                   <For
-                    each={bimbingan()}
+                    each={rekapBimbingan()}
+                    fallback={
+                      <tr>
+                        <td colspan="3" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
+                          Tidak ada data bimbingan
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(r) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{r.tanggal}</td>
+                        <td class="py-3 px-5 text-center">
+                          <span class="px-2 py-0.5 rounded-full text-caption font-bold bg-blue-50 text-blue-700">
+                            {r.jumlahSesi}
+                          </span>
+                        </td>
+                        <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{r.daftarMahasiswa}</td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Riwayat Bimbingan (Detail)</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-table border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-5">Tanggal Bimbingan</th>
+                    <th class="py-3 px-5">NIM</th>
+                    <th class="py-3 px-5">Nama Mahasiswa</th>
+                    <th class="py-3 px-5">Topik Bimbingan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={rincianBimbingan()}
                     fallback={
                       <tr>
                         <td colspan="4" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
@@ -282,33 +330,10 @@ export default function LaporanBKD() {
                   >
                     {(r) => (
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
-                        <td class="py-3 px-5">
-                          <div class="font-semibold text-secondary-800 dark:text-white">{r.mahasiswa?.nama || '-'}</div>
-                          <div class="text-caption text-secondary-400 dark:text-secondary-300">
-                            {r.mahasiswa?.nim || ''}
-                          </div>
-                        </td>
-                        <td class="py-3 px-5 text-center">{r.sesi?.length || 0}</td>
-                        <td class="py-3 px-5 text-center">
-                          <span
-                            class={
-                              'px-2 py-0.5 rounded-full text-caption font-bold ' +
-                              (r.isApproved ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700')
-                            }
-                          >
-                            {r.isApproved ? 'Disetujui' : 'Pending'}
-                          </span>
-                        </td>
-                        <td class="py-3 px-5 text-center">
-                          <span
-                            class={
-                              'px-2 py-0.5 rounded-full text-caption font-bold ' +
-                              (r.statusBkd ? 'bg-blue-50 text-blue-700' : 'bg-secondary-50 text-secondary-500')
-                            }
-                          >
-                            {r.statusBkd ? 'Ya' : 'Tidak'}
-                          </span>
-                        </td>
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{r.tanggal}</td>
+                        <td class="py-3 px-5">{r.nim}</td>
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{r.nama}</td>
+                        <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{r.topik}</td>
                       </tr>
                     )}
                   </For>

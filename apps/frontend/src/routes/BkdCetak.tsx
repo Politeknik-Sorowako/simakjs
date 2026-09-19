@@ -1,6 +1,7 @@
 import { useSearchParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { type BkdRekap, bkdController } from '../controllers/bkdController';
+import { hitungRekapPerTanggal, hitungRincianSesi } from '../utils/bkd-helpers';
 
 const PRESENSI_LABEL: {
   key: keyof { hadir: number; sakit: number; izin: number; alpa: number; telat: number };
@@ -41,6 +42,12 @@ export default function BkdCetak() {
       setTimeout(() => window.print(), 300);
     }
   });
+
+  const bimbingan = () => rekap()?.bimbingan || [];
+
+  const rekapBimbingan = () => hitungRekapPerTanggal(bimbingan());
+
+  const rincianBimbingan = () => hitungRincianSesi(bimbingan());
 
   return (
     <div class="min-h-screen bg-white p-8 text-secondary-800">
@@ -191,30 +198,68 @@ export default function BkdCetak() {
 
               <div class="mt-6">
                 <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
-                  C. Riwayat Bimbingan Akademik
+                  C1. Rekap Bimbingan per Tanggal
                 </h4>
                 <table class="w-full border-collapse text-left text-xs">
                   <thead>
                     <tr class="border-b border-secondary-200 bg-secondary-50 font-bold uppercase text-secondary-500">
-                      <th class="border-r border-secondary-200 p-2">NIM</th>
-                      <th class="border-r border-secondary-200 p-2">Mahasiswa</th>
-                      <th class="border-r border-secondary-200 p-2 text-center">Sesi</th>
-                      <th class="p-2 text-center">Status</th>
+                      <th class="border-r border-secondary-200 p-2">Tanggal Bimbingan</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">Jumlah Sesi</th>
+                      <th class="p-2">Daftar Mahasiswa</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <For each={data().bimbingan}>
+                    <For each={rekapBimbingan()}>
                       {(r) => (
                         <tr class="border-b border-secondary-200">
-                          <td class="border-r border-secondary-200 p-2">{r.mahasiswa?.nim || '-'}</td>
-                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">
-                            {r.mahasiswa?.nama || '-'}
-                          </td>
-                          <td class="border-r border-secondary-200 p-2 text-center">{r.sesi?.length || 0}</td>
-                          <td class="p-2 text-center">{r.isApproved ? 'Disetujui' : 'Pending'}</td>
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{r.tanggal}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{r.jumlahSesi}</td>
+                          <td class="p-2">{r.daftarMahasiswa}</td>
                         </tr>
                       )}
                     </For>
+                    <Show when={rekapBimbingan().length === 0}>
+                      <tr>
+                        <td colspan="3" class="p-4 text-center text-secondary-400">
+                          Tidak ada data bimbingan.
+                        </td>
+                      </tr>
+                    </Show>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-6">
+                <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
+                  C2. Rincian Sesi Bimbingan
+                </h4>
+                <table class="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-secondary-200 bg-secondary-50 font-bold uppercase text-secondary-500">
+                      <th class="border-r border-secondary-200 p-2">Tanggal Bimbingan</th>
+                      <th class="border-r border-secondary-200 p-2">NIM</th>
+                      <th class="border-r border-secondary-200 p-2">Nama Mahasiswa</th>
+                      <th class="p-2">Topik Bimbingan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={rincianBimbingan()}>
+                      {(r) => (
+                        <tr class="border-b border-secondary-200">
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{r.tanggal}</td>
+                          <td class="border-r border-secondary-200 p-2">{r.nim}</td>
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{r.nama}</td>
+                          <td class="p-2">{r.topik}</td>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={rincianBimbingan().length === 0}>
+                      <tr>
+                        <td colspan="4" class="p-4 text-center text-secondary-400">
+                          Tidak ada data bimbingan.
+                        </td>
+                      </tr>
+                    </Show>
                   </tbody>
                 </table>
               </div>
