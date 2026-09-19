@@ -641,6 +641,15 @@ export default function Khs() {
                             >
                               Cetak KHS
                             </button>
+                            <Show when={selectedMhsId() && selectedPeriode()}>
+                              <a
+                                href={`/khs/cetak/${selectedMhsId()}/${selectedPeriode()}`}
+                                target="_blank"
+                                class="px-3 py-1.5 border border-brand-600 text-brand-600 font-bold rounded-xl text-caption hover:bg-brand-50 active:scale-95 transition-all dark:border-brand-400 dark:text-brand-400"
+                              >
+                                Cetak Mandiri
+                              </a>
+                            </Show>
                           </div>
                         </div>
 

@@ -837,7 +837,11 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
 
             <Show when={isEvaluasiOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
-                <Show when={isAdmin() || isDosen() || isMahasiswa()}>
+                <Show
+                  when={
+                    isAdmin() || isDosen() || isMahasiswa() || isProdi() || isSuperAdmin() || auth.hasRole(['kaprodi'])
+                  }
+                >
                   <A
                     href="/khs"
                     onClick={() => props.onClose()}
