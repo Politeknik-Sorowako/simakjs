@@ -63,6 +63,7 @@ export interface KhsResponse {
   blocked: boolean;
   reason?: string;
   detail?: string;
+  warningTunggakan?: { reason: string | null; detail: string | null };
   krsList?: KhsKrsItem[];
   summary?: {
     totalSks: number;
@@ -80,6 +81,12 @@ export interface TranskripResponse {
   };
   ipk?: number;
   totalSksLulus?: number;
+}
+
+export interface KhsPeriodeItem {
+  id: string;
+  nama: string;
+  aktif: boolean;
 }
 
 export interface PengajuanYudisium {
@@ -211,8 +218,17 @@ export const khsController = {
     return fetchApi<KhsResponse>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}`);
   },
 
+  async getByNim(nim: string, periodeId: string): Promise<KhsResponse> {
+    const params = new URLSearchParams({ nim, periodeId });
+    return fetchApi<KhsResponse>(`/khs/by-nim?${params.toString()}`);
+  },
+
   async getTranskrip(mhsId: number): Promise<TranskripResponse> {
     return fetchApi<TranskripResponse>(`/khs/mahasiswa/${mhsId}/transkrip`);
+  },
+
+  async getPeriodeList(mhsId: number): Promise<{ data: KhsPeriodeItem[] }> {
+    return fetchApi<{ data: KhsPeriodeItem[] }>(`/khs/mahasiswa/${mhsId}/periode-list`);
   },
 
   async getRincianKomponen(kelasKuliahId: number, mahasiswaId?: number): Promise<RincianKomponenMahasiswa> {

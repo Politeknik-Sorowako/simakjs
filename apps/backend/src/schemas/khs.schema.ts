@@ -16,6 +16,12 @@ export const getKhsSchema = {
       blocked: t.Optional(t.Boolean({ default: false })),
       reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
       detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+      warningTunggakan: t.Optional(
+        t.Object({
+          reason: t.Union([t.String(), t.Null()]),
+          detail: t.Union([t.String(), t.Null()]),
+        }),
+      ),
       krsList: t.Optional(
         t.Array(
           t.Object({
@@ -48,6 +54,85 @@ export const getKhsSchema = {
           ipk: t.Optional(t.Number({ default: 3.65 })),
           totalSksKumulatif: t.Optional(t.Integer({ default: 84 })),
         }),
+      ),
+    }),
+  },
+};
+
+export const getByNimSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Ambil KHS Berdasarkan NIM (resolver)',
+    description:
+      'Resolver NIM untuk mengambil KHS mahasiswa. Mahasiswa hanya dapat mengakses NIM sendiri; admin/staff bebas dengan flag warningTunggakan untuk watermark cetak.',
+  },
+  query: t.Object({
+    nim: t.String({ minLength: 1, maxLength: 30 }),
+    periodeId: t.String({ minLength: 1, maxLength: 10 }),
+  }),
+  response: {
+    200: t.Object({
+      blocked: t.Optional(t.Boolean({ default: false })),
+      reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
+      detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+      warningTunggakan: t.Optional(
+        t.Object({
+          reason: t.Union([t.String(), t.Null()]),
+          detail: t.Union([t.String(), t.Null()]),
+        }),
+      ),
+      krsList: t.Optional(
+        t.Array(
+          t.Object({
+            id: t.Optional(t.Integer()),
+            nilaiAngka: t.Optional(t.Union([t.String(), t.Null()])),
+            nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()])),
+            nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()])),
+            isApproved: t.Optional(t.Boolean()),
+            kelasKuliah: t.Optional(t.Object({ id: t.Optional(t.Integer()), namaKelas: t.Optional(t.String()) })),
+            mataKuliah: t.Optional(
+              t.Object({
+                id: t.Optional(t.Integer()),
+                kode: t.Optional(t.String()),
+                nama: t.Optional(t.String()),
+                sksTotal: t.Optional(t.Integer()),
+              }),
+            ),
+          }),
+        ),
+      ),
+      summary: t.Optional(
+        t.Object({
+          totalSks: t.Optional(t.Integer()),
+          ipSemester: t.Optional(t.Number()),
+          ipk: t.Optional(t.Number()),
+          totalSksKumulatif: t.Optional(t.Integer()),
+        }),
+      ),
+    }),
+  },
+};
+
+export const getPeriodeListSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Daftar Periode yang Diikuti Mahasiswa',
+    description:
+      'Mengambil daftar periode akademik distinct yang pernah diikuti mahasiswa (dari relasi KRS ke kelas). Mahasiswa hanya dapat mengakses periode miliknya sendiri; admin/staff bebas.',
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({
+      data: t.Optional(
+        t.Array(
+          t.Object({
+            id: t.Optional(t.String()),
+            nama: t.Optional(t.String()),
+            aktif: t.Optional(t.Boolean()),
+          }),
+        ),
       ),
     }),
   },

@@ -1,4 +1,4 @@
-import { and, asc, count, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import {
   bap,
   bimbingan,
@@ -12,6 +12,7 @@ import {
   mataKuliah,
   nilaiKomponenMahasiswa,
   nilaiSubKomponenMahasiswa,
+  periodeAkademik,
   presensi,
   programStudi,
   skalaPredikatKelulusan,
@@ -903,5 +904,25 @@ export class KhsService {
       peserta: mhsList,
       bapList: bapRows,
     };
+  }
+
+  static async getPeriodeList(mahasiswaId: number) {
+    const rows = await db
+      .select({
+        id: periodeAkademik.id,
+        nama: periodeAkademik.nama,
+        aktif: periodeAkademik.aktif,
+      })
+      .from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .innerJoin(periodeAkademik, eq(kelasKuliah.periodeId, periodeAkademik.id))
+      .where(eq(krs.mahasiswaId, mahasiswaId))
+      .orderBy(desc(periodeAkademik.id));
+
+    const unique = new Map<string, { id: string; nama: string; aktif: boolean }>();
+    for (const r of rows) {
+      if (!unique.has(r.id)) unique.set(r.id, r);
+    }
+    return { data: Array.from(unique.values()) };
   }
 }
