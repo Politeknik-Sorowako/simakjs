@@ -67,11 +67,19 @@ export function AuthProvider(props: { children: JSX.Element }) {
   const [localTheme, setLocalTheme] = createSignal(localStorage.getItem('theme') || 'light');
   const toast = useToast();
 
-  const login = (newUser: User) => {
+  const login = async (newUser: User) => {
     setUser(newUser);
     if (newUser.theme) {
       setLocalTheme(newUser.theme);
       localStorage.setItem('theme', newUser.theme);
+    }
+    // Ambil exp sesi via /auth/me agar idle timer aktif segera
+    // (terutama untuk SSO & 2FA di mana bootstrap belum punya cookie).
+    try {
+      const me = await fetchMe();
+      if (me?.exp) setSessionExp(me.exp);
+    } catch {
+      // Biarkan tanpa exp — timer idle tidak aktif, sesi tetap aman server-side.
     }
   };
 
