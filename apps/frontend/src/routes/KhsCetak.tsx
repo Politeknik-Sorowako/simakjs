@@ -3,6 +3,7 @@ import { createEffect, createResource, createSignal, For, Show } from 'solid-js'
 import { useAuth } from '../contexts/AuthContext';
 import { type KhsResponse, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
 
 interface PrintData {
   nim: string;
@@ -51,6 +52,13 @@ export default function KhsCetak() {
   const showWatermark = () =>
     printData()?.khs.warningTunggakan || (printData()?.khs.blocked && !auth.hasRole(['mahasiswa']));
 
+  const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
+  const periodeName = () => {
+    const pid = printData()?.periodeId;
+    if (!pid) return '-';
+    return periodes()?.data?.find((p) => p.id === pid)?.nama || pid;
+  };
+
   return (
     <div class="min-h-screen bg-white p-8 text-secondary-800">
       <div class="mb-4 flex justify-end print:hidden">
@@ -95,7 +103,7 @@ export default function KhsCetak() {
                 <h3 class="text-base font-bold uppercase tracking-widest text-secondary-600">
                   Kartu Hasil Studi (KHS) — Semester
                 </h3>
-                <p class="text-xs text-secondary-500">Periode Akademik: {data().periodeId || '-'}</p>
+                <p class="text-xs text-secondary-500">Periode Akademik: {periodeName()}</p>
               </div>
 
               <div class="mt-4 grid grid-cols-2 gap-4 text-xs text-secondary-700">
