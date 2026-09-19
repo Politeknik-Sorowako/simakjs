@@ -25,7 +25,11 @@ export class SystemController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getParameters({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
@@ -46,7 +50,11 @@ export class SystemController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateParameter({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
@@ -85,7 +93,11 @@ export class SystemController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bumpSessionEpoch({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
@@ -97,7 +109,11 @@ export class SystemController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getSettings({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }

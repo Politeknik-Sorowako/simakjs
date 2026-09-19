@@ -240,9 +240,9 @@ describe('4. Dosen (/dosen)', () => {
       expect(response.status).toBe(403);
     });
 
-    it('harus gagal mengambil list dosen jika tanpa token (Guest)', async () => {
+    it('harus gagal mengambil list dosen jika tanpa token', async () => {
       const response = await app.handle(new Request('http://localhost/dosen', { method: 'GET' }));
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(401);
     });
   });
 

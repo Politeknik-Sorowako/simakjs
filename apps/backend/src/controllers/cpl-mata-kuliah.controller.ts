@@ -15,7 +15,11 @@ export class CplMataKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isAdminOrProdi(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -27,7 +31,11 @@ export class CplMataKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async update({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isAdminOrProdi(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -42,7 +50,11 @@ export class CplMataKuliahController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isAdminOrProdi(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isAdminOrProdi(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

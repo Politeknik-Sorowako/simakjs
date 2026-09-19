@@ -62,7 +62,7 @@ import { verifikasiUnknownRoutes } from './routes/verifikasi-unknown.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 import { SystemParameterService } from './services/system-parameter.service';
-import { isSessionClaimsValid, type SessionClaims } from './utils/session-token';
+import { isSessionClaimsValid } from './utils/session-token';
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -327,72 +327,6 @@ export const app = new Elysia()
     set.headers['Content-Type'] = file.type || 'application/octet-stream';
     set.headers['Cache-Control'] = 'private, max-age=3600';
     return file;
-  })
-  .ws('/bimbingan/ws/:bimbinganId', {
-    async open(ws) {
-      try {
-        const token = ws.data.query?.token;
-        if (!token) {
-          ws.send(JSON.stringify({ error: 'Unauthorized: Missing token' }));
-          ws.close();
-          return;
-        }
-        const payload = (await ws.data.jwt.verify(token)) as {
-          role: string;
-          roles?: string[];
-          email: string;
-        } | null;
-        if (!payload || !(await isSessionClaimsValid(payload as SessionClaims | null))) {
-          ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
-          ws.close();
-          return;
-        }
-
-        const bimbinganId = Number(ws.data.params.bimbinganId);
-        if (!bimbinganId) {
-          ws.send(JSON.stringify({ error: 'Invalid bimbingan ID' }));
-          ws.close();
-          return;
-        }
-
-        const { bimbingan: bimbinganTable } = await import('./models/schema');
-        const { db } = await import('./utils/db');
-        const { eq } = await import('drizzle-orm');
-
-        const bimbingan = await db.query.bimbingan.findFirst({
-          where: eq(bimbinganTable.id, bimbinganId),
-          with: { mahasiswa: true, dosen: true },
-        });
-
-        if (!bimbingan) {
-          ws.send(JSON.stringify({ error: 'Bimbingan not found' }));
-          ws.close();
-          return;
-        }
-
-        const userRoles = Array.isArray(payload.roles) && payload.roles.length > 0 ? payload.roles : [payload.role];
-        const userEmail = payload.email as string;
-        const isAdmin = userRoles.includes('admin') || userRoles.includes('super_admin');
-        const isDosenPa = userRoles.includes('dosen') && bimbingan.dosen?.email === userEmail;
-        const isMahasiswa = userRoles.includes('mahasiswa') && bimbingan.mahasiswa?.email === userEmail;
-
-        if (!isAdmin && !isDosenPa && !isMahasiswa) {
-          ws.send(JSON.stringify({ error: 'Forbidden: You are not a participant of this bimbingan' }));
-          ws.close();
-          return;
-        }
-
-        ws.subscribe(`bimbingan-${bimbinganId}`);
-      } catch (err: unknown) {
-        console.error('[WS] Error in open handler:', err instanceof Error ? err.message : err);
-        try {
-          ws.send(JSON.stringify({ error: 'Internal server error' }));
-          ws.close();
-        } catch {
-          // ws may already be closed
-        }
-      }
-    },
   })
   .use(authMiddleware)
   .onBeforeHandle(auditBeforeHandle)

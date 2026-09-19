@@ -19,7 +19,11 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async create({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['mahasiswa'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['mahasiswa'])) {
       set.status = 403;
       return { error: 'Hanya mahasiswa yang dapat mengajukan cuti.' };
     }
@@ -47,7 +51,11 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async inputByAdmin({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'prodi'])) {
       set.status = 403;
       return { error: 'Hanya Admin atau Prodi yang dapat menginput cuti mahasiswa.' };
     }
@@ -73,7 +81,11 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAll({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -113,7 +125,11 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMahasiswaCuti({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -129,7 +145,11 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getById({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -160,7 +180,11 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async approve({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['mahasiswa', 'guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['mahasiswa', 'guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Anda tidak memiliki wewenang untuk memberikan persetujuan.' };
     }
@@ -191,7 +215,11 @@ export class CutiController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async aktifKembali({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['mahasiswa', 'guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['mahasiswa', 'guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya admin/prodi/dosen yang dapat mengaktifkan kembali.' };
     }
@@ -209,8 +237,8 @@ export class CutiController {
   static async delete({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
-      set.status = 403;
-      return { error: 'Akses ditolak.' };
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
     }
 
     const isAdmin = hasRole(user, ['admin', 'prodi']);
