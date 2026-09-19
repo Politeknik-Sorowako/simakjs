@@ -198,7 +198,7 @@ export class AuthController {
       cookie.access_token.set({
         value: token,
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV !== 'development',
         path: '/',
         sameSite: 'strict',
         maxAge: sessionDurationSeconds,
@@ -289,7 +289,7 @@ export class AuthController {
         cookie.access_token.set({
           value: token,
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.NODE_ENV !== 'development',
           path: '/',
           sameSite: 'strict',
           maxAge: sessionDurationSeconds,
@@ -539,7 +539,7 @@ export class AuthController {
         cookie.access_token.set({
           value: token,
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.NODE_ENV !== 'development',
           path: '/',
           sameSite: 'strict',
           maxAge: sessionDurationSeconds,

@@ -130,6 +130,7 @@ fi
 
 # Step 4: Build and deploy
 log "Step 4: Building and deploying..."
+export NODE_ENV="${NODE_ENV:-staging}"
 docker compose -f "$COMPOSE_FILE" build 2>&1 | tee -a "$LOG_FILE" || {
   fail "Docker build failed"
   exit 1

@@ -35,7 +35,7 @@ services:
       PORT: "3000"
       JWT_SECRET: ${JWT_SECRET}
       CORS_ORIGIN: "http://localhost:8082,http://localhost:3001,https://staging-simak.politekniksorowako.ac.id"
-      NODE_ENV: development
+      NODE_ENV: ${NODE_ENV:-staging}
       DOMAIN_NAME: staging-simak.politekniksorowako.ac.id
       PGHOST: db_staging
       PGPORT: "5432"
