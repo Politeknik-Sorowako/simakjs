@@ -102,6 +102,20 @@ export class AuthService {
     await db.insert(passwordResets).values({ email, token: tokenHash, expiresAt });
   }
 
+  /**
+   * Membuat token reset untuk email, mengembalikan token mentah bila email
+   * terdaftar, atau `null` bila tidak (menjaga no-user-enumeration).
+   * Token mentah hanya diberikan ke pemanggil (email sender / test), tidak
+   * pernah bocor ke response body endpoint publik.
+   */
+  static async createPasswordResetForEmail(email: string): Promise<string | null> {
+    const user = await AuthService.findByEmail(email);
+    if (!user) return null;
+    const token = crypto.randomUUID();
+    await AuthService.createPasswordReset(email, token, new Date(Date.now() + 3600000));
+    return token;
+  }
+
   static async getPasswordReset(token: string) {
     const tokenHash = await hashToken(token);
     const [record] = await db.select().from(passwordResets).where(eq(passwordResets.token, tokenHash)).limit(1);

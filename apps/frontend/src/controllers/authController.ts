@@ -85,9 +85,9 @@ export const authController = {
     );
   },
 
-  async forgotPassword(email: string): Promise<{ message: string; token?: string }> {
-    return unwrap<{ message: string; token?: string }>(
-      eden.auth['forgot-password'].post({ email }) as unknown as GenericEden<{ message: string; token?: string }>,
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return unwrap<{ message: string }>(
+      eden.auth['forgot-password'].post({ email }) as unknown as GenericEden<{ message: string }>,
     );
   },
 

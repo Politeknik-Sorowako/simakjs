@@ -48,9 +48,9 @@ import { hasRole } from '../utils/role';
 export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post(
   '/reset',
   async ({ set, getCurrentUser }) => {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test') {
       set.status = 403;
-      return { error: 'Endpoint ini tidak dapat dijalankan di mode production.' };
+      return { error: 'Endpoint ini hanya dapat dijalankan di mode development/testing.' };
     }
     const user = await getCurrentUser();
     if (!user || !hasRole(user, ['admin', 'super_admin'])) {

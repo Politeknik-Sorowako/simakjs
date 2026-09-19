@@ -64,7 +64,7 @@ import { yudisiumRoutes } from './routes/yudisium.routes';
 import { SystemParameterService } from './services/system-parameter.service';
 import { isSessionClaimsValid, type SessionClaims } from './utils/session-token';
 
-const isDevelopment = process.env.NODE_ENV !== 'production';
+const isDevelopment = process.env.NODE_ENV === 'development';
 
 // Endpoint background (polling/health/public) tidak boleh memperpanjang sesi idle.
 // Client dapat meng-opt-out eksplisit lewat header X-Background: 1 untuk endpoint polling lain.

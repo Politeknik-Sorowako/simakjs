@@ -553,19 +553,8 @@ export class AuthController {
 
       const emailLower = email.toLowerCase().trim();
 
-      const user = await AuthService.findByEmail(emailLower);
-      if (user) {
-        const token = crypto.randomUUID();
-        const expiresAt = new Date(Date.now() + 3600000);
-        await AuthService.createPasswordReset(emailLower, token, expiresAt);
-
-        if (process.env.NODE_ENV === 'test') {
-          return {
-            message: 'Jika email terdaftar, link reset password telah dikirim.',
-            token,
-          };
-        }
-
+      const token = await AuthService.createPasswordResetForEmail(emailLower);
+      if (token) {
         const resendApiKey = process.env.RESEND_API_KEY;
         if (resendApiKey) {
           const resetLink = `${getFrontendBaseUrl()}/reset-password?token=${token}`;

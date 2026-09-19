@@ -96,15 +96,9 @@ export const forgotPasswordSchema = {
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
   }),
   response: {
-    200: t.Union([
-      t.Object({
-        message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
-      }),
-      t.Object({
-        message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
-        token: t.String(),
-      }),
-    ]),
+    200: t.Object({
+      message: t.String({ default: 'Jika email terdaftar, link reset password telah dikirim.' }),
+    }),
     429: t.Object({
       error: t.String({ default: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.' }),
       retryAfter: t.Number({ default: 900 }),
