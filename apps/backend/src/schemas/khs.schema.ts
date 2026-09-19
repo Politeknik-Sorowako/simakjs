@@ -16,6 +16,12 @@ export const getKhsSchema = {
       blocked: t.Optional(t.Boolean({ default: false })),
       reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
       detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+      warningTunggakan: t.Optional(
+        t.Object({
+          reason: t.Union([t.String(), t.Null()]),
+          detail: t.Union([t.String(), t.Null()]),
+        }),
+      ),
       krsList: t.Optional(
         t.Array(
           t.Object({

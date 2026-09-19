@@ -44,10 +44,16 @@ export class KhsController {
 
     try {
       const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
-      return {
-        blocked: false,
-        ...khs,
-      };
+      const response: Record<string, unknown> = { blocked: false, ...khs };
+
+      // Staff tetap bisa melihat walau ada tunggakan; beri flag untuk watermark cetak.
+      if (!hasRole(user, ['mahasiswa']) && (await SystemParameterService.isKhsBlockEnabled())) {
+        const clearance = await KhsService.checkBebasTanggungan(targetMhsId, targetPeriodeId);
+        if (!clearance.bebas) {
+          response.warningTunggakan = { reason: clearance.reason, detail: clearance.detail };
+        }
+      }
+      return response;
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses KHS.' };
@@ -389,7 +395,7 @@ export class KhsController {
       set.status = 401;
       return { error: 'Silakan login.' };
     }
-    let mhsId = parseInt(params.mhsId);
+    const mhsId = parseInt(params.mhsId);
     if (isNaN(mhsId)) {
       set.status = 400;
       return { error: 'ID Mahasiswa tidak valid.' };

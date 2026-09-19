@@ -1,7 +1,7 @@
 import { useParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
-import { type KhsResponse, khsController, type TranskripResponse } from '../controllers/khsController';
+import { type KhsResponse, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 
 interface PrintData {
@@ -10,7 +10,6 @@ interface PrintData {
   prodi: string;
   periodeId: string;
   khs: KhsResponse;
-  transkrip: TranskripResponse | null;
 }
 
 export default function KhsCetak() {
@@ -29,14 +28,12 @@ export default function KhsCetak() {
       try {
         const khs = await khsController.getByMhsIdAndPeriode(target.mhsId, target.periodeId);
         const profile = await mahasiswaController.getById(target.mhsId).catch(() => null);
-        const transkrip = await khsController.getTranskrip(target.mhsId).catch(() => null);
         return {
           nim: profile?.nim || '',
           nama: profile?.nama || '',
           prodi: profile?.programStudi?.nama || '',
           periodeId: target.periodeId,
           khs,
-          transkrip,
         };
       } catch {
         return null;

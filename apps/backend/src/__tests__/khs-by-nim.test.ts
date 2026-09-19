@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { app } from '../app';
-import { kelasKuliah, krs, mahasiswa, mataKuliah, periodeAkademik, programStudi } from '../models/schema';
+import { kelasKuliah, krs, mahasiswa, mataKuliah, periodeAkademik, programStudi, tagihan } from '../models/schema';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
@@ -87,5 +87,21 @@ describe('KHS Resolver NIM & RBAC', () => {
       }),
     );
     expect(matriks.status).toBe(403);
+  });
+
+  it('staff menerima warningTunggakan via getByMhsIdAndPeriode saat ada tunggakan', async () => {
+    await SystemParameterService.set('BLOCK_KHS_JIKA_TANGGUNGAN', 'true');
+    await db.insert(tagihan).values({ mahasiswaId: mhsId, periodeId, nominal: 2500000, status: 'belum_bayar' });
+
+    const res = await app.handle(
+      new Request(`http://localhost/khs/mahasiswa/${mhsId}/periode/${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { blocked: boolean; warningTunggakan?: { reason: string | null } };
+    expect(body.blocked).toBe(false);
+    expect(body.warningTunggakan?.reason).toBe('SPP Belum Lunas');
   });
 });
