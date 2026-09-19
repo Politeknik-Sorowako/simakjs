@@ -101,13 +101,15 @@ export default function LaporanBKD() {
             </p>
           </div>
           <div class="flex items-center gap-2">
-            <a
-              href={`/bkd/cetak?dosenId=${selectedDosen() || (isDosenRole() ? 0 : '')}&periodeId=${selectedPeriode()}`}
-              target="_blank"
-              class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 print:hidden"
-            >
-              🖨️ Cetak Mandiri
-            </a>
+            <Show when={selectedPeriode()}>
+              <a
+                href={`/bkd/cetak?dosenId=${selectedDosen() || (isDosenRole() ? 0 : '')}&periodeId=${selectedPeriode()}`}
+                target="_blank"
+                class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 print:hidden"
+              >
+                🖨️ Cetak Mandiri
+              </a>
+            </Show>
             <ExportButtonGroup data={() => rows()} columns={columns} filename="BKD" title="Laporan BKD / Beban Dosen" />
           </div>
         </div>

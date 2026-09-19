@@ -1,10 +1,8 @@
-import { eq } from 'drizzle-orm';
-import { dosen, periodeAkademik, programStudi } from '../models/schema';
+import { and, asc, eq, inArray } from 'drizzle-orm';
+import { bap, dosen, periodeAkademik, presensi, programStudi } from '../models/schema';
 import { db } from '../utils/db';
-import { BapService } from './bap.service';
 import { BimbinganService } from './bimbingan.service';
 import { DosenPengajarService } from './dosen-pengajar.service';
-import { PresensiService } from './presensi.service';
 
 export class BkdService {
   static async getRekap(dosenId: number, periodeId: string) {
@@ -26,14 +24,49 @@ export class BkdService {
     // Seluruh kelas yang diampu dosen pada periode tersebut.
     const pengajar = await DosenPengajarService.getAll(1, 10000, undefined, dosenId, periodeId);
 
+    // Batch: ambil semua BAP untuk semua kelas dalam satu query.
+    const kelasIds = pengajar.data.map((p: { kelasKuliah: { id: number } }) => p.kelasKuliah.id);
+
+    let allBap: (typeof bap.$inferSelect)[] = [];
+    if (kelasIds.length > 0) {
+      allBap = await db
+        .select()
+        .from(bap)
+        .where(and(inArray(bap.kelasKuliahId, kelasIds), eq(bap.dosenId, dosenId)))
+        .orderBy(asc(bap.tanggal));
+    }
+    const bapByKelas = new Map<number, typeof allBap>();
+    for (const b of allBap) {
+      const arr = bapByKelas.get(b.kelasKuliahId) || [];
+      arr.push(b);
+      bapByKelas.set(b.kelasKuliahId, arr);
+    }
+
+    // Batch: ambil semua presensi untuk semua BAP dalam satu query.
+    const allBapIds = allBap.map((b) => b.id);
+    const presensiByBapId = new Map<number, { status: string }[]>();
+    if (allBapIds.length > 0) {
+      const presensiRows = await db
+        .select({ bapId: presensi.bapId, status: presensi.status })
+        .from(presensi)
+        .where(inArray(presensi.bapId, allBapIds));
+      for (const pr of presensiRows) {
+        const arr = presensiByBapId.get(pr.bapId) || [];
+        arr.push({ status: pr.status });
+        presensiByBapId.set(pr.bapId, arr);
+      }
+    }
+
     let totalSks = 0;
     let totalPertemuan = 0;
     let totalMenit = 0;
 
     const mengajar = [];
-    for (const p of pengajar.data) {
+    for (const p of pengajar.data as {
+      kelasKuliah: { id: number; namaKelas: string; mataKuliah?: { kode?: string; nama?: string; sksTotal?: number } };
+    }[]) {
       const kelas = p.kelasKuliah;
-      const bapList = await BapService.getByKelas(kelas.id);
+      const bapList = bapByKelas.get(kelas.id) || [];
 
       const pertemuan = bapList.map((b) => ({
         tanggal: b.tanggal,
@@ -47,20 +80,34 @@ export class BkdService {
       totalPertemuan += jumlahPertemuan;
       totalMenit += totalMenitKelas;
 
+      // Agregasi presensi dari data yang sudah di-batch.
       let presensi = { hadir: 0, sakit: 0, izin: 0, alpa: 0, telat: 0, persen: 0 };
-      try {
-        const rekap = await PresensiService.getRekapKehadiran(kelas.id);
-        const mhs = rekap.mahasiswa || [];
+      const bapIds = bapList.map((b) => b.id);
+      if (bapIds.length > 0) {
+        let h = 0;
+        let s = 0;
+        let i = 0;
+        let a = 0;
+        let t = 0;
+        let totalEntries = 0;
+        for (const bId of bapIds) {
+          for (const pr of presensiByBapId.get(bId) || []) {
+            totalEntries++;
+            if (pr.status === 'hadir') h++;
+            else if (pr.status === 'sakit') s++;
+            else if (pr.status === 'izin') i++;
+            else if (pr.status === 'alpa') a++;
+            else if (pr.status === 'telat' || pr.status === 'terlambat') t++;
+          }
+        }
         presensi = {
-          hadir: mhs.reduce((s, m) => s + m.hadir, 0),
-          sakit: mhs.reduce((s, m) => s + m.sakit, 0),
-          izin: mhs.reduce((s, m) => s + m.izin, 0),
-          alpa: mhs.reduce((s, m) => s + m.alpa, 0),
-          telat: mhs.reduce((s, m) => s + m.telat, 0),
-          persen: mhs.length > 0 ? Math.round(mhs.reduce((s, m) => s + m.persentaseHadir, 0) / mhs.length) : 0,
+          hadir: h,
+          sakit: s,
+          izin: i,
+          alpa: a,
+          telat: t,
+          persen: totalEntries > 0 ? Math.round((h / totalEntries) * 100) : 0,
         };
-      } catch (e: unknown) {
-        console.error(`[BkdService] Gagal mengambil rekap presensi kelas ${kelas.id}:`, e);
       }
 
       mengajar.push({
