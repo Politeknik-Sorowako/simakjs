@@ -113,6 +113,31 @@ export const getByNimSchema = {
   },
 };
 
+export const getPeriodeListSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Daftar Periode yang Diikuti Mahasiswa',
+    description:
+      'Mengambil daftar periode akademik distinct yang pernah diikuti mahasiswa (dari relasi KRS ke kelas). Mahasiswa hanya dapat mengakses periode miliknya sendiri; admin/staff bebas.',
+  },
+  params: t.Object({
+    mhsId: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({
+      data: t.Optional(
+        t.Array(
+          t.Object({
+            id: t.Optional(t.String()),
+            nama: t.Optional(t.String()),
+            aktif: t.Optional(t.Boolean()),
+          }),
+        ),
+      ),
+    }),
+  },
+};
+
 export const getTranskripSchema = {
   detail: {
     tags: ['KHS & Transkrip'],

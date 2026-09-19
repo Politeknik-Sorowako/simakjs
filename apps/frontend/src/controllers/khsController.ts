@@ -83,6 +83,12 @@ export interface TranskripResponse {
   totalSksLulus?: number;
 }
 
+export interface KhsPeriodeItem {
+  id: string;
+  nama: string;
+  aktif: boolean;
+}
+
 export interface PengajuanYudisium {
   id?: number;
   mahasiswaId: number;
@@ -219,6 +225,10 @@ export const khsController = {
 
   async getTranskrip(mhsId: number): Promise<TranskripResponse> {
     return fetchApi<TranskripResponse>(`/khs/mahasiswa/${mhsId}/transkrip`);
+  },
+
+  async getPeriodeList(mhsId: number): Promise<{ data: KhsPeriodeItem[] }> {
+    return fetchApi<{ data: KhsPeriodeItem[] }>(`/khs/mahasiswa/${mhsId}/periode-list`);
   },
 
   async getRincianKomponen(kelasKuliahId: number, mahasiswaId?: number): Promise<RincianKomponenMahasiswa> {
