@@ -10,8 +10,8 @@ export const registerSchema = {
   body: t.Object({
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
     password: t.String({
-      minLength: 6,
-      description: 'Kata sandi (min. 6 karakter)',
+      minLength: 8,
+      description: 'Kata sandi (min. 8 karakter, harus ada huruf kapital dan angka)',
     }),
     nama: t.String({ minLength: 3, default: 'Nama Pengguna' }),
     role: t.Optional(

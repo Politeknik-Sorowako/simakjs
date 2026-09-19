@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { passwordResets, userRoles, users } from '../models/schema';
 import { db } from '../utils/db';
+import { assertValidPassword } from '../utils/password-policy';
 import type { UserRole } from '../utils/types';
 
 async function hashToken(token: string): Promise<string> {
@@ -21,12 +22,9 @@ export class AuthService {
     return legacy ? [legacy.role] : [];
   }
 
-  static async register(
-    email: string,
-    password: string,
-    nama: string,
-    role?: 'admin' | 'dosen' | 'mahasiswa' | 'guest',
-  ) {
+  static async register(email: string, password: string, nama: string, role?: UserRole) {
+    assertValidPassword(password);
+
     const hashedPassword = await Bun.password.hash(password, {
       algorithm: 'bcrypt',
       cost: 12,

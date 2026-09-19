@@ -9,6 +9,7 @@ import { TwoFactorService } from '../services/two-factor.service';
 import { db } from '../utils/db';
 import { getFrontendBaseUrl } from '../utils/frontend-url';
 import { escapeHtml } from '../utils/html-escape';
+import { PasswordValidationError, validatePassword } from '../utils/password-policy';
 import { isSuperAdminOrAdmin } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -16,6 +17,53 @@ const loginRateLimit = new Map<string, { count: number; resetTime: number }>();
 const forgotRateLimit = new Map<string, { count: number; resetTime: number }>();
 
 const TWO_FA_INTERIM_TTL_SECONDS = 10 * 60;
+
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
+const FORGOT_MAX_ATTEMPTS = 3;
+
+function getClientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return request.headers.get('x-real-ip') ?? 'unknown';
+}
+
+function rateLimitKey(prefix: string, request: Request, email: string): string {
+  return `${prefix}:${getClientIp(request)}:${email.toLowerCase().trim()}`;
+}
+
+function rateLimitCheck(
+  map: Map<string, { count: number; resetTime: number }>,
+  key: string,
+  maxAttempts: number,
+): { limited: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const record = map.get(key);
+  if (!record || now >= record.resetTime) {
+    map.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { limited: false };
+  }
+  record.count++;
+  if (record.count >= maxAttempts) {
+    return { limited: true, retryAfter: Math.max(1, Math.ceil((record.resetTime - now) / 1000)) };
+  }
+  return { limited: false };
+}
+
+// Bersihkan entri kedaluwarsa agar Map tidak bocor tak terbatas.
+let rateLimitSweepTimer: ReturnType<typeof setInterval> | undefined;
+function ensureRateLimitSweep() {
+  if (rateLimitSweepTimer) return;
+  rateLimitSweepTimer = setInterval(() => {
+    const now = Date.now();
+    for (const map of [loginRateLimit, forgotRateLimit]) {
+      for (const [key, record] of map) {
+        if (now >= record.resetTime) map.delete(key);
+      }
+    }
+  }, RATE_LIMIT_WINDOW_MS);
+  if (rateLimitSweepTimer.unref) rateLimitSweepTimer.unref();
+}
 
 export class AuthController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -29,7 +77,8 @@ export class AuthController {
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async register({ body, set }: AuthContext): Promise<any> {
-    if (body.role === 'admin' || body.role === 'prodi' || body.role === 'keuangan') {
+    const allowedRoles: string[] = ['dosen', 'mahasiswa', 'guest'];
+    if (body.role && !allowedRoles.includes(body.role)) {
       set.status = 403;
       return { error: 'Registrasi dengan role tersebut tidak diizinkan.' };
     }
@@ -41,30 +90,27 @@ export class AuthController {
         user,
       };
     } catch (e) {
+      if (e instanceof PasswordValidationError) {
+        set.status = 422;
+        return { error: e.message };
+      }
       set.status = 400;
       return { error: 'Email sudah terdaftar' };
     }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async login({ body, jwt, set, cookie }: AuthContext & { jwt: any }): Promise<any> {
+  static async login({ body, jwt, set, cookie, request }: AuthContext & { jwt: any }): Promise<any> {
     if (process.env.NODE_ENV !== 'test') {
-      const now = Date.now();
-      const limitKey = `login:${body.email.toLowerCase().trim()}`;
-      const loginRecord = loginRateLimit.get(limitKey);
-      if (loginRecord) {
-        if (now < loginRecord.resetTime) {
-          loginRecord.count++;
-          if (loginRecord.count >= 5) {
-            set.status = 429;
-            const retryAfter = Math.max(1, Math.ceil((loginRecord.resetTime - now) / 1000));
-            return { error: 'Terlalu banyak percobaan login. Silakan coba lagi.', retryAfter };
-          }
-        } else {
-          loginRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
-        }
-      } else {
-        loginRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
+      ensureRateLimitSweep();
+      const loginResult = rateLimitCheck(
+        loginRateLimit,
+        rateLimitKey('login', request, body.email),
+        LOGIN_MAX_ATTEMPTS,
+      );
+      if (loginResult.limited) {
+        set.status = 429;
+        return { error: 'Terlalu banyak percobaan login. Silakan coba lagi.', retryAfter: loginResult.retryAfter };
       }
     }
 
@@ -487,7 +533,7 @@ export class AuthController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async forgotPassword({ body, set }: AuthContext): Promise<any> {
+  static async forgotPassword({ body, set, request }: AuthContext): Promise<any> {
     try {
       const email = (body as { email?: string })?.email;
       if (!email) {
@@ -495,24 +541,17 @@ export class AuthController {
         return { error: 'Email wajib diisi' };
       }
 
-      const emailLower = email.toLowerCase().trim();
-      const now = Date.now();
-      const limitKey = `forgot:${emailLower}`;
-      const limitRecord = forgotRateLimit.get(limitKey);
-      if (limitRecord) {
-        if (now < limitRecord.resetTime) {
-          if (limitRecord.count >= 3) {
-            set.status = 429;
-            const retryAfter = Math.max(1, Math.ceil((limitRecord.resetTime - now) / 1000));
-            return { error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.', retryAfter };
-          }
-          limitRecord.count++;
-        } else {
-          forgotRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
-        }
-      } else {
-        forgotRateLimit.set(limitKey, { count: 1, resetTime: now + 15 * 60 * 1000 });
+      ensureRateLimitSweep();
+      const forgotResult = rateLimitCheck(forgotRateLimit, rateLimitKey('forgot', request, email), FORGOT_MAX_ATTEMPTS);
+      if (forgotResult.limited) {
+        set.status = 429;
+        return {
+          error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.',
+          retryAfter: forgotResult.retryAfter,
+        };
       }
+
+      const emailLower = email.toLowerCase().trim();
 
       const user = await AuthService.findByEmail(emailLower);
       if (user) {
@@ -580,14 +619,10 @@ export class AuthController {
         return { error: 'Token dan password baru wajib diisi' };
       }
 
-      if (password.length < 8) {
+      const passwordError = validatePassword(password);
+      if (passwordError) {
         set.status = 400;
-        return { error: 'Password minimal harus 8 karakter' };
-      }
-
-      if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
-        set.status = 400;
-        return { error: 'Password harus mengandung huruf kapital dan angka' };
+        return { error: passwordError };
       }
 
       const resetRecord = await AuthService.getPasswordReset(token);
@@ -689,10 +724,21 @@ export class AuthController {
     }
 
     const emailLower = email.toLowerCase().trim();
-    const loginKey = `login:${emailLower}`;
-    const forgotKey = `forgot:${emailLower}`;
-    const loginCleared = loginRateLimit.delete(loginKey);
-    const forgotCleared = forgotRateLimit.delete(forgotKey);
+    const loginPrefix = `login:`;
+    const forgotPrefix = `forgot:`;
+
+    // Kumpulkan key dulu, baru hapus (hindari mutasi Map saat iterasi).
+    const loginKeysToDelete = Array.from(loginRateLimit.keys()).filter(
+      (key) => key.startsWith(loginPrefix) && key.endsWith(`:${emailLower}`),
+    );
+    const forgotKeysToDelete = Array.from(forgotRateLimit.keys()).filter(
+      (key) => key.startsWith(forgotPrefix) && key.endsWith(`:${emailLower}`),
+    );
+    const loginCleared = loginKeysToDelete.length > 0;
+    const forgotCleared = forgotKeysToDelete.length > 0;
+
+    for (const key of loginKeysToDelete) loginRateLimit.delete(key);
+    for (const key of forgotKeysToDelete) forgotRateLimit.delete(key);
 
     if (!loginCleared && !forgotCleared) {
       set.status = 404;

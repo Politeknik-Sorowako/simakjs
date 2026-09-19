@@ -250,7 +250,7 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
     new Request('http://localhost/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: 'password123', nama: 'Test User', role }),
+      body: JSON.stringify({ email, password: 'Password123', nama: 'Test User', role }),
     }),
   );
 
@@ -266,7 +266,7 @@ export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mah
     new Request('http://localhost/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: 'password123' }),
+      body: JSON.stringify({ email, password: 'Password123' }),
     }),
   );
 

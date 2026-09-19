@@ -15,9 +15,11 @@ import {
   vaBanks,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { assertValidPassword } from '../utils/password-policy';
 
 export class AdmisiService {
   static async register(email: string, password: string, nama: string) {
+    assertValidPassword(password);
     const hashed = await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 12 });
     const [user] = await db
       .insert(users)
