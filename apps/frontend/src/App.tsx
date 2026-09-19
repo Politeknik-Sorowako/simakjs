@@ -92,6 +92,7 @@ const RombelEnroll = lazy(() => import('./routes/RombelEnroll'));
 const Rps = lazy(() => import('./routes/Rps'));
 const LaporanAkademik = lazy(() => import('./routes/reports/LaporanAkademik'));
 const LaporanBKD = lazy(() => import('./routes/reports/LaporanBKD'));
+const BkdCetak = lazy(() => import('./routes/BkdCetak'));
 const LaporanKeuangan = lazy(() => import('./routes/reports/LaporanKeuangan'));
 const LaporanKRS = lazy(() => import('./routes/reports/LaporanKRS'));
 const LaporanMahasiswaBaru = lazy(() => import('./routes/reports/LaporanMahasiswaBaru'));
@@ -621,8 +622,16 @@ function AppContent() {
           <Route
             path="/laporan/bkd"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen']}>
                 <LaporanBKD />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bkd/cetak"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen']}>
+                <BkdCetak />
               </ProtectedRoute>
             }
           />
