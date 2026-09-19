@@ -75,6 +75,44 @@ export class AuthController {
     return { message: 'Logout berhasil' };
   }
 
+  /**
+   * Profil sesi yang sedang aktif, di-resolve dari cookie access_token (httpOnly)
+   * maupun header Authorization. Endpoint ini menjadi sumber kebenaran frontend
+   * untuk cookie-only auth: kembalikan identitas user + `exp` sesi (epoch detik)
+   * untuk keperluan idle timer tanpa perlu menyimpan token di client.
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async me({ getCurrentUser, jwt, headers, cookie, set }: AuthContext & { jwt: any }): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+
+    const authHeader = headers?.['authorization'];
+    const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookie?.access_token?.value;
+    let exp: number | undefined;
+    if (typeof rawToken === 'string') {
+      try {
+        const payload = (await jwt.verify(rawToken)) as { exp?: number } | null;
+        exp = payload?.exp;
+      } catch {
+        exp = undefined;
+      }
+    }
+
+    const userResponse: Record<string, unknown> = {
+      id: user.id,
+      email: user.email,
+      nama: user.nama,
+      role: user.role,
+      roles: user.roles,
+      mustChangePassword: user.mustChangePassword,
+      isGlobalScope: user.isGlobalScope ?? false,
+    };
+    return { user: userResponse, exp: typeof exp === 'number' ? exp : null };
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async register({ body, set }: AuthContext): Promise<any> {
     const allowedRoles: string[] = ['dosen', 'mahasiswa', 'guest'];
