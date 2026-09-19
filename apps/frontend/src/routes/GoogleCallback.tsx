@@ -41,7 +41,7 @@ export default function GoogleCallback() {
           toast.showToast('Login Google berhasil. Silakan masukkan kode 2FA.', 'info');
           navigate('/login?step=2fa', { replace: true });
         } else if (res.token && res.user) {
-          auth.login(res.token, res.user);
+          auth.login(res.user);
           toast.showToast('Login Google SSO berhasil!', 'success');
           if (res.user.role === 'calon_mahasiswa') {
             navigate('/admisi/dashboard', { replace: true });

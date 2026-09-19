@@ -18,19 +18,23 @@ export function decodeTokenExp(token: string): number | null {
 }
 
 /**
- * Menyimpan token hasil sliding refresh (X-Refresh-Token) ke localStorage
- * dan memberitahu AuthContext agar sinyal token diperbarui & timer idle dijadwalkan ulang.
+ * Cookie-only: token JWT tidak lagi disimpan di client. Sliding refresh tetap
+ * berlangsung di backend via cookie; event `simak:token-refresh` hanya membawa
+ * `exp` (epoch detik) agar AuthContext bisa menjadwalkan ulang timer idle.
  */
-export function persistRefreshedToken(token: string): void {
-  const current = localStorage.getItem('token');
-  if (current === token) return;
-  localStorage.setItem('token', token);
-  window.dispatchEvent(new CustomEvent('simak:token-refresh', { detail: { token } }));
+export function emitTokenRefresh(exp: number): void {
+  window.dispatchEvent(new CustomEvent('simak:token-refresh', { detail: { exp } }));
 }
 
-/** Membaca header respons X-Refresh-Token dan menerapkannya bila ada (hanya untuk respons OK). */
+/**
+ * Membaca header respons X-Refresh-Token dan membagikan `exp`-nya (bila ada,
+ * hanya untuk respons OK) agar timer idle bisa dijadwalkan ulang tanpa
+ * menyimpan token di localStorage.
+ */
 export function applyRefreshedToken(response: Response): void {
   if (!response.ok) return;
   const refreshed = response.headers.get('X-Refresh-Token');
-  if (refreshed) persistRefreshedToken(refreshed);
+  if (!refreshed) return;
+  const exp = decodeTokenExp(refreshed);
+  if (typeof exp === 'number' && Number.isFinite(exp)) emitTokenRefresh(exp);
 }

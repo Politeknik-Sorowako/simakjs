@@ -9,11 +9,7 @@ export async function uploadFormDataWithProgress<T>(
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('POST', `${API_URL}${endpoint}`);
-
-    const token = localStorage.getItem('token');
-    if (token) {
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    }
+    xhr.withCredentials = true;
 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
@@ -36,8 +32,6 @@ export async function uploadFormDataWithProgress<T>(
       }
 
       if (xhr.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
         window.location.href = '/login';
         reject(new Error('Sesi Anda telah berakhir. Silakan login kembali.'));
         return;

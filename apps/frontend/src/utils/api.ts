@@ -70,16 +70,6 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
     },
   };
 
-  if (requireAuth) {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers = {
-        ...config.headers,
-        Authorization: `Bearer ${token}`,
-      };
-    }
-  }
-
   const response = await fetch(`${API_URL}${endpoint}`, config);
   applyRefreshedToken(response);
 
@@ -97,8 +87,6 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
   }
 
   if (response.status === 401 && requireAuth) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     window.location.href = '/login';
     throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
   }

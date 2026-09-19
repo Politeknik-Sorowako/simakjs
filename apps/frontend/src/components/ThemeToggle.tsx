@@ -23,7 +23,7 @@ export function ThemeToggle(props: { compact?: boolean }) {
         const res = await userController.updateProfile(authContext.user()?.nama || '', undefined, nextTheme);
         const currentUser = authContext.user();
         if (currentUser) {
-          authContext.login(localStorage.getItem('token') || '', {
+          authContext.login({
             ...currentUser,
             theme: res.user.theme as string | undefined,
           });

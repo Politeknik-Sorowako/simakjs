@@ -24,11 +24,22 @@ Daftar item keamanan yang teridentifikasi tapi belum diimplementasikan. Dikelomp
 - [ ] **Race condition sliding refresh**: Dua request simultan bisa memicu refresh independen — token pertama valid beberapa detik lebih pendek dari ideal. Overkill untuk mitigasi (perlu mutex per-user).
 - [ ] **Frontend idle timer drift**: Timer frontend dijadwalkan berdasarkan `exp` token saat login/refresh. Jika backend sliding refresh mengirim token baru sebelum timer frontend update, gap beberapa detik mungkin terjadi. Dalam praktik negligible.
 - [x] **WebSocket token via query param**: `app.ts:295` — token dikirim via `?token=` yang bisa bocor ke access log/proxy. Pindah ke `Sec-WebSocket-Protocol` header.
-- [ ] **Token storage di localStorage**: Frontend simpan JWT di `localStorage` — rentan XSS curi token. httpOnly cookie sudah tersedia sebagai alternatif (backend sudah set). Evaluasi migrasi penuh ke cookie-only.
+- [x] **Token storage di localStorage**: Frontend simpan JWT di `localStorage` — rentan XSS curi token. httpOnly cookie sudah tersedia sebagai alternatif (backend sudah set). Evaluasi migrasi penuh ke cookie-only.
 - [x] **Admin role whitelist**: Register tidak memblokir role `kaprodi`, `prodi`, `plp`, `instruktur` secara eksplisit — hanya `admin`, `prodi`, `keuangan` yang diblokir. Pastikan tidak ada role sensitif yang bisa didaftarkan mandiri.
 - [x] **Kontrak 401 vs 403 tidak konsisten**: Banyak controller memetakan `!user` (tidak login/kedaluwarsa/kill-switch) ke `403`, padahal secara semantik harus `401`; `403` seharusnya hanya untuk role mismatch. Frontend `fetchApi` hanya auto-logout+redirect pada `401`. Mitigasi saat ini: poller notifikasi (401) + redirect langsung setelah bump menutup gap, tapi refactor kontrak endpoint perlu dijadwalkan.
 
 ---
+
+## Selesai (PR #416 — feat/cookie-only-auth)
+
+- [x] Migrasi cookie-only frontend — hapus injeksi header `Authorization` & baca/tulis JWT di `localStorage` (10 titik).
+- [x] `AuthContext` bootstrap dari `GET /auth/me` — identitas + `exp` sesi; idle timer pakai `exp` dari `/me` bukan decode JWT.
+- [x] Sliding refresh tetap jalan — `X-Refresh-Token` → cookie; event hanya membawa `exp` untuk reschedule timer.
+- [x] Konsumen langsung (`ThemeToggle`, `Profil`, `StudentAvatar`, `mahasiswaController`, `auditController`, `presensiController`) bersih dari localStorage token.
+
+## Selesai (PR #415 — feat/auth-me-endpoint)
+
+- [x] Endpoint `GET /auth/me` — resolve sesi dari cookie httpOnly, kembalikan identitas + `exp`; 401 bila tanpa sesi.
 
 ## Selesai (PR #414 — fix/low-security-contracts)
 

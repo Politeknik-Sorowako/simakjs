@@ -82,7 +82,6 @@ export const auditController = {
     const qs = searchParams.toString();
     const res = await fetch(`${API_URL}/audit-logs/export${qs ? `?${qs}` : ''}`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
       credentials: 'include',
     });
     if (!res.ok) {

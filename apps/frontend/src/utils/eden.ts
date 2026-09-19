@@ -164,17 +164,11 @@ export async function unwrap<TData>(promise: Promise<{ data?: TData | null; erro
 
 export const eden = edenTreaty<App>(API_URL, {
   fetcher: ((input, init) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const headers = new Headers(init?.headers);
-    if (token && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
     return fetch(input, { ...init, headers, credentials: 'include' }).then((response) => {
       applyRefreshedToken(response);
-      // Sesi mati (exp/kill-switch) → backend balas 401; bersihkan state & arahkan ke login.
-      if (response.status === 401 && token) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      // Sesi mati (exp/kill-switch) → backend balas 401; arahkan ke login.
+      if (response.status === 401) {
         window.location.href = '/login';
       }
       return response;
