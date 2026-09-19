@@ -103,7 +103,7 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
     await SystemParameterService.set('SESSION_DURATION_MINUTES', '10080');
 
     const resp = await app.handle(
-      new Request('http://localhost/system/version', {
+      new Request('http://localhost/settings/public', {
         method: 'GET',
         headers: { Authorization: `Bearer ${tokenA}` },
       }),
@@ -124,9 +124,66 @@ describe('SESSION_DURATION_MINUTES — durasi sesi idle', () => {
     expect(status).toBe(200);
 
     const resp = await app.handle(
+      new Request('http://localhost/settings/public', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${data.token as string}` },
+      }),
+    );
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get('x-refresh-token')).toBeNull();
+  });
+
+  it('endpoint background /system/version tidak memperpanjang sesi (skip-list)', async () => {
+    await SystemParameterService.set('SESSION_DURATION_MINUTES', '15');
+    await createActiveUser('session-skipversion@test.com');
+    const { status, data } = await login('session-skipversion@test.com');
+    expect(status).toBe(200);
+
+    // Sisa 900 detik < setengah 10080*60 → tanpa skip-list harus di-refresh.
+    await SystemParameterService.set('SESSION_DURATION_MINUTES', '10080');
+
+    const resp = await app.handle(
       new Request('http://localhost/system/version', {
         method: 'GET',
         headers: { Authorization: `Bearer ${data.token as string}` },
+      }),
+    );
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get('x-refresh-token')).toBeNull();
+  });
+
+  it('endpoint polling /notifications tidak memperpanjang sesi (skip-list)', async () => {
+    await SystemParameterService.set('SESSION_DURATION_MINUTES', '15');
+    await createActiveUser('session-skipnotif@test.com');
+    const { status, data } = await login('session-skipnotif@test.com');
+    expect(status).toBe(200);
+
+    // Sisa 900 detik < setengah 10080*60 → tanpa skip-list harus di-refresh.
+    await SystemParameterService.set('SESSION_DURATION_MINUTES', '10080');
+
+    const resp = await app.handle(
+      new Request('http://localhost/notifications', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${data.token as string}` },
+      }),
+    );
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get('x-refresh-token')).toBeNull();
+  });
+
+  it('header X-Background: 1 meng-opt-out sliding refresh pada endpoint biasa', async () => {
+    await SystemParameterService.set('SESSION_DURATION_MINUTES', '15');
+    await createActiveUser('session-bg@test.com');
+    const { status, data } = await login('session-bg@test.com');
+    expect(status).toBe(200);
+
+    // Sisa 900 detik < setengah 10080*60 → tanpa header harus di-refresh.
+    await SystemParameterService.set('SESSION_DURATION_MINUTES', '10080');
+
+    const resp = await app.handle(
+      new Request('http://localhost/settings/public', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${data.token as string}`, 'X-Background': '1' },
       }),
     );
     expect(resp.status).toBe(200);
