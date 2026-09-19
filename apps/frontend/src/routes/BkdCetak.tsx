@@ -1,6 +1,7 @@
 import { useSearchParams } from '@solidjs/router';
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { type BkdRekap, bkdController } from '../controllers/bkdController';
+import { hitungRekapPerTanggal, hitungRincianSesi } from '../utils/bkd-helpers';
 
 const PRESENSI_LABEL: {
   key: keyof { hadir: number; sakit: number; izin: number; alpa: number; telat: number };
@@ -44,51 +45,9 @@ export default function BkdCetak() {
 
   const bimbingan = () => rekap()?.bimbingan || [];
 
-  const rekapBimbingan = createMemo(() => {
-    const map = new Map<string, { tanggal: string; jumlahSesi: number; mahasiswa: Map<string, string> }>();
-    for (const b of bimbingan()) {
-      for (const s of b.sesi || []) {
-        const tgl = s.tanggalBimbingan || '-';
-        const entry = map.get(tgl) || { tanggal: tgl, jumlahSesi: 0, mahasiswa: new Map<string, string>() };
-        entry.jumlahSesi += 1;
-        const nim = b.mahasiswa?.nim || '-';
-        const nama = b.mahasiswa?.nama || '-';
-        entry.mahasiswa.set(nim, `${nama} (${nim})`);
-        map.set(tgl, entry);
-      }
-    }
-    return [...map.values()]
-      .map((e) => ({
-        tanggal: e.tanggal,
-        jumlahSesi: e.jumlahSesi,
-        daftarMahasiswa: [...e.mahasiswa.values()].join(', '),
-      }))
-      .sort((a, b) => {
-        if (a.tanggal === '-') return 1;
-        if (b.tanggal === '-') return -1;
-        return a.tanggal.localeCompare(b.tanggal);
-      });
-  });
+  const rekapBimbingan = () => hitungRekapPerTanggal(bimbingan());
 
-  const rincianBimbingan = createMemo(() => {
-    const list: { tanggal: string; nim: string; nama: string; topik: string }[] = [];
-    for (const b of bimbingan()) {
-      for (const s of b.sesi || []) {
-        list.push({
-          tanggal: s.tanggalBimbingan || '-',
-          nim: b.mahasiswa?.nim || '-',
-          nama: b.mahasiswa?.nama || '-',
-          topik: s.topikBimbingan || '-',
-        });
-      }
-    }
-    return list.sort((a, b) => {
-      if (a.tanggal === '-') return 1;
-      if (b.tanggal === '-') return -1;
-      const byDate = a.tanggal.localeCompare(b.tanggal);
-      return byDate !== 0 ? byDate : a.nama.localeCompare(b.nama);
-    });
-  });
+  const rincianBimbingan = () => hitungRincianSesi(bimbingan());
 
   return (
     <div class="min-h-screen bg-white p-8 text-secondary-800">

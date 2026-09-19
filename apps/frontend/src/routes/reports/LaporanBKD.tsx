@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { type BkdRekap, bkdController } from '../../controllers/bkdController';
 import { dosenController } from '../../controllers/dosenController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
+import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helpers';
 import { ExportColumn } from '../../utils/export';
 
 const PRESENSI_STATUS: {
@@ -56,53 +57,11 @@ export default function LaporanBKD() {
   const bimbingan = () => rekap()?.data.bimbingan || [];
   const ringkasan = () => rekap()?.data.ringkasan;
 
-  // Tabel A: rekap bimbingan per tanggal (tanggal, jumlah sesi, daftar mahasiswa).
-  const rekapBimbingan = createMemo(() => {
-    const map = new Map<string, { tanggal: string; jumlahSesi: number; mahasiswa: Map<string, string> }>();
-    for (const b of bimbingan()) {
-      for (const s of b.sesi || []) {
-        const tgl = s.tanggalBimbingan || '-';
-        const entry = map.get(tgl) || { tanggal: tgl, jumlahSesi: 0, mahasiswa: new Map<string, string>() };
-        entry.jumlahSesi += 1;
-        const nim = b.mahasiswa?.nim || '-';
-        const nama = b.mahasiswa?.nama || '-';
-        entry.mahasiswa.set(nim, `${nama} (${nim})`);
-        map.set(tgl, entry);
-      }
-    }
-    return [...map.values()]
-      .map((e) => ({
-        tanggal: e.tanggal,
-        jumlahSesi: e.jumlahSesi,
-        daftarMahasiswa: [...e.mahasiswa.values()].join(', '),
-      }))
-      .sort((a, b) => {
-        if (a.tanggal === '-') return 1;
-        if (b.tanggal === '-') return -1;
-        return a.tanggal.localeCompare(b.tanggal);
-      });
-  });
+  // Tabel A: rekap bimbingan per tanggal.
+  const rekapBimbingan = createMemo(() => hitungRekapPerTanggal(bimbingan()));
 
-  // Tabel B: rincian per sesi bimbingan (tanggal, NIM, nama, topik).
-  const rincianBimbingan = createMemo(() => {
-    const list: { tanggal: string; nim: string; nama: string; topik: string }[] = [];
-    for (const b of bimbingan()) {
-      for (const s of b.sesi || []) {
-        list.push({
-          tanggal: s.tanggalBimbingan || '-',
-          nim: b.mahasiswa?.nim || '-',
-          nama: b.mahasiswa?.nama || '-',
-          topik: s.topikBimbingan || '-',
-        });
-      }
-    }
-    return list.sort((a, b) => {
-      if (a.tanggal === '-') return 1;
-      if (b.tanggal === '-') return -1;
-      const byDate = a.tanggal.localeCompare(b.tanggal);
-      return byDate !== 0 ? byDate : a.nama.localeCompare(b.nama);
-    });
-  });
+  // Tabel B: rincian per sesi bimbingan.
+  const rincianBimbingan = createMemo(() => hitungRincianSesi(bimbingan()));
 
   const columns: ExportColumn[] = [
     {
