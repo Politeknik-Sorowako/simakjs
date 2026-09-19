@@ -62,6 +62,7 @@ import { verifikasiUnknownRoutes } from './routes/verifikasi-unknown.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
 import { yudisiumRoutes } from './routes/yudisium.routes';
 import { SystemParameterService } from './services/system-parameter.service';
+import { isSessionClaimsValid, type SessionClaims } from './utils/session-token';
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
 
@@ -166,7 +167,7 @@ export const app = new Elysia()
         ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
         : ['http://localhost:8080', 'http://localhost:3000'],
       credentials: true,
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Background'],
       exposeHeaders: ['X-Refresh-Token'],
     }),
   )
@@ -227,7 +228,7 @@ export const app = new Elysia()
     const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
     const token = headerToken || cookieToken;
 
-    if (!token || !(await jwt.verify(token))) {
+    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
       set.status = 401;
       return { error: 'Unauthorized: Silakan login terlebih dahulu' };
     }
@@ -254,7 +255,7 @@ export const app = new Elysia()
     const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
     const token = headerToken || cookieToken;
 
-    if (!token || !(await jwt.verify(token))) {
+    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
       set.status = 401;
       return { error: 'Unauthorized: Silakan login terlebih dahulu' };
     }
@@ -280,7 +281,7 @@ export const app = new Elysia()
     const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
     const token = headerToken || cookieToken;
 
-    if (!token || !(await jwt.verify(token))) {
+    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
       set.status = 401;
       return { error: 'Unauthorized: Silakan login terlebih dahulu' };
     }
@@ -314,7 +315,7 @@ export const app = new Elysia()
           roles?: string[];
           email: string;
         } | null;
-        if (!payload) {
+        if (!payload || !(await isSessionClaimsValid(payload as SessionClaims | null))) {
           ws.send(JSON.stringify({ error: 'Unauthorized: Invalid token' }));
           ws.close();
           return;
@@ -379,11 +380,13 @@ export const app = new Elysia()
       const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : cookieToken;
       if (typeof rawToken !== 'string') return;
       const payload = (await jwt.verify(rawToken)) as (Record<string, unknown> & { exp?: number }) | null;
-      if (!payload || typeof payload.exp !== 'number') return;
+      if (!payload || !(await isSessionClaimsValid(payload))) return;
+      const exp = payload.exp;
+      if (typeof exp !== 'number') return;
       const nowSec = Math.floor(Date.now() / 1000);
-      if (payload.exp <= nowSec) return;
+      if (exp <= nowSec) return;
       const durationSec = await SystemParameterService.getSessionDurationSeconds();
-      if (payload.exp - nowSec >= durationSec / 2) return;
+      if (exp - nowSec >= durationSec / 2) return;
       const { iat: _iat, exp: _exp, ...claims } = payload;
       const refreshed = await jwt.sign({ ...claims, iat: true, exp: nowSec + durationSec });
       set.headers['X-Refresh-Token'] = refreshed;

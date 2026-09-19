@@ -95,6 +95,7 @@ export class AuthController {
     }
 
     const sessionDurationSeconds = await SystemParameterService.getSessionDurationSeconds();
+    const sessionEpoch = await SystemParameterService.getSessionEpoch();
     const now = Math.floor(Date.now() / 1000);
     const token = await jwt.sign({
       id: user.id,
@@ -104,6 +105,7 @@ export class AuthController {
       roles: user.roles,
       mustChangePassword: user.mustChangePassword,
       isGlobalScope: user.isGlobalScope ?? false,
+      sessEpoch: sessionEpoch,
       iat: now,
       exp: now + sessionDurationSeconds,
     });
@@ -184,6 +186,7 @@ export class AuthController {
       }
 
       const sessionDurationSeconds = await SystemParameterService.getSessionDurationSeconds();
+      const sessionEpoch = await SystemParameterService.getSessionEpoch();
       const now = Math.floor(Date.now() / 1000);
       const token = await jwt.sign({
         id: user.id,
@@ -193,6 +196,7 @@ export class AuthController {
         roles: user.roles,
         mustChangePassword: user.mustChangePassword,
         isGlobalScope: user.isGlobalScope ?? false,
+        sessEpoch: sessionEpoch,
         iat: now,
         exp: now + sessionDurationSeconds,
       });
@@ -432,6 +436,7 @@ export class AuthController {
 
       const roles = await AuthService.getRolesForUser(user.id);
       const sessionDurationSeconds = await SystemParameterService.getSessionDurationSeconds();
+      const sessionEpoch = await SystemParameterService.getSessionEpoch();
       const now = Math.floor(Date.now() / 1000);
       const token = await jwt.sign({
         id: user.id,
@@ -441,6 +446,7 @@ export class AuthController {
         roles,
         mustChangePassword: user.mustChangePassword,
         isGlobalScope: user.isGlobalScope ?? false,
+        sessEpoch: sessionEpoch,
         iat: now,
         exp: now + sessionDurationSeconds,
       });

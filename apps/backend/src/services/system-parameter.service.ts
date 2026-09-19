@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { systemSettings } from '../models/schema';
 import { db } from '../utils/db';
 
@@ -55,11 +55,18 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     description:
       'Durasi sesi login dalam menit (idle timeout). Sesi berakhir jika tidak ada aktivitas selama durasi ini. Berlaku untuk login/refresh token berikutnya.',
   },
+  SESSION_EPOCH: {
+    value: '1',
+    type: 'number',
+    description:
+      'Epoch sesi (kill-switch). Menaikkan nilai ini memaksa semua pengguna login ulang: token yang dibubuhi sessEpoch lebih kecil dari nilai ini ditolak.',
+  },
 };
 
 const SESSION_DURATION_MIN = 15;
 const SESSION_DURATION_MAX = 10080;
 const SESSION_DURATION_DEFAULT = 480;
+const SESSION_EPOCH_DEFAULT = 1;
 
 export class SystemParameterService {
   private static invalidate(key?: string) {
@@ -118,6 +125,42 @@ export class SystemParameterService {
   /** Durasi sesi login (idle timeout) dalam detik, diklamp ke rentang 15–10080 menit. */
   static async getSessionDurationSeconds(): Promise<number> {
     return (await SystemParameterService.getSessionDurationMinutes()) * 60;
+  }
+
+  /** Epoch sesi saat ini (min 1). Token dengan sessEpoch < nilai ini ditolak. */
+  static async getSessionEpoch(): Promise<number> {
+    const raw = await SystemParameterService.getRaw('SESSION_EPOCH');
+    const parsed = Number(raw);
+    if (raw === null || raw === '' || !Number.isFinite(parsed)) return SESSION_EPOCH_DEFAULT;
+    return Math.max(SESSION_EPOCH_DEFAULT, Math.floor(parsed));
+  }
+
+  /** Menaikkan epoch sesi (kill-switch) secara atomik dan mengembalikan nilai baru. */
+  static async incrementSessionEpoch(): Promise<number> {
+    // UPDATE atomik (row-lock Postgres) → aman terhadap bump konkuren.
+    const [updated] = await db
+      .update(systemSettings)
+      .set({ value: sql`${systemSettings.value}::int + 1`, updatedAt: new Date() })
+      .where(eq(systemSettings.key, 'SESSION_EPOCH'))
+      .returning();
+    SystemParameterService.invalidate('SESSION_EPOCH');
+    if (updated) {
+      const parsed = Number(updated.value);
+      return Number.isFinite(parsed) ? Math.max(SESSION_EPOCH_DEFAULT, parsed) : SESSION_EPOCH_DEFAULT;
+    }
+    // Baris belum ada (mis. tabel test di-bersihkan) → insert default+1.
+    const [inserted] = await db
+      .insert(systemSettings)
+      .values({
+        key: 'SESSION_EPOCH',
+        value: String(SESSION_EPOCH_DEFAULT + 1),
+        paramType: 'number',
+        description: DEFAULT_PARAMS.SESSION_EPOCH.description,
+      })
+      .onConflictDoNothing()
+      .returning();
+    const parsed = Number(inserted?.value);
+    return Number.isFinite(parsed) ? Math.max(SESSION_EPOCH_DEFAULT, parsed) : SESSION_EPOCH_DEFAULT + 1;
   }
 
   static async isKrsMandiriEnabled(): Promise<boolean> {
