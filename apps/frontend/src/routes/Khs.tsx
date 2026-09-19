@@ -140,8 +140,9 @@ export default function Khs() {
   const [searchQuery, setSearchQuery] = createSignal('');
   const [searchPage, setSearchPage] = createSignal(1);
   const [hasMoreStudents, setHasMoreStudents] = createSignal(false);
+  const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
 
-  const [mhsOptions] = createResource(
+  const [pageData] = createResource(
     () => ({ q: searchQuery(), page: searchPage() }),
     async ({ q, page }) => {
       const res = await mahasiswaController.getAll(q || undefined, page, 20);
@@ -149,6 +150,19 @@ export default function Khs() {
       return res.data.map((m): SelectOption => ({ label: `${m.nim} - ${m.nama}`, value: m.id }));
     },
   );
+
+  // Akumulasi hasil per halaman: reset saat ganti query, append saat load more.
+  createEffect((prevQ) => {
+    const q = searchQuery();
+    const data = pageData();
+    if (data === undefined) return q;
+    if (prevQ !== undefined && q === prevQ) {
+      setMhsOptions((prev) => [...prev, ...data]);
+    } else {
+      setMhsOptions(data);
+    }
+    return q;
+  });
 
   const onSearchStudents = (q: string) => {
     setSearchQuery(q);
@@ -392,7 +406,7 @@ export default function Khs() {
                 value={selectedMhsId()}
                 onChange={(v) => setSelectedMhsId(Number(v))}
                 onSearch={onSearchStudents}
-                isLoading={mhsOptions.loading}
+                isLoading={pageData.loading}
                 hasMore={hasMoreStudents()}
                 onLoadMore={onLoadMoreStudents}
               />
