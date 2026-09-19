@@ -25,6 +25,13 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   .post('/logout', AuthController.logout, {
     detail: { tags: ['Autentikasi'], summary: 'Logout' },
   })
+  .get('/me', AuthController.me, {
+    detail: {
+      tags: ['Autentikasi'],
+      summary: 'Profil sesi aktif',
+      description: 'Mengembalikan identitas user + exp sesi dari cookie httpOnly (untuk cookie-only auth).',
+    },
+  })
   .post('/forgot-password', AuthController.forgotPassword, forgotPasswordSchema)
   .post('/reset-password', AuthController.resetPassword, resetPasswordSchema)
   .post('/reset-password/validate', AuthController.validateResetToken, validateResetTokenSchema)
