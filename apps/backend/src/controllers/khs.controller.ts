@@ -44,10 +44,75 @@ export class KhsController {
 
     try {
       const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
-      return {
-        blocked: false,
-        ...khs,
-      };
+      const response: Record<string, unknown> = { blocked: false, ...khs };
+
+      // Staff tetap bisa melihat walau ada tunggakan; beri flag untuk watermark cetak.
+      if (!hasRole(user, ['mahasiswa']) && (await SystemParameterService.isKhsBlockEnabled())) {
+        const clearance = await KhsService.checkBebasTanggungan(targetMhsId, targetPeriodeId);
+        if (!clearance.bebas) {
+          response.warningTunggakan = { reason: clearance.reason, detail: clearance.detail };
+        }
+      }
+      return response;
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memproses KHS.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getByNim({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+
+    const q = (query || {}) as Record<string, string | undefined>;
+    const nim = q.nim?.trim();
+    const targetPeriodeId = q.periodeId as string | undefined;
+    if (!nim) {
+      set.status = 400;
+      return { error: 'NIM wajib diisi.' };
+    }
+    if (!targetPeriodeId) {
+      set.status = 400;
+      return { error: 'Periode akademik wajib diisi.' };
+    }
+
+    // Mahasiswa hanya dapat melihat KHS miliknya sendiri; admin/staff boleh by-nim bebas.
+    // Cek kepemilikan SEBELUM resolve target agar tidak membocorkan eksistensi NIM lain.
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat melihat KHS Anda sendiri.' };
+      }
+      const myNim = (await MahasiswaService.getById(myMhsId))?.nim;
+      if (nim !== myNim) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat melihat KHS Anda sendiri.' };
+      }
+    }
+
+    const targetMhsId = await MahasiswaService.getMahasiswaIdByNim(nim);
+    if (!targetMhsId) {
+      set.status = 404;
+      return { error: 'Mahasiswa dengan NIM tersebut tidak ditemukan.' };
+    }
+
+    try {
+      const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
+      const response: Record<string, unknown> = { blocked: false, ...khs };
+
+      // Staff tetap bisa melihat walau ada tunggakan; beri flag untuk watermark cetak.
+      if (!hasRole(user, ['mahasiswa']) && (await SystemParameterService.isKhsBlockEnabled())) {
+        const clearance = await KhsService.checkBebasTanggungan(targetMhsId, targetPeriodeId);
+        if (!clearance.bebas) {
+          response.warningTunggakan = { reason: clearance.reason, detail: clearance.detail };
+        }
+      }
+      return response;
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses KHS.' };
@@ -335,6 +400,14 @@ export class KhsController {
       set.status = 400;
       return { error: 'ID Mahasiswa tidak valid.' };
     }
+    // Mahasiswa hanya dapat melihat rekap nilainya sendiri.
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== mhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat melihat rekap nilai Anda sendiri.' };
+      }
+    }
     const periodeId = (query as Record<string, unknown>)?.periodeId as string | undefined;
     try {
       return await KhsService.getRekapNilai(mhsId, periodeId);
@@ -351,6 +424,11 @@ export class KhsController {
       set.status = 401;
       return { error: 'Silakan login.' };
     }
+    // Rekap per prodi bersifat agregat admin/staff; mahasiswa tidak boleh mengakses.
+    if (hasRole(user, ['mahasiswa'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
     const periodeId = (query as Record<string, unknown>)?.periodeId as string | undefined;
     try {
       return await KhsService.getRekapPerProdi(periodeId);
@@ -366,6 +444,11 @@ export class KhsController {
     if (!user) {
       set.status = 401;
       return { error: 'Silakan login.' };
+    }
+    // Matriks nilai MK bersifat agregat admin/staff; mahasiswa tidak boleh mengakses.
+    if (hasRole(user, ['mahasiswa'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
     }
     const q = (query || {}) as Record<string, string | undefined>;
     const periodeId = q.periodeId;
@@ -387,6 +470,11 @@ export class KhsController {
     if (!user) {
       set.status = 401;
       return { error: 'Silakan login.' };
+    }
+    // Detail nilai MK bersifat agregat admin/staff; mahasiswa tidak boleh mengakses.
+    if (hasRole(user, ['mahasiswa'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
     }
     const mataKuliahId = parseInt(params.mataKuliahId);
     if (isNaN(mataKuliahId)) {

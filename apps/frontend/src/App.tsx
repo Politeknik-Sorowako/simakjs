@@ -62,6 +62,7 @@ const InputNilai = lazy(() => import('./routes/InputNilai'));
 const KelasKuliah = lazy(() => import('./routes/KelasKuliah'));
 const KeuanganDashboard = lazy(() => import('./routes/KeuanganDashboard'));
 const Khs = lazy(() => import('./routes/Khs'));
+const KhsCetak = lazy(() => import('./routes/KhsCetak'));
 const KompensasiMahasiswa = lazy(() => import('./routes/KompensasiMahasiswa'));
 const KompensasiManual = lazy(() => import('./routes/KompensasiManual'));
 const KonfigurasiAbout = lazy(() => import('./routes/KonfigurasiAbout'));
@@ -372,8 +373,16 @@ function AppContent() {
           <Route
             path="/khs"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen', 'mahasiswa']}>
                 <Khs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/khs/cetak/:mhsId/:periodeId"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen', 'mahasiswa']}>
+                <KhsCetak />
               </ProtectedRoute>
             }
           />
