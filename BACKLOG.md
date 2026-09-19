@@ -23,12 +23,18 @@ Daftar item keamanan yang teridentifikasi tapi belum diimplementasikan. Dikelomp
 
 - [ ] **Race condition sliding refresh**: Dua request simultan bisa memicu refresh independen — token pertama valid beberapa detik lebih pendek dari ideal. Overkill untuk mitigasi (perlu mutex per-user).
 - [ ] **Frontend idle timer drift**: Timer frontend dijadwalkan berdasarkan `exp` token saat login/refresh. Jika backend sliding refresh mengirim token baru sebelum timer frontend update, gap beberapa detik mungkin terjadi. Dalam praktik negligible.
-- [ ] **WebSocket token via query param**: `app.ts:295` — token dikirim via `?token=` yang bisa bocor ke access log/proxy. Pindah ke `Sec-WebSocket-Protocol` header.
+- [x] **WebSocket token via query param**: `app.ts:295` — token dikirim via `?token=` yang bisa bocor ke access log/proxy. Pindah ke `Sec-WebSocket-Protocol` header.
 - [ ] **Token storage di localStorage**: Frontend simpan JWT di `localStorage` — rentan XSS curi token. httpOnly cookie sudah tersedia sebagai alternatif (backend sudah set). Evaluasi migrasi penuh ke cookie-only.
 - [x] **Admin role whitelist**: Register tidak memblokir role `kaprodi`, `prodi`, `plp`, `instruktur` secara eksplisit — hanya `admin`, `prodi`, `keuangan` yang diblokir. Pastikan tidak ada role sensitif yang bisa didaftarkan mandiri.
-- [ ] **Kontrak 401 vs 403 tidak konsisten**: Banyak controller memetakan `!user` (tidak login/kedaluwarsa/kill-switch) ke `403`, padahal secara semantik harus `401`; `403` seharusnya hanya untuk role mismatch. Frontend `fetchApi` hanya auto-logout+redirect pada `401`. Mitigasi saat ini: poller notifikasi (401) + redirect langsung setelah bump menutup gap, tapi refactor kontrak endpoint perlu dijadwalkan.
+- [x] **Kontrak 401 vs 403 tidak konsisten**: Banyak controller memetakan `!user` (tidak login/kedaluwarsa/kill-switch) ke `403`, padahal secara semantik harus `401`; `403` seharusnya hanya untuk role mismatch. Frontend `fetchApi` hanya auto-logout+redirect pada `401`. Mitigasi saat ini: poller notifikasi (401) + redirect langsung setelah bump menutup gap, tapi refactor kontrak endpoint perlu dijadwalkan.
 
 ---
+
+## Selesai (PR #414 — fix/low-security-contracts)
+
+- [x] WebSocket bimbingan dihapus — dead code tanpa konsumen; menutup permukaan serangan token di query param.
+- [x] Kontrak 401/403 distandarisasi — pecah guard `!user || <role>` jadi `!user → 401` dan role-mismatch → `403` di 54 controller (209 guard).
+- [x] Spike cookie-only selesai — hasil **NO-GO** (butuh endpoint `/auth/me` + sumber `exp` untuk idle timer); migrasi ditunda sebagai PR terpisah.
 
 ## Selesai (PR #413 — fix/medium-security-hardening)
 

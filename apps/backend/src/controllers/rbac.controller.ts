@@ -6,7 +6,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAllRoleGroups({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
@@ -18,7 +22,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async createRoleGroup({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -34,7 +42,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateRoleGroup({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -55,7 +67,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async deleteRoleGroup({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -71,7 +87,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async assignPermissions({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -88,7 +108,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMatrix({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -100,7 +124,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRoleTypes({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
@@ -110,7 +138,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async toggleRoleType({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -127,7 +159,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMatrixByLevel({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
@@ -139,7 +175,11 @@ export class RbacController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async assignPermissionsByLevel({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !isSuperAdminOrAdmin(user)) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!isSuperAdminOrAdmin(user)) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

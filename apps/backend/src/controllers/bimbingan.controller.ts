@@ -67,7 +67,11 @@ export class BimbinganController {
   static async getByMhsId(ctx: AuthContext<any, any>): Promise<any> {
     const { params, query, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -112,7 +116,11 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser, server } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -177,7 +185,11 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, request, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -260,7 +272,11 @@ export class BimbinganController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async updateBimbingan({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -304,7 +320,11 @@ export class BimbinganController {
   static async markAsRead(ctx: AuthContext<any, any>): Promise<any> {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -346,7 +366,11 @@ export class BimbinganController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getMonitoring({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'dosen', 'prodi'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen yang dapat mengakses monitoring.' };
     }
@@ -364,7 +388,11 @@ export class BimbinganController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getRekapBkd({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -395,7 +423,11 @@ export class BimbinganController {
   static async getAkademikSummary(ctx: AuthContext<any, any>) {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -482,7 +514,11 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -516,7 +552,11 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -581,7 +621,11 @@ export class BimbinganController {
   static async getSesiBalasan(ctx: AuthContext<any, any>): Promise<any> {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -611,7 +655,11 @@ export class BimbinganController {
     // biome-ignore lint/suspicious/noExplicitAny: Elysia context type inference
     const { params, body, set, getCurrentUser } = ctx as any;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -653,7 +701,11 @@ export class BimbinganController {
   static async markSesiRead(ctx: AuthContext<any, any>): Promise<any> {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -680,7 +732,11 @@ export class BimbinganController {
   static async deleteSesi(ctx: AuthContext) {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -703,7 +759,11 @@ export class BimbinganController {
   static async clearChat(ctx: AuthContext) {
     const { params, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || hasRole(user, ['guest'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
@@ -728,7 +788,11 @@ export class BimbinganController {
   static async getMonitoringLengkap(ctx: AuthContext<any, any>): Promise<any> {
     const { query, set, getCurrentUser } = ctx;
     const user = await getCurrentUser();
-    if (!user || !hasRole(user, ['admin', 'prodi', 'dosen', 'super_admin'])) {
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'prodi', 'dosen', 'super_admin'])) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

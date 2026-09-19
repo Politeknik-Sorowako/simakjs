@@ -158,7 +158,7 @@ describe('8. KRS (/krs)', () => {
         }),
       );
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(401);
     });
   });
 
