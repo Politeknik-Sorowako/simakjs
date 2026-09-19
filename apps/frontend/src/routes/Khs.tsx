@@ -1,7 +1,8 @@
-import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -136,11 +137,79 @@ export default function Khs() {
 
   // For Admin / Dosen view
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
-  const [searchNim, setSearchNim] = createSignal('');
-  const [debouncedSearchNim, setDebouncedSearchNim] = createSignal('');
-  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+  const [searchQuery, setSearchQuery] = createSignal('');
+  const [searchPage, setSearchPage] = createSignal(1);
+  const [hasMoreStudents, setHasMoreStudents] = createSignal(false);
+  const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
 
-  onCleanup(() => clearTimeout(searchDebounceTimer));
+  const [pageData] = createResource(
+    () => ({ q: searchQuery(), page: searchPage() }),
+    async ({ q, page }) => {
+      const res = await mahasiswaController.getAll(q || undefined, page, 20);
+      setHasMoreStudents(res.data.length === 20);
+      return res.data.map((m): SelectOption => ({ label: `${m.nim} - ${m.nama}`, value: m.id }));
+    },
+  );
+
+  // Akumulasi hasil per halaman: reset saat ganti query, append saat load more.
+  createEffect((prevQ) => {
+    const q = searchQuery();
+    const data = pageData();
+    if (data === undefined) return q;
+    if (prevQ !== undefined && q === prevQ) {
+      setMhsOptions((prev) => [...prev, ...data]);
+    } else {
+      setMhsOptions(data);
+    }
+    return q;
+  });
+
+  const onSearchStudents = (q: string) => {
+    setSearchQuery(q);
+    setSearchPage(1);
+  };
+
+  const onLoadMoreStudents = () => {
+    if (!hasMoreStudents()) return;
+    setSearchPage((p) => p + 1);
+  };
+
+  // Periode yang diikuti mahasiswa terpilih (distinct dari KRS).
+  const [mhsPeriodes] = createResource(selectedMhsId, async (mhsId) => {
+    if (!mhsId) return null;
+    try {
+      const res = await khsController.getPeriodeList(mhsId);
+      return res.data || [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Saat mahasiswa berubah, reset periode ke periode aktif milik mahasiswa itu.
+  createEffect(() => {
+    const mhsId = selectedMhsId();
+    const list = mhsPeriodes();
+    if (!mhsId || !list) return;
+    const active = list.find((p) => p.aktif);
+    if (active) {
+      setSelectedPeriode(active.id);
+    } else if (list.length > 0) {
+      setSelectedPeriode(list[0].id);
+    } else {
+      setSelectedPeriode('');
+    }
+  });
+
+  // Dropdown periode: bila mahasiswa terpilih, tampilkan hanya periode yang diikutinya;
+  // fallback ke daftar semua periode bila belum ada mahasiswa terpilih.
+  const periodeOptions = () => {
+    const mhsId = selectedMhsId();
+    if (mhsId) {
+      const list = mhsPeriodes();
+      if (list) return list;
+    }
+    return periodes() || [];
+  };
 
   // Printing States
   const [showPrintUjian, setShowPrintUjian] = createSignal(false);
@@ -205,12 +274,7 @@ export default function Khs() {
     },
   );
 
-  // Search Mahasiswa (Admin/Dosen only)
-  const [searchedStudents] = createResource(debouncedSearchNim, async (nim) => {
-    if (!nim) return [];
-    const res = await mahasiswaController.getAll(nim, 1, 10);
-    return res.data;
-  });
+  // Search Mahasiswa (Admin/Dosen only) — via SearchableSelect
 
   const [khsData, { refetch: refetchKhs }] = createResource(
     () => {
@@ -334,48 +398,18 @@ export default function Khs() {
         <Show when={role() !== 'mahasiswa' && activeTab() !== 'konversi'}>
           <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-700 text-base">Pilih Mahasiswa & Periode</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="flex flex-col gap-1.5">
-                <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
-                  Cari NIM / Nama
-                </label>
-                <input
-                  type="text"
-                  placeholder="Masukkan NIM atau Nama..."
-                  value={searchNim()}
-                  onInput={(e) => {
-                    const val = e.currentTarget.value;
-                    setSearchNim(val);
-                    clearTimeout(searchDebounceTimer);
-                    searchDebounceTimer = setTimeout(() => setDebouncedSearchNim(val), 400);
-                  }}
-                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-brand-500 dark:border-secondary-700"
-                />
-              </div>
-
-              <div class="flex flex-col gap-1.5">
-                <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
-                  Pilih dari Hasil Pencarian
-                </label>
-                <Suspense fallback={<span class="text-caption text-secondary-400">Memuat hasil pencarian...</span>}>
-                  <select
-                    onChange={(e) => {
-                      const id = parseInt(e.currentTarget.value);
-                      setSelectedMhsId(id || null);
-                    }}
-                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
-                  >
-                    <option value="">-- Pilih Mahasiswa --</option>
-                    <For each={searchedStudents()}>
-                      {(item) => (
-                        <option value={item.id} selected={selectedMhsId() === item.id}>
-                          {item.nim} - {item.nama}
-                        </option>
-                      )}
-                    </For>
-                  </select>
-                </Suspense>
-              </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SearchableSelect
+                label="Cari & Pilih Mahasiswa"
+                placeholder="Ketik NIM atau Nama..."
+                options={mhsOptions() || []}
+                value={selectedMhsId()}
+                onChange={(v) => setSelectedMhsId(Number(v))}
+                onSearch={onSearchStudents}
+                isLoading={pageData.loading}
+                hasMore={hasMoreStudents()}
+                onLoadMore={onLoadMoreStudents}
+              />
 
               <Show when={activeTab() === 'khs'}>
                 <div class="flex flex-col gap-1.5">
@@ -387,7 +421,10 @@ export default function Khs() {
                     onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
                     class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   >
-                    <For each={periodes()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                    <Show when={periodeOptions().length === 0}>
+                      <option value="">Belum ada periode yang diikuti</option>
+                    </Show>
+                    <For each={periodeOptions()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
                   </select>
                 </div>
               </Show>
@@ -404,7 +441,10 @@ export default function Khs() {
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
               class="border border-secondary-200 rounded-xl px-3 py-1.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
             >
-              <For each={periodes()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+              <Show when={periodeOptions().length === 0}>
+                <option value="">Belum ada periode yang diikuti</option>
+              </Show>
+              <For each={periodeOptions()}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
             </select>
           </div>
         </Show>
