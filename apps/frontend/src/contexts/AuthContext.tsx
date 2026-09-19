@@ -60,6 +60,12 @@ export const SINGLE_ROLE_ONLY: UserRole[] = ['super_admin', 'mahasiswa', 'guest'
 export const MULTI_ROLE_ALLOWED: UserRole[] = ['admin', 'kaprodi', 'prodi', 'dosen', 'keuangan', 'plp', 'instruktur'];
 export const ALL_ROLES: UserRole[] = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
 
+const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/activate', '/rombel/enroll'];
+
+function isPublicPath(pathname: string): boolean {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export function AuthProvider(props: { children: JSX.Element }) {
   const [user, setUser] = createSignal<User | null>(null);
   const [sessionExp, setSessionExp] = createSignal<number | null>(null);
@@ -145,13 +151,20 @@ export function AuthProvider(props: { children: JSX.Element }) {
   const resetIdle = () => scheduleSessionTimeout();
 
   onMount(async () => {
-    const me = await fetchMe();
-    if (me && me.user) {
-      setUser(me.user);
-      setSessionExp(me.exp);
-      if (me.user.theme) setLocalTheme(me.user.theme);
+    // Di halaman publik, jangan probe /auth/me (selalu 401 tanpa sesi) —
+    // hindari noise console. Login/enroll akan set sesi lalu bootstrap di
+    // rute berikutnya.
+    if (typeof window !== 'undefined' && isPublicPath(window.location.pathname)) {
+      setBootstrapped(true);
+    } else {
+      const me = await fetchMe();
+      if (me && me.user) {
+        setUser(me.user);
+        setSessionExp(me.exp);
+        if (me.user.theme) setLocalTheme(me.user.theme);
+      }
+      setBootstrapped(true);
     }
-    setBootstrapped(true);
 
     const events = ['mousemove', 'keydown', 'click', 'touchstart', 'scroll'];
     for (const ev of events) window.addEventListener(ev, resetIdle);
