@@ -43,7 +43,7 @@ describe('Force Password Change Feature', () => {
       new Request('http://localhost/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'user_fpc@test.com', password: 'password123' }),
+        body: JSON.stringify({ email: 'user_fpc@test.com', password: 'Password123' }),
       }),
     );
 
@@ -60,7 +60,7 @@ describe('Force Password Change Feature', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          currentPassword: 'password123',
+          currentPassword: 'Password123',
           password: 'newPassword123!',
         }),
       }),

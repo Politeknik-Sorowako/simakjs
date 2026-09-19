@@ -18,7 +18,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'dosen@test.com',
-            password: 'password123',
+            password: 'Password123',
             nama: 'Dosen Test',
             role: 'dosen',
           }),
@@ -37,7 +37,7 @@ describe('1. Autentikasi (/auth)', () => {
     it('harus gagal registrasi jika email sudah terdaftar', async () => {
       const payload = {
         email: 'duplicate@test.com',
-        password: 'password123',
+        password: 'Password123',
         nama: 'Duplicate Test',
         role: 'mahasiswa' as const,
       };
@@ -70,7 +70,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'invalid-email-format',
-            password: 'password123',
+            password: 'Password123',
             nama: 'Invalid Test',
             role: 'mahasiswa',
           }),
@@ -96,6 +96,44 @@ describe('1. Autentikasi (/auth)', () => {
 
       expect(response.status).toBe(422);
     });
+
+    it('harus gagal registrasi jika password tanpa huruf kapital dan angka', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'nocaps@test.com',
+            password: 'lowercaseonly',
+            nama: 'No Caps Test',
+            role: 'mahasiswa',
+          }),
+        }),
+      );
+
+      expect(response.status).toBe(422);
+      const body = (await response.json()) as ErrorResponse;
+      expect(body.error).toContain('huruf kapital dan angka');
+    });
+
+    it('harus menolak registrasi dengan role sensitif (allowlist)', async () => {
+      for (const role of ['admin', 'super_admin', 'kaprodi', 'plp', 'instruktur', 'keuangan', 'prodi']) {
+        const response = await app.handle(
+          new Request('http://localhost/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: `${role}-${Date.now()}@test.com`,
+              password: 'Password123',
+              nama: 'Role Test',
+              role,
+            }),
+          }),
+        );
+
+        expect([403, 422]).toContain(response.status);
+      }
+    });
   });
 
   describe('POST /auth/login', () => {
@@ -106,7 +144,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'user@test.com',
-            password: 'password123',
+            password: 'Password123',
             nama: 'User Test',
             role: 'mahasiswa',
           }),
@@ -121,7 +159,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'user@test.com',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );
@@ -141,7 +179,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'user@test.com',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );
@@ -160,7 +198,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'unregistered@test.com',
-            password: 'password123',
+            password: 'Password123',
           }),
         }),
       );
@@ -199,7 +237,7 @@ describe('1. Autentikasi (/auth)', () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: 'reset@test.com',
-            password: 'oldpassword123',
+            password: 'OldPassword123',
             nama: 'Reset Test',
             role: 'mahasiswa',
           }),

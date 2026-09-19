@@ -2,6 +2,7 @@ import { count, eq, ilike, inArray, or } from 'drizzle-orm';
 import { userRoles, users } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { db } from '../utils/db';
+import { validatePassword } from '../utils/password-policy';
 import { hasRole, validateRoleCombination } from '../utils/role';
 import { AuthContext, UserRole } from '../utils/types';
 
@@ -414,9 +415,10 @@ export class UserController {
           set.status = 400;
           return { error: 'Kata sandi saat ini salah' };
         }
-        if (password.length < 6) {
+        const passwordError = validatePassword(password);
+        if (passwordError) {
           set.status = 400;
-          return { error: 'Password minimal harus 6 karakter' };
+          return { error: passwordError };
         }
         updateData.password = await Bun.password.hash(password, {
           algorithm: 'bcrypt',
@@ -488,9 +490,10 @@ export class UserController {
 
       // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
       const newPassword = (body as any)?.password;
-      if (!newPassword || newPassword.length < 6) {
+      const passwordError = validatePassword(newPassword || '');
+      if (passwordError) {
         set.status = 400;
-        return { error: 'Password minimal 6 karakter' };
+        return { error: passwordError };
       }
 
       const hashed = await Bun.password.hash(newPassword, { algorithm: 'bcrypt', cost: 12 });
