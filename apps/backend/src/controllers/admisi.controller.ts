@@ -1,6 +1,11 @@
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'path';
 import { AdmisiService } from '../services/admisi.service';
+import {
+  sanitizeContentDispositionName,
+  validateAdmissionFile,
+  validateAdmissionFileMagic,
+} from '../utils/file-validation';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
 
@@ -177,6 +182,22 @@ export class AdmisiController {
         return { error: 'File dan requirementId wajib diisi' };
       }
 
+      // Validasi ukuran & ekstensi (jangan percaya mime dari client).
+      const basicError = validateAdmissionFile(file);
+      if (basicError) {
+        set.status = 400;
+        return { error: basicError };
+      }
+
+      // Validasi magic bytes: cegah rename ekstensi (mis. exe jadi .pdf).
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'file';
+      const magicBuffer = new Uint8Array(await file.arrayBuffer()).subarray(0, 12);
+      const magicError = validateAdmissionFileMagic(ext, magicBuffer);
+      if (magicError) {
+        set.status = 400;
+        return { error: magicError };
+      }
+
       // Fetch application + requirement info for naming
       const [[app], [req]] = await Promise.all([
         db
@@ -205,7 +226,6 @@ export class AdmisiController {
         `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}` +
         `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
 
-      const ext = file.name.split('.').pop() || 'file';
       const newFileName = `${noPendaftar}_${namaSlug}_${berkasSlug}-${timestamp}.${ext}`;
 
       const uploadDir = `${STORAGE_DIR}/${params.id}`;
@@ -383,7 +403,8 @@ export class AdmisiController {
       }
 
       set.headers['Content-Type'] = doc.mimeType || 'application/octet-stream';
-      set.headers['Content-Disposition'] = `inline; filename="${doc.originalName || 'file'}"`;
+      set.headers['Content-Disposition'] =
+        `inline; filename="${sanitizeContentDispositionName(doc.originalName || 'file')}"`;
       return file;
     } catch (e: unknown) {
       set.status = 500;
@@ -435,7 +456,8 @@ export class AdmisiController {
         docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       };
       set.headers['Content-Type'] = mimeMap[ext] || 'application/octet-stream';
-      set.headers['Content-Disposition'] = `attachment; filename="${ann.fileName || 'file'}"`;
+      set.headers['Content-Disposition'] =
+        `attachment; filename="${sanitizeContentDispositionName(ann.fileName || 'file')}"`;
       return file;
     } catch (e: unknown) {
       set.status = 500;

@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { passwordResets, users } from '../models/schema';
+import { users } from '../models/schema';
+import { AuthService } from '../services/auth.service';
 import { db } from '../utils/db';
 import { clearDatabase, ErrorResponse, LoginSuccessResponse, RegisterSuccessResponse } from './test-helper';
 
@@ -246,6 +247,9 @@ describe('1. Autentikasi (/auth)', () => {
     });
 
     it('harus sukses membuat token reset password untuk email terdaftar', async () => {
+      const token = await AuthService.createPasswordResetForEmail('reset@test.com');
+      expect(token).toBeDefined();
+
       const response = await app.handle(
         new Request('http://localhost/auth/forgot-password', {
           method: 'POST',
@@ -256,7 +260,9 @@ describe('1. Autentikasi (/auth)', () => {
 
       expect(response.status).toBe(200);
       const body = (await response.json()) as Record<string, unknown>;
-      expect(body.token).toBeDefined();
+      expect(body.message).toBeDefined();
+      // Token tidak boleh bocor ke response body publik.
+      expect(body.token).toBeUndefined();
     });
 
     it('harus memberikan response 200 untuk email tidak terdaftar (security: no user enumeration)', async () => {
@@ -272,17 +278,8 @@ describe('1. Autentikasi (/auth)', () => {
     });
 
     it('harus sukses mereset password dengan token valid', async () => {
-      const forgotResponse = await app.handle(
-        new Request('http://localhost/auth/forgot-password', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: 'reset@test.com' }),
-        }),
-      );
-      expect(forgotResponse.status).toBe(200);
-
-      const forgotBody = (await forgotResponse.json()) as { token: string };
-      const token = forgotBody.token;
+      const token = await AuthService.createPasswordResetForEmail('reset@test.com');
+      expect(token).toBeDefined();
 
       const resetResponse = await app.handle(
         new Request('http://localhost/auth/reset-password', {
