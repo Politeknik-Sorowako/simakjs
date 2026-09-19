@@ -1,5 +1,5 @@
 import { useSearchParams } from '@solidjs/router';
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { type BkdRekap, bkdController } from '../controllers/bkdController';
 
 const PRESENSI_LABEL: {
@@ -40,6 +40,54 @@ export default function BkdCetak() {
       setHasPrinted(true);
       setTimeout(() => window.print(), 300);
     }
+  });
+
+  const bimbingan = () => rekap()?.bimbingan || [];
+
+  const rekapBimbingan = createMemo(() => {
+    const map = new Map<string, { tanggal: string; jumlahSesi: number; mahasiswa: Map<string, string> }>();
+    for (const b of bimbingan()) {
+      for (const s of b.sesi || []) {
+        const tgl = s.tanggalBimbingan || '-';
+        const entry = map.get(tgl) || { tanggal: tgl, jumlahSesi: 0, mahasiswa: new Map<string, string>() };
+        entry.jumlahSesi += 1;
+        const nim = b.mahasiswa?.nim || '-';
+        const nama = b.mahasiswa?.nama || '-';
+        entry.mahasiswa.set(nim, `${nama} (${nim})`);
+        map.set(tgl, entry);
+      }
+    }
+    return [...map.values()]
+      .map((e) => ({
+        tanggal: e.tanggal,
+        jumlahSesi: e.jumlahSesi,
+        daftarMahasiswa: [...e.mahasiswa.values()].join(', '),
+      }))
+      .sort((a, b) => {
+        if (a.tanggal === '-') return 1;
+        if (b.tanggal === '-') return -1;
+        return a.tanggal.localeCompare(b.tanggal);
+      });
+  });
+
+  const rincianBimbingan = createMemo(() => {
+    const list: { tanggal: string; nim: string; nama: string; topik: string }[] = [];
+    for (const b of bimbingan()) {
+      for (const s of b.sesi || []) {
+        list.push({
+          tanggal: s.tanggalBimbingan || '-',
+          nim: b.mahasiswa?.nim || '-',
+          nama: b.mahasiswa?.nama || '-',
+          topik: s.topikBimbingan || '-',
+        });
+      }
+    }
+    return list.sort((a, b) => {
+      if (a.tanggal === '-') return 1;
+      if (b.tanggal === '-') return -1;
+      const byDate = a.tanggal.localeCompare(b.tanggal);
+      return byDate !== 0 ? byDate : a.nama.localeCompare(b.nama);
+    });
   });
 
   return (
@@ -191,30 +239,68 @@ export default function BkdCetak() {
 
               <div class="mt-6">
                 <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
-                  C. Riwayat Bimbingan Akademik
+                  C1. Rekap Bimbingan per Tanggal
                 </h4>
                 <table class="w-full border-collapse text-left text-xs">
                   <thead>
                     <tr class="border-b border-secondary-200 bg-secondary-50 font-bold uppercase text-secondary-500">
-                      <th class="border-r border-secondary-200 p-2">NIM</th>
-                      <th class="border-r border-secondary-200 p-2">Mahasiswa</th>
-                      <th class="border-r border-secondary-200 p-2 text-center">Sesi</th>
-                      <th class="p-2 text-center">Status</th>
+                      <th class="border-r border-secondary-200 p-2">Tanggal Bimbingan</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">Jumlah Sesi</th>
+                      <th class="p-2">Daftar Mahasiswa</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <For each={data().bimbingan}>
+                    <For each={rekapBimbingan()}>
                       {(r) => (
                         <tr class="border-b border-secondary-200">
-                          <td class="border-r border-secondary-200 p-2">{r.mahasiswa?.nim || '-'}</td>
-                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">
-                            {r.mahasiswa?.nama || '-'}
-                          </td>
-                          <td class="border-r border-secondary-200 p-2 text-center">{r.sesi?.length || 0}</td>
-                          <td class="p-2 text-center">{r.isApproved ? 'Disetujui' : 'Pending'}</td>
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{r.tanggal}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{r.jumlahSesi}</td>
+                          <td class="p-2">{r.daftarMahasiswa}</td>
                         </tr>
                       )}
                     </For>
+                    <Show when={rekapBimbingan().length === 0}>
+                      <tr>
+                        <td colspan="3" class="p-4 text-center text-secondary-400">
+                          Tidak ada data bimbingan.
+                        </td>
+                      </tr>
+                    </Show>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-6">
+                <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
+                  C2. Rincian Sesi Bimbingan
+                </h4>
+                <table class="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-secondary-200 bg-secondary-50 font-bold uppercase text-secondary-500">
+                      <th class="border-r border-secondary-200 p-2">Tanggal Bimbingan</th>
+                      <th class="border-r border-secondary-200 p-2">NIM</th>
+                      <th class="border-r border-secondary-200 p-2">Nama Mahasiswa</th>
+                      <th class="p-2">Topik Bimbingan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={rincianBimbingan()}>
+                      {(r) => (
+                        <tr class="border-b border-secondary-200">
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{r.tanggal}</td>
+                          <td class="border-r border-secondary-200 p-2">{r.nim}</td>
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{r.nama}</td>
+                          <td class="p-2">{r.topik}</td>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={rincianBimbingan().length === 0}>
+                      <tr>
+                        <td colspan="4" class="p-4 text-center text-secondary-400">
+                          Tidak ada data bimbingan.
+                        </td>
+                      </tr>
+                    </Show>
                   </tbody>
                 </table>
               </div>
