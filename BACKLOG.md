@@ -21,14 +21,19 @@ Daftar item keamanan yang teridentifikasi tapi belum diimplementasikan. Dikelomp
 
 ## LOW — Backlog / Best Practice
 
-- [ ] **Race condition sliding refresh**: Dua request simultan bisa memicu refresh independen — token pertama valid beberapa detik lebih pendek dari ideal. Overkill untuk mitigasi (perlu mutex per-user).
-- [ ] **Frontend idle timer drift**: Timer frontend dijadwalkan berdasarkan `exp` token saat login/refresh. Jika backend sliding refresh mengirim token baru sebelum timer frontend update, gap beberapa detik mungkin terjadi. Dalam praktik negligible.
+- [x] **Race condition sliding refresh** *(wont-fix — accepted risk)*: Dua request simultan bisa memicu refresh independen — token pertama valid beberapa detik lebih pendek dari ideal. Overkill untuk mitigasi (perlu mutex per-user).
+- [x] **Frontend idle timer drift** *(wont-fix — accepted risk)*: Timer frontend dijadwalkan berdasarkan `exp` token saat login/refresh. Jika backend sliding refresh mengirim token baru sebelum timer frontend update, gap beberapa detik mungkin terjadi. Dalam praktik negligible.
 - [x] **WebSocket token via query param**: `app.ts:295` — token dikirim via `?token=` yang bisa bocor ke access log/proxy. Pindah ke `Sec-WebSocket-Protocol` header.
 - [x] **Token storage di localStorage**: Frontend simpan JWT di `localStorage` — rentan XSS curi token. httpOnly cookie sudah tersedia sebagai alternatif (backend sudah set). Evaluasi migrasi penuh ke cookie-only.
 - [x] **Admin role whitelist**: Register tidak memblokir role `kaprodi`, `prodi`, `plp`, `instruktur` secara eksplisit — hanya `admin`, `prodi`, `keuangan` yang diblokir. Pastikan tidak ada role sensitif yang bisa didaftarkan mandiri.
 - [x] **Kontrak 401 vs 403 tidak konsisten**: Banyak controller memetakan `!user` (tidak login/kedaluwarsa/kill-switch) ke `403`, padahal secara semantik harus `401`; `403` seharusnya hanya untuk role mismatch. Frontend `fetchApi` hanya auto-logout+redirect pada `401`. Mitigasi saat ini: poller notifikasi (401) + redirect langsung setelah bump menutup gap, tapi refactor kontrak endpoint perlu dijadwalkan.
 
 ---
+
+## Ditutup tanpa aksi (accepted risk)
+
+- [x] **Race sliding refresh**: JWT stateless — tidak ada rotasi/invalidasi token lama server-side; dua token hasil refresh independen dan keduanya valid penuh sampai `exp` masing-masing. Tidak ada shared mutable state yang diperebutkan, sehingga mutex per-user tidak relevan. Tidak ada degradasi masa berlaku.
+- [x] **Idle timer drift**: Pasca-PR #416, `sessionExp` frontend disinkronkan via event `simak:token-refresh` tiap respons membawa `X-Refresh-Token`, lalu timer dijadwalkan ulang. Sisa skenario (slide tepat antara respons terakhir & fire timer) berakibat fail-closed ke logout beberapa detik lebih awal — aman, tanpa kebocoran sesi.
 
 ## Selesai (PR #416 — feat/cookie-only-auth)
 
