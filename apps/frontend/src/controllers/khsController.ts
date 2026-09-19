@@ -63,6 +63,7 @@ export interface KhsResponse {
   blocked: boolean;
   reason?: string;
   detail?: string;
+  warningTunggakan?: { reason: string | null; detail: string | null };
   krsList?: KhsKrsItem[];
   summary?: {
     totalSks: number;
@@ -209,6 +210,11 @@ export interface RincianKomponenMahasiswa {
 export const khsController = {
   async getByMhsIdAndPeriode(mhsId: number, periodeId: string): Promise<KhsResponse> {
     return fetchApi<KhsResponse>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}`);
+  },
+
+  async getByNim(nim: string, periodeId: string): Promise<KhsResponse> {
+    const params = new URLSearchParams({ nim, periodeId });
+    return fetchApi<KhsResponse>(`/khs/by-nim?${params.toString()}`);
   },
 
   async getTranskrip(mhsId: number): Promise<TranskripResponse> {

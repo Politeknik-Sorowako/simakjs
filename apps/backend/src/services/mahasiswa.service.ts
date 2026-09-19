@@ -161,6 +161,11 @@ export class MahasiswaService {
     return mhs ? mhs.id : null;
   }
 
+  static async getMahasiswaIdByNim(nim: string): Promise<number | null> {
+    const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nim));
+    return mhs ? mhs.id : null;
+  }
+
   static async getDosenIdByEmail(email: string): Promise<number | null> {
     const [dsn] = await db.select({ id: dosen.id }).from(dosen).where(ilike(dosen.email, email));
     return dsn ? dsn.id : null;

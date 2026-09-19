@@ -16,6 +16,7 @@ import { bahanKajianRoutes } from './routes/bahan-kajian.routes';
 import { bahanKajianCplMappingRoutes } from './routes/bahan-kajian-cpl-mapping.routes';
 import { bapRoutes } from './routes/bap.routes';
 import { bimbinganRoutes } from './routes/bimbingan.routes';
+import { bkdRoutes } from './routes/bkd.routes';
 import { capaianCplRoutes } from './routes/capaian-cpl.routes';
 import { capaianCpmkRoutes } from './routes/capaian-cpmk.routes';
 import { cplRoutes } from './routes/cpl.routes';
@@ -419,6 +420,7 @@ export const app = new Elysia()
   .use(nilaiPraktikRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
+  .use(bkdRoutes)
   .use(settingsRoutes)
   .use(pasalPelanggaranRoutes)
   .use(pelanggaranRoutes)

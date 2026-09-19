@@ -62,6 +62,7 @@ const InputNilai = lazy(() => import('./routes/InputNilai'));
 const KelasKuliah = lazy(() => import('./routes/KelasKuliah'));
 const KeuanganDashboard = lazy(() => import('./routes/KeuanganDashboard'));
 const Khs = lazy(() => import('./routes/Khs'));
+const KhsCetak = lazy(() => import('./routes/KhsCetak'));
 const KompensasiMahasiswa = lazy(() => import('./routes/KompensasiMahasiswa'));
 const KompensasiManual = lazy(() => import('./routes/KompensasiManual'));
 const KonfigurasiAbout = lazy(() => import('./routes/KonfigurasiAbout'));
@@ -92,6 +93,7 @@ const RombelEnroll = lazy(() => import('./routes/RombelEnroll'));
 const Rps = lazy(() => import('./routes/Rps'));
 const LaporanAkademik = lazy(() => import('./routes/reports/LaporanAkademik'));
 const LaporanBKD = lazy(() => import('./routes/reports/LaporanBKD'));
+const BkdCetak = lazy(() => import('./routes/BkdCetak'));
 const LaporanKeuangan = lazy(() => import('./routes/reports/LaporanKeuangan'));
 const LaporanKRS = lazy(() => import('./routes/reports/LaporanKRS'));
 const LaporanMahasiswaBaru = lazy(() => import('./routes/reports/LaporanMahasiswaBaru'));
@@ -371,8 +373,16 @@ function AppContent() {
           <Route
             path="/khs"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'dosen', 'mahasiswa']}>
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen', 'mahasiswa']}>
                 <Khs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/khs/cetak/:mhsId/:periodeId"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen', 'mahasiswa']}>
+                <KhsCetak />
               </ProtectedRoute>
             }
           />
@@ -621,8 +631,16 @@ function AppContent() {
           <Route
             path="/laporan/bkd"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'prodi', 'dosen']}>
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen']}>
                 <LaporanBKD />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bkd/cetak"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen']}>
+                <BkdCetak />
               </ProtectedRoute>
             }
           />
