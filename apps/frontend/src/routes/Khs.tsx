@@ -886,7 +886,7 @@ export default function Khs() {
         {/* PRINTABLE OVERLAY MODALS */}
         <Show when={showPrintUjian()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Print Preview - Kartu Ujian</h3>
                 <button
@@ -998,7 +998,7 @@ export default function Khs() {
 
         <Show when={showPrintKhs()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Print Preview - KHS</h3>
                 <button
@@ -1093,7 +1093,7 @@ export default function Khs() {
 
         <Show when={showPrintTranskrip()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Print Preview - Transkrip Akademik</h3>
                 <button
