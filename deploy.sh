@@ -195,7 +195,11 @@ cleanup_containers() {
 
 build_and_deploy() {
   log "Step 5: Building and deploying..."
-  
+
+  # Pastikan produksi berjalan dengan NODE_ENV=production (cookie Secure,
+  # Swagger/E2E mati). Nilai dari .env bisa meng-override bila ada.
+  export NODE_ENV="${NODE_ENV:-production}"
+
   docker compose build 2>&1 | tee -a "$LOG_FILE" || {
     fail "Docker build failed"
     exit 1

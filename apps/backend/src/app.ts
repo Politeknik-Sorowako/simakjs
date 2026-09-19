@@ -373,7 +373,7 @@ export const app = new Elysia()
         cookie.access_token.set({
           value: refreshed,
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
+          secure: process.env.NODE_ENV !== 'development',
           path: '/',
           sameSite: 'strict',
           maxAge: durationSec,
