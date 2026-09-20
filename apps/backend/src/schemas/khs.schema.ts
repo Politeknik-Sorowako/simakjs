@@ -162,11 +162,19 @@ export const getTranskripSchema = {
       transkripList: t.Optional(
         t.Array(
           t.Object({
-            mataKuliahKode: t.Optional(t.String()),
-            mataKuliahNama: t.Optional(t.String()),
-            sks: t.Optional(t.Integer()),
-            nilaiHuruf: t.Optional(t.String()),
-            nilaiIndeks: t.Optional(t.String()),
+            id: t.Optional(t.Integer({ default: 1 })),
+            nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+            nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+            nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+            periodeId: t.Optional(t.String()),
+            semester: t.Optional(t.Union([t.Integer(), t.Null()], { default: null })),
+            mataKuliah: t.Optional(
+              t.Object({
+                kode: t.Optional(t.String()),
+                nama: t.Optional(t.String()),
+                sksTotal: t.Optional(t.Integer()),
+              }),
+            ),
           }),
         ),
       ),

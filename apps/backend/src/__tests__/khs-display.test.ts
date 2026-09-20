@@ -194,5 +194,17 @@ describe('KHS Display Test', () => {
     expect(transRes.status).toBe(200);
     const transData = await transRes.json();
     console.log('TRANSKRIP DATA RESP:', JSON.stringify(transData, null, 2));
+
+    // Transkrip harus mengembalikan bentuk nested sesuai kontrak frontend,
+    // lengkap dengan nilai, periodeId, semester, dan mataKuliah.
+    expect(Array.isArray(transData.transkripList)).toBe(true);
+    expect(transData.transkripList.length).toBeGreaterThan(0);
+    const first = transData.transkripList[0];
+    expect(first).toHaveProperty('id');
+    expect(first).toHaveProperty('periodeId', '20252');
+    expect(first).toHaveProperty('semester');
+    expect(first.mataKuliah?.nama).toBe('Mata Kuliah 1');
+    expect(first.mataKuliah?.sksTotal).toBe(3);
+    expect(first.nilaiHuruf ?? first.nilaiIndeks).not.toBeNull();
   });
 });
