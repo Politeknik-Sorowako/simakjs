@@ -127,6 +127,7 @@ describe('9. Tagihan (/tagihan)', () => {
     angkatan: string,
     nominal: number,
     extra?: Record<string, unknown>,
+    periodeIdOverride?: string,
   ) => {
     const res = await app.handle(
       new Request('http://localhost/tagihan/tarif', {
@@ -135,6 +136,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan,
           programStudiId: prodiId,
+          periodeId: periodeIdOverride ?? '20231',
           nominal,
           termin1JatuhTempo: '2026-01-01',
           termin2JatuhTempo: '2026-03-01',
@@ -331,6 +333,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan: '8888', // Diambil dari 4 digit NIM mahasiswa ("88888888")
           programStudiId: prodiId,
+          periodeId: '20231',
           nominal: 3500000, // Tarif khusus angkatan 8888
           termin1JatuhTempo: '2026-01-01',
           termin2JatuhTempo: '2026-03-01',
@@ -451,7 +454,8 @@ describe('9. Tagihan (/tagihan)', () => {
       }),
     );
 
-    // Buat tarif untuk angkatan berjalan (misal periode 20251 -> angkatan 2025)
+    // Buat tarif untuk periode berjalan 20251 dengan angkatan NIM mahasiswa ('8888')
+    // agar generate periode 20251 memakai nominal yang sama (3.500.000).
     await app.handle(
       new Request('http://localhost/tagihan/tarif', {
         method: 'POST',
@@ -460,9 +464,10 @@ describe('9. Tagihan (/tagihan)', () => {
           Authorization: `Bearer ${adminToken}`,
         },
         body: JSON.stringify({
-          angkatan: '2025',
+          angkatan: '8888',
           programStudiId: prodiId,
-          nominal: 4000000,
+          periodeId: '20251',
+          nominal: 3500000,
           termin1JatuhTempo: '2026-01-01',
           termin2JatuhTempo: '2026-03-01',
         }),
@@ -619,6 +624,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan: '8888',
           programStudiId: prodiId,
+          periodeId: '20231',
           nominal: 5000000,
           termin1Nominal: 3000000,
           termin1JatuhTempo: '2026-01-10',
@@ -677,6 +683,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan: '8888',
           programStudiId: prodiId,
+          periodeId: '20231',
           nominal: 5000000,
           termin1Nominal: 2500000,
           termin1JatuhTempo: '2020-01-01',
@@ -758,6 +765,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan: '8888',
           programStudiId: prodiId,
+          periodeId: '20231',
           nominal: 5000000,
         }),
       }),
@@ -772,6 +780,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan: '8888',
           programStudiId: prodiId,
+          periodeId: '20231',
           nominal: 5000000,
           termin1Nominal: 4000000,
           termin1JatuhTempo: '2026-01-01',
@@ -790,6 +799,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan: '8888',
           programStudiId: prodiId,
+          periodeId: '20231',
           nominal: 5000000,
           termin1JatuhTempo: '2026-05-01',
           termin2JatuhTempo: '2026-01-01',
@@ -806,6 +816,7 @@ describe('9. Tagihan (/tagihan)', () => {
         body: JSON.stringify({
           angkatan: '8888',
           programStudiId: prodiId,
+          periodeId: '20231',
           nominal: 5000000,
           termin1Nominal: 0,
           termin1JatuhTempo: '2026-01-01',
@@ -830,6 +841,9 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({
+          programStudiId: prodiId,
+          angkatan: '8888',
+          periodeId: '20231',
           nominal: 6000000,
           termin1Nominal: 3000000,
           termin1JatuhTempo: '2026-02-01',
@@ -849,6 +863,9 @@ describe('9. Tagihan (/tagihan)', () => {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
         body: JSON.stringify({
+          programStudiId: prodiId,
+          angkatan: '8888',
+          periodeId: '20231',
           nominal: 6000000,
           termin1Nominal: 1000000,
           termin1JatuhTempo: '2026-02-01',
@@ -866,18 +883,19 @@ describe('9. Tagihan (/tagihan)', () => {
     // Tarif valid utk angkatan 8888
     await createTarif(adminToken, '8888', 5000000);
 
-    // Tarif tanpa tanggal utk angkatan lain yg tidak terpakai — pastikan tak menggagalkan batch
+    // Generate utk periode lain yang belum punya tarif -> mahasiswa di-skip (tanpa-tarif)
     const genRes = await app.handle(
       new Request('http://localhost/tagihan/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-        body: JSON.stringify({ periodeId: '20231' }),
+        body: JSON.stringify({ periodeId: '20251' }),
       }),
     );
     expect(genRes.status).toBe(201);
     const genBody = await genRes.json();
-    expect(genBody.count).toBeGreaterThan(0);
-    expect(genBody.skippedTanpaTanggal).toBeDefined();
+    expect(genBody.count).toBe(0);
+    expect(genBody.skipped.length).toBeGreaterThan(0);
+    expect(genBody.skipped[0].alasan).toBe('tanpa-tarif');
   });
 
   it('getAll mendukung filter periodeId dan programStudiId', async () => {
@@ -912,5 +930,67 @@ describe('9. Tagihan (/tagihan)', () => {
     );
     const bodyOther = await resOther.json();
     expect(bodyOther.data.length).toBe(0);
+  });
+
+  it('tarif bersifat unik per (angkatan, prodi, periode) dan generate memakai tarif periode berjalan', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-periode@test.com', 'admin');
+
+    // Tarif periode 20231 nominal 3jt
+    await createTarif(adminToken, '8888', 3000000);
+
+    // Tarif periode 20251 nominal 7jt (periode beda) — tak boleh dipakai utk generate 20231
+    const res20251 = await createTarif(adminToken, '8888', 7000000, undefined, '20251');
+    expect(res20251.status).toBe(200);
+
+    // Generate periode 20231 -> pakai 3jt
+    await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ periodeId: '20231' }),
+      }),
+    );
+    const listRes = await app.handle(
+      new Request('http://localhost/tagihan?limit=1', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const listBody = await listRes.json();
+    expect(listBody.data[0].nominal).toBe(3000000);
+
+    // Upsert: buat lagi periode 20231 nominal 4jt -> perbarui, bukan duplikat
+    const upsert = await createTarif(adminToken, '8888', 4000000);
+    expect(upsert.status).toBe(200);
+    const tarifListRes = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const tarifBody = await tarifListRes.json();
+    const tarif20231 = tarifBody.data.filter((t: Record<string, unknown>) => t.periodeId === '20231');
+    expect(tarif20231.length).toBe(1);
+    expect(tarif20231[0].nominal).toBe(4000000);
+  });
+
+  it('menolak create tarif dengan periodeId yang tidak dikenal', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-unknown-periode@test.com', 'admin');
+
+    const res = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          periodeId: '99999',
+          nominal: 5000000,
+          termin1JatuhTempo: '2026-01-01',
+          termin2JatuhTempo: '2026-03-01',
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
   });
 });

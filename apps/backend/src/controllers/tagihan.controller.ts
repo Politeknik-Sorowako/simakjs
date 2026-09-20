@@ -1,5 +1,5 @@
-import { and, eq } from 'drizzle-orm';
-import { mahasiswa, programStudi, skemaTarif } from '../models/schema';
+import { and, eq, sql } from 'drizzle-orm';
+import { mahasiswa, periodeAkademik, programStudi, skemaTarif } from '../models/schema';
 import { TagihanService } from '../services/tagihan.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
@@ -62,7 +62,7 @@ export class TagihanController {
       return {
         message: 'Tagihan berhasil dibuat secara massal',
         count: result.createdCount,
-        skippedTanpaTanggal: result.skippedTanpaTanggal,
+        skipped: result.skipped,
       };
     } catch (e: unknown) {
       set.status = 400;
@@ -227,6 +227,7 @@ export class TagihanController {
         id: skemaTarif.id,
         angkatan: skemaTarif.angkatan,
         programStudiId: skemaTarif.programStudiId,
+        periodeId: skemaTarif.periodeId,
         nominal: skemaTarif.nominal,
         termin1Nominal: skemaTarif.termin1Nominal,
         termin1JatuhTempo: skemaTarif.termin1JatuhTempo,
@@ -237,9 +238,14 @@ export class TagihanController {
           nama: programStudi.nama,
           kode: programStudi.kode,
         },
+        periode: {
+          id: periodeAkademik.id,
+          nama: periodeAkademik.nama,
+        },
       })
       .from(skemaTarif)
-      .leftJoin(programStudi, eq(skemaTarif.programStudiId, programStudi.id));
+      .leftJoin(programStudi, eq(skemaTarif.programStudiId, programStudi.id))
+      .leftJoin(periodeAkademik, eq(skemaTarif.periodeId, periodeAkademik.id));
     return { data: list };
   }
 
@@ -258,6 +264,12 @@ export class TagihanController {
       const nominal = Number(body.nominal);
       const programStudiId = Number(body.programStudiId);
       const angkatan = String(body.angkatan);
+      const periodeId = String(body.periodeId);
+
+      if (!periodeId || !/^\d{5}$/.test(periodeId)) {
+        set.status = 400;
+        return { error: 'Periode akademik wajib diisi' };
+      }
 
       const termin1Nominal = body.termin1Nominal != null ? Number(body.termin1Nominal) : null;
       const termin1JatuhTempo = body.termin1JatuhTempo ?? null;
@@ -272,10 +284,27 @@ export class TagihanController {
         termin2JatuhTempo,
       });
 
+      // Validasi periode eksis
+      const [periode] = await db
+        .select({ id: periodeAkademik.id })
+        .from(periodeAkademik)
+        .where(eq(periodeAkademik.id, periodeId))
+        .limit(1);
+      if (!periode) {
+        set.status = 400;
+        return { error: 'Periode akademik tidak ditemukan' };
+      }
+
       const [existing] = await db
         .select()
         .from(skemaTarif)
-        .where(and(eq(skemaTarif.angkatan, angkatan), eq(skemaTarif.programStudiId, programStudiId)))
+        .where(
+          and(
+            eq(skemaTarif.angkatan, angkatan),
+            eq(skemaTarif.programStudiId, programStudiId),
+            eq(skemaTarif.periodeId, periodeId),
+          ),
+        )
         .limit(1);
 
       const values = {
@@ -295,6 +324,7 @@ export class TagihanController {
           .values({
             angkatan,
             programStudiId,
+            periodeId,
             ...values,
           })
           .returning();
@@ -320,6 +350,15 @@ export class TagihanController {
     try {
       const id = parseInt(params.id);
       const nominal = Number(body.nominal);
+      const programStudiId = Number(body.programStudiId);
+      const angkatan = String(body.angkatan);
+      const periodeId = String(body.periodeId);
+
+      if (!periodeId || !/^\d{5}$/.test(periodeId)) {
+        set.status = 400;
+        return { error: 'Periode akademik wajib diisi' };
+      }
+
       const termin1Nominal = body.termin1Nominal != null ? Number(body.termin1Nominal) : null;
       const termin1JatuhTempo = body.termin1JatuhTempo ?? null;
       const termin2Nominal = body.termin2Nominal != null ? Number(body.termin2Nominal) : null;
@@ -333,10 +372,42 @@ export class TagihanController {
         termin2JatuhTempo,
       });
 
+      // Cek periode eksis
+      const [periode] = await db
+        .select({ id: periodeAkademik.id })
+        .from(periodeAkademik)
+        .where(eq(periodeAkademik.id, periodeId))
+        .limit(1);
+      if (!periode) {
+        set.status = 400;
+        return { error: 'Periode akademik tidak ditemukan' };
+      }
+
+      // Cek bentrok unik (angkatan, prodi, periode) dengan baris lain
+      const [existing] = await db
+        .select()
+        .from(skemaTarif)
+        .where(
+          and(
+            eq(skemaTarif.angkatan, angkatan),
+            eq(skemaTarif.programStudiId, programStudiId),
+            eq(skemaTarif.periodeId, periodeId),
+            sql`${skemaTarif.id} != ${id}`,
+          ),
+        )
+        .limit(1);
+      if (existing) {
+        set.status = 400;
+        return { error: 'Sudah ada tarif untuk angkatan, prodi, dan periode yang sama' };
+      }
+
       const [updated] = await db
         .update(skemaTarif)
         .set({
           nominal,
+          programStudiId,
+          angkatan,
+          periodeId,
           termin1Nominal,
           termin1JatuhTempo,
           termin2Nominal,

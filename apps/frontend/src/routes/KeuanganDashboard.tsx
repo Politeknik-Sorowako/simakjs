@@ -59,6 +59,7 @@ export default function KeuanganDashboard() {
   const [prodis] = createResource(() => prodiController.getAll('', 1, 100));
   const [newTarifAngkatan, setNewTarifAngkatan] = createSignal('');
   const [newTarifProdi, setNewTarifProdi] = createSignal<number | null>(null);
+  const [newTarifPeriode, setNewTarifPeriode] = createSignal('');
   const [newTarifNominal, setNewTarifNominal] = createSignal(5000000);
   const [tarifT1Nominal, setTarifT1Nominal] = createSignal('');
   const [tarifT1Tanggal, setTarifT1Tanggal] = createSignal('');
@@ -181,7 +182,11 @@ export default function KeuanganDashboard() {
     setIsGenerating(true);
     try {
       const res = await tagihanController.generate(selectedPeriode(), nominal);
-      toast.showToast(`${res.message} (${res.count} mahasiswa)`, 'success');
+      const skippedCount = res.skipped?.length || 0;
+      toast.showToast(
+        `${res.message} (${res.count} mahasiswa)${skippedCount ? `, ${skippedCount} di-skip` : ''}`,
+        'success',
+      );
       setShowGenerateModal(false);
       refetch();
       refetchStats();
@@ -227,6 +232,7 @@ export default function KeuanganDashboard() {
     setEditingTarifId(null);
     setNewTarifAngkatan('');
     setNewTarifProdi(null);
+    setNewTarifPeriode(selectedPeriode());
     setNewTarifNominal(5000000);
     setTarifT1Nominal('');
     setTarifT1Tanggal('');
@@ -239,6 +245,7 @@ export default function KeuanganDashboard() {
     setEditingTarifId(item.id);
     setNewTarifAngkatan(item.angkatan);
     setNewTarifProdi(item.programStudiId);
+    setNewTarifPeriode(item.periodeId);
     setNewTarifNominal(item.nominal);
     setTarifT1Nominal(item.termin1Nominal != null ? String(item.termin1Nominal) : '');
     setTarifT1Tanggal(item.termin1JatuhTempo || '');
@@ -251,6 +258,7 @@ export default function KeuanganDashboard() {
     e.preventDefault();
     const angkatan = newTarifAngkatan();
     const prodiId = newTarifProdi();
+    const periodeId = newTarifPeriode();
     const nominal = newTarifNominal();
     const editingId = editingTarifId();
 
@@ -260,6 +268,10 @@ export default function KeuanganDashboard() {
     }
     if (!prodiId) {
       toast.showToast('Silakan pilih program studi', 'error');
+      return;
+    }
+    if (!periodeId) {
+      toast.showToast('Silakan pilih periode akademik', 'error');
       return;
     }
     if (isNaN(nominal) || nominal <= 0) {
@@ -287,6 +299,9 @@ export default function KeuanganDashboard() {
     setTarifFormError('');
 
     const input = {
+      angkatan,
+      programStudiId: prodiId,
+      periodeId,
       nominal,
       termin1Nominal: t1Nom,
       termin1JatuhTempo: tarifT1Tanggal(),
@@ -297,7 +312,7 @@ export default function KeuanganDashboard() {
     try {
       const res = editingId
         ? await tagihanController.updateTarif(editingId, input)
-        : await tagihanController.createTarif(angkatan, prodiId, input);
+        : await tagihanController.createTarif(input);
       toast.showToast(res.message, 'success');
       resetTarifForm();
       refetchTarif();
@@ -418,6 +433,12 @@ export default function KeuanganDashboard() {
     };
   };
 
+  const summaryScopeLabel = () => {
+    const periode = periodes()?.data?.find((p) => p.id === selectedPeriode());
+    const prodi = prodiFilter() ? prodis()?.data?.find((p) => p.id === Number(prodiFilter())) : null;
+    return `Rekap: ${periode?.nama || selectedPeriode() || '-'} — ${prodi?.nama || 'Semua Prodi'}`;
+  };
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -450,7 +471,10 @@ export default function KeuanganDashboard() {
 
               <Button
                 variant="secondary"
-                onClick={() => setShowTarifModal(true)}
+                onClick={() => {
+                  setNewTarifPeriode(selectedPeriode());
+                  setShowTarifModal(true);
+                }}
                 class="w-full md:w-auto py-2 h-[38px] flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 <span class="text-caption font-bold">Skema Tarif Angkatan</span>
@@ -471,68 +495,73 @@ export default function KeuanganDashboard() {
         {/* Summary Stats */}
         <Suspense fallback={null}>
           <Show when={role() !== 'mahasiswa' && (tagihanData()?.data?.length || 0) > 0}>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                title="Total Tagihan"
-                value={formatRupiah(summaryStats().totalNominal)}
-                color="brand"
-                icon={
-                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                }
-              />
-              <StatCard
-                title="Telah Terbayar"
-                value={formatRupiah(summaryStats().totalTerbayar)}
-                color="green"
-                icon={
-                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                }
-              />
-              <StatCard
-                title="Sisa Tunggakan"
-                value={formatRupiah(summaryStats().totalTunggakan)}
-                color="rose"
-                icon={
-                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                }
-              />
-              <StatCard
-                title="Status Pembayaran"
-                value={`${summaryStats().lunas}/${summaryStats().total}`}
-                subtitle={`${summaryStats().cicilan} cicilan, ${summaryStats().belumBayar} belum`}
-                color="yellow"
-                icon={
-                  <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                }
-              />
+            <div class="flex flex-col gap-2">
+              <p class="text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
+                {summaryScopeLabel()}
+              </p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total Tagihan"
+                  value={formatRupiah(summaryStats().totalNominal)}
+                  color="brand"
+                  icon={
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                      />
+                    </svg>
+                  }
+                />
+                <StatCard
+                  title="Telah Terbayar"
+                  value={formatRupiah(summaryStats().totalTerbayar)}
+                  color="green"
+                  icon={
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  }
+                />
+                <StatCard
+                  title="Sisa Tunggakan"
+                  value={formatRupiah(summaryStats().totalTunggakan)}
+                  color="rose"
+                  icon={
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  }
+                />
+                <StatCard
+                  title="Status Pembayaran"
+                  value={`${summaryStats().lunas}/${summaryStats().total}`}
+                  subtitle={`${summaryStats().cicilan} cicilan, ${summaryStats().belumBayar} belum`}
+                  color="yellow"
+                  icon={
+                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  }
+                />
+              </div>
             </div>
           </Show>
         </Suspense>
@@ -1072,7 +1101,7 @@ export default function KeuanganDashboard() {
                 onSubmit={submitTarif}
                 class="flex flex-col gap-3 bg-secondary-55/40 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800"
               >
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                   <div class="flex flex-col gap-1">
                     <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
                       Angkatan (Tahun)
@@ -1098,6 +1127,20 @@ export default function KeuanganDashboard() {
                     >
                       <option value="">Pilih Prodi</option>
                       <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                    </select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
+                      Periode Semester
+                    </label>
+                    <select
+                      value={newTarifPeriode()}
+                      onChange={(e) => setNewTarifPeriode(e.currentTarget.value)}
+                      disabled={!!editingTarifId()}
+                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-caption text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white disabled:opacity-60 disabled:bg-secondary-100 dark:disabled:bg-secondary-800"
+                    >
+                      <option value="">Pilih Periode</option>
+                      <For each={periodes()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
                     </select>
                   </div>
                   <div class="flex flex-col gap-1">
@@ -1193,6 +1236,7 @@ export default function KeuanganDashboard() {
                     <tr>
                       <th class="p-3">Angkatan</th>
                       <th class="p-3">Program Studi</th>
+                      <th class="p-3">Periode</th>
                       <th class="p-3">Nominal Tarif</th>
                       <th class="p-3">Termin I</th>
                       <th class="p-3">Termin II</th>
@@ -1205,6 +1249,7 @@ export default function KeuanganDashboard() {
                         <tr class="border-b hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                           <td class="p-3 font-semibold text-secondary-800 dark:text-white">{t.angkatan}</td>
                           <td class="p-3 text-secondary-600">{t.programStudi?.nama || '-'}</td>
+                          <td class="p-3 text-secondary-600">{t.periode?.nama || t.periodeId || '-'}</td>
                           <td class="p-3 font-semibold text-secondary-800 dark:text-white">
                             {formatRupiah(t.nominal)}
                           </td>
@@ -1235,7 +1280,7 @@ export default function KeuanganDashboard() {
                     </For>
                     <Show when={!tarifList() || tarifList()!.data.length === 0}>
                       <tr>
-                        <td colspan="6" class="p-6 text-center text-secondary-400 dark:text-secondary-300 italic">
+                        <td colspan="7" class="p-6 text-center text-secondary-400 dark:text-secondary-300 italic">
                           Belum ada skema tarif angkatan terdaftar.
                         </td>
                       </tr>
