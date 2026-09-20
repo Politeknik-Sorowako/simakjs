@@ -26,6 +26,7 @@ export default function KeuanganDashboard() {
   onCleanup(() => clearTimeout(searchDebounceTimer));
 
   const [statusFilter, setStatusFilter] = createSignal('');
+  const [prodiFilter, setProdiFilter] = createSignal('');
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
   const [isGenerating, setIsGenerating] = createSignal(false);
@@ -60,9 +61,11 @@ export default function KeuanganDashboard() {
   const [newTarifProdi, setNewTarifProdi] = createSignal<number | null>(null);
   const [newTarifNominal, setNewTarifNominal] = createSignal(5000000);
   const [tarifT1Nominal, setTarifT1Nominal] = createSignal('');
-  const [tarifT1Tempo, setTarifT1Tempo] = createSignal('');
+  const [tarifT1Tanggal, setTarifT1Tanggal] = createSignal('');
   const [tarifT2Nominal, setTarifT2Nominal] = createSignal('');
-  const [tarifT2Tempo, setTarifT2Tempo] = createSignal('');
+  const [tarifT2Tanggal, setTarifT2Tanggal] = createSignal('');
+  const [editingTarifId, setEditingTarifId] = createSignal<number | null>(null);
+  const [tarifFormError, setTarifFormError] = createSignal('');
 
   // Modal Riwayat Transaksi & Void Signals
   const [showRiwayatModal, setShowRiwayatModal] = createSignal(false);
@@ -89,7 +92,8 @@ export default function KeuanganDashboard() {
   createEffect(() => {
     const list = periodes()?.data;
     if (list && list.length > 0 && !selectedPeriode()) {
-      setSelectedPeriode(list[0].id);
+      const aktif = list.find((p) => p.aktif);
+      setSelectedPeriode(aktif ? aktif.id : list[0].id);
     }
   });
 
@@ -100,16 +104,44 @@ export default function KeuanganDashboard() {
       status: statusFilter(),
       page: page(),
       limit: limit(),
+      periodeId: selectedPeriode(),
+      prodiId: prodiFilter(),
     }),
-    async ({ search, status, page, limit }) => {
+    async ({ search, status, page, limit, periodeId, prodiId }) => {
       try {
-        return await tagihanController.getAll(search, status || undefined, page, limit);
+        return await tagihanController.getAll(search, status || undefined, page, limit, {
+          periodeId: periodeId || undefined,
+          programStudiId: prodiId ? Number(prodiId) : undefined,
+        });
       } catch (e: unknown) {
         toast.showToast((e as Error).message || 'Gagal memuat data tagihan', 'error');
         throw e;
       }
     },
   );
+
+  // Summary agregat per periode & prodi (dari endpoint stats)
+  const [stats, { refetch: refetchStats }] = createResource(
+    () => ({
+      periodeId: selectedPeriode(),
+      prodiId: prodiFilter(),
+    }),
+    async ({ periodeId, prodiId }) => {
+      if (!periodeId) return null;
+      try {
+        return await tagihanController.getStats(periodeId, prodiId ? Number(prodiId) : undefined);
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  // Reset halaman saat filter periode/prodi berubah
+  createEffect(() => {
+    selectedPeriode();
+    prodiFilter();
+    resetPage();
+  });
 
   const [sortBy, setSortBy] = createSignal('mahasiswa');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
@@ -152,6 +184,7 @@ export default function KeuanganDashboard() {
       toast.showToast(`${res.message} (${res.count} mahasiswa)`, 'success');
       setShowGenerateModal(false);
       refetch();
+      refetchStats();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal melakukan generate tagihan massal', 'error');
     } finally {
@@ -184,9 +217,34 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setShowPayModal(false);
       refetch();
+      refetchStats();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal memproses pembayaran', 'error');
     }
+  };
+
+  const resetTarifForm = () => {
+    setEditingTarifId(null);
+    setNewTarifAngkatan('');
+    setNewTarifProdi(null);
+    setNewTarifNominal(5000000);
+    setTarifT1Nominal('');
+    setTarifT1Tanggal('');
+    setTarifT2Nominal('');
+    setTarifT2Tanggal('');
+    setTarifFormError('');
+  };
+
+  const openEditTarif = (item: SkemaTarif) => {
+    setEditingTarifId(item.id);
+    setNewTarifAngkatan(item.angkatan);
+    setNewTarifProdi(item.programStudiId);
+    setNewTarifNominal(item.nominal);
+    setTarifT1Nominal(item.termin1Nominal != null ? String(item.termin1Nominal) : '');
+    setTarifT1Tanggal(item.termin1JatuhTempo || '');
+    setTarifT2Nominal(item.termin2Nominal != null ? String(item.termin2Nominal) : '');
+    setTarifT2Tanggal(item.termin2JatuhTempo || '');
+    setTarifFormError('');
   };
 
   const submitTarif = async (e: Event) => {
@@ -194,6 +252,7 @@ export default function KeuanganDashboard() {
     const angkatan = newTarifAngkatan();
     const prodiId = newTarifProdi();
     const nominal = newTarifNominal();
+    const editingId = editingTarifId();
 
     if (!angkatan || !/^\d{4}$/.test(angkatan)) {
       toast.showToast('Tahun angkatan harus berupa 4 digit angka', 'error');
@@ -207,20 +266,40 @@ export default function KeuanganDashboard() {
       toast.showToast('Nominal tarif harus lebih besar dari 0', 'error');
       return;
     }
+    if (!tarifT1Tanggal() || !tarifT2Tanggal()) {
+      setTarifFormError('Tanggal jatuh tempo Termin I dan Termin II wajib diisi.');
+      return;
+    }
+    if (tarifT2Tanggal() < tarifT1Tanggal()) {
+      setTarifFormError('Tanggal jatuh tempo Termin II harus sama atau setelah Termin I.');
+      return;
+    }
+    const t1Nom = tarifT1Nominal() ? Number(tarifT1Nominal()) : null;
+    const t2Nom = tarifT2Nominal() ? Number(tarifT2Nominal()) : null;
+    if ((t1Nom !== null && t1Nom <= 0) || (t2Nom !== null && t2Nom <= 0)) {
+      setTarifFormError('Nominal angsuran termin harus lebih besar dari 0.');
+      return;
+    }
+    if (t1Nom !== null && t2Nom !== null && t1Nom + t2Nom !== nominal) {
+      setTarifFormError(`Total nominal angsuran (${t1Nom + t2Nom}) harus sama dengan nominal SPP (${nominal}).`);
+      return;
+    }
+    setTarifFormError('');
+
+    const input = {
+      nominal,
+      termin1Nominal: t1Nom,
+      termin1JatuhTempo: tarifT1Tanggal(),
+      termin2Nominal: t2Nom,
+      termin2JatuhTempo: tarifT2Tanggal(),
+    };
 
     try {
-      const res = await tagihanController.createTarif(angkatan, prodiId, nominal, {
-        termin1Nominal: tarifT1Nominal() ? Number(tarifT1Nominal()) : undefined,
-        termin1TempoHari: tarifT1Tempo() ? Number(tarifT1Tempo()) : undefined,
-        termin2Nominal: tarifT2Nominal() ? Number(tarifT2Nominal()) : undefined,
-        termin2TempoHari: tarifT2Tempo() ? Number(tarifT2Tempo()) : undefined,
-      });
+      const res = editingId
+        ? await tagihanController.updateTarif(editingId, input)
+        : await tagihanController.createTarif(angkatan, prodiId, input);
       toast.showToast(res.message, 'success');
-      setNewTarifAngkatan('');
-      setTarifT1Nominal('');
-      setTarifT1Tempo('');
-      setTarifT2Nominal('');
-      setTarifT2Tempo('');
+      resetTarifForm();
       refetchTarif();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menyimpan skema tarif', 'error');
@@ -258,6 +337,7 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       refetchRiwayat();
       refetch();
+      refetchStats();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal membatalkan transaksi', 'error');
     }
@@ -285,6 +365,7 @@ export default function KeuanganDashboard() {
       toast.showToast(res.message, 'success');
       setShowEditModal(false);
       refetch();
+      refetchStats();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal mengubah nominal tagihan', 'error');
     }
@@ -306,6 +387,20 @@ export default function KeuanganDashboard() {
 
   // Summary stats computed from all tagihan data
   const summaryStats = () => {
+    const s = stats();
+    if (s) {
+      const breakdown = s.statusBreakdown || {};
+      return {
+        totalNominal: Number(s.totalTagihan || 0),
+        totalTerbayar: Number(s.totalTerbayar || 0),
+        totalTunggakan: Number(s.totalTunggakan || 0),
+        lunas: Number(breakdown.lunas || 0),
+        cicilan: Number(breakdown.cicilan || 0),
+        belumBayar: Number(breakdown.belum_bayar || 0),
+        total: Number(s.totalMahasiswa || 0),
+      };
+    }
+    // Fallback saat stats belum siap: agregat dari data halaman aktif
     const items = tagihanData()?.data || [];
     const totalNominal = items.reduce((s, t) => s + t.nominal, 0);
     const totalTerbayar = items.reduce((s, t) => s + (t.nominalTerbayar || 0), 0);
@@ -464,6 +559,19 @@ export default function KeuanganDashboard() {
             </Show>
           </div>
           <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+            <Show when={role() !== 'mahasiswa'}>
+              <span class="text-caption font-semibold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
+                Prodi:
+              </span>
+              <select
+                class="px-3 py-1.5 text-caption bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors text-secondary-900 font-semibold dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                value={prodiFilter()}
+                onChange={(e) => setProdiFilter(e.currentTarget.value)}
+              >
+                <option value="">Semua Prodi</option>
+                <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+              </select>
+            </Show>
             <span class="text-caption font-semibold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
               Filter Status:
             </span>
@@ -974,7 +1082,8 @@ export default function KeuanganDashboard() {
                       placeholder="Misal: 2024"
                       value={newTarifAngkatan()}
                       onInput={(e) => setNewTarifAngkatan(e.currentTarget.value)}
-                      class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                      disabled={!!editingTarifId()}
+                      class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white disabled:opacity-60 disabled:bg-secondary-100 dark:disabled:bg-secondary-800"
                     />
                   </div>
                   <div class="flex flex-col gap-1">
@@ -982,8 +1091,10 @@ export default function KeuanganDashboard() {
                       Program Studi
                     </label>
                     <select
-                      onChange={(e) => setNewTarifProdi(parseInt(e.currentTarget.value))}
-                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-caption text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                      value={newTarifProdi() != null ? String(newTarifProdi()) : ''}
+                      onChange={(e) => setNewTarifProdi(e.currentTarget.value ? parseInt(e.currentTarget.value) : null)}
+                      disabled={!!editingTarifId()}
+                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-caption text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white disabled:opacity-60 disabled:bg-secondary-100 dark:disabled:bg-secondary-800"
                     >
                       <option value="">Pilih Prodi</option>
                       <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
@@ -1001,13 +1112,29 @@ export default function KeuanganDashboard() {
                     />
                   </div>
                   <Button variant="primary" type="submit" class="!py-1.5 text-caption">
-                    Simpan Tarif
+                    {editingTarifId() ? 'Simpan Perubahan' : 'Simpan Tarif'}
                   </Button>
                 </div>
                 <div class="border-t border-secondary-200 dark:border-secondary-700 pt-3">
-                  <p class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-2">
-                    Angsuran Termin (opsional — kosongkan untuk 50/50 & Termin II +60 hari)
-                  </p>
+                  <div class="flex items-center justify-between mb-2">
+                    <p class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
+                      Angsuran Termin (nominal kosong = dibagi proporsional; tanggal wajib diisi)
+                    </p>
+                    <Show when={editingTarifId()}>
+                      <Button
+                        variant="secondary"
+                        type="button"
+                        size="sm"
+                        onClick={resetTarifForm}
+                        class="!py-1 text-caption"
+                      >
+                        Batal Edit
+                      </Button>
+                    </Show>
+                  </div>
+                  <Show when={tarifFormError()}>
+                    <div class="mb-2 p-2 bg-red-50 text-red-700 rounded-lg text-caption">{tarifFormError()}</div>
+                  </Show>
                   <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div class="flex flex-col gap-1">
                       <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300">
@@ -1015,7 +1142,7 @@ export default function KeuanganDashboard() {
                       </label>
                       <input
                         type="number"
-                        placeholder="Misal: 3000000"
+                        placeholder="Kosong = otomatis"
                         value={tarifT1Nominal()}
                         onInput={(e) => setTarifT1Nominal(e.currentTarget.value)}
                         class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
@@ -1023,13 +1150,12 @@ export default function KeuanganDashboard() {
                     </div>
                     <div class="flex flex-col gap-1">
                       <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300">
-                        Termin I Tempo (hari)
+                        Termin I Jatuh Tempo (wajib)
                       </label>
                       <input
-                        type="number"
-                        placeholder="0 = awal periode"
-                        value={tarifT1Tempo()}
-                        onInput={(e) => setTarifT1Tempo(e.currentTarget.value)}
+                        type="date"
+                        value={tarifT1Tanggal()}
+                        onInput={(e) => setTarifT1Tanggal(e.currentTarget.value)}
                         class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
                       />
                     </div>
@@ -1039,7 +1165,7 @@ export default function KeuanganDashboard() {
                       </label>
                       <input
                         type="number"
-                        placeholder="Misal: 2000000"
+                        placeholder="Kosong = otomatis"
                         value={tarifT2Nominal()}
                         onInput={(e) => setTarifT2Nominal(e.currentTarget.value)}
                         class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
@@ -1047,13 +1173,12 @@ export default function KeuanganDashboard() {
                     </div>
                     <div class="flex flex-col gap-1">
                       <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300">
-                        Termin II Tempo (hari dari Termin I)
+                        Termin II Jatuh Tempo (wajib)
                       </label>
                       <input
-                        type="number"
-                        placeholder="60 = +2 bulan"
-                        value={tarifT2Tempo()}
-                        onInput={(e) => setTarifT2Tempo(e.currentTarget.value)}
+                        type="date"
+                        value={tarifT2Tanggal()}
+                        onInput={(e) => setTarifT2Tanggal(e.currentTarget.value)}
                         class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
                       />
                     </div>
@@ -1069,6 +1194,8 @@ export default function KeuanganDashboard() {
                       <th class="p-3">Angkatan</th>
                       <th class="p-3">Program Studi</th>
                       <th class="p-3">Nominal Tarif</th>
+                      <th class="p-3">Termin I</th>
+                      <th class="p-3">Termin II</th>
                       <th class="p-3 text-center">Aksi</th>
                     </tr>
                   </thead>
@@ -1081,7 +1208,21 @@ export default function KeuanganDashboard() {
                           <td class="p-3 font-semibold text-secondary-800 dark:text-white">
                             {formatRupiah(t.nominal)}
                           </td>
+                          <td class="p-3 text-secondary-600">
+                            <div>{t.termin1Nominal != null ? formatRupiah(t.termin1Nominal) : '(otomatis)'}</div>
+                            <div class="text-fine text-secondary-400">{t.termin1JatuhTempo || '-'}</div>
+                          </td>
+                          <td class="p-3 text-secondary-600">
+                            <div>{t.termin2Nominal != null ? formatRupiah(t.termin2Nominal) : '(otomatis)'}</div>
+                            <div class="text-fine text-secondary-400">{t.termin2JatuhTempo || '-'}</div>
+                          </td>
                           <td class="p-3 text-center">
+                            <button
+                              onClick={() => openEditTarif(t)}
+                              class="text-caption font-bold text-brand-600 hover:text-brand-800 px-2 py-1 rounded-lg hover:bg-brand-50"
+                            >
+                              Edit
+                            </button>
                             <button
                               onClick={() => handleDeleteTarif(t.id)}
                               class="text-caption font-bold text-rose-500 hover:text-rose-700 px-2 py-1 rounded-lg hover:bg-rose-50"
@@ -1094,7 +1235,7 @@ export default function KeuanganDashboard() {
                     </For>
                     <Show when={!tarifList() || tarifList()!.data.length === 0}>
                       <tr>
-                        <td colspan="4" class="p-6 text-center text-secondary-400 dark:text-secondary-300 italic">
+                        <td colspan="6" class="p-6 text-center text-secondary-400 dark:text-secondary-300 italic">
                           Belum ada skema tarif angkatan terdaftar.
                         </td>
                       </tr>

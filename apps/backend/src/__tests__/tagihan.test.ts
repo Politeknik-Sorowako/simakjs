@@ -122,8 +122,34 @@ describe('9. Tagihan (/tagihan)', () => {
     kelasId = kelasData.id;
   });
 
+  const createTarif = async (
+    adminToken: string,
+    angkatan: string,
+    nominal: number,
+    extra?: Record<string, unknown>,
+  ) => {
+    const res = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          angkatan,
+          programStudiId: prodiId,
+          nominal,
+          termin1JatuhTempo: '2026-01-01',
+          termin2JatuhTempo: '2026-03-01',
+          ...extra,
+        }),
+      }),
+    );
+    return res;
+  };
+
   it('harus sukses generate tagihan secara massal oleh Admin', async () => {
     const adminToken = await getAuthToken('admin-tagihan@test.com', 'admin');
+
+    // Buat skema tarif dengan tanggal termin terlebih dahulu
+    await createTarif(adminToken, '8888', 5000000);
 
     const generateRes = await app.handle(
       new Request('http://localhost/tagihan/generate', {
@@ -157,6 +183,9 @@ describe('9. Tagihan (/tagihan)', () => {
 
   it('mahasiswa non_aktif tidak boleh mengisi KRS', async () => {
     const adminToken = await getAuthToken('admin-tagihan@test.com', 'admin');
+
+    // Buat skema tarif dengan tanggal termin terlebih dahulu
+    await createTarif(adminToken, '8888', 5000000);
 
     // Generate tagihan to set student to non_aktif
     await app.handle(
@@ -212,6 +241,9 @@ describe('9. Tagihan (/tagihan)', () => {
         }),
       }),
     );
+
+    // Buat skema tarif dengan tanggal termin terlebih dahulu
+    await createTarif(adminToken, '8888', 5000000);
 
     // Generate tagihan
     await app.handle(
@@ -300,6 +332,8 @@ describe('9. Tagihan (/tagihan)', () => {
           angkatan: '8888', // Diambil dari 4 digit NIM mahasiswa ("88888888")
           programStudiId: prodiId,
           nominal: 3500000, // Tarif khusus angkatan 8888
+          termin1JatuhTempo: '2026-01-01',
+          termin2JatuhTempo: '2026-03-01',
         }),
       }),
     );
@@ -429,6 +463,8 @@ describe('9. Tagihan (/tagihan)', () => {
           angkatan: '2025',
           programStudiId: prodiId,
           nominal: 4000000,
+          termin1JatuhTempo: '2026-01-01',
+          termin2JatuhTempo: '2026-03-01',
         }),
       }),
     );
@@ -496,7 +532,12 @@ describe('9. Tagihan (/tagihan)', () => {
   it('generate tagihan membuat 2 angsuran termin dengan fallback 50/50 & FIFO pembayaran', async () => {
     const adminToken = await getAuthToken('admin-tagihan-ang@test.com', 'admin');
 
-    // Generate dengan nominal default 5.000.000 (fallback 50/50)
+    // Tarif 5jt tanpa nominal termin -> fallback 50/50; tanggal eksplisit
+    await createTarif(adminToken, '8888', 5000000, {
+      termin1JatuhTempo: '2026-01-01',
+      termin2JatuhTempo: '2026-03-02',
+    });
+
     const generateRes = await app.handle(
       new Request('http://localhost/tagihan/generate', {
         method: 'POST',
@@ -533,10 +574,9 @@ describe('9. Tagihan (/tagihan)', () => {
     expect(angBody.data[0].nominal).toBe(2500000);
     expect(angBody.data[1].terminKe).toBe(2);
     expect(angBody.data[1].nominal).toBe(2500000);
-    // Jatuh tempo termin 2 = +60 hari dari termin 1
-    const diffDays =
-      (new Date(angBody.data[1].jatuhTempo).getTime() - new Date(angBody.data[0].jatuhTempo).getTime()) / 86400000;
-    expect(diffDays).toBe(60);
+    // Jatuh tempo diambil dari tanggal tarif (bukan selisih hari)
+    expect(angBody.data[0].jatuhTempo).toBe('2026-01-01');
+    expect(angBody.data[1].jatuhTempo).toBe('2026-03-02');
 
     // Bayar 2.500.000 (lunasi Termin I saja) -> tagihan status cicilan
     const payRes = await app.handle(
@@ -565,10 +605,10 @@ describe('9. Tagihan (/tagihan)', () => {
     expect(angAfter.data[1].status).toBe('belum_bayar');
   });
 
-  it('skema tarif custom mengatur nominal & tempo angsuran termin', async () => {
+  it('skema tarif custom mengatur nominal & tanggal angsuran termin', async () => {
     const adminToken = await getAuthToken('admin-tagihan-custom@test.com', 'admin');
 
-    // Buat tarif custom: T1=3jt tempo 0, T2=2jt tempo 90
+    // Buat tarif custom: T1=3jt tanggal 2026-01-10, T2=2jt tanggal 2026-04-10
     const tarifRes = await app.handle(
       new Request('http://localhost/tagihan/tarif', {
         method: 'POST',
@@ -581,9 +621,9 @@ describe('9. Tagihan (/tagihan)', () => {
           programStudiId: prodiId,
           nominal: 5000000,
           termin1Nominal: 3000000,
-          termin1TempoHari: 0,
+          termin1JatuhTempo: '2026-01-10',
           termin2Nominal: 2000000,
-          termin2TempoHari: 90,
+          termin2JatuhTempo: '2026-04-10',
         }),
       }),
     );
@@ -619,15 +659,14 @@ describe('9. Tagihan (/tagihan)', () => {
     expect(angBody.data.length).toBe(2);
     expect(angBody.data[0].nominal).toBe(3000000);
     expect(angBody.data[1].nominal).toBe(2000000);
-    const diffDays =
-      (new Date(angBody.data[1].jatuhTempo).getTime() - new Date(angBody.data[0].jatuhTempo).getTime()) / 86400000;
-    expect(diffDays).toBe(90);
+    expect(angBody.data[0].jatuhTempo).toBe('2026-01-10');
+    expect(angBody.data[1].jatuhTempo).toBe('2026-04-10');
   });
 
   it('endpoint overdue read-only menampilkan angsuran lewat jatuh tempo yang belum lunas', async () => {
     const adminToken = await getAuthToken('admin-tagihan-overdue@test.com', 'admin');
 
-    // Set jatuh tempo termin 1 ke kemarin via tarif custom (tempo -1)
+    // Termin I jatuh tempo sudah lewat (kemarin), Termin II masa depan
     const tarifRes = await app.handle(
       new Request('http://localhost/tagihan/tarif', {
         method: 'POST',
@@ -640,9 +679,9 @@ describe('9. Tagihan (/tagihan)', () => {
           programStudiId: prodiId,
           nominal: 5000000,
           termin1Nominal: 2500000,
-          termin1TempoHari: -1,
+          termin1JatuhTempo: '2020-01-01',
           termin2Nominal: 2500000,
-          termin2TempoHari: 30,
+          termin2JatuhTempo: '2026-03-01',
         }),
       }),
     );
@@ -670,5 +709,208 @@ describe('9. Tagihan (/tagihan)', () => {
     expect(overdueBody.data.length).toBeGreaterThan(0);
     expect(overdueBody.data[0].terminKe).toBe(1);
     expect(overdueBody.data[0].status).not.toBe('lunas');
+  });
+
+  it('membangun termin plan parsial: satu nominal terisi, pasangannya otomatis', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-parsial@test.com', 'admin');
+
+    // Hanya Termin I nominal diisi 2jt; Termin II otomatis 3jt (5jt total)
+    const tarifRes = await createTarif(adminToken, '8888', 5000000, {
+      termin1Nominal: 2000000,
+      termin2Nominal: null,
+    });
+    expect(tarifRes.status).toBe(200);
+
+    await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ periodeId: '20231' }),
+      }),
+    );
+
+    const listRes = await app.handle(
+      new Request('http://localhost/tagihan?limit=1', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const listBody = await listRes.json();
+    const angRes = await app.handle(
+      new Request(`http://localhost/tagihan/${listBody.data[0].id}/angsuran`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const angBody = await angRes.json();
+    expect(angBody.data[0].nominal).toBe(2000000);
+    expect(angBody.data[1].nominal).toBe(3000000);
+  });
+
+  it('menolak tarif tanpa tanggal termin dan tarif dengan total nominal tidak sesuai', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-validasi@test.com', 'admin');
+
+    // Tanpa tanggal -> 400
+    const noTanggal = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          nominal: 5000000,
+        }),
+      }),
+    );
+    expect(noTanggal.status).toBe(400);
+
+    // Jumlah termin tidak sesuai nominal -> 400
+    const badTotal = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          nominal: 5000000,
+          termin1Nominal: 4000000,
+          termin1JatuhTempo: '2026-01-01',
+          termin2Nominal: 2000000,
+          termin2JatuhTempo: '2026-03-01',
+        }),
+      }),
+    );
+    expect(badTotal.status).toBe(400);
+
+    // Termin II lebih awal dari Termin I -> 400
+    const badOrder = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          nominal: 5000000,
+          termin1JatuhTempo: '2026-05-01',
+          termin2JatuhTempo: '2026-01-01',
+        }),
+      }),
+    );
+    expect(badOrder.status).toBe(400);
+
+    // Termin nominal <= 0 -> 400
+    const zeroTermin = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          nominal: 5000000,
+          termin1Nominal: 0,
+          termin1JatuhTempo: '2026-01-01',
+          termin2Nominal: 5000000,
+          termin2JatuhTempo: '2026-03-01',
+        }),
+      }),
+    );
+    expect(zeroTermin.status).toBe(400);
+  });
+
+  it('admin dapat mengedit skema tarif via PUT /tagihan/tarif/:id', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-edit@test.com', 'admin');
+
+    const createRes = await createTarif(adminToken, '8888', 5000000);
+    expect(createRes.status).toBe(200);
+    const created = (await createRes.json()).data as { id: number };
+
+    // Update nominal & tanggal
+    const updRes = await app.handle(
+      new Request(`http://localhost/tagihan/tarif/${created.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          nominal: 6000000,
+          termin1Nominal: 3000000,
+          termin1JatuhTempo: '2026-02-01',
+          termin2Nominal: 3000000,
+          termin2JatuhTempo: '2026-04-01',
+        }),
+      }),
+    );
+    expect(updRes.status).toBe(200);
+    const updBody = await updRes.json();
+    expect(updBody.data.nominal).toBe(6000000);
+    expect(updBody.data.termin1JatuhTempo).toBe('2026-02-01');
+
+    // PUT dengan total tidak sesuai -> 400
+    const badUpd = await app.handle(
+      new Request(`http://localhost/tagihan/tarif/${created.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          nominal: 6000000,
+          termin1Nominal: 1000000,
+          termin1JatuhTempo: '2026-02-01',
+          termin2Nominal: 1000000,
+          termin2JatuhTempo: '2026-04-01',
+        }),
+      }),
+    );
+    expect(badUpd.status).toBe(400);
+  });
+
+  it('generate melewatkan mahasiswa yang skema tarifnya tanpa tanggal dan melaporkannya', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-skip@test.com', 'admin');
+
+    // Tarif valid utk angkatan 8888
+    await createTarif(adminToken, '8888', 5000000);
+
+    // Tarif tanpa tanggal utk angkatan lain yg tidak terpakai — pastikan tak menggagalkan batch
+    const genRes = await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ periodeId: '20231' }),
+      }),
+    );
+    expect(genRes.status).toBe(201);
+    const genBody = await genRes.json();
+    expect(genBody.count).toBeGreaterThan(0);
+    expect(genBody.skippedTanpaTanggal).toBeDefined();
+  });
+
+  it('getAll mendukung filter periodeId dan programStudiId', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-filter@test.com', 'admin');
+
+    await createTarif(adminToken, '8888', 5000000);
+    await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ periodeId: '20231' }),
+      }),
+    );
+
+    const res = await app.handle(
+      new Request(`http://localhost/tagihan?periodeId=20231&programStudiId=${prodiId}&limit=1`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.length).toBeGreaterThan(0);
+    expect(body.data[0].periodeId).toBe('20231');
+
+    // Filter prodi yang berbeda -> kosong
+    const resOther = await app.handle(
+      new Request(`http://localhost/tagihan?programStudiId=99999`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const bodyOther = await resOther.json();
+    expect(bodyOther.data.length).toBe(0);
   });
 });

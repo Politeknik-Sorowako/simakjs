@@ -26,6 +26,8 @@ export class TagihanController {
     const limit = query?.limit ? parseInt(query.limit) : 10;
     const search = query?.search || '';
     const status = query?.status || undefined;
+    const periodeId = query?.periodeId || undefined;
+    const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
 
     let filterMhsId: number | undefined = undefined;
     if (hasRole(user, ['mahasiswa'])) {
@@ -39,7 +41,7 @@ export class TagihanController {
       filterMhsId = myMhsId;
     }
 
-    return await TagihanService.getAll(page, limit, search, status, filterMhsId);
+    return await TagihanService.getAll(page, limit, search, status, filterMhsId, { periodeId, programStudiId });
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -55,9 +57,13 @@ export class TagihanController {
     }
     try {
       const nominal = body.nominal !== undefined ? Number(body.nominal) : undefined;
-      const count = await TagihanService.generateTagihanPeriode(body.periodeId, nominal);
+      const result = await TagihanService.generateTagihanPeriode(body.periodeId, nominal);
       set.status = 201;
-      return { message: 'Tagihan berhasil dibuat secara massal', count };
+      return {
+        message: 'Tagihan berhasil dibuat secara massal',
+        count: result.createdCount,
+        skippedTanpaTanggal: result.skippedTanpaTanggal,
+      };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
@@ -223,9 +229,9 @@ export class TagihanController {
         programStudiId: skemaTarif.programStudiId,
         nominal: skemaTarif.nominal,
         termin1Nominal: skemaTarif.termin1Nominal,
-        termin1TempoHari: skemaTarif.termin1TempoHari,
+        termin1JatuhTempo: skemaTarif.termin1JatuhTempo,
         termin2Nominal: skemaTarif.termin2Nominal,
-        termin2TempoHari: skemaTarif.termin2TempoHari,
+        termin2JatuhTempo: skemaTarif.termin2JatuhTempo,
         programStudi: {
           id: programStudi.id,
           nama: programStudi.nama,
@@ -253,10 +259,18 @@ export class TagihanController {
       const programStudiId = Number(body.programStudiId);
       const angkatan = String(body.angkatan);
 
-      const termin1Nominal = body.termin1Nominal !== undefined ? Number(body.termin1Nominal) : null;
-      const termin1TempoHari = body.termin1TempoHari !== undefined ? Number(body.termin1TempoHari) : null;
-      const termin2Nominal = body.termin2Nominal !== undefined ? Number(body.termin2Nominal) : null;
-      const termin2TempoHari = body.termin2TempoHari !== undefined ? Number(body.termin2TempoHari) : null;
+      const termin1Nominal = body.termin1Nominal != null ? Number(body.termin1Nominal) : null;
+      const termin1JatuhTempo = body.termin1JatuhTempo ?? null;
+      const termin2Nominal = body.termin2Nominal != null ? Number(body.termin2Nominal) : null;
+      const termin2JatuhTempo = body.termin2JatuhTempo ?? null;
+
+      TagihanService.validateTarif({
+        nominal,
+        termin1Nominal,
+        termin2Nominal,
+        termin1JatuhTempo,
+        termin2JatuhTempo,
+      });
 
       const [existing] = await db
         .select()
@@ -267,9 +281,9 @@ export class TagihanController {
       const values = {
         nominal,
         termin1Nominal,
-        termin1TempoHari,
+        termin1JatuhTempo,
         termin2Nominal,
-        termin2TempoHari,
+        termin2JatuhTempo,
       };
 
       if (existing) {
@@ -286,6 +300,56 @@ export class TagihanController {
           .returning();
         return { message: 'Tarif angkatan berhasil ditambahkan', data: created };
       }
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateTarif({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'keuangan'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    try {
+      const id = parseInt(params.id);
+      const nominal = Number(body.nominal);
+      const termin1Nominal = body.termin1Nominal != null ? Number(body.termin1Nominal) : null;
+      const termin1JatuhTempo = body.termin1JatuhTempo ?? null;
+      const termin2Nominal = body.termin2Nominal != null ? Number(body.termin2Nominal) : null;
+      const termin2JatuhTempo = body.termin2JatuhTempo ?? null;
+
+      TagihanService.validateTarif({
+        nominal,
+        termin1Nominal,
+        termin2Nominal,
+        termin1JatuhTempo,
+        termin2JatuhTempo,
+      });
+
+      const [updated] = await db
+        .update(skemaTarif)
+        .set({
+          nominal,
+          termin1Nominal,
+          termin1JatuhTempo,
+          termin2Nominal,
+          termin2JatuhTempo,
+        })
+        .where(eq(skemaTarif.id, id))
+        .returning();
+
+      if (!updated) {
+        set.status = 404;
+        return { error: 'Skema tarif tidak ditemukan' };
+      }
+      return { message: 'Tarif angkatan berhasil diperbarui', data: updated };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };

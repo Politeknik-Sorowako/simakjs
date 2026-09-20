@@ -14,16 +14,6 @@ import { SystemParameterService } from './system-parameter.service';
 
 const DEFAULT_TZ = 'Asia/Makassar';
 
-function addDays(dateStr: string, days: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  date.setDate(date.getDate() + days);
-  const yy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yy}-${mm}-${dd}`;
-}
-
 interface TerminPlan {
   terminKe: number;
   nominal: number;
@@ -32,41 +22,116 @@ interface TerminPlan {
 
 export class TagihanService {
   /**
+   * Validasi konfigurasi skema tarif (dipakai create & update):
+   * - nominal > 0
+   * - kedua tanggal jatuh tempo wajib, format YYYY-MM-DD, termin2 >= termin1
+   * - jika kedua nominal termin diisi → jumlah harus == nominal SPP
+   * - jika satu nominal diisi → 0 < nilai < nominal
+   */
+  static validateTarif(data: {
+    nominal: number;
+    termin1Nominal?: number | null;
+    termin2Nominal?: number | null;
+    termin1JatuhTempo?: string | null;
+    termin2JatuhTempo?: string | null;
+  }): void {
+    if (isNaN(data.nominal) || data.nominal <= 0) {
+      throw new Error('Nominal SPP harus lebih besar dari 0');
+    }
+    const tanggalRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (!data.termin1JatuhTempo || !tanggalRe.test(data.termin1JatuhTempo)) {
+      throw new Error('Tanggal jatuh tempo Termin I wajib diisi (format YYYY-MM-DD)');
+    }
+    if (!data.termin2JatuhTempo || !tanggalRe.test(data.termin2JatuhTempo)) {
+      throw new Error('Tanggal jatuh tempo Termin II wajib diisi (format YYYY-MM-DD)');
+    }
+    if (data.termin2JatuhTempo < data.termin1JatuhTempo) {
+      throw new Error('Tanggal jatuh tempo Termin II harus sama atau setelah Termin I');
+    }
+
+    const t1Isi = data.termin1Nominal !== null && data.termin1Nominal !== undefined;
+    const t2Isi = data.termin2Nominal !== null && data.termin2Nominal !== undefined;
+    if (t1Isi && t2Isi) {
+      const t1 = data.termin1Nominal as number;
+      const t2 = data.termin2Nominal as number;
+      if (t1 <= 0 || t2 <= 0) {
+        throw new Error('Nominal angsuran termin harus lebih besar dari 0');
+      }
+      const total = t1 + t2;
+      if (total !== data.nominal) {
+        throw new Error(`Total nominal angsuran (${total}) harus sama dengan nominal SPP (${data.nominal})`);
+      }
+    } else if (t1Isi) {
+      const t1 = data.termin1Nominal as number;
+      if (t1 <= 0 || t1 >= data.nominal) {
+        throw new Error('Nominal Termin I harus lebih besar dari 0 dan kurang dari nominal SPP');
+      }
+    } else if (t2Isi) {
+      const t2 = data.termin2Nominal as number;
+      if (t2 <= 0 || t2 >= data.nominal) {
+        throw new Error('Nominal Termin II harus lebih besar dari 0 dan kurang dari nominal SPP');
+      }
+    }
+  }
+
+  /**
    * Menyusun rencana angsuran UKT 2 termin berdasarkan skema tarif.
-   * Custom per skema (termin1/termin2 nominal + tempo_hari); jika kosong,
-   * fallback 50/50 dengan Termin II +60 hari setelah Termin I.
+   * - Nominal: keduanya diisi → pakai apa adanya; hanya satu diisi → pasangannya
+   *   `nominal - terisi`; kosong semua → 50/50 (ceil pada Termin I).
+   * - Jatuh tempo: WAJIB dari tarif (tanggal absolut). Tanpa kedua tanggal → throw
+   *   agar generate tidak membuat tagihan dengan tempo yang tidak valid.
+   * Kolom termin1/2_tempo_hari dianggap DEPRECATED dan tidak dibaca lagi.
    */
   static buildTerminPlan(
     nominal: number,
     tarif?: typeof skemaTarif.$inferSelect | null,
-    nowDate: string = getNowDateString(DEFAULT_TZ),
+    _nowDate: string = getNowDateString(DEFAULT_TZ),
   ): TerminPlan[] {
     const t1Nominal = tarif?.termin1Nominal;
     const t2Nominal = tarif?.termin2Nominal;
-    const hasCustom = t1Nominal !== null && t1Nominal !== undefined && t2Nominal !== null && t2Nominal !== undefined;
+    const t1Tanggal = tarif?.termin1JatuhTempo;
+    const t2Tanggal = tarif?.termin2JatuhTempo;
+
+    if (!t1Tanggal || !t2Tanggal) {
+      throw new Error('Skema tarif harus memiliki tanggal jatuh tempo Termin I dan Termin II');
+    }
+
+    const t1Isi = t1Nominal !== null && t1Nominal !== undefined;
+    const t2Isi = t2Nominal !== null && t2Nominal !== undefined;
 
     let termin1: number;
     let termin2: number;
-    if (hasCustom && t1Nominal !== undefined && t2Nominal !== undefined) {
-      termin1 = t1Nominal;
-      termin2 = t2Nominal;
+    if (t1Isi && t2Isi) {
+      termin1 = t1Nominal as number;
+      termin2 = t2Nominal as number;
+    } else if (t1Isi) {
+      termin1 = t1Nominal as number;
+      termin2 = nominal - termin1;
+    } else if (t2Isi) {
+      termin2 = t2Nominal as number;
+      termin1 = nominal - termin2;
     } else {
       termin1 = Math.ceil(nominal / 2);
       termin2 = nominal - termin1;
     }
 
-    const t1TempoHari = tarif?.termin1TempoHari ?? 0;
-    const t2TempoHari = tarif?.termin2TempoHari ?? 60;
+    if (termin1 <= 0 || termin2 <= 0) {
+      throw new Error('Nominal angsuran termin harus lebih besar dari 0');
+    }
+    if (termin1 + termin2 !== nominal) {
+      throw new Error(`Total nominal angsuran (${termin1 + termin2}) harus sama dengan nominal SPP (${nominal})`);
+    }
 
     return [
-      { terminKe: 1, nominal: termin1, jatuhTempo: addDays(nowDate, t1TempoHari) },
-      { terminKe: 2, nominal: termin2, jatuhTempo: addDays(nowDate, t1TempoHari + t2TempoHari) },
+      { terminKe: 1, nominal: termin1, jatuhTempo: t1Tanggal },
+      { terminKe: 2, nominal: termin2, jatuhTempo: t2Tanggal },
     ];
   }
 
   static async generateTagihanPeriode(periodeId: string, nominalAmount?: number) {
     const students = await db.select().from(mahasiswa).where(eq(mahasiswa.status, 'aktif'));
     let createdCount = 0;
+    const skippedTanpaTanggal: { nim: string; nama: string }[] = [];
     const defaultNominal = nominalAmount !== undefined ? nominalAmount : 5000000;
 
     for (const student of students) {
@@ -110,6 +175,16 @@ export class TagihanService {
           }
         }
 
+        // Tanpa skema tarif (atau tarif tanpa tanggal termin), mahasiswa di-skip
+        // dan dilaporkan — tidak menggagalkan seluruh batch generate.
+        let terminPlans: TerminPlan[];
+        try {
+          terminPlans = this.buildTerminPlan(nominalTagihan, tarif);
+        } catch {
+          skippedTanpaTanggal.push({ nim: student.nim, nama: student.nama });
+          continue;
+        }
+
         await db.transaction(async (tx) => {
           const [newTagihan] = await tx
             .insert(tagihan)
@@ -122,7 +197,6 @@ export class TagihanService {
             })
             .returning();
 
-          const terminPlans = this.buildTerminPlan(nominalTagihan, tarif);
           await tx.insert(angsuranTagihan).values(
             terminPlans.map((tp) => ({
               tagihanId: newTagihan.id,
@@ -142,7 +216,7 @@ export class TagihanService {
       }
     }
 
-    return createdCount;
+    return { createdCount, skippedTanpaTanggal };
   }
 
   static async updateNominal(tagihanId: number, nominalBaru: number) {
@@ -379,7 +453,14 @@ export class TagihanService {
       .orderBy(transaksiPembayaran.tanggalTransaksi);
   }
 
-  static async getAll(page = 1, limit = 10, search = '', statusFilter?: string, mahasiswaId?: number) {
+  static async getAll(
+    page = 1,
+    limit = 10,
+    search = '',
+    statusFilter?: string,
+    mahasiswaId?: number,
+    options?: { periodeId?: string; programStudiId?: number },
+  ) {
     const offset = (page - 1) * limit;
 
     const searchConditions: SQL<unknown>[] = [];
@@ -393,6 +474,12 @@ export class TagihanService {
     }
     if (mahasiswaId !== undefined) {
       searchConditions.push(eq(tagihan.mahasiswaId, mahasiswaId));
+    }
+    if (options?.periodeId) {
+      searchConditions.push(eq(tagihan.periodeId, options.periodeId));
+    }
+    if (options?.programStudiId !== undefined) {
+      searchConditions.push(eq(mahasiswa.programStudiId, options.programStudiId));
     }
 
     const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;

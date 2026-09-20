@@ -526,6 +526,13 @@
       "when": 1789886662100,
       "tag": "0074_angsuran_tagihan",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1789886662200,
+      "tag": "0075_tarif_termin_tanggal",
+      "breakpoints": true
     }
   ]
 }

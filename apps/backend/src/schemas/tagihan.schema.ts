@@ -38,6 +38,8 @@ export const getTagihanSchema = {
     limit: t.Optional(t.Numeric({ default: 10 })),
     status: t.Optional(t.String()),
     search: t.Optional(t.String({ default: '' })),
+    periodeId: t.Optional(t.String()),
+    programStudiId: t.Optional(t.Numeric()),
   }),
   response: {
     200: t.Object({
@@ -63,6 +65,12 @@ export const generateTagihanSchema = {
     201: t.Object({
       message: t.String({ default: 'Tagihan berhasil dibuat secara massal' }),
       count: t.Integer({ default: 10 }),
+      skippedTanpaTanggal: t.Array(
+        t.Object({
+          nim: t.String(),
+          nama: t.String(),
+        }),
+      ),
     }),
     400: t.Object({
       error: t.String(),
@@ -129,18 +137,55 @@ export const createTarifSchema = {
   detail: {
     tags: ['Tagihan'],
     summary: 'Buat Skema Tarif Baru',
-    description: 'Menambahkan skema tarif SPP baru untuk angkatan/prodi tertentu. Termin I/II bersifat custom.',
+    description:
+      'Menambahkan skema tarif SPP baru untuk angkatan/prodi tertentu. Termin I/II memakai nominal & tanggal jatuh tempo absolut (wajib).',
   },
   body: t.Object({
     programStudiId: t.Optional(t.Integer()),
     angkatan: t.Optional(t.String()),
     nominal: t.Numeric(),
     periodeId: t.Optional(t.String()),
-    termin1Nominal: t.Optional(t.Numeric()),
-    termin1TempoHari: t.Optional(t.Numeric()),
-    termin2Nominal: t.Optional(t.Numeric()),
-    termin2TempoHari: t.Optional(t.Numeric()),
+    termin1Nominal: t.Optional(t.Nullable(t.Numeric())),
+    termin1JatuhTempo: t.Optional(t.Nullable(t.String())),
+    termin2Nominal: t.Optional(t.Nullable(t.Numeric())),
+    termin2JatuhTempo: t.Optional(t.Nullable(t.String())),
   }),
+};
+
+export const updateTarifSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Perbarui Skema Tarif',
+    description:
+      'Memperbarui skema tarif SPP berdasarkan ID. Validasi sama dengan create (nominal, tanggal wajib, total termin).',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  body: t.Object({
+    nominal: t.Numeric(),
+    termin1Nominal: t.Optional(t.Nullable(t.Numeric())),
+    termin1JatuhTempo: t.Optional(t.Nullable(t.String())),
+    termin2Nominal: t.Optional(t.Nullable(t.Numeric())),
+    termin2JatuhTempo: t.Optional(t.Nullable(t.String())),
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'Tarif angkatan berhasil diperbarui' }),
+      data: t.Object({
+        id: t.Integer(),
+        angkatan: t.String(),
+        programStudiId: t.Integer(),
+        nominal: t.Numeric(),
+        termin1Nominal: t.Union([t.Null(), t.Integer()]),
+        termin1JatuhTempo: t.Union([t.Null(), t.String()]),
+        termin2Nominal: t.Union([t.Null(), t.Integer()]),
+        termin2JatuhTempo: t.Union([t.Null(), t.String()]),
+      }),
+    }),
+    400: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  },
 };
 
 export const getOverdueTagihanSchema = {
