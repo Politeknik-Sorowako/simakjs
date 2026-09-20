@@ -492,4 +492,183 @@ describe('9. Tagihan (/tagihan)', () => {
     const editBody = await editRes.json();
     expect(editBody.tagihan.nominal).toBe(4500000);
   });
+
+  it('generate tagihan membuat 2 angsuran termin dengan fallback 50/50 & FIFO pembayaran', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-ang@test.com', 'admin');
+
+    // Generate dengan nominal default 5.000.000 (fallback 50/50)
+    const generateRes = await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ periodeId: '20231', nominal: 5000000 }),
+      }),
+    );
+    expect(generateRes.status).toBe(201);
+
+    const listRes = await app.handle(
+      new Request('http://localhost/tagihan?limit=1', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const listBody = await listRes.json();
+    const tag = listBody.data[0];
+    const tagihanId = tag.id;
+
+    // Angsuran: 2 termin, 50/50
+    const angRes = await app.handle(
+      new Request(`http://localhost/tagihan/${tagihanId}/angsuran`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(angRes.status).toBe(200);
+    const angBody = await angRes.json();
+    expect(angBody.data.length).toBe(2);
+    expect(angBody.data[0].terminKe).toBe(1);
+    expect(angBody.data[0].nominal).toBe(2500000);
+    expect(angBody.data[1].terminKe).toBe(2);
+    expect(angBody.data[1].nominal).toBe(2500000);
+    // Jatuh tempo termin 2 = +60 hari dari termin 1
+    const diffDays =
+      (new Date(angBody.data[1].jatuhTempo).getTime() - new Date(angBody.data[0].jatuhTempo).getTime()) / 86400000;
+    expect(diffDays).toBe(60);
+
+    // Bayar 2.500.000 (lunasi Termin I saja) -> tagihan status cicilan
+    const payRes = await app.handle(
+      new Request(`http://localhost/tagihan/${tagihanId}/bayar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ nominalBayar: 2500000 }),
+      }),
+    );
+    expect(payRes.status).toBe(200);
+    expect((await payRes.json()).tagihan.status).toBe('cicilan');
+
+    // Cek angsuran: Termin I lunas, Termin II belum bayar
+    const angAfterRes = await app.handle(
+      new Request(`http://localhost/tagihan/${tagihanId}/angsuran`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const angAfter = await angAfterRes.json();
+    expect(angAfter.data[0].status).toBe('lunas');
+    expect(angAfter.data[0].nominalTerbayar).toBe(2500000);
+    expect(angAfter.data[1].status).toBe('belum_bayar');
+  });
+
+  it('skema tarif custom mengatur nominal & tempo angsuran termin', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-custom@test.com', 'admin');
+
+    // Buat tarif custom: T1=3jt tempo 0, T2=2jt tempo 90
+    const tarifRes = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          nominal: 5000000,
+          termin1Nominal: 3000000,
+          termin1TempoHari: 0,
+          termin2Nominal: 2000000,
+          termin2TempoHari: 90,
+        }),
+      }),
+    );
+    expect(tarifRes.status).toBe(200);
+
+    await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ periodeId: '20231' }),
+      }),
+    );
+
+    const listRes = await app.handle(
+      new Request('http://localhost/tagihan?limit=1', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const listBody = await listRes.json();
+    const tagihanId = listBody.data[0].id;
+
+    const angRes = await app.handle(
+      new Request(`http://localhost/tagihan/${tagihanId}/angsuran`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const angBody = await angRes.json();
+    expect(angBody.data.length).toBe(2);
+    expect(angBody.data[0].nominal).toBe(3000000);
+    expect(angBody.data[1].nominal).toBe(2000000);
+    const diffDays =
+      (new Date(angBody.data[1].jatuhTempo).getTime() - new Date(angBody.data[0].jatuhTempo).getTime()) / 86400000;
+    expect(diffDays).toBe(90);
+  });
+
+  it('endpoint overdue read-only menampilkan angsuran lewat jatuh tempo yang belum lunas', async () => {
+    const adminToken = await getAuthToken('admin-tagihan-overdue@test.com', 'admin');
+
+    // Set jatuh tempo termin 1 ke kemarin via tarif custom (tempo -1)
+    const tarifRes = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          nominal: 5000000,
+          termin1Nominal: 2500000,
+          termin1TempoHari: -1,
+          termin2Nominal: 2500000,
+          termin2TempoHari: 30,
+        }),
+      }),
+    );
+    expect(tarifRes.status).toBe(200);
+
+    await app.handle(
+      new Request('http://localhost/tagihan/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({ periodeId: '20231' }),
+      }),
+    );
+
+    const overdueRes = await app.handle(
+      new Request('http://localhost/tagihan/overdue?periodeId=20231', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(overdueRes.status).toBe(200);
+    const overdueBody = await overdueRes.json();
+    expect(overdueBody.data.length).toBeGreaterThan(0);
+    expect(overdueBody.data[0].terminKe).toBe(1);
+    expect(overdueBody.data[0].status).not.toBe('lunas');
+  });
 });

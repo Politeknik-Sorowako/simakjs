@@ -19,6 +19,7 @@ export interface CreateMahasiswaDto {
   nama: string;
   email: string;
   programStudiId: number;
+  angkatan?: string;
   dosenPaId?: number | null;
   status?: string;
   idPddikti?: string;

@@ -15,6 +15,49 @@ export const bulkKrsBody = t.Object({
   isApproved: t.Optional(t.Boolean({ default: false })),
 });
 
+export const autoEnrollPaketSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Generate KRS Paket Otomatis',
+    description:
+      'Membuat KRS draft massal untuk seluruh mahasiswa aktif satu angkatan pada semester kurikulum tertentu (sistem blok). MK tanpa kelas atau dengan kelas paralel yang tidak dipetakan akan dilaporkan.',
+  },
+  body: t.Object({
+    periodeId: t.String(),
+    programStudiId: t.Integer(),
+    angkatan: t.String(),
+    semester: t.Integer({ minimum: 1, maximum: 8 }),
+    kelasMap: t.Optional(t.Record(t.String(), t.Integer())),
+  }),
+  response: {
+    201: t.Object({
+      periodeId: t.String(),
+      programStudiId: t.Integer(),
+      angkatan: t.String(),
+      semester: t.Integer(),
+      mahasiswaProses: t.Integer(),
+      createdCount: t.Integer(),
+      skippedExist: t.Integer(),
+      skippedTunggakan: t.Integer(),
+      skippedNonAktif: t.Integer(),
+      skippedNoKelas: t.Array(t.Object({ mataKuliahId: t.Integer(), kode: t.String(), nama: t.String() })),
+      skippedAmbiguous: t.Array(
+        t.Object({
+          mataKuliahId: t.Integer(),
+          kode: t.String(),
+          nama: t.String(),
+          kelasKandidat: t.Array(t.Object({ id: t.Integer(), namaKelas: t.String() })),
+        }),
+      ),
+      kelasDigunakan: t.Array(
+        t.Object({ mataKuliahId: t.Integer(), kelasKuliahId: t.Integer(), namaKelas: t.String() }),
+      ),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
 export const bulkKrsSchema = {
   detail: {
     tags: ['KRS'],

@@ -31,6 +31,26 @@ export interface Krs {
   isApproved?: boolean;
 }
 
+export interface AutoEnrollPaketResult {
+  periodeId: string;
+  programStudiId: number;
+  angkatan: string;
+  semester: number;
+  mahasiswaProses: number;
+  createdCount: number;
+  skippedExist: number;
+  skippedTunggakan: number;
+  skippedNonAktif: number;
+  skippedNoKelas: { mataKuliahId: number; kode: string; nama: string }[];
+  skippedAmbiguous: {
+    mataKuliahId: number;
+    kode: string;
+    nama: string;
+    kelasKandidat: { id: number; namaKelas: string }[];
+  }[];
+  kelasDigunakan: { mataKuliahId: number; kelasKuliahId: number; namaKelas: string }[];
+}
+
 export const krsController = {
   async getAll(
     search?: string,
@@ -77,6 +97,19 @@ export const krsController = {
     return fetchApi<{ createdCount: number; skippedCount: number; totalProcessed: number }>('/krs/bulk', {
       method: 'POST',
       body: JSON.stringify({ mahasiswaIds, kelasKuliahIds }),
+    });
+  },
+
+  async autoEnrollPaket(data: {
+    periodeId: string;
+    programStudiId: number;
+    angkatan: string;
+    semester: number;
+    kelasMap?: Record<string, number>;
+  }): Promise<AutoEnrollPaketResult> {
+    return fetchApi<AutoEnrollPaketResult>('/krs/auto-enroll-paket', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 

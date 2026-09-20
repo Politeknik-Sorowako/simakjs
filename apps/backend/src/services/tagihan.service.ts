@@ -1,8 +1,69 @@
-import { and, count, eq, ilike, or, type SQL, sql, sum } from 'drizzle-orm';
-import { mahasiswa, programStudi as ps, skemaTarif, tagihan, transaksiPembayaran, users } from '../models/schema';
+import { and, asc, count, desc, eq, ilike, lte, or, type SQL, sql, sum } from 'drizzle-orm';
+import {
+  angsuranTagihan,
+  mahasiswa,
+  programStudi as ps,
+  skemaTarif,
+  tagihan,
+  transaksiPembayaran,
+  users,
+} from '../models/schema';
 import { db } from '../utils/db';
+import { getNowDateString } from '../utils/timezone';
+import { SystemParameterService } from './system-parameter.service';
+
+const DEFAULT_TZ = 'Asia/Makassar';
+
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  const yy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+interface TerminPlan {
+  terminKe: number;
+  nominal: number;
+  jatuhTempo: string;
+}
 
 export class TagihanService {
+  /**
+   * Menyusun rencana angsuran UKT 2 termin berdasarkan skema tarif.
+   * Custom per skema (termin1/termin2 nominal + tempo_hari); jika kosong,
+   * fallback 50/50 dengan Termin II +60 hari setelah Termin I.
+   */
+  static buildTerminPlan(
+    nominal: number,
+    tarif?: typeof skemaTarif.$inferSelect | null,
+    nowDate: string = getNowDateString(DEFAULT_TZ),
+  ): TerminPlan[] {
+    const t1Nominal = tarif?.termin1Nominal;
+    const t2Nominal = tarif?.termin2Nominal;
+    const hasCustom = t1Nominal !== null && t1Nominal !== undefined && t2Nominal !== null && t2Nominal !== undefined;
+
+    let termin1: number;
+    let termin2: number;
+    if (hasCustom && t1Nominal !== undefined && t2Nominal !== undefined) {
+      termin1 = t1Nominal;
+      termin2 = t2Nominal;
+    } else {
+      termin1 = Math.ceil(nominal / 2);
+      termin2 = nominal - termin1;
+    }
+
+    const t1TempoHari = tarif?.termin1TempoHari ?? 0;
+    const t2TempoHari = tarif?.termin2TempoHari ?? 60;
+
+    return [
+      { terminKe: 1, nominal: termin1, jatuhTempo: addDays(nowDate, t1TempoHari) },
+      { terminKe: 2, nominal: termin2, jatuhTempo: addDays(nowDate, t1TempoHari + t2TempoHari) },
+    ];
+  }
+
   static async generateTagihanPeriode(periodeId: string, nominalAmount?: number) {
     const students = await db.select().from(mahasiswa).where(eq(mahasiswa.status, 'aktif'));
     let createdCount = 0;
@@ -36,23 +97,42 @@ export class TagihanService {
 
         // Ambil nominal tarif dari tabel skema_tarif
         let nominalTagihan = defaultNominal;
+        let tarif: typeof skemaTarif.$inferSelect | null = null;
         if (student.programStudiId) {
-          const [tarif] = await db
+          const [tarifRow] = await db
             .select()
             .from(skemaTarif)
             .where(and(eq(skemaTarif.angkatan, angkatan), eq(skemaTarif.programStudiId, student.programStudiId)))
             .limit(1);
-          if (tarif) {
-            nominalTagihan = tarif.nominal;
+          if (tarifRow) {
+            nominalTagihan = tarifRow.nominal;
+            tarif = tarifRow;
           }
         }
 
-        await db.insert(tagihan).values({
-          mahasiswaId: student.id,
-          periodeId: periodeId,
-          nominal: nominalTagihan,
-          nominalTerbayar: 0,
-          status: 'belum_bayar',
+        await db.transaction(async (tx) => {
+          const [newTagihan] = await tx
+            .insert(tagihan)
+            .values({
+              mahasiswaId: student.id,
+              periodeId: periodeId,
+              nominal: nominalTagihan,
+              nominalTerbayar: 0,
+              status: 'belum_bayar',
+            })
+            .returning();
+
+          const terminPlans = this.buildTerminPlan(nominalTagihan, tarif);
+          await tx.insert(angsuranTagihan).values(
+            terminPlans.map((tp) => ({
+              tagihanId: newTagihan.id,
+              terminKe: tp.terminKe,
+              nominal: tp.nominal,
+              nominalTerbayar: 0,
+              jatuhTempo: tp.jatuhTempo,
+              status: 'belum_bayar' as const,
+            })),
+          );
         });
 
         // Set status to non_aktif until they pay
@@ -75,16 +155,49 @@ export class TagihanService {
       throw new Error('Tagihan tidak ditemukan');
     }
 
-    const currentTerbayar = Number(tag.nominalTerbayar) || 0;
-    const isFullyPaid = currentTerbayar >= nominalBaru;
-    const determinedStatus = isFullyPaid ? 'lunas' : currentTerbayar > 0 ? 'cicilan' : 'belum_bayar';
+    // Sinkronkan ulang angsuran secara proporsional terhadap rasio nominal lama.
+    const angsuran = await db
+      .select()
+      .from(angsuranTagihan)
+      .where(eq(angsuranTagihan.tagihanId, tagihanId))
+      .orderBy(asc(angsuranTagihan.terminKe));
 
-    const [updated] = await db
+    const oldTotalNominal = angsuran.reduce((acc, ang) => acc + Number(ang.nominal), 0);
+    const oldTotalTerbayar = angsuran.reduce((acc, ang) => acc + Number(ang.nominalTerbayar), 0);
+    const ratio = oldTotalNominal > 0 ? nominalBaru / oldTotalNominal : 1;
+
+    // Rebalance nominal + nominalTerbayar proporsional, tapi tidak melebihi newAngNominal.
+    let sisaNominal = nominalBaru;
+    let sisaTerbayar = Math.min(oldTotalTerbayar, nominalBaru);
+    for (let i = 0; i < angsuran.length; i++) {
+      const ang = angsuran[i];
+      const isLast = i === angsuran.length - 1;
+      const newAngNominal = isLast ? sisaNominal : Math.round(Number(ang.nominal) * ratio);
+      const newAngTerbayar = isLast
+        ? Math.min(sisaTerbayar, newAngNominal)
+        : Math.min(Math.round(Number(ang.nominalTerbayar) * ratio), newAngNominal);
+      const angStatus: 'belum_bayar' | 'cicilan' | 'lunas' =
+        newAngTerbayar >= newAngNominal ? 'lunas' : newAngTerbayar > 0 ? 'cicilan' : 'belum_bayar';
+      await db
+        .update(angsuranTagihan)
+        .set({ nominal: newAngNominal, nominalTerbayar: newAngTerbayar, status: angStatus })
+        .where(eq(angsuranTagihan.id, ang.id));
+      sisaNominal -= newAngNominal;
+      sisaTerbayar -= newAngTerbayar;
+    }
+
+    // Hitung ulang status tagihan berdasarkan total terbayar aktual setelah rebalance.
+    const angsuranAfter = await db.select().from(angsuranTagihan).where(eq(angsuranTagihan.tagihanId, tagihanId));
+    const finalTerbayar = angsuranAfter.reduce((acc, a) => acc + Number(a.nominalTerbayar), 0);
+    const finalStatus: 'belum_bayar' | 'cicilan' | 'lunas' =
+      finalTerbayar >= nominalBaru ? 'lunas' : finalTerbayar > 0 ? 'cicilan' : 'belum_bayar';
+    const [finalTag] = await db
       .update(tagihan)
       .set({
         nominal: nominalBaru,
-        status: determinedStatus,
-        tanggalBayar: isFullyPaid ? tag.tanggalBayar || new Date() : null,
+        nominalTerbayar: finalTerbayar,
+        status: finalStatus,
+        tanggalBayar: finalStatus === 'lunas' ? tag.tanggalBayar || new Date() : null,
       })
       .where(eq(tagihan.id, tagihanId))
       .returning();
@@ -92,10 +205,10 @@ export class TagihanService {
     // Sinkronkan status aktif mahasiswa
     await db
       .update(mahasiswa)
-      .set({ status: isFullyPaid ? 'aktif' : 'non_aktif' })
+      .set({ status: finalStatus === 'lunas' ? 'aktif' : 'non_aktif' })
       .where(eq(mahasiswa.id, tag.mahasiswaId));
 
-    return updated;
+    return finalTag;
   }
 
   static async bayarTagihan(tagihanId: number, nominalBayar?: number, petugasId?: number, catatanKoreksi?: string) {
@@ -142,6 +255,29 @@ export class TagihanService {
         })
         .where(eq(tagihan.id, tagihanId))
         .returning();
+
+      // Alokasikan pembayaran FIFO ke angsuran: Termin I dilunasi dahulu.
+      const angsuran = await tx
+        .select()
+        .from(angsuranTagihan)
+        .where(eq(angsuranTagihan.tagihanId, tagihanId))
+        .orderBy(asc(angsuranTagihan.terminKe));
+
+      let sisa = finalNominalBayar;
+      for (const ang of angsuran) {
+        if (sisa <= 0) break;
+        const sisaAng = Number(ang.nominal) - Number(ang.nominalTerbayar);
+        if (sisaAng <= 0) continue;
+        const alokasi = Math.min(sisa, sisaAng);
+        const angTerbayarBaru = Number(ang.nominalTerbayar) + alokasi;
+        const angStatus: 'belum_bayar' | 'cicilan' | 'lunas' =
+          angTerbayarBaru >= Number(ang.nominal) ? 'lunas' : 'cicilan';
+        await tx
+          .update(angsuranTagihan)
+          .set({ nominalTerbayar: angTerbayarBaru, status: angStatus })
+          .where(eq(angsuranTagihan.id, ang.id));
+        sisa -= alokasi;
+      }
 
       if (isFullyPaid) {
         await tx.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, tag.mahasiswaId));
@@ -332,7 +468,62 @@ export class TagihanService {
       .where(eq(tagihan.id, id))
       .limit(1);
 
-    return row || null;
+    if (!row) return null;
+
+    const angsuran = await db
+      .select()
+      .from(angsuranTagihan)
+      .where(eq(angsuranTagihan.tagihanId, id))
+      .orderBy(asc(angsuranTagihan.terminKe));
+
+    return { ...row, angsuran };
+  }
+
+  static async getAngsuran(tagihanId: number) {
+    return await db
+      .select()
+      .from(angsuranTagihan)
+      .where(eq(angsuranTagihan.tagihanId, tagihanId))
+      .orderBy(asc(angsuranTagihan.terminKe));
+  }
+
+  /**
+   * Angsuran yang jatuh temponya telah lewat namun belum lunas.
+   * Read-only (tanpa auto-Alpa): kehadiran perkuliahan tetap dikonfirmasi
+   * manual pada BAP/presensi (keputusan Milestone A).
+   */
+  static async getOverdue(periodeId?: string, limit = 100) {
+    const todayStr = getNowDateString(DEFAULT_TZ);
+    const conditions: SQL<unknown>[] = [
+      lte(angsuranTagihan.jatuhTempo, todayStr),
+      sql`${angsuranTagihan.status} != 'lunas'`,
+    ];
+    if (periodeId) conditions.push(eq(tagihan.periodeId, periodeId));
+
+    const rows = await db
+      .select({
+        id: angsuranTagihan.id,
+        tagihanId: angsuranTagihan.tagihanId,
+        terminKe: angsuranTagihan.terminKe,
+        nominal: angsuranTagihan.nominal,
+        nominalTerbayar: angsuranTagihan.nominalTerbayar,
+        jatuhTempo: angsuranTagihan.jatuhTempo,
+        status: angsuranTagihan.status,
+        mahasiswa: {
+          id: mahasiswa.id,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          status: mahasiswa.status,
+        },
+      })
+      .from(angsuranTagihan)
+      .leftJoin(tagihan, eq(angsuranTagihan.tagihanId, tagihan.id))
+      .leftJoin(mahasiswa, eq(tagihan.mahasiswaId, mahasiswa.id))
+      .where(and(...conditions))
+      .orderBy(asc(angsuranTagihan.jatuhTempo))
+      .limit(limit);
+
+    return rows;
   }
 
   static async getStats(periodeId?: string, programStudiId?: number) {

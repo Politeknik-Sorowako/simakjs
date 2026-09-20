@@ -7,6 +7,8 @@ import {
   deleteTarifSchema,
   generateTagihanSchema,
   getAllTarifSchema,
+  getAngsuranTagihanSchema,
+  getOverdueTagihanSchema,
   getRiwayatTransaksiSchema,
   getStatsTagihanSchema,
   getTagihanSchema,
@@ -21,9 +23,11 @@ export const tagihanRoutes = new Elysia({ prefix: '/tagihan' })
   .post('/generate', TagihanController.generate, generateTagihanSchema)
   .post('/:id/bayar', TagihanController.bayar, bayarTagihanSchema)
   .put('/:id', TagihanController.updateNominal, updateNominalSchema)
+  .get('/overdue', TagihanController.getOverdue, getOverdueTagihanSchema)
 
   // Audit trail transaksi pembayaran
   .get('/:id/transaksi', TagihanController.getRiwayat, getRiwayatTransaksiSchema)
+  .get('/:id/angsuran', TagihanController.getAngsuran, getAngsuranTagihanSchema)
   .post('/transaksi/:id/void', TagihanController.voidTransaksi, voidTransaksiSchema)
 
   // Pengaturan skema tarif per angkatan
