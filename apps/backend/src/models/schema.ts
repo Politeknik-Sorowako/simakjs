@@ -1695,8 +1695,10 @@ export const skemaTarif = pgTable(
       .references(() => programStudi.id, { onDelete: 'cascade' }),
     nominal: integer('nominal').notNull(),
     termin1Nominal: integer('termin1_nominal'),
+    termin1JatuhTempo: date('termin1_jatuh_tempo', { mode: 'string' }),
     termin1TempoHari: integer('termin1_tempo_hari'),
     termin2Nominal: integer('termin2_nominal'),
+    termin2JatuhTempo: date('termin2_jatuh_tempo', { mode: 'string' }),
     termin2TempoHari: integer('termin2_tempo_hari'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')

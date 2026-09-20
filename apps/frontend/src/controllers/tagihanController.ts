@@ -69,9 +69,9 @@ export interface SkemaTarif {
   programStudiId: number;
   nominal: number;
   termin1Nominal?: number | null;
-  termin1TempoHari?: number | null;
+  termin1JatuhTempo?: string | null;
   termin2Nominal?: number | null;
-  termin2TempoHari?: number | null;
+  termin2JatuhTempo?: string | null;
   programStudi?: {
     id: number;
     nama: string;
@@ -79,22 +79,44 @@ export interface SkemaTarif {
   } | null;
 }
 
+export interface SkemaTarifInput {
+  nominal: number;
+  termin1Nominal?: number | null;
+  termin1JatuhTempo?: string | null;
+  termin2Nominal?: number | null;
+  termin2JatuhTempo?: string | null;
+}
+
 export const tagihanController = {
-  async getAll(search?: string, status?: string, page?: number, limit?: number): Promise<PaginatedResponse<Tagihan>> {
+  async getAll(
+    search?: string,
+    status?: string,
+    page?: number,
+    limit?: number,
+    filters?: { periodeId?: string; programStudiId?: number },
+  ): Promise<PaginatedResponse<Tagihan>> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (status) params.append('status', status);
     if (page) params.append('page', String(page));
     if (limit) params.append('limit', String(limit));
+    if (filters?.periodeId) params.append('periodeId', filters.periodeId);
+    if (filters?.programStudiId) params.append('programStudiId', String(filters.programStudiId));
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Tagihan>>(`/tagihan${queryString}`);
   },
 
-  async generate(periodeId: string, nominal?: number): Promise<{ message: string; count: number }> {
-    return fetchApi<{ message: string; count: number }>('/tagihan/generate', {
-      method: 'POST',
-      body: JSON.stringify({ periodeId, nominal }),
-    });
+  async generate(
+    periodeId: string,
+    nominal?: number,
+  ): Promise<{ message: string; count: number; skippedTanpaTanggal?: { nim: string; nama: string }[] }> {
+    return fetchApi<{ message: string; count: number; skippedTanpaTanggal?: { nim: string; nama: string }[] }>(
+      '/tagihan/generate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ periodeId, nominal }),
+      },
+    );
   },
 
   async bayar(
@@ -142,17 +164,18 @@ export const tagihanController = {
   async createTarif(
     angkatan: string,
     programStudiId: number,
-    nominal: number,
-    termin?: {
-      termin1Nominal?: number;
-      termin1TempoHari?: number;
-      termin2Nominal?: number;
-      termin2TempoHari?: number;
-    },
+    input: SkemaTarifInput,
   ): Promise<{ message: string; data: SkemaTarif }> {
     return fetchApi<{ message: string; data: SkemaTarif }>('/tagihan/tarif', {
       method: 'POST',
-      body: JSON.stringify({ angkatan, programStudiId, nominal, ...termin }),
+      body: JSON.stringify({ angkatan, programStudiId, ...input }),
+    });
+  },
+
+  async updateTarif(id: number, input: SkemaTarifInput): Promise<{ message: string; data: SkemaTarif }> {
+    return fetchApi<{ message: string; data: SkemaTarif }>(`/tagihan/tarif/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
     });
   },
 

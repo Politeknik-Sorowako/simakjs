@@ -13,6 +13,7 @@ import {
   getStatsTagihanSchema,
   getTagihanSchema,
   updateNominalSchema,
+  updateTarifSchema,
   voidTransaksiSchema,
 } from '../schemas/tagihan.schema';
 
@@ -33,4 +34,5 @@ export const tagihanRoutes = new Elysia({ prefix: '/tagihan' })
   // Pengaturan skema tarif per angkatan
   .get('/tarif', TagihanController.getAllTarif, getAllTarifSchema)
   .post('/tarif', TagihanController.createTarif, createTarifSchema)
+  .put('/tarif/:id', TagihanController.updateTarif, updateTarifSchema)
   .delete('/tarif/:id', TagihanController.deleteTarif, deleteTarifSchema);
