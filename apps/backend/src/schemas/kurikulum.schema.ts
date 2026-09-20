@@ -8,6 +8,9 @@ export const kurikulumBody = t.Object({
   jumlahSksLulus: t.Integer({ default: 144 }),
   jumlahSksWajib: t.Integer({ default: 120 }),
   jumlahSksPilihan: t.Integer({ default: 24 }),
+  sistemBlok: t.Optional(t.Boolean({ default: true })),
+  noSkDirektur: t.Optional(t.String()),
+  tanggalSkDirektur: t.Optional(t.String()),
   isAktif: t.Optional(t.Boolean({ default: false })),
   idPddikti: t.Optional(t.String()),
 });

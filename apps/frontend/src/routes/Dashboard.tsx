@@ -259,16 +259,18 @@ function DosenWidgets() {
   });
 
   const [kelasDiampu] = createResource(
-    () => ({ dosenId: dosenProfile()?.id, periodeId: periodeAktif()?.id }),
+    () => {
+      const dosenId = dosenProfile()?.id;
+      const periodeId = periodeAktif()?.id;
+      // Source primitif stabil: objek literal baru setiap render akan memicu
+      // refetch loop di Solid. Gabung jadi string bernilai unik per kombinasi.
+      return dosenId || periodeId ? `${dosenId ?? ''}:${periodeId ?? ''}` : null;
+    },
     async (key) => {
-      return await dosenPengajarController.getAll(
-        undefined,
-        key.dosenId || undefined,
-        1,
-        50,
-        key.periodeId || undefined,
-        false,
-      );
+      if (!key) return { data: [], meta: { total: 0, page: 1, limit: 50, totalPages: 1 } };
+      const [dosenIdRaw, periodeId] = key.split(':');
+      const dosenId = dosenIdRaw ? Number(dosenIdRaw) : undefined;
+      return await dosenPengajarController.getAll(undefined, dosenId, 1, 50, periodeId || undefined, false);
     },
   );
 
@@ -804,18 +806,18 @@ export default function Dashboard() {
         </div>
 
         {/* Role-based Dashboard Content */}
-        <Show when={role() === 'admin'}>
+        <Show when={auth.hasRole(['admin', 'super_admin'])}>
           <AdminWidgets />
         </Show>
-        <Show when={role() === 'dosen' || role() === 'instruktur'}>
+        <Show when={!auth.hasRole(['admin', 'super_admin']) && auth.hasRole(['dosen', 'instruktur', 'kaprodi'])}>
           <DosenWidgets />
         </Show>
-        <Show when={role() === 'mahasiswa'}>
+        <Show when={auth.hasRole(['mahasiswa'])}>
           <MahasiswaWidgets />
         </Show>
 
         {/* Other roles */}
-        <Show when={role() === 'prodi' || role() === 'keuangan'}>
+        <Show when={auth.hasRole(['prodi', 'keuangan', 'plp'])}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
             <p class="text-base text-secondary-500 dark:text-secondary-300">
               Dashboard khusus untuk role <strong>{role()}</strong> sedang dalam pengembangan. Silakan gunakan menu

@@ -1,5 +1,5 @@
 import { BarController, BarElement, CategoryScale, Chart, Legend, LinearScale, Title, Tooltip } from 'chart.js';
-import { createEffect, createSignal, onCleanup } from 'solid-js';
+import { createEffect, onCleanup } from 'solid-js';
 
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Title, Tooltip, Legend);
 
@@ -18,22 +18,19 @@ interface BarChartProps {
 
 export function BarChart(props: BarChartProps) {
   let canvasRef: HTMLCanvasElement | undefined;
-  const [chartInstance, setChartInstance] = createSignal<Chart | null>(null);
+  let chart: Chart | undefined;
 
   createEffect(() => {
     if (!canvasRef) return;
-
-    if (chartInstance()) {
-      chartInstance()!.destroy();
-    }
-
     const ctx = canvasRef.getContext('2d');
     if (!ctx) return;
+
+    chart?.destroy();
 
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#94a3b8' : '#64748b';
 
-    const chart = new Chart(ctx, {
+    chart = new Chart(ctx, {
       type: props.horizontal ? 'bar' : 'bar',
       data: {
         labels: props.labels,
@@ -66,10 +63,9 @@ export function BarChart(props: BarChartProps) {
       },
     });
 
-    setChartInstance(chart);
-
     // Observer for theme changes
     const observer = new MutationObserver(() => {
+      if (!chart) return;
       const dark = document.documentElement.classList.contains('dark');
       chart.options.scales!.x!.ticks!.color = dark ? '#94a3b8' : '#64748b';
       chart.options.scales!.y!.ticks!.color = dark ? '#94a3b8' : '#64748b';
@@ -83,7 +79,8 @@ export function BarChart(props: BarChartProps) {
 
     onCleanup(() => {
       observer.disconnect();
-      chart.destroy();
+      chart?.destroy();
+      chart = undefined;
     });
   });
 

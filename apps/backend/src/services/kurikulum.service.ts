@@ -1,6 +1,7 @@
-import { and, count, eq, ilike, inArray, or } from 'drizzle-orm';
+import { and, count, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { kurikulum, kurikulumMataKuliah, mataKuliah } from '../models/schema';
 import { db } from '../utils/db';
+import { SystemParameterService } from './system-parameter.service';
 
 export interface CreateKurikulumDto {
   kode: string;
@@ -10,6 +11,9 @@ export interface CreateKurikulumDto {
   jumlahSksLulus: number;
   jumlahSksWajib: number;
   jumlahSksPilihan: number;
+  sistemBlok?: boolean;
+  noSkDirektur?: string;
+  tanggalSkDirektur?: string;
   isAktif?: boolean;
   idPddikti?: string;
 }
@@ -26,6 +30,57 @@ export interface AddMataKuliahDto {
 }
 
 export class KurikulumService {
+  /**
+   * Menghitung kepatuhan kurikulum terhadap aturan BPA sistem blok (Epic 1).
+   * Bersifat warning saja (tidak memblokir operasi). Ambang SKS diambil dari
+   * system_settings (SKS_MIN_D3/SKS_MIN_D4) agar dapat dikonfigurasi admin.
+   */
+  static async getCompliance(id: number) {
+    const kur = await db.query.kurikulum.findFirst({
+      where: eq(kurikulum.id, id),
+      with: {
+        programStudi: true,
+        kurikulumMataKuliah: true,
+      },
+    });
+    if (!kur) return null;
+
+    const jenjang = kur.programStudi?.jenjang?.toUpperCase() ?? '';
+    const totalSksRiil = kur.kurikulumMataKuliah.reduce((sum, kmk) => sum + (kmk.sksMataKuliah || 0), 0);
+    const sksLulusTerdaftar = kur.jumlahSksLulus || 0;
+
+    const isJenjangDipetakan = jenjang === 'D3' || jenjang === 'D4';
+    let ambang = 0;
+    if (isJenjangDipetakan) {
+      const key = jenjang === 'D3' ? 'SKS_MIN_D3' : 'SKS_MIN_D4';
+      ambang = await SystemParameterService.getNumber(key);
+    }
+
+    const kurang = isJenjangDipetakan ? Math.max(0, ambang - totalSksRiil) : 0;
+    const lolos = isJenjangDipetakan ? totalSksRiil >= ambang : false;
+    const adaSk = Boolean(kur.noSkDirektur?.trim());
+
+    const warnings: string[] = [];
+    if (!adaSk) warnings.push('Belum ada SK Direktur');
+    if (isJenjangDipetakan && !lolos) {
+      warnings.push(`Total SKS ${totalSksRiil} belum mencapai ambang BPA ${jenjang} (${ambang} SKS)`);
+    }
+    if (!isJenjangDipetakan)
+      warnings.push(`Jenjang "${kur.programStudi?.jenjang ?? '-'}" tidak dipetakan ke ambang BPA`);
+
+    return {
+      jenjang,
+      ambang: isJenjangDipetakan ? ambang : null,
+      totalSksRiil,
+      sksLulusTerdaftar,
+      kurang,
+      lolos,
+      adaSk,
+      sistemBlok: kur.sistemBlok,
+      warnings,
+    };
+  }
+
   static async getAll(page = 1, limit = 10, search = '', prodiId?: number) {
     const offset = (page - 1) * limit;
     let whereClause = undefined;
@@ -56,10 +111,12 @@ export class KurikulumService {
       },
     });
 
+    const dataWithCompliance = await this.attachComplianceBatch(data);
+
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data,
+      data: dataWithCompliance,
       meta: {
         total,
         page,
@@ -67,6 +124,63 @@ export class KurikulumService {
         totalPages,
       },
     };
+  }
+
+  /**
+   * Melampirkan field compliance ke daftar kurikulum secara batch agar tidak
+   * memicu N+1 query (satu kueri agregat untuk seluruh id).
+   */
+  private static async attachComplianceBatch<
+    T extends {
+      id: number;
+      programStudi: { jenjang: string | null } | null;
+      jumlahSksLulus: number | null;
+      sistemBlok: boolean;
+    },
+  >(items: T[]) {
+    if (items.length === 0) return items;
+    const ids = items.map((k) => k.id);
+    const sums = await db
+      .select({
+        kurikulumId: kurikulumMataKuliah.kurikulumId,
+        total: sql<number>`COALESCE(SUM(${kurikulumMataKuliah.sksMataKuliah}), 0)`,
+      })
+      .from(kurikulumMataKuliah)
+      .where(inArray(kurikulumMataKuliah.kurikulumId, ids))
+      .groupBy(kurikulumMataKuliah.kurikulumId);
+    const sumMap = new Map(sums.map((s) => [s.kurikulumId, Number(s.total)]));
+
+    const ambangD3 = await SystemParameterService.getNumber('SKS_MIN_D3');
+    const ambangD4 = await SystemParameterService.getNumber('SKS_MIN_D4');
+
+    return items.map((k) => {
+      const jenjang = k.programStudi?.jenjang?.toUpperCase() ?? '';
+      const ambang = jenjang === 'D3' ? ambangD3 : jenjang === 'D4' ? ambangD4 : null;
+      const totalSksRiil = sumMap.get(k.id) ?? 0;
+      const adaSk = Boolean((k as { noSkDirektur?: string | null }).noSkDirektur?.trim());
+      const lolos = ambang !== null ? totalSksRiil >= ambang : false;
+      const kurang = ambang !== null ? Math.max(0, ambang - totalSksRiil) : 0;
+
+      const warnings: string[] = [];
+      if (!adaSk) warnings.push('Belum ada SK Direktur');
+      if (ambang !== null && !lolos)
+        warnings.push(`Total SKS ${totalSksRiil} belum mencapai ambang BPA ${jenjang} (${ambang} SKS)`);
+      if (ambang === null) warnings.push(`Jenjang "${k.programStudi?.jenjang ?? '-'}" tidak dipetakan ke ambang BPA`);
+
+      return {
+        ...k,
+        compliance: {
+          jenjang,
+          ambang,
+          totalSksRiil,
+          kurang,
+          lolos,
+          adaSk,
+          sistemBlok: k.sistemBlok,
+          warnings,
+        },
+      };
+    });
   }
 
   static async getById(id: number) {
@@ -82,7 +196,10 @@ export class KurikulumService {
         },
       },
     });
-    return data || null;
+    if (!data) return null;
+
+    const [withCompliance] = await this.attachComplianceBatch([data]);
+    return withCompliance || data;
   }
 
   static async create(data: CreateKurikulumDto) {
@@ -325,6 +442,9 @@ export class KurikulumService {
           jumlahSksLulus: source.jumlahSksLulus,
           jumlahSksWajib: source.jumlahSksWajib,
           jumlahSksPilihan: source.jumlahSksPilihan,
+          sistemBlok: source.sistemBlok,
+          noSkDirektur: source.noSkDirektur,
+          tanggalSkDirektur: source.tanggalSkDirektur,
         })
         .returning();
 

@@ -399,7 +399,7 @@ export const krsRelations = relations(krs, ({ one, many }) => ({
   nilaiKomponenMahasiswa: many(nilaiKomponenMahasiswa),
 }));
 
-export const tagihanRelations = relations(tagihan, ({ one }) => ({
+export const tagihanRelations = relations(tagihan, ({ one, many }) => ({
   mahasiswa: one(mahasiswa, {
     fields: [tagihan.mahasiswaId],
     references: [mahasiswa.id],
@@ -408,6 +408,7 @@ export const tagihanRelations = relations(tagihan, ({ one }) => ({
     fields: [tagihan.periodeId],
     references: [periodeAkademik.id],
   }),
+  angsuran: many(angsuranTagihan),
 }));
 
 export const presensiStatusEnum = pgEnum('presensi_status', [
@@ -1115,6 +1116,9 @@ export const kurikulum = pgTable('kurikulum', {
   jumlahSksLulus: integer('jumlah_sks_lulus').notNull(),
   jumlahSksWajib: integer('jumlah_sks_wajib').notNull(),
   jumlahSksPilihan: integer('jumlah_sks_pilihan').notNull(),
+  sistemBlok: boolean('sistem_blok').default(true).notNull(),
+  noSkDirektur: varchar('no_sk_direktur', { length: 100 }),
+  tanggalSkDirektur: date('tanggal_sk_direktur', { mode: 'string' }),
   isAktif: boolean('is_aktif').default(false).notNull(),
   isLocked: boolean('is_locked').default(false).notNull(),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),
@@ -1651,6 +1655,36 @@ export const transaksiPembayaranRelations = relations(transaksiPembayaran, ({ on
   }),
 }));
 
+export const angsuranTagihan = pgTable(
+  'angsuran_tagihan',
+  {
+    id: serial('id').primaryKey(),
+    tagihanId: integer('tagihan_id')
+      .notNull()
+      .references(() => tagihan.id, { onDelete: 'cascade' }),
+    terminKe: integer('termin_ke').notNull(),
+    nominal: integer('nominal').notNull(),
+    nominalTerbayar: integer('nominal_terbayar').default(0).notNull(),
+    jatuhTempo: date('jatuh_tempo', { mode: 'string' }).notNull(),
+    status: tagihanStatusEnum('status').notNull().default('belum_bayar'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    unq: unique('angsuran_tagihan_tagihan_termin_unique').on(t.tagihanId, t.terminKe),
+  }),
+);
+
+export const angsuranTagihanRelations = relations(angsuranTagihan, ({ one }) => ({
+  tagihan: one(tagihan, {
+    fields: [angsuranTagihan.tagihanId],
+    references: [tagihan.id],
+  }),
+}));
+
 export const skemaTarif = pgTable(
   'skema_tarif',
   {
@@ -1659,7 +1693,16 @@ export const skemaTarif = pgTable(
     programStudiId: integer('program_studi_id')
       .notNull()
       .references(() => programStudi.id, { onDelete: 'cascade' }),
+    periodeId: varchar('periode_id', { length: 5 })
+      .notNull()
+      .references(() => periodeAkademik.id, { onDelete: 'restrict' }),
     nominal: integer('nominal').notNull(),
+    termin1Nominal: integer('termin1_nominal'),
+    termin1JatuhTempo: date('termin1_jatuh_tempo', { mode: 'string' }),
+    termin1TempoHari: integer('termin1_tempo_hari'),
+    termin2Nominal: integer('termin2_nominal'),
+    termin2JatuhTempo: date('termin2_jatuh_tempo', { mode: 'string' }),
+    termin2TempoHari: integer('termin2_tempo_hari'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -1667,7 +1710,7 @@ export const skemaTarif = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => ({
-    unq: unique('skema_tarif_angkatan_prodi_unique').on(t.angkatan, t.programStudiId),
+    unq: unique('skema_tarif_angkatan_prodi_periode_unique').on(t.angkatan, t.programStudiId, t.periodeId),
   }),
 );
 
@@ -1675,6 +1718,10 @@ export const skemaTarifRelations = relations(skemaTarif, ({ one }) => ({
   programStudi: one(programStudi, {
     fields: [skemaTarif.programStudiId],
     references: [programStudi.id],
+  }),
+  periodeAkademik: one(periodeAkademik, {
+    fields: [skemaTarif.periodeId],
+    references: [periodeAkademik.id],
   }),
 }));
 

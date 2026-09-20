@@ -16,6 +16,7 @@ import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import { Krs as IKrs, krsController } from '../controllers/krsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { prodiController } from '../controllers/prodiController';
 import { settingsController } from '../controllers/settingsController';
 import { usePagination } from '../hooks/usePagination';
 
@@ -408,6 +409,54 @@ export default function Krs() {
     }
   };
 
+  // --- Generate Paket KRS Otomatis (sistem blok BPA) ---
+  const [showPaketModal, setShowPaketModal] = createSignal(false);
+  const [paketAngkatan, setPaketAngkatan] = createSignal('');
+  const [paketSemester, setPaketSemester] = createSignal(1);
+  const [paketLoading, setPaketLoading] = createSignal(false);
+  const [paketResult, setPaketResult] = createSignal<
+    import('../controllers/krsController').AutoEnrollPaketResult | null
+  >(null);
+  const [prodisPaket] = createResource(() => prodiController.getAll('', 1, 100));
+  const [paketProdi, setPaketProdi] = createSignal<number>(workspace.activeProdiId() || 0);
+
+  const handleGeneratePaket = async (e: Event) => {
+    e.preventDefault();
+    if (!selectedPeriode()) {
+      toast.showToast('Silakan pilih periode akademik terlebih dahulu', 'error');
+      return;
+    }
+    if (!paketAngkatan() || !/^\d{4}$/.test(paketAngkatan())) {
+      toast.showToast('Tahun angkatan harus 4 digit', 'error');
+      return;
+    }
+    if (!paketProdi()) {
+      toast.showToast('Pilih program studi', 'error');
+      return;
+    }
+    setPaketLoading(true);
+    setPaketResult(null);
+    try {
+      const result = await krsController.autoEnrollPaket({
+        periodeId: selectedPeriode(),
+        programStudiId: paketProdi(),
+        angkatan: paketAngkatan(),
+        semester: paketSemester(),
+      });
+      setPaketResult(result);
+      toast.showToast(
+        result.createdCount > 0 ? `${result.createdCount} KRS draft berhasil dibuat` : 'Tidak ada KRS baru yang dibuat',
+        result.createdCount > 0 ? 'success' : 'info',
+      );
+      refetchPending();
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal generate paket KRS', 'error');
+    } finally {
+      setPaketLoading(false);
+    }
+  };
+
   // Reset selection whenever the visible dataset changes.
   createEffect(() => {
     selectedPeriode();
@@ -767,6 +816,9 @@ export default function Krs() {
               </p>
             </div>
             <div class="flex items-center gap-2">
+              <Button variant="secondary" onClick={() => setShowPaketModal(true)} class="!py-1.5 !px-4 text-xs">
+                ⚡ Generate Paket KRS
+              </Button>
               <Button
                 variant="secondary"
                 onClick={toggleSelectAllMassal}
@@ -948,6 +1000,108 @@ export default function Krs() {
             refetchPending();
           }}
         />
+
+        {/* Modal Generate Paket KRS (sistem blok BPA) */}
+        <Modal
+          show={showPaketModal()}
+          onClose={() => setShowPaketModal(false)}
+          title="Generate KRS Paket Otomatis"
+          maxWidth="lg"
+        >
+          <form onSubmit={handleGeneratePaket} class="flex flex-col gap-4">
+            <p class="text-sm text-secondary-500 dark:text-secondary-200">
+              Membuat KRS draft untuk seluruh mahasiswa aktif satu angkatan pada semester kurikulum tertentu (sistem
+              blok). DPA kemudian menyetujui lewat <strong>Persetujuan Massal KRS</strong>.
+            </p>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
+                <select
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={paketProdi()}
+                  onChange={(e) => setPaketProdi(Number(e.currentTarget.value))}
+                >
+                  <option value={0}>Pilih Prodi</option>
+                  <For each={prodisPaket()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                </select>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Angkatan</label>
+                <input
+                  type="text"
+                  placeholder="Misal: 2024"
+                  value={paketAngkatan()}
+                  onInput={(e) => setPaketAngkatan(e.currentTarget.value)}
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Semester</label>
+                <select
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={paketSemester()}
+                  onChange={(e) => setPaketSemester(Number(e.currentTarget.value))}
+                >
+                  <For each={[1, 2, 3, 4, 5, 6, 7, 8]}>{(s) => <option value={s}>Semester {s}</option>}</For>
+                </select>
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Periode Akademik</label>
+                <select
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={selectedPeriode()}
+                  onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
+                >
+                  <For each={periodes() ?? []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                </select>
+              </div>
+            </div>
+
+            <Show when={paketResult()}>
+              {(res) => (
+                <div class="p-3 bg-secondary-50 dark:bg-secondary-800 rounded-lg text-sm space-y-1">
+                  <p class="font-semibold text-secondary-800 dark:text-white">
+                    {res().createdCount} KRS draft dibuat ({res().mahasiswaProses} mahasiswa diproses)
+                  </p>
+                  <Show when={res().skippedExist > 0}>
+                    <p class="text-xs text-secondary-500">{res().skippedExist} sudah ada (di-skip)</p>
+                  </Show>
+                  <Show when={res().skippedNonAktif > 0}>
+                    <p class="text-xs text-secondary-500">{res().skippedNonAktif} mahasiswa non-aktif/cuti di-skip</p>
+                  </Show>
+                  <Show when={res().skippedTunggakan > 0}>
+                    <p class="text-xs text-amber-600">{res().skippedTunggakan} mahasiswa dengan tunggakan di-skip</p>
+                  </Show>
+                  <Show when={res().skippedNoKelas.length > 0}>
+                    <p class="text-xs text-rose-600">
+                      MK tanpa kelas:{' '}
+                      {res()
+                        .skippedNoKelas.map((m) => m.kode)
+                        .join(', ')}
+                    </p>
+                  </Show>
+                  <Show when={res().skippedAmbiguous.length > 0}>
+                    <p class="text-xs text-rose-600">
+                      MK kelas paralel (tentukan kelas manual):{' '}
+                      {res()
+                        .skippedAmbiguous.map((m) => m.kode)
+                        .join(', ')}
+                    </p>
+                  </Show>
+                </div>
+              )}
+            </Show>
+
+            <div class="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" type="button" onClick={() => setShowPaketModal(false)}>
+                Tutup
+              </Button>
+              <Button type="submit" disabled={paketLoading()}>
+                {paketLoading() ? 'Memproses...' : 'Generate Sekarang'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
 
         <ImportCsvModal
           show={showImportModal()}
