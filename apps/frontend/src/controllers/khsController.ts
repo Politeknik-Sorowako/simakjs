@@ -6,6 +6,8 @@ export interface KhsKrsItem {
   nilaiHuruf: string | null;
   nilaiIndeks: string | null;
   isApproved: boolean;
+  useInGpa?: boolean;
+  isRetake?: boolean;
   kelasKuliah: { id: number; namaKelas: string };
   mataKuliah: { id: number; kode: string; nama: string; sksTotal: number };
 }
@@ -64,6 +66,15 @@ export interface KhsResponse {
   reason?: string;
   detail?: string;
   semester?: number | null;
+  nilaiSikap?: {
+    am: number;
+    degradasi: number;
+    sebutan: string;
+    narasi: string;
+    lisan: number;
+    tertulis: number;
+    totalPoin: number;
+  };
   warningTunggakan?: { reason: string | null; detail: string | null };
   krsList?: KhsKrsItem[];
   summary?: {
@@ -217,6 +228,13 @@ export interface RincianKomponenMahasiswa {
 export const khsController = {
   async getByMhsIdAndPeriode(mhsId: number, periodeId: string): Promise<KhsResponse> {
     return fetchApi<KhsResponse>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}`);
+  },
+
+  async pilihNilai(krsId: number, mahasiswaId: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/khs/pilih-nilai/${krsId}`, {
+      method: 'POST',
+      body: JSON.stringify({ mahasiswaId }),
+    });
   },
 
   async getByNim(nim: string, periodeId: string): Promise<KhsResponse> {

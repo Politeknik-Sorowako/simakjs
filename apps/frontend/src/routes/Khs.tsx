@@ -249,6 +249,18 @@ export default function Khs() {
     setShowRincianModal(true);
   };
 
+  const pilihNilai = async (krsId: number) => {
+    const mhsId = selectedMhsId();
+    if (!mhsId) return;
+    try {
+      await khsController.pilihNilai(krsId, mhsId);
+      toast.showToast('Nilai yang dipakai untuk IPK berhasil diperbarui.', 'success');
+      refetchKhs();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memperbarui pilihan nilai.', 'error');
+    }
+  };
+
   // Load exam eligibility for print card
   const [eligibilityData] = createResource(
     () => {
@@ -716,6 +728,9 @@ export default function Khs() {
                               <Show when={role() === 'mahasiswa'}>
                                 <th class="p-3">Rincian</th>
                               </Show>
+                              <Show when={role() !== 'mahasiswa'}>
+                                <th class="p-3">Aksi IPK</th>
+                              </Show>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
@@ -724,7 +739,7 @@ export default function Khs() {
                               fallback={
                                 <tr>
                                   <td
-                                    colspan={role() === 'mahasiswa' ? 7 : 6}
+                                    colspan="7"
                                     class="p-4 text-center text-secondary-400 dark:text-secondary-300 italic"
                                   >
                                     Nilai belum dimasukkan atau belum disetujui Dosen PA.
@@ -737,6 +752,11 @@ export default function Khs() {
                                   <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
                                   <td class="p-3 font-bold text-secondary-800 dark:text-white">
                                     {item.mataKuliah?.nama}
+                                    <Show when={item.isRetake}>
+                                      <span class="ml-2 px-1.5 py-0.5 rounded text-fine font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                                        Mengulang
+                                      </span>
+                                    </Show>
                                   </td>
                                   <td class="p-3">{item.mataKuliah?.sksTotal}</td>
                                   <td class="p-3">{item.nilaiAngka || '-'}</td>
@@ -756,6 +776,26 @@ export default function Khs() {
                                     </Show>
                                   </td>
                                   <td class="p-3">{item.nilaiIndeks || '-'}</td>
+                                  <Show when={role() !== 'mahasiswa'}>
+                                    <td class="p-3">
+                                      <Show
+                                        when={!item.useInGpa}
+                                        fallback={
+                                          <span class="px-2 py-1 rounded-lg text-fine font-bold bg-green-50 text-green-700 border border-green-200">
+                                            Dipakai IPK
+                                          </span>
+                                        }
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => void pilihNilai(item.id)}
+                                          class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-fine hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                                        >
+                                          Pilih untuk IPK
+                                        </button>
+                                      </Show>
+                                    </td>
+                                  </Show>
                                   <Show when={role() === 'mahasiswa'}>
                                     <td class="p-3">
                                       <button
@@ -1076,6 +1116,9 @@ export default function Khs() {
                     </p>
                     <p>
                       SKS Terkontrak: <span class="font-bold dark:text-white">{khsData()?.summary?.totalSks} SKS</span>
+                    </p>
+                    <p>
+                      Nilai Sikap: <span class="font-bold dark:text-white">{khsData()?.nilaiSikap?.narasi || '-'}</span>
                     </p>
                   </div>
                 </div>

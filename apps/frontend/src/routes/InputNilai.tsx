@@ -2447,13 +2447,18 @@ export default function InputNilai() {
               <Show
                 when={!isClassLocked()}
                 fallback={
-                  <Show
-                    when={role() === 'admin' || role() === 'prodi' || role() === 'dosen' || role() === 'instruktur'}
-                  >
-                    <Button variant="primary" size="sm" onClick={handleUnlockKelas}>
-                      Buka Kunci
-                    </Button>
-                  </Show>
+                  <>
+                    <Show when={role() === 'admin' || role() === 'prodi' || role() === 'kaprodi'}>
+                      <Button variant="primary" size="sm" onClick={handleUnlockKelas}>
+                        Buka Kunci
+                      </Button>
+                    </Show>
+                    <Show when={role() !== 'admin' && role() !== 'prodi' && role() !== 'kaprodi'}>
+                      <span class="text-fine text-secondary-400 dark:text-secondary-300">
+                        Hubungi Admin/Prodi untuk membuka kunci.
+                      </span>
+                    </Show>
+                  </>
                 }
               >
                 <Button variant="danger" size="sm" onClick={handleLockKelas}>

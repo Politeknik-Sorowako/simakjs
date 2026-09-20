@@ -131,6 +131,7 @@ export default function KonfigurasiParameter() {
 
   const khsBlockEnabled = () => boolValue('BLOCK_KHS_JIKA_TANGGUNGAN', 'true');
   const krsBlockEnabled = () => boolValue('BLOCK_KRS_JIKA_TANGGUNGAN', 'false');
+  const registrationEnabled = () => boolValue('REGISTRATION_ENABLED', 'true');
 
   const saveBoolParam = async (key: string, label: string, enabled: () => boolean) => {
     setSavingKey(key);
@@ -265,6 +266,15 @@ export default function KonfigurasiParameter() {
         {/* Kontrol Blocking KHS & KRS karena tunggakan */}
         <div class="mb-6 space-y-3">
           <ToggleCard
+            title="Pendaftaran Akun Baru"
+            parameterKey="REGISTRATION_ENABLED"
+            description="Jika aktif, tombol 'Daftar' tampil di halaman login dan pengguna baru dapat mendaftarkan akun. Jika nonaktif, registrasi mandiri ditutup."
+            enabled={registrationEnabled()}
+            saving={savingKey() === 'REGISTRATION_ENABLED'}
+            onToggle={(val) => setField('REGISTRATION_ENABLED', val)}
+            onSave={() => saveBoolParam('REGISTRATION_ENABLED', 'Pendaftaran Akun Baru', registrationEnabled)}
+          />
+          <ToggleCard
             title="Pemblokiran KHS karena Tunggakan"
             parameterKey="BLOCK_KHS_JIKA_TANGGUNGAN"
             description="Jika aktif, mahasiswa tidak dapat melihat KHS saat masih memiliki tunggakan SPP/kompensasi. Staff tidak terpengaruh."
@@ -379,6 +389,7 @@ export default function KonfigurasiParameter() {
             each={(params() || []).filter(
               (p) =>
                 p.key !== 'KRS_MANDIRI_ENABLED' &&
+                p.key !== 'REGISTRATION_ENABLED' &&
                 p.key !== 'BLOCK_KHS_JIKA_TANGGUNGAN' &&
                 p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
                 p.key !== 'SESSION_DURATION_MINUTES' &&

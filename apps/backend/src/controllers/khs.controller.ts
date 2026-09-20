@@ -1,5 +1,6 @@
 import { KhsService } from '../services/khs.service';
 import { MahasiswaService } from '../services/mahasiswa.service';
+import { PelanggaranService } from '../services/pelanggaran.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
@@ -48,6 +49,9 @@ export class KhsController {
 
       // Nomor semester aktif (berbasis angkatan + periode − cuti), independen KRS.
       response.semester = await KhsService.hitungSemester(targetMhsId, targetPeriodeId);
+
+      // Nilai Sikap (NS) BPA Pasal 20 untuk periode tersebut.
+      response.nilaiSikap = await PelanggaranService.getNilaiSikap(targetMhsId, targetPeriodeId);
 
       // Staff tetap bisa melihat walau ada tunggakan; beri flag untuk watermark cetak.
       if (!hasRole(user, ['mahasiswa']) && (await SystemParameterService.isKhsBlockEnabled())) {
@@ -111,6 +115,9 @@ export class KhsController {
       // Nomor semester aktif (berbasis angkatan + periode − cuti), independen KRS.
       response.semester = await KhsService.hitungSemester(targetMhsId, targetPeriodeId);
 
+      // Nilai Sikap (NS) BPA Pasal 20 untuk periode tersebut.
+      response.nilaiSikap = await PelanggaranService.getNilaiSikap(targetMhsId, targetPeriodeId);
+
       // Staff tetap bisa melihat walau ada tunggakan; beri flag untuk watermark cetak.
       if (!hasRole(user, ['mahasiswa']) && (await SystemParameterService.isKhsBlockEnabled())) {
         const clearance = await KhsService.checkBebasTanggungan(targetMhsId, targetPeriodeId);
@@ -153,6 +160,33 @@ export class KhsController {
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal mengambil daftar periode.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async pilihNilai({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+    if (!hasRole(user, ['admin', 'prodi', 'dosen', 'instruktur'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    const krsId = parseInt(params.krsId);
+    const mahasiswaId = body?.mahasiswaId ? parseInt(body.mahasiswaId) : Number.NaN;
+    if (isNaN(krsId) || isNaN(mahasiswaId)) {
+      set.status = 400;
+      return { error: 'Parameter tidak valid.' };
+    }
+
+    try {
+      return await KhsService.pilihNilaiUntukGpa(krsId, mahasiswaId);
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal memperbarui pilihan nilai.' };
     }
   }
 

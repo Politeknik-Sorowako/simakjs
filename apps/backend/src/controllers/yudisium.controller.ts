@@ -379,9 +379,9 @@ export class YudisiumController {
       set.status = 401;
       return { error: 'Silakan login terlebih dahulu' };
     }
-    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur'])) {
+    if (!hasRole(user, ['admin', 'prodi', 'kaprodi'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Anda tidak memiliki wewenang untuk membuka kunci nilai kelas.' };
+      return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Kaprodi yang dapat membuka kunci nilai kelas.' };
     }
 
     const kelasKuliahId = parseInt(params.kelasKuliahId);

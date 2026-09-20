@@ -115,6 +115,10 @@ export class AuthController {
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async register({ body, set }: AuthContext): Promise<any> {
+    if (!(await SystemParameterService.isRegistrationEnabled())) {
+      set.status = 403;
+      return { error: 'Registrasi akun baru sedang dinonaktifkan oleh admin.' };
+    }
     const allowedRoles: string[] = ['dosen', 'mahasiswa', 'guest'];
     if (body.role && !allowedRoles.includes(body.role)) {
       set.status = 403;
