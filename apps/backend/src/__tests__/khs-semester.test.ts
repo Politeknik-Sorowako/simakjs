@@ -85,4 +85,26 @@ describe('KHS hitungSemester (angkatan + periode - cuti)', () => {
     // Sebelum masa cuti, semester normal.
     expect(await KhsService.hitungSemester(mhsId, '20241')).toBe(1);
   });
+
+  it('cuti overlap/duplikat tidak mengurangi dua kali', async () => {
+    // Dua record cuti yang sama (20242-20242) — tidak boleh dikurangi 2×.
+    await db.insert(pengajuanCuti).values({
+      mahasiswaId: mhsId,
+      periodeId: '20242',
+      alasan: 'Duplikat cuti',
+      status: 'disetujui_pa',
+      semesterMulaiCuti: '20242',
+      semesterBerakhirCuti: '20242',
+    });
+    await db.insert(pengajuanCuti).values({
+      mahasiswaId: mhsId,
+      periodeId: '20242',
+      alasan: 'Duplikat cuti kedua',
+      status: 'disetujui_prodi',
+      semesterMulaiCuti: '20242',
+      semesterBerakhirCuti: '20242',
+    });
+    // Satu semester cuti yang sama → dikurangi 1× saja.
+    expect(await KhsService.hitungSemester(mhsId, '20251')).toBe(2);
+  });
 });
