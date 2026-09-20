@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { type KhsResponse, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { hitungSemesterAktif } from '../utils/khs-helpers';
 
 interface PrintData {
   nim: string;
@@ -57,6 +58,26 @@ export default function KhsCetak() {
     const pid = printData()?.periodeId;
     if (!pid) return '-';
     return periodes()?.data?.find((p) => p.id === pid)?.nama || pid;
+  };
+
+  // Daftar periode yang diikuti mahasiswa, untuk menghitung nomor semester aktif.
+  const [mhsPeriodes] = createResource(
+    () => printData()?.periodeId,
+    async () => {
+      const mhsId = Number(params.mhsId);
+      if (!mhsId) return null;
+      try {
+        const res = await khsController.getPeriodeList(mhsId);
+        return res.data || [];
+      } catch {
+        return null;
+      }
+    },
+  );
+
+  const semesterAktif = () => {
+    const pid = printData()?.periodeId;
+    return hitungSemesterAktif(pid, mhsPeriodes());
   };
 
   return (
@@ -118,6 +139,12 @@ export default function KhsCetak() {
                 <div class="text-right">
                   <p>
                     Program Studi: <span class="font-bold">{data().prodi || '-'}</span>
+                  </p>
+                  <p>
+                    Semester: <span class="font-bold">{semesterAktif() ?? '-'}</span>
+                  </p>
+                  <p>
+                    IP Semester: <span class="font-bold">{data().khs.summary?.ipSemester ?? '-'}</span>
                   </p>
                   <p>
                     IPK: <span class="font-bold">{data().khs.summary?.ipk ?? '-'}</span>

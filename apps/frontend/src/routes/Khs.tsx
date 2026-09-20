@@ -10,6 +10,7 @@ import { type KonversiRekap, type KonversiRekapRule, khsController } from '../co
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
+import { hitungSemesterAktif } from '../utils/khs-helpers';
 
 export default function Khs() {
   const auth = useAuth();
@@ -216,6 +217,13 @@ export default function Khs() {
       if (list) return list;
     }
     return periodes() || [];
+  };
+
+  // Nomor semester aktif: peringkat periode terpilih dalam daftar periode yang diikuti.
+  const semesterAktif = () => {
+    const pid = selectedPeriode();
+    const list = mhsPeriodes();
+    return hitungSemesterAktif(pid, list);
   };
 
   // Printing States
@@ -938,6 +946,9 @@ export default function Khs() {
                   </div>
                   <div class="text-right">
                     <p>
+                      Semester: <span class="font-bold text-brand-600 dark:text-white">{semesterAktif() ?? '-'}</span>
+                    </p>
+                    <p>
                       Bimbingan PA:{' '}
                       <span
                         class={`font-bold ${eligibilityData()?.bimbingan?.eligible ? 'text-accent-600' : 'text-rose-600'}`}
@@ -1055,12 +1066,18 @@ export default function Khs() {
                   </div>
                   <div class="text-right">
                     <p>
-                      Semester: <span class="font-bold text-brand-600 dark:text-white">{periodeNama()}</span>
+                      Semester: <span class="font-bold text-brand-600 dark:text-white">{semesterAktif() ?? '-'}</span>
                     </p>
                     <p>
                       IP Semester:{' '}
                       <span class="font-bold text-brand-600 dark:text-white">
                         {Number(khsData()?.summary?.ipSemester ?? 0).toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
+                      IP Kumulatif:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">
+                        {Number(khsData()?.summary?.ipk ?? 0).toFixed(2)}
                       </span>
                     </p>
                     <p>
@@ -1156,6 +1173,10 @@ export default function Khs() {
                     </p>
                   </div>
                   <div class="text-right">
+                    <p>
+                      Semester Terakhir:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">{semesterAktif() ?? '-'}</span>
+                    </p>
                     <p>
                       IPK Kumulatif:{' '}
                       <span class="font-bold text-brand-600 dark:text-white">
