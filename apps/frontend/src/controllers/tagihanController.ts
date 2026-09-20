@@ -67,6 +67,7 @@ export interface SkemaTarif {
   id: number;
   angkatan: string;
   programStudiId: number;
+  periodeId: string;
   nominal: number;
   termin1Nominal?: number | null;
   termin1JatuhTempo?: string | null;
@@ -77,14 +78,27 @@ export interface SkemaTarif {
     nama: string;
     kode: string;
   } | null;
+  periode?: {
+    id: string;
+    nama: string;
+  } | null;
 }
 
 export interface SkemaTarifInput {
+  programStudiId: number;
+  angkatan: string;
+  periodeId: string;
   nominal: number;
   termin1Nominal?: number | null;
   termin1JatuhTempo?: string | null;
   termin2Nominal?: number | null;
   termin2JatuhTempo?: string | null;
+}
+
+export interface GenerateSkippedItem {
+  nim: string;
+  nama: string;
+  alasan: 'tanpa-tarif' | 'tanpa-tanggal';
 }
 
 export const tagihanController = {
@@ -109,14 +123,11 @@ export const tagihanController = {
   async generate(
     periodeId: string,
     nominal?: number,
-  ): Promise<{ message: string; count: number; skippedTanpaTanggal?: { nim: string; nama: string }[] }> {
-    return fetchApi<{ message: string; count: number; skippedTanpaTanggal?: { nim: string; nama: string }[] }>(
-      '/tagihan/generate',
-      {
-        method: 'POST',
-        body: JSON.stringify({ periodeId, nominal }),
-      },
-    );
+  ): Promise<{ message: string; count: number; skipped?: GenerateSkippedItem[] }> {
+    return fetchApi<{ message: string; count: number; skipped?: GenerateSkippedItem[] }>('/tagihan/generate', {
+      method: 'POST',
+      body: JSON.stringify({ periodeId, nominal }),
+    });
   },
 
   async bayar(
@@ -161,14 +172,10 @@ export const tagihanController = {
     return fetchApi<{ data: SkemaTarif[] }>('/tagihan/tarif');
   },
 
-  async createTarif(
-    angkatan: string,
-    programStudiId: number,
-    input: SkemaTarifInput,
-  ): Promise<{ message: string; data: SkemaTarif }> {
+  async createTarif(input: SkemaTarifInput): Promise<{ message: string; data: SkemaTarif }> {
     return fetchApi<{ message: string; data: SkemaTarif }>('/tagihan/tarif', {
       method: 'POST',
-      body: JSON.stringify({ angkatan, programStudiId, ...input }),
+      body: JSON.stringify(input),
     });
   },
 

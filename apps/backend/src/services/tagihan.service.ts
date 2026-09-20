@@ -131,7 +131,7 @@ export class TagihanService {
   static async generateTagihanPeriode(periodeId: string, nominalAmount?: number) {
     const students = await db.select().from(mahasiswa).where(eq(mahasiswa.status, 'aktif'));
     let createdCount = 0;
-    const skippedTanpaTanggal: { nim: string; nama: string }[] = [];
+    const skipped: { nim: string; nama: string; alasan: 'tanpa-tarif' | 'tanpa-tanggal' }[] = [];
     const defaultNominal = nominalAmount !== undefined ? nominalAmount : 5000000;
 
     for (const student of students) {
@@ -160,14 +160,20 @@ export class TagihanService {
           }
         }
 
-        // Ambil nominal tarif dari tabel skema_tarif
+        // Ambil nominal tarif dari tabel skema_tarif — HARUS cocok periode berjalan.
         let nominalTagihan = defaultNominal;
         let tarif: typeof skemaTarif.$inferSelect | null = null;
         if (student.programStudiId) {
           const [tarifRow] = await db
             .select()
             .from(skemaTarif)
-            .where(and(eq(skemaTarif.angkatan, angkatan), eq(skemaTarif.programStudiId, student.programStudiId)))
+            .where(
+              and(
+                eq(skemaTarif.angkatan, angkatan),
+                eq(skemaTarif.programStudiId, student.programStudiId),
+                eq(skemaTarif.periodeId, periodeId),
+              ),
+            )
             .limit(1);
           if (tarifRow) {
             nominalTagihan = tarifRow.nominal;
@@ -175,13 +181,18 @@ export class TagihanService {
           }
         }
 
-        // Tanpa skema tarif (atau tarif tanpa tanggal termin), mahasiswa di-skip
-        // dan dilaporkan — tidak menggagalkan seluruh batch generate.
+        // Tanpa skema tarif untuk periode ini -> skip + lapor.
+        if (!tarif) {
+          skipped.push({ nim: student.nim, nama: student.nama, alasan: 'tanpa-tarif' });
+          continue;
+        }
+
+        // Tarif tanpa tanggal termin -> skip + lapor.
         let terminPlans: TerminPlan[];
         try {
           terminPlans = this.buildTerminPlan(nominalTagihan, tarif);
         } catch {
-          skippedTanpaTanggal.push({ nim: student.nim, nama: student.nama });
+          skipped.push({ nim: student.nim, nama: student.nama, alasan: 'tanpa-tanggal' });
           continue;
         }
 
@@ -216,7 +227,7 @@ export class TagihanService {
       }
     }
 
-    return { createdCount, skippedTanpaTanggal };
+    return { createdCount, skipped };
   }
 
   static async updateNominal(tagihanId: number, nominalBaru: number) {

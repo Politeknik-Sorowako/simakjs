@@ -533,6 +533,13 @@
       "when": 1789886662200,
       "tag": "0075_tarif_termin_tanggal",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1789886662300,
+      "tag": "0076_tarif_per_periode",
+      "breakpoints": true
     }
   ]
 }

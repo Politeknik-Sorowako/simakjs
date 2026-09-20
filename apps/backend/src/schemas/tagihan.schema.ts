@@ -65,10 +65,11 @@ export const generateTagihanSchema = {
     201: t.Object({
       message: t.String({ default: 'Tagihan berhasil dibuat secara massal' }),
       count: t.Integer({ default: 10 }),
-      skippedTanpaTanggal: t.Array(
+      skipped: t.Array(
         t.Object({
           nim: t.String(),
           nama: t.String(),
+          alasan: t.Union([t.Literal('tanpa-tarif'), t.Literal('tanpa-tanggal')]),
         }),
       ),
     }),
@@ -138,13 +139,13 @@ export const createTarifSchema = {
     tags: ['Tagihan'],
     summary: 'Buat Skema Tarif Baru',
     description:
-      'Menambahkan skema tarif SPP baru untuk angkatan/prodi tertentu. Termin I/II memakai nominal & tanggal jatuh tempo absolut (wajib).',
+      'Menambahkan skema tarif SPP baru untuk angkatan/prodi/periode tertentu. Termin I/II memakai nominal & tanggal jatuh tempo absolut (wajib).',
   },
   body: t.Object({
-    programStudiId: t.Optional(t.Integer()),
-    angkatan: t.Optional(t.String()),
+    programStudiId: t.Integer(),
+    angkatan: t.String(),
+    periodeId: t.String(),
     nominal: t.Numeric(),
-    periodeId: t.Optional(t.String()),
     termin1Nominal: t.Optional(t.Nullable(t.Numeric())),
     termin1JatuhTempo: t.Optional(t.Nullable(t.String())),
     termin2Nominal: t.Optional(t.Nullable(t.Numeric())),
@@ -163,6 +164,9 @@ export const updateTarifSchema = {
     id: t.Numeric(),
   }),
   body: t.Object({
+    programStudiId: t.Integer(),
+    angkatan: t.String(),
+    periodeId: t.String(),
     nominal: t.Numeric(),
     termin1Nominal: t.Optional(t.Nullable(t.Numeric())),
     termin1JatuhTempo: t.Optional(t.Nullable(t.String())),
@@ -176,6 +180,7 @@ export const updateTarifSchema = {
         id: t.Integer(),
         angkatan: t.String(),
         programStudiId: t.Integer(),
+        periodeId: t.String(),
         nominal: t.Numeric(),
         termin1Nominal: t.Union([t.Null(), t.Integer()]),
         termin1JatuhTempo: t.Union([t.Null(), t.String()]),

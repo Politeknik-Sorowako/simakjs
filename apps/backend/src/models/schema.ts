@@ -1693,6 +1693,9 @@ export const skemaTarif = pgTable(
     programStudiId: integer('program_studi_id')
       .notNull()
       .references(() => programStudi.id, { onDelete: 'cascade' }),
+    periodeId: varchar('periode_id', { length: 5 })
+      .notNull()
+      .references(() => periodeAkademik.id, { onDelete: 'restrict' }),
     nominal: integer('nominal').notNull(),
     termin1Nominal: integer('termin1_nominal'),
     termin1JatuhTempo: date('termin1_jatuh_tempo', { mode: 'string' }),
@@ -1707,7 +1710,7 @@ export const skemaTarif = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => ({
-    unq: unique('skema_tarif_angkatan_prodi_unique').on(t.angkatan, t.programStudiId),
+    unq: unique('skema_tarif_angkatan_prodi_periode_unique').on(t.angkatan, t.programStudiId, t.periodeId),
   }),
 );
 
@@ -1715,6 +1718,10 @@ export const skemaTarifRelations = relations(skemaTarif, ({ one }) => ({
   programStudi: one(programStudi, {
     fields: [skemaTarif.programStudiId],
     references: [programStudi.id],
+  }),
+  periodeAkademik: one(periodeAkademik, {
+    fields: [skemaTarif.periodeId],
+    references: [periodeAkademik.id],
   }),
 }));
 
