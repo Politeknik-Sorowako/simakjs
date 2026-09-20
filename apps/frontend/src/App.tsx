@@ -107,7 +107,7 @@ const Yudisium = lazy(() => import('./routes/Yudisium'));
 
 import { queryClient } from './utils/queryClient';
 
-function RouteLoadingFallback() {
+export function RouteLoadingFallback() {
   return (
     <div class="min-h-screen flex flex-col items-center justify-center bg-parchment dark:bg-secondary-950 text-secondary-700 dark:text-secondary-200">
       <div class="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
@@ -169,6 +169,14 @@ function AppContent() {
           <Route path="/rombel/enroll/:token" component={RombelEnroll} />
 
           {/* Protected Routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/dashboard"
             element={
@@ -845,7 +853,15 @@ function AppContent() {
           {/* Catch-all redirect */}
           <Route
             path="*"
-            element={auth.isAuthenticated() ? <Navigate href="/dashboard" /> : <Navigate href="/login" />}
+            element={
+              !auth.bootstrapped() ? (
+                <RouteLoadingFallback />
+              ) : auth.isAuthenticated() ? (
+                <Navigate href="/dashboard" />
+              ) : (
+                <Navigate href="/login" />
+              )
+            }
           />
         </Routes>
       </Suspense>
