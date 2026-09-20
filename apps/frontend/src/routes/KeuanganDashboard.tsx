@@ -243,7 +243,6 @@ export default function KeuanganDashboard() {
     setSelectedTagihan(item);
     setVoidNotes('');
     setShowRiwayatModal(true);
-    refetchAngsuran();
   };
 
   const handleVoid = async (transaksiId: number) => {
