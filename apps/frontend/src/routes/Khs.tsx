@@ -316,14 +316,24 @@ export default function Khs() {
       return { mhsId: mId, periodeId: pId };
     },
     async ({ mhsId, periodeId }) => {
-      return await khsController.getByMhsIdAndPeriode(mhsId, periodeId);
+      try {
+        return await khsController.getByMhsIdAndPeriode(mhsId, periodeId);
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat KHS mahasiswa.', 'error');
+        throw e;
+      }
     },
   );
 
   // Load Transkrip
   const [transkripData, { refetch: refetchTranskrip }] = createResource(selectedMhsId, async (mhsId) => {
     if (!mhsId) return null;
-    return await khsController.getTranskrip(mhsId);
+    try {
+      return await khsController.getTranskrip(mhsId);
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memuat transkrip mahasiswa.', 'error');
+      throw e;
+    }
   });
 
   const handleSaveKonversi = async (e: Event) => {
