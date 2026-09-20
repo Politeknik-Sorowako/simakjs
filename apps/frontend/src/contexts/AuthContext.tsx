@@ -45,6 +45,7 @@ export type UserRole = User['role'];
 
 interface AuthContextType {
   user: () => User | null;
+  bootstrapped: () => boolean;
   isAuthenticated: () => boolean;
   login: (user: User) => void;
   logout: () => void;
@@ -200,7 +201,9 @@ export function AuthProvider(props: { children: JSX.Element }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, updateUser, theme, setTheme, hasRole }}>
+    <AuthContext.Provider
+      value={{ user, bootstrapped, isAuthenticated, login, logout, updateUser, theme, setTheme, hasRole }}
+    >
       {props.children}
     </AuthContext.Provider>
   );

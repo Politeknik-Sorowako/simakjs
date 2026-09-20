@@ -804,18 +804,18 @@ export default function Dashboard() {
         </div>
 
         {/* Role-based Dashboard Content */}
-        <Show when={role() === 'admin'}>
+        <Show when={auth.hasRole(['admin', 'super_admin'])}>
           <AdminWidgets />
         </Show>
-        <Show when={role() === 'dosen' || role() === 'instruktur'}>
+        <Show when={!auth.hasRole(['admin', 'super_admin']) && auth.hasRole(['dosen', 'instruktur', 'kaprodi'])}>
           <DosenWidgets />
         </Show>
-        <Show when={role() === 'mahasiswa'}>
+        <Show when={auth.hasRole(['mahasiswa'])}>
           <MahasiswaWidgets />
         </Show>
 
         {/* Other roles */}
-        <Show when={role() === 'prodi' || role() === 'keuangan'}>
+        <Show when={auth.hasRole(['prodi', 'keuangan', 'plp'])}>
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
             <p class="text-base text-secondary-500 dark:text-secondary-300">
               Dashboard khusus untuk role <strong>{role()}</strong> sedang dalam pengembangan. Silakan gunakan menu

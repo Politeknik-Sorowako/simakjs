@@ -1,9 +1,9 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import { createEdenQuery } from '../hooks/useEdenQuery';
+import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { prodiController } from '../controllers/prodiController';
 import { fetchApi } from '../utils/api';
-import { eden } from '../utils/eden';
 import { ThemeToggle } from './ThemeToggle';
 
 interface NotificationItem {
@@ -12,18 +12,6 @@ interface NotificationItem {
   message: string;
   isRead: boolean;
   createdAt: string;
-}
-
-interface SafeProdi {
-  id: number;
-  kode: string;
-  nama: string;
-  jenjang: string;
-}
-
-interface SafePeriode {
-  id: string;
-  nama: string;
 }
 
 export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean; onToggleCollapse?: () => void }) {
@@ -67,18 +55,22 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
   };
 
   // Load Prodis for admin global filter
-  const prodis = createEdenQuery<{ data: SafeProdi[]; meta?: object }>(() => ({
-    queryKey: ['prodi', { page: 1, limit: 100 }],
-    queryFn: () => eden.prodi.get({ $query: { page: 1, limit: 100 } }),
-    enabled: () => role() === 'admin',
-  }));
+  const [prodis] = createResource(
+    () => role() === 'admin',
+    async (isAdmin) => {
+      if (!isAdmin) return null;
+      return await prodiController.getAll(undefined, 1, 100);
+    },
+  );
 
   // Load Periodes for admin global filter
-  const periodes = createEdenQuery<{ data: SafePeriode[]; meta?: object }>(() => ({
-    queryKey: ['periode-akademik', { page: 1, limit: 100 }],
-    queryFn: () => eden['periode-akademik'].get({ $query: { page: 1, limit: 100 } }),
-    enabled: () => role() === 'admin',
-  }));
+  const [periodes] = createResource(
+    () => role() === 'admin',
+    async (isAdmin) => {
+      if (!isAdmin) return null;
+      return await periodeAkademikController.getAll('', 1, 100);
+    },
+  );
 
   return (
     <header class="sticky top-0 z-40 h-16 backdrop-blur-md bg-white/80 dark:bg-secondary-900/80 border-b border-secondary-200/80 dark:border-secondary-800/80 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
@@ -133,7 +125,7 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
               <option value="" selected={workspace.selectedProdiId() === null}>
                 Semua Prodi
               </option>
-              <For each={prodis.data?.data ?? []}>
+              <For each={prodis()?.data ?? []}>
                 {(p) => (
                   <option value={p.id} selected={workspace.selectedProdiId() === p.id}>
                     {p.nama}
@@ -155,7 +147,7 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
               <option value="" selected={workspace.selectedPeriodeId() === null}>
                 Semua Periode
               </option>
-              <For each={periodes.data?.data ?? []}>
+              <For each={periodes()?.data ?? []}>
                 {(p) => (
                   <option value={p.id} selected={workspace.selectedPeriodeId() === p.id}>
                     {p.nama}
