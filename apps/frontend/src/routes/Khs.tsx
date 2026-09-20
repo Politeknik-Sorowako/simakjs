@@ -10,6 +10,7 @@ import { type KonversiRekap, type KonversiRekapRule, khsController } from '../co
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
+import { hitungSemesterAktif } from '../utils/khs-helpers';
 
 export default function Khs() {
   const auth = useAuth();
@@ -118,6 +119,13 @@ export default function Khs() {
     }
   });
 
+  // Nama periode untuk ditampilkan pada cetakan KHS (mis. "Ganjil 2025/2026").
+  const periodeNama = () => {
+    const pid = selectedPeriode();
+    if (!pid) return '-';
+    return periodes()?.find((p) => p.id === pid)?.nama || pid;
+  };
+
   createEffect(() => {
     const wsPeriode = workspace.selectedPeriodeId();
     if (wsPeriode) {
@@ -211,6 +219,13 @@ export default function Khs() {
     return periodes() || [];
   };
 
+  // Nomor semester aktif: peringkat periode terpilih dalam daftar periode yang diikuti.
+  const semesterAktif = () => {
+    const pid = selectedPeriode();
+    const list = mhsPeriodes();
+    return hitungSemesterAktif(pid, list);
+  };
+
   // Printing States
   const [showPrintUjian, setShowPrintUjian] = createSignal(false);
   const [showPrintKhs, setShowPrintKhs] = createSignal(false);
@@ -262,15 +277,19 @@ export default function Khs() {
   // Load Mahasiswa profile if logged in as student
   const [mhsProfile] = createResource(
     () => {
-      if (role() === 'mahasiswa') return user()?.email;
-      return null;
+      if (role() === 'mahasiswa') return { email: user()?.email as string | undefined, mhsId: null };
+      return { email: undefined, mhsId: selectedMhsId() };
     },
-    async (email) => {
-      if (!email) return null;
-      const res = await mahasiswaController.getAll(email, 1, 1);
-      const profile = res.data[0] || null;
-      if (profile) setSelectedMhsId(profile.id);
-      return profile;
+    async ({ email, mhsId }) => {
+      if (role() === 'mahasiswa') {
+        if (!email) return null;
+        const res = await mahasiswaController.getAll(email, 1, 1);
+        const profile = res.data[0] || null;
+        if (profile) setSelectedMhsId(profile.id);
+        return profile;
+      }
+      if (!mhsId) return null;
+      return await mahasiswaController.getById(mhsId).catch(() => null);
     },
   );
 
@@ -904,7 +923,7 @@ export default function Khs() {
                     KARTU UJIAN MAHASISWA (UTS/UAS)
                   </h3>
                   <p class="text-caption text-secondary-400 dark:text-secondary-300">
-                    Periode Akademik: {selectedPeriode()}
+                    Periode Akademik: {periodeNama()}
                   </p>
                 </div>
 
@@ -918,8 +937,17 @@ export default function Khs() {
                       Nama:{' '}
                       <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
+                    <p>
+                      Program Studi:{' '}
+                      <span class="font-bold dark:text-white">
+                        {mhsProfile()?.programStudi?.nama || mhsProfile()?.programStudiId || 'N/A'}
+                      </span>
+                    </p>
                   </div>
                   <div class="text-right">
+                    <p>
+                      Semester: <span class="font-bold text-brand-600 dark:text-white">{semesterAktif() ?? '-'}</span>
+                    </p>
                     <p>
                       Bimbingan PA:{' '}
                       <span
@@ -1016,7 +1044,7 @@ export default function Khs() {
                     KARTU HASIL STUDI (KHS) SEMESTER
                   </h3>
                   <p class="text-caption text-secondary-400 dark:text-secondary-300">
-                    Periode Akademik: {selectedPeriode()}
+                    Periode Akademik: {periodeNama()}
                   </p>
                 </div>
 
@@ -1029,12 +1057,27 @@ export default function Khs() {
                     <p>
                       Nama: <span class="font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
+                    <p>
+                      Program Studi:{' '}
+                      <span class="font-bold dark:text-white">
+                        {mhsProfile()?.programStudi?.nama || mhsProfile()?.programStudiId || 'N/A'}
+                      </span>
+                    </p>
                   </div>
                   <div class="text-right">
+                    <p>
+                      Semester: <span class="font-bold text-brand-600 dark:text-white">{semesterAktif() ?? '-'}</span>
+                    </p>
                     <p>
                       IP Semester:{' '}
                       <span class="font-bold text-brand-600 dark:text-white">
                         {Number(khsData()?.summary?.ipSemester ?? 0).toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
+                      IP Kumulatif:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">
+                        {Number(khsData()?.summary?.ipk ?? 0).toFixed(2)}
                       </span>
                     </p>
                     <p>
@@ -1122,8 +1165,18 @@ export default function Khs() {
                       Nama:{' '}
                       <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
+                    <p>
+                      Program Studi:{' '}
+                      <span class="font-bold dark:text-white">
+                        {mhsProfile()?.programStudi?.nama || mhsProfile()?.programStudiId || 'N/A'}
+                      </span>
+                    </p>
                   </div>
                   <div class="text-right">
+                    <p>
+                      Semester Terakhir:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">{semesterAktif() ?? '-'}</span>
+                    </p>
                     <p>
                       IPK Kumulatif:{' '}
                       <span class="font-bold text-brand-600 dark:text-white">
