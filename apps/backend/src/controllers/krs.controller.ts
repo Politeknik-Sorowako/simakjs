@@ -160,6 +160,33 @@ export class KrsController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async autoEnrollPaket({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'kaprodi', 'prodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin/Prodi/Kaprodi.' };
+    }
+    try {
+      const result = await KrsService.autoEnrollPaket({
+        periodeId: body.periodeId,
+        programStudiId: Number(body.programStudiId),
+        angkatan: String(body.angkatan),
+        semester: Number(body.semester),
+        kelasMap: body.kelasMap,
+      });
+      set.status = 201;
+      return result;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async bulkCreate({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {

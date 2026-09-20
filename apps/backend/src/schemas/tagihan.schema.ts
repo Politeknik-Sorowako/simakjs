@@ -129,13 +129,40 @@ export const createTarifSchema = {
   detail: {
     tags: ['Tagihan'],
     summary: 'Buat Skema Tarif Baru',
-    description: 'Menambahkan skema tarif SPP baru untuk angkatan/prodi tertentu.',
+    description: 'Menambahkan skema tarif SPP baru untuk angkatan/prodi tertentu. Termin I/II bersifat custom.',
   },
   body: t.Object({
     programStudiId: t.Optional(t.Integer()),
     angkatan: t.Optional(t.String()),
     nominal: t.Numeric(),
     periodeId: t.Optional(t.String()),
+    termin1Nominal: t.Optional(t.Numeric()),
+    termin1TempoHari: t.Optional(t.Numeric()),
+    termin2Nominal: t.Optional(t.Numeric()),
+    termin2TempoHari: t.Optional(t.Numeric()),
+  }),
+};
+
+export const getOverdueTagihanSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Daftar Angsuran Jatuh Tempo (Overdue)',
+    description:
+      'Angsuran UKT yang jatuh temponya telah lewat namun belum lunas. Read-only: kehadiran perkuliahan tetap dikonfirmasi manual.',
+  },
+  query: t.Object({
+    periodeId: t.Optional(t.String()),
+  }),
+};
+
+export const getAngsuranTagihanSchema = {
+  detail: {
+    tags: ['Tagihan'],
+    summary: 'Daftar Angsuran Tagihan',
+    description: 'Mengambil daftar angsuran (termin I/II) untuk suatu tagihan.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
   }),
 };
 

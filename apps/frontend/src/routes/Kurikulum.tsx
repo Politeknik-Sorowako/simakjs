@@ -69,6 +69,9 @@ export default function Kurikulum() {
   const [jumlahSksWajib, setJumlahSksWajib] = createSignal(120);
   const [jumlahSksPilihan, setJumlahSksPilihan] = createSignal(24);
   const [isAktif, setIsAktif] = createSignal(false);
+  const [sistemBlok, setSistemBlok] = createSignal(true);
+  const [noSkDirektur, setNoSkDirektur] = createSignal('');
+  const [tanggalSkDirektur, setTanggalSkDirektur] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
 
   // State for Manage MK Modal
@@ -289,6 +292,9 @@ export default function Kurikulum() {
     setJumlahSksWajib(120);
     setJumlahSksPilihan(24);
     setIsAktif(false);
+    setSistemBlok(true);
+    setNoSkDirektur('');
+    setTanggalSkDirektur('');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -303,6 +309,9 @@ export default function Kurikulum() {
     setJumlahSksWajib(item.jumlahSksWajib);
     setJumlahSksPilihan(item.jumlahSksPilihan);
     setIsAktif(item.isAktif);
+    setSistemBlok(item.sistemBlok ?? true);
+    setNoSkDirektur(item.noSkDirektur || '');
+    setTanggalSkDirektur(item.tanggalSkDirektur || '');
     setErrorMsg('');
     setShowModal(true);
   };
@@ -323,6 +332,9 @@ export default function Kurikulum() {
         jumlahSksLulus: Number(jumlahSksLulus()),
         jumlahSksWajib: Number(jumlahSksWajib()),
         jumlahSksPilihan: Number(jumlahSksPilihan()),
+        sistemBlok: sistemBlok(),
+        noSkDirektur: noSkDirektur() || undefined,
+        tanggalSkDirektur: tanggalSkDirektur() || undefined,
         isAktif: isAktif(),
       };
       if (editId()) {
@@ -429,19 +441,20 @@ export default function Kurikulum() {
               'Mulai Berlaku',
               'SKS (L/W/P)',
               'Status',
+              'Kepatuhan BPA',
               'Aksi',
             ]}
           >
             <Show when={kurikulums.loading}>
               <tr>
-                <td colspan="7" class="p-8 text-center text-secondary-500">
+                <td colspan="8" class="p-8 text-center text-secondary-500">
                   Memuat data...
                 </td>
               </tr>
             </Show>
             <Show when={!kurikulums.loading && (kurikulums()?.data?.length ?? 0) === 0}>
               <tr>
-                <td colspan="7" class="p-8 text-center text-secondary-500">
+                <td colspan="8" class="p-8 text-center text-secondary-500">
                   Belum ada data kurikulum.
                 </td>
               </tr>
@@ -464,6 +477,32 @@ export default function Kurikulum() {
                     >
                       {item.isAktif ? 'Aktif' : 'Tidak Aktif'}
                     </span>
+                  </td>
+                  <td class="px-6 py-4 text-sm">
+                    <Show when={item.compliance} fallback={<span class="text-secondary-400">-</span>}>
+                      <div class="flex flex-col gap-1">
+                        <span
+                          class={`px-2 py-1 rounded-full text-xs font-semibold w-fit ${
+                            item.compliance!.lolos && item.compliance!.adaSk
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                          }`}
+                        >
+                          {item.compliance!.lolos && item.compliance!.adaSk
+                            ? `Lolos BPA ${item.compliance!.jenjang}`
+                            : 'Belum Patuh BPA'}
+                        </span>
+                        <Show when={!item.compliance!.lolos && item.compliance!.ambang !== null}>
+                          <span class="text-xs text-amber-700 dark:text-amber-400">
+                            SKS {item.compliance!.totalSksRiil}/{item.compliance!.ambang}
+                            <Show when={item.compliance!.kurang > 0}> (kurang {item.compliance!.kurang})</Show>
+                          </span>
+                        </Show>
+                        <Show when={!item.compliance!.adaSk}>
+                          <span class="text-xs text-amber-700 dark:text-amber-400">Tanpa SK Direktur</span>
+                        </Show>
+                      </div>
+                    </Show>
                   </td>
                   <td class="px-6 py-4 text-sm space-x-2">
                     <Button variant="primary" onClick={() => openManageModal(item.id)}>
@@ -586,6 +625,38 @@ export default function Kurikulum() {
               <label for="isAktif" class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
                 Aktifkan Kurikulum ini
               </label>
+            </div>
+            <div class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="sistemBlok"
+                checked={sistemBlok()}
+                onChange={(e) => setSistemBlok(e.currentTarget.checked)}
+              />
+              <label for="sistemBlok" class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                Sistem Blok (BPA)
+              </label>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">No. SK Direktur</label>
+                <Input
+                  type="text"
+                  placeholder="Contoh: 042/SK/DIR/2025"
+                  value={noSkDirektur()}
+                  onInput={(e) => setNoSkDirektur(e.currentTarget.value)}
+                />
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                  Tanggal SK Direktur
+                </label>
+                <Input
+                  type="date"
+                  value={tanggalSkDirektur()}
+                  onInput={(e) => setTanggalSkDirektur(e.currentTarget.value)}
+                />
+              </div>
             </div>
             <div class="flex justify-end gap-2 mt-4">
               <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>

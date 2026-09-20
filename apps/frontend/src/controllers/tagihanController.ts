@@ -53,11 +53,25 @@ export interface TransaksiPembayaran {
   } | null;
 }
 
+export interface AngsuranTagihan {
+  id: number;
+  tagihanId: number;
+  terminKe: number;
+  nominal: number;
+  nominalTerbayar: number;
+  jatuhTempo: string;
+  status: string;
+}
+
 export interface SkemaTarif {
   id: number;
   angkatan: string;
   programStudiId: number;
   nominal: number;
+  termin1Nominal?: number | null;
+  termin1TempoHari?: number | null;
+  termin2Nominal?: number | null;
+  termin2TempoHari?: number | null;
   programStudi?: {
     id: number;
     nama: string;
@@ -105,6 +119,15 @@ export const tagihanController = {
     return fetchApi<{ data: TransaksiPembayaran[] }>(`/tagihan/${tagihanId}/transaksi`);
   },
 
+  async getAngsuran(tagihanId: number): Promise<{ data: AngsuranTagihan[] }> {
+    return fetchApi<{ data: AngsuranTagihan[] }>(`/tagihan/${tagihanId}/angsuran`);
+  },
+
+  async getOverdue(periodeId?: string): Promise<{ data: Array<AngsuranTagihan & { mahasiswa?: Mahasiswa | null }> }> {
+    const qs = periodeId ? `?periodeId=${encodeURIComponent(periodeId)}` : '';
+    return fetchApi(`/tagihan/overdue${qs}`);
+  },
+
   async voidTransaksi(transaksiId: number, catatan: string): Promise<{ message: string; tagihan: Partial<Tagihan> }> {
     return fetchApi<{ message: string; tagihan: Partial<Tagihan> }>(`/tagihan/transaksi/${transaksiId}/void`, {
       method: 'POST',
@@ -120,10 +143,16 @@ export const tagihanController = {
     angkatan: string,
     programStudiId: number,
     nominal: number,
+    termin?: {
+      termin1Nominal?: number;
+      termin1TempoHari?: number;
+      termin2Nominal?: number;
+      termin2TempoHari?: number;
+    },
   ): Promise<{ message: string; data: SkemaTarif }> {
     return fetchApi<{ message: string; data: SkemaTarif }>('/tagihan/tarif', {
       method: 'POST',
-      body: JSON.stringify({ angkatan, programStudiId, nominal }),
+      body: JSON.stringify({ angkatan, programStudiId, nominal, ...termin }),
     });
   },
 

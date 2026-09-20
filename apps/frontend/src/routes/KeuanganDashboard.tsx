@@ -59,6 +59,10 @@ export default function KeuanganDashboard() {
   const [newTarifAngkatan, setNewTarifAngkatan] = createSignal('');
   const [newTarifProdi, setNewTarifProdi] = createSignal<number | null>(null);
   const [newTarifNominal, setNewTarifNominal] = createSignal(5000000);
+  const [tarifT1Nominal, setTarifT1Nominal] = createSignal('');
+  const [tarifT1Tempo, setTarifT1Tempo] = createSignal('');
+  const [tarifT2Nominal, setTarifT2Nominal] = createSignal('');
+  const [tarifT2Tempo, setTarifT2Tempo] = createSignal('');
 
   // Modal Riwayat Transaksi & Void Signals
   const [showRiwayatModal, setShowRiwayatModal] = createSignal(false);
@@ -68,6 +72,13 @@ export default function KeuanganDashboard() {
     async (tagId) => {
       if (!tagId) return { data: [] };
       return await tagihanController.getRiwayatTransaksi(tagId);
+    },
+  );
+  const [riwayatAngsuran, { refetch: refetchAngsuran }] = createResource(
+    () => riwayatTagihanId(),
+    async (tagId) => {
+      if (!tagId) return { data: [] };
+      return await tagihanController.getAngsuran(tagId);
     },
   );
   const [voidNotes, setVoidNotes] = createSignal('');
@@ -198,9 +209,18 @@ export default function KeuanganDashboard() {
     }
 
     try {
-      const res = await tagihanController.createTarif(angkatan, prodiId, nominal);
+      const res = await tagihanController.createTarif(angkatan, prodiId, nominal, {
+        termin1Nominal: tarifT1Nominal() ? Number(tarifT1Nominal()) : undefined,
+        termin1TempoHari: tarifT1Tempo() ? Number(tarifT1Tempo()) : undefined,
+        termin2Nominal: tarifT2Nominal() ? Number(tarifT2Nominal()) : undefined,
+        termin2TempoHari: tarifT2Tempo() ? Number(tarifT2Tempo()) : undefined,
+      });
       toast.showToast(res.message, 'success');
       setNewTarifAngkatan('');
+      setTarifT1Nominal('');
+      setTarifT1Tempo('');
+      setTarifT2Nominal('');
+      setTarifT2Tempo('');
       refetchTarif();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menyimpan skema tarif', 'error');
@@ -223,6 +243,7 @@ export default function KeuanganDashboard() {
     setSelectedTagihan(item);
     setVoidNotes('');
     setShowRiwayatModal(true);
+    refetchAngsuran();
   };
 
   const handleVoid = async (transaksiId: number) => {
@@ -942,46 +963,103 @@ export default function KeuanganDashboard() {
               {/* Form Tambah Tarif */}
               <form
                 onSubmit={submitTarif}
-                class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end bg-secondary-55/40 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800"
+                class="flex flex-col gap-3 bg-secondary-55/40 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800"
               >
-                <div class="flex flex-col gap-1">
-                  <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
-                    Angkatan (Tahun)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Misal: 2024"
-                    value={newTarifAngkatan()}
-                    onInput={(e) => setNewTarifAngkatan(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
-                  />
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                  <div class="flex flex-col gap-1">
+                    <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
+                      Angkatan (Tahun)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Misal: 2024"
+                      value={newTarifAngkatan()}
+                      onInput={(e) => setNewTarifAngkatan(e.currentTarget.value)}
+                      class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                    />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
+                      Program Studi
+                    </label>
+                    <select
+                      onChange={(e) => setNewTarifProdi(parseInt(e.currentTarget.value))}
+                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-caption text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                    >
+                      <option value="">Pilih Prodi</option>
+                      <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                    </select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
+                      Nominal SPP (Rp)
+                    </label>
+                    <input
+                      type="number"
+                      value={newTarifNominal()}
+                      onInput={(e) => setNewTarifNominal(parseInt(e.currentTarget.value))}
+                      class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                    />
+                  </div>
+                  <Button variant="primary" type="submit" class="!py-1.5 text-caption">
+                    Simpan Tarif
+                  </Button>
                 </div>
-                <div class="flex flex-col gap-1">
-                  <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
-                    Program Studi
-                  </label>
-                  <select
-                    onChange={(e) => setNewTarifProdi(parseInt(e.currentTarget.value))}
-                    class="border border-secondary-200 rounded-lg px-2 py-1.5 text-caption text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
-                  >
-                    <option value="">Pilih Prodi</option>
-                    <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
-                  </select>
+                <div class="border-t border-secondary-200 dark:border-secondary-700 pt-3">
+                  <p class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-2">
+                    Angsuran Termin (opsional — kosongkan untuk 50/50 & Termin II +60 hari)
+                  </p>
+                  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div class="flex flex-col gap-1">
+                      <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300">
+                        Termin I Nominal (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Misal: 3000000"
+                        value={tarifT1Nominal()}
+                        onInput={(e) => setTarifT1Nominal(e.currentTarget.value)}
+                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300">
+                        Termin I Tempo (hari)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="0 = awal periode"
+                        value={tarifT1Tempo()}
+                        onInput={(e) => setTarifT1Tempo(e.currentTarget.value)}
+                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300">
+                        Termin II Nominal (Rp)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Misal: 2000000"
+                        value={tarifT2Nominal()}
+                        onInput={(e) => setTarifT2Nominal(e.currentTarget.value)}
+                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300">
+                        Termin II Tempo (hari dari Termin I)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="60 = +2 bulan"
+                        value={tarifT2Tempo()}
+                        onInput={(e) => setTarifT2Tempo(e.currentTarget.value)}
+                        class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div class="flex flex-col gap-1">
-                  <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider">
-                    Nominal SPP (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    value={newTarifNominal()}
-                    onInput={(e) => setNewTarifNominal(parseInt(e.currentTarget.value))}
-                    class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
-                  />
-                </div>
-                <Button variant="primary" type="submit" class="!py-1.5 text-caption">
-                  Simpan Tarif
-                </Button>
               </form>
 
               {/* Tabel Daftar Tarif */}
@@ -1052,6 +1130,58 @@ export default function KeuanganDashboard() {
                 >
                   ❌
                 </button>
+              </div>
+
+              {/* Angsuran Termin I/II */}
+              <div class="overflow-x-auto border rounded-xl">
+                <div class="px-3 py-2 bg-secondary-50 border-b font-bold text-caption text-secondary-600 dark:bg-secondary-800 dark:text-secondary-200">
+                  Angsuran UKT (Termin I / II)
+                </div>
+                <table class="w-full text-left text-caption">
+                  <thead class="bg-secondary-50 border-b dark:bg-secondary-800">
+                    <tr>
+                      <th class="p-3">Termin</th>
+                      <th class="p-3">Nominal</th>
+                      <th class="p-3">Terbayar</th>
+                      <th class="p-3">Jatuh Tempo</th>
+                      <th class="p-3 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={riwayatAngsuran()?.data}>
+                      {(ang) => (
+                        <tr class="border-b hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
+                          <td class="p-3 font-bold text-secondary-800 dark:text-white">Termin {ang.terminKe}</td>
+                          <td class="p-3 font-semibold text-secondary-700">{formatRupiah(ang.nominal)}</td>
+                          <td class="p-3 font-semibold text-accent-600">{formatRupiah(ang.nominalTerbayar)}</td>
+                          <td class="p-3 font-mono text-fine text-secondary-500 dark:text-secondary-300">
+                            {ang.jatuhTempo}
+                          </td>
+                          <td class="p-3 text-center">
+                            <span
+                              class={`inline-flex px-2 py-0.5 rounded-full text-fine font-bold ${
+                                ang.status === 'lunas'
+                                  ? 'bg-green-50 text-green-700 border border-green-200'
+                                  : ang.status === 'cicilan'
+                                    ? 'bg-brand-50 text-brand-700 border border-brand-200'
+                                    : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                              }`}
+                            >
+                              {ang.status === 'lunas' ? 'Lunas' : ang.status === 'cicilan' ? 'Cicilan' : 'Belum Bayar'}
+                            </span>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={!riwayatAngsuran() || riwayatAngsuran()!.data.length === 0}>
+                      <tr>
+                        <td colspan="5" class="p-4 text-center text-secondary-400 italic">
+                          Belum ada data angsuran.
+                        </td>
+                      </tr>
+                    </Show>
+                  </tbody>
+                </table>
               </div>
 
               <div class="overflow-x-auto border rounded-xl">

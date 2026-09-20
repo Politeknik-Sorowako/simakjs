@@ -8,10 +8,32 @@ import {
   kurikulumMataKuliah,
   mahasiswa,
   mataKuliah,
+  tagihan,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { SystemParameterService } from './system-parameter.service';
 
 type BulkCreateResult = { createdCount: number; skippedCount: number; totalProcessed: number };
+
+export interface AutoEnrollPaketResult {
+  periodeId: string;
+  programStudiId: number;
+  angkatan: string;
+  semester: number;
+  mahasiswaProses: number;
+  createdCount: number;
+  skippedExist: number;
+  skippedTunggakan: number;
+  skippedNonAktif: number;
+  skippedNoKelas: { mataKuliahId: number; kode: string; nama: string }[];
+  skippedAmbiguous: {
+    mataKuliahId: number;
+    kode: string;
+    nama: string;
+    kelasKandidat: { id: number; namaKelas: string }[];
+  }[];
+  kelasDigunakan: { mataKuliahId: number; kelasKuliahId: number; namaKelas: string }[];
+}
 
 export interface CreateKrsDto {
   mahasiswaId: number;
@@ -23,6 +45,183 @@ export interface CreateKrsDto {
 }
 
 export class KrsService {
+  /**
+   * Auto-enroll KRS paket per angkatan untuk satu semester kurikulum (BPA sistem blok).
+   * - Resolusi kurikulum via angkatan_kurikulum aktif → kurikulum_mata_kuliah semester=X.
+   * - Setiap MK dipetakan ke kelas_kuliah(MK+periode). 1 kelas → pakai; >1 kelas → wajib
+   *   di kelasMap (eksplisit) atau masuk skippedAmbiguous; 0 kelas → skippedNoKelas.
+   * - Mahasiswa non-aktif/cuti diskip; jika BLOCK_KRS_JIKA_TANGGUNGAN aktif dan ada
+   *   tunggakan → skippedTunggakan.
+   * - Idempoten: existing pair (mahasiswa,kelas) di-skip via inArray + onConflictDoNothing.
+   */
+  static async autoEnrollPaket(params: {
+    periodeId: string;
+    programStudiId: number;
+    angkatan: string;
+    semester: number;
+    kelasMap?: Record<number, number>;
+  }): Promise<AutoEnrollPaketResult> {
+    const { periodeId, programStudiId, angkatan, semester, kelasMap } = params;
+
+    const result: AutoEnrollPaketResult = {
+      periodeId,
+      programStudiId,
+      angkatan,
+      semester,
+      mahasiswaProses: 0,
+      createdCount: 0,
+      skippedExist: 0,
+      skippedTunggakan: 0,
+      skippedNonAktif: 0,
+      skippedNoKelas: [],
+      skippedAmbiguous: [],
+      kelasDigunakan: [],
+    };
+
+    // 1. Resolve kurikulum aktif untuk angkatan+prodi
+    const binding = await db.query.angkatanKurikulum.findFirst({
+      where: and(
+        eq(angkatanKurikulum.programStudiId, programStudiId),
+        eq(angkatanKurikulum.angkatan, angkatan),
+        eq(angkatanKurikulum.isActive, true),
+      ),
+    });
+    if (!binding) {
+      throw new Error('Tidak ada binding angkatan ke kurikulum aktif untuk program studi ini');
+    }
+
+    // 2. MK paket semester target
+    const paket = await db.query.kurikulumMataKuliah.findMany({
+      where: and(eq(kurikulumMataKuliah.kurikulumId, binding.kurikulumId), eq(kurikulumMataKuliah.semester, semester)),
+      with: { mataKuliah: true },
+    });
+    if (paket.length === 0) {
+      throw new Error(`Tidak ada mata kuliah paket pada semester ${semester} di kurikulum ini`);
+    }
+
+    // 3. Mapping MK → kelas kuliah (periode berjalan)
+    const mkIds = paket.map((kmk) => kmk.mataKuliahId);
+    const kelasRows = await db
+      .select({ id: kelasKuliah.id, mataKuliahId: kelasKuliah.mataKuliahId, namaKelas: kelasKuliah.namaKelas })
+      .from(kelasKuliah)
+      .where(and(eq(kelasKuliah.periodeId, periodeId), inArray(kelasKuliah.mataKuliahId, mkIds)));
+
+    const kelasByMk = new Map<number, { id: number; namaKelas: string }[]>();
+    for (const k of kelasRows) {
+      const arr = kelasByMk.get(k.mataKuliahId) || [];
+      arr.push({ id: k.id, namaKelas: k.namaKelas });
+      kelasByMk.set(k.mataKuliahId, arr);
+    }
+
+    // Putuskan kelas per MK
+    const kelasKeputusan = new Map<number, number>();
+    for (const kmk of paket) {
+      const kandidat = kelasByMk.get(kmk.mataKuliahId) || [];
+      if (kandidat.length === 0) {
+        result.skippedNoKelas.push({
+          mataKuliahId: kmk.mataKuliahId,
+          kode: kmk.mataKuliah?.kode || '',
+          nama: kmk.mataKuliah?.nama || '',
+        });
+        continue;
+      }
+      if (kandidat.length === 1) {
+        kelasKeputusan.set(kmk.mataKuliahId, kandidat[0].id);
+        result.kelasDigunakan.push({
+          mataKuliahId: kmk.mataKuliahId,
+          kelasKuliahId: kandidat[0].id,
+          namaKelas: kandidat[0].namaKelas,
+        });
+        continue;
+      }
+      // >1 kelas paralel → wajib eksplisit
+      const eksplisit = kelasMap?.[kmk.mataKuliahId];
+      if (eksplisit && kandidat.some((kk) => kk.id === eksplisit)) {
+        kelasKeputusan.set(kmk.mataKuliahId, eksplisit);
+        result.kelasDigunakan.push({
+          mataKuliahId: kmk.mataKuliahId,
+          kelasKuliahId: eksplisit,
+          namaKelas: kandidat.find((kk) => kk.id === eksplisit)?.namaKelas || '',
+        });
+      } else {
+        result.skippedAmbiguous.push({
+          mataKuliahId: kmk.mataKuliahId,
+          kode: kmk.mataKuliah?.kode || '',
+          nama: kmk.mataKuliah?.nama || '',
+          kelasKandidat: kandidat,
+        });
+      }
+    }
+
+    if (kelasKeputusan.size === 0) {
+      throw new Error('Tidak ada mata kuliah paket yang bisa di-enroll (periksa kelas kuliah & kelas paralel)');
+    }
+
+    // 4. Mahasiswa angkatan+prodi aktif
+    const mhsRows = await db
+      .select({ id: mahasiswa.id, status: mahasiswa.status })
+      .from(mahasiswa)
+      .where(and(eq(mahasiswa.programStudiId, programStudiId), eq(mahasiswa.angkatan, angkatan)));
+    const mhsAktif = mhsRows.filter((m) => m.status === 'aktif');
+    result.mahasiswaProses = mhsAktif.length;
+    result.skippedNonAktif = mhsRows.length - mhsAktif.length;
+
+    if (mhsAktif.length === 0) {
+      return result;
+    }
+
+    // 5. Filter tunggakan bila BLOCK_KRS_JIKA_TANGGUNGAN aktif
+    let mhsEligible = mhsAktif.map((m) => m.id);
+    if (await SystemParameterService.isKrsBlockEnabled()) {
+      const punyaTunggakan = await db
+        .selectDistinct({ mahasiswaId: tagihan.mahasiswaId })
+        .from(tagihan)
+        .where(
+          and(
+            eq(tagihan.periodeId, periodeId),
+            sql`${tagihan.status} != 'lunas'`,
+            inArray(tagihan.mahasiswaId, mhsEligible),
+          ),
+        );
+      const tunggakanSet = new Set(punyaTunggakan.map((t) => t.mahasiswaId));
+      const eligible = mhsEligible.filter((id) => !tunggakanSet.has(id));
+      result.skippedTunggakan = mhsEligible.length - eligible.length;
+      mhsEligible = eligible;
+    }
+
+    if (mhsEligible.length === 0) {
+      return result;
+    }
+
+    const kelasIds = Array.from(kelasKeputusan.values());
+
+    // 6. Idempoten insert
+    const existingPairs = await db
+      .select({ mahasiswaId: krs.mahasiswaId, kelasKuliahId: krs.kelasKuliahId })
+      .from(krs)
+      .where(and(inArray(krs.mahasiswaId, mhsEligible), inArray(krs.kelasKuliahId, kelasIds)));
+    const existingSet = new Set(existingPairs.map((p) => `${p.mahasiswaId}-${p.kelasKuliahId}`));
+
+    const newRows: { mahasiswaId: number; kelasKuliahId: number; isApproved: boolean }[] = [];
+    for (const mId of mhsEligible) {
+      for (const kelasId of kelasIds) {
+        if (existingSet.has(`${mId}-${kelasId}`)) {
+          result.skippedExist++;
+        } else {
+          newRows.push({ mahasiswaId: mId, kelasKuliahId: kelasId, isApproved: false });
+          existingSet.add(`${mId}-${kelasId}`);
+        }
+      }
+    }
+
+    if (newRows.length > 0) {
+      await db.insert(krs).values(newRows).onConflictDoNothing();
+    }
+    result.createdCount = newRows.length;
+
+    return result;
+  }
+
   static async bulkCreate(
     mahasiswaIds: number[],
     kelasKuliahIds: number[],

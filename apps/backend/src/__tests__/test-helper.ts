@@ -4,6 +4,7 @@ import {
   admissionSessionProdis,
   admissionSessions,
   angkatanKurikulum,
+  angsuranTagihan,
   announcements,
   applications,
   auditLogs,
@@ -130,6 +131,7 @@ export async function clearDatabase() {
   await db.delete(admissionSessions);
   await db.delete(pengajuanCuti);
   await db.delete(mahasiswaKeluar);
+  await db.delete(angsuranTagihan);
   await db.delete(tagihan);
   await db.delete(transaksiPembayaran);
   await db.delete(skemaTarif);

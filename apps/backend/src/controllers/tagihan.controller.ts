@@ -174,6 +174,38 @@ export class TagihanController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getAngsuran({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const tagihanId = parseInt(params.id);
+    const data = await TagihanService.getAngsuran(tagihanId);
+    return { data };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getOverdue({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'keuangan', 'prodi', 'kaprodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const periodeId = query?.periodeId || undefined;
+    const data = await TagihanService.getOverdue(periodeId);
+    return { data };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getAllTarif({ set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
@@ -190,6 +222,10 @@ export class TagihanController {
         angkatan: skemaTarif.angkatan,
         programStudiId: skemaTarif.programStudiId,
         nominal: skemaTarif.nominal,
+        termin1Nominal: skemaTarif.termin1Nominal,
+        termin1TempoHari: skemaTarif.termin1TempoHari,
+        termin2Nominal: skemaTarif.termin2Nominal,
+        termin2TempoHari: skemaTarif.termin2TempoHari,
         programStudi: {
           id: programStudi.id,
           nama: programStudi.nama,
@@ -217,18 +253,27 @@ export class TagihanController {
       const programStudiId = Number(body.programStudiId);
       const angkatan = String(body.angkatan);
 
+      const termin1Nominal = body.termin1Nominal !== undefined ? Number(body.termin1Nominal) : null;
+      const termin1TempoHari = body.termin1TempoHari !== undefined ? Number(body.termin1TempoHari) : null;
+      const termin2Nominal = body.termin2Nominal !== undefined ? Number(body.termin2Nominal) : null;
+      const termin2TempoHari = body.termin2TempoHari !== undefined ? Number(body.termin2TempoHari) : null;
+
       const [existing] = await db
         .select()
         .from(skemaTarif)
         .where(and(eq(skemaTarif.angkatan, angkatan), eq(skemaTarif.programStudiId, programStudiId)))
         .limit(1);
 
+      const values = {
+        nominal,
+        termin1Nominal,
+        termin1TempoHari,
+        termin2Nominal,
+        termin2TempoHari,
+      };
+
       if (existing) {
-        const [updated] = await db
-          .update(skemaTarif)
-          .set({ nominal })
-          .where(eq(skemaTarif.id, existing.id))
-          .returning();
+        const [updated] = await db.update(skemaTarif).set(values).where(eq(skemaTarif.id, existing.id)).returning();
         return { message: 'Tarif angkatan berhasil diperbarui', data: updated };
       } else {
         const [created] = await db
@@ -236,7 +281,7 @@ export class TagihanController {
           .values({
             angkatan,
             programStudiId,
-            nominal,
+            ...values,
           })
           .returning();
         return { message: 'Tarif angkatan berhasil ditambahkan', data: created };

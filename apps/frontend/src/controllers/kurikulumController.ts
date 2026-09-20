@@ -3,6 +3,18 @@ import { eden, unwrap } from '../utils/eden';
 import { MataKuliah } from './mataKuliahController';
 import { PaginatedResponse, Prodi } from './prodiController';
 
+export interface KurikulumCompliance {
+  jenjang: string;
+  ambang: number | null;
+  totalSksRiil: number;
+  sksLulusTerdaftar: number;
+  kurang: number;
+  lolos: boolean;
+  adaSk: boolean;
+  sistemBlok: boolean;
+  warnings: string[];
+}
+
 export interface Kurikulum {
   id: number;
   kode: string;
@@ -12,10 +24,14 @@ export interface Kurikulum {
   jumlahSksLulus: number;
   jumlahSksWajib: number;
   jumlahSksPilihan: number;
+  sistemBlok?: boolean;
+  noSkDirektur?: string | null;
+  tanggalSkDirektur?: string | null;
   isAktif: boolean;
   programStudi?: Prodi | null;
   idPddikti?: string | null;
   isSynced?: boolean;
+  compliance?: KurikulumCompliance;
 }
 
 export interface KurikulumMataKuliah {

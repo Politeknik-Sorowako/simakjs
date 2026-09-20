@@ -39,6 +39,16 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'boolean',
     description: 'Blokir akses KHS mahasiswa jika masih memiliki tunggakan SPP/kompensasi',
   },
+  SKS_MIN_D3: {
+    value: '108',
+    type: 'number',
+    description: 'Batas minimal total SKS kelulusan kurikulum jenjang D3 (BPA Pasal Kurikulum Blok)',
+  },
+  SKS_MIN_D4: {
+    value: '144',
+    type: 'number',
+    description: 'Batas minimal total SKS kelulusan kurikulum jenjang D4/S1 Terapan (BPA Pasal Kurikulum Blok)',
+  },
   BLOCK_KRS_JIKA_TANGGUNGAN: {
     value: 'false',
     type: 'boolean',
