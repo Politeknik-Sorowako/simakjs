@@ -12,6 +12,7 @@ import {
   mataKuliah,
   nilaiKomponenMahasiswa,
   nilaiSubKomponenMahasiswa,
+  pengajuanCuti,
   periodeAkademik,
   presensi,
   programStudi,
@@ -924,5 +925,66 @@ export class KhsService {
       if (!unique.has(r.id)) unique.set(r.id, r);
     }
     return { data: Array.from(unique.values()) };
+  }
+
+  /**
+   * Menghitung nomor semester aktif mahasiswa pada periode tertentu, independen
+   * dari kelengkapan KRS. Berbasis angkatan (tahun masuk) + periode berjalan,
+   * dikurangi jumlah semester cuti yang sudah diambil sebelum periode ini.
+   * Periode ID berformat "YYYYT" (T = 1 Ganjil, 2 Genap).
+   */
+  static async hitungSemester(mahasiswaId: number, periodeId: string): Promise<number | null> {
+    const [mhs] = await db
+      .select({ angkatan: mahasiswa.angkatan })
+      .from(mahasiswa)
+      .where(eq(mahasiswa.id, mahasiswaId));
+    if (!mhs?.angkatan) return null;
+
+    const angkatanTahun = parseInt(mhs.angkatan, 10);
+    if (isNaN(angkatanTahun)) return null;
+
+    const periodeTahun = parseInt(periodeId.slice(0, 4), 10);
+    const term = parseInt(periodeId.slice(4, 5), 10) || 1;
+    if (isNaN(periodeTahun)) return null;
+
+    // Semester kalender tanpa memperhitungkan cuti.
+    let semester = (periodeTahun - angkatanTahun) * 2 + term;
+
+    // Kurangi semester cuti yang sudah dilalui sebelum periode ini.
+    const cutis = await db
+      .select({ mulai: pengajuanCuti.semesterMulaiCuti, berakhir: pengajuanCuti.semesterBerakhirCuti })
+      .from(pengajuanCuti)
+      .where(
+        and(
+          eq(pengajuanCuti.mahasiswaId, mahasiswaId),
+          inArray(pengajuanCuti.status, ['disetujui_pa', 'disetujui_keuangan', 'disetujui_prodi', 'kembali_aktif']),
+        ),
+      );
+
+    const currentIdx = periodeTahun * 2 + term;
+    const idxOf = (pid: string | null) => {
+      if (!pid || pid.length < 5) return null;
+      const t = parseInt(pid.slice(0, 4), 10);
+      const tr = parseInt(pid.slice(4, 5), 10) || 1;
+      if (isNaN(t)) return null;
+      return t * 2 + tr;
+    };
+
+    for (const c of cutis) {
+      const mulaiIdx = idxOf(c.mulai);
+      const berakhirIdx = idxOf(c.berakhir);
+      // Periode cuti dihitung sebagai rentang [mulai..berakhir] yang jatuh
+      // sebelum atau sama dengan periode berjalan; tiap semester cuti
+      // menggeser kemajuan 1 semester.
+      const lo = mulaiIdx ?? berakhirIdx ?? null;
+      const hi = berakhirIdx ?? mulaiIdx ?? null;
+      if (lo === null || hi === null) continue;
+      const from = Math.min(lo, hi);
+      const to = Math.max(lo, hi);
+      if (from > currentIdx) continue; // cuti belum terjadi
+      semester -= Math.min(to, currentIdx) - from + 1;
+    }
+
+    return Math.max(1, semester);
   }
 }
