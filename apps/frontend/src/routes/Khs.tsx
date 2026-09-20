@@ -99,7 +99,7 @@ export default function Khs() {
 
   const [prodis] = createResource(
     () => {
-      if (role() === 'admin') return true;
+      if (role() !== 'mahasiswa') return true;
       return null;
     },
     async () => {
@@ -144,15 +144,16 @@ export default function Khs() {
 
   // For Admin / Dosen view
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
+  const [selectedProdi, setSelectedProdi] = createSignal<string>('');
   const [searchQuery, setSearchQuery] = createSignal('');
   const [searchPage, setSearchPage] = createSignal(1);
   const [hasMoreStudents, setHasMoreStudents] = createSignal(false);
   const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
 
   const [pageData] = createResource(
-    () => ({ q: searchQuery(), page: searchPage() }),
-    async ({ q, page }) => {
-      const res = await mahasiswaController.getAll(q || undefined, page, 20);
+    () => ({ q: searchQuery(), page: searchPage(), prodiId: selectedProdi() || undefined }),
+    async ({ q, page, prodiId }) => {
+      const res = await mahasiswaController.getAll(q || undefined, page, 20, prodiId ? Number(prodiId) : undefined);
       setHasMoreStudents(res.data.length === 20);
       return res.data.map((m): SelectOption => ({ label: `${m.nim} - ${m.nama}`, value: m.id }));
     },
@@ -174,12 +175,22 @@ export default function Khs() {
   const onSearchStudents = (q: string) => {
     setSearchQuery(q);
     setSearchPage(1);
+    setMhsOptions([]); // Reset options saat query baru
   };
 
   const onLoadMoreStudents = () => {
     if (!hasMoreStudents()) return;
     setSearchPage((p) => p + 1);
   };
+
+  // Reset pilihan mahasiswa & options saat prodi berubah.
+  createEffect(() => {
+    void selectedProdi(); // Subscribe to change
+    setSelectedMhsId(null);
+    setMhsOptions([]);
+    setSearchQuery('');
+    setSearchPage(1);
+  });
 
   // Periode yang diikuti mahasiswa terpilih (distinct dari KRS).
   const [mhsPeriodes] = createResource(selectedMhsId, async (mhsId) => {
@@ -421,7 +432,21 @@ export default function Khs() {
         <Show when={role() !== 'mahasiswa' && activeTab() !== 'konversi'}>
           <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-700 text-base">Pilih Mahasiswa & Periode</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
+                  Program Studi
+                </label>
+                <select
+                  value={selectedProdi()}
+                  onChange={(e) => setSelectedProdi(e.currentTarget.value)}
+                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                >
+                  <option value="">Semua Program Studi</option>
+                  <For each={prodis() || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                </select>
+              </div>
+
               <SearchableSelect
                 label="Cari & Pilih Mahasiswa"
                 placeholder="Ketik NIM atau Nama..."
@@ -902,7 +927,7 @@ export default function Khs() {
                           {(item) => (
                             <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                               <td class="p-3 font-semibold text-secondary-500 dark:text-secondary-300">
-                                {item.periodeId}
+                                {item.semester ?? item.periodeId}
                               </td>
                               <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
                               <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.mataKuliah?.nama}</td>

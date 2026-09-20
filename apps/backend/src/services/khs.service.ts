@@ -333,16 +333,25 @@ export class KhsService {
       }
     }
 
-    const formattedList = list.map((item) => ({
-      id: item.id,
-      mataKuliahKode: item.mataKuliah.kode,
-      mataKuliahNama: item.mataKuliah.nama,
-      sks: item.mataKuliah.sksTotal,
-      nilaiHuruf: item.nilaiHuruf || '-',
-      nilaiIndeks: item.nilaiIndeks || '0.00',
-      useInGpa: item.useInGpa,
-      isRetake: laterAttempt.has(item.id),
-    }));
+    // Format list ke bentuk nested sesuai kontrak TranskripItem frontend,
+    // lengkap dengan periodeId, semester aktif, dan seluruh nilai.
+    const formattedList = await Promise.all(
+      list.map(async (item) => ({
+        id: item.id,
+        nilaiAngka: item.nilaiAngka,
+        nilaiHuruf: item.nilaiHuruf,
+        nilaiIndeks: item.nilaiIndeks,
+        useInGpa: item.useInGpa,
+        isRetake: laterAttempt.has(item.id),
+        periodeId: item.periodeId,
+        semester: await this.hitungSemester(mahasiswaId, item.periodeId),
+        mataKuliah: {
+          kode: item.mataKuliah.kode,
+          nama: item.mataKuliah.nama,
+          sksTotal: item.mataKuliah.sksTotal,
+        },
+      })),
+    );
 
     return {
       mahasiswa: mhsDetail

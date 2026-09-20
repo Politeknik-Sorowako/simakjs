@@ -17,6 +17,8 @@ export interface TranskripItem {
   nilaiAngka: string | null;
   nilaiHuruf: string | null;
   nilaiIndeks: string | null;
+  useInGpa?: boolean;
+  isRetake?: boolean;
   periodeId: string;
   semester?: number;
   ips?: string | null;
