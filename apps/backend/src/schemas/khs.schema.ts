@@ -16,6 +16,7 @@ export const getKhsSchema = {
       blocked: t.Optional(t.Boolean({ default: false })),
       reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
       detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+      semester: t.Optional(t.Union([t.Integer(), t.Null()], { default: null })),
       warningTunggakan: t.Optional(
         t.Object({
           reason: t.Union([t.String(), t.Null()]),
@@ -75,6 +76,7 @@ export const getByNimSchema = {
       blocked: t.Optional(t.Boolean({ default: false })),
       reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
       detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+      semester: t.Optional(t.Union([t.Integer(), t.Null()], { default: null })),
       warningTunggakan: t.Optional(
         t.Object({
           reason: t.Union([t.String(), t.Null()]),

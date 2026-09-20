@@ -63,6 +63,7 @@ export interface KhsResponse {
   blocked: boolean;
   reason?: string;
   detail?: string;
+  semester?: number | null;
   warningTunggakan?: { reason: string | null; detail: string | null };
   krsList?: KhsKrsItem[];
   summary?: {

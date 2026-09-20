@@ -46,6 +46,9 @@ export class KhsController {
       const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
       const response: Record<string, unknown> = { blocked: false, ...khs };
 
+      // Nomor semester aktif (berbasis angkatan + periode − cuti), independen KRS.
+      response.semester = await KhsService.hitungSemester(targetMhsId, targetPeriodeId);
+
       // Staff tetap bisa melihat walau ada tunggakan; beri flag untuk watermark cetak.
       if (!hasRole(user, ['mahasiswa']) && (await SystemParameterService.isKhsBlockEnabled())) {
         const clearance = await KhsService.checkBebasTanggungan(targetMhsId, targetPeriodeId);
@@ -104,6 +107,9 @@ export class KhsController {
     try {
       const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
       const response: Record<string, unknown> = { blocked: false, ...khs };
+
+      // Nomor semester aktif (berbasis angkatan + periode − cuti), independen KRS.
+      response.semester = await KhsService.hitungSemester(targetMhsId, targetPeriodeId);
 
       // Staff tetap bisa melihat walau ada tunggakan; beri flag untuk watermark cetak.
       if (!hasRole(user, ['mahasiswa']) && (await SystemParameterService.isKhsBlockEnabled())) {
