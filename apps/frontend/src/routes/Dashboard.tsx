@@ -259,16 +259,18 @@ function DosenWidgets() {
   });
 
   const [kelasDiampu] = createResource(
-    () => ({ dosenId: dosenProfile()?.id, periodeId: periodeAktif()?.id }),
+    () => {
+      const dosenId = dosenProfile()?.id;
+      const periodeId = periodeAktif()?.id;
+      // Source primitif stabil: objek literal baru setiap render akan memicu
+      // refetch loop di Solid. Gabung jadi string bernilai unik per kombinasi.
+      return dosenId || periodeId ? `${dosenId ?? ''}:${periodeId ?? ''}` : null;
+    },
     async (key) => {
-      return await dosenPengajarController.getAll(
-        undefined,
-        key.dosenId || undefined,
-        1,
-        50,
-        key.periodeId || undefined,
-        false,
-      );
+      if (!key) return { data: [], meta: { total: 0, page: 1, limit: 50, totalPages: 1 } };
+      const [dosenIdRaw, periodeId] = key.split(':');
+      const dosenId = dosenIdRaw ? Number(dosenIdRaw) : undefined;
+      return await dosenPengajarController.getAll(undefined, dosenId, 1, 50, periodeId || undefined, false);
     },
   );
 
