@@ -1,5 +1,5 @@
 import { A, useNavigate, useSearchParams } from '@solidjs/router';
-import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
+import { systemController } from '../controllers/systemController';
 import { RateLimitError } from '../utils/eden';
 
 function formatCountdown(totalSeconds: number): string {
@@ -48,6 +49,11 @@ export default function Login() {
   const [showPassword, setShowPassword] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+
+  // Apakah pendaftaran akun baru diizinkan oleh admin (REGISTRATION_ENABLED).
+  const [registrationStatus] = createResource(() =>
+    systemController.getRegistrationStatus().catch(() => ({ enabled: true })),
+  );
 
   // 2FA Signals
   const [is2FAStep, setIs2FAStep] = createSignal(false);
@@ -253,6 +259,11 @@ export default function Login() {
 
     try {
       if (isRegister()) {
+        if (registrationStatus()?.enabled === false) {
+          setErrorMsg('Pendaftaran akun baru sedang dinonaktifkan oleh admin.');
+          toast.showToast('Pendaftaran akun baru sedang dinonaktifkan oleh admin.', 'error');
+          return;
+        }
         const res = await authController.register(email(), password(), nama(), role());
         setIsRegister(false);
         const successMsg = res.message || 'Registrasi sukses! Silakan periksa email untuk aktivasi.';
@@ -550,17 +561,19 @@ export default function Login() {
         </Show>
 
         <div class="text-center flex flex-col gap-2">
-          <button
-            onClick={() => {
-              setIsRegister(!isRegister());
-              setErrorMsg('');
-              setShowResendBtn(false);
-            }}
-            disabled={loading()}
-            class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
-          >
-            {isRegister() ? 'Sudah memiliki akun? Masuk' : 'Belum memiliki akun? Daftar'}
-          </button>
+          <Show when={registrationStatus()?.enabled !== false}>
+            <button
+              onClick={() => {
+                setIsRegister(!isRegister());
+                setErrorMsg('');
+                setShowResendBtn(false);
+              }}
+              disabled={loading()}
+              class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
+            >
+              {isRegister() ? 'Sudah memiliki akun? Masuk' : 'Belum memiliki akun? Daftar'}
+            </button>
+          </Show>
 
           <Show when={!isRegister() && !is2FAStep()}>
             <A

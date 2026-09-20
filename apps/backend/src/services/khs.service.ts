@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import {
   bap,
   bimbingan,
@@ -22,6 +22,7 @@ import {
 } from '../models/schema';
 import { db } from '../utils/db';
 import { computeKomponenScore, type KonversiRule, resolveNilaiEnvelope } from '../utils/grade-calc';
+import { PelanggaranService } from './pelanggaran.service';
 import { PresensiService } from './presensi.service';
 import { SystemParameterService } from './system-parameter.service';
 
@@ -161,6 +162,7 @@ export class KhsService {
         nilaiHuruf: krs.nilaiHuruf,
         nilaiIndeks: krs.nilaiIndeks,
         isApproved: krs.isApproved,
+        useInGpa: krs.useInGpa,
         kelasKuliah: {
           id: kelasKuliah.id,
           namaKelas: kelasKuliah.namaKelas,
@@ -177,11 +179,12 @@ export class KhsService {
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, true)));
 
-    // Calculate Semester Stats
+    // Calculate Semester Stats (pakai hanya attempt yang dihitung ke GPA, `useInGpa`).
     let totalSks = 0;
     let weightedPoints = 0;
 
     for (const item of krsList) {
+      if (!item.useInGpa) continue;
       const sks = item.mataKuliah.sksTotal;
       const index = item.nilaiIndeks ? parseFloat(item.nilaiIndeks) : null;
       if (index !== null) {
@@ -192,11 +195,12 @@ export class KhsService {
 
     const ipSemester = totalSks > 0 ? parseFloat((weightedPoints / totalSks).toFixed(2)) : 0.0;
 
-    // Calculate Cumulative GPA (IPK)
+    // Calculate Cumulative GPA (IPK) — hanya attempt yang `useInGpa=true`.
     const allApprovedKrs = await db
       .select({
         nilaiIndeks: krs.nilaiIndeks,
         sksTotal: mataKuliah.sksTotal,
+        useInGpa: krs.useInGpa,
       })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
@@ -207,6 +211,7 @@ export class KhsService {
     let weightedPointsKumulatif = 0;
 
     for (const item of allApprovedKrs) {
+      if (!item.useInGpa) continue;
       const sks = item.sksTotal;
       const index = item.nilaiIndeks ? parseFloat(item.nilaiIndeks) : null;
       if (index !== null) {
@@ -217,8 +222,30 @@ export class KhsService {
 
     const ipk = totalSksKumulatif > 0 ? parseFloat((weightedPointsKumulatif / totalSksKumulatif).toFixed(2)) : 0.0;
 
+    // Tandai attempt sebagai mengulang bila MK yang sama pernah diambil di periode lebih baru.
+    const laterAttempt = new Set<number>();
+    if (krsList.length > 0) {
+      const ids = krsList.map((k) => k.mataKuliah.id);
+      const dupMk = await db
+        .selectDistinct({ mataKuliahId: mataKuliah.id, periodeId: kelasKuliah.periodeId })
+        .from(krs)
+        .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.isApproved, true), inArray(mataKuliah.id, ids)));
+      const mkMaxPeriode = new Map<number, string>();
+      for (const d of dupMk) {
+        const cur = mkMaxPeriode.get(d.mataKuliahId);
+        if (!cur || d.periodeId > cur) mkMaxPeriode.set(d.mataKuliahId, d.periodeId);
+      }
+      for (const item of krsList) {
+        if (mkMaxPeriode.get(item.mataKuliah.id) !== periodeId) {
+          laterAttempt.add(item.id);
+        }
+      }
+    }
+
     return {
-      krsList,
+      krsList: krsList.map((k) => ({ ...k, isRetake: laterAttempt.has(k.id) })),
       summary: {
         totalSks,
         ipSemester,
@@ -235,8 +262,10 @@ export class KhsService {
         nilaiAngka: krs.nilaiAngka,
         nilaiHuruf: krs.nilaiHuruf,
         nilaiIndeks: krs.nilaiIndeks,
+        useInGpa: krs.useInGpa,
         periodeId: kelasKuliah.periodeId,
         mataKuliah: {
+          id: mataKuliah.id,
           kode: mataKuliah.kode,
           nama: mataKuliah.nama,
           sksTotal: mataKuliah.sksTotal,
@@ -247,10 +276,12 @@ export class KhsService {
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.isApproved, true), isNotNull(krs.nilaiIndeks)));
 
+    // IPK hanya menghitung attempt yang `useInGpa=true`.
     let totalSks = 0;
     let weightedPoints = 0;
 
     for (const item of list) {
+      if (!item.useInGpa) continue;
       const sks = item.mataKuliah.sksTotal;
       const index = item.nilaiIndeks ? parseFloat(item.nilaiIndeks) : null;
       if (index !== null) {
@@ -280,6 +311,28 @@ export class KhsService {
       },
     });
 
+    // Tandai attempt sebagai mengulang bila MK yang sama pernah diambil di periode lebih baru.
+    const laterAttempt = new Set<number>();
+    if (list.length > 0) {
+      const mkIds = list.map((k) => k.mataKuliah.id);
+      const dupMk = await db
+        .selectDistinct({ mataKuliahId: mataKuliah.id, periodeId: kelasKuliah.periodeId })
+        .from(krs)
+        .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.isApproved, true), inArray(mataKuliah.id, mkIds)));
+      const mkMaxPeriode = new Map<number, string>();
+      for (const d of dupMk) {
+        const cur = mkMaxPeriode.get(d.mataKuliahId);
+        if (!cur || d.periodeId > cur) mkMaxPeriode.set(d.mataKuliahId, d.periodeId);
+      }
+      for (const item of list) {
+        if (mkMaxPeriode.get(item.mataKuliah.id) !== item.periodeId) {
+          laterAttempt.add(item.id);
+        }
+      }
+    }
+
     // Format list ke bentuk nested sesuai kontrak TranskripItem frontend,
     // lengkap dengan periodeId, semester aktif, dan seluruh nilai.
     const formattedList = await Promise.all(
@@ -288,6 +341,8 @@ export class KhsService {
         nilaiAngka: item.nilaiAngka,
         nilaiHuruf: item.nilaiHuruf,
         nilaiIndeks: item.nilaiIndeks,
+        useInGpa: item.useInGpa,
+        isRetake: laterAttempt.has(item.id),
         periodeId: item.periodeId,
         semester: await this.hitungSemester(mahasiswaId, item.periodeId),
         mataKuliah: {
@@ -1001,5 +1056,52 @@ export class KhsService {
     semester -= cutiSemesters.size;
 
     return Math.max(1, semester);
+  }
+
+  /**
+   * Menentukan attempt KRS mana yang dihitung ke IPK untuk suatu MK.
+   * Saat sebuah attempt dipilih (useInGpa=true), semua attempt lain untuk
+   * MK yang sama milik mahasiswa di-set false (hanya satu yang aktif).
+   */
+  static async pilihNilaiUntukGpa(krsId: number, mahasiswaId: number) {
+    const [target] = await db
+      .select({
+        id: krs.id,
+        mataKuliahId: mataKuliah.id,
+        mahasiswaId: krs.mahasiswaId,
+      })
+      .from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+      .where(eq(krs.id, krsId));
+
+    if (!target) throw new Error('Data nilai tidak ditemukan.');
+    if (target.mahasiswaId !== mahasiswaId) {
+      throw new Error('Akses ditolak. Data nilai bukan milik mahasiswa ini.');
+    }
+
+    await db.transaction(async (tx) => {
+      // Nonaktifkan attempt lain untuk MK yang sama milik mahasiswa.
+      const siblingIds = await tx
+        .select({ id: krs.id })
+        .from(krs)
+        .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+        .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+        .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(mataKuliah.id, target.mataKuliahId), ne(krs.id, krsId)));
+      if (siblingIds.length > 0) {
+        await tx
+          .update(krs)
+          .set({ useInGpa: false, updatedAt: new Date() })
+          .where(
+            inArray(
+              krs.id,
+              siblingIds.map((s) => s.id),
+            ),
+          );
+      }
+      await tx.update(krs).set({ useInGpa: true, updatedAt: new Date() }).where(eq(krs.id, krsId));
+    });
+
+    return { message: 'Nilai yang dipakai untuk IPK berhasil diperbarui.' };
   }
 }

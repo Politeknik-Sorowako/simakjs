@@ -17,6 +17,17 @@ export const getKhsSchema = {
       reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
       detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
       semester: t.Optional(t.Union([t.Integer(), t.Null()], { default: null })),
+      nilaiSikap: t.Optional(
+        t.Object({
+          am: t.Number(),
+          degradasi: t.Number(),
+          sebutan: t.String(),
+          narasi: t.String(),
+          lisan: t.Integer(),
+          tertulis: t.Integer(),
+          totalPoin: t.Integer(),
+        }),
+      ),
       warningTunggakan: t.Optional(
         t.Object({
           reason: t.Union([t.String(), t.Null()]),
@@ -31,6 +42,8 @@ export const getKhsSchema = {
             nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: 'A' })),
             nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: '4.0' })),
             isApproved: t.Optional(t.Boolean({ default: true })),
+            useInGpa: t.Optional(t.Boolean({ default: true })),
+            isRetake: t.Optional(t.Boolean({ default: false })),
             kelasKuliah: t.Optional(
               t.Object({
                 id: t.Optional(t.Integer({ default: 1 })),
@@ -77,6 +90,17 @@ export const getByNimSchema = {
       reason: t.Optional(t.Union([t.String(), t.Null()], { default: '' })),
       detail: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
       semester: t.Optional(t.Union([t.Integer(), t.Null()], { default: null })),
+      nilaiSikap: t.Optional(
+        t.Object({
+          am: t.Number(),
+          degradasi: t.Number(),
+          sebutan: t.String(),
+          narasi: t.String(),
+          lisan: t.Integer(),
+          tertulis: t.Integer(),
+          totalPoin: t.Integer(),
+        }),
+      ),
       warningTunggakan: t.Optional(
         t.Object({
           reason: t.Union([t.String(), t.Null()]),
@@ -140,6 +164,26 @@ export const getPeriodeListSchema = {
   },
 };
 
+export const pilihNilaiSchema = {
+  detail: {
+    tags: ['KHS & Transkrip'],
+    summary: 'Pilih Nilai yang Dipakai ke IPK (kasus MK diambil ulang)',
+    description:
+      'Menentukan attempt KRS mana yang dihitung ke IPK untuk suatu mata kuliah. Saat satu attempt dipilih, attempt lain untuk MK yang sama dinonaktifkan.',
+  },
+  params: t.Object({
+    krsId: t.Numeric(),
+  }),
+  body: t.Object({
+    mahasiswaId: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({
+      message: t.Optional(t.String()),
+    }),
+  },
+};
+
 export const getTranskripSchema = {
   detail: {
     tags: ['KHS & Transkrip'],
@@ -166,6 +210,8 @@ export const getTranskripSchema = {
             nilaiAngka: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
             nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
             nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+            useInGpa: t.Optional(t.Boolean({ default: true })),
+            isRetake: t.Optional(t.Boolean({ default: false })),
             periodeId: t.Optional(t.String()),
             semester: t.Optional(t.Union([t.Integer(), t.Null()], { default: null })),
             mataKuliah: t.Optional(

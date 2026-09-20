@@ -274,6 +274,7 @@ export const krs = pgTable(
     nilaiAngka: numeric('nilai_angka', { precision: 5, scale: 2 }),
     nilaiHuruf: varchar('nilai_huruf', { length: 5 }),
     nilaiIndeks: numeric('nilai_indeks', { precision: 3, scale: 2 }),
+    useInGpa: boolean('use_in_gpa').default(true).notNull(),
     isApproved: boolean('is_approved').default(false).notNull(),
     approvedById: integer('approved_by_id').references(() => dosen.id, { onDelete: 'set null' }),
     approvedAt: timestamp('approved_at'),
