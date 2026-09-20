@@ -159,17 +159,15 @@ export default function Khs() {
     },
   );
 
-  // Akumulasi hasil per halaman: reset saat ganti query, append saat load more.
-  createEffect((prevQ) => {
-    const q = searchQuery();
+  // Akumulasi hasil per halaman: reset saat halaman pertama, append saat load more.
+  createEffect(() => {
     const data = pageData();
-    if (data === undefined) return q;
-    if (prevQ !== undefined && q === prevQ) {
+    if (data === undefined) return;
+    if (searchPage() > 1) {
       setMhsOptions((prev) => [...prev, ...data]);
     } else {
       setMhsOptions(data);
     }
-    return q;
   });
 
   const onSearchStudents = (q: string) => {
@@ -1270,7 +1268,7 @@ export default function Khs() {
                     <For each={transkripData()?.transkripList}>
                       {(item) => (
                         <tr>
-                          <td class="p-2 border-r">{item.periodeId}</td>
+                          <td class="p-2 border-r">{item.semester ?? item.periodeId}</td>
                           <td class="p-2 border-r">{item.mataKuliah?.kode}</td>
                           <td class="p-2 border-r font-bold text-secondary-800 dark:text-white">
                             {item.mataKuliah?.nama}

@@ -335,23 +335,33 @@ export class KhsService {
 
     // Format list ke bentuk nested sesuai kontrak TranskripItem frontend,
     // lengkap dengan periodeId, semester aktif, dan seluruh nilai.
-    const formattedList = await Promise.all(
-      list.map(async (item) => ({
-        id: item.id,
-        nilaiAngka: item.nilaiAngka,
-        nilaiHuruf: item.nilaiHuruf,
-        nilaiIndeks: item.nilaiIndeks,
-        useInGpa: item.useInGpa,
-        isRetake: laterAttempt.has(item.id),
-        periodeId: item.periodeId,
-        semester: await this.hitungSemester(mahasiswaId, item.periodeId),
-        mataKuliah: {
-          kode: item.mataKuliah.kode,
-          nama: item.mataKuliah.nama,
-          sksTotal: item.mataKuliah.sksTotal,
-        },
-      })),
-    );
+    // Semester dihitung sekali per periodeId unik (memoize) agar tidak
+    // memicu query DB redundan per mata kuliah (N+1).
+    const semesterCache = new Map<string, number | null>();
+    for (const item of list) {
+      if (!semesterCache.has(item.periodeId)) {
+        semesterCache.set(
+          item.periodeId,
+          await this.hitungSemester(mahasiswaId, item.periodeId, mhsDetail?.angkatan ?? null),
+        );
+      }
+    }
+
+    const formattedList = list.map((item) => ({
+      id: item.id,
+      nilaiAngka: item.nilaiAngka,
+      nilaiHuruf: item.nilaiHuruf,
+      nilaiIndeks: item.nilaiIndeks,
+      useInGpa: item.useInGpa,
+      isRetake: laterAttempt.has(item.id),
+      periodeId: item.periodeId,
+      semester: semesterCache.get(item.periodeId),
+      mataKuliah: {
+        kode: item.mataKuliah.kode,
+        nama: item.mataKuliah.nama,
+        sksTotal: item.mataKuliah.sksTotal,
+      },
+    }));
 
     return {
       mahasiswa: mhsDetail
