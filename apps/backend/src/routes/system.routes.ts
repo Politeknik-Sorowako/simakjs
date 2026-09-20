@@ -4,6 +4,11 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 
 export const systemRoutes = new Elysia({ prefix: '/system' })
   .use(authMiddleware)
+  .get('/registration-status', SystemController.getRegistrationStatus, {
+    response: {
+      200: t.Object({ enabled: t.Boolean() }),
+    },
+  })
   .get('/version', SystemController.getVersion, {
     response: {
       200: t.Object({

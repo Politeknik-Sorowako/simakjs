@@ -261,6 +261,50 @@ export class PelanggaranService {
     };
   }
 
+  /**
+   * Nilai Sikap (NS) mahasiswa per semester sesuai BPA Politeknik Sorowako (Pasal 20).
+   * AM awal 4.0; degradasi 0.25 per peringatan Lisan, 1.0 per peringatan Tertulis.
+   * Klasifikasi: Istimewa (AM=4.0), Sangat Baik (3.0<AM<4.0), Baik (2.0<AM<=3.0), Cukup (AM<=2.0).
+   * Narasi: "{Sebutan} ({AM,2 desimal})".
+   */
+  static async getNilaiSikap(mahasiswaId: number, periodeId?: string) {
+    const conditions = [eq(pelanggaran.mahasiswaId, mahasiswaId)];
+    if (periodeId) conditions.push(eq(pelanggaran.periodeId, periodeId));
+
+    const rows = await db
+      .select({ jenisSanksi: pelanggaran.jenisSanksi })
+      .from(pelanggaran)
+      .where(and(...conditions));
+
+    let lisan = 0;
+    let tertulis = 0;
+    for (const r of rows) {
+      if (r.jenisSanksi === 1) lisan += 1;
+      else if (r.jenisSanksi === 4) tertulis += 1;
+    }
+
+    // Total poin (Lisan=1, Tertulis=4) untuk menurunkan degradasi sesuai formula BPA.
+    const totalPoin = lisan * 1 + tertulis * 4;
+    const degradasi = hitungDegradasiNilaiSikap(totalPoin);
+    const am = Math.max(0, Number((4.0 - degradasi).toFixed(2)));
+
+    let sebutan: string;
+    if (am === 4.0) sebutan = 'Istimewa';
+    else if (am > 3.0) sebutan = 'Sangat Baik';
+    else if (am > 2.0) sebutan = 'Baik';
+    else sebutan = 'Cukup';
+
+    return {
+      am,
+      degradasi,
+      sebutan,
+      narasi: `${sebutan} (${am.toFixed(2).replace('.', ',')})`,
+      lisan,
+      tertulis,
+      totalPoin,
+    };
+  }
+
   static async getAllPelanggaran(page?: number, limit?: number, search?: string, prodiId?: number, periodeId?: string) {
     const conditions = [];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));

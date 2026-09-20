@@ -128,6 +128,9 @@ export default function KhsCetak() {
                   <p>
                     IPK: <span class="font-bold">{data().khs.summary?.ipk ?? '-'}</span>
                   </p>
+                  <p>
+                    Nilai Sikap: <span class="font-bold">{data().khs.nilaiSikap?.narasi || '-'}</span>
+                  </p>
                 </div>
               </div>
 
