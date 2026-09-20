@@ -276,6 +276,10 @@ export default function KeuanganDashboard() {
     }
     const t1Nom = tarifT1Nominal() ? Number(tarifT1Nominal()) : null;
     const t2Nom = tarifT2Nominal() ? Number(tarifT2Nominal()) : null;
+    if ((t1Nom !== null && t1Nom <= 0) || (t2Nom !== null && t2Nom <= 0)) {
+      setTarifFormError('Nominal angsuran termin harus lebih besar dari 0.');
+      return;
+    }
     if (t1Nom !== null && t2Nom !== null && t1Nom + t2Nom !== nominal) {
       setTarifFormError(`Total nominal angsuran (${t1Nom + t2Nom}) harus sama dengan nominal SPP (${nominal}).`);
       return;
@@ -1078,7 +1082,8 @@ export default function KeuanganDashboard() {
                       placeholder="Misal: 2024"
                       value={newTarifAngkatan()}
                       onInput={(e) => setNewTarifAngkatan(e.currentTarget.value)}
-                      class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white"
+                      disabled={!!editingTarifId()}
+                      class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption text-secondary-900 focus:outline-none dark:border-secondary-700 dark:text-white disabled:opacity-60 disabled:bg-secondary-100 dark:disabled:bg-secondary-800"
                     />
                   </div>
                   <div class="flex flex-col gap-1">
@@ -1086,8 +1091,10 @@ export default function KeuanganDashboard() {
                       Program Studi
                     </label>
                     <select
-                      onChange={(e) => setNewTarifProdi(parseInt(e.currentTarget.value))}
-                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-caption text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                      value={newTarifProdi() != null ? String(newTarifProdi()) : ''}
+                      onChange={(e) => setNewTarifProdi(e.currentTarget.value ? parseInt(e.currentTarget.value) : null)}
+                      disabled={!!editingTarifId()}
+                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-caption text-secondary-900 focus:outline-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-white disabled:opacity-60 disabled:bg-secondary-100 dark:disabled:bg-secondary-800"
                     >
                       <option value="">Pilih Prodi</option>
                       <For each={prodis()?.data}>{(p) => <option value={p.id}>{p.nama}</option>}</For>

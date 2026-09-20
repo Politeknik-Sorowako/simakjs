@@ -52,7 +52,12 @@ export class TagihanService {
     const t1Isi = data.termin1Nominal !== null && data.termin1Nominal !== undefined;
     const t2Isi = data.termin2Nominal !== null && data.termin2Nominal !== undefined;
     if (t1Isi && t2Isi) {
-      const total = (data.termin1Nominal as number) + (data.termin2Nominal as number);
+      const t1 = data.termin1Nominal as number;
+      const t2 = data.termin2Nominal as number;
+      if (t1 <= 0 || t2 <= 0) {
+        throw new Error('Nominal angsuran termin harus lebih besar dari 0');
+      }
+      const total = t1 + t2;
       if (total !== data.nominal) {
         throw new Error(`Total nominal angsuran (${total}) harus sama dengan nominal SPP (${data.nominal})`);
       }

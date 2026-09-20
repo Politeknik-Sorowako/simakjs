@@ -797,6 +797,24 @@ describe('9. Tagihan (/tagihan)', () => {
       }),
     );
     expect(badOrder.status).toBe(400);
+
+    // Termin nominal <= 0 -> 400
+    const zeroTermin = await app.handle(
+      new Request('http://localhost/tagihan/tarif', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({
+          angkatan: '8888',
+          programStudiId: prodiId,
+          nominal: 5000000,
+          termin1Nominal: 0,
+          termin1JatuhTempo: '2026-01-01',
+          termin2Nominal: 5000000,
+          termin2JatuhTempo: '2026-03-01',
+        }),
+      }),
+    );
+    expect(zeroTermin.status).toBe(400);
   });
 
   it('admin dapat mengedit skema tarif via PUT /tagihan/tarif/:id', async () => {
