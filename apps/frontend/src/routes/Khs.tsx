@@ -99,7 +99,7 @@ export default function Khs() {
 
   const [prodis] = createResource(
     () => {
-      if (role() === 'admin') return true;
+      if (role() !== 'mahasiswa') return true;
       return null;
     },
     async () => {
@@ -117,6 +117,13 @@ export default function Khs() {
       return [];
     }
   });
+
+  // Nama periode untuk ditampilkan pada cetakan KHS (mis. "Ganjil 2025/2026").
+  const periodeNama = () => {
+    const pid = selectedPeriode();
+    if (!pid) return '-';
+    return periodes()?.find((p) => p.id === pid)?.nama || pid;
+  };
 
   createEffect(() => {
     const wsPeriode = workspace.selectedPeriodeId();
@@ -137,42 +144,51 @@ export default function Khs() {
 
   // For Admin / Dosen view
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
+  const [selectedProdi, setSelectedProdi] = createSignal<string>('');
   const [searchQuery, setSearchQuery] = createSignal('');
   const [searchPage, setSearchPage] = createSignal(1);
   const [hasMoreStudents, setHasMoreStudents] = createSignal(false);
   const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
 
   const [pageData] = createResource(
-    () => ({ q: searchQuery(), page: searchPage() }),
-    async ({ q, page }) => {
-      const res = await mahasiswaController.getAll(q || undefined, page, 20);
+    () => ({ q: searchQuery(), page: searchPage(), prodiId: selectedProdi() || undefined }),
+    async ({ q, page, prodiId }) => {
+      const res = await mahasiswaController.getAll(q || undefined, page, 20, prodiId ? Number(prodiId) : undefined);
       setHasMoreStudents(res.data.length === 20);
       return res.data.map((m): SelectOption => ({ label: `${m.nim} - ${m.nama}`, value: m.id }));
     },
   );
 
-  // Akumulasi hasil per halaman: reset saat ganti query, append saat load more.
-  createEffect((prevQ) => {
-    const q = searchQuery();
+  // Akumulasi hasil per halaman: reset saat halaman pertama, append saat load more.
+  createEffect(() => {
     const data = pageData();
-    if (data === undefined) return q;
-    if (prevQ !== undefined && q === prevQ) {
+    if (data === undefined) return;
+    if (searchPage() > 1) {
       setMhsOptions((prev) => [...prev, ...data]);
     } else {
       setMhsOptions(data);
     }
-    return q;
   });
 
   const onSearchStudents = (q: string) => {
     setSearchQuery(q);
     setSearchPage(1);
+    setMhsOptions([]); // Reset options saat query baru
   };
 
   const onLoadMoreStudents = () => {
     if (!hasMoreStudents()) return;
     setSearchPage((p) => p + 1);
   };
+
+  // Reset pilihan mahasiswa & options saat prodi berubah.
+  createEffect(() => {
+    void selectedProdi(); // Subscribe to change
+    setSelectedMhsId(null);
+    setMhsOptions([]);
+    setSearchQuery('');
+    setSearchPage(1);
+  });
 
   // Periode yang diikuti mahasiswa terpilih (distinct dari KRS).
   const [mhsPeriodes] = createResource(selectedMhsId, async (mhsId) => {
@@ -242,6 +258,18 @@ export default function Khs() {
     setShowRincianModal(true);
   };
 
+  const pilihNilai = async (krsId: number) => {
+    const mhsId = selectedMhsId();
+    if (!mhsId) return;
+    try {
+      await khsController.pilihNilai(krsId, mhsId);
+      toast.showToast('Nilai yang dipakai untuk IPK berhasil diperbarui.', 'success');
+      refetchKhs();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memperbarui pilihan nilai.', 'error');
+    }
+  };
+
   // Load exam eligibility for print card
   const [eligibilityData] = createResource(
     () => {
@@ -262,15 +290,19 @@ export default function Khs() {
   // Load Mahasiswa profile if logged in as student
   const [mhsProfile] = createResource(
     () => {
-      if (role() === 'mahasiswa') return user()?.email;
-      return null;
+      if (role() === 'mahasiswa') return { email: user()?.email as string | undefined, mhsId: null };
+      return { email: undefined, mhsId: selectedMhsId() };
     },
-    async (email) => {
-      if (!email) return null;
-      const res = await mahasiswaController.getAll(email, 1, 1);
-      const profile = res.data[0] || null;
-      if (profile) setSelectedMhsId(profile.id);
-      return profile;
+    async ({ email, mhsId }) => {
+      if (role() === 'mahasiswa') {
+        if (!email) return null;
+        const res = await mahasiswaController.getAll(email, 1, 1);
+        const profile = res.data[0] || null;
+        if (profile) setSelectedMhsId(profile.id);
+        return profile;
+      }
+      if (!mhsId) return null;
+      return await mahasiswaController.getById(mhsId).catch(() => null);
     },
   );
 
@@ -284,14 +316,24 @@ export default function Khs() {
       return { mhsId: mId, periodeId: pId };
     },
     async ({ mhsId, periodeId }) => {
-      return await khsController.getByMhsIdAndPeriode(mhsId, periodeId);
+      try {
+        return await khsController.getByMhsIdAndPeriode(mhsId, periodeId);
+      } catch (e: unknown) {
+        toast.showToast((e as Error).message || 'Gagal memuat KHS mahasiswa.', 'error');
+        throw e;
+      }
     },
   );
 
   // Load Transkrip
   const [transkripData, { refetch: refetchTranskrip }] = createResource(selectedMhsId, async (mhsId) => {
     if (!mhsId) return null;
-    return await khsController.getTranskrip(mhsId);
+    try {
+      return await khsController.getTranskrip(mhsId);
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal memuat transkrip mahasiswa.', 'error');
+      throw e;
+    }
   });
 
   const handleSaveKonversi = async (e: Event) => {
@@ -398,7 +440,21 @@ export default function Khs() {
         <Show when={role() !== 'mahasiswa' && activeTab() !== 'konversi'}>
           <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-700 text-base">Pilih Mahasiswa & Periode</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
+                  Program Studi
+                </label>
+                <select
+                  value={selectedProdi()}
+                  onChange={(e) => setSelectedProdi(e.currentTarget.value)}
+                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                >
+                  <option value="">Semua Program Studi</option>
+                  <For each={prodis() || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                </select>
+              </div>
+
               <SearchableSelect
                 label="Cari & Pilih Mahasiswa"
                 placeholder="Ketik NIM atau Nama..."
@@ -705,6 +761,9 @@ export default function Khs() {
                               <Show when={role() === 'mahasiswa'}>
                                 <th class="p-3">Rincian</th>
                               </Show>
+                              <Show when={role() !== 'mahasiswa'}>
+                                <th class="p-3">Aksi IPK</th>
+                              </Show>
                             </tr>
                           </thead>
                           <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
@@ -713,7 +772,7 @@ export default function Khs() {
                               fallback={
                                 <tr>
                                   <td
-                                    colspan={role() === 'mahasiswa' ? 7 : 6}
+                                    colspan="7"
                                     class="p-4 text-center text-secondary-400 dark:text-secondary-300 italic"
                                   >
                                     Nilai belum dimasukkan atau belum disetujui Dosen PA.
@@ -726,6 +785,11 @@ export default function Khs() {
                                   <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
                                   <td class="p-3 font-bold text-secondary-800 dark:text-white">
                                     {item.mataKuliah?.nama}
+                                    <Show when={item.isRetake}>
+                                      <span class="ml-2 px-1.5 py-0.5 rounded text-fine font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                                        Mengulang
+                                      </span>
+                                    </Show>
                                   </td>
                                   <td class="p-3">{item.mataKuliah?.sksTotal}</td>
                                   <td class="p-3">{item.nilaiAngka || '-'}</td>
@@ -745,6 +809,26 @@ export default function Khs() {
                                     </Show>
                                   </td>
                                   <td class="p-3">{item.nilaiIndeks || '-'}</td>
+                                  <Show when={role() !== 'mahasiswa'}>
+                                    <td class="p-3">
+                                      <Show
+                                        when={!item.useInGpa}
+                                        fallback={
+                                          <span class="px-2 py-1 rounded-lg text-fine font-bold bg-green-50 text-green-700 border border-green-200">
+                                            Dipakai IPK
+                                          </span>
+                                        }
+                                      >
+                                        <button
+                                          type="button"
+                                          onClick={() => void pilihNilai(item.id)}
+                                          class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-fine hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                                        >
+                                          Pilih untuk IPK
+                                        </button>
+                                      </Show>
+                                    </td>
+                                  </Show>
                                   <Show when={role() === 'mahasiswa'}>
                                     <td class="p-3">
                                       <button
@@ -851,7 +935,7 @@ export default function Khs() {
                           {(item) => (
                             <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                               <td class="p-3 font-semibold text-secondary-500 dark:text-secondary-300">
-                                {item.periodeId}
+                                {item.semester ?? item.periodeId}
                               </td>
                               <td class="p-3 whitespace-nowrap">{item.mataKuliah?.kode}</td>
                               <td class="p-3 font-bold text-secondary-800 dark:text-white">{item.mataKuliah?.nama}</td>
@@ -904,7 +988,7 @@ export default function Khs() {
                     KARTU UJIAN MAHASISWA (UTS/UAS)
                   </h3>
                   <p class="text-caption text-secondary-400 dark:text-secondary-300">
-                    Periode Akademik: {selectedPeriode()}
+                    Periode Akademik: {periodeNama()}
                   </p>
                 </div>
 
@@ -918,8 +1002,18 @@ export default function Khs() {
                       Nama:{' '}
                       <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
+                    <p>
+                      Program Studi:{' '}
+                      <span class="font-bold dark:text-white">
+                        {mhsProfile()?.programStudi?.nama || mhsProfile()?.programStudiId || 'N/A'}
+                      </span>
+                    </p>
                   </div>
                   <div class="text-right">
+                    <p>
+                      Semester:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">{khsData()?.semester ?? '-'}</span>
+                    </p>
                     <p>
                       Bimbingan PA:{' '}
                       <span
@@ -1016,7 +1110,7 @@ export default function Khs() {
                     KARTU HASIL STUDI (KHS) SEMESTER
                   </h3>
                   <p class="text-caption text-secondary-400 dark:text-secondary-300">
-                    Periode Akademik: {selectedPeriode()}
+                    Periode Akademik: {periodeNama()}
                   </p>
                 </div>
 
@@ -1029,8 +1123,18 @@ export default function Khs() {
                     <p>
                       Nama: <span class="font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
+                    <p>
+                      Program Studi:{' '}
+                      <span class="font-bold dark:text-white">
+                        {mhsProfile()?.programStudi?.nama || mhsProfile()?.programStudiId || 'N/A'}
+                      </span>
+                    </p>
                   </div>
                   <div class="text-right">
+                    <p>
+                      Semester:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">{khsData()?.semester ?? '-'}</span>
+                    </p>
                     <p>
                       IP Semester:{' '}
                       <span class="font-bold text-brand-600 dark:text-white">
@@ -1038,7 +1142,16 @@ export default function Khs() {
                       </span>
                     </p>
                     <p>
+                      IP Kumulatif:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">
+                        {Number(khsData()?.summary?.ipk ?? 0).toFixed(2)}
+                      </span>
+                    </p>
+                    <p>
                       SKS Terkontrak: <span class="font-bold dark:text-white">{khsData()?.summary?.totalSks} SKS</span>
+                    </p>
+                    <p>
+                      Nilai Sikap: <span class="font-bold dark:text-white">{khsData()?.nilaiSikap?.narasi || '-'}</span>
                     </p>
                   </div>
                 </div>
@@ -1122,8 +1235,18 @@ export default function Khs() {
                       Nama:{' '}
                       <span class="text-secondary-900 font-bold dark:text-white">{mhsProfile()?.nama || 'N/A'}</span>
                     </p>
+                    <p>
+                      Program Studi:{' '}
+                      <span class="font-bold dark:text-white">
+                        {mhsProfile()?.programStudi?.nama || mhsProfile()?.programStudiId || 'N/A'}
+                      </span>
+                    </p>
                   </div>
                   <div class="text-right">
+                    <p>
+                      Semester Terakhir:{' '}
+                      <span class="font-bold text-brand-600 dark:text-white">{khsData()?.semester ?? '-'}</span>
+                    </p>
                     <p>
                       IPK Kumulatif:{' '}
                       <span class="font-bold text-brand-600 dark:text-white">
@@ -1155,7 +1278,7 @@ export default function Khs() {
                     <For each={transkripData()?.transkripList}>
                       {(item) => (
                         <tr>
-                          <td class="p-2 border-r">{item.periodeId}</td>
+                          <td class="p-2 border-r">{item.semester ?? item.periodeId}</td>
                           <td class="p-2 border-r">{item.mataKuliah?.kode}</td>
                           <td class="p-2 border-r font-bold text-secondary-800 dark:text-white">
                             {item.mataKuliah?.nama}

@@ -17,6 +17,12 @@ export class SystemController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getRegistrationStatus(): Promise<any> {
+    const enabled = await SystemParameterService.isRegistrationEnabled();
+    return { enabled };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getChangelog(): Promise<any> {
     const sections = ChangelogService.getSections();
     return { sections };

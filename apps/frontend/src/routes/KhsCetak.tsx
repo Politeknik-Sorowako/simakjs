@@ -120,7 +120,16 @@ export default function KhsCetak() {
                     Program Studi: <span class="font-bold">{data().prodi || '-'}</span>
                   </p>
                   <p>
+                    Semester: <span class="font-bold">{data().khs.semester ?? '-'}</span>
+                  </p>
+                  <p>
+                    IP Semester: <span class="font-bold">{data().khs.summary?.ipSemester ?? '-'}</span>
+                  </p>
+                  <p>
                     IPK: <span class="font-bold">{data().khs.summary?.ipk ?? '-'}</span>
+                  </p>
+                  <p>
+                    Nilai Sikap: <span class="font-bold">{data().khs.nilaiSikap?.narasi || '-'}</span>
                   </p>
                 </div>
               </div>

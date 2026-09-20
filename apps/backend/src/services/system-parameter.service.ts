@@ -29,6 +29,11 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'boolean',
     description: 'Izinkan mahasiswa melakukan pengisian KRS secara mandiri',
   },
+  REGISTRATION_ENABLED: {
+    value: 'true',
+    type: 'boolean',
+    description: 'Izinkan pendaftaran akun baru melalui halaman login (register)',
+  },
   BLOCK_KHS_JIKA_TANGGUNGAN: {
     value: 'true',
     type: 'boolean',
@@ -165,6 +170,13 @@ export class SystemParameterService {
 
   static async isKrsMandiriEnabled(): Promise<boolean> {
     const raw = await SystemParameterService.getRaw('KRS_MANDIRI_ENABLED');
+    if (raw === null || raw === '') return true;
+    return raw === 'true' || raw === '1';
+  }
+
+  /** Registrasi akun baru via halaman login. Fail-open ke `true` (perilaku saat ini). */
+  static async isRegistrationEnabled(): Promise<boolean> {
+    const raw = await SystemParameterService.getRaw('REGISTRATION_ENABLED');
     if (raw === null || raw === '') return true;
     return raw === 'true' || raw === '1';
   }
