@@ -10,7 +10,7 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { createEffect, createSignal, onCleanup } from 'solid-js';
+import { createEffect, onCleanup } from 'solid-js';
 
 Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend, Filler);
 
@@ -30,23 +30,20 @@ interface LineChartProps {
 
 export function LineChart(props: LineChartProps) {
   let canvasRef: HTMLCanvasElement | undefined;
-  const [chartInstance, setChartInstance] = createSignal<Chart | null>(null);
+  let chart: Chart | undefined;
 
   createEffect(() => {
     if (!canvasRef) return;
-
-    if (chartInstance()) {
-      chartInstance()!.destroy();
-    }
-
     const ctx = canvasRef.getContext('2d');
     if (!ctx) return;
+
+    chart?.destroy();
 
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#94a3b8' : '#64748b';
     const gridColor = isDark ? '#334155' : '#e2e8f0';
 
-    const chart = new Chart(ctx, {
+    chart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: props.labels,
@@ -81,9 +78,8 @@ export function LineChart(props: LineChartProps) {
       },
     });
 
-    setChartInstance(chart);
-
     const observer = new MutationObserver(() => {
+      if (!chart) return;
       const dark = document.documentElement.classList.contains('dark');
       const tc = dark ? '#94a3b8' : '#64748b';
       const gc = dark ? '#334155' : '#e2e8f0';
@@ -101,7 +97,8 @@ export function LineChart(props: LineChartProps) {
 
     onCleanup(() => {
       observer.disconnect();
-      chart.destroy();
+      chart?.destroy();
+      chart = undefined;
     });
   });
 

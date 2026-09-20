@@ -1,5 +1,5 @@
 import { ArcElement, Chart, Legend, PieController, Title, Tooltip } from 'chart.js';
-import { createEffect, createSignal, onCleanup } from 'solid-js';
+import { createEffect, onCleanup } from 'solid-js';
 
 Chart.register(PieController, ArcElement, Title, Tooltip, Legend);
 
@@ -16,22 +16,19 @@ const defaultColors = ['#6366f1', '#06b6d4', '#22c55e', '#f43f5e', '#eab308', '#
 
 export function PieChart(props: PieChartProps) {
   let canvasRef: HTMLCanvasElement | undefined;
-  const [chartInstance, setChartInstance] = createSignal<Chart | null>(null);
+  let chart: Chart | undefined;
 
   createEffect(() => {
     if (!canvasRef) return;
-
-    if (chartInstance()) {
-      chartInstance()!.destroy();
-    }
-
     const ctx = canvasRef.getContext('2d');
     if (!ctx) return;
+
+    chart?.destroy();
 
     const isDark = document.documentElement.classList.contains('dark');
     const textColor = isDark ? '#94a3b8' : '#64748b';
 
-    const chart = new Chart(ctx, {
+    chart = new Chart(ctx, {
       type: 'doughnut',
       data: {
         labels: props.labels,
@@ -60,9 +57,9 @@ export function PieChart(props: PieChartProps) {
       },
     });
 
-    setChartInstance(chart);
-
+    // Observer for theme changes
     const observer = new MutationObserver(() => {
+      if (!chart) return;
       const dark = document.documentElement.classList.contains('dark');
       chart.options.plugins!.legend!.labels!.color = dark ? '#94a3b8' : '#64748b';
       if (chart.options.plugins!.title) {
@@ -74,7 +71,8 @@ export function PieChart(props: PieChartProps) {
 
     onCleanup(() => {
       observer.disconnect();
-      chart.destroy();
+      chart?.destroy();
+      chart = undefined;
     });
   });
 
