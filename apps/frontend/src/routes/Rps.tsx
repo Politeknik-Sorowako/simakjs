@@ -265,20 +265,26 @@ export default function Rps() {
   const handleSaveTopik = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
-    if (topikText().length > 255) {
+    const topik = topikText().trim();
+    const metodeVal = metode().trim();
+    if (!topik) {
+      setErrorMsg('Topik Utama tidak boleh kosong.');
+      return;
+    }
+    if (topik.length > 255) {
       setErrorMsg('Topik Utama terlalu panjang. Maksimal 255 karakter.');
       return;
     }
-    if (metode().length > 100) {
+    if (metodeVal.length > 100) {
       setErrorMsg('Metode Pembelajaran terlalu panjang. Maksimal 100 karakter.');
       return;
     }
     try {
       const payload = {
         pertemuanKe: Number(pertemuanKe()),
-        topik: topikText(),
+        topik,
         subTopik: subTopik(),
-        metode: metode(),
+        metode: metodeVal,
       };
       if (editTopikId()) {
         await rpsController.updateTopik(editTopikId()!, payload);
@@ -338,14 +344,19 @@ export default function Rps() {
       setErrorMsg(`Total bobot evaluasi (${currentTotal + newBobot}%) tidak boleh melebihi 100%`);
       return;
     }
-    if (namaEvaluasi().length > 100) {
+    const nama = namaEvaluasi().trim();
+    if (!nama) {
+      setErrorMsg('Nama Evaluasi tidak boleh kosong.');
+      return;
+    }
+    if (nama.length > 100) {
       setErrorMsg('Nama Evaluasi terlalu panjang. Maksimal 100 karakter.');
       return;
     }
     try {
       const payload = {
         mataKuliahId: selectedMk(),
-        namaEvaluasi: namaEvaluasi(),
+        namaEvaluasi: nama,
         bobotEvaluasi: newBobot,
         deskripsi: evalDeskripsi(),
       };
