@@ -5,6 +5,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { stripMarkdown } from '../components/ui/MarkdownViewer';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
@@ -1882,7 +1883,7 @@ export default function BapPresensi() {
                       <tr class="border-b border-secondary-100 dark:border-secondary-800/50 hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
                         <td class="py-2.5 px-3 font-bold text-brand-600">P{row.pertemuanRps}</td>
                         <td class="py-2.5 px-3 font-medium text-secondary-800 dark:text-white">
-                          {row.topik} {row.subTopik ? `(${row.subTopik})` : ''}
+                          {row.topik} {row.subTopik ? `(${stripMarkdown(row.subTopik)})` : ''}
                         </td>
                         <td class="py-2.5 px-3">
                           <span
@@ -2032,7 +2033,9 @@ export default function BapPresensi() {
                         <span class="font-bold text-brand-700 dark:text-brand-400">P{topic.pertemuanKe}:</span>
                         <span class="text-secondary-700 dark:text-white font-medium">{topic.topik}</span>
                         {topic.subTopik && (
-                          <span class="text-secondary-400 dark:text-secondary-300">({topic.subTopik})</span>
+                          <span class="text-secondary-400 dark:text-secondary-300">
+                            ({stripMarkdown(topic.subTopik)})
+                          </span>
                         )}
                       </label>
                     );
@@ -2442,7 +2445,7 @@ export default function BapPresensi() {
                           <span class="font-medium text-secondary-800 dark:text-secondary-100">{topic.topik}</span>
                           {topic.subTopik && (
                             <span class="text-secondary-500 dark:text-secondary-400 block text-fine">
-                              {topic.subTopik}
+                              {stripMarkdown(topic.subTopik)}
                             </span>
                           )}
                         </div>

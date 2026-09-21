@@ -4,11 +4,14 @@ import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { TurnstileWidget } from '../components/ui/TurnstileWidget';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
 import { systemController } from '../controllers/systemController';
 import { RateLimitError } from '../utils/eden';
+
+const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || '';
 
 function formatCountdown(totalSeconds: number): string {
   const s = Math.max(0, Math.floor(totalSeconds));
@@ -54,6 +57,21 @@ export default function Login() {
   const [registrationStatus] = createResource(() =>
     systemController.getRegistrationStatus().catch(() => ({ enabled: true })),
   );
+
+  // Turnstile pada form login (opsional, sesuai konfigurasi admin LOGIN_TURNSTILE_ENABLED).
+  const [loginTurnstileStatus] = createResource(() =>
+    systemController.getLoginTurnstileStatus().catch(() => ({ enabled: false })),
+  );
+  const loginTurnstileEnabled = () => loginTurnstileStatus()?.enabled === true;
+  const [turnstileToken, setTurnstileToken] = createSignal('');
+  const [turnstileReset, setTurnstileReset] = createSignal(0);
+
+  const turnstileVisible = () => !!TURNSTILE_SITE_KEY && (isRegister() || loginTurnstileEnabled() || showResendBtn());
+
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    setTurnstileReset((c) => c + 1);
+  };
 
   // 2FA Signals
   const [is2FAStep, setIs2FAStep] = createSignal(false);
@@ -185,9 +203,13 @@ export default function Login() {
       toast.showToast('Masukkan alamat email Anda terlebih dahulu', 'error');
       return;
     }
+    if (TURNSTILE_SITE_KEY && !turnstileToken()) {
+      toast.showToast('Selesaikan verifikasi keamanan terlebih dahulu.', 'error');
+      return;
+    }
     setResendingActivation(true);
     try {
-      const res = await authController.resendActivation(email());
+      const res = await authController.resendActivation(email(), turnstileToken());
       toast.showToast(res.message, 'success');
       setErrorMsg('Tautan aktivasi baru telah dikirimkan ke email Anda.');
       setShowResendBtn(false);
@@ -195,6 +217,7 @@ export default function Login() {
       toast.showToast((err as Error).message || 'Gagal mengirim email aktivasi', 'error');
     } finally {
       setResendingActivation(false);
+      resetTurnstile();
     }
   };
 
@@ -255,6 +278,12 @@ export default function Login() {
       return;
     }
 
+    if (turnstileVisible() && !showResendBtn() && !turnstileToken()) {
+      setErrorMsg('Selesaikan verifikasi keamanan terlebih dahulu.');
+      toast.showToast('Selesaikan verifikasi keamanan terlebih dahulu.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -264,13 +293,13 @@ export default function Login() {
           toast.showToast('Pendaftaran akun baru sedang dinonaktifkan oleh admin.', 'error');
           return;
         }
-        const res = await authController.register(email(), password(), nama(), role());
+        const res = await authController.register(email(), password(), nama(), role(), turnstileToken());
         setIsRegister(false);
         const successMsg = res.message || 'Registrasi sukses! Silakan periksa email untuk aktivasi.';
         setErrorMsg(successMsg);
         toast.showToast(successMsg, 'success');
       } else {
-        const response = await authController.login(email(), password());
+        const response = await authController.login(email(), password(), turnstileToken());
         if (response.requires2FA && response.twoFactorToken) {
           setTwoFactorToken(response.twoFactorToken);
           setIs2FAStep(true);
@@ -298,11 +327,13 @@ export default function Login() {
         setErrorMsg(errText);
         if (errText.toLowerCase().includes('belum diaktifkan')) {
           setShowResendBtn(true);
+          resetTurnstile();
         }
         toast.showToast(errText, 'error');
       }
     } finally {
       setLoading(false);
+      resetTurnstile();
     }
   };
 
@@ -385,6 +416,18 @@ export default function Login() {
           >
             <span>{errorMsg()}</span>
             <Show when={showResendBtn()}>
+              <Show when={TURNSTILE_SITE_KEY}>
+                <div class="flex flex-col items-start gap-1 mt-2">
+                  <TurnstileWidget
+                    siteKey={TURNSTILE_SITE_KEY}
+                    theme={auth.theme() === 'dark' ? 'dark' : 'light'}
+                    onVerify={setTurnstileToken}
+                    onExpire={() => setTurnstileToken('')}
+                    onError={() => setTurnstileToken('')}
+                    resetCounter={turnstileReset()}
+                  />
+                </div>
+              </Show>
               <Button
                 type="button"
                 variant="secondary"
@@ -545,6 +588,24 @@ export default function Login() {
               </button>
             </div>
 
+            <Show when={TURNSTILE_SITE_KEY && (isRegister() || loginTurnstileEnabled()) && !showResendBtn()}>
+              <div class="flex flex-col items-start gap-1">
+                <TurnstileWidget
+                  siteKey={TURNSTILE_SITE_KEY}
+                  theme={auth.theme() === 'dark' ? 'dark' : 'light'}
+                  onVerify={setTurnstileToken}
+                  onExpire={() => setTurnstileToken('')}
+                  onError={() => setTurnstileToken('')}
+                  resetCounter={turnstileReset()}
+                />
+                <Show when={!turnstileToken()}>
+                  <span class="text-xs text-secondary-400 dark:text-secondary-500">
+                    Selesaikan verifikasi keamanan sebelum melanjutkan.
+                  </span>
+                </Show>
+              </div>
+            </Show>
+
             <Show
               when={retryAfter() !== null}
               fallback={
@@ -567,6 +628,7 @@ export default function Login() {
                 setIsRegister(!isRegister());
                 setErrorMsg('');
                 setShowResendBtn(false);
+                resetTurnstile();
               }}
               disabled={loading()}
               class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"

@@ -3,8 +3,11 @@ import { createEffect, createSignal, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { TurnstileWidget } from '../components/ui/TurnstileWidget';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
+
+const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || '';
 
 export default function AktivasiAkun() {
   const [searchParams] = useSearchParams();
@@ -16,6 +19,8 @@ export default function AktivasiAkun() {
   const [message, setMessage] = createSignal('');
   const [emailResend, setEmailResend] = createSignal('');
   const [resending, setResending] = createSignal(false);
+  const [turnstileToken, setTurnstileToken] = createSignal('');
+  const [turnstileReset, setTurnstileReset] = createSignal(0);
 
   createEffect(() => {
     const token = searchParams.token;
@@ -47,16 +52,22 @@ export default function AktivasiAkun() {
       toast.showToast('Masukkan alamat email yang valid', 'error');
       return;
     }
+    if (TURNSTILE_SITE_KEY && !turnstileToken()) {
+      toast.showToast('Selesaikan verifikasi keamanan terlebih dahulu.', 'error');
+      return;
+    }
 
     setResending(true);
     try {
-      const res = await authController.resendActivation(emailResend());
+      const res = await authController.resendActivation(emailResend(), turnstileToken());
       toast.showToast(res.message, 'success');
       setMessage('Tautan aktivasi baru telah dikirim. Silakan periksa kotak masuk email Anda.');
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal mengirim ulang aktivasi.', 'error');
     } finally {
       setResending(false);
+      setTurnstileToken('');
+      setTurnstileReset((c) => c + 1);
     }
   };
 
@@ -106,6 +117,16 @@ export default function AktivasiAkun() {
                   onInput={(e) => setEmailResend(e.currentTarget.value)}
                   required
                 />
+                <Show when={TURNSTILE_SITE_KEY}>
+                  <TurnstileWidget
+                    siteKey={TURNSTILE_SITE_KEY}
+                    theme="auto"
+                    onVerify={setTurnstileToken}
+                    onExpire={() => setTurnstileToken('')}
+                    onError={() => setTurnstileToken('')}
+                    resetCounter={turnstileReset()}
+                  />
+                </Show>
                 <Button type="submit" loading={resending()} class="w-full">
                   Kirim Ulang Email Aktivasi
                 </Button>

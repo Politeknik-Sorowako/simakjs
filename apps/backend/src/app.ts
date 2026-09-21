@@ -215,6 +215,10 @@ export const app = new Elysia()
       set.status = 400;
       return { success: false, error: 'Relasi tidak valid. Referensi ID tidak ditemukan.' };
     }
+    if (err && err.code === '22001') {
+      set.status = 400;
+      return { success: false, error: 'Teks terlalu panjang melebihi batas maksimal karakter yang diizinkan.' };
+    }
     if (code === 'NOT_FOUND') {
       set.status = 404;
       return { success: false, error: 'Endpoint tidak ditemukan' };

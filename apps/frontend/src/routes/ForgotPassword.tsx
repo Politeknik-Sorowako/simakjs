@@ -4,9 +4,12 @@ import { z } from 'zod';
 import logoImg from '../assets/logo.png';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { TurnstileWidget } from '../components/ui/TurnstileWidget';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
+
+const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || '';
 
 const emailSchema = z.object({
   email: z.string().email({ message: 'Format email tidak valid' }),
@@ -21,6 +24,8 @@ export default function ForgotPassword() {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [successMsg, setSuccessMsg] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+  const [turnstileToken, setTurnstileToken] = createSignal('');
+  const [turnstileReset, setTurnstileReset] = createSignal(0);
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -35,10 +40,16 @@ export default function ForgotPassword() {
       return;
     }
 
+    if (TURNSTILE_SITE_KEY && !turnstileToken()) {
+      setErrorMsg('Selesaikan verifikasi keamanan terlebih dahulu.');
+      toast.showToast('Selesaikan verifikasi keamanan terlebih dahulu.', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await authController.forgotPassword(email());
+      const res = await authController.forgotPassword(email(), turnstileToken());
       const msg = 'Token reset password berhasil dibuat!';
       setSuccessMsg(msg);
       toast.showToast(msg, 'success');
@@ -48,6 +59,8 @@ export default function ForgotPassword() {
       toast.showToast(errText, 'error');
     } finally {
       setLoading(false);
+      setTurnstileToken('');
+      setTurnstileReset((c) => c + 1);
     }
   };
 
@@ -123,6 +136,24 @@ export default function ForgotPassword() {
             disabled={loading() || successMsg().length > 0}
             class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-primary-500/30"
           />
+
+          <Show when={TURNSTILE_SITE_KEY}>
+            <div class="flex flex-col items-start gap-1">
+              <TurnstileWidget
+                siteKey={TURNSTILE_SITE_KEY}
+                theme={auth.theme() === 'dark' ? 'dark' : 'light'}
+                onVerify={setTurnstileToken}
+                onExpire={() => setTurnstileToken('')}
+                onError={() => setTurnstileToken('')}
+                resetCounter={turnstileReset()}
+              />
+              <Show when={!turnstileToken()}>
+                <span class="text-xs text-secondary-400 dark:text-secondary-500">
+                  Selesaikan verifikasi keamanan sebelum melanjutkan.
+                </span>
+              </Show>
+            </div>
+          </Show>
 
           <Button type="submit" disabled={loading() || successMsg().length > 0} class="w-full mt-2 py-3">
             {loading() ? 'Memproses...' : 'Kirim Token Reset'}

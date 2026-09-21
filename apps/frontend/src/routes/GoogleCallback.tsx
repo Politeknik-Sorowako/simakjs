@@ -1,8 +1,14 @@
 import { useNavigate, useSearchParams } from '@solidjs/router';
 import { createEffect, createSignal, Show } from 'solid-js';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { TurnstileWidget } from '../components/ui/TurnstileWidget';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
+import { AccountInactiveError } from '../utils/eden';
+
+const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || '';
 
 export default function GoogleCallback() {
   const [searchParams] = useSearchParams();
@@ -13,6 +19,10 @@ export default function GoogleCallback() {
   const [loading, setLoading] = createSignal(true);
   const [stage, setStage] = createSignal('Memverifikasi tiket otentikasi Google...');
   const [errorMsg, setErrorMsg] = createSignal('');
+  const [inactiveEmail, setInactiveEmail] = createSignal('');
+  const [resending, setResending] = createSignal(false);
+  const [turnstileToken, setTurnstileToken] = createSignal('');
+  const [turnstileReset, setTurnstileReset] = createSignal(0);
 
   createEffect(() => {
     const code = searchParams.code;
@@ -55,12 +65,41 @@ export default function GoogleCallback() {
       .catch((err: unknown) => {
         const msg = (err as Error).message || 'Gagal memproses login Google SSO.';
         setErrorMsg(msg);
+        setInactiveEmail('');
+        if (err instanceof AccountInactiveError) {
+          setInactiveEmail(err.email);
+        }
         toast.showToast(msg, 'error');
       })
       .finally(() => {
         setLoading(false);
       });
   });
+
+  const handleResendActivation = async (e: Event) => {
+    e.preventDefault();
+    const email = inactiveEmail();
+    if (!email) {
+      toast.showToast('Alamat email akun tidak tersedia.', 'error');
+      return;
+    }
+    if (TURNSTILE_SITE_KEY && !turnstileToken()) {
+      toast.showToast('Selesaikan verifikasi keamanan terlebih dahulu.', 'error');
+      return;
+    }
+    setResending(true);
+    try {
+      const res = await authController.resendActivation(email, turnstileToken());
+      toast.showToast(res.message, 'success');
+      setErrorMsg('Tautan aktivasi baru telah dikirimkan ke email Anda.');
+    } catch (err: unknown) {
+      toast.showToast((err as Error).message || 'Gagal mengirim email aktivasi.', 'error');
+    } finally {
+      setResending(false);
+      setTurnstileToken('');
+      setTurnstileReset((c) => c + 1);
+    }
+  };
 
   return (
     <div class="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
@@ -85,6 +124,40 @@ export default function GoogleCallback() {
             </div>
             <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">Login SSO Gagal</h2>
             <p class="text-sm text-red-600 dark:text-red-400">{errorMsg()}</p>
+
+            <Show when={inactiveEmail()}>
+              <div class="w-full mt-2 pt-4 border-t border-slate-200 dark:border-slate-800 text-left">
+                <p class="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  Akun Anda belum aktif. Kirim ulang link aktivasi ke:
+                </p>
+                <form onSubmit={handleResendActivation} class="flex flex-col gap-3">
+                  <Input
+                    type="email"
+                    placeholder="Alamat email Anda"
+                    value={inactiveEmail()}
+                    onInput={(e) => setInactiveEmail(e.currentTarget.value)}
+                    required
+                  />
+                  <Show when={TURNSTILE_SITE_KEY}>
+                    <TurnstileWidget
+                      siteKey={TURNSTILE_SITE_KEY}
+                      theme="auto"
+                      onVerify={setTurnstileToken}
+                      onExpire={() => setTurnstileToken('')}
+                      onError={() => setTurnstileToken('')}
+                      resetCounter={turnstileReset()}
+                    />
+                  </Show>
+                  <Button type="submit" loading={resending()} class="w-full">
+                    Kirim Ulang Email Aktivasi
+                  </Button>
+                </form>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">
+                  Setelah mengaktifkan akun melalui email, silakan coba login Google SSO kembali.
+                </p>
+              </div>
+            </Show>
+
             <button
               onClick={() => navigate('/login', { replace: true })}
               class="mt-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors"

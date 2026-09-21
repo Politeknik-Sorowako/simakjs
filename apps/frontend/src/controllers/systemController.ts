@@ -65,6 +65,10 @@ export const systemController = {
     return fetchApi<{ enabled: boolean }>('/system/registration-status');
   },
 
+  async getLoginTurnstileStatus(): Promise<{ enabled: boolean }> {
+    return fetchApi<{ enabled: boolean }>('/system/login-turnstile-status');
+  },
+
   async getParameters(): Promise<SystemParameter[]> {
     const res = await unwrap<{ data: SystemParameter[] }>(eden.system.parameters.get() as unknown as SystemParamsEden);
     return res.data || [];
