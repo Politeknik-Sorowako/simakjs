@@ -17,6 +17,7 @@ export const registerSchema = {
     role: t.Optional(
       t.Union([t.Literal('dosen'), t.Literal('mahasiswa'), t.Literal('guest')], { default: 'mahasiswa' }),
     ),
+    turnstileToken: t.Optional(t.String({ description: 'Token Cloudflare Turnstile (wajib bila key dikonfigurasi)' })),
   }),
   response: {
     201: t.Object({
@@ -94,6 +95,7 @@ export const forgotPasswordSchema = {
   },
   body: t.Object({
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
+    turnstileToken: t.Optional(t.String({ description: 'Token Cloudflare Turnstile (wajib bila key dikonfigurasi)' })),
   }),
   response: {
     200: t.Object({
@@ -115,6 +117,7 @@ export const loginSchema = {
   body: t.Object({
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
     password: t.String({ description: 'Kata sandi' }),
+    turnstileToken: t.Optional(t.String({ description: 'Token Cloudflare Turnstile (wajib bila fitur login aktif)' })),
   }),
   response: {
     200: t.Union([
@@ -209,6 +212,7 @@ export const resendActivationSchema = {
   },
   body: t.Object({
     email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
+    turnstileToken: t.Optional(t.String({ description: 'Token Cloudflare Turnstile (wajib bila key dikonfigurasi)' })),
   }),
 };
 

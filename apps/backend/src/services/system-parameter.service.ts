@@ -34,6 +34,11 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'boolean',
     description: 'Izinkan pendaftaran akun baru melalui halaman login (register)',
   },
+  LOGIN_TURNSTILE_ENABLED: {
+    value: 'false',
+    type: 'boolean',
+    description: 'Wajibkan verifikasi Cloudflare Turnstile pada halaman login (default nonaktif)',
+  },
   BLOCK_KHS_JIKA_TANGGUNGAN: {
     value: 'true',
     type: 'boolean',
@@ -188,6 +193,13 @@ export class SystemParameterService {
   static async isRegistrationEnabled(): Promise<boolean> {
     const raw = await SystemParameterService.getRaw('REGISTRATION_ENABLED');
     if (raw === null || raw === '') return true;
+    return raw === 'true' || raw === '1';
+  }
+
+  /** Turnstile pada halaman login. Fail-close ke `false` (opt-in via admin). */
+  static async isLoginTurnstileEnabled(): Promise<boolean> {
+    const raw = await SystemParameterService.getRaw('LOGIN_TURNSTILE_ENABLED');
+    if (raw === null || raw === '') return false;
     return raw === 'true' || raw === '1';
   }
 

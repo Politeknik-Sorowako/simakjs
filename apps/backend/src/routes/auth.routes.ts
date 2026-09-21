@@ -20,6 +20,16 @@ import {
 export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(jwtPlugin)
   .use(authMiddleware)
+  .onBeforeHandle(({ request, set }) => {
+    const globalResult = AuthController.checkAuthGlobalRateLimit(request);
+    if (globalResult.limited) {
+      set.status = 429;
+      return {
+        error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.',
+        retryAfter: globalResult.retryAfter,
+      };
+    }
+  })
   .post('/register', AuthController.register, registerSchema)
   .post('/login', AuthController.login, loginSchema)
   .post('/logout', AuthController.logout, {

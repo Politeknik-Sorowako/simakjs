@@ -98,21 +98,16 @@ export class AccountActivationService {
     };
   }
 
-  static async resendActivationToken(email: string): Promise<string> {
+  static async resendActivationToken(email: string): Promise<void> {
     const emailLower = email.toLowerCase().trim();
     const [user] = await db.select().from(users).where(eq(users.email, emailLower)).limit(1);
 
-    if (!user) {
-      throw new Error('Akun dengan email tersebut tidak ditemukan.');
-    }
-
-    if (user.isActive) {
-      throw new Error('Akun Anda sudah aktif. Silakan langsung login.');
+    // Anti-enumerasi: email tak terdaftar / akun sudah aktif tidak membedakan respons.
+    if (!user || user.isActive) {
+      return;
     }
 
     const token = await AccountActivationService.createActivationToken(user.id, user.email);
     await AccountActivationService.sendActivationEmail(user.email, user.nama, token);
-
-    return token;
   }
 }

@@ -11,16 +11,27 @@ import { getFrontendBaseUrl } from '../utils/frontend-url';
 import { escapeHtml } from '../utils/html-escape';
 import { PasswordValidationError, validatePassword } from '../utils/password-policy';
 import { isSuperAdminOrAdmin } from '../utils/role';
+import { verifyTurnstile } from '../utils/turnstile';
 import type { AuthContext } from '../utils/types';
 
 const loginRateLimit = new Map<string, { count: number; resetTime: number }>();
 const forgotRateLimit = new Map<string, { count: number; resetTime: number }>();
+const registerRateLimit = new Map<string, { count: number; resetTime: number }>();
+const resendRateLimit = new Map<string, { count: number; resetTime: number }>();
+const resetRateLimit = new Map<string, { count: number; resetTime: number }>();
+const activateRateLimit = new Map<string, { count: number; resetTime: number }>();
+const authGlobalRateLimit = new Map<string, { count: number; resetTime: number }>();
 
 const TWO_FA_INTERIM_TTL_SECONDS = 10 * 60;
 
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 5;
 const FORGOT_MAX_ATTEMPTS = 3;
+const REGISTER_MAX_ATTEMPTS = 5;
+const RESEND_MAX_ATTEMPTS = 3;
+const RESET_MAX_ATTEMPTS = 5;
+const ACTIVATE_MAX_ATTEMPTS = 10;
+const AUTH_GLOBAL_MAX_ATTEMPTS = 60;
 
 function getClientIp(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -56,7 +67,15 @@ function ensureRateLimitSweep() {
   if (rateLimitSweepTimer) return;
   rateLimitSweepTimer = setInterval(() => {
     const now = Date.now();
-    for (const map of [loginRateLimit, forgotRateLimit]) {
+    for (const map of [
+      loginRateLimit,
+      forgotRateLimit,
+      registerRateLimit,
+      resendRateLimit,
+      resetRateLimit,
+      activateRateLimit,
+      authGlobalRateLimit,
+    ]) {
       for (const [key, record] of map) {
         if (now >= record.resetTime) map.delete(key);
       }
@@ -65,7 +84,28 @@ function ensureRateLimitSweep() {
   if (rateLimitSweepTimer.unref) rateLimitSweepTimer.unref();
 }
 
+/** Rate-limit per endpoint publik auth. Selalu dilewati saat NODE_ENV=test. */
+function checkRateLimit(
+  map: Map<string, { count: number; resetTime: number }>,
+  prefix: string,
+  request: Request,
+  email: string,
+  maxAttempts: number,
+): { limited: boolean; retryAfter?: number } {
+  if (process.env.NODE_ENV === 'test') return { limited: false };
+  ensureRateLimitSweep();
+  return rateLimitCheck(map, rateLimitKey(prefix, request, email), maxAttempts);
+}
+
 export class AuthController {
+  /**
+   * Rate-limit global per-IP untuk seluruh endpoint /auth/* — plafon langit-langit
+   * agar rotasi email/IP tidak membypass limiter per-endpoint.
+   */
+  static checkAuthGlobalRateLimit(request: Request): { limited: boolean; retryAfter?: number } {
+    return checkRateLimit(authGlobalRateLimit, 'authGlobal', request, '', AUTH_GLOBAL_MAX_ATTEMPTS);
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async logout({ set, cookie }: AuthContext): Promise<any> {
     if (cookie?.access_token) {
@@ -114,7 +154,22 @@ export class AuthController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async register({ body, set }: AuthContext): Promise<any> {
+  static async register({ body, set, request }: AuthContext): Promise<any> {
+    const regResult = checkRateLimit(registerRateLimit, 'register', request, body.email, REGISTER_MAX_ATTEMPTS);
+    if (regResult.limited) {
+      set.status = 429;
+      return { error: 'Terlalu banyak percobaan pendaftaran. Silakan coba lagi.', retryAfter: regResult.retryAfter };
+    }
+
+    const turnstile = await verifyTurnstile(
+      (body as { turnstileToken?: string })?.turnstileToken,
+      getClientIp(request),
+    );
+    if (!turnstile.ok) {
+      set.status = 400;
+      return { error: turnstile.error };
+    }
+
     if (!(await SystemParameterService.isRegistrationEnabled())) {
       set.status = 403;
       return { error: 'Registrasi akun baru sedang dinonaktifkan oleh admin.' };
@@ -143,16 +198,22 @@ export class AuthController {
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async login({ body, jwt, set, cookie, request }: AuthContext & { jwt: any }): Promise<any> {
-    if (process.env.NODE_ENV !== 'test') {
-      ensureRateLimitSweep();
-      const loginResult = rateLimitCheck(
-        loginRateLimit,
-        rateLimitKey('login', request, body.email),
-        LOGIN_MAX_ATTEMPTS,
+    const loginResult = checkRateLimit(loginRateLimit, 'login', request, body.email, LOGIN_MAX_ATTEMPTS);
+    if (loginResult.limited) {
+      set.status = 429;
+      return { error: 'Terlalu banyak percobaan login. Silakan coba lagi.', retryAfter: loginResult.retryAfter };
+    }
+
+    // Turnstile di login bersifat opsional via konfigurasi admin.
+    const loginTurnstile = await SystemParameterService.isLoginTurnstileEnabled();
+    if (loginTurnstile) {
+      const turnstile = await verifyTurnstile(
+        (body as { turnstileToken?: string })?.turnstileToken,
+        getClientIp(request),
       );
-      if (loginResult.limited) {
-        set.status = 429;
-        return { error: 'Terlalu banyak percobaan login. Silakan coba lagi.', retryAfter: loginResult.retryAfter };
+      if (!turnstile.ok) {
+        set.status = 400;
+        return { error: turnstile.error };
       }
     }
 
@@ -323,12 +384,18 @@ export class AuthController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async activateAccount({ body, set }: AuthContext): Promise<any> {
+  static async activateAccount({ body, set, request }: AuthContext): Promise<any> {
     try {
       const token = (body as { token?: string })?.token;
       if (!token) {
         set.status = 400;
         return { error: 'Token aktivasi wajib diisi.' };
+      }
+
+      const actResult = checkRateLimit(activateRateLimit, 'activate', request, '', ACTIVATE_MAX_ATTEMPTS);
+      if (actResult.limited) {
+        set.status = 429;
+        return { error: 'Terlalu banyak permintaan aktivasi. Silakan coba lagi.', retryAfter: actResult.retryAfter };
       }
 
       const result = await AccountActivationService.verifyActivationToken(token);
@@ -341,7 +408,7 @@ export class AuthController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async resendActivation({ body, set }: AuthContext): Promise<any> {
+  static async resendActivation({ body, set, request }: AuthContext): Promise<any> {
     try {
       const email = (body as { email?: string })?.email;
       if (!email) {
@@ -349,9 +416,25 @@ export class AuthController {
         return { error: 'Email wajib diisi.' };
       }
 
+      const resendResult = checkRateLimit(resendRateLimit, 'resend', request, email, RESEND_MAX_ATTEMPTS);
+      if (resendResult.limited) {
+        set.status = 429;
+        return { error: 'Terlalu banyak permintaan. Silakan coba lagi.', retryAfter: resendResult.retryAfter };
+      }
+
+      const turnstile = await verifyTurnstile(
+        (body as { turnstileToken?: string })?.turnstileToken,
+        getClientIp(request),
+      );
+      if (!turnstile.ok) {
+        set.status = 400;
+        return { error: turnstile.error };
+      }
+
       await AccountActivationService.resendActivationToken(email);
+      // Respons generik menutup oracle enumerasi akun (pola forgot-password).
       set.status = 200;
-      return { message: 'Tautan aktivasi baru telah dikirimkan ke email Anda.' };
+      return { message: 'Jika email terdaftar dan belum aktif, tautan aktivasi telah dikirim.' };
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal mengirim ulang email aktivasi.' };
@@ -583,14 +666,22 @@ export class AuthController {
         return { error: 'Email wajib diisi' };
       }
 
-      ensureRateLimitSweep();
-      const forgotResult = rateLimitCheck(forgotRateLimit, rateLimitKey('forgot', request, email), FORGOT_MAX_ATTEMPTS);
+      const forgotResult = checkRateLimit(forgotRateLimit, 'forgot', request, email, FORGOT_MAX_ATTEMPTS);
       if (forgotResult.limited) {
         set.status = 429;
         return {
           error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.',
           retryAfter: forgotResult.retryAfter,
         };
+      }
+
+      const turnstile = await verifyTurnstile(
+        (body as { turnstileToken?: string })?.turnstileToken,
+        getClientIp(request),
+      );
+      if (!turnstile.ok) {
+        set.status = 400;
+        return { error: turnstile.error };
       }
 
       const emailLower = email.toLowerCase().trim();
@@ -640,7 +731,7 @@ export class AuthController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async resetPassword({ body, set }: AuthContext): Promise<any> {
+  static async resetPassword({ body, set, request }: AuthContext): Promise<any> {
     try {
       const token = (body as { token?: string; password?: string })?.token;
       const password = (body as { token?: string; password?: string })?.password;
@@ -648,6 +739,12 @@ export class AuthController {
       if (!token || !password) {
         set.status = 400;
         return { error: 'Token dan password baru wajib diisi' };
+      }
+
+      const resetResult = checkRateLimit(resetRateLimit, 'reset', request, '', RESET_MAX_ATTEMPTS);
+      if (resetResult.limited) {
+        set.status = 429;
+        return { error: 'Terlalu banyak permintaan. Silakan coba lagi.', retryAfter: resetResult.retryAfter };
       }
 
       const passwordError = validatePassword(password);
@@ -713,12 +810,18 @@ export class AuthController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async validateResetToken({ body, set }: AuthContext): Promise<any> {
+  static async validateResetToken({ body, set, request }: AuthContext): Promise<any> {
     try {
       const token = (body as { token?: string })?.token;
       if (!token) {
         set.status = 400;
         return { error: 'Token wajib diisi' };
+      }
+
+      const validateResult = checkRateLimit(resetRateLimit, 'reset', request, '', RESET_MAX_ATTEMPTS);
+      if (validateResult.limited) {
+        set.status = 429;
+        return { error: 'Terlalu banyak permintaan. Silakan coba lagi.', retryAfter: validateResult.retryAfter };
       }
 
       const resetRecord = await AuthService.getPasswordReset(token);
