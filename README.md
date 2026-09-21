@@ -93,6 +93,7 @@ simakjs/
 - **@elysiajs/swagger**: Dokumentasi API (Swagger UI).
 - **@elysiajs/jwt & @elysiajs/cookie**: Autentikasi JWT via HttpOnly Cookie.
 - **@elysiajs/cors**: Middleware CORS.
+- **Resend**: Pengiriman email transaksional (aktivasi akun, reset password) dengan sender `EMAIL_FROM` (default `SIMAK <postman@politekniksorowako.ac.id>`).
 
 **Frontend (`apps/frontend`):**
 - **Solid.js**: Framework UI deklaratif reaktif tanpa Virtual DOM.
@@ -174,6 +175,8 @@ docker compose up -d
 ```
 - Frontend: `http://localhost:8080`
 - Backend: `http://localhost:3000/swagger`
+
+> **Email (Resend):** set `RESEND_API_KEY` dan `EMAIL_FROM` (mis. `SIMAK <postman@politekniksorowako.ac.id>`) di environment. Domain `EMAIL_FROM` harus terverifikasi di dashboard Resend agar pengiriman tidak ditolak.
 
 ### Migrasi Database
 ```bash
@@ -429,6 +432,8 @@ docker compose up -d
 ```
 - Frontend: `http://localhost:8080`
 - Backend: `http://localhost:3000/swagger`
+
+> **Email (Resend):** set `RESEND_API_KEY` dan `EMAIL_FROM` (mis. `SIMAK <postman@politekniksorowako.ac.id>`) di environment. Domain `EMAIL_FROM` harus terverifikasi di dashboard Resend agar pengiriman tidak ditolak.
 
 ### Migrasi Database
 ```bash
