@@ -35,6 +35,10 @@ Daftar item keamanan yang teridentifikasi tapi belum diimplementasikan. Dikelomp
 - [x] **Race sliding refresh**: JWT stateless — tidak ada rotasi/invalidasi token lama server-side; dua token hasil refresh independen dan keduanya valid penuh sampai `exp` masing-masing. Tidak ada shared mutable state yang diperebutkan, sehingga mutex per-user tidak relevan. Tidak ada degradasi masa berlaku.
 - [x] **Idle timer drift**: Pasca-PR #416, `sessionExp` frontend disinkronkan via event `simak:token-refresh` tiap respons membawa `X-Refresh-Token`, lalu timer dijadwalkan ulang. Sisa skenario (slide tepat antara respons terakhir & fire timer) berakibat fail-closed ke logout beberapa detik lebih awal — aman, tanpa kebocoran sesi.
 
+## Selesai (PR #450 — feat/email-from-postman)
+
+- [x] Sender email Resend tidak lagi memakai sandbox `onboarding@resend.dev` — kini `EMAIL_FROM` (default `SIMAK <postman@politekniksorowako.ac.id>`) pada aktivasi akun & reset password, dengan helper terpusat `getEmailFrom()` (`utils/email.ts`). Domain kampus terverifikasi di Resend sehingga SPF/DKIM proper (anti-spoofing & deliverability lebih baik).
+
 ## Selesai (PR #416 — feat/cookie-only-auth)
 
 - [x] Migrasi cookie-only frontend — hapus injeksi header `Authorization` & baca/tulis JWT di `localStorage` (10 titik).

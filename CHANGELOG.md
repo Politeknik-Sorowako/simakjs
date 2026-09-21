@@ -15,6 +15,7 @@ Nilai versi dibaca otomatis dari `package.json`.
 ### Changed
 - **Access Control**: dosen/instruktur hanya dapat mengelola RPS, BAP, nilai/komponen, dan presensi untuk kelas yang mereka ampu (`dosen_pengajar_kelas`). Admin/super_admin/prodi tetap akses penuh.
 - Laporan kompensasi (`getLaporanKompensasi` / `getLaporanKompensasiStats`) dibatasi kembali ke admin & dosen karena agregatnya mencakup sumber global (apel/manual) yang tidak bisa di-scope per kelas.
+- **Email Sender (Resend)**: pengirim email aktivasi & reset password kini memakai `SIMAK <postman@politekniksorowako.ac.id>` (via env `EMAIL_FROM`, default di helper `getEmailFrom()` di `utils/email.ts`), menggantikan sender sandbox `onboarding@resend.dev`.
 
 ### Fixed
 - Error "resource enroll rombel" (*info.error* bukan fungsi) pada halaman enroll rombel.

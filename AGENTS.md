@@ -61,6 +61,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 - **Services & DB**: Always static methods. Use Drizzle ORM with explicit `where` clauses (never fetch unbounded tables). Throw standard `Error` instances for business logic failures.
 - **Data & File Operations**: Process bulk imports/CSV row-by-row with individual error handling (do not wrap entire imports in a single DB transaction). Use character-by-character CSV parsing to respect quoted newlines. Use native Node APIs (`node:fs/promises`) instead of shell commands.
 - **Native Bun & Elysia First**: Prefer `Bun.password` for password hashing over external libraries (e.g. `bcrypt`). Use Elysia `t.*` schema validators for all input validation instead of external validators (e.g. zod, joi). Minimize external npm dependencies when Bun/Elysia provide built-in equivalents.
+- **Email Sending (Resend)**: NEVER hardcode the sender `from` in email calls. Always use `getEmailFrom()` from `apps/backend/src/utils/email.ts`, which resolves `EMAIL_FROM` env (default `SIMAK <postman@politekniksorowako.ac.id>`). Set `EMAIL_FROM` explicitly in every deployment env (staging/prod); the sender domain must be verified in the Resend dashboard.
 
 ---
 

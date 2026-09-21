@@ -37,6 +37,7 @@ Sistem ini mencakup siklus akademik end-to-end:
 | **Styling** | **TailwindCSS v3.4.x** + **Vanilla CSS** | System styling berbasis utility class dan custom design tokens (Apple-inspired). |
 | **Code Formatting & Linting** | **Biome v2.5.2** | Linting & formatting terpadu cepat menggantikan ESLint & Prettier. |
 | **Testing** | **Bun Test** (Backend), **Playwright v1.61.x** (Frontend E2E) | Unit/integration testing backend & E2E testing frontend. |
+| **Email** | **Resend** (`resend` v6.16.0) | Pengiriman email transaksional (aktivasi akun, reset password) dengan sender kampus terverifikasi. |
 | **Export & Visualisasi** | **Chart.js**, **jsPDF + AutoTable**, **XLSX**, **QRCode** | Visualisasi grafik, ekspor PDF/Excel, dan pembuatan QR Code. |
 
 ---
@@ -58,7 +59,7 @@ simakjs/
 │   │   │   ├── middlewares/         # Auth & context middlewares
 │   │   │   ├── plugins/             # Plugin custom (Audit Log otomatis, JWT)
 │   │   │   ├── schemas/             # TypeBox schema validation
-│   │   │   ├── utils/               # Timezone, DB connection, role utils, dosen-scope, grade-calc
+│   │   │   ├── utils/               # Timezone, DB connection, role utils, dosen-scope, grade-calc, email helper
 │   │   │   ├── scripts/             # Script DB migration, seed, backup, & safe-migrate
 │   │   │   └── __tests__/           # Test suite backend
 │   │   ├── package.json
@@ -196,6 +197,10 @@ Seluruh entitas database dikelola melalui Drizzle ORM pada file [schema.ts](file
 ### H. Penanganan Tanggal (Eden Date Handling)
 - **Kolom `date()` (Calendar Date, misal `tanggal`, `tanggalLahir`)**: Menggunakan Drizzle `date('col', { mode: 'string' })` dan schema Eden `t.String()`. String di-pass murni dalam format `'YYYY-MM-DD'` tanpa konversi timezone atau `new Date().toISOString()` untuk mencegah bugs selisih hari.
 - **Kolom `timestamp()` (misal `createdAt`, `updatedAt`)**: Menggunakan schema Eden `t.Date()`.
+
+### I. Pengiriman Email (Resend) & Sender `EMAIL_FROM`
+- Seluruh email transaksional (aktivasi akun, reset password) dikirim via **Resend** (`resend` v6.16.0) dengan sender terpusat `getEmailFrom()` di `apps/backend/src/utils/email.ts`.
+- Sender default `SIMAK <postman@politekniksorowako.ac.id>` (domain kampus terverifikasi di dashboard Resend); dapat di-override via env `EMAIL_FROM`. Wajib diset eksplisit di setiap env deploy (staging/prod). DILARANG hardcode `from` pada pemanggilan email.
 
 ---
 
