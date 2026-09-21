@@ -1,5 +1,15 @@
 import { useBeforeLeave } from '@solidjs/router';
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+  Suspense,
+} from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { IconActionButton } from '../components/ui/IconActionButton';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
@@ -83,6 +93,18 @@ export default function ApelKelola() {
   // Modal Kelola Anggota State
   const [showAnggotaModal, setShowAnggotaModal] = createSignal(false);
   const [mhsSearch, setMhsSearch] = createSignal('');
+  const [debouncedMhsSearch, setDebouncedMhsSearch] = createSignal('');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const handleSearchInput = (val: string) => {
+    setMhsSearch(val);
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      setDebouncedMhsSearch(val);
+    }, 300);
+  };
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
   const [selectedMhsToAdd, setSelectedMhsToAdd] = createSignal<number[]>([]);
 
   // Modal Catatan / Alasan Presensi State
@@ -149,7 +171,7 @@ export default function ApelKelola() {
 
   // Resource Daftar Mahasiswa Lintas Prodi (untuk Modal Kelola Anggota)
   const [mhsList] = createResource(
-    () => ({ search: mhsSearch(), open: showAnggotaModal() }),
+    () => ({ search: debouncedMhsSearch(), open: showAnggotaModal() }),
     async ({ search, open }) => {
       if (!open) return [];
       const res = await mahasiswaController.getAll(search, 1, 50);
@@ -1282,48 +1304,55 @@ export default function ApelKelola() {
                     placeholder="Cari berdasarkan NIM atau Nama Mahasiswa..."
                     class="w-full border rounded-lg px-2.5 py-1.5 text-caption dark:bg-gray-700 dark:border-gray-600"
                     value={mhsSearch()}
-                    onInput={(e) => setMhsSearch(e.currentTarget.value)}
+                    onInput={(e) => handleSearchInput(e.currentTarget.value)}
                   />
                   <div class="flex-1 overflow-y-auto space-y-1 pr-1">
-                    <For each={mhsList()}>
-                      {(mhs: Mahasiswa) => {
-                        const isAlreadyMember = () => kelompokDetail()?.anggota?.some((a) => a.mahasiswaId === mhs.id);
-                        const isSelected = () => selectedMhsToAdd().includes(mhs.id);
-                        return (
-                          <div
-                            class={`flex items-center justify-between p-2 rounded text-caption border ${
-                              isAlreadyMember()
-                                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-transparent cursor-not-allowed'
-                                : isSelected()
-                                  ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-400'
-                                  : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-300'
-                            }`}
-                            onClick={() => !isAlreadyMember() && toggleMhsSelection(mhs.id)}
-                          >
-                            <div>
-                              <div class="font-medium">{mhs.nama}</div>
-                              <div class="text-gray-500 dark:text-gray-400 font-mono text-fine">{mhs.nim}</div>
-                            </div>
-                            <Show
-                              when={!isAlreadyMember()}
-                              fallback={<span class="text-fine text-gray-400 italic">Sudah Ada</span>}
+                    <Suspense
+                      fallback={
+                        <div class="text-center text-caption text-gray-500 py-6 animate-pulse">Memuat mahasiswa...</div>
+                      }
+                    >
+                      <For each={mhsList()}>
+                        {(mhs: Mahasiswa) => {
+                          const isAlreadyMember = () =>
+                            kelompokDetail()?.anggota?.some((a) => a.mahasiswaId === mhs.id);
+                          const isSelected = () => selectedMhsToAdd().includes(mhs.id);
+                          return (
+                            <div
+                              class={`flex items-center justify-between p-2 rounded text-caption border ${
+                                isAlreadyMember()
+                                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-transparent cursor-not-allowed'
+                                  : isSelected()
+                                    ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-400'
+                                    : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 cursor-pointer hover:border-blue-300'
+                              }`}
+                              onClick={() => !isAlreadyMember() && toggleMhsSelection(mhs.id)}
                             >
-                              <input
-                                type="checkbox"
-                                checked={isSelected()}
-                                readOnly
-                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
-                              />
-                            </Show>
-                          </div>
-                        );
-                      }}
-                    </For>
-                    <Show when={mhsList() && mhsList()!.length === 0}>
-                      <div class="text-center text-caption text-gray-500 dark:text-gray-400 py-6">
-                        Mahasiswa tidak ditemukan
-                      </div>
-                    </Show>
+                              <div>
+                                <div class="font-medium">{mhs.nama}</div>
+                                <div class="text-gray-500 dark:text-gray-400 font-mono text-fine">{mhs.nim}</div>
+                              </div>
+                              <Show
+                                when={!isAlreadyMember()}
+                                fallback={<span class="text-fine text-gray-400 italic">Sudah Ada</span>}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected()}
+                                  readOnly
+                                  class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 pointer-events-none"
+                                />
+                              </Show>
+                            </div>
+                          );
+                        }}
+                      </For>
+                      <Show when={mhsList() && mhsList()!.length === 0}>
+                        <div class="text-center text-caption text-gray-500 dark:text-gray-400 py-6">
+                          Mahasiswa tidak ditemukan
+                        </div>
+                      </Show>
+                    </Suspense>
                   </div>
 
                   <button

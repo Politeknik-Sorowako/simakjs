@@ -1,6 +1,7 @@
-import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { apelController, MonitorResponse } from '../controllers/apelController';
@@ -108,10 +109,21 @@ export default function ApelMonitor() {
               Auto-refresh (30 detik)
             </label>
             <button
-              class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700"
+              class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 inline-flex items-center gap-1.5"
               onClick={() => refetch()}
+              disabled={data.loading}
             >
-              Refresh
+              <Show when={data.loading}>
+                <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </Show>
+              <span>{data.loading ? 'Memuat...' : 'Refresh'}</span>
             </button>
             <button
               class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700"
@@ -122,157 +134,163 @@ export default function ApelMonitor() {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <Show when={data()}>
-          <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div class="text-sm text-gray-500">Total Kelompok Aktif</div>
-              <div class="text-3xl font-bold">{data()?.summary.totalKelompok || data()?.detail.length || 0}</div>
-            </div>
-            <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow p-4">
-              <div class="text-sm text-blue-600 dark:text-blue-400">Sesi Berlangsung</div>
-              <div class="text-3xl font-bold text-blue-700 dark:text-blue-300">
-                {data()?.summary.totalSesiAktif || 0}
+        {/* Summary Cards and Table wrapped in local Suspense */}
+        <Suspense fallback={<TableLoadingFallback />}>
+          <Show when={data()}>
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <div class="text-sm text-gray-500">Total Kelompok Aktif</div>
+                <div class="text-3xl font-bold">{data()?.summary.totalKelompok || data()?.detail.length || 0}</div>
+              </div>
+              <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow p-4">
+                <div class="text-sm text-blue-600 dark:text-blue-400">Sesi Berlangsung</div>
+                <div class="text-3xl font-bold text-blue-700 dark:text-blue-300">
+                  {data()?.summary.totalSesiAktif || 0}
+                </div>
+              </div>
+              <div class="bg-green-50 dark:bg-green-900/20 rounded-lg shadow p-4">
+                <div class="text-sm text-green-600 dark:text-green-400">Hadir</div>
+                <div class="text-3xl font-bold text-green-700 dark:text-green-300">
+                  {data()?.summary.totalHadir || 0}
+                </div>
+              </div>
+              <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow p-4">
+                <div class="text-sm text-yellow-600 dark:text-yellow-400">Terlambat</div>
+                <div class="text-3xl font-bold text-yellow-700 dark:text-yellow-300">
+                  {data()?.summary.totalTerlambat || 0}
+                </div>
+              </div>
+              <div class="bg-gray-50 dark:bg-gray-700 rounded-lg shadow p-4">
+                <div class="text-sm text-gray-500">Unknown</div>
+                <div class="text-3xl font-bold">{data()?.summary.totalUnknown || 0}</div>
               </div>
             </div>
-            <div class="bg-green-50 dark:bg-green-900/20 rounded-lg shadow p-4">
-              <div class="text-sm text-green-600 dark:text-green-400">Hadir</div>
-              <div class="text-3xl font-bold text-green-700 dark:text-green-300">{data()?.summary.totalHadir || 0}</div>
-            </div>
-            <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow p-4">
-              <div class="text-sm text-yellow-600 dark:text-yellow-400">Terlambat</div>
-              <div class="text-3xl font-bold text-yellow-700 dark:text-yellow-300">
-                {data()?.summary.totalTerlambat || 0}
-              </div>
-            </div>
-            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg shadow p-4">
-              <div class="text-sm text-gray-500">Unknown</div>
-              <div class="text-3xl font-bold">{data()?.summary.totalUnknown || 0}</div>
-            </div>
-          </div>
 
-          {/* Detail Table */}
-          <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <div class="p-4 border-b dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h3 class="text-sm font-bold">Daftar Pemantauan Sesi Apel</h3>
-              <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-                <input
-                  type="text"
-                  placeholder="Cari kelompok / dosen..."
-                  class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600 w-full sm:w-56"
-                  value={searchTerm()}
-                  onInput={(e) => setSearchTerm(e.currentTarget.value)}
-                />
-                <select
-                  class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-                  value={statusFilter()}
-                  onChange={(e) => setStatusFilter(e.currentTarget.value)}
-                >
-                  <option value="all">Semua Status</option>
-                  <option value="dibuka">Sedang Berlangsung</option>
-                  <option value="belum_buka">Belum Dibuka</option>
-                  <option value="ditutup">Selesai</option>
-                </select>
+            {/* Detail Table */}
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+              <div class="p-4 border-b dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <h3 class="text-sm font-bold">Daftar Pemantauan Sesi Apel</h3>
+                <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <input
+                    type="text"
+                    placeholder="Cari kelompok / dosen..."
+                    class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600 w-full sm:w-56"
+                    value={searchTerm()}
+                    onInput={(e) => setSearchTerm(e.currentTarget.value)}
+                  />
+                  <select
+                    class="px-3 py-1.5 text-xs border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                    value={statusFilter()}
+                    onChange={(e) => setStatusFilter(e.currentTarget.value)}
+                  >
+                    <option value="all">Semua Status</option>
+                    <option value="dibuka">Sedang Berlangsung</option>
+                    <option value="belum_buka">Belum Dibuka</option>
+                    <option value="ditutup">Selesai</option>
+                  </select>
+                </div>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase">Kelompok</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase">Tanggal</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Shift</th>
+                      <th class="px-4 py-3 text-left text-xs font-medium uppercase">Dosen PJ</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status Sesi</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Jam Mulai</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Total</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Hadir</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Terlambat</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Unknown</th>
+                      <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y dark:divide-gray-700">
+                    <For each={filteredDetail()}>
+                      {(item) => {
+                        const totalHadir = item.sesiHariIni.reduce((s, x) => s + x.hadir, 0);
+                        const totalTerlambat = item.sesiHariIni.reduce((s, x) => s + x.terlambat, 0);
+                        const totalUnknown = item.sesiHariIni.reduce((s, x) => s + x.unknown, 0);
+                        return (
+                          <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
+                            <td class="px-4 py-3 text-sm font-medium">{item.kelompokNama}</td>
+                            <td class="px-4 py-3 text-sm">{item.tanggal}</td>
+                            <td class="px-4 py-3 text-center">
+                              <div class="flex flex-wrap items-center justify-center gap-1">
+                                {item.sesiHariIni.length === 0 ? (
+                                  <span class="text-xs text-gray-400 capitalize">- ({item.shiftDefault})</span>
+                                ) : (
+                                  item.sesiHariIni.map((sesi) => (
+                                    <span
+                                      class={`px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${
+                                        sesi.statusSesi === 'ditutup'
+                                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                          : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                                      }`}
+                                    >
+                                      {sesi.shift}
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                            </td>
+                            <td class="px-4 py-3 text-sm">
+                              <span title={item.dosenNama} class="inline-block max-w-[200px] truncate align-bottom">
+                                {item.dosenNama}
+                              </span>
+                            </td>
+                            <td class="px-4 py-3 text-center text-xs">
+                              <Show
+                                when={item.statusKelompok === 'dibuka'}
+                                fallback={
+                                  <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-semibold">
+                                    Belum Dibuka
+                                  </span>
+                                }
+                              >
+                                <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-semibold">
+                                  Dibuka
+                                </span>
+                              </Show>
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm font-mono">
+                              {item.sesiHariIni.length > 0 ? item.sesiHariIni.map((s) => s.jamMulai).join(', ') : '-'}
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm font-bold">{item.totalMahasiswa}</td>
+                            <td class="px-4 py-3 text-center text-sm text-green-600 font-semibold">{totalHadir}</td>
+                            <td class="px-4 py-3 text-center text-sm text-yellow-600 font-semibold">
+                              {totalTerlambat}
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm text-gray-500 font-semibold">{totalUnknown}</td>
+                            <td class="px-4 py-3 text-center">
+                              <Show
+                                when={item.sesiHariIni.length > 0}
+                                fallback={<span class="text-xs text-gray-400 italic">Belum Sesi</span>}
+                              >
+                                <div class="flex flex-wrap items-center justify-center gap-1">
+                                  {item.sesiHariIni.map((sesi) => (
+                                    <button
+                                      class="bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-100 px-2 py-1 rounded text-xs font-semibold capitalize"
+                                      onClick={() => setSelectedDetailSesiId(sesi.id)}
+                                    >
+                                      Detail {sesi.shift}
+                                    </button>
+                                  ))}
+                                </div>
+                              </Show>
+                            </td>
+                          </tr>
+                        );
+                      }}
+                    </For>
+                  </tbody>
+                </table>
               </div>
             </div>
-            <div class="overflow-x-auto">
-              <table class="w-full">
-                <thead class="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium uppercase">Kelompok</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium uppercase">Tanggal</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Shift</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium uppercase">Dosen PJ</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Status Sesi</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Jam Mulai</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Total</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Hadir</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Terlambat</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Unknown</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium uppercase">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y dark:divide-gray-700">
-                  <For each={filteredDetail()}>
-                    {(item) => {
-                      const totalHadir = item.sesiHariIni.reduce((s, x) => s + x.hadir, 0);
-                      const totalTerlambat = item.sesiHariIni.reduce((s, x) => s + x.terlambat, 0);
-                      const totalUnknown = item.sesiHariIni.reduce((s, x) => s + x.unknown, 0);
-                      return (
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-750">
-                          <td class="px-4 py-3 text-sm font-medium">{item.kelompokNama}</td>
-                          <td class="px-4 py-3 text-sm">{item.tanggal}</td>
-                          <td class="px-4 py-3 text-center">
-                            <div class="flex flex-wrap items-center justify-center gap-1">
-                              {item.sesiHariIni.length === 0 ? (
-                                <span class="text-xs text-gray-400 capitalize">- ({item.shiftDefault})</span>
-                              ) : (
-                                item.sesiHariIni.map((sesi) => (
-                                  <span
-                                    class={`px-2 py-0.5 rounded text-[10px] font-semibold capitalize ${
-                                      sesi.statusSesi === 'ditutup'
-                                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                        : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                    }`}
-                                  >
-                                    {sesi.shift}
-                                  </span>
-                                ))
-                              )}
-                            </div>
-                          </td>
-                          <td class="px-4 py-3 text-sm">
-                            <span title={item.dosenNama} class="inline-block max-w-[200px] truncate align-bottom">
-                              {item.dosenNama}
-                            </span>
-                          </td>
-                          <td class="px-4 py-3 text-center text-xs">
-                            <Show
-                              when={item.statusKelompok === 'dibuka'}
-                              fallback={
-                                <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-semibold">
-                                  Belum Dibuka
-                                </span>
-                              }
-                            >
-                              <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 font-semibold">
-                                Dibuka
-                              </span>
-                            </Show>
-                          </td>
-                          <td class="px-4 py-3 text-center text-sm font-mono">
-                            {item.sesiHariIni.length > 0 ? item.sesiHariIni.map((s) => s.jamMulai).join(', ') : '-'}
-                          </td>
-                          <td class="px-4 py-3 text-center text-sm font-bold">{item.totalMahasiswa}</td>
-                          <td class="px-4 py-3 text-center text-sm text-green-600 font-semibold">{totalHadir}</td>
-                          <td class="px-4 py-3 text-center text-sm text-yellow-600 font-semibold">{totalTerlambat}</td>
-                          <td class="px-4 py-3 text-center text-sm text-gray-500 font-semibold">{totalUnknown}</td>
-                          <td class="px-4 py-3 text-center">
-                            <Show
-                              when={item.sesiHariIni.length > 0}
-                              fallback={<span class="text-xs text-gray-400 italic">Belum Sesi</span>}
-                            >
-                              <div class="flex flex-wrap items-center justify-center gap-1">
-                                {item.sesiHariIni.map((sesi) => (
-                                  <button
-                                    class="bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 hover:bg-blue-100 px-2 py-1 rounded text-xs font-semibold capitalize"
-                                    onClick={() => setSelectedDetailSesiId(sesi.id)}
-                                  >
-                                    Detail {sesi.shift}
-                                  </button>
-                                ))}
-                              </div>
-                            </Show>
-                          </td>
-                        </tr>
-                      );
-                    }}
-                  </For>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </Show>
+          </Show>
+        </Suspense>
 
         {/* Modal Detail Presensi Sesi */}
         <Show when={selectedDetailSesiId()}>
