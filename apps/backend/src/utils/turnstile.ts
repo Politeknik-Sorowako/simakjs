@@ -9,10 +9,9 @@ export interface TurnstileVerifyResult {
  * Verifikasi token Cloudflare Turnstile dari frontend.
  *
  * - Test: selalu lolos (tidak ada fetch eksternal).
- * - Token kosong → gagal (fail-closed) selama secret dikonfigurasi; di
- *   production, secret kosong pun gagal eksplisit (jangan bypass diam-diam).
- * - Di luar production tanpa secret, verifikasi dilewati agar development/
- *   staging tidak terblokir sebelum key diisi.
+ * - Tanpa secret: production fail-closed (tolak eksplisit), selain production
+ *   dilewati agar dev/staging tidak terblokir sebelum key diisi.
+ * - Secret ada: token wajib ada dan valid (fail-closed saat captcha belum dijawab).
  */
 export async function verifyTurnstile(token: string | undefined, ip?: string): Promise<TurnstileVerifyResult> {
   if (process.env.NODE_ENV === 'test') return { ok: true };
@@ -20,15 +19,18 @@ export async function verifyTurnstile(token: string | undefined, ip?: string): P
   const secret = process.env.TURNSTILE_SECRET_KEY;
   const tokenTrimmed = token?.trim() ?? '';
 
-  if (!tokenTrimmed) {
-    return { ok: false, error: 'Verifikasi keamanan belum diselesaikan. Silakan selesaikan captcha lalu coba lagi.' };
-  }
-
+  // Tanpa secret, verifikasi hanya wajib di production (fail-closed). Di luar
+  // production, dilewati agar development/staging tidak terkunci sebelum key diisi.
   if (!secret) {
     if (process.env.NODE_ENV === 'production') {
       return { ok: false, error: 'Layanan verifikasi keamanan (Turnstile) belum dikonfigurasi pada server.' };
     }
     return { ok: true };
+  }
+
+  // Secret ada → token wajib. Kontrol frontend seharusnya sudah menyelesaikan captcha.
+  if (!tokenTrimmed) {
+    return { ok: false, error: 'Verifikasi keamanan belum diselesaikan. Silakan selesaikan captcha lalu coba lagi.' };
   }
 
   try {
