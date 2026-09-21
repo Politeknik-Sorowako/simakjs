@@ -1,5 +1,12 @@
 import { User } from '../contexts/AuthContext';
-import { eden, unwrap } from '../utils/eden';
+import {
+  AccountInactiveError,
+  eden,
+  extractErrorText,
+  getEdenErrorBody,
+  getEdenErrorStatus,
+  unwrap,
+} from '../utils/eden';
 
 export interface AuthResponse {
   token?: string;
@@ -39,7 +46,19 @@ export const authController = {
   },
 
   async googleCallback(code: string): Promise<AuthResponse> {
-    return unwrap<AuthResponse>(eden.auth.google.callback.post({ code }) as unknown as GenericEden<AuthResponse>);
+    const res = (await eden.auth.google.callback.post({ code })) as unknown as {
+      data?: AuthResponse;
+      error?: unknown;
+    };
+    if (res.error) {
+      const status = getEdenErrorStatus(res.error);
+      const body = getEdenErrorBody(res.error);
+      if (status === 403 && body?.needsActivation === true && typeof body.email === 'string') {
+        throw new AccountInactiveError(extractErrorText(res.error), body.email);
+      }
+      throw new Error(extractErrorText(res.error));
+    }
+    return res.data as AuthResponse;
   },
 
   async activateAccount(token: string): Promise<{ message: string; email: string }> {

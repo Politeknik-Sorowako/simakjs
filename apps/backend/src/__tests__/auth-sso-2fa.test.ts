@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { users } from '../models/schema';
+import { accountActivations, users } from '../models/schema';
 import { AccountActivationService } from '../services/account-activation.service';
 import { SsoService } from '../services/sso.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { TwoFactorService } from '../services/two-factor.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
@@ -290,7 +292,12 @@ describe('Autentikasi Lanjutan: SSO, Aktivasi Email & 2FA', () => {
       const user = await SsoService.findOrCreateGoogleUser(profile);
       expect(user).toBeDefined();
       expect(user.email).toBe('dosen.sso@politekniksorowako.ac.id');
-      expect(user.isActive).toBe(true);
+      // Akun baru via SSO nonaktif sampai aktivasi email (kebijakan: tidak auto-aktif).
+      expect(user.isActive).toBe(false);
+
+      // Token aktivasi terbit agar user bisa aktifkan via email.
+      const actRecord = await db.select().from(accountActivations).where(eq(accountActivations.userId, user.id));
+      expect(actRecord.length).toBeGreaterThan(0);
 
       // Verify Google ID linked in DB
       const dbUser = await db.query.users.findFirst({
@@ -298,6 +305,53 @@ describe('Autentikasi Lanjutan: SSO, Aktivasi Email & 2FA', () => {
       });
       expect(dbUser?.googleId).toBe('google-uid-12345');
       expect(dbUser?.authProvider).toBe('google');
+    });
+
+    it('harus mempertahankan akun nonaktif saat email sudah terdaftar via form (link by email)', async () => {
+      // User terdaftar via form (isActive=false) dan belum aktivasi.
+      const regRes = await app.handle(
+        new Request('http://localhost/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'budi.sso@politekniksorowako.ac.id',
+            password: 'Password123',
+            nama: 'Budi SSO',
+            role: 'mahasiswa',
+          }),
+        }),
+      );
+      expect(regRes.status).toBe(201);
+
+      // Login SSO dengan email sama → googleId di-link, status aktif TIDAK diubah.
+      const user = await SsoService.findOrCreateGoogleUser({
+        id: 'google-uid-budi',
+        email: 'budi.sso@politekniksorowako.ac.id',
+        name: 'Budi SSO',
+        hd: 'politekniksorowako.ac.id',
+        email_verified: true,
+      });
+      expect(user.isActive).toBe(false);
+
+      const dbUser = await db.query.users.findFirst({
+        where: (u, { eq }) => eq(u.email, 'budi.sso@politekniksorowako.ac.id'),
+      });
+      expect(dbUser?.isActive).toBe(false);
+      expect(dbUser?.googleId).toBe('google-uid-budi');
+      expect(dbUser?.authProvider).toBe('google');
+    });
+
+    it('harus menolak pembuatan akun baru via SSO saat REGISTRATION_ENABLED=false', async () => {
+      await SystemParameterService.set('REGISTRATION_ENABLED', 'false');
+      await expect(
+        SsoService.findOrCreateGoogleUser({
+          id: 'google-uid-new',
+          email: 'new.sso@politekniksorowako.ac.id',
+          name: 'New SSO',
+          hd: 'politekniksorowako.ac.id',
+          email_verified: true,
+        }),
+      ).rejects.toThrow('Pendaftaran akun baru sedang dinonaktifkan oleh admin.');
     });
 
     it('harus menolak pengguna dari domain di luar @politekniksorowako.ac.id', async () => {

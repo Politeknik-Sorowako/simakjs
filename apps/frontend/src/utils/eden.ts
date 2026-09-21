@@ -47,6 +47,17 @@ export class RateLimitError extends Error {
   }
 }
 
+/** Error terstruktur saat login (mis. SSO Google) menemukan akun yang belum aktif. */
+export class AccountInactiveError extends Error {
+  readonly email: string;
+
+  constructor(message: string, email: string) {
+    super(message);
+    this.name = 'AccountInactiveError';
+    this.email = email;
+  }
+}
+
 function extractNumberValue(record: Record<string, unknown>, keys: string[]): number | null {
   for (const key of keys) {
     const v = record[key];
@@ -60,7 +71,23 @@ function extractNumberValue(record: Record<string, unknown>, keys: string[]): nu
   return null;
 }
 
-function getEdenErrorStatus(raw: unknown): number | undefined {
+/** Ekstrak body response HTTP dari error Eden Treaty untuk inspeksi field terstruktur. */
+export function getEdenErrorBody(raw: unknown): Record<string, unknown> | undefined {
+  if (raw && typeof raw === 'object') {
+    const err = raw as EdenError;
+    for (const container of [err.value, err.data]) {
+      if (container && typeof container === 'object') return container as Record<string, unknown>;
+    }
+    if (err.response && typeof err.response === 'object') {
+      const r = err.response as Record<string, unknown>;
+      const data = r.data ?? r.body;
+      if (data && typeof data === 'object') return data as Record<string, unknown>;
+    }
+  }
+  return undefined;
+}
+
+export function getEdenErrorStatus(raw: unknown): number | undefined {
   if (raw && typeof raw === 'object') {
     const err = raw as EdenError;
     if (typeof err.status === 'number') return err.status;
@@ -96,7 +123,7 @@ function getRetryAfter(raw: unknown): number | null {
   return null;
 }
 
-function extractErrorText(raw: unknown): string {
+export function extractErrorText(raw: unknown): string {
   if (typeof raw === 'string') return raw;
   if (raw instanceof Error) {
     // Eden Treaty Error stores the raw HTTP body in .value, while .message may
