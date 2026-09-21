@@ -254,7 +254,7 @@ export class AuthController {
 
       if (!user.isActive) {
         set.status = 403;
-        return { error: 'Akun Anda belum aktif.' };
+        return { error: 'Akun Anda belum aktif.', email: user.email, needsActivation: true };
       }
 
       if (user.twoFactorEnabled) {

@@ -119,13 +119,13 @@ export class SsoService {
     if (!user) {
       [user] = await db.select().from(users).where(eq(users.email, emailLower)).limit(1);
       if (user) {
-        // Link googleId to existing user
+        // Link googleId ke user existing TANPA mengubah status aktif.
+        // Akun nonaktif (mis. baru register via form) tetap wajib aktivasi email.
         const [updated] = await db
           .update(users)
           .set({
             googleId: profile.id,
             authProvider: 'google',
-            isActive: true, // Google Workspace users are auto-activated
           })
           .where(eq(users.id, user.id))
           .returning();
@@ -135,6 +135,11 @@ export class SsoService {
 
     // 3. Auto-provision if user does not exist at all
     if (!user) {
+      const { SystemParameterService } = await import('./system-parameter.service');
+      if (!(await SystemParameterService.isRegistrationEnabled())) {
+        throw new Error('Pendaftaran akun baru sedang dinonaktifkan oleh admin.');
+      }
+
       const dummyPassword = await AuthService.hashPassword(crypto.randomUUID());
       const defaultRole: UserRole = 'mahasiswa';
 
@@ -145,7 +150,7 @@ export class SsoService {
           password: dummyPassword,
           nama: profile.name || emailLower.split('@')[0],
           role: defaultRole,
-          isActive: true,
+          isActive: false, // wajib aktivasi email sebelum login
           googleId: profile.id,
           authProvider: 'google',
           avatar: profile.picture,
@@ -153,6 +158,15 @@ export class SsoService {
         .returning();
 
       await db.insert(userRoles).values({ userId: newUser.id, role: defaultRole });
+
+      // Kirim email aktivasi; kegagalan kirim tidak menggagalkan pembuatan akun.
+      try {
+        const { AccountActivationService } = await import('./account-activation.service');
+        const activationToken = await AccountActivationService.createActivationToken(newUser.id, newUser.email);
+        await AccountActivationService.sendActivationEmail(newUser.email, newUser.nama, activationToken);
+      } catch (err) {
+        console.error('Failed to trigger SSO activation email:', err);
+      }
       user = newUser;
     }
 
