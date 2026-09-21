@@ -36,6 +36,8 @@ interface ToggleCardProps {
   saving: boolean;
   onToggle: (value: string) => void;
   onSave: () => void;
+  trueLabel?: string;
+  falseLabel?: string;
 }
 
 function ToggleCard(props: ToggleCardProps) {
@@ -57,8 +59,8 @@ function ToggleCard(props: ToggleCardProps) {
             onChange={(e) => props.onToggle(e.currentTarget.value)}
             class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
           >
-            <option value="true">Ya — Blokir</option>
-            <option value="false">Tidak — Izinkan</option>
+            <option value="true">{props.trueLabel || 'Ya — Blokir'}</option>
+            <option value="false">{props.falseLabel || 'Tidak — Izinkan'}</option>
           </select>
           <Button size="sm" loading={props.saving} onClick={props.onSave}>
             Simpan
@@ -132,6 +134,7 @@ export default function KonfigurasiParameter() {
   const khsBlockEnabled = () => boolValue('BLOCK_KHS_JIKA_TANGGUNGAN', 'true');
   const krsBlockEnabled = () => boolValue('BLOCK_KRS_JIKA_TANGGUNGAN', 'false');
   const registrationEnabled = () => boolValue('REGISTRATION_ENABLED', 'true');
+  const loginTurnstileEnabled = () => boolValue('LOGIN_TURNSTILE_ENABLED', 'false');
 
   const saveBoolParam = async (key: string, label: string, enabled: () => boolean) => {
     setSavingKey(key);
@@ -273,6 +276,19 @@ export default function KonfigurasiParameter() {
             saving={savingKey() === 'REGISTRATION_ENABLED'}
             onToggle={(val) => setField('REGISTRATION_ENABLED', val)}
             onSave={() => saveBoolParam('REGISTRATION_ENABLED', 'Pendaftaran Akun Baru', registrationEnabled)}
+          />
+          <ToggleCard
+            title="Verifikasi Turnstile pada Login"
+            parameterKey="LOGIN_TURNSTILE_ENABLED"
+            description="Jika aktif, form login menampilkan captcha Cloudflare Turnstile. Pastikan TURNSTILE_SECRET_KEY (backend) dan VITE_TURNSTILE_SITE_KEY (build frontend) sudah terisi — tanpa secret, login di production ditolak. Efek berlaku ±10 detik setelah disimpan."
+            enabled={loginTurnstileEnabled()}
+            saving={savingKey() === 'LOGIN_TURNSTILE_ENABLED'}
+            onToggle={(val) => setField('LOGIN_TURNSTILE_ENABLED', val)}
+            onSave={() =>
+              saveBoolParam('LOGIN_TURNSTILE_ENABLED', 'Verifikasi Turnstile pada Login', loginTurnstileEnabled)
+            }
+            trueLabel="Ya — Wajibkan"
+            falseLabel="Tidak — Nonaktifkan"
           />
           <ToggleCard
             title="Pemblokiran KHS karena Tunggakan"
