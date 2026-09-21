@@ -7,6 +7,7 @@ import { SsoService } from '../services/sso.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { TwoFactorService } from '../services/two-factor.service';
 import { db } from '../utils/db';
+import { getEmailFrom } from '../utils/email';
 import { getFrontendBaseUrl } from '../utils/frontend-url';
 import { escapeHtml } from '../utils/html-escape';
 import { PasswordValidationError, validatePassword } from '../utils/password-policy';
@@ -695,7 +696,7 @@ export class AuthController {
           try {
             const resend = new Resend(resendApiKey);
             const { error: sendError } = await resend.emails.send({
-              from: 'SIMAK Vokasi <onboarding@resend.dev>',
+              from: getEmailFrom(),
               to: [emailLower],
               subject: 'Reset Kata Sandi - SIMAK Vokasi',
               html: `

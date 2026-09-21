@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { Resend } from 'resend';
 import { accountActivations, users } from '../models/schema';
 import { db } from '../utils/db';
+import { getEmailFrom } from '../utils/email';
 import { getFrontendBaseUrl } from '../utils/frontend-url';
 import { escapeHtml } from '../utils/html-escape';
 
@@ -48,7 +49,7 @@ export class AccountActivationService {
     try {
       const resend = new Resend(resendApiKey);
       const { error: sendError } = await resend.emails.send({
-        from: 'SIMAK Vokasi <onboarding@resend.dev>',
+        from: getEmailFrom(),
         to: [email],
         subject: 'Aktivasi Akun SIMAK Vokasi',
         html: `
