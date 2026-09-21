@@ -48,7 +48,7 @@ export class AccountActivationService {
     try {
       const resend = new Resend(resendApiKey);
       const { error: sendError } = await resend.emails.send({
-        from: 'SIMAK Vokasi <onboarding@resend.dev>',
+        from: process.env.EMAIL_FROM ?? 'SIMAK <postman@politekniksorowako.ac.id>',
         to: [email],
         subject: 'Aktivasi Akun SIMAK Vokasi',
         html: `
