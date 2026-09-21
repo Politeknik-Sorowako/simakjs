@@ -117,9 +117,12 @@ export const authController = {
     );
   },
 
-  async forgotPassword(email: string): Promise<{ message: string }> {
+  async forgotPassword(email: string, turnstileToken?: string): Promise<{ message: string }> {
     return unwrap<{ message: string }>(
-      eden.auth['forgot-password'].post({ email }) as unknown as GenericEden<{ message: string }>,
+      eden.auth['forgot-password'].post({
+        email,
+        ...(turnstileToken ? { turnstileToken } : {}),
+      }) as unknown as GenericEden<{ message: string }>,
     );
   },
 
