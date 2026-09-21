@@ -9,6 +9,11 @@ export const systemRoutes = new Elysia({ prefix: '/system' })
       200: t.Object({ enabled: t.Boolean() }),
     },
   })
+  .get('/login-turnstile-status', SystemController.getLoginTurnstileStatus, {
+    response: {
+      200: t.Object({ enabled: t.Boolean() }),
+    },
+  })
   .get('/version', SystemController.getVersion, {
     response: {
       200: t.Object({

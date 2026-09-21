@@ -23,6 +23,12 @@ export class SystemController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getLoginTurnstileStatus(): Promise<any> {
+    const enabled = await SystemParameterService.isLoginTurnstileEnabled();
+    return { enabled };
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getChangelog(): Promise<any> {
     const sections = ChangelogService.getSections();
     return { sections };

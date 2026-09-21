@@ -2,10 +2,13 @@ import { useNavigate, useSearchParams } from '@solidjs/router';
 import { createEffect, createSignal, Show } from 'solid-js';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { TurnstileWidget } from '../components/ui/TurnstileWidget';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
 import { AccountInactiveError } from '../utils/eden';
+
+const TURNSTILE_SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || '';
 
 export default function GoogleCallback() {
   const [searchParams] = useSearchParams();
@@ -18,6 +21,8 @@ export default function GoogleCallback() {
   const [errorMsg, setErrorMsg] = createSignal('');
   const [inactiveEmail, setInactiveEmail] = createSignal('');
   const [resending, setResending] = createSignal(false);
+  const [turnstileToken, setTurnstileToken] = createSignal('');
+  const [turnstileReset, setTurnstileReset] = createSignal(0);
 
   createEffect(() => {
     const code = searchParams.code;
@@ -78,15 +83,21 @@ export default function GoogleCallback() {
       toast.showToast('Alamat email akun tidak tersedia.', 'error');
       return;
     }
+    if (TURNSTILE_SITE_KEY && !turnstileToken()) {
+      toast.showToast('Selesaikan verifikasi keamanan terlebih dahulu.', 'error');
+      return;
+    }
     setResending(true);
     try {
-      const res = await authController.resendActivation(email);
+      const res = await authController.resendActivation(email, turnstileToken());
       toast.showToast(res.message, 'success');
       setErrorMsg('Tautan aktivasi baru telah dikirimkan ke email Anda.');
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal mengirim email aktivasi.', 'error');
     } finally {
       setResending(false);
+      setTurnstileToken('');
+      setTurnstileReset((c) => c + 1);
     }
   };
 
@@ -127,6 +138,16 @@ export default function GoogleCallback() {
                     onInput={(e) => setInactiveEmail(e.currentTarget.value)}
                     required
                   />
+                  <Show when={TURNSTILE_SITE_KEY}>
+                    <TurnstileWidget
+                      siteKey={TURNSTILE_SITE_KEY}
+                      theme="auto"
+                      onVerify={setTurnstileToken}
+                      onExpire={() => setTurnstileToken('')}
+                      onError={() => setTurnstileToken('')}
+                      resetCounter={turnstileReset()}
+                    />
+                  </Show>
                   <Button type="submit" loading={resending()} class="w-full">
                     Kirim Ulang Email Aktivasi
                   </Button>

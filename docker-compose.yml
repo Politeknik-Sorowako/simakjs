@@ -43,6 +43,7 @@ services:
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
       GOOGLE_ALLOWED_DOMAINS: ${GOOGLE_ALLOWED_DOMAINS:-politekniksorowako.ac.id}
       RESEND_API_KEY: ${RESEND_API_KEY}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
     volumes:
       - ./apps/backend:/app/apps/backend
       - /app/apps/backend/node_modules
@@ -59,6 +60,7 @@ services:
       args:
         - VITE_API_URL=${VITE_API_URL:-/api}
         - VITE_APP_MODE=${VITE_APP_MODE:-production}
+        - VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY:-}
     init: true
     container_name: simak_frontend
     ports:

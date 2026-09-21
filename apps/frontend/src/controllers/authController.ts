@@ -19,8 +19,14 @@ export interface AuthResponse {
 type GenericEden<T> = Promise<{ data?: T; error?: unknown }>;
 
 export const authController = {
-  async login(email: string, password: string): Promise<AuthResponse> {
-    return unwrap<AuthResponse>(eden.auth.login.post({ email, password }) as unknown as GenericEden<AuthResponse>);
+  async login(email: string, password: string, turnstileToken?: string): Promise<AuthResponse> {
+    return unwrap<AuthResponse>(
+      eden.auth.login.post({
+        email,
+        password,
+        ...(turnstileToken ? { turnstileToken } : {}),
+      }) as unknown as GenericEden<AuthResponse>,
+    );
   },
 
   async register(
@@ -28,16 +34,20 @@ export const authController = {
     password: string,
     nama: string,
     role: string,
+    turnstileToken?: string,
   ): Promise<{ message: string; user: User }> {
     const bodyRole = (['dosen', 'mahasiswa', 'guest'].includes(role) ? role : 'mahasiswa') as
       | 'dosen'
       | 'mahasiswa'
       | 'guest';
     return unwrap<{ message: string; user: User }>(
-      eden.auth.register.post({ nama, email, password, role: bodyRole }) as unknown as GenericEden<{
-        message: string;
-        user: User;
-      }>,
+      eden.auth.register.post({
+        nama,
+        email,
+        password,
+        role: bodyRole,
+        ...(turnstileToken ? { turnstileToken } : {}),
+      }) as unknown as GenericEden<{ message: string; user: User }>,
     );
   },
 
@@ -67,9 +77,12 @@ export const authController = {
     );
   },
 
-  async resendActivation(email: string): Promise<{ message: string }> {
+  async resendActivation(email: string, turnstileToken?: string): Promise<{ message: string }> {
     return unwrap<{ message: string }>(
-      eden.auth['resend-activation'].post({ email }) as unknown as GenericEden<{ message: string }>,
+      eden.auth['resend-activation'].post({
+        email,
+        ...(turnstileToken ? { turnstileToken } : {}),
+      }) as unknown as GenericEden<{ message: string }>,
     );
   },
 
