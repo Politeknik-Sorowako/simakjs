@@ -161,6 +161,29 @@ export function renderMarkdown(markdown: string): string {
   return html.join('\n');
 }
 
+/**
+ * Menghilangkan sintaks markdown menjadi teks polos — dipakai untuk tampilan
+ * compact (mis. inline excerpt pada list/picker) di mana markdown mentah
+ * (`**bold**`, `- list`, `[tautan](url)`) akan terlihat berantakan.
+ */
+export function stripMarkdown(input: string | null | undefined): string {
+  if (!input) return '';
+  return input
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '')
+    .replace(/^\s*\d+\.\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/(^|[^*])\*([^*]+)\*/g, '$1$2')
+    .replace(/(^|[^_])_([^_]+)_/g, '$1$2')
+    .replace(/\n+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function MarkdownViewer(props: MarkdownViewerProps) {
   const html = createMemo(() => (props.content ? renderMarkdown(props.content) : ''));
   return (

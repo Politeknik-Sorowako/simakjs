@@ -9,16 +9,16 @@ export const rpsBody = t.Object({
 
 export const rpsTopikBody = t.Object({
   pertemuanKe: t.Integer({ default: 1 }),
-  topik: t.String({ default: 'Pengenalan dan Kontrak Kuliah' }),
+  topik: t.String({ maxLength: 255, default: 'Pengenalan dan Kontrak Kuliah' }),
   subTopik: t.Optional(t.String()),
-  metode: t.Optional(t.String({ default: 'Ceramah & Diskusi' })),
+  metode: t.Optional(t.String({ maxLength: 100, default: 'Ceramah & Diskusi' })),
   cpmkId: t.Optional(t.Integer()),
   subCpmkId: t.Optional(t.Integer()),
 });
 
 export const rencanaEvaluasiBody = t.Object({
   mataKuliahId: t.Integer({ default: 1 }),
-  namaEvaluasi: t.String({ default: 'UTS' }),
+  namaEvaluasi: t.String({ maxLength: 100, default: 'UTS' }),
   bobotEvaluasi: t.Numeric({ default: 20 }),
   deskripsi: t.Optional(t.String()),
   idPddikti: t.Optional(t.String()),

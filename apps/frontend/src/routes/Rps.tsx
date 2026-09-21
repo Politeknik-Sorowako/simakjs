@@ -3,8 +3,10 @@ import { createEffect, createResource, createSignal, For, onCleanup, Show } from
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { MarkdownViewer } from '../components/ui/MarkdownViewer';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { RichMarkdownEditor } from '../components/ui/RichMarkdownEditor';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
@@ -255,9 +257,22 @@ export default function Rps() {
     setShowTopikModal(true);
   };
 
+  const counterClass = (len: number, max: number) =>
+    `text-fine font-semibold tabular-nums ${
+      len > max ? 'text-danger-600 dark:text-danger-400' : 'text-secondary-400 dark:text-secondary-500'
+    }`;
+
   const handleSaveTopik = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
+    if (topikText().length > 255) {
+      setErrorMsg('Topik Utama terlalu panjang. Maksimal 255 karakter.');
+      return;
+    }
+    if (metode().length > 100) {
+      setErrorMsg('Metode Pembelajaran terlalu panjang. Maksimal 100 karakter.');
+      return;
+    }
     try {
       const payload = {
         pertemuanKe: Number(pertemuanKe()),
@@ -321,6 +336,10 @@ export default function Rps() {
     );
     if (currentTotal + newBobot > 100) {
       setErrorMsg(`Total bobot evaluasi (${currentTotal + newBobot}%) tidak boleh melebihi 100%`);
+      return;
+    }
+    if (namaEvaluasi().length > 100) {
+      setErrorMsg('Nama Evaluasi terlalu panjang. Maksimal 100 karakter.');
       return;
     }
     try {
@@ -550,7 +569,9 @@ export default function Rps() {
                             <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
                               <div class="font-medium">{t.topik}</div>
                               <Show when={t.subTopik}>
-                                <div class="text-xs text-secondary-500 mt-0.5">{t.subTopik}</div>
+                                <div class="mt-0.5">
+                                  <MarkdownViewer content={t.subTopik} class="text-[13px]" />
+                                </div>
                               </Show>
                             </td>
                             <td class="px-6 py-4 text-sm text-secondary-700 dark:text-secondary-200">
@@ -676,20 +697,49 @@ export default function Rps() {
               />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Topik Utama</label>
-              <Input type="text" value={topikText()} onInput={(e) => setTopikText(e.currentTarget.value)} required />
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Topik Utama</label>
+                <span class={counterClass(topikText().length, 255)}>{topikText().length}/255</span>
+              </div>
+              <Input
+                type="text"
+                value={topikText()}
+                onInput={(e) => setTopikText(e.currentTarget.value)}
+                maxLength={255}
+                placeholder="Contoh: Pengenalan dan Kontrak Kuliah"
+                required
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
-                Sub-Topik / Materi (Opsional)
-              </label>
-              <Input type="text" value={subTopik()} onInput={(e) => setSubTopik(e.currentTarget.value)} />
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                  Sub-Topik / Materi (Opsional)
+                </label>
+                <span class="text-fine font-semibold tabular-nums text-secondary-400 dark:text-secondary-500">
+                  {subTopik().length} karakter
+                </span>
+              </div>
+              <RichMarkdownEditor
+                value={subTopik()}
+                onInput={setSubTopik}
+                rows={5}
+                placeholder="Tulis materi perkuliahan di sini. Mendukung **bold**, *italic*, - list, > quote, `code`, dan [tautan](https://...)."
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
-                Metode Pembelajaran
-              </label>
-              <Input type="text" value={metode()} onInput={(e) => setMetode(e.currentTarget.value)} />
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">
+                  Metode Pembelajaran
+                </label>
+                <span class={counterClass(metode().length, 100)}>{metode().length}/100</span>
+              </div>
+              <Input
+                type="text"
+                value={metode()}
+                onInput={(e) => setMetode(e.currentTarget.value)}
+                maxLength={100}
+                placeholder="Contoh: Ceramah, Diskusi, Praktik, Project-Based Learning"
+              />
             </div>
             <div class="flex justify-end gap-2 mt-4">
               <Button variant="secondary" type="button" onClick={() => setShowTopikModal(false)}>
@@ -711,12 +761,16 @@ export default function Rps() {
               <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">{errorMsg()}</div>
             </Show>
             <div class="flex flex-col gap-1">
-              <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nama Evaluasi</label>
+              <div class="flex items-center justify-between">
+                <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Nama Evaluasi</label>
+                <span class={counterClass(namaEvaluasi().length, 100)}>{namaEvaluasi().length}/100</span>
+              </div>
               <Input
                 type="text"
                 placeholder="Contoh: UTS, UAS, Tugas Besar"
                 value={namaEvaluasi()}
                 onInput={(e) => setNamaEvaluasi(e.currentTarget.value)}
+                maxLength={100}
                 required
               />
             </div>
