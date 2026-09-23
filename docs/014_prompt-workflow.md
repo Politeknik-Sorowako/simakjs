@@ -4,9 +4,7 @@ Context: Refer to @CODEBASE_CONTEXT.MD and existing codebase structure.
 
 Task: Create a detailed step-by-step implementation plan for the following task:
 
-- auto refresh pada halaman /apel/monitor sebaiknya hanya pada blok tabel dan rekap/summary saja, alih-alih seluruh halaman.
-
-- halaman selalu refresh saat mengetikkan nim/nama pada searchable selector pada kolom tambah manusia di panel Kelola Anggota Kelompok Apel pada halaman /presensi-apel
+- pada halaman /laporan/bkd, lewati BAP dan presensi yang kosong tidak perlu dimasukkan dalam laporan BAP dan Presensi yang dicetak.
 
 Requirements:
 
@@ -53,7 +51,7 @@ gh pr create --title "feat: implementasi [Nama Fitur]" --body "PR otomatis dibua
 
 Role: You are acting as the Senior Code Reviewer & QA Lead under @AGENTS.MD.
 
-Task: Perform a thorough code review on the changes made in PR 399
+Task: Perform a thorough code review on the changes made in PR 461
 
 Steps:
 
@@ -75,7 +73,7 @@ If everything passes, write a summary review and approve the PR for merging.
 
 Role: You are acting as the Senior Code Reviewer & QA Lead under @AGENTS.MD.
 
-Task: Perform a thorough code review on the changes made in PR 445
+Task: Perform a thorough code review on the changes made in PR 463
 
 Steps:
 
