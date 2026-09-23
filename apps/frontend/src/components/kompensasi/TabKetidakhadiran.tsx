@@ -108,8 +108,22 @@ export default function TabKetidakhadiran() {
       }),
   );
 
+  const [rows, setRows] = createSignal<KetidakhadiranRow[]>([]);
+  const [total, setTotal] = createSignal(0);
+  const [totalPages, setTotalPages] = createSignal(1);
+
   createEffect(() => {
-    if (data.error && data()) {
+    if (data.error) return;
+    const d = data();
+    if (d) {
+      setRows(d.data);
+      setTotal(d.meta.total);
+      setTotalPages(d.meta.totalPages);
+    }
+  });
+
+  createEffect(() => {
+    if (data.error && rows().length > 0) {
       toast.showToast('Gagal memperbarui data. Menampilkan data sebelumnya.', 'error');
     }
   });
@@ -165,8 +179,7 @@ export default function TabKetidakhadiran() {
     setPreviewRow(null);
   };
 
-  const meta = () => data()?.meta;
-  const totalPages = () => Math.max(meta()?.totalPages || 0, 1);
+  const hasData = () => rows().length > 0;
 
   return (
     <div class="flex flex-col gap-4">
@@ -227,11 +240,9 @@ export default function TabKetidakhadiran() {
           </FilterField>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-xs text-secondary-400 dark:text-secondary-300">
-            {meta()?.total ?? 0} data ketidakhadiran
-          </span>
+          <span class="text-xs text-secondary-400 dark:text-secondary-300">{total()} data ketidakhadiran</span>
           <div class="flex items-center gap-4">
-            <RefreshingBadge show={data.loading && !!data()} />
+            <RefreshingBadge show={data.loading && hasData()} />
             <button
               type="button"
               onClick={resetFilters}
@@ -264,103 +275,106 @@ export default function TabKetidakhadiran() {
           'Aksi',
         ]}
       >
-        <Show when={data.loading && !data()}>
+        <Show when={data.loading && !hasData()}>
           <For each={Array.from({ length: 5 })}>{() => <TableLoadingFallback cols={9} />}</For>
         </Show>
-        <Show when={data.error && !data()}>
+        <Show when={data.error && !hasData()}>
           <ErrorState
             message={data.error instanceof Error ? data.error.message : String(data.error)}
             onRetry={refetch}
           />
         </Show>
-        <Show when={data() && !data.error}>
-          <For each={data()?.data || []} fallback={<EmptyState message="Tidak ada data ketidakhadiran." />}>
-            {(row) => (
-              <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
-                <td class="py-4 px-6">
-                  <div class="flex items-center gap-3">
-                    <StudentAvatar foto={row.foto} nama={row.nama} nim={row.nim} size="sm" />
-                    <div>
-                      <div class="font-bold text-secondary-800 dark:text-white">{row.nama}</div>
-                      <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.nim}</div>
-                      <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.prodiNama || '-'}</div>
-                    </div>
+        <For
+          each={rows()}
+          fallback={
+            <Show when={!data.loading && !data.error}>
+              <EmptyState message="Tidak ada data ketidakhadiran." />
+            </Show>
+          }
+        >
+          {(row) => (
+            <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-3">
+                  <StudentAvatar foto={row.foto} nama={row.nama} nim={row.nim} size="sm" />
+                  <div>
+                    <div class="font-bold text-secondary-800 dark:text-white">{row.nama}</div>
+                    <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.nim}</div>
+                    <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.prodiNama || '-'}</div>
                   </div>
-                </td>
-                <td class="py-4 px-6 text-secondary-600 dark:text-secondary-200">{fmtTanggal(row.tanggal)}</td>
-                <td class="py-4 px-6">
-                  <SumberBadge sumber={row.sumber} />
-                </td>
-                <td class="py-4 px-6 max-w-xs">
-                  <div class="text-xs text-secondary-600 dark:text-secondary-200">
-                    <Show when={row.namaKelas}>
-                      <div class="font-semibold">
-                        {row.mataKuliahNama || 'MK'} · {row.namaKelas}
-                      </div>
-                      <Show when={row.dosenNama}>
-                        <div class="text-secondary-400">Dosen: {row.dosenNama}</div>
-                      </Show>
-                      <Show when={row.pertemuanKe != null}>
-                        <div class="text-secondary-400">Pertemuan/Sesi {row.pertemuanKe}</div>
-                      </Show>
+                </div>
+              </td>
+              <td class="py-4 px-6 text-secondary-600 dark:text-secondary-200">{fmtTanggal(row.tanggal)}</td>
+              <td class="py-4 px-6">
+                <SumberBadge sumber={row.sumber} />
+              </td>
+              <td class="py-4 px-6 max-w-xs">
+                <div class="text-xs text-secondary-600 dark:text-secondary-200">
+                  <Show when={row.namaKelas}>
+                    <div class="font-semibold">
+                      {row.mataKuliahNama || 'MK'} · {row.namaKelas}
+                    </div>
+                    <Show when={row.dosenNama}>
+                      <div class="text-secondary-400">Dosen: {row.dosenNama}</div>
                     </Show>
-                    <Show when={row.kelompokNama}>
-                      <div class="font-semibold">Apel · {row.kelompokNama}</div>
-                      <Show when={row.shift}>
-                        <div class="text-secondary-400">Shift {row.shift}</div>
-                      </Show>
+                    <Show when={row.pertemuanKe != null}>
+                      <div class="text-secondary-400">Pertemuan/Sesi {row.pertemuanKe}</div>
                     </Show>
-                    <Show when={row.materi}>
-                      <div class="text-secondary-400 line-clamp-2">{row.materi}</div>
+                  </Show>
+                  <Show when={row.kelompokNama}>
+                    <div class="font-semibold">Apel · {row.kelompokNama}</div>
+                    <Show when={row.shift}>
+                      <div class="text-secondary-400">Shift {row.shift}</div>
                     </Show>
-                    <Show when={!row.namaKelas && !row.kelompokNama}>
-                      <div class="text-secondary-400">Input manual</div>
+                  </Show>
+                  <Show when={row.materi}>
+                    <div class="text-secondary-400 line-clamp-2">{row.materi}</div>
+                  </Show>
+                  <Show when={!row.namaKelas && !row.kelompokNama}>
+                    <div class="text-secondary-400">Input manual</div>
+                  </Show>
+                </div>
+              </td>
+              <td class="py-4 px-6 text-secondary-700 dark:text-secondary-100 font-semibold">{row.durasiMenit} mnt</td>
+              <td class="py-4 px-6">
+                <StatusBadge status={row.status} />
+              </td>
+              <td class="py-4 px-6">
+                <VerifBadge isVerified={row.isVerified} />
+                <Show when={row.isVerified && row.verifiedByName}>
+                  <div class="text-xs text-secondary-400 dark:text-secondary-300 mt-1">
+                    {row.verifiedByName}
+                    <Show when={row.verifiedAt}>
+                      {' · '}
+                      {fmtTanggal(row.verifiedAt)}
                     </Show>
                   </div>
-                </td>
-                <td class="py-4 px-6 text-secondary-700 dark:text-secondary-100 font-semibold">
-                  {row.durasiMenit} mnt
-                </td>
-                <td class="py-4 px-6">
-                  <StatusBadge status={row.status} />
-                </td>
-                <td class="py-4 px-6">
-                  <VerifBadge isVerified={row.isVerified} />
-                  <Show when={row.isVerified && row.verifiedByName}>
-                    <div class="text-xs text-secondary-400 dark:text-secondary-300 mt-1">
-                      {row.verifiedByName}
-                      <Show when={row.verifiedAt}>
-                        {' · '}
-                        {fmtTanggal(row.verifiedAt)}
-                      </Show>
-                    </div>
-                  </Show>
-                </td>
-                <td class="py-4 px-6">
-                  <Show
-                    when={row.lampiranEvidens}
-                    fallback={<span class="text-xs text-secondary-400 dark:text-secondary-500">-</span>}
-                  >
-                    <Button onClick={() => openPreview(row)} variant="ghost" class="!px-3 !py-1 text-xs font-bold">
-                      Lihat
-                    </Button>
-                  </Show>
-                </td>
-                <td class="py-4 px-6">
-                  <Button onClick={() => setVerifyRow(row)} variant="primary" class="!px-3 !py-1.5 text-xs font-bold">
-                    {row.isVerified ? 'Ubah' : 'Verifikasi'}
+                </Show>
+              </td>
+              <td class="py-4 px-6">
+                <Show
+                  when={row.lampiranEvidens}
+                  fallback={<span class="text-xs text-secondary-400 dark:text-secondary-500">-</span>}
+                >
+                  <Button onClick={() => openPreview(row)} variant="ghost" class="!px-3 !py-1 text-xs font-bold">
+                    Lihat
                   </Button>
-                </td>
-              </tr>
-            )}
-          </For>
-        </Show>
+                </Show>
+              </td>
+              <td class="py-4 px-6">
+                <Button onClick={() => setVerifyRow(row)} variant="primary" class="!px-3 !py-1.5 text-xs font-bold">
+                  {row.isVerified ? 'Ubah' : 'Verifikasi'}
+                </Button>
+              </td>
+            </tr>
+          )}
+        </For>
       </Table>
 
       <Pagination
         currentPage={page()}
         totalPages={totalPages()}
-        total={meta()?.total ?? 0}
+        total={total()}
         limit={limit()}
         onPageChange={setPage}
         onLimitChange={(l) => {

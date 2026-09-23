@@ -116,6 +116,20 @@ export default function TabRekaman(props: TabRekamanProps) {
       }),
   );
 
+  const [rows, setRows] = createSignal<KetidakhadiranRow[]>([]);
+  const [total, setTotal] = createSignal(0);
+  const [totalPages, setTotalPages] = createSignal(1);
+
+  createEffect(() => {
+    if (data.error) return;
+    const d = data();
+    if (d) {
+      setRows(d.data);
+      setTotal(d.meta.total);
+      setTotalPages(d.meta.totalPages);
+    }
+  });
+
   const prodiOptions = (): SelectOption[] => [
     { value: '', label: 'Semua Prodi' },
     ...(prodis()?.data || []).map((p) => ({ value: p.id, label: p.nama })),
@@ -123,7 +137,7 @@ export default function TabRekaman(props: TabRekamanProps) {
 
   const selectedRows = createMemo(() => {
     const set = selectedIds();
-    return (data()?.data || []).filter((r) => set.has(r.id));
+    return rows().filter((r) => set.has(r.id));
   });
 
   const selectedManualIds = createMemo(() =>
@@ -151,21 +165,21 @@ export default function TabRekaman(props: TabRekamanProps) {
   };
 
   const toggleSelectAll = (checked: boolean) => {
-    const rows = data()?.data || [];
+    const current = rows();
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (checked) {
-        rows.forEach((r) => next.add(r.id));
+        current.forEach((r) => next.add(r.id));
       } else {
-        rows.forEach((r) => next.delete(r.id));
+        current.forEach((r) => next.delete(r.id));
       }
       return next;
     });
   };
 
   const isAllSelected = () => {
-    const rows = data()?.data || [];
-    return rows.length > 0 && rows.every((r) => selectedIds().has(r.id));
+    const current = rows();
+    return current.length > 0 && current.every((r) => selectedIds().has(r.id));
   };
 
   const openEditManual = (row: KetidakhadiranRow) => {
@@ -252,11 +266,10 @@ export default function TabRekaman(props: TabRekamanProps) {
     setPage(1);
   };
 
-  const meta = () => data()?.meta;
-  const totalPages = () => Math.max(meta()?.totalPages || 0, 1);
+  const hasData = () => rows().length > 0;
 
   createEffect(() => {
-    if (data.error && data()) {
+    if (data.error && hasData()) {
       toast.showToast('Gagal memperbarui data. Menampilkan data sebelumnya.', 'error');
     }
   });
@@ -304,11 +317,9 @@ export default function TabRekaman(props: TabRekamanProps) {
           </FilterField>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-xs text-secondary-400 dark:text-secondary-300">
-            {meta()?.total ?? 0} rekaman kompensasi
-          </span>
+          <span class="text-xs text-secondary-400 dark:text-secondary-300">{total()} rekaman kompensasi</span>
           <div class="flex items-center gap-4">
-            <RefreshingBadge show={data.loading && !!data()} />
+            <RefreshingBadge show={data.loading && hasData()} />
             <button
               type="button"
               onClick={resetFilters}
@@ -373,106 +384,109 @@ export default function TabRekaman(props: TabRekamanProps) {
           <Show when={props.canManage}>Aksi</Show>,
         ]}
       >
-        <Show when={data.loading && !data()}>
+        <Show when={data.loading && !hasData()}>
           <For each={Array.from({ length: 5 })}>{() => <TableLoadingFallback cols={props.canManage ? 9 : 8} />}</For>
         </Show>
-        <Show when={data.error && !data()}>
+        <Show when={data.error && !hasData()}>
           <ErrorState
             message={data.error instanceof Error ? data.error.message : String(data.error)}
             onRetry={refetch}
           />
         </Show>
-        <Show when={data() && !data.error}>
-          <For each={data()?.data || []} fallback={<EmptyState message="Tidak ada rekaman kompensasi." />}>
-            {(row) => (
-              <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
-                <Show when={props.canManage}>
-                  <td class="py-4 px-6">
-                    <input
-                      type="checkbox"
-                      aria-label="Pilih rekaman baris ini"
-                      checked={selectedIds().has(row.id)}
-                      onChange={(e) => toggleSelect(row.id)}
-                      class="accent-brand-600"
-                    />
-                  </td>
-                </Show>
+        <For
+          each={rows()}
+          fallback={
+            <Show when={!data.loading && !data.error}>
+              <EmptyState message="Tidak ada rekaman kompensasi." />
+            </Show>
+          }
+        >
+          {(row) => (
+            <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
+              <Show when={props.canManage}>
                 <td class="py-4 px-6">
-                  <div class="flex items-center gap-3">
-                    <StudentAvatar foto={row.foto} nama={row.nama} nim={row.nim} size="sm" />
-                    <div>
-                      <div class="font-bold text-secondary-800 dark:text-white">{row.nama}</div>
-                      <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.nim}</div>
-                      <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.prodiNama || '-'}</div>
-                    </div>
+                  <input
+                    type="checkbox"
+                    aria-label="Pilih rekaman baris ini"
+                    checked={selectedIds().has(row.id)}
+                    onChange={(e) => toggleSelect(row.id)}
+                    class="accent-brand-600"
+                  />
+                </td>
+              </Show>
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-3">
+                  <StudentAvatar foto={row.foto} nama={row.nama} nim={row.nim} size="sm" />
+                  <div>
+                    <div class="font-bold text-secondary-800 dark:text-white">{row.nama}</div>
+                    <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.nim}</div>
+                    <div class="text-xs text-secondary-400 dark:text-secondary-200">{row.prodiNama || '-'}</div>
                   </div>
-                </td>
-                <td class="py-4 px-6 text-secondary-600 dark:text-secondary-200">{fmtTanggal(row.tanggal)}</td>
+                </div>
+              </td>
+              <td class="py-4 px-6 text-secondary-600 dark:text-secondary-200">{fmtTanggal(row.tanggal)}</td>
+              <td class="py-4 px-6">
+                <SumberBadge sumber={row.sumber} />
+              </td>
+              <td class="py-4 px-6">
+                <StatusBadge status={row.status} />
+              </td>
+              <td class="py-4 px-6 font-semibold text-secondary-700 dark:text-secondary-100">{row.durasiMenit} mnt</td>
+              <td class="py-4 px-6 max-w-[220px]">
+                <span class="text-xs text-secondary-500 dark:text-secondary-300 line-clamp-2">
+                  {row.keterangan || row.verificationNote || '-'}
+                </span>
+              </td>
+              <td class="py-4 px-6">
+                <div class="text-xs text-secondary-500 dark:text-secondary-300">
+                  {row.verifiedByName || row.createdByName || '-'}
+                </div>
+                <div class="text-xs text-secondary-400 dark:text-secondary-500">
+                  {row.verifiedAt ? fmtWaktu(row.verifiedAt) : row.sumber === 'MANUAL' ? 'Input manual' : '-'}
+                </div>
+              </td>
+              <Show when={props.canManage}>
                 <td class="py-4 px-6">
-                  <SumberBadge sumber={row.sumber} />
-                </td>
-                <td class="py-4 px-6">
-                  <StatusBadge status={row.status} />
-                </td>
-                <td class="py-4 px-6 font-semibold text-secondary-700 dark:text-secondary-100">
-                  {row.durasiMenit} mnt
-                </td>
-                <td class="py-4 px-6 max-w-[220px]">
-                  <span class="text-xs text-secondary-500 dark:text-secondary-300 line-clamp-2">
-                    {row.keterangan || row.verificationNote || '-'}
-                  </span>
-                </td>
-                <td class="py-4 px-6">
-                  <div class="text-xs text-secondary-500 dark:text-secondary-300">
-                    {row.verifiedByName || row.createdByName || '-'}
-                  </div>
-                  <div class="text-xs text-secondary-400 dark:text-secondary-500">
-                    {row.verifiedAt ? fmtWaktu(row.verifiedAt) : row.sumber === 'MANUAL' ? 'Input manual' : '-'}
-                  </div>
-                </td>
-                <Show when={props.canManage}>
-                  <td class="py-4 px-6">
-                    <div class="flex items-center gap-2">
-                      <Show
-                        when={row.sumber === 'MANUAL'}
-                        fallback={
-                          <Button
-                            onClick={() => setVerifyRow(row)}
-                            variant="primary"
-                            class="!px-3 !py-1 text-xs font-bold"
-                          >
-                            Ubah
-                          </Button>
-                        }
-                      >
+                  <div class="flex items-center gap-2">
+                    <Show
+                      when={row.sumber === 'MANUAL'}
+                      fallback={
                         <Button
-                          onClick={() => openEditManual(row)}
+                          onClick={() => setVerifyRow(row)}
                           variant="primary"
                           class="!px-3 !py-1 text-xs font-bold"
                         >
                           Ubah
                         </Button>
-                      </Show>
+                      }
+                    >
                       <Button
-                        onClick={() => setConfirmAnulir({ type: 'row', row })}
-                        variant="danger"
+                        onClick={() => openEditManual(row)}
+                        variant="primary"
                         class="!px-3 !py-1 text-xs font-bold"
                       >
-                        Anulir
+                        Ubah
                       </Button>
-                    </div>
-                  </td>
-                </Show>
-              </tr>
-            )}
-          </For>
-        </Show>
+                    </Show>
+                    <Button
+                      onClick={() => setConfirmAnulir({ type: 'row', row })}
+                      variant="danger"
+                      class="!px-3 !py-1 text-xs font-bold"
+                    >
+                      Anulir
+                    </Button>
+                  </div>
+                </td>
+              </Show>
+            </tr>
+          )}
+        </For>
       </Table>
 
       <Pagination
         currentPage={page()}
         totalPages={totalPages()}
-        total={meta()?.total ?? 0}
+        total={total()}
         limit={limit()}
         onPageChange={setPage}
         onLimitChange={(l) => {
