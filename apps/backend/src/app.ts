@@ -34,6 +34,7 @@ import { kategoriBimbinganRoutes } from './routes/kategori-bimbingan.routes';
 import { kelasKuliahRoutes } from './routes/kelas-kuliah.routes';
 import { khsRoutes } from './routes/khs.routes';
 import { kompensasiManualRoutes } from './routes/kompensasi-manual.routes';
+import { ketidakhadiranRiwayatRoutes, kompensasiRekamanRoutes } from './routes/kompensasi-riwayat.routes';
 import { krsRoutes } from './routes/krs.routes';
 import { kurikulumRoutes } from './routes/kurikulum.routes';
 import { mahasiswaRoutes } from './routes/mahasiswa.routes';
@@ -420,7 +421,9 @@ export const app = new Elysia()
   .use(evaluasiKurikulumRoutes)
   .use(presensiRoutes)
   .use(kompensasiManualRoutes)
+  .use(kompensasiRekamanRoutes)
   .use(verifikasiUnknownRoutes)
+  .use(ketidakhadiranRiwayatRoutes)
   .use(nilaiPraktikRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)

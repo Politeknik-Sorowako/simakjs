@@ -77,6 +77,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
     if (
       isMatch([
         '/laporan-kompensasi',
+        '/ketidakhadiran-kompensasi',
         '/laporan',
         '/obe/bobot-penilaian',
         '/obe/evaluasi-kurikulum',
@@ -903,6 +904,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
 
             <Show when={isLaporanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
+                <Show when={isAdminMgmt() || isProdi() || auth.hasRole(['kaprodi'])}>
+                  <A
+                    href="/ketidakhadiran-kompensasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                    Ketidakhadiran & Kompensasi
+                  </A>
+                </Show>
                 <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/rekap-nilai"
