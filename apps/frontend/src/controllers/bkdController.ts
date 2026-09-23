@@ -16,10 +16,43 @@ export interface BkdPresensi {
 }
 
 export interface BkdPertemuan {
+  bapId: number;
   tanggal: string;
   pertemuanKe: number;
+  tema?: string | null;
   materi: string;
+  catatan?: string | null;
   durasiMenit: number;
+  presensiRingkasan: {
+    hadir: number;
+    sakit: number;
+    izin: number;
+    alpa: number;
+    telat: number;
+    total: number;
+  };
+}
+
+export interface BkdRekapMahasiswa {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  hadir: number;
+  sakit: number;
+  izin: number;
+  alpa: number;
+  telat: number;
+  totalKehadiran: number;
+  persentaseHadir: number;
+}
+
+export interface BkdRekapPresensiKelas {
+  kelasId: number;
+  namaKelas: string;
+  mataKuliah: BkdMataKuliah;
+  jumlahPertemuan: number;
+  totalMenit: number;
+  mahasiswa: BkdRekapMahasiswa[];
 }
 
 export interface BkdMengajar {
@@ -44,6 +77,7 @@ export interface BkdRekap {
   dosen: { id: number; nip: string; nama: string; nidn?: string | null; prodi: string };
   periode: { id: string; nama: string };
   mengajar: BkdMengajar[];
+  rekapPresensi: BkdRekapPresensiKelas[];
   bimbingan: {
     mahasiswa?: { nim: string; nama: string };
     isApproved: boolean;

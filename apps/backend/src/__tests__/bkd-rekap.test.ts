@@ -75,7 +75,9 @@ describe('BKD Rekap', () => {
         kelasKuliahId: kelas.id,
         tanggal: '2025-09-01',
         pertemuanKe: 1,
+        tema: 'Kontrak Kuliah',
         materi: 'Pengantar',
+        catatan: 'Sesi pertama',
         durasiMenit: 100,
         dosenId,
       })
@@ -91,9 +93,60 @@ describe('BKD Rekap', () => {
       }),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { mengajar: unknown[]; ringkasan: { totalSks: number } } };
+    const body = (await res.json()) as {
+      data: {
+        mengajar: unknown[];
+        ringkasan: { totalSks: number };
+      };
+    };
     expect(body.data.mengajar).toHaveLength(1);
     expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: pertemuan membawa detail BAP & rekap presensi agregat per mahasiswa', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=${dosenId}&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: {
+        mengajar: {
+          kelasId: number;
+          pertemuan: {
+            bapId: number;
+            tema: string | null;
+            catatan: string | null;
+            presensiRingkasan: { hadir: number; total: number };
+          }[];
+        }[];
+        rekapPresensi: {
+          kelasId: number;
+          mahasiswa: { nim: string; nama: string; hadir: number; totalKehadiran: number; persentaseHadir: number }[];
+        }[];
+      };
+    };
+
+    const kelas = body.data.mengajar[0];
+    expect(kelas.pertemuan).toHaveLength(1);
+    expect(kelas.pertemuan[0]).toMatchObject({
+      tema: 'Kontrak Kuliah',
+      catatan: 'Sesi pertama',
+      presensiRingkasan: { hadir: 1, total: 1 },
+    });
+    expect(kelas.pertemuan[0].bapId).toBeGreaterThan(0);
+
+    const rekap = body.data.rekapPresensi[0];
+    expect(rekap.mahasiswa).toHaveLength(1);
+    expect(rekap.mahasiswa[0]).toMatchObject({
+      nim: '20250099',
+      nama: 'Mahasiswa BKD',
+      hadir: 1,
+      totalKehadiran: 1,
+      persentaseHadir: 100,
+    });
   });
 
   it('BKD rekap: dosen dipaksa self dan tetap berhasil', async () => {
@@ -106,6 +159,53 @@ describe('BKD Rekap', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { data: { ringkasan: { totalSks: number } } };
     expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: dosen mengabaikan dosenId query orang lain (self-only)', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=999999&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { ringkasan: { totalSks: number } } };
+    expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: dosen dengan dosenId=0 (placeholder) tetap memuat data sendiri', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=0&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { ringkasan: { totalSks: number } } };
+    expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: prodi bisa mereview laporan dosen manapun', async () => {
+    const prodiToken = await getAuthToken('prodi_bkd@test.com', 'prodi');
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=${dosenId}&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${prodiToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { ringkasan: { totalSks: number } } };
+    expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: non-dosen tanpa dosenId ditolak (400)', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(400);
   });
 
   it('BKD rekap: periode wajib (422 bila kosong dari schema)', async () => {

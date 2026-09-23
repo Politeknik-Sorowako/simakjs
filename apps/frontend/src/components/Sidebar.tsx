@@ -1120,25 +1120,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     Kompensasi Manual
                   </A>
                 </Show>
-                <Show when={isAdmin()}>
-                  <A
-                    href="/duplicate-risk-kompensasi"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Audit Kompensasi Ganda
-                  </A>
-                </Show>
                 <Show when={isAdmin() || isDosen() || isProdi()}>
                   <A
                     href="/apel/monitor"

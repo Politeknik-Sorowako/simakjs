@@ -90,7 +90,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
   // Program studi dari mahasiswa yang dipilih (langkah 1) → filter kelas.
   const selectedProdis = createMemo(() => {
     const ids = selectedMhsIds();
-    const list = mahasiswaList() || [];
+    const list = mahasiswaList.latest || [];
     const map = new Map<number, string>();
     for (const m of list) {
       if (ids.includes(m.id) && m.programStudiId) {
@@ -139,7 +139,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
   };
 
   const toggleSelectAllMhs = () => {
-    const list = mahasiswaList() || [];
+    const list = mahasiswaList.latest || [];
     if (selectedMhsIds().length === list.length && list.length > 0) {
       setSelectedMhsIds([]);
     } else {
@@ -153,7 +153,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
   };
 
   const toggleSelectAllKelas = () => {
-    const list = kelasList() || [];
+    const list = kelasList.latest || [];
     if (selectedKelasIds().length === list.length && list.length > 0) {
       setSelectedKelasIds([]);
     } else {
@@ -288,7 +288,8 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 <input
                   type="checkbox"
                   checked={
-                    (mahasiswaList() || []).length > 0 && selectedMhsIds().length === (mahasiswaList() || []).length
+                    (mahasiswaList.latest || []).length > 0 &&
+                    selectedMhsIds().length === (mahasiswaList.latest || []).length
                   }
                   onChange={toggleSelectAllMhs}
                   class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
@@ -299,7 +300,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 'Status',
               ]}
             >
-              <For each={mahasiswaList() || []}>
+              <For each={mahasiswaList.latest || []}>
                 {(item) => (
                   <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                     <td class="px-4 py-2">
@@ -323,7 +324,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                   </tr>
                 )}
               </For>
-              <Show when={(mahasiswaList() || []).length === 0}>
+              <Show when={(mahasiswaList.latest || []).length === 0}>
                 <tr>
                   <td colspan="5" class="px-4 py-8 text-center text-xs text-secondary-400">
                     Tidak ada mahasiswa ditemukan.
@@ -404,7 +405,9 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
               headers={[
                 <input
                   type="checkbox"
-                  checked={(kelasList() || []).length > 0 && selectedKelasIds().length === (kelasList() || []).length}
+                  checked={
+                    (kelasList.latest || []).length > 0 && selectedKelasIds().length === (kelasList.latest || []).length
+                  }
                   onChange={toggleSelectAllKelas}
                   class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
                 />,
@@ -415,7 +418,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                 'Pengajar',
               ]}
             >
-              <For each={kelasList() || []}>
+              <For each={kelasList.latest || []}>
                 {(item) => (
                   <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                     <td class="px-4 py-2">
@@ -445,7 +448,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                   </tr>
                 )}
               </For>
-              <Show when={(kelasList() || []).length === 0}>
+              <Show when={(kelasList.latest || []).length === 0}>
                 <tr>
                   <td colspan="6" class="px-4 py-8 text-center text-xs text-secondary-400">
                     Tidak ada kelas kuliah pada periode ini.

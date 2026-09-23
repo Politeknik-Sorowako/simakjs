@@ -20,7 +20,7 @@ const healedSources = new Set<string>();
 const SELF_HEAL_WARN_LIMIT = 10;
 
 export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
-export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR';
+export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN';
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -30,7 +30,7 @@ interface HealedSource {
   durasiMenit: number;
 }
 
-const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'HADIR'];
+const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'HADIR', 'UNKNOWN'];
 
 /** Status yang dihitung sebagai beban kompensasi terverifikasi pada cap harian. */
 const STATUS_TERHITUNG_CAP = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT'];
@@ -56,7 +56,7 @@ export class VerifikasiUnknownService {
    */
   static async verify(input: VerifyInput) {
     if (!STATUS_KONFIRMASI.includes(input.statusKonfirmasi)) {
-      throw new Error('Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, atau HADIR');
+      throw new Error('Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, HADIR, atau UNKNOWN');
     }
 
     const adminUserId = Number(input.adminUserId) > 0 ? input.adminUserId : null;
@@ -292,6 +292,85 @@ export class VerifikasiUnknownService {
           .where(eq(ketidakhadiranMahasiswa.id, absence.id));
 
         return { ...absence, status: 'HADIR', isVerified: true, durasiMenit: 0, verifiedBy: adminUserId };
+      }
+
+      // UNKNOWN = admin/prodi mengembalikan baris ke status belum terverifikasi
+      // (kembali ke antrean verifikasi). Baris terpusat jadi UNKNOWN + is_verified=false
+      // sehingga keluar dari rekap kompensasi; durasi dikembalikan ke nilai sumber asli
+      // agar cap harian dihitung ulang dengan benar saat diverifikasi kembali.
+      if (input.statusKonfirmasi === 'UNKNOWN') {
+        const source =
+          absence.sumberId != null
+            ? await VerifikasiUnknownService._resolveSourceForHeal(tx, absence.sumber, absence.sumberId)
+            : null;
+        const sourceDurasi = Math.max(Number(source?.durasiMenit ?? absence.durasiMenit) || 0, 0);
+        const note = input.keterangan?.trim() || '';
+        const dikembalikan = `[dikembalikan] butuh konfirmasi${note ? ` — ${note}` : ''}`;
+
+        if (absence.sumber === 'BAP' && absence.sumberId != null) {
+          const [bapRow] = await tx
+            .select({ keteranganAdmin: presensi.keteranganAdmin })
+            .from(presensi)
+            .where(eq(presensi.id, absence.sumberId));
+          const prev = bapRow?.keteranganAdmin || '';
+          await tx
+            .update(presensi)
+            .set({
+              status: 'unknown' as 'unknown',
+              durasiMangkir: sourceDurasi,
+              keteranganAdmin: prev ? `${prev} | ${dikembalikan}` : dikembalikan,
+              resolvedBy: null,
+              resolvedAt: null,
+            })
+            .where(eq(presensi.id, absence.sumberId));
+        } else if (absence.sumber === 'APEL' && absence.sumberId != null) {
+          const [apelRow] = await tx
+            .select({ verificationNote: presensiApel.verificationNote })
+            .from(presensiApel)
+            .where(eq(presensiApel.id, absence.sumberId));
+          const prev = apelRow?.verificationNote || '';
+          await tx
+            .update(presensiApel)
+            .set({
+              status: 'unknown' as 'unknown',
+              verifiedStatus: 'unknown' as 'unknown',
+              menitTerlambat: sourceDurasi,
+              verificationNote: prev ? `${prev} | ${dikembalikan}` : dikembalikan,
+              verifiedBy: null,
+              verifiedAt: null,
+            })
+            .where(eq(presensiApel.id, absence.sumberId));
+        } else if (absence.sumber === 'PRAKTIKUM' && absence.sumberId != null) {
+          const [prakRow] = await tx
+            .select({ keteranganAdmin: presensiPraktikum.keteranganAdmin })
+            .from(presensiPraktikum)
+            .where(eq(presensiPraktikum.id, absence.sumberId));
+          const prev = prakRow?.keteranganAdmin || '';
+          await tx
+            .update(presensiPraktikum)
+            .set({
+              status: 'unknown' as 'unknown',
+              durasiMangkir: sourceDurasi,
+              keteranganAdmin: prev ? `${prev} | ${dikembalikan}` : dikembalikan,
+              resolvedBy: null,
+              resolvedAt: null,
+            })
+            .where(eq(presensiPraktikum.id, absence.sumberId));
+        }
+
+        const [revertedAbsence] = await tx
+          .update(ketidakhadiranMahasiswa)
+          .set({
+            status: 'UNKNOWN',
+            durasiMenit: sourceDurasi,
+            isVerified: false,
+            verifiedBy: null,
+            verifiedAt: null,
+          })
+          .where(eq(ketidakhadiranMahasiswa.id, absence.id))
+          .returning();
+
+        return revertedAbsence;
       }
 
       if (durasi > 0) {

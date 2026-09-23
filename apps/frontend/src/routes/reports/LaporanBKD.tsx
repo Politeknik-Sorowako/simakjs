@@ -3,9 +3,16 @@ import { StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { type BkdRekap, bkdController } from '../../controllers/bkdController';
 import { dosenController } from '../../controllers/dosenController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
+import {
+  exportBapBulkPDF,
+  exportPresensiBulkPDF,
+  filterKelasBerBap,
+  filterKelasBerpresensi,
+} from '../../utils/bkd-bulk-print';
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helpers';
 import { ExportColumn } from '../../utils/export';
 
@@ -22,6 +29,7 @@ const PRESENSI_STATUS: {
 
 export default function LaporanBKD() {
   const auth = useAuth();
+  const toast = useToast();
   const isDosenRole = () => auth.hasRole(['dosen']);
 
   const [selectedPeriode, setSelectedPeriode] = createSignal('');
@@ -36,7 +44,7 @@ export default function LaporanBKD() {
       if (!periodeId) return null;
       // Dosen dipaksa self di backend; kirim placeholder bila role dosen tanpa pilihan.
       const targetDosen = isDosenRole() ? Number(dosenId) || 0 : Number(dosenId);
-      if (!targetDosen) return null;
+      if (!targetDosen && !isDosenRole()) return null;
       try {
         return await bkdController.getRekap(targetDosen, periodeId);
       } catch {
@@ -56,6 +64,42 @@ export default function LaporanBKD() {
   const rows = (): BkdRekap['mengajar'] => rekap()?.data.mengajar || [];
   const bimbingan = () => rekap()?.data.bimbingan || [];
   const ringkasan = () => rekap()?.data.ringkasan;
+
+  const handleBapPdf = () => {
+    const data = rekap()?.data;
+    if (!data) {
+      toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
+      return;
+    }
+    if (filterKelasBerBap(data.mengajar).length === 0) {
+      toast.showToast('Tidak ada sesi BAP untuk dicetak', 'info');
+      return;
+    }
+    try {
+      exportBapBulkPDF(data);
+      toast.showToast('PDF BAP berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal membuat PDF BAP', 'error');
+    }
+  };
+
+  const handlePresensiPdf = () => {
+    const data = rekap()?.data;
+    if (!data) {
+      toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
+      return;
+    }
+    if (filterKelasBerpresensi(data.rekapPresensi || []).length === 0) {
+      toast.showToast('Tidak ada data presensi untuk dicetak', 'info');
+      return;
+    }
+    try {
+      exportPresensiBulkPDF(data);
+      toast.showToast('PDF rekap presensi berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal membuat PDF rekap presensi', 'error');
+    }
+  };
 
   // Tabel A: rekap bimbingan per tanggal.
   const rekapBimbingan = createMemo(() => hitungRekapPerTanggal(bimbingan()));
@@ -109,6 +153,24 @@ export default function LaporanBKD() {
               >
                 🖨️ Cetak Mandiri
               </a>
+            </Show>
+            <Show when={rekap()?.data}>
+              <button
+                type="button"
+                onClick={handleBapPdf}
+                disabled={rekap.loading}
+                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
+              >
+                📄 BAP (PDF)
+              </button>
+              <button
+                type="button"
+                onClick={handlePresensiPdf}
+                disabled={rekap.loading}
+                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
+              >
+                📊 Presensi (PDF)
+              </button>
             </Show>
             <ExportButtonGroup data={() => rows()} columns={columns} filename="BKD" title="Laporan BKD / Beban Dosen" />
           </div>

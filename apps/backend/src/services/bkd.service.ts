@@ -1,5 +1,5 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
-import { bap, dosen, periodeAkademik, presensi, programStudi } from '../models/schema';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
+import { bap, dosen, mahasiswa, periodeAkademik, presensi, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 import { BimbinganService } from './bimbingan.service';
 import { DosenPengajarService } from './dosen-pengajar.service';
@@ -57,11 +57,79 @@ export class BkdService {
       }
     }
 
+    // Ringkasan status per BAP (dipakai untuk cetak BAP bulk per sesi).
+    const ringkasanPerBap = (bapId: number) => {
+      const entries = presensiByBapId.get(bapId) || [];
+      let hadir = 0;
+      let sakit = 0;
+      let izin = 0;
+      let alpa = 0;
+      let telat = 0;
+      for (const pr of entries) {
+        if (pr.status === 'hadir') hadir++;
+        else if (pr.status === 'sakit') sakit++;
+        else if (pr.status === 'izin') izin++;
+        else if (pr.status === 'alpa') alpa++;
+        else if (pr.status === 'telat' || pr.status === 'terlambat') telat++;
+      }
+      return { hadir, sakit, izin, alpa, telat, total: entries.length };
+    };
+
+    // Agregat rekap presensi per mahasiswa per kelas (batch, satu query).
+    const rekapPresensiByKelas = new Map<
+      number,
+      {
+        mahasiswaId: number;
+        nim: string;
+        nama: string;
+        hadir: number;
+        sakit: number;
+        izin: number;
+        alpa: number;
+        telat: number;
+      }[]
+    >();
+    if (kelasIds.length > 0) {
+      const rekapRows = await db
+        .select({
+          kelasKuliahId: bap.kelasKuliahId,
+          mahasiswaId: presensi.mahasiswaId,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
+          sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
+          izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
+          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'alpa' THEN 1 ELSE 0 END), 0)`,
+          telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'telat' OR ${presensi.status} = 'terlambat' THEN 1 ELSE 0 END), 0)`,
+        })
+        .from(presensi)
+        .innerJoin(bap, eq(presensi.bapId, bap.id))
+        .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
+        .where(and(inArray(bap.kelasKuliahId, kelasIds), eq(bap.dosenId, dosenId)))
+        .groupBy(bap.kelasKuliahId, presensi.mahasiswaId, mahasiswa.nim, mahasiswa.nama)
+        .orderBy(bap.kelasKuliahId, asc(mahasiswa.nama));
+      for (const row of rekapRows) {
+        const arr = rekapPresensiByKelas.get(row.kelasKuliahId) || [];
+        arr.push({
+          mahasiswaId: row.mahasiswaId,
+          nim: row.nim,
+          nama: row.nama,
+          hadir: Number(row.hadir),
+          sakit: Number(row.sakit),
+          izin: Number(row.izin),
+          alpa: Number(row.alpa),
+          telat: Number(row.telat),
+        });
+        rekapPresensiByKelas.set(row.kelasKuliahId, arr);
+      }
+    }
+
     let totalSks = 0;
     let totalPertemuan = 0;
     let totalMenit = 0;
 
     const mengajar = [];
+    const rekapPresensi = [];
     for (const p of pengajar.data as {
       kelasKuliah: { id: number; namaKelas: string; mataKuliah?: { kode?: string; nama?: string; sksTotal?: number } };
     }[]) {
@@ -69,10 +137,14 @@ export class BkdService {
       const bapList = bapByKelas.get(kelas.id) || [];
 
       const pertemuan = bapList.map((b) => ({
+        bapId: b.id,
         tanggal: b.tanggal,
         pertemuanKe: b.pertemuanKe,
+        tema: b.tema,
         materi: b.materi,
+        catatan: b.catatan,
         durasiMenit: b.durasiMenit,
+        presensiRingkasan: ringkasanPerBap(b.id),
       }));
       const jumlahPertemuan = bapList.length;
       const totalMenitKelas = bapList.reduce((s, b) => s + (b.durasiMenit || 0), 0);
@@ -91,14 +163,13 @@ export class BkdService {
         let t = 0;
         let totalEntries = 0;
         for (const bId of bapIds) {
-          for (const pr of presensiByBapId.get(bId) || []) {
-            totalEntries++;
-            if (pr.status === 'hadir') h++;
-            else if (pr.status === 'sakit') s++;
-            else if (pr.status === 'izin') i++;
-            else if (pr.status === 'alpa') a++;
-            else if (pr.status === 'telat' || pr.status === 'terlambat') t++;
-          }
+          const ringkasan = ringkasanPerBap(bId);
+          h += ringkasan.hadir;
+          s += ringkasan.sakit;
+          i += ringkasan.izin;
+          a += ringkasan.alpa;
+          t += ringkasan.telat;
+          totalEntries += ringkasan.total;
         }
         presensi = {
           hadir: h,
@@ -109,6 +180,19 @@ export class BkdService {
           persen: totalEntries > 0 ? Math.round((h / totalEntries) * 100) : 0,
         };
       }
+
+      const mhsRekap = (rekapPresensiByKelas.get(kelas.id) || []).map((m) => ({
+        mahasiswaId: m.mahasiswaId,
+        nim: m.nim,
+        nama: m.nama,
+        hadir: m.hadir,
+        sakit: m.sakit,
+        izin: m.izin,
+        alpa: m.alpa,
+        telat: m.telat,
+        totalKehadiran: m.hadir + m.sakit + m.izin,
+        persentaseHadir: jumlahPertemuan > 0 ? Math.round(((m.hadir + m.sakit + m.izin) / jumlahPertemuan) * 100) : 0,
+      }));
 
       mengajar.push({
         kelasId: kelas.id,
@@ -122,6 +206,19 @@ export class BkdService {
         totalMenit: totalMenitKelas,
         presensi,
         pertemuan,
+      });
+
+      rekapPresensi.push({
+        kelasId: kelas.id,
+        namaKelas: kelas.namaKelas,
+        mataKuliah: {
+          kode: kelas.mataKuliah?.kode || '-',
+          nama: kelas.mataKuliah?.nama || '-',
+          sks: kelas.mataKuliah?.sksTotal || 0,
+        },
+        jumlahPertemuan,
+        totalMenit: totalMenitKelas,
+        mahasiswa: mhsRekap,
       });
     }
 
@@ -137,6 +234,7 @@ export class BkdService {
       },
       periode: { id: periode.id, nama: periode.nama },
       mengajar,
+      rekapPresensi,
       bimbingan,
       ringkasan: {
         totalSks,
