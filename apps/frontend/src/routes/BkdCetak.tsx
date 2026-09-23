@@ -49,6 +49,16 @@ export default function BkdCetak() {
 
   const rincianBimbingan = () => hitungRincianSesi(bimbingan());
 
+  function escapeHtml(value: unknown): string {
+    if (value == null) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   const openBapBulkPrintWindow = () => {
     const data = rekap();
     if (!data) {
@@ -59,7 +69,7 @@ export default function BkdCetak() {
       .map(
         (mk) => `
         <div class="section">
-          <h3>[${mk.mataKuliah.kode}] ${mk.mataKuliah.nama} · Kelas ${mk.namaKelas}</h3>
+          <h3>[${escapeHtml(mk.mataKuliah.kode)}] ${escapeHtml(mk.mataKuliah.nama)} · Kelas ${escapeHtml(mk.namaKelas)}</h3>
           <table>
             <thead>
               <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
@@ -72,10 +82,10 @@ export default function BkdCetak() {
                         (p, i) => `
                 <tr>
                   <td>${i + 1}</td>
-                  <td>${p.pertemuanKe}</td>
-                  <td>${p.tanggal}</td>
-                  <td>${p.tema ? `${p.tema} — ` : ''}${p.materi}</td>
-                  <td>${p.durasiMenit} mnt</td>
+                  <td>${escapeHtml(p.pertemuanKe)}</td>
+                  <td>${escapeHtml(p.tanggal)}</td>
+                  <td>${p.tema ? `${escapeHtml(p.tema)} — ` : ''}${escapeHtml(p.materi)}</td>
+                  <td>${escapeHtml(p.durasiMenit)} mnt</td>
                   <td></td>
                 </tr>`,
                       )
@@ -87,7 +97,7 @@ export default function BkdCetak() {
           <div class="sign-area">
             <div class="sign-box">
               <p class="sign-gap">(_______________)</p>
-              <p>${data.dosen.nama}</p>
+              <p>${escapeHtml(data.dosen.nama)}</p>
             </div>
           </div>
         </div>`,
@@ -112,7 +122,7 @@ export default function BkdCetak() {
         const sesi = pertemuanByKelas.get(rk.kelasId) || [];
         return `
         <div class="section">
-          <h3>[${rk.mataKuliah.kode}] ${rk.mataKuliah.nama} · Kelas ${rk.namaKelas} (${rk.jumlahPertemuan} pertemuan, ${rk.totalMenit} mnt)</h3>
+          <h3>[${escapeHtml(rk.mataKuliah.kode)}] ${escapeHtml(rk.mataKuliah.nama)} · Kelas ${escapeHtml(rk.namaKelas)} (${escapeHtml(rk.jumlahPertemuan)} pertemuan, ${escapeHtml(rk.totalMenit)} mnt)</h3>
           <h4>A. Rekap Presensi per Mahasiswa</h4>
           <table>
             <thead>
@@ -125,9 +135,9 @@ export default function BkdCetak() {
                       .map(
                         (m, i) => `
                 <tr>
-                  <td>${i + 1}</td><td>${m.nim}</td><td>${m.nama}</td>
-                  <td>${m.hadir}</td><td>${m.sakit}</td><td>${m.izin}</td><td>${m.alpa}</td><td>${m.telat}</td>
-                  <td>${m.totalKehadiran}</td><td>${m.persentaseHadir}%</td>
+                  <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
+                  <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(m.alpa)}</td><td>${escapeHtml(m.telat)}</td>
+                  <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
                 </tr>`,
                       )
                       .join('')
@@ -147,9 +157,9 @@ export default function BkdCetak() {
                       .map(
                         (p, i) => `
                 <tr>
-                  <td>${i + 1}</td><td>${p.pertemuanKe}</td><td>${p.tanggal}</td>
-                  <td>${p.presensiRingkasan.hadir}</td><td>${p.presensiRingkasan.sakit}</td><td>${p.presensiRingkasan.izin}</td>
-                  <td>${p.presensiRingkasan.alpa}</td><td>${p.presensiRingkasan.telat}</td><td>${p.presensiRingkasan.total}</td>
+                  <td>${i + 1}</td><td>${escapeHtml(p.pertemuanKe)}</td><td>${escapeHtml(p.tanggal)}</td>
+                  <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(p.presensiRingkasan.izin)}</td>
+                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.telat)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
                 </tr>`,
                       )
                       .join('')
@@ -160,7 +170,7 @@ export default function BkdCetak() {
           <div class="sign-area">
             <div class="sign-box">
               <p class="sign-gap">(_______________)</p>
-              <p>${data.dosen.nama}</p>
+              <p>${escapeHtml(data.dosen.nama)}</p>
             </div>
           </div>
         </div>`;
@@ -180,7 +190,7 @@ export default function BkdCetak() {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
     h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
@@ -202,8 +212,8 @@ export default function BkdCetak() {
 </head>
 <body>
   <h2>POLITEKNIK SOROWAKO</h2>
-  <h2>${heading}</h2>
-  <p class="meta">Periode Akademik: ${data.periode.nama} · Dosen: ${data.dosen.nama} (NIP: ${data.dosen.nip})</p>
+  <h2>${escapeHtml(heading)}</h2>
+  <p class="meta">Periode Akademik: ${escapeHtml(data.periode.nama)} · Dosen: ${escapeHtml(data.dosen.nama)} (NIP: ${escapeHtml(data.dosen.nip)})</p>
   ${bodyHtml}
   <script>
     window.onload = function() { window.print(); };
