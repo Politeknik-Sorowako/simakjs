@@ -75,7 +75,9 @@ describe('BKD Rekap', () => {
         kelasKuliahId: kelas.id,
         tanggal: '2025-09-01',
         pertemuanKe: 1,
+        tema: 'Kontrak Kuliah',
         materi: 'Pengantar',
+        catatan: 'Sesi pertama',
         durasiMenit: 100,
         dosenId,
       })
@@ -91,9 +93,60 @@ describe('BKD Rekap', () => {
       }),
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { data: { mengajar: unknown[]; ringkasan: { totalSks: number } } };
+    const body = (await res.json()) as {
+      data: {
+        mengajar: unknown[];
+        ringkasan: { totalSks: number };
+      };
+    };
     expect(body.data.mengajar).toHaveLength(1);
     expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: pertemuan membawa detail BAP & rekap presensi agregat per mahasiswa', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=${dosenId}&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: {
+        mengajar: {
+          kelasId: number;
+          pertemuan: {
+            bapId: number;
+            tema: string | null;
+            catatan: string | null;
+            presensiRingkasan: { hadir: number; total: number };
+          }[];
+        }[];
+        rekapPresensi: {
+          kelasId: number;
+          mahasiswa: { nim: string; nama: string; hadir: number; totalKehadiran: number; persentaseHadir: number }[];
+        }[];
+      };
+    };
+
+    const kelas = body.data.mengajar[0];
+    expect(kelas.pertemuan).toHaveLength(1);
+    expect(kelas.pertemuan[0]).toMatchObject({
+      tema: 'Kontrak Kuliah',
+      catatan: 'Sesi pertama',
+      presensiRingkasan: { hadir: 1, total: 1 },
+    });
+    expect(kelas.pertemuan[0].bapId).toBeGreaterThan(0);
+
+    const rekap = body.data.rekapPresensi[0];
+    expect(rekap.mahasiswa).toHaveLength(1);
+    expect(rekap.mahasiswa[0]).toMatchObject({
+      nim: '20250099',
+      nama: 'Mahasiswa BKD',
+      hadir: 1,
+      totalKehadiran: 1,
+      persentaseHadir: 100,
+    });
   });
 
   it('BKD rekap: dosen dipaksa self dan tetap berhasil', async () => {

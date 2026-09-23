@@ -49,9 +49,195 @@ export default function BkdCetak() {
 
   const rincianBimbingan = () => hitungRincianSesi(bimbingan());
 
+  const openBapBulkPrintWindow = () => {
+    const data = rekap();
+    if (!data) {
+      window.alert('Data BKD belum termuat.');
+      return;
+    }
+    const rowsHtml = data.mengajar
+      .map(
+        (mk) => `
+        <div class="section">
+          <h3>[${mk.mataKuliah.kode}] ${mk.mataKuliah.nama} · Kelas ${mk.namaKelas}</h3>
+          <table>
+            <thead>
+              <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
+            </thead>
+            <tbody>
+              ${
+                mk.pertemuan.length
+                  ? mk.pertemuan
+                      .map(
+                        (p, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${p.pertemuanKe}</td>
+                  <td>${p.tanggal}</td>
+                  <td>${p.tema ? `${p.tema} — ` : ''}${p.materi}</td>
+                  <td>${p.durasiMenit} mnt</td>
+                  <td></td>
+                </tr>`,
+                      )
+                      .join('')
+                  : '<tr><td colspan="6" class="empty">Tidak ada sesi BAP.</td></tr>'
+              }
+            </tbody>
+          </table>
+          <div class="sign-area">
+            <div class="sign-box">
+              <p class="sign-gap">(_______________)</p>
+              <p>${data.dosen.nama}</p>
+            </div>
+          </div>
+        </div>`,
+      )
+      .join('');
+
+    openPrintWindow(
+      'BAP-Bulk',
+      'BERITA ACARA PERKULIAHAN (BAP)',
+      data,
+      `<p class="sub">Seluruh sesi perkuliahan per periode</p>${rowsHtml}`,
+    );
+  };
+
+  const openPresensiBulkPrintWindow = () => {
+    const data = rekap();
+    if (!data) return;
+    const pertemuanByKelas = new Map<number, BkdRekap['mengajar'][number]['pertemuan']>();
+    for (const mk of data.mengajar) pertemuanByKelas.set(mk.kelasId, mk.pertemuan);
+    const rowsHtml = (data.rekapPresensi || [])
+      .map((rk) => {
+        const sesi = pertemuanByKelas.get(rk.kelasId) || [];
+        return `
+        <div class="section">
+          <h3>[${rk.mataKuliah.kode}] ${rk.mataKuliah.nama} · Kelas ${rk.namaKelas} (${rk.jumlahPertemuan} pertemuan, ${rk.totalMenit} mnt)</h3>
+          <h4>A. Rekap Presensi per Mahasiswa</h4>
+          <table>
+            <thead>
+              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total Hadir</th><th>% Hadir</th></tr>
+            </thead>
+            <tbody>
+              ${
+                rk.mahasiswa.length
+                  ? rk.mahasiswa
+                      .map(
+                        (m, i) => `
+                <tr>
+                  <td>${i + 1}</td><td>${m.nim}</td><td>${m.nama}</td>
+                  <td>${m.hadir}</td><td>${m.sakit}</td><td>${m.izin}</td><td>${m.alpa}</td><td>${m.telat}</td>
+                  <td>${m.totalKehadiran}</td><td>${m.persentaseHadir}%</td>
+                </tr>`,
+                      )
+                      .join('')
+                  : '<tr><td colspan="10" class="empty">Tidak ada data presensi mahasiswa.</td></tr>'
+              }
+            </tbody>
+          </table>
+          <h4>B. Rekap Presensi per Sesi</h4>
+          <table>
+            <thead>
+              <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              ${
+                sesi.length
+                  ? sesi
+                      .map(
+                        (p, i) => `
+                <tr>
+                  <td>${i + 1}</td><td>${p.pertemuanKe}</td><td>${p.tanggal}</td>
+                  <td>${p.presensiRingkasan.hadir}</td><td>${p.presensiRingkasan.sakit}</td><td>${p.presensiRingkasan.izin}</td>
+                  <td>${p.presensiRingkasan.alpa}</td><td>${p.presensiRingkasan.telat}</td><td>${p.presensiRingkasan.total}</td>
+                </tr>`,
+                      )
+                      .join('')
+                  : '<tr><td colspan="9" class="empty">Tidak ada sesi BAP.</td></tr>'
+              }
+            </tbody>
+          </table>
+          <div class="sign-area">
+            <div class="sign-box">
+              <p class="sign-gap">(_______________)</p>
+              <p>${data.dosen.nama}</p>
+            </div>
+          </div>
+        </div>`;
+      })
+      .join('');
+
+    openPrintWindow(
+      'Rekap-Presensi',
+      'REKAP PRESENSI PERKULIAHAN',
+      data,
+      `<p class="sub">Seluruh kelas & sesi perkuliahan per periode</p>${rowsHtml}`,
+    );
+  };
+
+  const openPrintWindow = (title: string, heading: string, data: NonNullable<BkdRekap>, bodyHtml: string) => {
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${title}</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
+    h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
+    .sub { text-align: center; font-size: 13px; margin: 2px 0; }
+    .meta { text-align: center; font-size: 12px; margin: 4px 0 14px; color: #333; }
+    .section { margin-top: 24px; page-break-before: always; }
+    .section:first-child { page-break-before: auto; }
+    h3 { font-size: 14px; margin: 0 0 8px; }
+    h4 { font-size: 12px; margin: 14px 0 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+    th { background: #eee; text-align: center; }
+    td { text-align: center; }
+    .empty { text-align: center; color: #666; }
+    .sign-area { margin-top: 40px; }
+    .sign-box { display: inline-block; width: 220px; text-align: center; }
+    .sign-gap { margin-bottom: 60px; }
+  </style>
+</head>
+<body>
+  <h2>POLITEKNIK SOROWAKO</h2>
+  <h2>${heading}</h2>
+  <p class="meta">Periode Akademik: ${data.periode.nama} · Dosen: ${data.dosen.nama} (NIP: ${data.dosen.nip})</p>
+  ${bodyHtml}
+  <script>
+    window.onload = function() { window.print(); };
+  <\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=1000,height=750');
+    if (!win) {
+      window.alert('Popup diblokir. Aktifkan popup untuk mencetak.');
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+  };
+
   return (
     <div class="min-h-screen bg-white p-8 text-secondary-800">
-      <div class="mb-4 flex justify-end print:hidden">
+      <div class="mb-4 flex justify-end gap-2 print:hidden">
+        <button
+          type="button"
+          onClick={openBapBulkPrintWindow}
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+        >
+          🗂️ Cetak BAP (Semua Sesi)
+        </button>
+        <button
+          type="button"
+          onClick={openPresensiBulkPrintWindow}
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+        >
+          📊 Cetak Rekap Presensi
+        </button>
         <button
           type="button"
           onClick={() => window.print()}
