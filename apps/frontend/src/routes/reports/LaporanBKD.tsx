@@ -7,7 +7,12 @@ import { useToast } from '../../contexts/ToastContext';
 import { type BkdRekap, bkdController } from '../../controllers/bkdController';
 import { dosenController } from '../../controllers/dosenController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
-import { exportBapBulkPDF, exportPresensiBulkPDF } from '../../utils/bkd-bulk-print';
+import {
+  exportBapBulkPDF,
+  exportPresensiBulkPDF,
+  filterKelasBerBap,
+  filterKelasBerpresensi,
+} from '../../utils/bkd-bulk-print';
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helpers';
 import { ExportColumn } from '../../utils/export';
 
@@ -39,7 +44,7 @@ export default function LaporanBKD() {
       if (!periodeId) return null;
       // Dosen dipaksa self di backend; kirim placeholder bila role dosen tanpa pilihan.
       const targetDosen = isDosenRole() ? Number(dosenId) || 0 : Number(dosenId);
-      if (!targetDosen) return null;
+      if (!targetDosen && !isDosenRole()) return null;
       try {
         return await bkdController.getRekap(targetDosen, periodeId);
       } catch {
@@ -66,7 +71,7 @@ export default function LaporanBKD() {
       toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
       return;
     }
-    if (data.mengajar.length === 0) {
+    if (filterKelasBerBap(data.mengajar).length === 0) {
       toast.showToast('Tidak ada sesi BAP untuk dicetak', 'info');
       return;
     }
@@ -84,7 +89,7 @@ export default function LaporanBKD() {
       toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
       return;
     }
-    if (data.mengajar.length === 0) {
+    if (filterKelasBerpresensi(data.rekapPresensi || []).length === 0) {
       toast.showToast('Tidak ada data presensi untuk dicetak', 'info');
       return;
     }

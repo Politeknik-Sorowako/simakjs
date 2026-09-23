@@ -200,7 +200,7 @@ export async function clearDatabase() {
 }
 
 // Helper function to register and login a user, returning their JWT authorization token
-export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan') {
+export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan' | 'prodi') {
   const cacheKey = `${email}:${role}`;
   if (tokenCache.has(cacheKey)) {
     return tokenCache.get(cacheKey)!;
