@@ -7,9 +7,16 @@ export const verifikasiUnknownSchema = {
     }),
     sumberId: t.Numeric(),
     statusKonfirmasi: t.Union(
-      [t.Literal('SAKIT'), t.Literal('IZIN'), t.Literal('ALPA'), t.Literal('TERLAMBAT'), t.Literal('HADIR')],
+      [
+        t.Literal('SAKIT'),
+        t.Literal('IZIN'),
+        t.Literal('ALPA'),
+        t.Literal('TERLAMBAT'),
+        t.Literal('HADIR'),
+        t.Literal('UNKNOWN'),
+      ],
       {
-        error: 'Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, atau HADIR',
+        error: 'Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, HADIR, atau UNKNOWN',
       },
     ),
     durasiMenit: t.Optional(t.Number({ minimum: 0 })),
