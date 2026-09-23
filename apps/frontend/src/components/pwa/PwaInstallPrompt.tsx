@@ -6,13 +6,13 @@ type BrowserKind = 'chrome' | 'samsung' | 'firefox' | 'ios' | 'other';
 
 function detectBrowser(): BrowserKind {
   if (typeof window === 'undefined') return 'other';
-  const ua = window.navigator.userAgent;
+  const ua = window.navigator.userAgent.toLowerCase();
   if (/iphone|ipad|ipod/.test(ua) || (ua.includes('macintosh') && window.navigator.maxTouchPoints > 1)) {
     return 'ios';
   }
-  if (/samsung/i.test(ua) && /android/i.test(ua)) return 'samsung';
-  if (/firefox/i.test(ua)) return 'firefox';
-  if (/edg/i.test(ua) || /chrome/i.test(ua) || /crios/i.test(ua)) return 'chrome';
+  if (/samsung/.test(ua) && /android/.test(ua)) return 'samsung';
+  if (/firefox/.test(ua)) return 'firefox';
+  if (/edg/.test(ua) || /chrome/.test(ua) || /crios/.test(ua)) return 'chrome';
   return 'other';
 }
 

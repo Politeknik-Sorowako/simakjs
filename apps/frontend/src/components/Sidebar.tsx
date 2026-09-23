@@ -41,6 +41,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
     return (isIosUa || isIpadOs) && !('MSStream' in window);
   };
 
+  const supportsManualGuide = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    return /edg/.test(ua) || /chrome/.test(ua) || /crios/.test(ua) || /samsung/.test(ua) || /firefox/.test(ua);
+  };
+
   createEffect(() => {
     if (typeof window === 'undefined') return;
     const mql = window.matchMedia('(display-mode: standalone)');
@@ -52,15 +58,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
       setPwaInstalled(true);
       setPwaInstallable(false);
     };
+    const handleStandaloneChange = (e: MediaQueryListEvent) =>
+      setPwaInstalled(e.matches || Boolean(navigator.standalone));
 
     updateInstallable();
-    mql.addEventListener('change', (e) => setPwaInstalled(e.matches || Boolean(navigator.standalone)));
+    mql.addEventListener('change', handleStandaloneChange);
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('pwa-prompt-ready', updateInstallable);
     window.addEventListener('appinstalled', handleAppInstalled);
 
     onCleanup(() => {
-      mql.removeEventListener('change', (e) => setPwaInstalled(e.matches || Boolean(navigator.standalone)));
+      mql.removeEventListener('change', handleStandaloneChange);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('pwa-prompt-ready', updateInstallable);
       window.removeEventListener('appinstalled', handleAppInstalled);
@@ -1093,6 +1101,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     ADMISI
                   </A>
                 </Show>
+                <Show when={isAdmin()}>
+                  <A
+                    href="/laporan-kompensasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Jam Kompensasi
+                  </A>
+                </Show>
                 <Show when={isAdmin() || isInstruktur() || isDosen()}>
                   <A
                     href="/kompensasi-manual"
@@ -1865,7 +1892,13 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           </Show>
         </div>
 
-        <Show when={typeof window !== 'undefined' && !pwaInstalled() && (pwaInstallable() || isIosDevice())}>
+        <Show
+          when={
+            typeof window !== 'undefined' &&
+            !pwaInstalled() &&
+            (pwaInstallable() || isIosDevice() || supportsManualGuide())
+          }
+        >
           <div class="pt-2 sidebar-footer-actions">
             <button
               type="button"

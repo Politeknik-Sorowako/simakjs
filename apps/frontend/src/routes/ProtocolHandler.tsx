@@ -1,7 +1,7 @@
 import { useNavigate, useSearchParams } from '@solidjs/router';
 import { createEffect } from 'solid-js';
 
-function parseProtocolUrl(raw: string): string | null {
+export function parseProtocolUrl(raw: string): string | null {
   const url = raw.trim();
   if (!url.startsWith('web+simak://')) return null;
 

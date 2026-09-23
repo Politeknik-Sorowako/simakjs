@@ -58,10 +58,10 @@ test.describe('PWA Validation Suite', () => {
   });
 
   test('should show manual guide modal instead of alert when prompt unavailable', async ({ page }) => {
-    let alerted = false;
     await page.addInitScript(() => {
+      window.__pwaAlerted = false;
       window.alert = () => {
-        alerted = true;
+        window.__pwaAlerted = true;
       };
     });
     await page.goto('/login');
@@ -73,6 +73,7 @@ test.describe('PWA Validation Suite', () => {
 
     const manualGuide = page.locator('#pwa-manual-guide');
     await expect(manualGuide).toHaveCount(1);
+    const alerted = await page.evaluate(() => window.__pwaAlerted);
     expect(alerted).toBe(false);
   });
 });
