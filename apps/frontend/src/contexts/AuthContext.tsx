@@ -61,7 +61,15 @@ export const SINGLE_ROLE_ONLY: UserRole[] = ['super_admin', 'mahasiswa', 'guest'
 export const MULTI_ROLE_ALLOWED: UserRole[] = ['admin', 'kaprodi', 'prodi', 'dosen', 'keuangan', 'plp', 'instruktur'];
 export const ALL_ROLES: UserRole[] = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
 
-const PUBLIC_PATHS = ['/login', '/register', '/forgot-password', '/reset-password', '/activate', '/rombel/enroll'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/activate',
+  '/rombel/enroll',
+  '/protocol',
+];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

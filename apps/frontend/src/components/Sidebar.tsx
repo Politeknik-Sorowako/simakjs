@@ -1,5 +1,5 @@
 import { A, useLocation } from '@solidjs/router';
-import { createEffect, createResource, createSignal, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, onCleanup, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { settingsController } from '../controllers/settingsController';
@@ -29,6 +29,51 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
   const [isLayananOpen, setIsLayananOpen] = createSignal(false);
   const [isKonfigurasiOpen, setIsKonfigurasiOpen] = createSignal(false);
   const [isAdmisiOpen, setIsAdmisiOpen] = createSignal(false);
+  const [pwaInstalled, setPwaInstalled] = createSignal(false);
+  const [pwaInstallable, setPwaInstallable] = createSignal(false);
+
+  const isIosDevice = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    const isIosUa = /iphone|ipad|ipod/.test(ua);
+    const isIpadOs =
+      ua.includes('macintosh') && Boolean(window.navigator.maxTouchPoints && window.navigator.maxTouchPoints > 1);
+    return (isIosUa || isIpadOs) && !('MSStream' in window);
+  };
+
+  const supportsManualGuide = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    return /edg/.test(ua) || /chrome/.test(ua) || /crios/.test(ua) || /samsung/.test(ua) || /firefox/.test(ua);
+  };
+
+  createEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(display-mode: standalone)');
+    setPwaInstalled(mql.matches || Boolean(navigator.standalone));
+
+    const updateInstallable = () => setPwaInstallable(Boolean(window.deferredPwaPrompt));
+    const handleBeforeInstall = () => setPwaInstallable(true);
+    const handleAppInstalled = () => {
+      setPwaInstalled(true);
+      setPwaInstallable(false);
+    };
+    const handleStandaloneChange = (e: MediaQueryListEvent) =>
+      setPwaInstalled(e.matches || Boolean(navigator.standalone));
+
+    updateInstallable();
+    mql.addEventListener('change', handleStandaloneChange);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('pwa-prompt-ready', updateInstallable);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    onCleanup(() => {
+      mql.removeEventListener('change', handleStandaloneChange);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('pwa-prompt-ready', updateInstallable);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    });
+  });
 
   createEffect(() => {
     const currentPath = path();
@@ -1850,7 +1895,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
         <Show
           when={
             typeof window !== 'undefined' &&
-            !(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone)
+            !pwaInstalled() &&
+            (pwaInstallable() || isIosDevice() || supportsManualGuide())
           }
         >
           <div class="pt-2 sidebar-footer-actions">
