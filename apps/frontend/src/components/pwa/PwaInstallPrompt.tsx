@@ -2,10 +2,26 @@ import { createSignal, onCleanup, onMount, Show } from 'solid-js';
 
 const DISMISS_KEY = 'simak_pwa_install_dismissed';
 
+type BrowserKind = 'chrome' | 'samsung' | 'firefox' | 'ios' | 'other';
+
+function detectBrowser(): BrowserKind {
+  if (typeof window === 'undefined') return 'other';
+  const ua = window.navigator.userAgent;
+  if (/iphone|ipad|ipod/.test(ua) || (ua.includes('macintosh') && window.navigator.maxTouchPoints > 1)) {
+    return 'ios';
+  }
+  if (/samsung/i.test(ua) && /android/i.test(ua)) return 'samsung';
+  if (/firefox/i.test(ua)) return 'firefox';
+  if (/edg/i.test(ua) || /chrome/i.test(ua) || /crios/i.test(ua)) return 'chrome';
+  return 'other';
+}
+
 export default function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = createSignal<BeforeInstallPromptEvent | null>(null);
   const [showIosGuide, setShowIosGuide] = createSignal(false);
+  const [showManualGuide, setShowManualGuide] = createSignal(false);
   const [dismissed, setDismissed] = createSignal(false);
+  const [installed, setInstalled] = createSignal(false);
 
   const checkStandalone = (): boolean => {
     if (typeof window === 'undefined') return false;
@@ -14,11 +30,7 @@ export default function PwaInstallPrompt() {
 
   const isIosDevice = (): boolean => {
     if (typeof window === 'undefined') return false;
-    const ua = window.navigator.userAgent.toLowerCase();
-    const isIosUa = /iphone|ipad|ipod/.test(ua);
-    const isIpadOs =
-      ua.includes('macintosh') && Boolean(window.navigator.maxTouchPoints && window.navigator.maxTouchPoints > 1);
-    return (isIosUa || isIpadOs) && !('MSStream' in window);
+    return detectBrowser() === 'ios';
   };
 
   const checkDismissed = (): boolean => {
@@ -37,8 +49,28 @@ export default function PwaInstallPrompt() {
     }
   };
 
+  const handleStandaloneChange = (e: MediaQueryListEvent) => {
+    setInstalled(e.matches);
+  };
+
+  const handleAppInstalled = () => {
+    setInstalled(true);
+    setDeferredPrompt(null);
+    window.deferredPwaPrompt = null;
+  };
+
+  const showManual = () => {
+    setDismissed(false);
+    if (isIosDevice()) {
+      setShowIosGuide(true);
+    } else {
+      setShowManualGuide(true);
+    }
+  };
+
   onMount(() => {
     if (checkStandalone()) {
+      setInstalled(true);
       return;
     }
 
@@ -68,20 +100,25 @@ export default function PwaInstallPrompt() {
       setDismissed(false);
       if (isIosDevice()) {
         setShowIosGuide(true);
-      } else if (deferredPrompt()) {
-        handleInstall();
-      } else if (window.deferredPwaPrompt) {
-        setDeferredPrompt(window.deferredPwaPrompt);
-        handleInstall();
+      } else if (deferredPrompt() || window.deferredPwaPrompt) {
+        const promptEvent = deferredPrompt() || window.deferredPwaPrompt;
+        if (!promptEvent) return;
+        setDeferredPrompt(promptEvent);
+        void handleInstall();
       } else {
-        // Fallback info if prompt is unavailable
-        alert('Fitur instalasi PWA tidak didukung atau aplikasi sudah terpasang.');
+        // No install prompt available: guide user manually per browser
+        showManual();
       }
     };
+
+    const mql = window.matchMedia('(display-mode: standalone)');
+    setInstalled(mql.matches);
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('pwa-prompt-ready', handlePwaReady);
     window.addEventListener('trigger-pwa-install', handleTriggerManual);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    mql.addEventListener('change', handleStandaloneChange);
 
     if (isIosDevice() && !checkDismissed()) {
       setShowIosGuide(true);
@@ -91,6 +128,8 @@ export default function PwaInstallPrompt() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
       window.removeEventListener('pwa-prompt-ready', handlePwaReady);
       window.removeEventListener('trigger-pwa-install', handleTriggerManual);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      mql.removeEventListener('change', handleStandaloneChange);
     });
   });
 
@@ -100,19 +139,20 @@ export default function PwaInstallPrompt() {
 
     try {
       await promptEvent.prompt();
-      const choice = await promptEvent.userChoice;
-      if (choice.outcome === 'accepted') {
-        setDeferredPrompt(null);
-        window.deferredPwaPrompt = null;
-      }
+      await promptEvent.userChoice;
     } catch (e: unknown) {
       console.error('Failed to trigger PWA prompt', e);
+    } finally {
+      // Prompt can only be used once — always clear regardless of outcome
+      setDeferredPrompt(null);
+      window.deferredPwaPrompt = null;
     }
   };
 
   const handleDismiss = () => {
     setDismissed(true);
     setShowIosGuide(false);
+    setShowManualGuide(false);
     try {
       localStorage.setItem(DISMISS_KEY, Date.now().toString());
     } catch {}
@@ -121,7 +161,7 @@ export default function PwaInstallPrompt() {
   return (
     <>
       {/* Android & Chromium Banner */}
-      <Show when={deferredPrompt() && !dismissed() && !showIosGuide() && !checkStandalone()}>
+      <Show when={deferredPrompt() && !dismissed() && !showIosGuide() && !showManualGuide() && !installed()}>
         <div
           id="pwa-install-prompt"
           class="fixed bottom-5 left-5 z-50 flex max-w-sm items-center gap-3.5 rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-xl backdrop-blur-md transition-all dark:border-slate-800/80 dark:bg-slate-900/95"
@@ -156,7 +196,7 @@ export default function PwaInstallPrompt() {
       </Show>
 
       {/* iOS Safari Banner Guide */}
-      <Show when={showIosGuide() && !dismissed() && !checkStandalone()}>
+      <Show when={showIosGuide() && !dismissed() && !installed()}>
         <div
           id="pwa-ios-prompt"
           class="fixed bottom-5 left-5 right-5 z-50 max-w-sm rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-xl backdrop-blur-md transition-all sm:left-5 sm:right-auto dark:border-slate-800/80 dark:bg-slate-900/95"
@@ -197,6 +237,95 @@ export default function PwaInstallPrompt() {
             <div class="mt-1 flex items-center gap-1.5">
               <span>2. Pilih</span>
               <span class="font-semibold text-slate-800 dark:text-slate-100">"Tambah ke Layar Utama"</span>
+            </div>
+          </div>
+        </div>
+      </Show>
+
+      {/* Manual Guide Modal for browsers without beforeinstallprompt */}
+      <Show when={showManualGuide() && !installed()}>
+        <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setShowManualGuide(false)} />
+          <div
+            id="pwa-manual-guide"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Panduan memasang aplikasi"
+            class="relative w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <img src="/pwa-192x192.png" alt="SIMAK Icon" class="h-11 w-11 rounded-xl object-cover shadow-sm" />
+                <div>
+                  <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Pasang SIMAK Vokasi</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">
+                    Browser Anda tidak menyediakan tombol pasang otomatis.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualGuide(false)}
+                class="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                aria-label="Tutup"
+              >
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="mt-4 space-y-3 text-xs text-slate-600 dark:text-slate-300">
+              <Show when={detectBrowser() === 'samsung'}>
+                <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                  <p class="font-semibold text-slate-800 dark:text-slate-100">Samsung Internet</p>
+                  <p class="mt-1">
+                    1. Ketuk ikon <span class="font-mono">⋮</span> (Menu) di kanan bawah.
+                    <br />
+                    2. Pilih <span class="font-semibold">"Tambahkan ke layar utama"</span>.
+                  </p>
+                </div>
+              </Show>
+              <Show when={detectBrowser() === 'firefox'}>
+                <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                  <p class="font-semibold text-slate-800 dark:text-slate-100">Firefox</p>
+                  <p class="mt-1">
+                    Instalasi PWA belum didukung penuh di Firefox desktop. Gunakan Chrome, Edge, atau Opera untuk
+                    memasang aplikasi, atau gunakan menu <span class="font-mono">☰</span> pada Firefox Android dan pilih{' '}
+                    <span class="font-semibold">"Instal"</span> /{' '}
+                    <span class="font-semibold">"Add to Home screen"</span>.
+                  </p>
+                </div>
+              </Show>
+              <Show when={detectBrowser() === 'chrome' || detectBrowser() === 'other'}>
+                <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                  <p class="font-semibold text-slate-800 dark:text-slate-100">Chrome / Edge / Lainnya</p>
+                  <p class="mt-1">
+                    1. Buka menu <span class="font-mono">⋮</span> atau <span class="font-mono">⋯</span> di pojok kanan
+                    atas.
+                    <br />
+                    2. Pilih <span class="font-semibold">"Pasang / Install SIMAK Vokasi"</span> (atau{' '}
+                    <span class="font-semibold">"Save and share → Install"</span>).
+                  </p>
+                </div>
+              </Show>
+            </div>
+
+            <div class="mt-5 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowManualGuide(false)}
+                class="flex-1 rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600 transition-all hover:bg-slate-100 active:scale-95 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                Nanti
+              </button>
+              <button
+                type="button"
+                onClick={handleDismiss}
+                class="flex-1 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-sky-700 active:scale-95 focus:outline-none"
+              >
+                Mengerti
+              </button>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { A, useLocation } from '@solidjs/router';
-import { createEffect, createResource, createSignal, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, onCleanup, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { settingsController } from '../controllers/settingsController';
@@ -29,6 +29,43 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
   const [isLayananOpen, setIsLayananOpen] = createSignal(false);
   const [isKonfigurasiOpen, setIsKonfigurasiOpen] = createSignal(false);
   const [isAdmisiOpen, setIsAdmisiOpen] = createSignal(false);
+  const [pwaInstalled, setPwaInstalled] = createSignal(false);
+  const [pwaInstallable, setPwaInstallable] = createSignal(false);
+
+  const isIosDevice = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    const isIosUa = /iphone|ipad|ipod/.test(ua);
+    const isIpadOs =
+      ua.includes('macintosh') && Boolean(window.navigator.maxTouchPoints && window.navigator.maxTouchPoints > 1);
+    return (isIosUa || isIpadOs) && !('MSStream' in window);
+  };
+
+  createEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(display-mode: standalone)');
+    setPwaInstalled(mql.matches || Boolean(navigator.standalone));
+
+    const updateInstallable = () => setPwaInstallable(Boolean(window.deferredPwaPrompt));
+    const handleBeforeInstall = () => setPwaInstallable(true);
+    const handleAppInstalled = () => {
+      setPwaInstalled(true);
+      setPwaInstallable(false);
+    };
+
+    updateInstallable();
+    mql.addEventListener('change', (e) => setPwaInstalled(e.matches || Boolean(navigator.standalone)));
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('pwa-prompt-ready', updateInstallable);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    onCleanup(() => {
+      mql.removeEventListener('change', (e) => setPwaInstalled(e.matches || Boolean(navigator.standalone)));
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('pwa-prompt-ready', updateInstallable);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    });
+  });
 
   createEffect(() => {
     const currentPath = path();
@@ -1056,25 +1093,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     ADMISI
                   </A>
                 </Show>
-                <Show when={isAdmin()}>
-                  <A
-                    href="/laporan-kompensasi"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Jam Kompensasi
-                  </A>
-                </Show>
                 <Show when={isAdmin() || isInstruktur() || isDosen()}>
                   <A
                     href="/kompensasi-manual"
@@ -1847,12 +1865,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           </Show>
         </div>
 
-        <Show
-          when={
-            typeof window !== 'undefined' &&
-            !(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone)
-          }
-        >
+        <Show when={typeof window !== 'undefined' && !pwaInstalled() && (pwaInstallable() || isIosDevice())}>
           <div class="pt-2 sidebar-footer-actions">
             <button
               type="button"

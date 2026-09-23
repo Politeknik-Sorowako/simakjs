@@ -86,6 +86,7 @@ const PresensiMahasiswa = lazy(() => import('./routes/PresensiMahasiswa'));
 const Profil = lazy(() => import('./routes/Profil'));
 const ProfilLulusan = lazy(() => import('./routes/ProfilLulusan'));
 const ProgramStudi = lazy(() => import('./routes/ProgramStudi'));
+const ProtocolHandler = lazy(() => import('./routes/ProtocolHandler'));
 const RombelEnroll = lazy(() => import('./routes/RombelEnroll'));
 const Rps = lazy(() => import('./routes/Rps'));
 const LaporanAkademik = lazy(() => import('./routes/reports/LaporanAkademik'));
@@ -163,6 +164,7 @@ function AppContent() {
           <Route path="/ganti-password" component={ForceChangePassword} />
           <Route path="/aktivasi-akun" component={AktivasiAkun} />
           <Route path="/auth/google/callback" component={GoogleCallback} />
+          <Route path="/protocol" component={ProtocolHandler} />
           <Route path="/rombel/enroll/:token" component={RombelEnroll} />
 
           {/* Protected Routes */}
