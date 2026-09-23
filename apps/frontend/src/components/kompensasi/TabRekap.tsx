@@ -4,6 +4,7 @@ import { useWorkspace } from '../../contexts/WorkspaceContext';
 import {
   type KompensasiDetailResponse,
   type KompensasiLaporanItem,
+  type KompensasiStatsResponse,
   presensiController,
 } from '../../controllers/presensiController';
 import { prodiController } from '../../controllers/prodiController';
@@ -95,6 +96,34 @@ export default function TabRekap(props: TabRekapProps) {
   const [mhsDetail, { refetch: refetchDetail }] = createResource(selectedMhsId, async (id) => {
     if (!id) return null;
     return presensiController.getKompensasiDetail(id);
+  });
+
+  const [statsData, setStatsData] = createSignal<KompensasiStatsResponse | null>(null);
+  createEffect(() => {
+    if (stats.error) return;
+    const s = stats();
+    if (s) setStatsData(s);
+  });
+
+  const [rows, setRows] = createSignal<KompensasiLaporanItem[]>([]);
+  const [total, setTotal] = createSignal(0);
+  const [totalPages, setTotalPages] = createSignal(1);
+
+  createEffect(() => {
+    if (data.error) return;
+    const d = data();
+    if (d) {
+      setRows(d.data);
+      setTotal(d.meta.total);
+      setTotalPages(d.meta.totalPages);
+    }
+  });
+
+  const [detailData, setDetailData] = createSignal<KompensasiDetailResponse | null>(null);
+  createEffect(() => {
+    if (mhsDetail.error) return;
+    const d = mhsDetail();
+    if (d) setDetailData(d);
   });
 
   const prodiOptions = (): SelectOption[] => [
@@ -265,18 +294,17 @@ export default function TabRekap(props: TabRekapProps) {
     printSlipKompensasi(detail);
   };
 
-  const meta = () => data()?.meta;
-  const totalPages = () => Math.max(meta()?.totalPages || 0, 1);
+  const hasData = () => rows().length > 0;
 
   createEffect(() => {
-    if (data.error && data()) {
+    if (data.error && hasData()) {
       toast.showToast('Gagal memperbarui data. Menampilkan data sebelumnya.', 'error');
     }
   });
 
   return (
     <div class="flex flex-col gap-4">
-      <Show when={stats()}>
+      <Show when={statsData()}>
         {(s) => (
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard label="Mahasiswa Terkompensasi" value={s().summary.totalMahasiswa} />
@@ -349,9 +377,9 @@ export default function TabRekap(props: TabRekapProps) {
           </div>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-xs text-secondary-400 dark:text-secondary-300">{meta()?.total ?? 0} mahasiswa</span>
+          <span class="text-xs text-secondary-400 dark:text-secondary-300">{total()} mahasiswa</span>
           <div class="flex items-center gap-4">
-            <RefreshingBadge show={data.loading && !!data()} />
+            <RefreshingBadge show={data.loading && hasData()} />
             <button
               type="button"
               onClick={() => {
@@ -399,80 +427,85 @@ export default function TabRekap(props: TabRekapProps) {
           'Aksi',
         ]}
       >
-        <Show when={data.loading && !data()}>
+        <Show when={data.loading && !hasData()}>
           <For each={Array.from({ length: 5 })}>{() => <TableLoadingFallback cols={6} />}</For>
         </Show>
-        <Show when={data.error && !data()}>
+        <Show when={data.error && !hasData()}>
           <ErrorState
             message={data.error instanceof Error ? data.error.message : String(data.error)}
             onRetry={refetch}
           />
         </Show>
-        <Show when={data() && !data.error}>
-          <For each={data()?.data || []} fallback={<EmptyState message="Tidak ada data rekap kompensasi." />}>
-            {(item: KompensasiLaporanItem) => (
-              <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
-                <td class="py-4 px-6">
-                  <div class="flex items-center gap-3">
-                    <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
-                    <div>
-                      <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
-                      <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
-                    </div>
+        <For
+          each={rows()}
+          fallback={
+            <Show when={!data.loading && !data.error}>
+              <EmptyState message="Tidak ada data rekap kompensasi." />
+            </Show>
+          }
+        >
+          {(item: KompensasiLaporanItem) => (
+            <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-3">
+                  <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                  <div>
+                    <div class="font-bold text-secondary-800 dark:text-white">{item.nama}</div>
+                    <div class="text-xs text-secondary-400 dark:text-secondary-200">{item.nim}</div>
                   </div>
-                </td>
-                <td class="py-4 px-6 text-secondary-600 dark:text-secondary-200">{item.prodiNama || '-'}</td>
-                <td class="py-4 px-6">
-                  <span class="font-bold text-danger-600 dark:text-danger-400">{item.totalKompensasi} mnt</span>
-                  <span class="text-xs text-secondary-400 block">
-                    (<DurasiText menit={item.totalKompensasi} />)
-                  </span>
-                </td>
-                <td class="py-4 px-6 font-bold text-success-600 dark:text-success-400">{item.totalDibayar} mnt</td>
-                <td class="py-4 px-6">
-                  <span
-                    class={`px-3 py-1 rounded-full text-xs font-extrabold ${
-                      item.sisaKompensasi > 0
-                        ? 'bg-danger-50 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400'
-                        : 'bg-success-50 text-success-700 dark:bg-success-900/30 dark:text-success-400'
-                    }`}
+                </div>
+              </td>
+              <td class="py-4 px-6 text-secondary-600 dark:text-secondary-200">{item.prodiNama || '-'}</td>
+              <td class="py-4 px-6">
+                <span class="font-bold text-danger-600 dark:text-danger-400">{item.totalKompensasi} mnt</span>
+                <span class="text-xs text-secondary-400 block">
+                  (<DurasiText menit={item.totalKompensasi} />)
+                </span>
+              </td>
+              <td class="py-4 px-6 font-bold text-success-600 dark:text-success-400">{item.totalDibayar} mnt</td>
+              <td class="py-4 px-6">
+                <span
+                  class={`px-3 py-1 rounded-full text-xs font-extrabold ${
+                    item.sisaKompensasi > 0
+                      ? 'bg-danger-50 text-danger-700 dark:bg-danger-900/30 dark:text-danger-400'
+                      : 'bg-success-50 text-success-700 dark:bg-success-900/30 dark:text-success-400'
+                  }`}
+                >
+                  {item.sisaKompensasi} mnt
+                </span>
+              </td>
+              <td class="py-4 px-6">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <Button
+                    onClick={() => setSelectedMhsId(item.id)}
+                    variant="primary"
+                    class="!px-3 !py-1 text-xs font-bold"
                   >
-                    {item.sisaKompensasi} mnt
-                  </span>
-                </td>
-                <td class="py-4 px-6">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <Button
-                      onClick={() => setSelectedMhsId(item.id)}
-                      variant="primary"
-                      class="!px-3 !py-1 text-xs font-bold"
-                    >
-                      Riwayat
+                    Riwayat
+                  </Button>
+                  <Show when={props.canManage}>
+                    <Button onClick={() => openPay(item.id)} variant="success" class="!px-3 !py-1 text-xs font-bold">
+                      Bayar
                     </Button>
-                    <Show when={props.canManage}>
-                      <Button onClick={() => openPay(item.id)} variant="success" class="!px-3 !py-1 text-xs font-bold">
-                        Bayar
-                      </Button>
-                    </Show>
-                    <Button
-                      onClick={() => setSelectedMhsId(item.id)}
-                      variant="ghost"
-                      class="!px-3 !py-1 text-xs font-bold"
-                    >
-                      Cetak
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </For>
-        </Show>
+                  </Show>
+                  <Button
+                    onClick={() => setSelectedMhsId(item.id)}
+                    variant="ghost"
+                    class="!px-3 !py-1 text-xs font-bold"
+                  >
+                    Cetak
+                  </Button>
+                </div>
+              </td>
+            </tr>
+          )}
+        </For>
       </Table>
 
       <Pagination
         currentPage={page()}
         totalPages={totalPages()}
-        total={meta()?.total ?? 0}
+        total={total()}
         limit={limit()}
         onPageChange={setPage}
         onLimitChange={(l) => {
@@ -489,7 +522,7 @@ export default function TabRekap(props: TabRekapProps) {
         maxWidth="xl"
       >
         <SuspenseDetail
-          detail={mhsDetail()}
+          detail={detailData()}
           error={mhsDetail.error}
           onRetry={refetchDetail}
           onExport={handleExportRiwayat}
@@ -502,7 +535,7 @@ export default function TabRekap(props: TabRekapProps) {
       {/* Modal Input Pembayaran */}
       <Modal isOpen={showPayModal()} onClose={() => setShowPayModal(false)} title="Input Pembayaran Jam Kompensasi">
         <div class="flex flex-col gap-4">
-          <Show when={mhsDetail()}>
+          <Show when={detailData()}>
             {(d) => (
               <div class="text-sm text-secondary-500 dark:text-secondary-300">
                 {d().mahasiswa.nama} · {d().mahasiswa.nim} — Sisa {d().summary.sisaKompensasi} menit
