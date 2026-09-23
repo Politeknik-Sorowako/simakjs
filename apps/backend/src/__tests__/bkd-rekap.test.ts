@@ -161,6 +161,53 @@ describe('BKD Rekap', () => {
     expect(body.data.ringkasan.totalSks).toBe(3);
   });
 
+  it('BKD rekap: dosen mengabaikan dosenId query orang lain (self-only)', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=999999&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { ringkasan: { totalSks: number } } };
+    expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: dosen dengan dosenId=0 (placeholder) tetap memuat data sendiri', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=0&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${dosenToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { ringkasan: { totalSks: number } } };
+    expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: prodi bisa mereview laporan dosen manapun', async () => {
+    const prodiToken = await getAuthToken('prodi_bkd@test.com', 'prodi');
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=${dosenId}&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${prodiToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: { ringkasan: { totalSks: number } } };
+    expect(body.data.ringkasan.totalSks).toBe(3);
+  });
+
+  it('BKD rekap: non-dosen tanpa dosenId ditolak (400)', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it('BKD rekap: periode wajib (422 bila kosong dari schema)', async () => {
     const res = await app.handle(
       new Request('http://localhost/bkd/rekap', {

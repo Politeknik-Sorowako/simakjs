@@ -101,13 +101,23 @@ function judulKelas(m: BkdMengajar): string {
   return `[${m.mataKuliah.kode}] ${m.mataKuliah.nama} — Kelas ${m.namaKelas}`;
 }
 
+/** Kelas yang memiliki minimal satu sesi BAP (seksi kosong dilewati saat cetak). */
+export function filterKelasBerBap(mengajar: BkdMengajar[]): BkdMengajar[] {
+  return mengajar.filter((m) => m.pertemuan.length > 0);
+}
+
+/** Kelas yang memiliki minimal satu baris presensi mahasiswa (seksi kosong dilewati saat cetak). */
+export function filterKelasBerpresensi(rekap: BkdRekapPresensiKelas[]): BkdRekapPresensiKelas[] {
+  return rekap.filter((r) => r.mahasiswa.length > 0);
+}
+
 export function exportBapBulkPDF(rekap: BkdRekap) {
   const doc = new jsPDF('p', 'mm', 'a4');
   const margin = 14;
 
   const { startY } = gambarKop(doc, { orientasi: 'portrait', judul: 'Berita Acara Perkuliahan (BAP)', rekap });
 
-  rekap.mengajar.forEach((mk, idx) => {
+  filterKelasBerBap(rekap.mengajar).forEach((mk, idx) => {
     if (idx > 0) doc.addPage();
 
     doc.setFontSize(10);
@@ -140,12 +150,6 @@ export function exportBapBulkPDF(rekap: BkdRekap) {
       margin: { left: margin, right: margin },
     });
 
-    if (mk.pertemuan.length === 0) {
-      doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.text('Tidak ada sesi BAP pada kelas ini.', margin, startY + 18);
-    }
-
     const lastY = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? startY + 18;
     gambarTandaTangan(doc, rekap.dosen.nama, lastY);
   });
@@ -164,7 +168,7 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
   const pertemuanByKelas = new Map<number, BkdMengajar['pertemuan']>();
   for (const m of rekap.mengajar) pertemuanByKelas.set(m.kelasId, m.pertemuan);
 
-  const kelasRekap: BkdRekapPresensiKelas[] =
+  const kelasRekap = filterKelasBerpresensi(
     rekap.rekapPresensi && rekap.rekapPresensi.length > 0
       ? rekap.rekapPresensi
       : rekap.mengajar.map((m) => ({
@@ -174,7 +178,8 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
           jumlahPertemuan: m.jumlahPertemuan,
           totalMenit: m.totalMenit,
           mahasiswa: [],
-        }));
+        })),
+  );
 
   kelasRekap.forEach((rk, idx) => {
     if (idx > 0) doc.addPage();
@@ -225,12 +230,6 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
       },
       margin: { left: margin, right: margin },
     });
-
-    if (rk.mahasiswa.length === 0) {
-      doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.text('Tidak ada data presensi mahasiswa pada kelas ini.', margin, startY + 20);
-    }
 
     // Tabel ringkas per sesi.
     const afterMhs = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? startY + 20;

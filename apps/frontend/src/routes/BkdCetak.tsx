@@ -1,6 +1,8 @@
 import { useSearchParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { useAuth } from '../contexts/AuthContext';
 import { type BkdRekap, bkdController } from '../controllers/bkdController';
+import { filterKelasBerBap, filterKelasBerpresensi } from '../utils/bkd-bulk-print';
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../utils/bkd-helpers';
 
 const PRESENSI_LABEL: {
@@ -15,6 +17,8 @@ const PRESENSI_LABEL: {
 ];
 
 export default function BkdCetak() {
+  const auth = useAuth();
+  const isDosenRole = () => auth.hasRole(['dosen']);
   const [searchParams] = useSearchParams();
   const [hasPrinted, setHasPrinted] = createSignal(false);
 
@@ -22,7 +26,8 @@ export default function BkdCetak() {
     () => {
       const dosenId = Number(searchParams.dosenId);
       const periodeId = searchParams.periodeId || '';
-      if (!dosenId || !periodeId) return null;
+      // Dosen memakai dosenId=0 (placeholder); backend memaksa self via email.
+      if ((!dosenId && !isDosenRole()) || !periodeId) return null;
       return { dosenId, periodeId };
     },
     async (target): Promise<BkdRekap | null> => {
@@ -65,7 +70,12 @@ export default function BkdCetak() {
       window.alert('Data BKD belum termuat.');
       return;
     }
-    const rowsHtml = data.mengajar
+    const kelasBerisi = filterKelasBerBap(data.mengajar);
+    if (kelasBerisi.length === 0) {
+      window.alert('Tidak ada sesi BAP untuk dicetak.');
+      return;
+    }
+    const rowsHtml = kelasBerisi
       .map(
         (mk) => `
         <div class="section">
@@ -75,11 +85,9 @@ export default function BkdCetak() {
               <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
             </thead>
             <tbody>
-              ${
-                mk.pertemuan.length
-                  ? mk.pertemuan
-                      .map(
-                        (p, i) => `
+              ${mk.pertemuan
+                .map(
+                  (p, i) => `
                 <tr>
                   <td>${i + 1}</td>
                   <td>${escapeHtml(p.pertemuanKe)}</td>
@@ -88,10 +96,8 @@ export default function BkdCetak() {
                   <td>${escapeHtml(p.durasiMenit)} mnt</td>
                   <td></td>
                 </tr>`,
-                      )
-                      .join('')
-                  : '<tr><td colspan="6" class="empty">Tidak ada sesi BAP.</td></tr>'
-              }
+                )
+                .join('')}
             </tbody>
           </table>
           <div class="sign-area">
@@ -117,7 +123,12 @@ export default function BkdCetak() {
     if (!data) return;
     const pertemuanByKelas = new Map<number, BkdRekap['mengajar'][number]['pertemuan']>();
     for (const mk of data.mengajar) pertemuanByKelas.set(mk.kelasId, mk.pertemuan);
-    const rowsHtml = (data.rekapPresensi || [])
+    const kelasBerisi = filterKelasBerpresensi(data.rekapPresensi || []);
+    if (kelasBerisi.length === 0) {
+      window.alert('Tidak ada data presensi untuk dicetak.');
+      return;
+    }
+    const rowsHtml = kelasBerisi
       .map((rk) => {
         const sesi = pertemuanByKelas.get(rk.kelasId) || [];
         return `
@@ -129,20 +140,16 @@ export default function BkdCetak() {
               <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total Hadir</th><th>% Hadir</th></tr>
             </thead>
             <tbody>
-              ${
-                rk.mahasiswa.length
-                  ? rk.mahasiswa
-                      .map(
-                        (m, i) => `
+              ${rk.mahasiswa
+                .map(
+                  (m, i) => `
                 <tr>
                   <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
                   <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(m.alpa)}</td><td>${escapeHtml(m.telat)}</td>
                   <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
                 </tr>`,
-                      )
-                      .join('')
-                  : '<tr><td colspan="10" class="empty">Tidak ada data presensi mahasiswa.</td></tr>'
-              }
+                )
+                .join('')}
             </tbody>
           </table>
           <h4>B. Rekap Presensi per Sesi</h4>
@@ -151,20 +158,16 @@ export default function BkdCetak() {
               <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total</th></tr>
             </thead>
             <tbody>
-              ${
-                sesi.length
-                  ? sesi
-                      .map(
-                        (p, i) => `
+              ${sesi
+                .map(
+                  (p, i) => `
                 <tr>
                   <td>${i + 1}</td><td>${escapeHtml(p.pertemuanKe)}</td><td>${escapeHtml(p.tanggal)}</td>
                   <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(p.presensiRingkasan.izin)}</td>
                   <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.telat)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
                 </tr>`,
-                      )
-                      .join('')
-                  : '<tr><td colspan="9" class="empty">Tidak ada sesi BAP.</td></tr>'
-              }
+                )
+                .join('')}
             </tbody>
           </table>
           <div class="sign-area">
