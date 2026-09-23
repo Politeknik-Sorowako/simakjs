@@ -53,18 +53,26 @@ const meta = t.Object({
   totalPages: t.Integer(),
 });
 
+export const riwayatQueryWithStatus = t.Object({
+  page: t.Optional(t.String({ default: '1' })),
+  limit: t.Optional(t.String({ default: '20' })),
+  search: t.Optional(t.String()),
+  prodiId: t.Optional(t.String()),
+  tglDari: t.Optional(t.String()),
+  tglSampai: t.Optional(t.String()),
+  sortBy: t.Optional(t.String()),
+  sortOrder: t.Optional(t.String()),
+  sumber: t.Optional(t.String()),
+  statusVerif: t.Optional(t.Union([t.Literal('belum'), t.Literal('sudah')])),
+});
+
 export const getRiwayatKetidakhadiranSchema = {
   detail: {
     tags: ['Ketidakhadiran'],
     summary: 'Riwayat Ketidakhadiran Terpadu',
     description: 'Daftar ketidakhadiran terpadu (BAP/Apel/Praktikum/Manual) dengan filter, sorting, dan pagination.',
   },
-  query: t.Intersect([
-    riwayatQuery,
-    t.Object({
-      statusVerif: t.Optional(t.Union([t.Literal('belum'), t.Literal('sudah')])),
-    }),
-  ]),
+  query: riwayatQueryWithStatus,
   response: {
     200: t.Object({
       data: t.Array(riwayatRow),
