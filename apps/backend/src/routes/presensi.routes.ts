@@ -3,6 +3,8 @@ import { PresensiController } from '../controllers/presensi.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   bayarKompensasiSchema,
+  bulkDeleteKompensasiBayarSchema,
+  deleteKompensasiBayarSchema,
   getByBapSchema,
   getKompensasiMahasiswaDetailSchema,
   getKompensasiStatsSchema,
@@ -13,6 +15,7 @@ import {
   getRekapKehadiranSchema,
   getRekapKelasListSchema,
   getRekapMahasiswaListSchema,
+  getRiwayatPembayaranSchema,
   getUnknownPresensiSchema,
   importKompensasiBayarSchema,
   resolveUnknownPresensiSchema,
@@ -38,5 +41,8 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .get('/rekap-mahasiswa-list', PresensiController.getRekapMahasiswaList, getRekapMahasiswaListSchema)
   .get('/kompensasi/mahasiswa/:mahasiswaId', PresensiController.getKompensasiDetail, getKompensasiMahasiswaDetailSchema)
   .post('/kompensasi/bayar', PresensiController.bayarKompensasi, bayarKompensasiSchema)
+  .get('/kompensasi/bayar', PresensiController.getRiwayatPembayaran, getRiwayatPembayaranSchema)
   .post('/kompensasi/bayar/import', PresensiController.importKompensasiBayar, importKompensasiBayarSchema)
-  .put('/kompensasi/bayar/:id', PresensiController.updateKompensasiBayar, updateKompensasiBayarSchema);
+  .post('/kompensasi/bayar/bulk-delete', PresensiController.bulkDeleteKompensasiBayar, bulkDeleteKompensasiBayarSchema)
+  .put('/kompensasi/bayar/:id', PresensiController.updateKompensasiBayar, updateKompensasiBayarSchema)
+  .delete('/kompensasi/bayar/:id', PresensiController.deleteKompensasiBayar, deleteKompensasiBayarSchema);

@@ -1,5 +1,5 @@
 import { A, useLocation } from '@solidjs/router';
-import { createEffect, createResource, createSignal, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, onCleanup, Show } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import { useAuth } from '../contexts/AuthContext';
 import { settingsController } from '../controllers/settingsController';
@@ -29,6 +29,51 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
   const [isLayananOpen, setIsLayananOpen] = createSignal(false);
   const [isKonfigurasiOpen, setIsKonfigurasiOpen] = createSignal(false);
   const [isAdmisiOpen, setIsAdmisiOpen] = createSignal(false);
+  const [pwaInstalled, setPwaInstalled] = createSignal(false);
+  const [pwaInstallable, setPwaInstallable] = createSignal(false);
+
+  const isIosDevice = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    const isIosUa = /iphone|ipad|ipod/.test(ua);
+    const isIpadOs =
+      ua.includes('macintosh') && Boolean(window.navigator.maxTouchPoints && window.navigator.maxTouchPoints > 1);
+    return (isIosUa || isIpadOs) && !('MSStream' in window);
+  };
+
+  const supportsManualGuide = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    const ua = window.navigator.userAgent.toLowerCase();
+    return /edg/.test(ua) || /chrome/.test(ua) || /crios/.test(ua) || /samsung/.test(ua) || /firefox/.test(ua);
+  };
+
+  createEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(display-mode: standalone)');
+    setPwaInstalled(mql.matches || Boolean(navigator.standalone));
+
+    const updateInstallable = () => setPwaInstallable(Boolean(window.deferredPwaPrompt));
+    const handleBeforeInstall = () => setPwaInstallable(true);
+    const handleAppInstalled = () => {
+      setPwaInstalled(true);
+      setPwaInstallable(false);
+    };
+    const handleStandaloneChange = (e: MediaQueryListEvent) =>
+      setPwaInstalled(e.matches || Boolean(navigator.standalone));
+
+    updateInstallable();
+    mql.addEventListener('change', handleStandaloneChange);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('pwa-prompt-ready', updateInstallable);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    onCleanup(() => {
+      mql.removeEventListener('change', handleStandaloneChange);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('pwa-prompt-ready', updateInstallable);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    });
+  });
 
   createEffect(() => {
     const currentPath = path();
@@ -77,6 +122,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
     if (
       isMatch([
         '/laporan-kompensasi',
+        '/ketidakhadiran-kompensasi',
         '/laporan',
         '/obe/bobot-penilaian',
         '/obe/evaluasi-kurikulum',
@@ -903,6 +949,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
 
             <Show when={isLaporanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
+                <Show when={isAdminMgmt() || isProdi() || auth.hasRole(['kaprodi'])}>
+                  <A
+                    href="/ketidakhadiran-kompensasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                      />
+                    </svg>
+                    Ketidakhadiran & Kompensasi
+                  </A>
+                </Show>
                 <Show when={isAdmin() || isProdi() || isDosen()}>
                   <A
                     href="/laporan/rekap-nilai"
@@ -1036,25 +1101,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     ADMISI
                   </A>
                 </Show>
-                <Show when={isAdmin()}>
-                  <A
-                    href="/laporan-kompensasi"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Jam Kompensasi
-                  </A>
-                </Show>
                 <Show when={isAdmin() || isInstruktur() || isDosen()}>
                   <A
                     href="/kompensasi-manual"
@@ -1091,44 +1137,6 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                       />
                     </svg>
                     Audit Kompensasi Ganda
-                  </A>
-                </Show>
-                <Show when={isAdmin() || isProdi()}>
-                  <A
-                    href="/apel/verifikasi"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Verifikasi Apel
-                  </A>
-                </Show>
-                <Show when={isAdminMgmt() || isProdi()}>
-                  <A
-                    href="/presensi-unknown"
-                    onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
-                    inactiveClass="hover:text-white text-secondary-200"
-                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
-                  >
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    Konfirmasi Presensi Unknown
                   </A>
                 </Show>
                 <Show when={isAdmin() || isDosen() || isProdi()}>
@@ -1868,7 +1876,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
         <Show
           when={
             typeof window !== 'undefined' &&
-            !(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone)
+            !pwaInstalled() &&
+            (pwaInstallable() || isIosDevice() || supportsManualGuide())
           }
         >
           <div class="pt-2 sidebar-footer-actions">

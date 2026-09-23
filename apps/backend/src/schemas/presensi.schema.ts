@@ -293,6 +293,93 @@ export const updateKompensasiBayarSchema = {
   },
 };
 
+export const getRiwayatPembayaranSchema = {
+  detail: {
+    tags: ['Kompensasi'],
+    summary: 'Riwayat Pembayaran Kompensasi',
+    description:
+      'Daftar pembayaran kompensasi dengan filter NIM/nama, prodi, rentang tanggal bayar, sorting, dan pagination.',
+  },
+  query: t.Object({
+    page: t.Optional(t.String({ default: '1' })),
+    limit: t.Optional(t.String({ default: '20' })),
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.String()),
+    tglDari: t.Optional(t.String()),
+    tglSampai: t.Optional(t.String()),
+    sortBy: t.Optional(t.String()),
+    sortOrder: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Object({
+      data: t.Array(
+        t.Object({
+          id: t.Integer(),
+          mahasiswaId: t.Integer(),
+          nim: t.String(),
+          nama: t.String(),
+          foto: t.Optional(t.Union([t.String(), t.Null()])),
+          prodiId: t.Optional(t.Union([t.Integer(), t.Null()])),
+          prodiNama: t.Optional(t.Union([t.String(), t.Null()])),
+          jumlahMenit: t.Integer(),
+          tanggal: t.String(),
+          keterangan: t.String(),
+          petugasId: t.Optional(t.Union([t.Integer(), t.Null()])),
+          petugasNama: t.Optional(t.Union([t.String(), t.Null()])),
+          createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
+        }),
+      ),
+      meta: t.Object({
+        total: t.Integer(),
+        page: t.Integer(),
+        limit: t.Integer(),
+        totalPages: t.Integer(),
+      }),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
+export const bulkDeleteKompensasiBayarSchema = {
+  detail: {
+    tags: ['Kompensasi'],
+    summary: 'Hapus Massal Pembayaran Kompensasi',
+    description: 'Menghapus beberapa catatan pembayaran kompensasi sekaligus berdasarkan ID.',
+  },
+  body: t.Object({
+    ids: t.Array(t.Number()),
+  }),
+  response: {
+    200: t.Object({
+      success: t.Boolean(),
+      deleted: t.Integer(),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
+export const deleteKompensasiBayarSchema = {
+  detail: {
+    tags: ['Kompensasi'],
+    summary: 'Hapus Pembayaran Kompensasi',
+    description: 'Menghapus satu catatan pembayaran kompensasi berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({
+      success: t.Boolean(),
+      id: t.Integer(),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  },
+};
+
 export const uploadSuratIzinSchema = {
   detail: {
     tags: ['Presensi'],

@@ -949,6 +949,103 @@ export class PresensiService {
     return updated || null;
   }
 
+  static async getRiwayatPembayaran(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    prodiIds?: number[];
+    tglDari?: string;
+    tglSampai?: string;
+    sortBy?: string;
+    sortOrder?: string;
+  }) {
+    const conditions: SQL<unknown>[] = [];
+    if (params.search && params.search.trim()) {
+      const s = `%${params.search.trim()}%`;
+      const searchCond = or(ilike(mahasiswa.nama, s), ilike(mahasiswa.nim, s));
+      if (searchCond) conditions.push(searchCond);
+    }
+    if (params.prodiIds && params.prodiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, params.prodiIds));
+    }
+    if (params.tglDari) conditions.push(sql`${kompensasiBayar.tanggal} >= ${params.tglDari}`);
+    if (params.tglSampai) conditions.push(sql`${kompensasiBayar.tanggal} <= ${params.tglSampai}`);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const limit = Math.min(Math.max(params.limit ?? 20, 1), 200);
+    const offset = ((params.page ?? 1) - 1) * limit;
+
+    let orderClause = sql`${kompensasiBayar.tanggal} DESC, ${kompensasiBayar.id} DESC`;
+    if (params.sortOrder === 'asc') {
+      if (params.sortBy === 'nama') {
+        orderClause = sql`${mahasiswa.nama} ASC, ${kompensasiBayar.tanggal} DESC`;
+      } else if (params.sortBy === 'nim') {
+        orderClause = sql`${mahasiswa.nim} ASC, ${kompensasiBayar.tanggal} DESC`;
+      } else if (params.sortBy === 'jumlahMenit') {
+        orderClause = sql`${kompensasiBayar.jumlahMenit} ASC, ${kompensasiBayar.tanggal} DESC`;
+      }
+    } else if (params.sortBy === 'nama') {
+      orderClause = sql`${mahasiswa.nama} DESC, ${kompensasiBayar.tanggal} DESC`;
+    } else if (params.sortBy === 'nim') {
+      orderClause = sql`${mahasiswa.nim} DESC, ${kompensasiBayar.tanggal} DESC`;
+    } else if (params.sortBy === 'jumlahMenit') {
+      orderClause = sql`${kompensasiBayar.jumlahMenit} DESC, ${kompensasiBayar.tanggal} DESC`;
+    }
+
+    const [[totalRow], rows] = await Promise.all([
+      db
+        .select({ total: count() })
+        .from(kompensasiBayar)
+        .innerJoin(mahasiswa, eq(kompensasiBayar.mahasiswaId, mahasiswa.id))
+        .where(whereClause),
+      db
+        .select({
+          id: kompensasiBayar.id,
+          mahasiswaId: kompensasiBayar.mahasiswaId,
+          nim: mahasiswa.nim,
+          nama: mahasiswa.nama,
+          foto: mahasiswa.foto,
+          prodiId: mahasiswa.programStudiId,
+          prodiNama: programStudi.nama,
+          jumlahMenit: kompensasiBayar.jumlahMenit,
+          tanggal: kompensasiBayar.tanggal,
+          keterangan: kompensasiBayar.keterangan,
+          petugasId: kompensasiBayar.petugasId,
+          petugasNama: users.nama,
+          createdAt: kompensasiBayar.createdAt,
+        })
+        .from(kompensasiBayar)
+        .innerJoin(mahasiswa, eq(kompensasiBayar.mahasiswaId, mahasiswa.id))
+        .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+        .leftJoin(users, eq(kompensasiBayar.petugasId, users.id))
+        .where(whereClause)
+        .orderBy(orderClause)
+        .limit(limit)
+        .offset(offset),
+    ]);
+    const total = totalRow?.total || 0;
+
+    return {
+      data: rows,
+      meta: { total, page: params.page ?? 1, limit, totalPages: Math.ceil(total / limit) },
+    };
+  }
+
+  static async deleteKompensasiBayar(id: number) {
+    const [deleted] = await db.delete(kompensasiBayar).where(eq(kompensasiBayar.id, id)).returning();
+    return deleted || null;
+  }
+
+  static async bulkDeleteKompensasiBayar(ids: number[]): Promise<number> {
+    const uniqueIds = [...new Set(ids.map(Number).filter((n) => Number.isFinite(n) && n > 0))];
+    if (uniqueIds.length === 0) return 0;
+    const deleted = await db
+      .delete(kompensasiBayar)
+      .where(sql`${kompensasiBayar.id} IN (${sql.join(uniqueIds, sql`, `)})`)
+      .returning({ id: kompensasiBayar.id });
+    return deleted.length;
+  }
+
   static async getRekapKehadiran(kelasKuliahId: number) {
     const kelasInfo = await db.query.kelasKuliah.findFirst({
       where: eq(kelasKuliah.id, kelasKuliahId),

@@ -32,6 +32,48 @@ test.describe('PWA Validation Suite', () => {
     expect(manifest.start_url).toBe('/');
     expect(manifest.scope).toBe('/');
     expect(Array.isArray(manifest.icons)).toBe(true);
-    expect(manifest.icons.length).toBeGreaterThanOrEqual(2);
+    expect(manifest.icons.length).toBeGreaterThanOrEqual(4);
+    expect(manifest.icons.some((i) => i.purpose === 'maskable')).toBe(true);
+    expect(Array.isArray(manifest.shortcuts)).toBe(true);
+    expect(manifest.shortcuts.length).toBe(4);
+    expect(Array.isArray(manifest.protocol_handlers)).toBe(true);
+    expect(manifest.protocol_handlers[0].protocol).toBe('web+simak');
+  });
+
+  test('should not show install prompt when already in standalone mode', async ({ page }) => {
+    // Simulate standalone display mode
+    await page.addInitScript(() => {
+      window.matchMedia = (query) =>
+        ({
+          matches: query.includes('standalone'),
+          media: query,
+          addEventListener: () => {},
+          removeEventListener: () => {},
+        }) as unknown as MediaQueryList;
+    });
+    await page.goto('/login');
+
+    const prompt = page.locator('#pwa-install-prompt');
+    await expect(prompt).toHaveCount(0);
+  });
+
+  test('should show manual guide modal instead of alert when prompt unavailable', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__pwaAlerted = false;
+      window.alert = () => {
+        window.__pwaAlerted = true;
+      };
+    });
+    await page.goto('/login');
+
+    // Dispatch manual trigger event as PwaInstallPrompt does
+    await page.evaluate(() => {
+      window.dispatchEvent(new CustomEvent('trigger-pwa-install'));
+    });
+
+    const manualGuide = page.locator('#pwa-manual-guide');
+    await expect(manualGuide).toHaveCount(1);
+    const alerted = await page.evaluate(() => window.__pwaAlerted);
+    expect(alerted).toBe(false);
   });
 });

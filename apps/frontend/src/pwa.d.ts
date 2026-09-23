@@ -7,6 +7,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 interface Window {
   deferredPwaPrompt?: BeforeInstallPromptEvent | null;
+  __pwaAlerted?: boolean;
 }
 
 interface Navigator {
